@@ -96,7 +96,7 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("Register controller")
-	Expect((&extensionclusterrole.Reconciler{}).AddToManager(ctx, mgr)).To(Succeed())
+	Expect((&extensionclusterrole.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
 	// The test waits for namespaces to be gone, so we need to finalize them as envtest doesn't run the namespace
 	// controller.

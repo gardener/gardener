@@ -7,7 +7,6 @@ package care_test
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -148,7 +147,7 @@ var _ = Describe("Add", func() {
 
 	Describe("#MapManagedResourceToSeed", func() {
 		It("should return a request with the seed name", func() {
-			Expect(reconciler.MapManagedResourceToSeed(context.TODO(), logr.Discard(), nil, nil)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: reconciler.SeedName}}))
+			Expect(reconciler.MapManagedResourceToSeed(context.TODO(), nil)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: reconciler.SeedName}}))
 		})
 	})
 })

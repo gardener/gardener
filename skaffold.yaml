@@ -1364,7 +1364,6 @@ build:
             - pkg/client/kubernetes/cache
             - pkg/controller/tokenrequestor
             - pkg/controllerutils
-            - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/controllerutils/routes

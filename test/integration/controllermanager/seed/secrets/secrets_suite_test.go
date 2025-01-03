@@ -112,7 +112,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&secrets.Reconciler{
 		GardenNamespace: testNamespace.Name,
-	}).AddToManager(ctx, mgr)).To(Succeed())
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

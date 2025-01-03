@@ -7,7 +7,6 @@ package care
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -25,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -33,7 +31,7 @@ import (
 const ControllerName = "seed-care"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
@@ -44,7 +42,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.Clock = clock.RealClock{}
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
@@ -52,24 +50,21 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.Config.SyncPeriod.Duration),
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](gardenCluster.GetCache(),
-				&gardencorev1beta1.Seed{},
-				&handler.EnqueueRequestForObject{},
-				predicateutils.HasName(r.SeedName),
-				r.SeedPredicate()),
-		).Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](seedCluster.GetCache(),
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
+			&gardencorev1beta1.Seed{},
+			&handler.EnqueueRequestForObject{},
+			predicateutils.HasName(r.SeedName),
+			r.SeedPredicate(),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			seedCluster.GetCache(),
 			&resourcesv1alpha1.ManagedResource{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToSeed), mapper.UpdateWithNew, c.GetLogger()),
+			handler.EnqueueRequestsFromMapFunc(r.MapManagedResourceToSeed),
 			r.IsSystemComponent(),
-			predicateutils.ManagedResourceConditionsChanged()),
-	)
+			predicateutils.ManagedResourceConditionsChanged(),
+		)).
+		Complete(r)
 }
 
 // SeedPredicate is a predicate which returns 'true' for create events, and for update events in case the seed was
@@ -105,7 +100,7 @@ func (r *Reconciler) IsSystemComponent() predicate.Predicate {
 	})
 }
 
-// MapManagedResourceToSeed is a mapper.MapFunc for mapping a ManagedResource to the owning Seed.
-func (r *Reconciler) MapManagedResourceToSeed(_ context.Context, _ logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
+// MapManagedResourceToSeed is a handler.MapFunc for mapping a ManagedResource to the owning Seed.
+func (r *Reconciler) MapManagedResourceToSeed(_ context.Context, _ client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: r.SeedName}}}
 }

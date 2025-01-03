@@ -150,6 +150,7 @@ var _ = Describe("Add", func() {
 		BeforeEach(func() {
 			log = logr.Discard()
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			reconciler.Client = fakeClient
 
 			seed1 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed1"}}
 			seed2 = &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: "seed2"}}
@@ -159,7 +160,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should map to all seeds", func() {
-			Expect(reconciler.MapToAllSeeds(ctx, log, fakeClient, nil)).To(ConsistOf(
+			Expect(reconciler.MapToAllSeeds(log)(ctx, nil)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: seed1.Name}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: seed2.Name}},
 			))

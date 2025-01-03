@@ -7,7 +7,6 @@ package care_test
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -81,27 +80,24 @@ var _ = Describe("Add", func() {
 	})
 
 	Describe("#MapManagedResourceToControllerInstallation", func() {
-		var (
-			ctx = context.TODO()
-			log = logr.Discard()
-		)
+		ctx := context.TODO()
 
 		It("should return nothing because object is no ManagedResource", func() {
-			Expect(reconciler.MapManagedResourceToControllerInstallation(ctx, log, nil, &corev1.Secret{})).To(BeEmpty())
+			Expect(reconciler.MapManagedResourceToControllerInstallation(ctx, &corev1.Secret{})).To(BeEmpty())
 		})
 
 		It("should return nothing because label is not present", func() {
 			delete(managedResource.Labels, "controllerinstallation-name")
-			Expect(reconciler.MapManagedResourceToControllerInstallation(ctx, log, nil, managedResource)).To(BeEmpty())
+			Expect(reconciler.MapManagedResourceToControllerInstallation(ctx, managedResource)).To(BeEmpty())
 		})
 
 		It("should return nothing because label value is empty", func() {
 			managedResource.Labels["controllerinstallation-name"] = ""
-			Expect(reconciler.MapManagedResourceToControllerInstallation(ctx, log, nil, managedResource)).To(BeEmpty())
+			Expect(reconciler.MapManagedResourceToControllerInstallation(ctx, managedResource)).To(BeEmpty())
 		})
 
 		It("should return a request with the controller installation name", func() {
-			Expect(reconciler.MapManagedResourceToControllerInstallation(ctx, log, nil, managedResource)).To(ConsistOf(
+			Expect(reconciler.MapManagedResourceToControllerInstallation(ctx, managedResource)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallationName}},
 			))
 		})

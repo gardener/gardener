@@ -164,7 +164,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		GardenNamespace: testNamespace.Name,
-	}).AddToManager(ctx, mgr, gardenClientMap)).To(Succeed())
+	}).AddToManager(mgr, gardenClientMap)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

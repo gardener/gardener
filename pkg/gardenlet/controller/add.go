@@ -72,20 +72,20 @@ func AddToManager(
 	if err := (&backupbucket.Reconciler{
 		Config:   *cfg.Controllers.BackupBucket,
 		SeedName: cfg.SeedConfig.Name,
-	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding BackupBucket controller: %w", err)
 	}
 
 	if err := (&backupentry.Reconciler{
 		Config:   *cfg.Controllers.BackupEntry,
 		SeedName: cfg.SeedConfig.Name,
-	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding BackupEntry controller: %w", err)
 	}
 
 	if err := (&bastion.Reconciler{
 		Config: *cfg.Controllers.Bastion,
-	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
 
@@ -110,7 +110,7 @@ func AddToManager(
 		return fmt.Errorf("failed adding NetworkPolicy controller: %w", err)
 	}
 
-	if err := seed.AddToManager(ctx, mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager); err != nil {
+	if err := seed.AddToManager(mgr, gardenCluster, seedCluster, seedClientSet, *cfg, identity, healthManager); err != nil {
 		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 

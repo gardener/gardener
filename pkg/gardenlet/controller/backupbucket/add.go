@@ -7,7 +7,6 @@ package backupbucket
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -24,7 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -32,7 +30,7 @@ import (
 const ControllerName = "backupbucket"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenCluster cluster.Cluster, seedCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Cluster, seedCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
@@ -49,31 +47,27 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 			RateLimiter:             r.RateLimiter,
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](gardenCluster.GetCache(),
-				&gardencorev1beta1.BackupBucket{},
-				&handler.EnqueueRequestForObject{},
-				&predicate.GenerationChangedPredicate{},
-				r.SeedNamePredicate()),
-		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](seedCluster.GetCache(),
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
+			&gardencorev1beta1.BackupBucket{},
+			&handler.EnqueueRequestForObject{},
+			&predicate.GenerationChangedPredicate{},
+			r.SeedNamePredicate(),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			seedCluster.GetCache(),
 			&extensionsv1alpha1.BackupBucket{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapExtensionBackupBucketToCoreBackupBucket), mapper.UpdateWithNew, c.GetLogger()),
+			handler.EnqueueRequestsFromMapFunc(r.MapExtensionBackupBucketToCoreBackupBucket),
 			predicateutils.LastOperationChanged(predicateutils.GetExtensionLastOperation),
-		))
+		)).
+		Complete(r)
 }
 
 // SeedNamePredicate returns a predicate which returns true when the object belongs to this seed.
@@ -87,8 +81,8 @@ func (r *Reconciler) SeedNamePredicate() predicate.Predicate {
 	})
 }
 
-// MapExtensionBackupBucketToCoreBackupBucket is a mapper.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupBucket to the owning
-// core.gardener.cloud/v1beta1.BackupBucket.
-func (r *Reconciler) MapExtensionBackupBucketToCoreBackupBucket(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+// MapExtensionBackupBucketToCoreBackupBucket is handler.MapFunc for mapping a extensions.gardener.cloud/v1alpha1.BackupBucket
+// to the owning core.gardener.cloud/v1beta1.BackupBucket.
+func (r *Reconciler) MapExtensionBackupBucketToCoreBackupBucket(_ context.Context, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.GetName()}}}
 }

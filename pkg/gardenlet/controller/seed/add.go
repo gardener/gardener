@@ -5,7 +5,6 @@
 package seed
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -24,7 +23,6 @@ import (
 
 // AddToManager adds all Seed controllers to the given manager.
 func AddToManager(
-	ctx context.Context,
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
@@ -48,7 +46,7 @@ func AddToManager(
 	if err := (&care.Reconciler{
 		Config:   *cfg.Controllers.SeedCare,
 		SeedName: cfg.SeedConfig.Name,
-	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 

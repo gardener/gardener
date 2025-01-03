@@ -32,7 +32,7 @@ func AddToManager(
 ) error {
 	if err := (&care.Reconciler{
 		Config: *cfg.Controllers.ControllerInstallationCare,
-	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
@@ -48,7 +48,7 @@ func AddToManager(
 	if err := (&required.Reconciler{
 		Config:   *cfg.Controllers.ControllerInstallationRequired,
 		SeedName: cfg.SeedConfig.SeedTemplate.Name,
-	}).AddToManager(ctx, mgr, gardenCluster, seedCluster); err != nil {
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
 		return fmt.Errorf("failed adding required reconciler: %w", err)
 	}
 

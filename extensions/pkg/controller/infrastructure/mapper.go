@@ -6,7 +6,7 @@ package infrastructure
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -15,6 +15,6 @@ import (
 
 // ClusterToInfrastructureMapper returns a mapper that returns requests for Infrastructures whose
 // referenced clusters have been modified.
-func ClusterToInfrastructureMapper(mgr manager.Manager, predicates []predicate.Predicate) mapper.Mapper {
-	return mapper.ClusterToObjectMapper(mgr, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }, predicates)
+func ClusterToInfrastructureMapper(reader client.Reader, predicates []predicate.Predicate) handler.MapFunc {
+	return mapper.ClusterToObjectMapper(reader, func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }, predicates)
 }

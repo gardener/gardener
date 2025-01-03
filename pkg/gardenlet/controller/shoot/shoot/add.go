@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -41,26 +42,17 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 		r.Clock = clock.RealClock{}
 	}
 
-	// It's not possible to call builder.Build() without adding atleast one watch, and without this, we can't get the controller logger.
-	// Hence, we have to build up the controller manually.
-	c, err := controller.New(
-		ControllerName,
-		mgr,
-		controller.Options{
-			Reconciler:              r,
-			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.Shoot.ConcurrentSyncs, 0),
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](gardenCluster.GetCache(),
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(controller.Options{MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.Shoot.ConcurrentSyncs, 0)}).
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
 			&gardencorev1beta1.Shoot{},
-			r.EventHandler(c.GetLogger()),
-			&predicate.GenerationChangedPredicate{}),
-	)
+			r.EventHandler(mgr.GetLogger().WithValues("controller", ControllerName)),
+			&predicate.GenerationChangedPredicate{},
+		)).
+		Complete(r)
 }
 
 // CalculateControllerInfos is exposed for testing

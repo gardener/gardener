@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -18,7 +19,6 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 const (
@@ -55,9 +55,8 @@ type AddArgs struct {
 }
 
 // Add adds an Extension controller to the given manager using the given AddArgs.
-func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args)
-	return add(ctx, mgr, args)
+func Add(mgr manager.Manager, args AddArgs) error {
+	return add(mgr, args)
 }
 
 // DefaultPredicates returns the default predicates for an extension reconciler.
@@ -65,29 +64,34 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate(ctx, mgr))
 }
 
-func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
-	ctrl, err := controller.New(args.Name, mgr, args.ControllerOptions)
+func add(mgr manager.Manager, args AddArgs) error {
+	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
+
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(args.Name).
+		WithOptions(args.ControllerOptions).
+		Watches(
+			&extensionsv1alpha1.Extension{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicates...),
+		).
+		Build(NewReconciler(mgr, args))
 	if err != nil {
 		return err
 	}
 
-	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
-
-	if err := ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.Extension{}, &handler.EnqueueRequestForObject{}, predicates...)); err != nil {
-		return err
-	}
-
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(
-			source.Kind[client.Object](mgr.GetCache(),
-				&extensionsv1alpha1.Cluster{},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToExtensionMapper(mgr, predicates...), mapper.UpdateWithNew, mgr.GetLogger().WithName(args.Name))),
-		); err != nil {
+		if err := c.Watch(source.Kind[client.Object](
+			mgr.GetCache(),
+			&extensionsv1alpha1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(ClusterToExtensionMapper(mgr.GetClient(), predicates...)),
+		)); err != nil {
 			return err
 		}
 	}
 
 	// Add additional watches to the controller besides the standard one.
-	return args.WatchBuilder.AddToController(ctrl)
+	return args.WatchBuilder.AddToController(c)
 }

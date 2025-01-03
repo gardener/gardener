@@ -54,7 +54,7 @@ var _ = Describe("Add", func() {
 
 		Context("when Garden reconciliation is not processing", func() {
 			It("should return a request with the garden name", func() {
-				Expect(reconciler.MapManagedResourceToGarden(ctx, logr.Discard(), nil, nil)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: gardenName}}))
+				Expect(reconciler.MapManagedResourceToGarden(logr.Discard())(ctx, nil)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: gardenName}}))
 			})
 		})
 
@@ -64,7 +64,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return an empty list", func() {
-				Expect(reconciler.MapManagedResourceToGarden(ctx, logr.Discard(), nil, nil)).To(BeEmpty())
+				Expect(reconciler.MapManagedResourceToGarden(logr.Discard())(ctx, nil)).To(BeEmpty())
 			})
 		})
 	})

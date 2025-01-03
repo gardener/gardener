@@ -22,7 +22,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 	if err := (&health.Reconciler{
 		Config:      cfg.Controllers.Health,
 		ClassFilter: resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
-	}).AddToManager(ctx, mgr, sourceCluster, targetCluster, *cfg.Controllers.ClusterID); err != nil {
+	}).AddToManager(mgr, sourceCluster, targetCluster, *cfg.Controllers.ClusterID); err != nil {
 		return fmt.Errorf("failed adding health reconciler: %w", err)
 	}
 

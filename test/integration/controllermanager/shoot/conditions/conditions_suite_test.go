@@ -110,7 +110,7 @@ var _ = BeforeSuite(func() {
 		Config: config.ShootConditionsControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
-	}).AddToManager(ctx, mgr)).To(Succeed())
+	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

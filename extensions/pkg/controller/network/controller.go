@@ -7,6 +7,7 @@ package network
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -16,7 +17,6 @@ import (
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 const (
@@ -54,30 +54,38 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 
 // Add creates a new network Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
-func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
-	return add(ctx, mgr, args)
+func Add(mgr manager.Manager, args AddArgs) error {
+	return add(mgr, args)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
-	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
+func add(mgr manager.Manager, args AddArgs) error {
+	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
+
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(args.ControllerOptions).
+		Watches(
+			&extensionsv1alpha1.Network{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicates...),
+		).
+		Build(NewReconciler(mgr, args.Actuator))
 	if err != nil {
 		return err
 	}
 
-	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
-
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(
-			source.Kind[client.Object](mgr.GetCache(),
-				&extensionsv1alpha1.Cluster{},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToNetworkMapper(mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
-		); err != nil {
+		if err := c.Watch(source.Kind[client.Object](
+			mgr.GetCache(),
+			&extensionsv1alpha1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(ClusterToNetworkMapper(mgr.GetClient(), predicates)),
+		)); err != nil {
 			return err
 		}
 	}
 
-	return ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.Network{}, &handler.EnqueueRequestForObject{}, predicates...))
+	return nil
 }

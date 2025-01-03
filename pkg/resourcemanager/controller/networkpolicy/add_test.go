@@ -214,18 +214,18 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should map to the referenced service", func() {
-			Expect(reconciler.MapNetworkPolicyToService(ctx, log, nil, networkPolicy)).To(ConsistOf(
+			Expect(reconciler.MapNetworkPolicyToService(ctx, networkPolicy)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: serviceNamespace, Name: serviceName}},
 			))
 		})
 
 		It("should return nil if the object is has no reference", func() {
 			networkPolicy.Labels = nil
-			Expect(reconciler.MapNetworkPolicyToService(ctx, log, nil, networkPolicy)).To(BeNil())
+			Expect(reconciler.MapNetworkPolicyToService(ctx, networkPolicy)).To(BeNil())
 		})
 
 		It("should return nil if the object is nil", func() {
-			Expect(reconciler.MapNetworkPolicyToService(ctx, log, nil, nil)).To(BeNil())
+			Expect(reconciler.MapNetworkPolicyToService(ctx, nil)).To(BeNil())
 		})
 	})
 
@@ -244,14 +244,14 @@ var _ = Describe("Add", func() {
 			Expect(fakeClient.Create(ctx, service1)).To(Succeed())
 			Expect(fakeClient.Create(ctx, service2)).To(Succeed())
 
-			Expect(reconciler.MapToAllServices(ctx, log, nil, nil)).To(ConsistOf(
+			Expect(reconciler.MapToAllServices(log)(ctx, nil)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: service1.Namespace, Name: service1.Name}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: service2.Namespace, Name: service2.Name}},
 			))
 		})
 
 		It("should return nil if there are no services", func() {
-			Expect(reconciler.MapToAllServices(ctx, log, nil, nil)).To(BeNil())
+			Expect(reconciler.MapToAllServices(log)(ctx, nil)).To(BeNil())
 		})
 	})
 
@@ -324,7 +324,7 @@ var _ = Describe("Add", func() {
 				}
 			)
 
-			Expect(reconciler.MapIngressToServices(ctx, log, nil, ingress)).To(ConsistOf(
+			Expect(reconciler.MapIngressToServices(ctx, ingress)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service1}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service2}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: service3}},
@@ -332,11 +332,11 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return nil if there are no referenced services", func() {
-			Expect(reconciler.MapToAllServices(ctx, log, nil, &networkingv1.Ingress{Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{Host: "foo"}}}})).To(BeNil())
+			Expect(reconciler.MapToAllServices(log)(ctx, &networkingv1.Ingress{Spec: networkingv1.IngressSpec{Rules: []networkingv1.IngressRule{{Host: "foo"}}}})).To(BeNil())
 		})
 
 		It("should return nil if the passed object is nil", func() {
-			Expect(reconciler.MapToAllServices(ctx, log, nil, nil)).To(BeNil())
+			Expect(reconciler.MapToAllServices(log)(ctx, nil)).To(BeNil())
 		})
 	})
 })

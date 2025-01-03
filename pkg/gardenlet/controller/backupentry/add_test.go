@@ -109,7 +109,7 @@ var _ = Describe("Add", func() {
 
 		It("should return a request with the core.gardener.cloud/v1beta1.BackupEntry name and namespace", func() {
 			Expect(fakeClient.Create(ctx, cluster)).To(Succeed())
-			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(ConsistOf(
+			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(log)(ctx, extensionBackupEntry)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry.Name, Namespace: backupEntry.Namespace}},
 			))
 		})
@@ -117,18 +117,18 @@ var _ = Describe("Add", func() {
 		It("should return nil if the object has a deletion timestamp", func() {
 			extensionBackupEntry.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 
-			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(BeNil())
+			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(log)(ctx, extensionBackupEntry)).To(BeNil())
 		})
 
 		It("should return nil when cluster is not found", func() {
-			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(BeNil())
+			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(log)(ctx, extensionBackupEntry)).To(BeNil())
 		})
 
 		It("should return nil when shoot is not present in the cluster", func() {
 			cluster.Spec.Shoot.Object = nil
 			Expect(fakeClient.Create(ctx, cluster)).To(Succeed())
 
-			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(ctx, log, nil, extensionBackupEntry)).To(BeNil())
+			Expect(reconciler.MapExtensionBackupEntryToCoreBackupEntry(log)(ctx, extensionBackupEntry)).To(BeNil())
 		})
 	})
 
@@ -193,7 +193,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return nil when the object is not BackupBucket", func() {
-			Expect(reconciler.MapBackupBucketToBackupEntry(ctx, log, nil, &corev1.Secret{})).To(BeNil())
+			Expect(reconciler.MapBackupBucketToBackupEntry(log)(ctx, &corev1.Secret{})).To(BeNil())
 		})
 
 		It("should return requests with the name and namespace of backupentries referencing this backupbucket", func() {
@@ -201,7 +201,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeClient.Create(ctx, backupEntry2)).To(Succeed())
 			Expect(fakeClient.Create(ctx, backupEntry3)).To(Succeed())
 
-			Expect(reconciler.MapBackupBucketToBackupEntry(ctx, log, nil, backupBucket)).To(ConsistOf(
+			Expect(reconciler.MapBackupBucketToBackupEntry(log)(ctx, backupBucket)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry1.Name, Namespace: backupEntry1.Namespace}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry3.Name, Namespace: backupEntry3.Namespace}},
 			))
@@ -226,7 +226,7 @@ var _ = Describe("Add", func() {
 				Expect(fakeClient.Create(ctx, backupEntry2)).To(Succeed())
 				Expect(fakeClient.Create(ctx, backupEntry3)).To(Succeed())
 
-				Expect(reconciler.MapBackupBucketToBackupEntry(ctx, log, nil, backupBucket)).To(ConsistOf(
+				Expect(reconciler.MapBackupBucketToBackupEntry(log)(ctx, backupBucket)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry1.Name, Namespace: backupEntry1.Namespace}},
 				))
 			})
@@ -239,7 +239,7 @@ var _ = Describe("Add", func() {
 
 				Expect(fakeClient.Create(ctx, backupEntry1)).To(Succeed())
 
-				Expect(reconciler.MapBackupBucketToBackupEntry(ctx, log, nil, backupBucket)).To(ConsistOf(
+				Expect(reconciler.MapBackupBucketToBackupEntry(log)(ctx, backupBucket)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: backupEntry1.Name, Namespace: backupEntry1.Namespace}},
 				))
 			})

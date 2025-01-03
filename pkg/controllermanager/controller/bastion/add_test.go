@@ -146,10 +146,11 @@ var _ = Describe("Add", func() {
 				WithScheme(kubernetes.GardenScheme).
 				WithIndex(&operationsv1alpha1.Bastion{}, operations.BastionShootName, indexer.BastionShootNameIndexerFunc).
 				Build()
+			reconciler.Client = fakeClient
 		})
 
 		It("should do nothing if the object is no shoot", func() {
-			Expect(reconciler.MapShootToBastions(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
+			Expect(reconciler.MapShootToBastions(log)(ctx, &corev1.Secret{})).To(BeEmpty())
 		})
 
 		It("should map the shoot to bastions", func() {
@@ -201,7 +202,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeClient.Create(ctx, bastion2)).To(Succeed())
 			Expect(fakeClient.Create(ctx, bastion3)).To(Succeed())
 
-			Expect(reconciler.MapShootToBastions(ctx, log, fakeClient, shoot)).To(ConsistOf(
+			Expect(reconciler.MapShootToBastions(log)(ctx, shoot)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: bastion1.Name, Namespace: bastion1.Namespace}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: bastion2.Name, Namespace: bastion2.Namespace}},
 			))

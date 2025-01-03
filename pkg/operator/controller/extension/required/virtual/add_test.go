@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -23,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/required/virtual"
@@ -47,19 +47,19 @@ var _ = Describe("Add", func() {
 			var (
 				fakeClient client.Client
 
-				mapperFunc mapper.MapFunc
+				mapperFunc handler.MapFunc
 			)
 
 			BeforeEach(func() {
 				fakeClient = fake.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
 				reconciler.RuntimeClient = fakeClient
 
-				mapperFunc = reconciler.MapControllerInstallationToExtension()
+				mapperFunc = reconciler.MapControllerInstallationToExtension(log)
 			})
 
 			Context("without controller installation", func() {
 				It("should not return any request", func() {
-					requests := mapperFunc.Map(ctx, log, nil, nil)
+					requests := mapperFunc(ctx, nil)
 					Expect(requests).To(BeEmpty())
 				})
 			})
@@ -95,13 +95,13 @@ var _ = Describe("Add", func() {
 				})
 
 				It("should return expected extension request", func() {
-					requests := mapperFunc.Map(ctx, log, nil, controllerInstallation)
+					requests := mapperFunc(ctx, controllerInstallation)
 					Expect(requests).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: extensionName}}))
 				})
 
 				It("should not return any request if no related extension is found", func() {
 					controllerInstallation.Spec.RegistrationRef.Name = controllerInstallation.Spec.RegistrationRef.Name + "-foo"
-					requests := mapperFunc.Map(ctx, log, nil, controllerInstallation)
+					requests := mapperFunc(ctx, controllerInstallation)
 					Expect(requests).To(BeEmpty())
 				})
 			})

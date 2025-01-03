@@ -38,7 +38,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Controll
 
 	if err := (&bastion.Reconciler{
 		Config: *cfg.Controllers.Bastion,
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Bastion controller: %w", err)
 	}
 
@@ -57,7 +57,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Controll
 
 	if err := (&namespacedcloudprofile.Reconciler{
 		Config: *cfg.Controllers.NamespacedCloudProfile,
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding NamespacedCloudProfile controller: %w", err)
 	}
 
@@ -67,7 +67,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Controll
 		return fmt.Errorf("failed adding ControllerDeployment controller: %w", err)
 	}
 
-	if err := controllerregistration.AddToManager(ctx, mgr, *cfg); err != nil {
+	if err := controllerregistration.AddToManager(mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding ControllerRegistration controller: %w", err)
 	}
 
@@ -97,7 +97,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Controll
 		return fmt.Errorf("failed adding ManagedSeedSet controller: %w", err)
 	}
 
-	if err := project.AddToManager(ctx, mgr, *cfg); err != nil {
+	if err := project.AddToManager(mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding Project controller: %w", err)
 	}
 
@@ -113,11 +113,11 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *config.Controll
 		return fmt.Errorf("failed adding SecretBinding controller: %w", err)
 	}
 
-	if err := seed.AddToManager(ctx, mgr, *cfg); err != nil {
+	if err := seed.AddToManager(mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding Seed controller: %w", err)
 	}
 
-	if err := shoot.AddToManager(ctx, mgr, *cfg); err != nil {
+	if err := shoot.AddToManager(mgr, *cfg); err != nil {
 		return fmt.Errorf("failed adding Shoot controller: %w", err)
 	}
 

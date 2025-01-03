@@ -16,15 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
@@ -32,29 +31,24 @@ import (
 const ControllerName = "shoot-conditions"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&gardencorev1beta1.Shoot{}, builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create))).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](mgr.GetCache(),
+		Watches(
 			&gardencorev1beta1.Seed{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapSeedToShoot), mapper.UpdateWithNew, c.GetLogger()),
-			r.SeedPredicate(),
-		))
+			handler.EnqueueRequestsFromMapFunc(r.MapSeedToShoot(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(r.SeedPredicate()),
+		).
+		Complete(r)
 }
 
 // SeedPredicate reacts on Seed events that indicate that the conditions of the registered Seed changed.
@@ -81,32 +75,34 @@ func (r *Reconciler) SeedPredicate() predicate.Predicate {
 	}
 }
 
-// MapSeedToShoot is a mapper.MapFunc for mapping a Seed to a Shoot in case it is managed by a ManagedSeed.
-func (r *Reconciler) MapSeedToShoot(ctx context.Context, log logr.Logger, reader client.Reader, obj client.Object) []reconcile.Request {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return nil
-	}
-
-	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := reader.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, managedSeed); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get ManagedSeed for Seed", "seed", client.ObjectKeyFromObject(seed))
+// MapSeedToShoot is a handler.MapFunc for mapping a Seed to a Shoot in case it is managed by a ManagedSeed.
+func (r *Reconciler) MapSeedToShoot(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		seed, ok := obj.(*gardencorev1beta1.Seed)
+		if !ok {
+			return nil
 		}
-		return nil
-	}
 
-	if managedSeed.Spec.Shoot == nil {
-		return nil
-	}
-
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := reader.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.Error(err, "Failed to get Shoot for ManagedSeed", "managedSeed", client.ObjectKeyFromObject(managedSeed))
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: seed.Name}, managedSeed); err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to get ManagedSeed for Seed", "seed", client.ObjectKeyFromObject(seed))
+			}
+			return nil
 		}
-		return nil
-	}
 
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: shoot.Namespace, Name: shoot.Name}}}
+		if managedSeed.Spec.Shoot == nil {
+			return nil
+		}
+
+		shoot := &gardencorev1beta1.Shoot{}
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to get Shoot for ManagedSeed", "managedSeed", client.ObjectKeyFromObject(managedSeed))
+			}
+			return nil
+		}
+
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: shoot.Namespace, Name: shoot.Name}}}
+	}
 }
