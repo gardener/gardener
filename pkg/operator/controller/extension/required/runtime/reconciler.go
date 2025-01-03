@@ -23,7 +23,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 )
 
 // RequeueExtensionKindNotCalculated is the time after which an extension will be requeued if the extension kind has not been processed yet. Exposed for testing.
@@ -32,7 +32,7 @@ var RequeueExtensionKindNotCalculated = 2 * time.Second
 // Reconciler reconciles Extensions to determine their required state.
 type Reconciler struct {
 	Client client.Client
-	Config config.ExtensionRequiredRuntimeControllerConfiguration
+	Config operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration
 
 	Lock                *sync.RWMutex
 	KindToRequiredTypes map[string]sets.Set[string]

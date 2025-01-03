@@ -15,7 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,7 +54,7 @@ var (
 
 	mockManager             *mockmanager.MockManager
 	virtualCluster          cluster.Cluster
-	virtualClientConnection componentbaseconfig.ClientConnectionConfiguration
+	virtualClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration
 )
 
 var _ = BeforeSuite(func() {
@@ -102,7 +102,7 @@ var _ = BeforeSuite(func() {
 	channel = make(chan event.TypedGenericEvent[*rest.Config])
 	ctrl = gomock.NewController(GinkgoT())
 	mockManager = mockmanager.NewMockManager(ctrl)
-	virtualClientConnection = componentbaseconfig.ClientConnectionConfiguration{
+	virtualClientConnection = componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 		AcceptContentTypes: "application/json",
 		ContentType:        "application/json",
 		Burst:              42,

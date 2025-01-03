@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -47,7 +47,7 @@ type Reconciler struct {
 	Manager               manager.Manager
 	RuntimeClientSet      kubernetes.Interface
 	RuntimeVersion        *semver.Version
-	Config                config.OperatorConfiguration
+	Config                operatorconfigv1alpha1.OperatorConfiguration
 	Clock                 clock.Clock
 	Recorder              record.EventRecorder
 	Identity              *gardencorev1beta1.Gardener

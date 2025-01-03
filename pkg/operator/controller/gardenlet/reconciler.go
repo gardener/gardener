@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -44,7 +44,7 @@ type Reconciler struct {
 	VirtualConfig         *rest.Config
 	VirtualAPIReader      client.Reader
 	VirtualClient         client.Client
-	Config                config.GardenletDeployerControllerConfig
+	Config                operatorconfigv1alpha1.GardenletDeployerControllerConfig
 	Clock                 clock.Clock
 	Recorder              record.EventRecorder
 	HelmRegistry          oci.Interface

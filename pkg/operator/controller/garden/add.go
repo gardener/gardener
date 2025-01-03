@@ -14,7 +14,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/reference"
@@ -25,7 +25,7 @@ import (
 func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
-	cfg *config.OperatorConfiguration,
+	cfg *operatorconfigv1alpha1.OperatorConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	gardenClientMap clientmap.ClientMap,
 ) error {
