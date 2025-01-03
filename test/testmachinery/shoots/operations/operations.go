@@ -39,20 +39,16 @@ package operations
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/test/framework"
@@ -107,59 +103,6 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 			return nil
 		})
 		framework.ExpectNoError(err)
-	}, reconcileTimeout)
-
-	f.Beta().Disruptive().CIt("should rotate the kubeconfig for a shoot cluster", func(ctx context.Context) {
-		if !ptr.Deref(f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-			ginkgo.Skip("The static token kubeconfig is not enabled for this shoot")
-		}
-
-		ginkgo.By("Rotate kubeconfig")
-		var (
-			secretName = f.Shoot.Name + ".kubeconfig"
-		)
-
-		oldKubeconfig, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.ProjectNamespace, secretName, framework.KubeconfigSecretKeyName)
-		framework.ExpectNoError(err)
-
-		oldClient, err := kubernetes.NewClientFromBytes([]byte(oldKubeconfig))
-		framework.ExpectNoError(err)
-		_, err = oldClient.Kubernetes().Discovery().ServerVersion()
-		framework.ExpectNoError(err)
-
-		err = f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
-			shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.ShootOperationRotateKubeconfigCredentials
-			return nil
-		})
-		framework.ExpectNoError(err)
-
-		framework.ExpectNoError(f.GetShoot(ctx, f.Shoot))
-		gomega.Expect(f.Shoot.Status.Credentials.Rotation.Kubeconfig.LastInitiationTime).NotTo(gomega.BeNil())
-		gomega.Expect(f.Shoot.Status.Credentials.Rotation.Kubeconfig.LastCompletionTime).NotTo(gomega.BeNil())
-
-		newKubeconfig, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.ProjectNamespace, secretName, framework.KubeconfigSecretKeyName)
-		framework.ExpectNoError(err)
-
-		// write the updated kubeconfig to the testmachinery shoot kubeconfig path
-		defer func() {
-			kubeconfigsPath := os.Getenv(framework.TestMachineryKubeconfigsPathEnvVarName)
-			if len(kubeconfigsPath) == 0 {
-				// do nothing if the environment variable is not defined.
-				return
-			}
-			shootKubeconfigPath := filepath.Join(kubeconfigsPath, "shoot.config")
-			framework.ExpectNoError(os.WriteFile(shootKubeconfigPath, []byte(newKubeconfig), 0600))
-		}()
-
-		newClient, err := kubernetes.NewClientFromBytes([]byte(newKubeconfig))
-		framework.ExpectNoError(err)
-		_, err = newClient.Kubernetes().Discovery().ServerVersion()
-		framework.ExpectNoError(err)
-
-		_, err = oldClient.Kubernetes().Discovery().ServerVersion()
-		gomega.Expect(err).To(gomega.HaveOccurred())
-
-		gomega.Expect(oldKubeconfig).ToNot(gomega.Equal(newKubeconfig))
 	}, reconcileTimeout)
 
 	f.Beta().Serial().CIt("should rotate the ssh keypair for a shoot cluster", func(ctx context.Context) {

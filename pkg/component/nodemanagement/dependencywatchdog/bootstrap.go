@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	appsv1 "k8s.io/api/apps/v1"
@@ -65,8 +64,6 @@ type BootstrapperValues struct {
 	ProberConfig proberapi.Config
 	// Image is the container image used for DependencyWatchdog.
 	Image string
-	// KubernetesVersion is the Kubernetes version of the Seed.
-	KubernetesVersion *semver.Version
 }
 
 // NewBootstrapper creates a new instance of DeployWaiter for the dependency-watchdog.
@@ -449,12 +446,11 @@ func (b *bootstrapper) getPDB(deployment *appsv1.Deployment) *policyv1.PodDisrup
 			Labels:    b.getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-			Selector:       deployment.Spec.Selector,
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   deployment.Spec.Selector,
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},
 	}
-
-	kubernetesutils.SetAlwaysAllowEviction(pdb, b.values.KubernetesVersion)
 
 	return pdb
 }

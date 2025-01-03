@@ -56,7 +56,7 @@ var _ = Describe("Worker", func() {
 		extensionType                = "some-type"
 		region                       = "local"
 		sshPublicKey                 = []byte("very-public")
-		kubernetesVersion            = semver.MustParse("1.25.5")
+		kubernetesVersion            = semver.MustParse("1.31.1")
 		workerKubernetesVersion      = "1.27.6"
 		infrastructureProviderStatus = &runtime.RawExtension{Raw: []byte(`{"baz":"foo"}`)}
 

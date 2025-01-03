@@ -53,7 +53,6 @@ func (g *gardenerAPIServer) serviceMonitor() *monitoringv1.ServiceMonitor {
 					"apiserver_init_events_total",
 					"apiserver_watch_events_sizes_.+",
 					"apiserver_watch_events_total",
-					"etcd_db_total_size_in_bytes",
 					"etcd_request_duration_seconds_.+",
 					"watch_cache_capacity_increase_total",
 					"watch_cache_capacity_decrease_total",

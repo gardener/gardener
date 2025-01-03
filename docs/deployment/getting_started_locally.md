@@ -182,7 +182,7 @@ Alternatively, you can run `kubectl get seed local` and wait for the `STATUS` to
 
 ```bash
 NAME    STATUS   PROVIDER   REGION   AGE     VERSION       K8S VERSION
-local   Ready    local      local    4m42s   vX.Y.Z-dev    v1.25.1
+local   Ready    local      local    4m42s   vX.Y.Z-dev    v1.28.1
 ```
 
 In order to create a first shoot cluster, just run:
@@ -201,7 +201,7 @@ Alternatively, you can run `kubectl -n garden-local get shoot local` and wait fo
 
 ```bash
 NAME    CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPERATION            STATUS    AGE
-local   local          local      local    1.25.1        Awake         Create Processing (43%)   healthy   94s
+local   local          local      local   1.28.1        Awake         Create Processing (43%)   healthy   94s
 ```
 
 If you don't need any worker pools, you can create a workerless `Shoot` by running:

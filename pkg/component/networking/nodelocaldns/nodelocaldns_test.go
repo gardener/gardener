@@ -226,7 +226,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
 			Image:             image,
-			KubernetesVersion: semver.MustParse("1.26.1"),
+			KubernetesVersion: semver.MustParse("1.31.1"),
 			IPFamilies:        []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 		}
 
