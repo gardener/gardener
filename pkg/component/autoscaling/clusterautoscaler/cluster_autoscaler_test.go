@@ -60,15 +60,41 @@ var _ = Describe("ClusterAutoscaler", func() {
 		image              = "registry.k8s.io/cluster-autoscaler:v1.2.3"
 		replicas     int32 = 1
 
-		machineDeployment1Name       = "pool1"
-		machineDeployment1Min  int32 = 2
-		machineDeployment1Max  int32 = 4
-		machineDeployment2Name       = "pool2"
-		machineDeployment2Min  int32 = 3
-		machineDeployment2Max  int32 = 5
-		machineDeployments           = []extensionsv1alpha1.MachineDeployment{
-			{Name: machineDeployment1Name, Minimum: machineDeployment1Min, Maximum: machineDeployment1Max},
-			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max},
+		machineDeployment1Name           = "pool1"
+		machineDeployment1Min      int32 = 2
+		machineDeployment1Max      int32 = 4
+		machineDeployment1Priority int32 = 0
+		machineDeployment2Name           = "pool2"
+		machineDeployment2Min      int32 = 3
+		machineDeployment2Max      int32 = 5
+		machineDeployment2Priority int32 = 40
+		machineDeployment3Name           = "pool3"
+		machineDeployment3Min      int32 = 3
+		machineDeployment3Max      int32 = 5
+		machineDeployments               = []extensionsv1alpha1.MachineDeployment{
+			{Name: machineDeployment1Name, Minimum: machineDeployment1Min, Maximum: machineDeployment1Max, Priority: machineDeployment1Priority},
+			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max, Priority: machineDeployment2Priority},
+			{Name: machineDeployment3Name, Minimum: machineDeployment3Min, Maximum: machineDeployment3Max},
+		}
+
+		workerConfig = []gardencorev1beta1.Worker{
+			{
+				Name:     machineDeployment1Name,
+				Minimum:  machineDeployment1Min,
+				Maximum:  machineDeployment1Max,
+				Priority: ptr.To(machineDeployment1Priority),
+			},
+			{
+				Name:     machineDeployment2Name,
+				Minimum:  machineDeployment2Min,
+				Maximum:  machineDeployment2Max,
+				Priority: ptr.To(machineDeployment2Priority),
+			},
+			{
+				Name:    machineDeployment3Name,
+				Minimum: machineDeployment3Min,
+				Maximum: machineDeployment3Max,
+			},
 		}
 
 		configExpander                            = gardencorev1beta1.ClusterAutoscalerExpanderRandom
@@ -231,8 +257,14 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
-		deploymentFor = func(withConfig bool) *appsv1.Deployment {
+		deploymentFor = func(withConfig bool, withWorkerPriority bool) *appsv1.Deployment {
 			var commandConfigFlags []string
+
+			expander := string(configExpander)
+			if withWorkerPriority {
+				expander = "priority," + expander
+			}
+
 			if !withConfig {
 				commandConfigFlags = append(commandConfigFlags,
 					"--expander=least-waste",
@@ -252,7 +284,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
-					"--expander="+string(configExpander),
+					"--expander="+expander,
 					fmt.Sprintf("--max-graceful-termination-sec=%d", configMaxGracefulTerminationSeconds),
 					fmt.Sprintf("--max-node-provision-time=%s", configMaxNodeProvisionTime.Duration),
 					fmt.Sprintf("--scale-down-utilization-threshold=%f", *configScaleDownUtilizationThreshold),
@@ -290,6 +322,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			command = append(command,
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment1Min, machineDeployment1Max, namespace, machineDeployment1Name),
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment2Min, machineDeployment2Max, namespace, machineDeployment2Name),
+				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment3Min, machineDeployment3Max, namespace, machineDeployment3Name),
 			)
 
 			deploy := &appsv1.Deployment{
@@ -554,6 +587,16 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 		}
 
+		priorityExpanderConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster-autoscaler-priority-expander",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Data: map[string]string{
+				"priorities": "\"0\":\n- shoot--foo--bar.pool1\n- shoot--foo--bar.pool3\n\"40\":\n- shoot--foo--bar.pool2\n",
+			},
+		}
+
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceName,
@@ -579,7 +622,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, 1337, nil)
+		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, workerConfig, 1337, nil)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -590,16 +633,21 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#Deploy", func() {
 		Context("should successfully deploy all the resources", func() {
-			test := func(withConfig bool, runtimeVersionGreaterEquals126 bool) {
+			test := func(withConfig bool, withWorkerConfig bool, runtimeVersionGreaterEquals126 bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
+				var shootWorkerConfig []gardencorev1beta1.Worker
 				if withConfig {
 					config = configFull
 				}
 
+				if withWorkerConfig {
+					shootWorkerConfig = workerConfig
+				}
+
 				if runtimeVersionGreaterEquals126 {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, 0, semver.MustParse("1.26.1"))
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, 0, semver.MustParse("1.26.1"))
 				} else {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, 0, semver.MustParse("1.25.0"))
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, 0, semver.MustParse("1.25.0"))
 				}
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
@@ -613,7 +661,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 				utilruntime.Must(references.InjectAnnotations(managedResource))
 				Expect(actualMr).To(DeepEqual(managedResource))
 
-				Expect(managedResource).To(consistOf(clusterRoleShoot, clusterRoleBindingShoot, roleShoot, roleBindingShoot))
+				if withWorkerConfig {
+					Expect(managedResource).To(consistOf(clusterRoleShoot, clusterRoleBindingShoot, roleShoot, roleBindingShoot, priorityExpanderConfigMap))
+				} else {
+					Expect(managedResource).To(consistOf(clusterRoleShoot, clusterRoleBindingShoot, roleShoot, roleBindingShoot))
+				}
 
 				actualServiceAccount := &corev1.ServiceAccount{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), actualServiceAccount)).To(Succeed())
@@ -632,7 +684,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualSecret).To(DeepEqual(secret))
 
 				actualDeployment := &appsv1.Deployment{}
-				deploy := deploymentFor(withConfig)
+				deploy := deploymentFor(withConfig, withWorkerConfig)
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), actualDeployment)).To(Succeed())
 				Expect(actualDeployment).To(DeepEqual(deploy))
 
@@ -657,9 +709,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			}
 
-			It("w/o config", func() { test(false, false) })
-			It("w/ config, kubernetes version < 1.26", func() { test(true, false) })
-			It("w/ config, kubernetes version >= 1.26", func() { test(true, true) })
+			It("w/o config", func() { test(false, false, false) })
+			It("w/ config, kubernetes version < 1.26", func() { test(true, false, false) })
+			It("w/ config, kubernetes version >= 1.26", func() { test(true, false, true) })
+			It("w/ config, w/ workerConfig, kubernetes version >= 1.26", func() { test(true, true, true) })
+
 		})
 	})
 

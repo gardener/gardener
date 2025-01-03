@@ -35,6 +35,7 @@ type MachineDeployment struct {
 	SecretName                   string
 	Minimum                      int32
 	Maximum                      int32
+	Priority                     int32
 	MaxSurge                     intstr.IntOrString
 	MaxUnavailable               intstr.IntOrString
 	Labels                       map[string]string

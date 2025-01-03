@@ -63,6 +63,7 @@ var _ = Describe("Worker", func() {
 		worker1Name                           = "worker1"
 		worker1Minimum                  int32 = 1
 		worker1Maximum                  int32 = 2
+		worker1Priority                       = ptr.To(int32(0))
 		worker1MaxSurge                       = intstr.FromInt32(3)
 		worker1MaxUnavailable                 = intstr.FromInt32(4)
 		worker1Labels                         = map[string]string{"foo": "bar"}
@@ -93,6 +94,7 @@ var _ = Describe("Worker", func() {
 		worker2Name                      = "worker2"
 		worker2Minimum             int32 = 5
 		worker2Maximum             int32 = 6
+		worker2Priority                  = ptr.To(int32(10))
 		worker2MaxSurge                  = intstr.FromInt32(7)
 		worker2MaxUnavailable            = intstr.FromInt32(8)
 		worker2MachineType               = "worker2machinetype"
@@ -182,6 +184,7 @@ var _ = Describe("Worker", func() {
 					Maximum:        worker1Maximum,
 					MaxSurge:       &worker1MaxSurge,
 					MaxUnavailable: &worker1MaxUnavailable,
+					Priority:       worker1Priority,
 					Annotations:    worker1Annotations,
 					Labels:         worker1Labels,
 					Taints:         worker1Taints,
@@ -224,6 +227,7 @@ var _ = Describe("Worker", func() {
 					Maximum:        worker2Maximum,
 					MaxSurge:       &worker2MaxSurge,
 					MaxUnavailable: &worker2MaxUnavailable,
+					Priority:       worker2Priority,
 					Machine: gardencorev1beta1.Machine{
 						Type: worker2MachineType,
 						Image: &gardencorev1beta1.ShootMachineImage{
@@ -270,6 +274,7 @@ var _ = Describe("Worker", func() {
 					Maximum:        worker1Maximum,
 					MaxSurge:       worker1MaxSurge,
 					MaxUnavailable: worker1MaxUnavailable,
+					Priority:       worker1Priority,
 					Annotations:    worker1Annotations,
 					Labels: utils.MergeStringMaps(worker1Labels, map[string]string{
 						"node.kubernetes.io/role":                                                   "node",
@@ -317,6 +322,7 @@ var _ = Describe("Worker", func() {
 					Maximum:        worker2Maximum,
 					MaxSurge:       worker2MaxSurge,
 					MaxUnavailable: worker2MaxUnavailable,
+					Priority:       worker2Priority,
 					Labels: map[string]string{
 						"node.kubernetes.io/role":                               "node",
 						"kubernetes.io/arch":                                    *worker2Arch,
