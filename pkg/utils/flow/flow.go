@@ -13,8 +13,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
+	"k8s.io/utils/clock"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/gardener/gardener/pkg/utils"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
 )
 
@@ -51,6 +53,9 @@ func (ns nodes) getOrCreate(id TaskID) *node {
 type Flow struct {
 	name  string
 	nodes nodes
+
+	clock clock.Clock
+	start time.Time
 }
 
 // Name retrieves the name of a flow.
@@ -109,6 +114,9 @@ type nodeResult struct {
 	TaskID  TaskID
 	Error   error
 	skipped bool
+
+	delay    time.Duration
+	duration time.Duration
 }
 
 // Stats are the statistics of a Flow execution.
@@ -199,6 +207,7 @@ type execution struct {
 
 func (e *execution) runNode(ctx context.Context, id TaskID) {
 	log := e.log.WithValues(logKeyTask, id)
+	taskStartDelay := e.flow.clock.Now().UTC().Sub(e.flow.start.UTC())
 
 	node := e.flow.nodes[id]
 	if node.skip {
@@ -206,7 +215,7 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 		e.stats.Skipped.Insert(id)
 
 		go func() {
-			e.done <- &nodeResult{TaskID: id, Error: nil, skipped: true}
+			e.done <- &nodeResult{TaskID: id, Error: nil, skipped: true, delay: taskStartDelay}
 		}()
 
 		return
@@ -220,12 +229,11 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 	e.stats.Running.Insert(id)
 
 	go func() {
-		start := time.Now().UTC()
-
+		start := e.flow.clock.Now().UTC()
 		log.V(1).Info("Started")
 		err := node.fn(ctx)
-		end := time.Now().UTC()
-		log.V(1).Info("Finished", "duration", end.Sub(start))
+		duration := e.flow.clock.Now().UTC().Sub(start)
+		log.V(1).Info("Finished", "duration", duration)
 
 		if err != nil {
 			log.Error(err, "Error")
@@ -234,7 +242,7 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 			log.Info("Succeeded")
 		}
 
-		e.done <- &nodeResult{TaskID: id, Error: err}
+		e.done <- &nodeResult{TaskID: id, Error: err, delay: taskStartDelay, duration: duration}
 	}()
 }
 
@@ -271,6 +279,7 @@ func (e *execution) reportProgress(ctx context.Context) {
 }
 
 func (e *execution) run(ctx context.Context) error {
+	e.flow.start = e.flow.clock.Now()
 	defer close(e.done)
 
 	if e.progressReporter != nil {
@@ -297,6 +306,7 @@ func (e *execution) run(ctx context.Context) error {
 
 	for e.stats.Running.Len() > 0 || e.stats.Skipped.Len() > 0 {
 		result := <-e.done
+		e.reportTaskMetrics(result)
 		if result.skipped {
 			e.stats.Skipped.Delete(result.TaskID)
 			if cancelErr = ctx.Err(); cancelErr == nil {
@@ -325,6 +335,7 @@ func (e *execution) run(ctx context.Context) error {
 }
 
 func (e *execution) result(cancelErr error) error {
+	e.reportFlowMetrics()
 	if cancelErr != nil {
 		return &flowCanceled{
 			name:       e.flow.name,
@@ -340,6 +351,26 @@ func (e *execution) result(cancelErr error) error {
 		}
 	}
 	return nil
+}
+
+func (e *execution) reportTaskMetrics(r *nodeResult) {
+	if flowTaskDelaySeconds != nil {
+		flowTaskDelaySeconds.
+			WithLabelValues(e.flow.name, string(r.TaskID), utils.IifString(r.skipped, "true", "false")).
+			Observe(r.delay.Seconds())
+	}
+	if flowTaskDurationSeconds != nil && !r.skipped {
+		flowTaskDurationSeconds.WithLabelValues(e.flow.name, string(r.TaskID)).Observe(r.duration.Seconds())
+	}
+	if flowTaskResults != nil {
+		flowTaskResults.WithLabelValues(e.flow.name, string(r.TaskID), utils.IifString(r.Error == nil, "success", "error")).Inc()
+	}
+}
+
+func (e *execution) reportFlowMetrics() {
+	if flowDurationSeconds != nil {
+		flowDurationSeconds.WithLabelValues(e.flow.name).Observe(e.flow.clock.Now().UTC().Sub(e.flow.start.UTC()).Seconds())
+	}
 }
 
 type flowCanceled struct {

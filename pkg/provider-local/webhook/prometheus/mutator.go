@@ -57,9 +57,8 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 				},
 				{
 					SourceLabels: []monitoringv1.LabelName{"__name__"},
-					// TODO: add filter for relevant metrics
-					Regex:  "(up)",
-					Action: "keep",
+					Regex:        "(up|flow_.+)",
+					Action:       "keep",
 				},
 			},
 		})
