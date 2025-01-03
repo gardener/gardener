@@ -40,7 +40,7 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) BackupEntryStorage {
 	}
 }
 
-// NewREST returns a RESTStorage object that will work against backupEntrys.
+// NewREST returns a RESTStorage object that will work against backupEntries.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	var (
 		store = &genericregistry.Store{

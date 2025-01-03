@@ -18,6 +18,8 @@ import (
 )
 
 const empty = ""
+
+// spellchecker:off
 const validCert = `
 -----BEGIN CERTIFICATE-----
 MIICljCCAX4CCQDWZEelmpcGpTANBgkqhkiG9w0BAQsFADANMQswCQYDVQQGEwJC
@@ -36,6 +38,8 @@ zntZlrSTQGEBwAk3OsDJe9dOBsgR7IWiat5leJQ60oQ9xpSj9JalrMBZnNKpO1RI
 664+oMpUFHeSgdQ4kA90lir7X6G6oAsfaFLC7uPUGexAGbHzX1FxjbFA
 -----END CERTIFICATE-----
 `
+
+// spellchecker:on
 
 // type providerFunc func() field.ErrorList
 type provider interface {

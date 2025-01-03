@@ -62,7 +62,8 @@ func kubeconfigTests(
 		clusterCACert = []byte("cluster-ca-cert1")
 
 		clientCACertName = "minikubeCA"
-		clientCACert     = []byte(`-----BEGIN CERTIFICATE-----
+		// spellchecker:off
+		clientCACert = []byte(`-----BEGIN CERTIFICATE-----
 MIIDBjCCAe6gAwIBAgIBATANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwptaW5p
 a3ViZUNBMB4XDTIxMDMyNTE0MjczN1oXDTMxMDMyNDE0MjczN1owFTETMBEGA1UE
 AxMKbWluaWt1YmVDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALsW
@@ -109,6 +110,7 @@ AIOz/jD6sCJ6KPr1L6mJ5w4mDX1UmjCKy3Kz4xfqxPEbMvPDTL+9TWFSlAuNtHGC
 lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 -----END RSA PRIVATE KEY-----`)
 	)
+	// spellchecker:on
 
 	const (
 		name      = "test"

@@ -89,7 +89,7 @@ type BackupEntrySchedulerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
-	// RetrySyncPeriod is the duration how fast BackupEntries with an errornous operation are
+	// RetrySyncPeriod is the duration how fast BackupEntries with an erroneous operation are
 	// re-added to the queue so that the operation can be retried. Defaults to 15s.
 	// +optional
 	RetrySyncPeriod metav1.Duration

@@ -42,6 +42,7 @@ var _ = Describe("Encoding", func() {
 			MatchError(errors.New("PEM block type must be CERTIFICATE REQUEST")),
 		),
 
+		// spellchecker:off
 		Entry("data is no CSR",
 			[]byte(`-----BEGIN CERTIFICATE-----
 MIIDAjCCAeqgAwIBAgIRALm+TCqth9laBtLixvzY0QMwDQYJKoZIhvcNAQELBQAw
@@ -91,5 +92,6 @@ scLaDjVwpKfl9g24hVxCoyVl8Kcuqax5OcXba3h4/dEgq/N2hbpsnQ==
 			},
 			BeNil(),
 		),
+		// spellchecker:on
 	)
 })

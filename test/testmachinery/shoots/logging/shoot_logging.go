@@ -87,6 +87,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		)
 		framework.ExpectNoError(err)
 
+		// spellchecker:off
 		// Deploy Vali ValidatingWebhookConfiguration
 		validatingWebhookParams := map[string]any{
 			"NamespaceLabelKey":   shootNamespaceLabelKey,
@@ -110,6 +111,8 @@ esfcqFwji6JyAKFRACPowykQONFwUSom89uYESSCJFvNCk9MJmjJ2PzDUt6CypR4
 epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 -----END CERTIFICATE-----`)),
 		}
+		// spellchecker:on
+
 		err = shootFramework.RenderAndDeployTemplate(ctx,
 			shootFramework.SeedClient, templates.BlockValiValidatingWebhookConfiguration, validatingWebhookParams,
 		)

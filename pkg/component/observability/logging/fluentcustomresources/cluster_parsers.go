@@ -26,7 +26,7 @@ func GetClusterParsers(labels map[string]string) []*fluentbitv1alpha2.ClusterPar
 					TimeFormat: "%Y-%m-%dT%H:%M:%S.%L%z",
 					TimeKeep:   ptr.To(true),
 				},
-				Decoders: []fluentbitv1alpha2.Decorder{
+				Decoders: []fluentbitv1alpha2.Decorder{ // spellchecker:disable-line
 					{
 						DecodeFieldAs: "json log",
 					},
