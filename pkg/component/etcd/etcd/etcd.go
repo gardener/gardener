@@ -248,7 +248,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	clientService := &corev1.Service{}
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
+	gardenerutils.ReconcileTopologyAwareRouting(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
 
 	ports := []networkingv1.NetworkPolicyPort{
 		{Port: ptr.To(intstr.FromInt32(etcdconstants.PortEtcdClient)), Protocol: ptr.To(corev1.ProtocolTCP)},

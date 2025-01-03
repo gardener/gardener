@@ -6,7 +6,13 @@ The enablement of [highly available shoot control-planes](../usage/high-availabi
 
 ## How it works
 
-The topology-aware routing feature relies on the Kubernetes feature [`TopologyAwareHints`](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/).
+The topology-aware routing feature relies for Kubernetes 1.30 and lower on the Kubernetes feature [`TopologyAwareHints`](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/). Starting with Kubernetes version 1.31 the new feature [`Service Traffic Distribution`](https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution) is used.
+
+##### Service Traffic Distribution
+
+Starting from Kubernetes version 1.31. the new feature [`Service Traffic Distribution`](https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution) is use. 
+
+`Traffic Distribution` is simpler then `service.kubernetes.io/topology-mode: Auto` and only uses the nodes from the same zone with a fallback to all nodes if no pod is running in the same zone. `service.kubernetes.io/topology-mode: Auto` also uses a CPU-balance heuristic see [EndpointSlice Hints Mutating Webhook](#endpointslice-hints-mutating-webhook). 
 
 ##### EndpointSlice Hints Mutating Webhook
 
@@ -32,6 +38,26 @@ With the topology-aware routing feature, kube-proxy filters the endpoints it rou
 
 ## How to make a Service topology-aware?
 
+The Gardener extensions can use this approaches to make a Service they deploy topology-aware.
+
+Prerequisites for making a Service topology-aware:
+
+1. The Pods backing the Service should be spread on most of the available zones. This constraint should be ensured with appropriate scheduling constraints (topology spread constraints, (anti-)affinity). Enabling the feature for a Service with a single backing Pod or Pods all located in the same zone does not lead to a benefit.
+1. The component should be scaled up by `VerticalPodAutoscaler`. In case of an overload (a large portion of the traffic is originating from a given zone), the `VerticalPodAutoscaler` should provide better resource recommendations for the overloaded backing Pods.
+
+##### `Service Traffic Distribution` in Kubernetes version 1.31 and higher
+
+To make a Service topology-aware, the following spec have to be added to the Service:
+
+```yaml
+apiVersion: v1
+kind: Service
+spec:
+  trafficDistribution: PreferClose
+```
+
+##### `service.kubernetes.io/topology-mode=auto` in Kubernetes version 1.30 and lower
+
 To make a Service topology-aware, the following annotation and label have to be added to the Service:
 
 ```yaml
@@ -49,13 +75,7 @@ metadata:
 The `service.kubernetes.io/topology-aware-hints=auto` annotation is needed for kube-proxy. One of the prerequisites on kube-proxy side for using topology-aware routing is the corresponding Service to be annotated with the `service.kubernetes.io/topology-aware-hints=auto`. For more details, see the following [kube-proxy function](https://github.com/kubernetes/kubernetes/blob/b46a3f887ca979b1a5d14fd39cb1af43e7e5d12d/pkg/proxy/topology.go#L140-L186).
 The `endpoint-slice-hints.resources.gardener.cloud/consider=true` label is needed for gardener-resource-manager to prevent the EndpointSlice hints mutating webhook from selecting all EndpointSlice resources but only the ones that are labeled with the consider label.
 
-The Gardener extensions can use this approach to make a Service they deploy topology-aware.
-
-Prerequisites for making a Service topology-aware:
-
-1. The Pods backing the Service should be spread on most of the available zones. This constraint should be ensured with appropriate scheduling constraints (topology spread constraints, (anti-)affinity). Enabling the feature for a Service with a single backing Pod or Pods all located in the same zone does not lead to a benefit.
-1. The component should be scaled up by `VerticalPodAutoscaler`. In case of an overload (a large portion of the of the traffic is originating from a given zone), the `VerticalPodAutoscaler` should provide better resource recommendations for the overloaded backing Pods.
-1. Consider the [`TopologyAwareHints` constraints](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/#constraints).
+Be sure to also check out the [`TopologyAwareHints` constraints](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/#constraints).
 
 > Note: The topology-aware routing feature is considered as alpha feature. Use it only for evaluation purposes.
 
