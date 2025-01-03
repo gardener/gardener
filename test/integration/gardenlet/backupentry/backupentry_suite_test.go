@@ -33,11 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -238,10 +237,10 @@ var _ = BeforeSuite(func() {
 
 	Expect((&backupentry.Reconciler{
 		Clock: fakeClock,
-		Config: config.BackupEntryControllerConfiguration{
+		Config: gardenletconfigv1alpha1.BackupEntryControllerConfiguration{
 			ConcurrentSyncs:                  ptr.To(5),
 			DeletionGracePeriodHours:         ptr.To(deletionGracePeriodHours),
-			DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeProduction},
+			DeletionGracePeriodShootPurposes: []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeProduction},
 		},
 		SeedName:        seed.Name,
 		GardenNamespace: seedGardenNamespace.Name,

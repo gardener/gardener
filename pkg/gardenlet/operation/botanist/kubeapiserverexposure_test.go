@@ -22,7 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
@@ -97,9 +97,9 @@ var _ = Describe("KubeAPIServerExposure", func() {
 				},
 			})
 
-			botanist.Config = &config.GardenletConfiguration{
-				SNI: &config.SNI{
-					Ingress: &config.SNIIngress{
+			botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+				SNI: &gardenletconfigv1alpha1.SNI{
+					Ingress: &gardenletconfigv1alpha1.SNIIngress{
 						Namespace: ptr.To("istio-ingress"),
 						Labels:    map[string]string{"istio": "ingressgateway"},
 					},

@@ -37,8 +37,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/extensions"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -76,7 +76,7 @@ type Health struct {
 
 	log logr.Logger
 
-	gardenletConfiguration                    *gardenletconfig.GardenletConfiguration
+	gardenletConfiguration                    *gardenletconfigv1alpha1.GardenletConfiguration
 	clock                                     clock.Clock
 	controllerRegistrationToLastHeartbeatTime map[string]*metav1.MicroTime
 	conditionThresholds                       map[gardencorev1beta1.ConditionType]time.Duration
@@ -95,7 +95,7 @@ func NewHealth(
 	gardenClient client.Client,
 	shootClientInit ShootClientInit,
 	clock clock.Clock,
-	gardenletConfig *gardenletconfig.GardenletConfiguration,
+	gardenletConfig *gardenletconfigv1alpha1.GardenletConfiguration,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 ) *Health {
 	return &Health{

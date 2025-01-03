@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -21,20 +20,10 @@ import (
 
 	securityv1alpha1constants "github.com/gardener/gardener/pkg/apis/security/v1alpha1/constants"
 	securityclientset "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 )
 
 // ControllerName is the name of the controller.
 const ControllerName = "token-requestor-workload-identity"
-
-// AddToManager adds the controller to the given manager.
-func AddToManager(mgr manager.Manager, seedCluster, gardenCluster cluster.Cluster, cfg config.TokenRequestorWorkloadIdentityControllerConfiguration) error {
-	return (&Reconciler{
-		ConcurrentSyncs: ptr.Deref(cfg.ConcurrentSyncs, 0),
-		Clock:           clock.RealClock{},
-		JitterFunc:      wait.Jitter,
-	}).AddToManager(mgr, seedCluster, gardenCluster)
-}
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster) error {
@@ -43,6 +32,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	}
 	if r.GardenClient == nil {
 		r.GardenClient = targetCluster.GetClient()
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
+	}
+	if r.JitterFunc == nil {
+		r.JitterFunc = wait.Jitter
 	}
 
 	if r.GardenSecurityClient == nil {

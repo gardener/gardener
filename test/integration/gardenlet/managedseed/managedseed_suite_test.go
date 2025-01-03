@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -36,7 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -201,9 +200,9 @@ var _ = BeforeSuite(func() {
 	shootName = "shoot-" + testRunID
 	shootClientMap = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForShoot(&gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: shootName, Namespace: gardenNamespaceGarden.Name}}), testClientSet).Build()
 
-	cfg := config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			ManagedSeed: &config.ManagedSeedControllerConfiguration{
+	cfg := gardenletconfigv1alpha1.GardenletConfiguration{
+		Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 				WaitSyncPeriod:   &metav1.Duration{Duration: 5 * time.Millisecond},
 				ConcurrentSyncs:  ptr.To(5),
 				SyncJitterPeriod: &metav1.Duration{Duration: 50 * time.Millisecond},
@@ -211,8 +210,8 @@ var _ = BeforeSuite(func() {
 				SyncPeriod: &metav1.Duration{Duration: time.Minute},
 			},
 		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
+		SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seed.Name,
 				},

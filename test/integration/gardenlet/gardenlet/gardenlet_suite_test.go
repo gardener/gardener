@@ -31,13 +31,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -204,15 +203,15 @@ var _ = BeforeSuite(func() {
 	fakeRegistry.AddArtifact(&ociRepository, gardenletChart)
 
 	By("Register controller")
-	cfg := config.GardenletConfiguration{
-		Controllers: &config.GardenletControllerConfiguration{
-			Gardenlet: &config.GardenletObjectControllerConfiguration{
+	cfg := gardenletconfigv1alpha1.GardenletConfiguration{
+		Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+			Gardenlet: &gardenletconfigv1alpha1.GardenletObjectControllerConfiguration{
 				// This controller is pretty heavy-weight, so use a higher duration.
 				SyncPeriod: &metav1.Duration{Duration: time.Minute},
 			},
 		},
-		SeedConfig: &config.SeedConfig{
-			SeedTemplate: gardencore.SeedTemplate{
+		SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seed.Name,
 				},

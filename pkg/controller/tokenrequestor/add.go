@@ -6,6 +6,8 @@ package tokenrequestor
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -30,6 +32,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetClus
 	}
 	if len(r.CAData) == 0 {
 		r.CAData = targetCluster.GetConfig().CAData
+	}
+	if r.Clock == nil {
+		r.Clock = clock.RealClock{}
+	}
+	if r.JitterFunc == nil {
+		r.JitterFunc = wait.Jitter
 	}
 
 	return builder.

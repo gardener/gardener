@@ -16,9 +16,9 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var _ = Describe("SeedConfigChecker", func() {
@@ -203,7 +203,7 @@ var _ = Describe("SeedConfigChecker", func() {
 		})
 
 		DescribeTable("validate seed network configuration",
-			func(seedConfig *config.SeedConfig, shootInfoData map[string]string, matcher gomegatypes.GomegaMatcher) {
+			func(seedConfig *gardenletconfigv1alpha1.SeedConfig, shootInfoData map[string]string, matcher gomegatypes.GomegaMatcher) {
 				checker.SeedConfig = seedConfig
 
 				shootInfoConfigMap.Data = shootInfoData
@@ -213,44 +213,44 @@ var _ = Describe("SeedConfigChecker", func() {
 			},
 
 			Entry("no seed configuration", nil, shootInfoWithNodes, BeNil()),
-			Entry("correct seed configuration with nodes", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("correct seed configuration with nodes", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, shootInfoWithNodes, BeNil()),
-			Entry("correct seed configuration without nodes", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("correct seed configuration without nodes", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, shootInfoWithoutNodes, BeNil()),
-			Entry("correct seed configuration with nodes but no nodes in shoot-info", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("correct seed configuration with nodes but no nodes in shoot-info", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, shootInfoWithoutNodes, BeNil()),
-			Entry("correct seed configuration without nodes but nodes in shoot-info", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("correct seed configuration without nodes but nodes in shoot-info", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, shootInfoWithNodes, BeNil()),
-			Entry("correct seed configuration with incorrect nodes but no nodes in shoot-info", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("correct seed configuration with incorrect nodes but no nodes in shoot-info", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &otherCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, shootInfoWithoutNodes, BeNil()),
-			Entry("correct seed configuration without nodes but incorrect nodes in shoot-info", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("correct seed configuration without nodes but incorrect nodes in shoot-info", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, shootInfoWithIncorrectNodes, BeNil()),
-			Entry("incorrect node cidr", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("incorrect node cidr", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &otherCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, shootInfoWithNodes, HaveOccurred()),
-			Entry("incorrect pod cidr", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("incorrect pod cidr", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     otherCIDR,
 				Services: serviceCIDR,
 			}}}}, shootInfoWithNodes, HaveOccurred()),
-			Entry("incorrect service cidr", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("incorrect service cidr", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: otherCIDR,
@@ -258,7 +258,7 @@ var _ = Describe("SeedConfigChecker", func() {
 		)
 
 		DescribeTable("validate seed network configuration heuristically",
-			func(seedConfig *config.SeedConfig, nodes []corev1.Node, pods []corev1.Pod, services []corev1.Service, matcher gomegatypes.GomegaMatcher) {
+			func(seedConfig *gardenletconfigv1alpha1.SeedConfig, nodes []corev1.Node, pods []corev1.Pod, services []corev1.Service, matcher gomegatypes.GomegaMatcher) {
 				checker.SeedConfig = seedConfig
 
 				for _, n := range nodes {
@@ -276,22 +276,22 @@ var _ = Describe("SeedConfigChecker", func() {
 				Expect(checker.Start(ctx)).To(matcher)
 			},
 
-			Entry("correct seed configuration with nodes", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("correct seed configuration with nodes", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, []corev1.Node{pendingNode, node}, []corev1.Pod{pendingPod, incorrectHostNetworkPod, pod}, []corev1.Service{pendingService, headlessService, loadBalancerService, service}, BeNil()),
-			Entry("incorrect node", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("incorrect node", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, []corev1.Node{pendingNode, node, incorrectNode}, []corev1.Pod{pendingPod, incorrectHostNetworkPod, pod}, []corev1.Service{pendingService, headlessService, loadBalancerService, service}, HaveOccurred()),
-			Entry("incorrect pod", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("incorrect pod", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,
 			}}}}, []corev1.Node{pendingNode, node}, []corev1.Pod{pendingPod, incorrectHostNetworkPod, pod, incorrectPod}, []corev1.Service{pendingService, headlessService, loadBalancerService, service}, HaveOccurred()),
-			Entry("incorrect service", &config.SeedConfig{SeedTemplate: core.SeedTemplate{Spec: core.SeedSpec{Networks: core.SeedNetworks{
+			Entry("incorrect service", &gardenletconfigv1alpha1.SeedConfig{SeedTemplate: gardencorev1beta1.SeedTemplate{Spec: gardencorev1beta1.SeedSpec{Networks: gardencorev1beta1.SeedNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     podCIDR,
 				Services: serviceCIDR,

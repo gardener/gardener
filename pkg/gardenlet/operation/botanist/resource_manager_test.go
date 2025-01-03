@@ -29,7 +29,7 @@ import (
 	mockresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/mock"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	"github.com/gardener/gardener/pkg/component/shared"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -80,8 +80,8 @@ var _ = Describe("ResourceManager", func() {
 			notReadyTolerationSeconds := ptr.To[int64](60)
 			unreachableTolerationSeconds := ptr.To[int64](120)
 
-			botanist.Config = &gardenletconfig.GardenletConfiguration{
-				NodeToleration: &gardenletconfig.NodeToleration{
+			botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+				NodeToleration: &gardenletconfigv1alpha1.NodeToleration{
 					DefaultNotReadyTolerationSeconds:    notReadyTolerationSeconds,
 					DefaultUnreachableTolerationSeconds: unreachableTolerationSeconds,
 				},

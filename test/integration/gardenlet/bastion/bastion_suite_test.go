@@ -37,7 +37,7 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -171,7 +171,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	Expect((&bastion.Reconciler{
-		Config: config.BastionControllerConfiguration{
+		Config: gardenletconfigv1alpha1.BastionControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 		Clock: fakeClock,

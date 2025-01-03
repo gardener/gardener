@@ -18,9 +18,9 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -33,21 +33,21 @@ var _ = Describe("GardenKubeconfig", func() {
 		kubeconfigValidity = time.Hour
 
 		fakeClient client.Client
-		cfg        *config.GardenletConfiguration
+		cfg        *gardenletconfigv1alpha1.GardenletConfiguration
 		result     *KubeconfigBootstrapResult
 		runner     *GardenKubeconfig
 	)
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		cfg = &config.GardenletConfiguration{
-			GardenClientConnection: &config.GardenClientConnection{
-				KubeconfigValidity: &config.KubeconfigValidity{
+		cfg = &gardenletconfigv1alpha1.GardenletConfiguration{
+			GardenClientConnection: &gardenletconfigv1alpha1.GardenClientConnection{
+				KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
 					Validity: &metav1.Duration{Duration: kubeconfigValidity},
 				},
 			},
-			SeedConfig: &config.SeedConfig{
-				SeedTemplate: core.SeedTemplate{
+			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: seedName,
 					},

@@ -27,14 +27,14 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 // GetSeedName returns the seed name from the SeedConfig or the default Seed name
-func GetSeedName(seedConfig *config.SeedConfig) string {
+func GetSeedName(seedConfig *gardenletconfigv1alpha1.SeedConfig) string {
 	if seedConfig != nil {
 		return seedConfig.Name
 	}
@@ -78,7 +78,7 @@ func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Co
 
 // UpdateGardenKubeconfigCAIfChanged checks if the garden cluster CA given in the gardenClientConnection differs from the CA in the kubeconfig secret
 // and updates the secret to contain the new CA if that's the case.
-func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, log logr.Logger, seedClient client.Client, kubeconfig []byte, gardenClientConnection *config.GardenClientConnection) ([]byte, error) {
+func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, log logr.Logger, seedClient client.Client, kubeconfig []byte, gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection) ([]byte, error) {
 	if kubeconfig == nil {
 		return nil, fmt.Errorf("no kubeconfig given")
 	}

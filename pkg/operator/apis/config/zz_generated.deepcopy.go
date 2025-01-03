@@ -10,7 +10,7 @@
 package config
 
 import (
-	apisconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	v1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
@@ -161,7 +161,7 @@ func (in *GardenControllerConfig) DeepCopyInto(out *GardenControllerConfig) {
 	}
 	if in.ETCDConfig != nil {
 		in, out := &in.ETCDConfig, &out.ETCDConfig
-		*out = new(apisconfig.ETCDConfig)
+		*out = new(v1alpha1.ETCDConfig)
 		(*in).DeepCopyInto(*out)
 	}
 	return

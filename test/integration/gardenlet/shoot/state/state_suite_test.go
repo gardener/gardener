@@ -29,7 +29,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -169,7 +169,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&state.Reconciler{
-		Config: config.ShootStateControllerConfiguration{
+		Config: gardenletconfigv1alpha1.ShootStateControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 			SyncPeriod:      &metav1.Duration{Duration: syncPeriod},
 		},
