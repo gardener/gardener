@@ -41,6 +41,7 @@ config:
     NewWorkerPoolHash: true
     NewVPN: true
     NodeAgentAuthorizer: true
+    IstioTLSTermination: true
   etcdConfig:
     featureGates:
       UseEtcdWrapper: true

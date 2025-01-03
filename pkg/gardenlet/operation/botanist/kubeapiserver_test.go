@@ -573,6 +573,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 			botanist.ShootClientSet = fake.NewClientSetBuilder().WithClient(seedClient).Build()
 
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 			kubeAPIServer.EXPECT().Destroy(ctx)
 
 			Expect(botanist.DeleteKubeAPIServer(ctx)).To(Succeed())

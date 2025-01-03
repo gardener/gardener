@@ -131,7 +131,8 @@ build:
             - pkg/component/kubernetes/apiserver
             - pkg/component/kubernetes/apiserver/constants
             - pkg/component/kubernetes/apiserverexposure
-            - pkg/component/kubernetes/apiserverexposure/templates/envoyfilter.yaml
+            - pkg/component/kubernetes/apiserverexposure/templates/envoyfilter-apiserver-proxy.yaml
+            - pkg/component/kubernetes/apiserverexposure/templates/envoyfilter-istio-tls-termination.yaml
             - pkg/component/kubernetes/controllermanager
             - pkg/component/kubernetes/scheduler
             - pkg/component/networking/coredns/constants
@@ -956,6 +957,7 @@ deploy:
           nodeToleration:
             defaultNotReadyTolerationSeconds: 60
             defaultUnreachableTolerationSeconds: 60
+          config.featureGates.IstioTLSTermination: true
         createNamespace: true
         wait: true
 profiles:

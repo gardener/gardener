@@ -24,5 +24,6 @@ func GetFeatures() []featuregate.Feature {
 		features.NewWorkerPoolHash,
 		features.NewVPN,
 		features.NodeAgentAuthorizer,
+		features.IstioTLSTermination,
 	}
 }
