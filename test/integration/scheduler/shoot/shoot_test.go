@@ -23,7 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -31,7 +31,7 @@ import (
 var _ = Describe("Scheduler tests", func() {
 	Context("SameRegion Scheduling Strategy", func() {
 		BeforeEach(func() {
-			createAndStartManager(&config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.SameRegion})
+			createAndStartManager(&schedulerconfigv1alpha1.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: schedulerconfigv1alpha1.SameRegion})
 		})
 
 		It("should fail because no Seed in same region exist", func() {
@@ -187,7 +187,7 @@ var _ = Describe("Scheduler tests", func() {
 		var seedAPWest1, seedEUEast1, seedEUWest1, seedUSCentral2, seedUSEast1 *gardencorev1beta1.Seed
 
 		BeforeEach(func() {
-			createAndStartManager(&config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.MinimalDistance})
+			createAndStartManager(&schedulerconfigv1alpha1.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: schedulerconfigv1alpha1.MinimalDistance})
 
 			seedAPWest1 = createSeed("ap-west-1", nil, nil)
 			seedEUEast1 = createSeed("eu-east-1", nil, nil)
@@ -552,7 +552,7 @@ us-central-3: 220`,
 	})
 })
 
-func createAndStartManager(config *config.ShootSchedulerConfiguration) {
+func createAndStartManager(config *schedulerconfigv1alpha1.ShootSchedulerConfiguration) {
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  kubernetes.GardenScheme,
