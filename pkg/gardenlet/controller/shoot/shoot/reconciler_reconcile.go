@@ -130,7 +130,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		o.Shoot.Networks = networks
 	}
 
-	nodeAgentAuthorizerWebhookReady, err := botanist.NodeAgentAuthorizerWebhookReady(ctx)
+	nodeAgentAuthorizerWebhookReady, err := botanist.IsGardenerResourceManagerReady(ctx)
 	if err != nil {
 		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
@@ -157,6 +157,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Initializing secrets management",
 			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying initial shoot logging stack in Seed",
+			Fn:           flow.TaskFn(botanist.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement).InsertIf(shootControlPlaneLoggingEnabled),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server ingress with trusted certificate in the Seed cluster",
