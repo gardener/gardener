@@ -83,6 +83,8 @@ type ControllerManagerControllerConfiguration struct {
 	ShootConditions *ShootConditionsControllerConfiguration
 	// ShootStatusLabel defines the configuration of the ShootStatusLabel controller.
 	ShootStatusLabel *ShootStatusLabelControllerConfiguration
+	// ShootMigration defines the configuration of the ShootMigration controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	ShootMigration *ShootMigrationControllerConfiguration
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration
 }
@@ -319,6 +321,14 @@ type ShootConditionsControllerConfiguration struct {
 // ShootStatusLabelControllerConfiguration defines the configuration of the
 // ShootStatusLabel controller.
 type ShootStatusLabelControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs *int
+}
+
+// ShootMigrationControllerConfiguration defines the configuration of the
+// ShootMigration controller.
+type ShootMigrationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int

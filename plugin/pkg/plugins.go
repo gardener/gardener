@@ -38,6 +38,8 @@ const (
 	PluginNameProjectValidator = "ProjectValidator"
 	// PluginNameSeedValidator is the name of the SeedValidator admission plugin.
 	PluginNameSeedValidator = "SeedValidator"
+	// PluginNameSeedMutator is the name of the SeedMutator admission plugin.
+	PluginNameSeedMutator = "SeedMutator"
 	// PluginNameShootDNS is the name of the ShootDNS admission plugin.
 	PluginNameShootDNS = "ShootDNS"
 	// PluginNameShootDNSRewriting is the name of the ShootDNSRewriting admission plugin.
@@ -80,6 +82,7 @@ func AllPluginNames() []string {
 		PluginNameShootQuotaValidator,               // ShootQuotaValidator
 		PluginNameShootValidator,                    // ShootValidator
 		PluginNameSeedValidator,                     // SeedValidator
+		PluginNameSeedMutator,                       // SeedMutator
 		PluginNameControllerRegistrationResources,   // ControllerRegistrationResources
 		PluginNameNamespacedCloudProfileValidator,   // NamespacedCloudProfileValidator
 		PluginNameProjectValidator,                  // ProjectValidator
@@ -121,6 +124,7 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameShootQuotaValidator,             // ShootQuotaValidator
 		PluginNameShootValidator,                  // ShootValidator
 		PluginNameSeedValidator,                   // SeedValidator
+		PluginNameSeedMutator,                     // SeedMutator
 		PluginNameControllerRegistrationResources, // ControllerRegistrationResources
 		PluginNameNamespacedCloudProfileValidator, // NamespacedCloudProfileValidator
 		PluginNameProjectValidator,                // ProjectValidator

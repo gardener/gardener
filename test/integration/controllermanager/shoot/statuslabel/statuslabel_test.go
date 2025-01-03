@@ -14,7 +14,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-var _ = Describe("Shoot Quota controller tests", func() {
+var _ = Describe("Shoot StatusLabel controller tests", func() {
 	var shoot *gardencorev1beta1.Shoot
 
 	BeforeEach(func() {

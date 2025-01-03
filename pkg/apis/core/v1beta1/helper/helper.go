@@ -1621,3 +1621,9 @@ func sumQuantities(left, right *resource.Quantity) *resource.Quantity {
 	copy.Add(*right)
 	return &copy
 }
+
+// ShouldPrepareShootForMigration determines whether the controller should prepare the shoot control plane for migration
+// to another seed.
+func ShouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Status.SeedName != nil && shoot.Spec.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName
+}
