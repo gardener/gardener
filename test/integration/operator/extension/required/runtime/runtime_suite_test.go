@@ -29,7 +29,7 @@ import (
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	requiredruntime "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
 	"github.com/gardener/gardener/pkg/operator/features"
@@ -136,7 +136,7 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&requiredruntime.RequeueExtensionKindNotCalculated, 10*time.Millisecond))
 
 	Expect((&requiredruntime.Reconciler{
-		Config: config.ExtensionRequiredRuntimeControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
+		Config: operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
 	}).AddToManager(mgr)).Should(Succeed())
 
 	By("Start manager")

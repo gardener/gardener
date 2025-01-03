@@ -28,7 +28,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	requiredvirtual "github.com/gardener/gardener/pkg/operator/controller/extension/required/virtual"
 	"github.com/gardener/gardener/pkg/utils"
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register Controller")
 	Expect((&requiredvirtual.Reconciler{
-		Config:        config.ExtensionRequiredVirtualControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
+		Config:        operatorconfigv1alpha1.ExtensionRequiredVirtualControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
 		RuntimeClient: mgr.GetClient(),
 		VirtualClient: mgr.GetClient(),
 	}).AddToManager(mgr, mgr)).To(Succeed())

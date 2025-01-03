@@ -34,7 +34,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension"
 	"github.com/gardener/gardener/pkg/operator/features"
@@ -193,8 +193,8 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&extension.Reconciler{
-		Config: config.OperatorConfiguration{
-			Controllers: config.ControllerConfiguration{},
+		Config: operatorconfigv1alpha1.OperatorConfiguration{
+			Controllers: operatorconfigv1alpha1.ControllerConfiguration{},
 		},
 		HelmRegistry:    fakeRegistry,
 		GardenNamespace: testNamespace.Name,

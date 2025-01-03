@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 )
 
 var (
@@ -32,7 +32,7 @@ var (
 // Reconciler reconciles garden resources and executes health check operations.
 type Reconciler struct {
 	RuntimeClient   client.Client
-	Config          config.OperatorConfiguration
+	Config          operatorconfigv1alpha1.OperatorConfiguration
 	Clock           clock.Clock
 	GardenNamespace string
 	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for usage in tests.

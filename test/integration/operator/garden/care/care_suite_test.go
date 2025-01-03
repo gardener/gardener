@@ -33,7 +33,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/operator/features"
@@ -156,9 +156,9 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&care.Reconciler{
-		Config: config.OperatorConfiguration{
-			Controllers: config.ControllerConfiguration{
-				GardenCare: config.GardenCareControllerConfiguration{
+		Config: operatorconfigv1alpha1.OperatorConfiguration{
+			Controllers: operatorconfigv1alpha1.ControllerConfiguration{
+				GardenCare: operatorconfigv1alpha1.GardenCareControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
 				},
 			},
