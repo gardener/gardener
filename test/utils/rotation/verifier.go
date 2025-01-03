@@ -16,6 +16,10 @@ type Verifier interface {
 	Before(ctx context.Context)
 	// ExpectPreparingStatus is called while waiting for the Preparing status.
 	ExpectPreparingStatus(g Gomega)
+	// ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
+	ExpectPreparingWithoutWorkersRolloutStatus(g Gomega)
+	// ExpectWaitingForWorkersRolloutStatus is called while waiting for the WaitingForWorkersRollout status.
+	ExpectWaitingForWorkersRolloutStatus(g Gomega)
 	// AfterPrepared is called when the Shoot is in Prepared status.
 	AfterPrepared(ctx context.Context)
 	// ExpectCompletingStatus is called while waiting for the Completing status.
@@ -41,6 +45,20 @@ func (v Verifiers) Before(ctx context.Context) {
 func (v Verifiers) ExpectPreparingStatus(g Gomega) {
 	for _, vv := range v {
 		vv.ExpectPreparingStatus(g)
+	}
+}
+
+// ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
+func (v Verifiers) ExpectPreparingWithoutWorkersRolloutStatus(g Gomega) {
+	for _, vv := range v {
+		vv.ExpectPreparingWithoutWorkersRolloutStatus(g)
+	}
+}
+
+// ExpectWaitingForWorkersRolloutStatus is called while waiting for the WaitingForWorkersRollout status.
+func (v Verifiers) ExpectWaitingForWorkersRolloutStatus(g Gomega) {
+	for _, vv := range v {
+		vv.ExpectWaitingForWorkersRolloutStatus(g)
 	}
 }
 

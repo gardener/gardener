@@ -57,6 +57,12 @@ func (v *ObservabilityVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(time.Now().UTC().Sub(v.GetObservabilityRotation().LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
+// ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
+func (v *ObservabilityVerifier) ExpectPreparingWithoutWorkersRolloutStatus(_ Gomega) {}
+
+// ExpectWaitingForWorkersRolloutStatus is called while waiting for the WaitingForWorkersRollout status.
+func (v *ObservabilityVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomega) {}
+
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 	observabilityRotation := v.GetObservabilityRotation()

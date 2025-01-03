@@ -1387,6 +1387,24 @@ var _ = Describe("OperatingSystemConfig", func() {
 					EphemeralStorage: ptr.To(resource.MustParse("20480Mi")),
 				}
 			})
+
+			It("when a shoot CA rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastCARotationInitiation.Add(time.Hour)}
+				values.CredentialsRotationStatus.CertificateAuthorities.LastInitiationTime = &newRotationTime
+				values.CredentialsRotationStatus.CertificateAuthorities.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{{
+					Name:               p.Name,
+					LastInitiationTime: &lastCARotationInitiation,
+				}}
+			})
+
+			It("when a shoot service account key rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastSAKeyRotationInitiation.Add(time.Hour)}
+				values.CredentialsRotationStatus.ServiceAccountKey.LastInitiationTime = &newRotationTime
+				values.CredentialsRotationStatus.ServiceAccountKey.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{{
+					Name:               p.Name,
+					LastInitiationTime: &lastSAKeyRotationInitiation,
+				}}
+			})
 		})
 
 		Context("hash value should change", func() {

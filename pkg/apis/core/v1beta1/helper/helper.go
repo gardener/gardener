@@ -1621,3 +1621,14 @@ func sumQuantities(left, right *resource.Quantity) *resource.Quantity {
 	copy.Add(*right)
 	return &copy
 }
+
+// LastInitiationTimeForWorkerPool returns the last initiation time for the worker pool when found in the given list of
+// pending workers rollouts. If the worker pool is not found in the list, the global last initiation time is returned.
+func LastInitiationTimeForWorkerPool(name string, pendingWorkersRollout []gardencorev1beta1.PendingWorkersRollout, globalLastInitiationTime *metav1.Time) *metav1.Time {
+	if i := slices.IndexFunc(pendingWorkersRollout, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+		return rollout.Name == name
+	}); i != -1 {
+		return pendingWorkersRollout[i].LastInitiationTime
+	}
+	return globalLastInitiationTime
+}

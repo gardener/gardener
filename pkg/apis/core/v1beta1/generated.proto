@@ -325,6 +325,11 @@ message CARotation {
   // triggered.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
+
+  // PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+  // credentials rotation.
+  // +optional
+  repeated PendingWorkersRollout pendingWorkersRollouts = 6;
 }
 
 // CRI contains information about the Container Runtimes.
@@ -2126,6 +2131,17 @@ message OpenIDConnectClientAuthentication {
   optional string secret = 2;
 }
 
+// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
+// credentials rotation.
+message PendingWorkersRollout {
+  // Name is the name of a worker pool.
+  optional string name = 1;
+
+  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 2;
+}
+
 // Project holds certain properties about a Gardener project.
 message Project {
   // Standard object metadata.
@@ -2844,6 +2860,11 @@ message ServiceAccountKeyRotation {
   // triggered.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
+
+  // PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+  // credentials rotation.
+  // +optional
+  repeated PendingWorkersRollout pendingWorkersRollouts = 6;
 }
 
 // Shoot represents a Shoot cluster created and managed by Gardener.

@@ -55,6 +55,24 @@ func (v *ServiceAccountKeyVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(serviceAccountKeyRotation.LastCompletionTriggeredTime).To(BeNil())
 }
 
+// ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
+func (v *ServiceAccountKeyVerifier) ExpectPreparingWithoutWorkersRolloutStatus(g Gomega) {
+	serviceAccountKeyRotation := v.GetServiceAccountKeyRotation()
+	g.Expect(serviceAccountKeyRotation.Phase).To(Equal(gardencorev1beta1.RotationPreparingWithoutWorkersRollout))
+	g.Expect(time.Now().UTC().Sub(serviceAccountKeyRotation.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
+	g.Expect(serviceAccountKeyRotation.LastInitiationFinishedTime).To(BeNil())
+	g.Expect(serviceAccountKeyRotation.LastCompletionTriggeredTime).To(BeNil())
+}
+
+// ExpectWaitingForWorkersRolloutStatus is called while waiting for the WaitingForWorkersRollout status.
+func (v *ServiceAccountKeyVerifier) ExpectWaitingForWorkersRolloutStatus(g Gomega) {
+	serviceAccountKeyRotation := v.GetServiceAccountKeyRotation()
+	g.Expect(serviceAccountKeyRotation.Phase).To(Equal(gardencorev1beta1.RotationWaitingForWorkersRollout))
+	g.Expect(serviceAccountKeyRotation.LastInitiationTime).NotTo(BeNil())
+	g.Expect(serviceAccountKeyRotation.LastInitiationFinishedTime).To(BeNil())
+	g.Expect(serviceAccountKeyRotation.LastCompletionTriggeredTime).To(BeNil())
+}
+
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 	serviceAccountKeyRotation := v.GetServiceAccountKeyRotation()
