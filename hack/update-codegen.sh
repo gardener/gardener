@@ -206,12 +206,10 @@ operatorconfig_groups() {
   
   kube::codegen::gen_helpers \
     --boilerplate "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt" \
-    --extra-peer-dir github.com/gardener/gardener/pkg/operator/apis/config \
     --extra-peer-dir github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1 \
     --extra-peer-dir k8s.io/apimachinery/pkg/apis/meta/v1 \
     --extra-peer-dir k8s.io/apimachinery/pkg/conversion \
     --extra-peer-dir k8s.io/apimachinery/pkg/runtime \
-    --extra-peer-dir k8s.io/component-base/config \
     --extra-peer-dir k8s.io/component-base/config/v1alpha1 \
     "${PROJECT_ROOT}/pkg/operator/apis/config"
 }
