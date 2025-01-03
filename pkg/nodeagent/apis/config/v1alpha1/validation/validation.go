@@ -12,12 +12,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
 // ValidateNodeAgentConfiguration validates the given `NodeAgentConfiguration`.
-func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.ErrorList {
+func ValidateNodeAgentConfiguration(conf *nodeagentconfigv1alpha1.NodeAgentConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if conf.LogLevel != "" && !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
@@ -34,13 +34,13 @@ func ValidateNodeAgentConfiguration(conf *config.NodeAgentConfiguration) field.E
 	return allErrs
 }
 
-func validateBootstrapConfiguration(_ *config.BootstrapConfiguration, _ *field.Path) field.ErrorList {
+func validateBootstrapConfiguration(_ *nodeagentconfigv1alpha1.BootstrapConfiguration, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
-func validateControllerConfiguration(conf config.ControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateControllerConfiguration(conf nodeagentconfigv1alpha1.ControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOperatingSystemConfigControllerConfiguration(conf.OperatingSystemConfig, fldPath.Child("operatingSystemConfig"))...)
@@ -49,7 +49,7 @@ func validateControllerConfiguration(conf config.ControllerConfiguration, fldPat
 	return allErrs
 }
 
-func validateOperatingSystemConfigControllerConfiguration(conf config.OperatingSystemConfigControllerConfig, fldPath *field.Path) field.ErrorList {
+func validateOperatingSystemConfigControllerConfiguration(conf nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if conf.SecretName == "" {
@@ -67,7 +67,7 @@ func validateOperatingSystemConfigControllerConfiguration(conf config.OperatingS
 	return allErrs
 }
 
-func validateTokenControllerConfiguration(conf config.TokenControllerConfig, fldPath *field.Path) field.ErrorList {
+func validateTokenControllerConfiguration(conf nodeagentconfigv1alpha1.TokenControllerConfig, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 		paths   = sets.New[string]()

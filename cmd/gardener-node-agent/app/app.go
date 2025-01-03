@@ -44,7 +44,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/nodeagent"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
@@ -102,7 +101,7 @@ func getBootstrapCommand(opts *options) *cobra.Command {
 	return bootstrapCmd
 }
 
-func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *config.NodeAgentConfiguration) error {
+func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 	fs := afero.Afero{Fs: afero.NewOsFs()}
 
@@ -117,9 +116,9 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 
 	var extraHandlers map[string]http.Handler
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+	if cfg.Debugging != nil && ptr.Deref(cfg.Debugging.EnableProfiling, false) {
 		extraHandlers = routes.ProfilingHandlers
-		if cfg.Debugging.EnableContentionProfiling {
+		if ptr.Deref(cfg.Debugging.EnableContentionProfiling, false) {
 			goruntime.SetBlockProfileRate(1)
 		}
 	}
@@ -215,10 +214,10 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	return mgr.Start(ctx)
 }
 
-func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfiguration) (*rest.Config, error) {
+func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration) (*rest.Config, error) {
 	if len(cfg.ClientConnection.Kubeconfig) > 0 {
 		log.Info("Creating REST config from client configuration")
-		restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
+		restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed getting REST config from client connection configuration: %w", err)
 		}
@@ -298,7 +297,7 @@ func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *co
 	return getRESTConfigNodeAgentAuthorizer(ctx, log, fs, cfg)
 }
 
-func getRESTConfigNodeAgentAuthorizer(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *config.NodeAgentConfiguration) (*rest.Config, error) {
+func getRESTConfigNodeAgentAuthorizer(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration) (*rest.Config, error) {
 	if kubeconfigExists, err := fs.Exists(nodeagentconfigv1alpha1.KubeconfigFilePath); err != nil {
 		return nil, fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
 	} else if !kubeconfigExists {
@@ -346,7 +345,7 @@ func getRESTConfigNodeAgentAuthorizer(ctx context.Context, log logr.Logger, fs a
 }
 
 // TODO(oliver-goetz): Remove this function when NodeAgentAuthorizer feature gate is removed.
-func getRESTConfigAccessToken(log logr.Logger, cfg *config.NodeAgentConfiguration) (*rest.Config, error) {
+func getRESTConfigAccessToken(log logr.Logger, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration) (*rest.Config, error) {
 	restConfig := &rest.Config{
 		Burst: int(cfg.ClientConnection.Burst),
 		QPS:   cfg.ClientConnection.QPS,

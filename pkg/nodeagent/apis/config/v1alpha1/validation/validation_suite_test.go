@@ -13,5 +13,5 @@ import (
 
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "NodeAgent APIs Config Validation Suite")
+	RunSpecs(t, "NodeAgent APIs Config V1alpha1 Validation Suite")
 }

@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/certificate"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/hostnamecheck"
@@ -25,7 +25,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Manager, cfg *config.NodeAgentConfiguration, hostName, machineName, nodeName string) error {
+func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Manager, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration, hostName, machineName, nodeName string) error {
 	nodePredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{corev1.LabelHostname: hostName}})
 	if err != nil {
 		return fmt.Errorf("failed computing label selector predicate for node: %w", err)

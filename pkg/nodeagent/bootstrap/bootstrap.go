@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/afero"
 
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
@@ -29,7 +28,7 @@ func Bootstrap(
 	log logr.Logger,
 	fs afero.Afero,
 	dbus dbus.DBus,
-	bootstrapConfig *config.BootstrapConfiguration,
+	bootstrapConfig *nodeagentconfigv1alpha1.BootstrapConfiguration,
 ) error {
 	log.Info("Starting bootstrap procedure")
 

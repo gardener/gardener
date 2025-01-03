@@ -22,7 +22,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/token"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -74,8 +74,8 @@ var _ = Describe("Token controller tests", func() {
 		testFS = afero.Afero{Fs: afero.NewMemMapFs()}
 		Expect((&token.Reconciler{
 			FS: testFS,
-			Config: config.TokenControllerConfig{
-				SyncConfigs: []config.TokenSecretSyncConfig{
+			Config: nodeagentconfigv1alpha1.TokenControllerConfig{
+				SyncConfigs: []nodeagentconfigv1alpha1.TokenSecretSyncConfig{
 					{
 						SecretName: secret1.Name,
 						Path:       path1,

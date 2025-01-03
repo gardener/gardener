@@ -15,26 +15,21 @@ import (
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
-	nodeagentvalidation "github.com/gardener/gardener/pkg/nodeagent/apis/config/validation"
+	nodeagentvalidation "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1/validation"
 )
 
 var configDecoder runtime.Decoder
 
 func init() {
 	configScheme := runtime.NewScheme()
-	schemeBuilder := runtime.NewSchemeBuilder(
-		config.AddToScheme,
-		nodeagentconfigv1alpha1.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
+	utilruntime.Must(nodeagentconfigv1alpha1.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()
 }
 
 type options struct {
 	configFile string
-	config     *config.NodeAgentConfiguration
+	config     *nodeagentconfigv1alpha1.NodeAgentConfiguration
 }
 
 var _ initrun.Options = &options{}
@@ -53,7 +48,7 @@ func (o *options) Complete() error {
 		return fmt.Errorf("error reading config file: %w", err)
 	}
 
-	o.config = &config.NodeAgentConfiguration{}
+	o.config = &nodeagentconfigv1alpha1.NodeAgentConfiguration{}
 	if err = runtime.DecodeInto(configDecoder, data, o.config); err != nil {
 		return fmt.Errorf("error decoding config: %w", err)
 	}

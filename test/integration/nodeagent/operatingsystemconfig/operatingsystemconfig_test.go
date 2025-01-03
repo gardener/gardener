@@ -30,7 +30,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	fakeregistry "github.com/gardener/gardener/pkg/nodeagent/registry/fake"
@@ -140,7 +140,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Register controller")
 		Expect((&operatingsystemconfig.Reconciler{
-			Config: config.OperatingSystemConfigControllerConfig{
+			Config: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
 				SyncPeriod:        &metav1.Duration{Duration: time.Hour},
 				SecretName:        oscSecretName,
 				KubernetesVersion: kubernetesVersion,
