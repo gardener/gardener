@@ -104,3 +104,10 @@ type TLSServer struct {
 	// named tls.crt and tls.key respectively).
 	ServerCertDir string `json:"serverCertDir"`
 }
+
+const (
+	// AdmissionModeBlock specifies that the webhook should block violating requests.
+	AdmissionModeBlock ResourceAdmissionWebhookMode = "block"
+	// AdmissionModeLog specifies that the webhook should only log violating requests.
+	AdmissionModeLog ResourceAdmissionWebhookMode = "log"
+)

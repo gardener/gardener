@@ -23,8 +23,8 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	admissioncontrollerhelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	admissioncontrollerhelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
 )
 
@@ -34,7 +34,7 @@ const metricReasonSizeExceeded = "Size Exceeded"
 // Handler checks the resource sizes.
 type Handler struct {
 	Logger logr.Logger
-	Config *admissioncontrollerconfig.ResourceAdmissionConfiguration
+	Config *admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration
 }
 
 // Handle checks the resource sizes.
@@ -88,7 +88,7 @@ func (h *Handler) handle(req admission.Request) error {
 		return err
 	}
 	if limit.CmpInt64(objectSize) == -1 {
-		if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfig.AdmissionModeBlock {
+		if h.Config.OperationMode == nil || *h.Config.OperationMode == admissioncontrollerconfigv1alpha1.AdmissionModeBlock {
 			log.Info("Maximum resource size exceeded, rejected request", "requestObjectSize", objectSize, "limit", limit)
 			metrics.RejectedResources.WithLabelValues(
 				fmt.Sprint(req.Operation),
@@ -155,7 +155,7 @@ func isUnrestrictedUser(userInfo authenticationv1.UserInfo, subjects []rbacv1.Su
 	return userMatch(userInfo, subjects)
 }
 
-func findLimitForGVR(limits []admissioncontrollerconfig.ResourceLimit, gvr *metav1.GroupVersionResource) *resource.Quantity {
+func findLimitForGVR(limits []admissioncontrollerconfigv1alpha1.ResourceLimit, gvr *metav1.GroupVersionResource) *resource.Quantity {
 	for _, limit := range limits {
 		size := limit.Size
 		if admissioncontrollerhelper.APIGroupMatches(limit, gvr.Group) &&

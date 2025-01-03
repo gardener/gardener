@@ -24,7 +24,7 @@ import (
 	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/cmd/utils/initrun"
-	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
@@ -58,21 +58,21 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func run(ctx context.Context, log logr.Logger, cfg *config.AdmissionControllerConfiguration) error {
+func run(ctx context.Context, log logr.Logger, cfg *admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration) error {
 	log.Info("Getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		cfg.GardenClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.GardenClientConnection, nil, kubernetes.AuthTokenFile)
+	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}
 
 	var extraHandlers map[string]http.Handler
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+	if cfg.Debugging != nil && ptr.Deref(cfg.Debugging.EnableProfiling, false) {
 		extraHandlers = routes.ProfilingHandlers
-		if cfg.Debugging.EnableContentionProfiling {
+		if ptr.Deref(cfg.Debugging.EnableContentionProfiling, false) {
 			goruntime.SetBlockProfileRate(1)
 		}
 	}
