@@ -29,7 +29,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -125,7 +125,7 @@ var _ = BeforeSuite(func() {
 	maxLifeTime = 10 * time.Minute
 
 	Expect((&bastion.Reconciler{
-		Config: config.BastionControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.BastionControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 			MaxLifetime:     &metav1.Duration{Duration: maxLifeTime},
 		},

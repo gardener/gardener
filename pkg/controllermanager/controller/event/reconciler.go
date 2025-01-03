@@ -17,14 +17,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Reconciler reconciles Event.
 type Reconciler struct {
 	Client client.Client
-	Config config.EventControllerConfiguration
+	Config controllermanagerconfigv1alpha1.EventControllerConfiguration
 	Clock  clock.Clock
 }
 

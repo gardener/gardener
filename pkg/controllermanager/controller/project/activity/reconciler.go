@@ -16,14 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Reconciler reconciles Projects and updates the lastActivityTimestamp in the status.
 type Reconciler struct {
 	Client client.Client
-	Config config.ProjectControllerConfiguration
+	Config controllermanagerconfigv1alpha1.ProjectControllerConfiguration
 	Clock  clock.Clock
 }
 

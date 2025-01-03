@@ -18,14 +18,14 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Reconciler reconciles ControllerDeployment.
 type Reconciler struct {
 	Client client.Client
-	Config config.ControllerDeploymentControllerConfiguration
+	Config controllermanagerconfigv1alpha1.ControllerDeploymentControllerConfiguration
 
 	// RateLimiter allows limiting exponential backoff for testing purposes
 	RateLimiter workqueue.TypedRateLimiter[reconcile.Request]

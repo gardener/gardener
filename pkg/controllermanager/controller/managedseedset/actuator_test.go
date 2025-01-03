@@ -19,7 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -45,7 +45,7 @@ var _ = Describe("Actuator", func() {
 		r0       *mockmanagedseedset.MockReplica
 		recorder *mockrecord.MockEventRecorder
 
-		cfg *config.ManagedSeedSetControllerConfiguration
+		cfg *controllermanagerconfigv1alpha1.ManagedSeedSetControllerConfiguration
 
 		actuator Actuator
 
@@ -67,7 +67,7 @@ var _ = Describe("Actuator", func() {
 		recorder = mockrecord.NewMockEventRecorder(ctrl)
 
 		v := int(maxShootRetries)
-		cfg = &config.ManagedSeedSetControllerConfiguration{
+		cfg = &controllermanagerconfigv1alpha1.ManagedSeedSetControllerConfiguration{
 			MaxShootRetries: &v,
 		}
 

@@ -28,7 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/stale"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -123,7 +123,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now())
 
 	Expect((&stale.Reconciler{
-		Config: config.ProjectControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ProjectControllerConfiguration{
 			ConcurrentSyncs:         ptr.To(5),
 			MinimumLifetimeDays:     ptr.To(minimumLifetimeDays),
 			StaleGracePeriodDays:    ptr.To(staleGracePeriodDays),

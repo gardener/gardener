@@ -26,7 +26,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/hibernation"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -108,7 +108,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	fakeClock = &testclock.FakeClock{}
 	Expect((&hibernation.Reconciler{
-		Config: config.ShootHibernationControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ShootHibernationControllerConfiguration{
 			ConcurrentSyncs:         ptr.To(5),
 			TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Minute},
 		},

@@ -17,7 +17,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -25,7 +25,7 @@ import (
 // Reconciler reconciles failed Shoots and retries them.
 type Reconciler struct {
 	Client client.Client
-	Config config.ShootRetryControllerConfiguration
+	Config controllermanagerconfigv1alpha1.ShootRetryControllerConfiguration
 }
 
 // Reconcile reconciles failed Shoots and retries them.

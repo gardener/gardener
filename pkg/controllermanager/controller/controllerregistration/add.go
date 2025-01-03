@@ -10,7 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/controllerregistrationfinalizer"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/extensionclusterrole"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration/seed"
@@ -18,7 +18,7 @@ import (
 )
 
 // AddToManager adds all ControllerRegistration controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, cfg controllermanagerconfigv1alpha1.ControllerManagerConfiguration) error {
 	if err := (&seed.Reconciler{
 		Config: *cfg.Controllers.ControllerRegistration,
 	}).AddToManager(ctx, mgr); err != nil {

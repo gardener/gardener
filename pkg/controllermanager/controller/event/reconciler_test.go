@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -42,7 +42,7 @@ var _ = Describe("eventReconciler", func() {
 		nonShootEvent              *corev1.Event
 		nonGardenerAPIGroupEvent   *corev1.Event
 		eventWithoutInvolvedObject *corev1.Event
-		cfg                        config.EventControllerConfiguration
+		cfg                        controllermanagerconfigv1alpha1.EventControllerConfiguration
 	)
 
 	BeforeEach(func() {
@@ -72,7 +72,7 @@ var _ = Describe("eventReconciler", func() {
 			InvolvedObject: corev1.ObjectReference{Kind: "Shoot", APIVersion: "v1"},
 		}
 
-		cfg = config.EventControllerConfiguration{
+		cfg = controllermanagerconfigv1alpha1.EventControllerConfiguration{
 			TTLNonShootEvents: ttl,
 		}
 

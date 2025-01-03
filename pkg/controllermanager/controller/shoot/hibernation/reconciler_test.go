@@ -23,7 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 )
 
 var _ = Describe("Shoot Hibernation", func() {
@@ -177,7 +177,7 @@ var _ = Describe("Shoot Hibernation", func() {
 				Expect(c.Create(ctx, shoot)).To(Succeed())
 
 				By("Configure hibernation reconciler")
-				config := config.ShootHibernationControllerConfiguration{}
+				config := controllermanagerconfigv1alpha1.ShootHibernationControllerConfiguration{}
 				if t.triggerDeadlineDuration != noDeadLine {
 					config.TriggerDeadlineDuration = &metav1.Duration{Duration: t.triggerDeadlineDuration}
 				}

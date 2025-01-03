@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	controllerdeploymentcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -116,7 +116,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&controllerdeploymentcontroller.Reconciler{
-		Config: config.ControllerDeploymentControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ControllerDeploymentControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 		// limit exponential backoff in tests

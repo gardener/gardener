@@ -26,7 +26,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/maintenance"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -115,7 +115,7 @@ var _ = BeforeSuite(func() {
 	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 
 	Expect((&maintenance.Reconciler{
-		Config: config.ShootMaintenanceControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
 		Clock:    fakeClock,
