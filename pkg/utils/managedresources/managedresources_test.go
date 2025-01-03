@@ -210,6 +210,7 @@ var _ = Describe("managedresources", func() {
 				Namespace: namespace,
 			}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			CheckAndRemoveGCSuppressionAnnotation(secret)
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
@@ -252,6 +253,7 @@ var _ = Describe("managedresources", func() {
 				Namespace: namespace,
 			}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			CheckAndRemoveGCSuppressionAnnotation(secret)
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
@@ -341,6 +343,7 @@ var _ = Describe("managedresources", func() {
 				Namespace: namespace,
 			}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			CheckAndRemoveGCSuppressionAnnotation(secret)
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
@@ -374,6 +377,7 @@ var _ = Describe("managedresources", func() {
 				Namespace: namespace,
 			}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			CheckAndRemoveGCSuppressionAnnotation(secret)
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,
@@ -402,6 +406,7 @@ var _ = Describe("managedresources", func() {
 				Namespace: namespace,
 			}}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			CheckAndRemoveGCSuppressionAnnotation(secret)
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            secretName,

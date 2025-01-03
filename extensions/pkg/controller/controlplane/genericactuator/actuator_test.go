@@ -47,6 +47,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	managedresourcesutils "github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -355,7 +356,12 @@ webhooks:
 
 				utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForShootWebhooks))
 				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForShootWebhooks), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-				c.EXPECT().Create(ctx, createdMRSecretForShootWebhooks).Return(nil)
+				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+						managedresourcesutils.CheckAndRemoveGCSuppressionAnnotation(obj.(*corev1.Secret))
+						Expect(obj).To(DeepEqual(createdMRSecretForShootWebhooks))
+					}).
+					Return(nil)
 				c.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
 				createdMRForShootWebhooks.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForShootWebhooks.Name}}
 				utilruntime.Must(references.InjectAnnotations(createdMRForShootWebhooks))
@@ -369,7 +375,12 @@ webhooks:
 
 			utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootChart))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-			c.EXPECT().Create(ctx, createdMRSecretForCPShootChart).Return(nil)
+			c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+					managedresourcesutils.CheckAndRemoveGCSuppressionAnnotation(obj.(*corev1.Secret))
+					Expect(obj).To(DeepEqual(createdMRSecretForCPShootChart))
+				}).
+				Return(nil)
 			c.EXPECT().Get(ctx, resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
 			createdMRForCPShootChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootChart.Name}}
 			utilruntime.Must(references.InjectAnnotations(createdMRForCPShootChart))
@@ -378,7 +389,12 @@ webhooks:
 			if withShootCRDsChart {
 				utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForCPShootCRDsChart))
 				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForCPShootCRDsChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-				c.EXPECT().Create(ctx, createdMRSecretForCPShootCRDsChart).Return(nil)
+				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+						managedresourcesutils.CheckAndRemoveGCSuppressionAnnotation(obj.(*corev1.Secret))
+						Expect(obj).To(DeepEqual(createdMRSecretForCPShootCRDsChart))
+					}).
+					Return(nil)
 				c.EXPECT().Get(ctx, resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
 				createdMRForCPShootCRDsChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForCPShootCRDsChart.Name}}
 				utilruntime.Must(references.InjectAnnotations(createdMRForCPShootCRDsChart))
@@ -387,7 +403,12 @@ webhooks:
 
 			utilruntime.Must(kubernetesutils.MakeUnique(createdMRSecretForStorageClassesChart))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(createdMRSecretForStorageClassesChart), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-			c.EXPECT().Create(ctx, createdMRSecretForStorageClassesChart).Return(nil)
+			c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+					managedresourcesutils.CheckAndRemoveGCSuppressionAnnotation(obj.(*corev1.Secret))
+					Expect(obj).To(DeepEqual(createdMRSecretForStorageClassesChart))
+				}).
+				Return(nil)
 			c.EXPECT().Get(ctx, resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
 			createdMRForStorageClassesChart.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: createdMRSecretForStorageClassesChart.Name}}
 			utilruntime.Must(references.InjectAnnotations(createdMRForStorageClassesChart))

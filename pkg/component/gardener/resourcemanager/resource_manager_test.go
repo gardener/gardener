@@ -48,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	managedresourcesutils "github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -1920,6 +1921,7 @@ subjects:
 							}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
+							managedresourcesutils.CheckAndRemoveGCSuppressionAnnotation(obj.(*corev1.Secret))
 							Expect(obj).To(DeepEqual(managedResourceSecret))
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
@@ -2023,6 +2025,7 @@ subjects:
 							}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
+							managedresourcesutils.CheckAndRemoveGCSuppressionAnnotation(obj.(*corev1.Secret))
 							Expect(obj).To(DeepEqual(managedResourceSecret))
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
@@ -2113,6 +2116,7 @@ subjects:
 						}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
+						managedresourcesutils.CheckAndRemoveGCSuppressionAnnotation(obj.(*corev1.Secret))
 						Expect(obj).To(DeepEqual(managedResourceSecret))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
@@ -2230,6 +2234,7 @@ subjects:
 						}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
+						managedresourcesutils.CheckAndRemoveGCSuppressionAnnotation(obj.(*corev1.Secret))
 						Expect(obj).To(DeepEqual(managedResourceSecret))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),

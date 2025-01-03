@@ -87,6 +87,17 @@ func (s *Secret) WithAnnotations(annotations map[string]string) *Secret {
 	return s
 }
 
+// AddAnnotations adds the specified annotations to the secret's existing annotations.
+func (s *Secret) AddAnnotations(annotations map[string]string) *Secret {
+	if s.secret.Annotations == nil {
+		s.secret.Annotations = make(map[string]string, len(annotations))
+	}
+	for k, v := range annotations {
+		s.secret.Annotations[k] = v
+	}
+	return s
+}
+
 // WithKeyValues sets the data map.
 func (s *Secret) WithKeyValues(keyValues map[string][]byte) *Secret {
 	s.secret.Data = keyValues

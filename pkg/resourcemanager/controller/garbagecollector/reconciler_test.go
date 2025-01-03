@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 var _ = Describe("Collector", func() {
@@ -37,6 +38,20 @@ var _ = Describe("Collector", func() {
 		minimumObjectLifetime = time.Minute
 		creationTimestamp     = metav1.Date(2000, 5, 5, 5, 30, 0, 0, time.Local)
 		fakeClock             = testclock.NewFakeClock(creationTimestamp.Add(minimumObjectLifetime / 2))
+
+		createSuppressedSecret = func(suppressGCUntil string) *corev1.Secret {
+			return &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "labeledobj",
+					Namespace: metav1.NamespaceDefault,
+					Labels: map[string]string{
+						"resources.gardener.cloud/garbage-collectable-reference": "true",
+					},
+					Annotations: map[string]string{
+						managedresources.AnnotationKeySuppressGarbageCollectionUntil: suppressGCUntil,
+					},
+				}}
+		}
 	)
 
 	BeforeEach(func() {
@@ -252,6 +267,67 @@ var _ = Describe("Collector", func() {
 				*labeledConfigMap4, *labeledConfigMap5, *labeledConfigMap6,
 				*labeledConfigMap7,
 			))
+		})
+
+		Context("GC suppression lease", func() {
+			It("should not collect when the suppression period has not expired", func() {
+				suppressUntil, _ := time.Parse(time.RFC3339, "2056-01-01T00:00:00Z")
+				secret1 := createSuppressedSecret(suppressUntil.Format(time.RFC3339))
+				Expect(c.Create(ctx, secret1)).To(Succeed())
+
+				fakeClock.SetTime(suppressUntil.Add(-1 * time.Second))
+				_, err := gc.Reconcile(ctx, reconcile.Request{})
+				Expect(err).NotTo(HaveOccurred())
+
+				secretList := &corev1.SecretList{}
+				Expect(c.List(ctx, secretList)).To(Succeed())
+				Expect(secretList.Items).To(ConsistOf(
+					*secret1,
+				))
+			})
+
+			It("should collect once the suppression period expires", func() {
+				suppressUntil, _ := time.Parse(time.RFC3339, "2056-01-01T00:00:00Z")
+				secret1 := createSuppressedSecret(suppressUntil.Format(time.RFC3339))
+				Expect(c.Create(ctx, secret1)).To(Succeed())
+
+				fakeClock.SetTime(suppressUntil.Add(1 * time.Second))
+				_, err := gc.Reconcile(ctx, reconcile.Request{})
+				Expect(err).NotTo(HaveOccurred())
+
+				secretList := &corev1.SecretList{}
+				Expect(c.List(ctx, secretList)).To(Succeed())
+				Expect(secretList.Items).To(BeEmpty())
+			})
+
+			It("should collect if the suppression period is missing", func() {
+				suppressUntil, _ := time.Parse(time.RFC3339, "2056-01-01T00:00:00Z")
+				secret1 := createSuppressedSecret(suppressUntil.Format(time.RFC3339))
+				delete(secret1.Annotations, managedresources.AnnotationKeySuppressGarbageCollectionUntil)
+				Expect(c.Create(ctx, secret1)).To(Succeed())
+
+				fakeClock.SetTime(suppressUntil.Add(1 * time.Second))
+				_, err := gc.Reconcile(ctx, reconcile.Request{})
+				Expect(err).NotTo(HaveOccurred())
+
+				secretList := &corev1.SecretList{}
+				Expect(c.List(ctx, secretList)).To(Succeed())
+				Expect(secretList.Items).To(BeEmpty())
+			})
+
+			It("should collect once the suppression period is invalid", func() {
+				suppressUntil, _ := time.Parse(time.RFC3339, "2056-01-01T00:00:00Z")
+				secret1 := createSuppressedSecret("some invalid time string")
+				Expect(c.Create(ctx, secret1)).To(Succeed())
+
+				fakeClock.SetTime(suppressUntil.Add(1 * time.Second))
+				_, err := gc.Reconcile(ctx, reconcile.Request{})
+				Expect(err).NotTo(HaveOccurred())
+
+				secretList := &corev1.SecretList{}
+				Expect(c.List(ctx, secretList)).To(Succeed())
+				Expect(secretList.Items).To(BeEmpty())
+			})
 		})
 	})
 })
