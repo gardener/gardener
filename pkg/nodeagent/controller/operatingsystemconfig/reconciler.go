@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
@@ -65,7 +64,7 @@ func init() {
 // node.
 type Reconciler struct {
 	Client        client.Client
-	Config        config.OperatingSystemConfigControllerConfig
+	Config        nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig
 	Recorder      record.EventRecorder
 	DBus          dbus.DBus
 	FS            afero.Afero

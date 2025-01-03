@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/afero"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/nodeagent/bootstrap"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -29,7 +29,7 @@ var _ = Describe("Bootstrap", func() {
 			fakeFS   afero.Afero
 			fakeDBus *fakedbus.DBus
 
-			bootstrapConfig *config.BootstrapConfiguration
+			bootstrapConfig *nodeagentconfigv1alpha1.BootstrapConfiguration
 
 			expectedGNAUnitContent = `[Unit]
 Description=Gardener Node Agent
@@ -49,7 +49,7 @@ WantedBy=multi-user.target`
 			fakeFS = afero.Afero{Fs: afero.NewMemMapFs()}
 			fakeDBus = fakedbus.New()
 
-			bootstrapConfig = &config.BootstrapConfiguration{}
+			bootstrapConfig = &nodeagentconfigv1alpha1.BootstrapConfiguration{}
 		})
 
 		assertions := func() {

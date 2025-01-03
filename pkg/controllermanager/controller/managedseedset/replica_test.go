@@ -101,12 +101,12 @@ var _ = Describe("Replica", func() {
 			deletionTimestamp *metav1.Time,
 			lastOperationType gardencorev1beta1.LastOperationType,
 			lastOperationState gardencorev1beta1.LastOperationState,
-			shs gardenerutils.ShootStatus,
+			shootStatus gardenerutils.ShootStatus,
 			protected bool,
 		) *gardencorev1beta1.Shoot {
 			labels := make(map[string]string)
-			if shs != "" {
-				labels[v1beta1constants.ShootStatus] = string(shs)
+			if shootStatus != "" {
+				labels[v1beta1constants.ShootStatus] = string(shootStatus)
 			}
 			annotations := make(map[string]string)
 			if protected {
@@ -262,9 +262,9 @@ var _ = Describe("Replica", func() {
 	)
 
 	DescribeTable("#GetShootHealthStatus",
-		func(shoot *gardencorev1beta1.Shoot, shs gardenerutils.ShootStatus) {
+		func(shoot *gardencorev1beta1.Shoot, shootStatus gardenerutils.ShootStatus) {
 			replica := NewReplica(managedSeedSet, shoot, nil, nil, false)
-			Expect(replica.GetShootHealthStatus()).To(Equal(shs))
+			Expect(replica.GetShootHealthStatus()).To(Equal(shootStatus))
 		},
 		Entry("should return unhealthy",
 			nil, gardenerutils.ShootStatusUnhealthy),

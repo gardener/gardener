@@ -102,7 +102,7 @@ const (
 	// ServiceAccountTokenRenewTimestamp is the key of an annotation of a secret whose value contains the timestamp when
 	// the token needs to be renewed.
 	ServiceAccountTokenRenewTimestamp = "serviceaccount.resources.gardener.cloud/token-renew-timestamp"
-	// ServiceAccountInjectCABundle instucts the Token Requester to also write the CA bundle.
+	// ServiceAccountInjectCABundle instructs the Token Requester to also write the CA bundle.
 	ServiceAccountInjectCABundle = "serviceaccount.resources.gardener.cloud/inject-ca-bundle"
 
 	// DataKeyToken is the data key whose value contains a service account token.

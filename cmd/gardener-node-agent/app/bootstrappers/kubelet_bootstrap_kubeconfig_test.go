@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	. "github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
-	"github.com/gardener/gardener/pkg/nodeagent/apis/config"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -26,7 +26,7 @@ var _ = Describe("KubeletBootstrapKubeconfig", func() {
 		log = logr.Discard()
 
 		fakeFS          afero.Afero
-		apiServerConfig = config.APIServer{
+		apiServerConfig = nodeagentconfigv1alpha1.APIServer{
 			Server:   "server",
 			CABundle: []byte("ca-bundle"),
 		}

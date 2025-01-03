@@ -1187,11 +1187,11 @@ var _ = Describe("kubernetes", func() {
 			client.ObjectKey{Namespace: "", Name: "foo"},
 		),
 	)
-
 	Describe("#ClientCertificateFromRESTConfig", func() {
 		var (
 			config *rest.Config
 
+			// spellchecker:off
 			certPEM = []byte(`-----BEGIN CERTIFICATE-----
 MIIDBDCCAeygAwIBAgIUXutuW//tcCBAR2BKjz1N9xNosNwwDQYJKoZIhvcNAQEL
 BQAwGjEYMBYGA1UEAxMPbmV3LW1pbmlrdWJlLWNhMB4XDTIyMDQxMjA3MDcwMFoX
@@ -1239,6 +1239,7 @@ xdiQxdLMPqh48D9u+bwt+roq66lt1kcF0mvIUgEYXhaPj/9moG8cfgmbmF9tsm08
 bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 -----END RSA PRIVATE KEY-----`)
 		)
+		// spellchecker:on
 
 		BeforeEach(func() {
 			config = &rest.Config{}
