@@ -5,8 +5,6 @@
 package helper
 
 import (
-	"net"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
@@ -19,44 +17,6 @@ func ClusterAutoscalerRequired(pools []extensionsv1alpha1.WorkerPool) bool {
 		}
 	}
 	return false
-}
-
-// GetDNSRecordType returns the appropriate DNS record type (A/AAAA or CNAME) for the given address.
-func GetDNSRecordType(address string) extensionsv1alpha1.DNSRecordType {
-	if ip := net.ParseIP(address); ip != nil {
-		if ip.To4() != nil {
-			return extensionsv1alpha1.DNSRecordTypeA
-		}
-		return extensionsv1alpha1.DNSRecordTypeAAAA
-	}
-	return extensionsv1alpha1.DNSRecordTypeCNAME
-}
-
-// GetDNSRecordTTL returns the value of the given ttl, or 120 if nil.
-func GetDNSRecordTTL(ttl *int64) int64 {
-	if ttl != nil {
-		return *ttl
-	}
-	return 120
-}
-
-// DeterminePrimaryIPFamily determines the primary IP family out of a specified list of IP families.
-func DeterminePrimaryIPFamily(ipFamilies []extensionsv1alpha1.IPFamily) extensionsv1alpha1.IPFamily {
-	if len(ipFamilies) == 0 {
-		return extensionsv1alpha1.IPFamilyIPv4
-	}
-	return ipFamilies[0]
-}
-
-// FilePathsFrom returns the paths for all the given files.
-func FilePathsFrom(files []extensionsv1alpha1.File) []string {
-	var out []string
-
-	for _, file := range files {
-		out = append(out, file.Path)
-	}
-
-	return out
 }
 
 // GetMachineDeploymentClusterAutoscalerAnnotations returns a map of annotations with values intended to be used as cluster-autoscaler options for the worker group
@@ -82,9 +42,4 @@ func GetMachineDeploymentClusterAutoscalerAnnotations(caOptions *extensionsv1alp
 	}
 
 	return annotations
-}
-
-// HasContainerdConfiguration returns true if containerd is the configured CRI and has a proper configuration.
-func HasContainerdConfiguration(criConfig *extensionsv1alpha1.CRIConfig) bool {
-	return criConfig != nil && criConfig.Name == extensionsv1alpha1.CRINameContainerD && criConfig.Containerd != nil
 }
