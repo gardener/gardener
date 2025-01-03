@@ -112,7 +112,7 @@ func getVolume(expirationSeconds int64) corev1.Volume {
 		Name: volumeName(),
 		VolumeSource: corev1.VolumeSource{
 			Projected: &corev1.ProjectedVolumeSource{
-				DefaultMode: ptr.To[int32](420),
+				DefaultMode: ptr.To[int32](416),
 				Sources: []corev1.VolumeProjection{
 					{
 						ServiceAccountToken: &corev1.ServiceAccountTokenProjection{

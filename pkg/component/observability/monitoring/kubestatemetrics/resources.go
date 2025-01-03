@@ -38,6 +38,8 @@ import (
 	"github.com/gardener/gardener/third_party/gopkg.in/yaml.v2"
 )
 
+const nonRootUser = int64(65532)
+
 func (k *kubeStateMetrics) serviceAccount() *corev1.ServiceAccount {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics" + k.values.NameSuffix, Namespace: k.namespace}}
 	serviceAccount.Labels = k.getLabels()
@@ -273,6 +275,12 @@ func (k *kubeStateMetrics) deployment(
 				}},
 			}},
 			PriorityClassName: k.values.PriorityClassName,
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsNonRoot: ptr.To[bool](true),
+				RunAsUser:    ptr.To[int64](nonRootUser),
+				RunAsGroup:   ptr.To[int64](nonRootUser),
+				FSGroup:      ptr.To[int64](nonRootUser),
+			},
 			Volumes: []corev1.Volume{{
 				Name: customResourceStateConfigMapName,
 				VolumeSource: corev1.VolumeSource{
