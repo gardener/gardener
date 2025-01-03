@@ -48,7 +48,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
@@ -67,7 +67,7 @@ type Reconciler struct {
 	TargetClient                  client.Client
 	TargetScheme                  *runtime.Scheme
 	TargetRESTMapper              meta.RESTMapper
-	Config                        config.ManagedResourceControllerConfig
+	Config                        resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig
 	Clock                         clock.Clock
 	ClassFilter                   *resourcemanagerpredicate.ClassFilter
 	ClusterID                     string

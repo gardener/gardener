@@ -30,7 +30,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 	"github.com/gardener/gardener/pkg/utils"
@@ -157,7 +157,7 @@ var _ = BeforeSuite(func() {
 
 	Expect((&csrapprover.Reconciler{
 		CertificatesClient: kubernetesClient.CertificatesV1().CertificateSigningRequests(),
-		Config: config.CSRApproverControllerConfig{
+		Config: resourcemanagerconfigv1alpha1.CSRApproverControllerConfig{
 			ConcurrentSyncs:  ptr.To(5),
 			MachineNamespace: testNamespace.Name,
 		},

@@ -29,7 +29,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/highavailabilityconfig"
 )
@@ -109,7 +109,7 @@ var _ = BeforeSuite(func() {
 	Expect((&highavailabilityconfig.Handler{
 		Logger:       log,
 		TargetClient: testClient,
-		Config: config.HighAvailabilityConfigWebhookConfig{
+		Config: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
 			DefaultNotReadyTolerationSeconds:    ptr.To(defaultNotReadyTolerationSeconds),
 			DefaultUnreachableTolerationSeconds: ptr.To(defaultUnreachableTolerationSeconds),
 		},

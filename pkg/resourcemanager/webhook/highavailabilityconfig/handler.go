@@ -30,7 +30,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -42,7 +42,7 @@ import (
 type Handler struct {
 	Logger       logr.Logger
 	TargetClient client.Reader
-	Config       config.HighAvailabilityConfigWebhookConfig
+	Config       resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig
 	Decoder      admission.Decoder
 }
 

@@ -9,12 +9,12 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 )
 
 // Webhook represents the webhook of node-agent authorizer.
 type Webhook struct {
 	Logger  logr.Logger
 	Handler http.Handler
-	Config  config.NodeAgentAuthorizerWebhookConfig
+	Config  resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig
 }

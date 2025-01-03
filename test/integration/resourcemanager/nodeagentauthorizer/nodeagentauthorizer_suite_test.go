@@ -39,7 +39,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
 	"github.com/gardener/gardener/pkg/utils"
@@ -187,7 +187,7 @@ var _ = BeforeSuite(func() {
 	By("Register webhook")
 	Expect((&nodeagentauthorizer.Webhook{
 		Logger: log,
-		Config: config.NodeAgentAuthorizerWebhookConfig{
+		Config: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
 			Enabled:          true,
 			MachineNamespace: testNamespaceName,
 		},

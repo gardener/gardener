@@ -28,7 +28,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
@@ -118,7 +117,7 @@ var _ = BeforeSuite(func() {
 	filter = resourcemanagerpredicate.NewClassFilter(resourcemanagerconfigv1alpha1.DefaultResourceClass)
 
 	Expect((&managedresource.Reconciler{
-		Config: config.ManagedResourceControllerConfig{
+		Config: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
 			ConcurrentSyncs: ptr.To(5),
 			// Higher sync period is used because in some tests, we want to assert an intermediate state of the
 			// resource, which won't be possible if the controller reconciles it back too quickly.

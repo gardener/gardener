@@ -28,7 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/health"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/progressing"
@@ -117,7 +117,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controllers")
-	cfg := config.HealthControllerConfig{
+	cfg := resourcemanagerconfigv1alpha1.HealthControllerConfig{
 		ConcurrentSyncs: ptr.To(5),
 		SyncPeriod:      &metav1.Duration{Duration: 500 * time.Millisecond},
 	}
