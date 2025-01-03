@@ -739,7 +739,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("SecretBindingName/CredentialsBinding validation", func() {
-
 			It("should forbid adding secretBindingName in case of workerless shoot", func() {
 				shoot.Spec.Provider.Workers = nil
 				shoot.Spec.SecretBindingName = ptr.To("foo")
@@ -1018,7 +1017,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("Extensions validation", func() {
-
 			It("should forbid passing an extension w/o type information", func() {
 				extension := core.Extension{}
 				shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
@@ -2753,7 +2751,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("spec.kubernetes.kubeScheduler"),
 					"Detail": ContainSubstring("this field should not be set for workerless Shoot clusters"),
 				}))))
-
 			})
 
 			It("should succeed when using valid scheduling profile", func() {
@@ -3603,6 +3600,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			Context("IPv4", func() {
+				BeforeEach(func() {
+					shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+				})
+
 				It("should allow valid networking configuration", func() {
 					shoot.Spec.Networking.Nodes = ptr.To("10.250.0.0/16")
 					shoot.Spec.Networking.Services = ptr.To("100.64.0.0/13")
@@ -3632,6 +3633,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networking.services"),
 						"Detail": ContainSubstring("invalid CIDR address"),
+					}))
+				})
+
+				It("should fail updating IPv4 IP family to IPv6 Family", func() {
+					newShoot := prepareShootForUpdate(shoot)
+
+					newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.networking.ipFamilies"),
+						"Detail": ContainSubstring(`IPv4 to IPv6 is not allowed`),
 					}))
 				})
 
@@ -3716,6 +3730,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))
 				})
 
+				It("should fail updating IPv6 IP family to IPv4 Family", func() {
+					newShoot := prepareShootForUpdate(shoot)
+
+					newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+
+					errorList := ValidateShootUpdate(newShoot, shoot)
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.networking.ipFamilies"),
+						"Detail": ContainSubstring(`IPv6 to IPv4 is not allowed`),
+					}))
+				})
+
 				It("should forbid IPv4 CIDRs with IPv6 IP family", func() {
 					shoot.Spec.Networking.Nodes = ptr.To("10.250.0.0/16")
 					shoot.Spec.Networking.Services = ptr.To("100.64.0.0/13")
@@ -3759,21 +3786,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))
 				})
 			})
-
-			It("should fail updating immutable fields", func() {
-				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
-
-				newShoot := prepareShootForUpdate(shoot)
-				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
-
-				errorList := ValidateShootUpdate(newShoot, shoot)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.networking.ipFamilies"),
-					"Detail": ContainSubstring(`field is immutable`),
-				}))
-			})
 		})
 
 		Context("dual-stack", func() {
@@ -3787,6 +3799,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Networking.Pods = ptr.To("100.96.0.0/11")
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should fail changing single-stack shoot to dual-stack without annotation", func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6, core.IPFamilyIPv4}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+					"Detail": ContainSubstring(`"gardener.cloud/operation"="maintain"`),
+				}))
+			})
+
+			It("should fail changing dual-stack shoot to single-stack", func() {
+				newShoot := prepareShootForUpdate(shoot)
+
+				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.networking.ipFamilies"),
+					"Detail": ContainSubstring(`dual-stack to single-stack is not allowed`),
+				}))
 			})
 		})
 
