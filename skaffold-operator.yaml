@@ -241,9 +241,8 @@ build:
             - pkg/gardenlet/bootstrap/util
             - pkg/healthz
             - pkg/logger
-            - pkg/operator/apis/config
             - pkg/operator/apis/config/v1alpha1
-            - pkg/operator/apis/config/validation
+            - pkg/operator/apis/config/v1alpha1/validation
             - pkg/operator/client
             - pkg/operator/controller
             - pkg/operator/controller/controllerregistrar
