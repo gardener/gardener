@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/resourcesize"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/seedrestriction"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/shootkubeconfigsecretref"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhook/admission/updaterestriction"
 	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhook/auth/seed"
 )
 
@@ -90,6 +91,10 @@ func AddToManager(
 		Client: mgr.GetClient(),
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", shootkubeconfigsecretref.HandlerName, err)
+	}
+
+	if err := updaterestriction.AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", updaterestriction.HandlerName, err)
 	}
 
 	return nil
