@@ -27,7 +27,7 @@ const (
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.81.0
 	// beta: v1.91.0
-	// GA: v1.112.0
+	// GA: v1.111.0
 	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
 
 	// UseNamespacedCloudProfile enables the usage of the NamespacedCloudProfile API object
