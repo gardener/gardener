@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -181,12 +180,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
-
-	if features.DefaultFeatureGate.Enabled(features.ShootForceDeletion) {
-		allErrs = append(allErrs, ValidateForceDeletion(newShoot, oldShoot)...)
-	} else if helper.ShootNeedsForceDeletion(newShoot) && !helper.ShootNeedsForceDeletion(oldShoot) {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("metadata", "annotations").Key(v1beta1constants.AnnotationConfirmationForceDeletion), "force-deletion annotation cannot be added when the ShootForceDeletion feature gate is not enabled"))
-	}
+	allErrs = append(allErrs, ValidateForceDeletion(newShoot, oldShoot)...)
 
 	return allErrs
 }
@@ -2613,6 +2607,7 @@ func ValidateForceDeletion(newShoot, oldShoot *core.Shoot) field.ErrorList {
 			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("force-deletion annotation cannot be set when Shoot status does not contain one of these error codes: %v", sets.List(errorCodesAllowingForceDeletion))))
 		}
 	}
+
 	return allErrs
 }
 

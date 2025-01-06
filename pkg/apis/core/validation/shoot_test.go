@@ -28,8 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -5176,51 +5174,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.schedulerName"),
 				}))))
-			})
-		})
-
-		Context("shoot force-deletion", func() {
-			It("should not allow setting the force-deletion annotation if the ShootForceDeletion feature gate is not enabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootForceDeletion, false))
-
-				newShoot := prepareShootForUpdate(shoot)
-				metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "1")
-
-				errorList := ValidateShootUpdate(newShoot, shoot)
-				Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeForbidden),
-					"Field":  Equal("metadata.annotations[confirmation.gardener.cloud/force-deletion]"),
-					"Detail": ContainSubstring("force-deletion annotation cannot be added when the ShootForceDeletion feature gate is not enabled"),
-				}))))
-			})
-
-			It("should not error if the oldShoot has force-deletion annotation even if the ShootForceDeletion feature gate is not enabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootForceDeletion, false))
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "1")
-
-				newShoot := prepareShootForUpdate(shoot)
-
-				errorList := ValidateShootUpdate(newShoot, shoot)
-				Expect(errorList).To(BeEmpty())
-			})
-
-			It("should allow setting the force-deletion annotation if the ShootForceDeletion feature gate is enabled", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootForceDeletion, true))
-
-				shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Status = core.ShootStatus{
-					LastErrors: []core.LastError{
-						{
-							Codes: []core.ErrorCode{core.ErrorInfraDependencies},
-						},
-					},
-				}
-
-				metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, v1beta1constants.AnnotationConfirmationForceDeletion, "1")
-
-				errorList := ValidateShootUpdate(newShoot, shoot)
-				Expect(errorList).To(BeEmpty())
 			})
 		})
 	})
