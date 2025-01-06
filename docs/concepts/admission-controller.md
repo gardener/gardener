@@ -93,6 +93,13 @@ It's recommended to start with `log`, check the logs for exceeding requests, adj
 
 Please refer to [Scoped API Access for Gardenlets](../deployment/gardenlet_api_access.md) for more information.
 
+### UpdateRestriction
+
+Gardener stores public data regarding shoot clusters, i.e. certificate authority bundles, OIDC discovery documents, etc.
+This information can be used by third parties so that they establish trust to specific authorities, making the integrity of the stored data extremely important in a way that any unwanted modifications can be considered a security risk.
+This handler protects `secrets` and `configmaps` against tampering.
+It denies `CREATE`, `UPDATE` and `DELETE` requests if the resource is labeled with `gardener.cloud/update-restriction=true` and the request is not made by a `gardenlet`.
+
 ## Authorization Webhook Handlers
 
 This section describes the authorization webhook handlers that are currently served.
