@@ -74,6 +74,7 @@ func getConfig(seed *gardencorev1beta1.Seed) (map[string]string, error) {
 			"use-proxy-protocol":           "false",
 			"worker-processes":             "2",
 			"allow-snippet-annotations":    "true",
+			"annotations-risk-level":       "Critical",
 		}
 		providerConfig = map[string]any{}
 	)
