@@ -17,7 +17,7 @@ var _ = Describe("Features", func() {
 		It("should return the spec for the given feature gate", func() {
 			Expect(GetFeatures("DefaultSeccompProfile", "ShootForceDeletion", "Foo")).To(Equal(map[featuregate.Feature]featuregate.FeatureSpec{
 				DefaultSeccompProfile: {Default: false, PreRelease: featuregate.Alpha},
-				ShootForceDeletion:    {Default: true, PreRelease: featuregate.GA},
+				ShootForceDeletion:    {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 			}))
 		})
 	})
