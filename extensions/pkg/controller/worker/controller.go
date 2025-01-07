@@ -57,8 +57,7 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
 
-	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
+	predicates := extensionspredicate.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Type)
 
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
 	if err != nil {

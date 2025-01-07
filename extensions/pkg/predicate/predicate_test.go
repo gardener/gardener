@@ -6,6 +6,7 @@ package predicate_test
 
 import (
 	"encoding/json"
+	"reflect"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -177,12 +178,11 @@ var _ = Describe("Predicate", func() {
 			object           client.Object
 			extensionTypeFoo = "foo"
 
-			purposeNormal = extensionsv1alpha1.Normal
-
-			createEvent  event.CreateEvent
-			updateEvent  event.UpdateEvent
-			deleteEvent  event.DeleteEvent
-			genericEvent event.GenericEvent
+			createEvent   event.CreateEvent
+			updateEvent   event.UpdateEvent
+			deleteEvent   event.DeleteEvent
+			genericEvent  event.GenericEvent
+			truePredicate predicate.Predicate = predicate.NewPredicateFuncs(func(client.Object) bool { return true })
 		)
 
 		BeforeEach(func() {
@@ -209,25 +209,38 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should add the HasType predicate of the passed extension to the given list of predicates", func() {
-			predicates := AddTypePredicate([]predicate.Predicate{HasPurpose(purposeNormal)}, extensionType)
+			predicates := AddTypeAndClassPredicates([]predicate.Predicate{truePredicate}, extensionsv1alpha1.ExtensionClassShoot, extensionType)
 
-			Expect(predicates).To(HaveLen(2))
+			Expect(predicates).To(HaveLen(3))
+			Expect(reflect.ValueOf(predicates[2])).To(Equal(reflect.ValueOf(truePredicate)), "predicate list should contain the passed predicate at last element")
+			pred := predicate.And(predicates...)
 
-			Expect(predicates[1].Create(createEvent)).To(BeTrue())
-			Expect(predicates[1].Update(updateEvent)).To(BeTrue())
-			Expect(predicates[1].Delete(deleteEvent)).To(BeTrue())
-			Expect(predicates[1].Generic(genericEvent)).To(BeTrue())
+			Expect(pred.Create(createEvent)).To(BeTrue())
+			Expect(pred.Update(updateEvent)).To(BeTrue())
+			Expect(pred.Delete(deleteEvent)).To(BeTrue())
+			Expect(pred.Generic(genericEvent)).To(BeTrue())
+
+			predicates = AddTypeAndClassPredicates([]predicate.Predicate{truePredicate}, extensionsv1alpha1.ExtensionClassShoot, extensionTypeFoo)
+
+			Expect(predicates).To(HaveLen(3))
+			pred = predicate.And(predicates...)
+
+			Expect(pred.Create(createEvent)).To(BeFalse())
+			Expect(pred.Update(updateEvent)).To(BeFalse())
+			Expect(pred.Delete(deleteEvent)).To(BeFalse())
+			Expect(pred.Generic(genericEvent)).To(BeFalse())
 		})
 
 		It("should add OR of all the HasType predicates for the passed extensions to the given list of predicates", func() {
-			predicates := AddTypePredicate([]predicate.Predicate{HasPurpose(purposeNormal)}, extensionType, extensionTypeFoo)
+			predicates := AddTypeAndClassPredicates([]predicate.Predicate{truePredicate}, extensionsv1alpha1.ExtensionClassShoot, extensionType, extensionTypeFoo)
 
-			Expect(predicates).To(HaveLen(2))
+			Expect(predicates).To(HaveLen(3))
+			pred := predicate.And(predicates...)
 
-			Expect(predicates[1].Create(createEvent)).To(BeTrue())
-			Expect(predicates[1].Update(updateEvent)).To(BeTrue())
-			Expect(predicates[1].Delete(deleteEvent)).To(BeTrue())
-			Expect(predicates[1].Generic(genericEvent)).To(BeTrue())
+			Expect(pred.Create(createEvent)).To(BeTrue())
+			Expect(pred.Update(updateEvent)).To(BeTrue())
+			Expect(pred.Delete(deleteEvent)).To(BeTrue())
+			Expect(pred.Generic(genericEvent)).To(BeTrue())
 
 			// checking HasType(extensionTypeFoo)
 			object = &extensionsv1alpha1.Extension{
@@ -250,10 +263,10 @@ var _ = Describe("Predicate", func() {
 			genericEvent = event.GenericEvent{
 				Object: object,
 			}
-			Expect(predicates[1].Create(createEvent)).To(BeTrue())
-			Expect(predicates[1].Update(updateEvent)).To(BeTrue())
-			Expect(predicates[1].Delete(deleteEvent)).To(BeTrue())
-			Expect(predicates[1].Generic(genericEvent)).To(BeTrue())
+			Expect(pred.Create(createEvent)).To(BeTrue())
+			Expect(pred.Update(updateEvent)).To(BeTrue())
+			Expect(pred.Delete(deleteEvent)).To(BeTrue())
+			Expect(pred.Generic(genericEvent)).To(BeTrue())
 		})
 	})
 
