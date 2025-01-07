@@ -63,14 +63,14 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 		ClassFilter:               resourcemanagerpredicate.NewClassFilter(*cfg.Controllers.ResourceClass),
 		ClusterID:                 *cfg.Controllers.ClusterID,
 		GarbageCollectorActivated: cfg.Controllers.GarbageCollector.Enabled,
-	}).AddToManager(ctx, mgr, sourceCluster, targetCluster); err != nil {
+	}).AddToManager(mgr, sourceCluster, targetCluster); err != nil {
 		return fmt.Errorf("failed adding managed resource controller: %w", err)
 	}
 
 	if cfg.Controllers.NetworkPolicy.Enabled {
 		if err := (&networkpolicy.Reconciler{
 			Config: cfg.Controllers.NetworkPolicy,
-		}).AddToManager(ctx, mgr, targetCluster); err != nil {
+		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding networkpolicy controller: %w", err)
 		}
 	}
@@ -78,7 +78,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targe
 	if cfg.Controllers.TokenInvalidator.Enabled {
 		if err := (&tokeninvalidator.Reconciler{
 			Config: cfg.Controllers.TokenInvalidator,
-		}).AddToManager(ctx, mgr, targetCluster); err != nil {
+		}).AddToManager(mgr, targetCluster); err != nil {
 			return fmt.Errorf("failed adding token invalidator controller: %w", err)
 		}
 	}

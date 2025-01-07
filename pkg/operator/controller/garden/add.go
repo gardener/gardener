@@ -5,7 +5,6 @@
 package garden
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -23,7 +22,6 @@ import (
 
 // AddToManager adds all Garden controllers to the given manager.
 func AddToManager(
-	ctx context.Context,
 	mgr manager.Manager,
 	cfg *config.OperatorConfiguration,
 	identity *gardencorev1beta1.Gardener,
@@ -52,7 +50,7 @@ func AddToManager(
 
 	if err := (&care.Reconciler{
 		Config: *cfg,
-	}).AddToManager(ctx, mgr, gardenClientMap); err != nil {
+	}).AddToManager(mgr, gardenClientMap); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 

@@ -5,10 +5,9 @@
 package backupentry
 
 import (
-	"context"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -18,7 +17,6 @@ import (
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 const (
@@ -56,41 +54,45 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 
 // Add creates a new BackupEntry Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
-func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
+func Add(mgr manager.Manager, args AddArgs) error {
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
-	return add(ctx, mgr, args, predicates)
+	return add(mgr, args, predicates)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(ctx context.Context, mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) error {
-	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
+func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) error {
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(args.ControllerOptions).
+		Watches(
+			&extensionsv1alpha1.BackupEntry{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicates...),
+		).
+		Build(NewReconciler(mgr, args.Actuator))
 	if err != nil {
 		return err
 	}
 
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(
-			source.Kind[client.Object](mgr.GetCache(),
-				&corev1.Namespace{},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), NamespaceToBackupEntryMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
-		); err != nil {
+		if err := c.Watch(source.Kind[client.Object](
+			mgr.GetCache(),
+			&corev1.Namespace{},
+			handler.EnqueueRequestsFromMapFunc(NamespaceToBackupEntryMapper(mgr.GetClient(), predicates)),
+		)); err != nil {
 			return err
 		}
 
-		if err := ctrl.Watch(
-			source.Kind[client.Object](mgr.GetCache(), &metav1.PartialObjectMetadata{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: "v1",
-				},
-			},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), SecretToBackupEntryMapper(predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
-		); err != nil {
+		if err := c.Watch(source.Kind[client.Object](
+			mgr.GetCache(),
+			&metav1.PartialObjectMetadata{TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"}},
+			handler.EnqueueRequestsFromMapFunc(SecretToBackupEntryMapper(mgr.GetClient(), predicates)),
+		)); err != nil {
 			return err
 		}
 	}
 
-	return ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.BackupEntry{}, &handler.EnqueueRequestForObject{}, predicates...))
+	return nil
 }

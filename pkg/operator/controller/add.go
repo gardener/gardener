@@ -34,17 +34,17 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, operatorCancel context.CancelFunc, mgr manager.Manager, cfg *config.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
+func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *config.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
 	}
 
-	if err := garden.AddToManager(ctx, mgr, cfg, identity, gardenClientMap); err != nil {
+	if err := garden.AddToManager(mgr, cfg, identity, gardenClientMap); err != nil {
 		return err
 	}
 
-	if err := extension.AddToManager(ctx, mgr, cfg, gardenClientMap); err != nil {
+	if err := extension.AddToManager(mgr, cfg, gardenClientMap); err != nil {
 		return err
 	}
 
@@ -59,7 +59,7 @@ func AddToManager(ctx context.Context, operatorCancel context.CancelFunc, mgr ma
 		Controllers: append([]controllerregistrar.Controller{
 			{
 				Name: networkpolicy.ControllerName,
-				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
+				AddToManagerFunc: func(_ context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
 					var nodes []string
 					if garden.Spec.RuntimeCluster.Networking.Nodes != nil {
 						nodes = []string{*garden.Spec.RuntimeCluster.Networking.Nodes}
@@ -76,7 +76,7 @@ func AddToManager(ctx context.Context, operatorCancel context.CancelFunc, mgr ma
 							Services:   []string{garden.Spec.RuntimeCluster.Networking.Services},
 							BlockCIDRs: garden.Spec.RuntimeCluster.Networking.BlockCIDRs,
 						},
-					}).AddToManager(ctx, mgr, mgr)
+					}).AddToManager(mgr, mgr)
 				},
 			},
 			{
@@ -89,10 +89,10 @@ func AddToManager(ctx context.Context, operatorCancel context.CancelFunc, mgr ma
 			},
 			{
 				Name: requiredruntime.ControllerName,
-				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+				AddToManagerFunc: func(_ context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
 					return true, (&requiredruntime.Reconciler{
 						Config: cfg.Controllers.ExtensionRequiredRuntime,
-					}).AddToManager(ctx, mgr)
+					}).AddToManager(mgr)
 				},
 			},
 			{
@@ -118,7 +118,7 @@ func AddToManager(ctx context.Context, operatorCancel context.CancelFunc, mgr ma
 
 					return true, (&requiredvirtual.Reconciler{
 						Config: cfg.Controllers.ExtensionRequiredVirtual,
-					}).AddToManager(ctx, mgr, virtualCluster)
+					}).AddToManager(mgr, virtualCluster)
 				},
 			},
 		}, addVirtualClusterControllerToManager...),

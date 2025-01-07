@@ -7,7 +7,6 @@ package care
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
@@ -25,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/utils"
 )
@@ -34,7 +32,7 @@ import (
 const ControllerName = "controllerinstallation-care"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
@@ -48,7 +46,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
@@ -56,24 +54,20 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 			// if going into exponential backoff, wait at most the configured sync period
 			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.Config.SyncPeriod.Duration),
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](gardenCluster.GetCache(),
-				&gardencorev1beta1.ControllerInstallation{},
-				&handler.EnqueueRequestForObject{},
-				predicateutils.ForEventTypes(predicateutils.Create)),
-		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](seedCluster.GetCache(),
+		WatchesRawSource(source.Kind[client.Object](
+			gardenCluster.GetCache(),
+			&gardencorev1beta1.ControllerInstallation{},
+			&handler.EnqueueRequestForObject{},
+			predicateutils.ForEventTypes(predicateutils.Create),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			seedCluster.GetCache(),
 			&resourcesv1alpha1.ManagedResource{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapManagedResourceToControllerInstallation), mapper.UpdateWithNew, c.GetLogger()),
+			handler.EnqueueRequestsFromMapFunc(r.MapManagedResourceToControllerInstallation),
 			r.IsExtensionDeployment(),
-			predicateutils.ManagedResourceConditionsChanged()),
-	)
+			predicateutils.ManagedResourceConditionsChanged(),
+		)).
+		Complete(r)
 }
 
 // IsExtensionDeployment returns a predicate which evaluates to true in case the object is in the garden namespace and
@@ -85,9 +79,9 @@ func (r *Reconciler) IsExtensionDeployment() predicate.Predicate {
 	})
 }
 
-// MapManagedResourceToControllerInstallation is a mapper.MapFunc for mapping a ManagedResource to the owning
+// MapManagedResourceToControllerInstallation is a handler.MapFunc for mapping a ManagedResource to the owning
 // ControllerInstallation.
-func (r *Reconciler) MapManagedResourceToControllerInstallation(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+func (r *Reconciler) MapManagedResourceToControllerInstallation(_ context.Context, obj client.Object) []reconcile.Request {
 	managedResource, ok := obj.(*resourcesv1alpha1.ManagedResource)
 	if !ok {
 		return nil

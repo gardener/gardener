@@ -197,7 +197,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	}
 
 	log.Info("Adding controllers to manager")
-	if err := controller.AddToManager(ctx, cancel, mgr, cfg, gardenClientMap); err != nil {
+	if err := controller.AddToManager(cancel, mgr, cfg, gardenClientMap); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
 	}
 

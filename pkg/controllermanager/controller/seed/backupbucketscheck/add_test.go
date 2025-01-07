@@ -7,20 +7,16 @@ package backupbucketscheck_test
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed/backupbucketscheck"
 )
 
@@ -114,28 +110,19 @@ var _ = Describe("Add", func() {
 	})
 
 	Describe("#MapBackupBucketToSeed", func() {
-		var (
-			ctx        = context.TODO()
-			log        logr.Logger
-			fakeClient client.Client
-		)
-
-		BeforeEach(func() {
-			log = logr.Discard()
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		})
+		ctx := context.TODO()
 
 		It("should do nothing if the object is no BackupBucket", func() {
-			Expect(reconciler.MapBackupBucketToSeed(ctx, log, fakeClient, &corev1.Secret{})).To(BeEmpty())
+			Expect(reconciler.MapBackupBucketToSeed(ctx, &corev1.Secret{})).To(BeEmpty())
 		})
 
 		It("should do nothing if seed name is not set", func() {
 			backupBucket.Spec.SeedName = nil
-			Expect(reconciler.MapBackupBucketToSeed(ctx, log, fakeClient, backupBucket)).To(BeEmpty())
+			Expect(reconciler.MapBackupBucketToSeed(ctx, backupBucket)).To(BeEmpty())
 		})
 
 		It("should map the BackupBucket to the Seed", func() {
-			Expect(reconciler.MapBackupBucketToSeed(ctx, log, fakeClient, backupBucket)).To(ConsistOf(
+			Expect(reconciler.MapBackupBucketToSeed(ctx, backupBucket)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: *backupBucket.Spec.SeedName}},
 			))
 		})

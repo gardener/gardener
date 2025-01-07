@@ -126,7 +126,7 @@ var _ = BeforeSuite(func() {
 		},
 		// limit exponential backoff in tests
 		RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), 100*time.Millisecond),
-	}).AddToManager(ctx, mgr, mgr)).To(Succeed())
+	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	Expect((&tokeninvalidatorwebhook.Handler{
 		Logger: log,

@@ -5,20 +5,18 @@
 package healthcheck
 
 import (
-	"context"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	extensionsconfigv1alpha1 "github.com/gardener/gardener/extensions/pkg/apis/config/v1alpha1"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
@@ -92,7 +90,6 @@ type RegisteredExtension struct {
 // healthChecks defines the checks to execute mapped to the healthConditionTypes its contributing to (e.g checkDeployment in Seed -> ControlPlaneHealthy).
 // register returns a runtime representation of the extension resource to register it with the controller-runtime
 func DefaultRegistration(
-	ctx context.Context,
 	extensionType string,
 	kind schema.GroupVersionKind,
 	getExtensionObjListFunc GetExtensionObjectListFunc,
@@ -125,7 +122,7 @@ func DefaultRegistration(
 	}
 
 	healthCheckActuator := NewActuator(mgr, args.Type, args.GetExtensionGroupVersionKind().Kind, getExtensionObjFunc, healthChecks, shootRestOptions)
-	return Register(ctx, mgr, args, healthCheckActuator)
+	return Register(mgr, args, healthCheckActuator)
 }
 
 // RegisterExtension registered a resource and its corresponding healthCheckTypes.
@@ -171,12 +168,11 @@ func DefaultPredicates() []predicate.Predicate {
 // Register the extension resource. Must be of type extensionsv1alpha1.Object
 // Add creates a new Reconciler and adds it to the Manager.
 // and Start it when the Manager is Started.
-func Register(ctx context.Context, mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, actuator, *args.registeredExtension, args.SyncPeriod)
-	return add(ctx, mgr, args)
+func Register(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error {
+	return add(mgr, args, actuator)
 }
 
-func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
+func add(mgr manager.Manager, args AddArgs, actuator HealthCheckActuator) error {
 	// generate random string to create unique manager name, in case multiple managers register the same extension resource
 	str, err := utils.GenerateRandomString(10)
 	if err != nil {
@@ -184,28 +180,29 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	}
 
 	controllerName := fmt.Sprintf("%s-%s-%s-%s-%s", ControllerName, args.registeredExtension.groupVersionKind.Kind, args.registeredExtension.groupVersionKind.Group, args.registeredExtension.groupVersionKind.Version, str)
-	ctrl, err := controller.New(controllerName, mgr, args.ControllerOptions)
-	if err != nil {
-		return err
-	}
-
-	log.Log.Info("Registered health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 
 	// add type predicate to only watch registered resource (e.g. ControlPlane) with a certain type (e.g. aws)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
-	if err := ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), args.registeredExtension.getExtensionObjFunc(), &handler.EnqueueRequestForObject{}, predicates...)); err != nil {
-		return err
-	}
+	log.Log.Info("Registering health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 
-	// watch Cluster of Shoot provider type (e.g. aws)
-	// this is to be notified when the Shoot is being hibernated (stop health checks) and wakes up (start health checks again)
-	return ctrl.Watch(
-		source.Kind[client.Object](mgr.GetCache(),
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(controllerName).
+		WithOptions(args.ControllerOptions).
+		Watches(
+			args.registeredExtension.getExtensionObjFunc(),
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicates...),
+		).
+		// watch Cluster of Shoot provider type (e.g. aws)
+		// this is to be notified when the Shoot is being hibernated (stop health checks) and wakes up (start health checks again)
+		Watches(
 			&extensionsv1alpha1.Cluster{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.ClusterToObjectMapper(mgr, args.GetExtensionObjListFunc, predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
-	)
+			handler.EnqueueRequestsFromMapFunc(mapper.ClusterToObjectMapper(mgr.GetClient(), args.GetExtensionObjListFunc, predicates)),
+		).
+		Complete(NewReconciler(mgr, actuator, *args.registeredExtension, args.SyncPeriod))
 }
 
 func getHealthCheckTypes(healthChecks []ConditionTypeToHealthCheck) []string {

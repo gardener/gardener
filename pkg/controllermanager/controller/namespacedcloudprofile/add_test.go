@@ -73,17 +73,13 @@ var _ = Describe("NamespacedCloudProfile controller", func() {
 			Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
 			Expect(fakeClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
 
-			result := reconciler.MapCloudProfileToNamespacedCloudProfile(ctx, log, fakeClient, cloudProfile)
-
-			Expect(result).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: "n-profile-1", Namespace: namespaceName}}))
+			Expect(reconciler.MapCloudProfileToNamespacedCloudProfile(log)(ctx, cloudProfile)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: "n-profile-1", Namespace: namespaceName}}))
 		})
 
 		It("should successfully return an empty result if no referencing NamespacedCloudProfiles exist", func() {
 			Expect(fakeClient.Create(ctx, cloudProfile)).To(Succeed())
 
-			result := reconciler.MapCloudProfileToNamespacedCloudProfile(ctx, log, fakeClient, cloudProfile)
-
-			Expect(result).To(BeEmpty())
+			Expect(reconciler.MapCloudProfileToNamespacedCloudProfile(log)(ctx, cloudProfile)).To(BeEmpty())
 		})
 	})
 })

@@ -7,7 +7,6 @@ package tokeninvalidator
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,14 +23,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 // ControllerName is the name of the controller.
 const ControllerName = "token-invalidator"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targetCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Cluster) error {
 	if r.TargetReader == nil {
 		r.TargetReader = targetCluster.GetAPIReader()
 	}
@@ -42,30 +40,26 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, targ
 	secret := &metav1.PartialObjectMetadata{}
 	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 			RateLimiter:             r.RateLimiter,
 		}).
-		WatchesRawSource(
-			source.Kind[client.Object](targetCluster.GetCache(),
-				secret,
-				&handler.EnqueueRequestForObject{},
-				r.SecretPredicate()),
-		).
-		Build(r)
-	if err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.Kind[client.Object](targetCluster.GetCache(),
+		WatchesRawSource(source.Kind[client.Object](
+			targetCluster.GetCache(),
+			secret,
+			&handler.EnqueueRequestForObject{},
+			r.SecretPredicate(),
+		)).
+		WatchesRawSource(source.Kind[client.Object](
+			targetCluster.GetCache(),
 			&corev1.ServiceAccount{},
-			mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), mapper.MapFunc(r.MapServiceAccountToSecrets), mapper.UpdateWithOldAndNew, c.GetLogger()),
-			r.ServiceAccountPredicate()),
-	)
+			handler.EnqueueRequestsFromMapFunc(r.MapServiceAccountToSecrets),
+			r.ServiceAccountPredicate(),
+		)).
+		Complete(r)
 }
 
 // SecretPredicate returns the predicate for secrets.
@@ -106,7 +100,7 @@ func (r *Reconciler) ServiceAccountPredicate() predicate.Predicate {
 }
 
 // MapServiceAccountToSecrets maps the ServiceAccount to all referenced secrets.
-func (r *Reconciler) MapServiceAccountToSecrets(_ context.Context, _ logr.Logger, _ client.Reader, obj client.Object) []reconcile.Request {
+func (r *Reconciler) MapServiceAccountToSecrets(_ context.Context, obj client.Object) []reconcile.Request {
 	sa, ok := obj.(*corev1.ServiceAccount)
 	if !ok {
 		return nil

@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -58,13 +59,12 @@ type AddArgs struct {
 
 // Add creates a new heartbeat controller and adds it to the given manager.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.ExtensionName, args.Namespace, args.RenewIntervalSeconds, args.Clock)
 	args.ControllerOptions.MaxConcurrentReconciles = 1
 
-	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
-	if err != nil {
-		return err
-	}
-
-	return ctrl.Watch(controllerutils.EnqueueOnce)
+	return builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(args.ControllerOptions).
+		WatchesRawSource(controllerutils.EnqueueOnce).
+		Complete(NewReconciler(mgr, args.ExtensionName, args.Namespace, args.RenewIntervalSeconds, args.Clock))
 }

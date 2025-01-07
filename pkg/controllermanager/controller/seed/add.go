@@ -5,7 +5,6 @@
 package seed
 
 import (
-	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -18,16 +17,16 @@ import (
 )
 
 // AddToManager adds all Seed controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
 	if err := (&backupbucketscheck.Reconciler{
 		Config: *cfg.Controllers.SeedBackupBucketsCheck,
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding backupbuckets check reconciler: %w", err)
 	}
 
 	if err := (&extensionscheck.Reconciler{
 		Config: *cfg.Controllers.SeedExtensionsCheck,
-	}).AddToManager(ctx, mgr); err != nil {
+	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding extensions check reconciler: %w", err)
 	}
 
@@ -37,7 +36,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.Controlle
 		return fmt.Errorf("failed adding lifecycle reconciler: %w", err)
 	}
 
-	if err := (&secrets.Reconciler{}).AddToManager(ctx, mgr); err != nil {
+	if err := (&secrets.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding secrets reconciler: %w", err)
 	}
 

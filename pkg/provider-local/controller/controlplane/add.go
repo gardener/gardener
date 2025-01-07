@@ -48,7 +48,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		return err
 	}
 
-	return controlplane.Add(ctx, mgr, controlplane.AddArgs{
+	return controlplane.Add(mgr, controlplane.AddArgs{
 		Actuator:          genericActuator,
 		ControllerOptions: opts.Controller,
 		Predicates:        controlplane.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),

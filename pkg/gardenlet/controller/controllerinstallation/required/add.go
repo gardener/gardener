@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -28,7 +29,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/extensions"
 )
 
@@ -36,7 +36,7 @@ import (
 const ControllerName = "controllerinstallation-required"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluster cluster.Cluster) error {
 	if r.GardenClient == nil {
 		r.GardenClient = gardenCluster.GetClient()
 	}
@@ -49,8 +49,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	r.Lock = &sync.RWMutex{}
 	r.KindToRequiredTypes = make(map[string]sets.Set[string])
 
-	// It's not possible to call builder.Build() without adding atleast one watch, and without this, we can't get the controller logger.
-	// Hence, we have to build up the controller manually.
+	// It's not possible to call builder.Build() without adding at least one watch, and without this, we can't get the
+	// controller logger. Hence, we have to build up the controller manually.
 	c, err := controller.New(
 		ControllerName,
 		mgr,
@@ -80,13 +80,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 		{extensionsv1alpha1.OperatingSystemConfigResource, &extensionsv1alpha1.OperatingSystemConfig{}, func() client.ObjectList { return &extensionsv1alpha1.OperatingSystemConfigList{} }},
 		{extensionsv1alpha1.WorkerResource, &extensionsv1alpha1.Worker{}, func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }},
 	} {
-		eventHandler := mapper.EnqueueRequestsFrom(
-			ctx,
-			mgr.GetCache(),
-			r.MapObjectKindToControllerInstallations(extension.objectKind, extension.newObjectListFunc),
-			mapper.UpdateWithNew,
-			c.GetLogger(),
-		)
+		eventHandler := handler.EnqueueRequestsFromMapFunc(r.MapObjectKindToControllerInstallations(
+			mgr.GetLogger().WithValues("controller", ControllerName),
+			extension.objectKind,
+			extension.newObjectListFunc,
+		))
 
 		// Execute the mapper function at least once to initialize the `KindToRequiredTypes` map.
 		// This is necessary for extension kinds which are registered but for which no extension objects exist in the
@@ -112,8 +110,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 // the given kind.
 // The returned reconciler doesn't care about which object was created/updated/deleted, it just cares about being
 // triggered when some object of the kind, it is responsible for, is created/updated/deleted.
-func (r *Reconciler) MapObjectKindToControllerInstallations(objectKind string, newObjectListFunc func() client.ObjectList) mapper.MapFunc {
-	return func(ctx context.Context, log logr.Logger, _ client.Reader, _ client.Object) []reconcile.Request {
+func (r *Reconciler) MapObjectKindToControllerInstallations(log logr.Logger, objectKind string, newObjectListFunc func() client.ObjectList) handler.MapFunc {
+	return func(ctx context.Context, _ client.Object) []reconcile.Request {
 		log = log.WithValues("extensionKind", objectKind)
 
 		listObj := newObjectListFunc()

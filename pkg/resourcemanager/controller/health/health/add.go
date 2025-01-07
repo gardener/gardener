@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health/utils"
 	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
@@ -36,7 +35,7 @@ import (
 const ControllerName = "health"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, clusterID string) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, clusterID string) error {
 	if r.SourceClient == nil {
 		r.SourceClient = sourceCluster.GetClient()
 	}
@@ -97,11 +96,12 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, sour
 		_, metadataOnly := obj.(*metav1.PartialObjectMetadata)
 		c.GetLogger().Info("Adding new watch for GroupVersionKind", "groupVersionKind", gvk, "metadataOnly", metadataOnly)
 
-		if err := c.Watch(
-			source.Kind[client.Object](targetCluster.GetCache(), obj,
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), utils.MapToOriginManagedResource(clusterID), mapper.UpdateWithNew, c.GetLogger()),
-				utils.HealthStatusChanged(c.GetLogger())),
-		); err != nil {
+		if err := c.Watch(source.Kind[client.Object](
+			targetCluster.GetCache(),
+			obj,
+			handler.EnqueueRequestsFromMapFunc(utils.MapToOriginManagedResource(c.GetLogger(), clusterID)),
+			utils.HealthStatusChanged(c.GetLogger()),
+		)); err != nil {
 			return fmt.Errorf("error starting watch for GVK %s: %w", gvk.String(), err)
 		}
 

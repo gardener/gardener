@@ -137,7 +137,7 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddControllerInstallationRegistrationRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Register controller")
-	Expect(controllerregistration.AddToManager(ctx, mgr, config.ControllerManagerConfiguration{
+	Expect(controllerregistration.AddToManager(mgr, config.ControllerManagerConfiguration{
 		Controllers: config.ControllerManagerControllerConfiguration{
 			ControllerRegistration: &config.ControllerRegistrationControllerConfiguration{
 				ConcurrentSyncs: ptr.To(5),

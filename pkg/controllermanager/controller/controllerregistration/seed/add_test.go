@@ -446,6 +446,7 @@ var _ = Describe("Add", func() {
 		BeforeEach(func() {
 			log = logr.Discard()
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			reconciler.Client = fakeClient
 		})
 
 		Describe("#MapToAllSeeds", func() {
@@ -460,7 +461,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should map to all seeds", func() {
-				Expect(reconciler.MapToAllSeeds(ctx, log, fakeClient, nil)).To(ConsistOf(
+				Expect(reconciler.MapToAllSeeds(log)(ctx, nil)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed1.Name}},
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed2.Name}},
 				))
@@ -479,11 +480,11 @@ var _ = Describe("Add", func() {
 
 			It("should return nil when seed name is not set", func() {
 				backupBucket.Spec.SeedName = nil
-				Expect(reconciler.MapBackupBucketToSeed(ctx, log, fakeClient, backupBucket)).To(BeEmpty())
+				Expect(reconciler.MapBackupBucketToSeed(ctx, backupBucket)).To(BeEmpty())
 			})
 
 			It("should map to the seed", func() {
-				Expect(reconciler.MapBackupBucketToSeed(ctx, log, fakeClient, backupBucket)).To(ConsistOf(
+				Expect(reconciler.MapBackupBucketToSeed(ctx, backupBucket)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
 				))
 			})
@@ -501,11 +502,11 @@ var _ = Describe("Add", func() {
 
 			It("should return nil when seed name is not set", func() {
 				backupEntry.Spec.SeedName = nil
-				Expect(reconciler.MapBackupEntryToSeed(ctx, log, fakeClient, backupEntry)).To(BeEmpty())
+				Expect(reconciler.MapBackupEntryToSeed(ctx, backupEntry)).To(BeEmpty())
 			})
 
 			It("should map to the seed", func() {
-				Expect(reconciler.MapBackupEntryToSeed(ctx, log, fakeClient, backupEntry)).To(ConsistOf(
+				Expect(reconciler.MapBackupEntryToSeed(ctx, backupEntry)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
 				))
 			})
@@ -523,11 +524,11 @@ var _ = Describe("Add", func() {
 
 			It("should return nil when seed name is not set", func() {
 				shoot.Spec.SeedName = nil
-				Expect(reconciler.MapShootToSeed(ctx, log, fakeClient, shoot)).To(BeEmpty())
+				Expect(reconciler.MapShootToSeed(ctx, shoot)).To(BeEmpty())
 			})
 
 			It("should map to the seed", func() {
-				Expect(reconciler.MapShootToSeed(ctx, log, fakeClient, shoot)).To(ConsistOf(
+				Expect(reconciler.MapShootToSeed(ctx, shoot)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
 				))
 			})
@@ -544,7 +545,7 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should map to the seed", func() {
-				Expect(reconciler.MapControllerInstallationToSeed(ctx, log, fakeClient, controllerInstallation)).To(ConsistOf(
+				Expect(reconciler.MapControllerInstallationToSeed(ctx, controllerInstallation)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}},
 				))
 			})
@@ -578,13 +579,13 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return nil because there is no ControllerRegistration referencing the deployment", func() {
-				Expect(reconciler.MapControllerDeploymentToAllSeeds(ctx, log, fakeClient, controllerDeployment)).To(BeEmpty())
+				Expect(reconciler.MapControllerDeploymentToAllSeeds(log)(ctx, controllerDeployment)).To(BeEmpty())
 			})
 
 			It("should map to all seeds the seed because there is a ControllerRegistration referencing the deployment", func() {
 				Expect(fakeClient.Create(ctx, controllerRegistration)).To(Succeed())
 
-				Expect(reconciler.MapControllerDeploymentToAllSeeds(ctx, log, fakeClient, controllerDeployment)).To(ConsistOf(
+				Expect(reconciler.MapControllerDeploymentToAllSeeds(log)(ctx, controllerDeployment)).To(ConsistOf(
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed1.Name}},
 					reconcile.Request{NamespacedName: types.NamespacedName{Name: seed2.Name}},
 				))

@@ -190,6 +190,7 @@ var _ = Describe("Add", func() {
 				WithScheme(kubernetes.GardenScheme).
 				WithIndex(&gardencorev1beta1.Project{}, core.ProjectNamespace, indexer.ProjectNamespaceIndexerFunc).
 				Build()
+			reconciler.Client = fakeClient
 
 			project = &gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -199,20 +200,20 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should do nothing if the Project is not found", func() {
-			Expect(reconciler.MapObjectToProject(ctx, log, fakeClient, secretSecretBindingRef)).To(BeEmpty())
+			Expect(reconciler.MapObjectToProject(log)(ctx, secretSecretBindingRef)).To(BeEmpty())
 		})
 
 		It("should do nothing if no related Project can be found", func() {
 			Expect(fakeClient.Create(ctx, project)).To(Succeed())
 
-			Expect(reconciler.MapObjectToProject(ctx, log, fakeClient, secretSecretBindingRef)).To(BeEmpty())
+			Expect(reconciler.MapObjectToProject(log)(ctx, secretSecretBindingRef)).To(BeEmpty())
 		})
 
 		It("should map the object to the Project", func() {
 			project.Spec.Namespace = &secretSecretBindingRef.Namespace
 			Expect(fakeClient.Create(ctx, project)).To(Succeed())
 
-			Expect(reconciler.MapObjectToProject(ctx, log, fakeClient, secretSecretBindingRef)).To(ConsistOf(
+			Expect(reconciler.MapObjectToProject(log)(ctx, secretSecretBindingRef)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name}},
 			))
 		})

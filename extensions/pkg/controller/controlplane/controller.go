@@ -7,6 +7,7 @@ package controlplane
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -16,7 +17,6 @@ import (
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 const (
@@ -54,26 +54,33 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 
 // Add creates a new ControlPlane Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
-func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
+func Add(mgr manager.Manager, args AddArgs) error {
+	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
 
-	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(args.ControllerOptions).
+		Watches(
+			&extensionsv1alpha1.ControlPlane{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicates...),
+		).
+		Build(NewReconciler(mgr, args.Actuator))
 	if err != nil {
 		return err
 	}
 
-	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
-
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(
-			source.Kind[client.Object](mgr.GetCache(),
-				&extensionsv1alpha1.Cluster{},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToControlPlaneMapper(mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
-		); err != nil {
+		if err := c.Watch(source.Kind[client.Object](
+			mgr.GetCache(),
+			&extensionsv1alpha1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(ClusterToControlPlaneMapper(mgr.GetClient(), predicates)),
+		)); err != nil {
 			return err
 		}
 	}
 
-	return ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.ControlPlane{}, &handler.EnqueueRequestForObject{}, predicates...))
+	return nil
 }

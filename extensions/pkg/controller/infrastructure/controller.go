@@ -7,6 +7,7 @@ package infrastructure
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -18,7 +19,6 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 const (
@@ -62,37 +62,41 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 
 // Add creates a new Infrastructure Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
-func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator, args.ConfigValidator, args.KnownCodes)
-	return add(ctx, mgr, args)
+func Add(mgr manager.Manager, args AddArgs) error {
+	return add(mgr, args)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
-	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
+func add(mgr manager.Manager, args AddArgs) error {
+	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
+
+	c, err := builder.
+		ControllerManagedBy(mgr).
+		Named(ControllerName).
+		WithOptions(args.ControllerOptions).
+		Watches(
+			&extensionsv1alpha1.Infrastructure{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicates...),
+		).
+		Build(NewReconciler(mgr, args.Actuator, args.ConfigValidator, args.KnownCodes))
 	if err != nil {
 		return err
 	}
 
-	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
-
-	if err := ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), &extensionsv1alpha1.Infrastructure{}, &handler.EnqueueRequestForObject{}, predicates...)); err != nil {
-		return err
-	}
-
-	// do not watch cluster if respect operation annotation to prevent unwanted reconciliations in case the operation annotation
-	// is already present & the extension CRD is already deleting
+	// do not watch cluster if respect operation annotation to prevent unwanted reconciliations in case the operation
+	// annotation is already present & the extension CRD is already deleting
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(
-			source.Kind[client.Object](mgr.GetCache(),
-				&extensionsv1alpha1.Cluster{},
-				mapper.EnqueueRequestsFrom(ctx, mgr.GetCache(), ClusterToInfrastructureMapper(mgr, predicates), mapper.UpdateWithNew, ctrl.GetLogger())),
-		); err != nil {
+		if err := c.Watch(source.Kind[client.Object](
+			mgr.GetCache(),
+			&extensionsv1alpha1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(ClusterToInfrastructureMapper(mgr.GetClient(), predicates)),
+		)); err != nil {
 			return err
 		}
 	}
 
 	// Add additional watches to the controller besides the standard one.
-	return args.WatchBuilder.AddToController(ctrl)
+	return args.WatchBuilder.AddToController(c)
 }

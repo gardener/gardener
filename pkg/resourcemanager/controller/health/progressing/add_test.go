@@ -210,7 +210,7 @@ var _ = Describe("Add", func() {
 		})
 
 		It("should return nil because owning Deployment was not found", func() {
-			Expect(reconciler.MapPodToDeploymentToOriginManagedResource("")(ctx, log, fakeClient, pod)).To(BeEmpty())
+			Expect(reconciler.MapPodToDeploymentToOriginManagedResource(log, "")(ctx, pod)).To(BeEmpty())
 		})
 
 		It("should return nil because Deployment has no matching origin", func() {
@@ -219,7 +219,7 @@ var _ = Describe("Add", func() {
 			Expect(fakeClient.Create(ctx, replicaSet)).To(Succeed())
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
-			Expect(reconciler.MapPodToDeploymentToOriginManagedResource("")(ctx, log, fakeClient, pod)).To(BeEmpty())
+			Expect(reconciler.MapPodToDeploymentToOriginManagedResource(log, "")(ctx, pod)).To(BeEmpty())
 		})
 
 		It("should return a request because the origin of the Deployment matches the cluster id", func() {
@@ -229,7 +229,7 @@ var _ = Describe("Add", func() {
 			deployment.Annotations = map[string]string{"resources.gardener.cloud/origin": "foo:bar/baz"}
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 
-			Expect(reconciler.MapPodToDeploymentToOriginManagedResource("foo")(ctx, log, fakeClient, pod)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: "baz", Namespace: "bar"}}))
+			Expect(reconciler.MapPodToDeploymentToOriginManagedResource(log, "foo")(ctx, pod)).To(ConsistOf(reconcile.Request{NamespacedName: types.NamespacedName{Name: "baz", Namespace: "bar"}}))
 		})
 	})
 })
