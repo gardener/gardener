@@ -10,17 +10,52 @@ import (
 	"fmt"
 	"sort"
 
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+func (x *x509CertificateExporter) daemonSetList(resNamePrefix string, sa *corev1.ServiceAccount) ([]client.Object, error) {
+	if len(x.values.WorkerGroups) == 0 {
+		return nil, nil
+	}
+	var (
+		daemonSets          []client.Object = make([]client.Object, 0, len(x.values.WorkerGroups))
+		getHostCertificates                 = func(group operatorv1alpha1.WorkerGroup) ([]HostCertificates, error) {
+			newHostCertificates := make([]HostCertificates, 0, len(group.HostCertificates))
+			for idx, hc := range group.HostCertificates {
+				certs, err := NewHostCertificates(hc.MountPath, hc.CertificatePaths, hc.CertificateDirPaths)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create HostCertificates object from %v: %w", hc, err)
+				}
+				newHostCertificates[idx] = *certs
+			}
+			return newHostCertificates, nil
+		}
+	)
+
+	for name, group := range x.values.WorkerGroups {
+		hostCertificates, err := getHostCertificates(group)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HostCertificates object for worker group %s: %w", name, err)
+		}
+		ds, err := x.daemonSet(fmt.Sprintf("%s-%s", resNamePrefix, name), sa, hostCertificates, group.Selector)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create DaemonSet: %w", err)
+		}
+		daemonSets = append(daemonSets, ds)
+	}
+
+	return daemonSets, nil
+}
+
 func (x *x509CertificateExporter) daemonSet(
-	resName string, sa *corev1.ServiceAccount,
+	resName string, sa *corev1.ServiceAccount, hostCerts []HostCertificates, selector *metav1.LabelSelector,
 ) (*appsv1.DaemonSet, error) {
-	if len(x.values.HostCertificates) == 0 {
-		return nil, errors.New("no host certificates provided")
+	if len(x.values.WorkerGroups) == 0 {
+		return nil, errors.New("No workergroups defined")
 	}
 
 	var (
@@ -36,7 +71,7 @@ func (x *x509CertificateExporter) daemonSet(
 	hostPaths, args = func() ([]string, []string) {
 		paths := []string{}
 		certArgs := []string{}
-		for _, hc := range x.values.HostCertificates {
+		for _, hc := range hostCerts {
 			paths = append(paths, hc.MountPath)
 			certArgs = append(certArgs, hc.AsArgs()...)
 		}
@@ -79,6 +114,9 @@ func (x *x509CertificateExporter) daemonSet(
 	podSpec.Containers[0].Args = args
 	podSpec.Volumes = volumes
 	podSpec.Containers[0].VolumeMounts = volumeMounts
+	if selector != nil {
+		podSpec.NodeSelector = selector.MatchLabels
+	}
 
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -106,13 +144,18 @@ func (x *x509CertificateExporter) getHostCertificateMonitoringResources() ([]cli
 		sa      = x.serviceAccount(resName)
 		service = x.service(resName, x.getGenericLabels(nodeCertificateLabelValue))
 		sm      = x.serviceMonitor(resName, x.getGenericLabels(nodeCertificateLabelValue))
-		ds      *appsv1.DaemonSet
 	)
-	ds, err := x.daemonSet(resName, sa)
+	objList, err := x.daemonSetList(resName, sa)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create DaemonSet: %w", err)
+		return nil, fmt.Errorf("failed to create DaemonSets: %w", err)
 	}
 
-	return []client.Object{sa, service, sm, ds}, nil
+	if objList == nil {
+		return nil, nil
+	}
+
+	objList = append(objList, sa, service, sm)
+
+	return objList, nil
 }

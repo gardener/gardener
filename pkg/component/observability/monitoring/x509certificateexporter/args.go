@@ -214,5 +214,5 @@ func (in IncludeNamespaces) AsArgs() []string {
 type ConfigMapKeys []string
 
 func (c ConfigMapKeys) AsArgs() []string {
-	return listToArgs("--configmap-key=", c)
+	return listToArgs("--configmap-keys=", c)
 }

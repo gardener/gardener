@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	x "github.com/gardener/gardener/pkg/component/observability/monitoring/x509certificateexporter"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -20,11 +21,12 @@ import (
 // NewX509CertificateExporter instantiates a new `x509-certificate-exporter` component.
 func NewX509CertificateExporter(
 	c client.Client,
-	gardebNamespaceName string,
+	gardenNamespaceName string,
 	runtimeVersion *semver.Version,
 	priorityClassName string,
 	suffix string,
 	prometheusInstanceName string,
+	workerGroups map[string]operatorv1alpha1.WorkerGroup,
 ) (
 	component.DeployWaiter,
 	error,
@@ -34,8 +36,7 @@ func NewX509CertificateExporter(
 		return nil, err
 	}
 
-	return x.New(c, nil, gardebNamespaceName, x.Values{
-		// TODO(mimiteto): Allow host mounts
+	return x.New(c, nil, gardenNamespaceName, x.Values{
 		SecretTypes: x.SecretTypeList{
 			x.SecretType{Type: "kubernetes.io/tls", Key: `.*.crt`},
 			x.SecretType{Type: "istio.io/ca-root", Key: `.*cert.*\.pem`},
@@ -49,5 +50,6 @@ func NewX509CertificateExporter(
 		CertificateRenewalDays:    14,
 		CertificateExpirationDays: 7,
 		PrometheusInstance:        prometheusInstanceName,
+		WorkerGroups:              workerGroups,
 	}), nil
 }

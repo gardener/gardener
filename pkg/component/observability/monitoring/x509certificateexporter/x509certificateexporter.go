@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -76,8 +77,8 @@ type Values struct {
 	IncludeLabels IncludeLabels
 	// ExcludeLabels exludes labels, similar to the namespaces vars.
 	ExcludeLabels ExcludeLabels
-	// HostCertificates that should be monitored from hosts
-	HostCertificates []HostCertificates
+	// WorkerGroups that should be monitored from nodes
+	WorkerGroups map[string]operatorv1alpha1.WorkerGroup
 	// CertificateExpirationDays is the number of days before expiration that will trigger a critical alert
 	CertificateExpirationDays uint
 	// CertificateRenewalDays is the number of days bedfore expiration that will trigger a warning alert
@@ -129,7 +130,7 @@ func (x *x509CertificateExporter) Deploy(ctx context.Context) error {
 	}
 	res = append(res, x.prometheusRule(x.getGenericLabels("any"), x.values.CertificateRenewalDays, x.values.CertificateExpirationDays))
 
-	if len(x.values.HostCertificates) > 0 {
+	if x.values.WorkerGroups != nil {
 		if hostResources, err = x.getHostCertificateMonitoringResources(); err != nil {
 			return fmt.Errorf("failed to get host certificate monitoring resources: %w", err)
 		}
