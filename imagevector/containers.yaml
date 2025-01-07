@@ -454,6 +454,10 @@ images:
         value:
           - type: "githubTeam"
             teamname: "gardener/monitoring-maintainers"
+  - name: x509-certificate-exporter
+    sourceRepository: github.com/enix/x509-certificate-exporter
+    repository: docker.io/enix/x509-certificate-exporter
+    tag: 3.18.0
   # Shoot core addons
   - name: vpn-client
     sourceRepository: github.com/gardener/vpn2
@@ -892,8 +896,3 @@ images:
     sourceRepository: github.com/gardener/apiserver-proxy
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver-proxy
     tag: "v0.19.0"
-
-  - name: x509-certificate-exporter
-    sourceRepository: github.com/enix/x509-certificate-exporter
-    repository: docker.io/enix/x509-certificate-exporter
-    tag: 3.18.0

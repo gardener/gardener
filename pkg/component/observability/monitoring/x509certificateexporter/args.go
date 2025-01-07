@@ -24,7 +24,7 @@ type X509CertificateArgSet interface {
 	AsArgs() []string
 }
 
-// Filepath to a certificate on the node
+// CertificatePath filepath to a certificate on the node
 type CertificatePath string
 
 // AsArg returns the certificate path as an argument
@@ -45,10 +45,10 @@ func (c CertificateDirPath) AsArg() string {
 type HostCertificates struct {
 	// MountPath is the host path that will be mounted
 	MountPath string
-	// Certificate paths is a list of certificates withion the specified mount
+	// CertificatePaths is a list of certificates withion the specified mount
 	// All relative paths are configured base on the specified mount
 	CertificatePaths []CertificatePath
-	// Similat to CertificatePaths but for dirs
+	// CertificateDirPaths similat to CertificatePaths but for dirs
 	CertificateDirPaths []CertificateDirPath
 }
 
@@ -116,7 +116,7 @@ func (h HostCertificates) AsArgs() []string {
 	return args
 }
 
-// SecretType groups Secret types and the key name contained within that secret
+// SecretType groups secret types and the key name contained within that secret
 // to provide an argument for the x509 certificate exporter
 type SecretType struct {
 	// Type of the secrets that should be searched

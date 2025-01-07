@@ -75,11 +75,11 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
-	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/x509certificateexporter"
+	oteloperator "github.com/gardener/gardener/pkg/component/observability/opentelemetry/operator"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
-	controllermanagerv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -736,7 +736,6 @@ func (r *Reconciler) newKubeAPIServer(
 			Name:       "seed-authorizer",
 			Kubeconfig: kubeconfig,
 			WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
-<<<<<<< HEAD
 				// Set TTL to a very low value since it cannot be set to 0 because of defaulting.
 				// See https://github.com/kubernetes/apiserver/blob/3658357fea9fa8b36173d072f2d548f135049e05/pkg/apis/apiserver/v1beta1/defaults.go#L29-L36
 				// TODO(rfranzke): Use `Cache{Una,A}uthorizedRequests` instead of `AuthorizedTTL` and
@@ -744,10 +743,6 @@ func (r *Reconciler) newKubeAPIServer(
 				//  More info: https://github.com/kubernetes/kubernetes/pull/129237
 				AuthorizedTTL:                            metav1.Duration{Duration: 1 * time.Nanosecond},
 				UnauthorizedTTL:                          metav1.Duration{Duration: 1 * time.Nanosecond},
-=======
-				AuthorizedTTL:                            metav1.Duration{Duration: time.Duration(0)},
-				UnauthorizedTTL:                          metav1.Duration{Duration: time.Duration(0)},
->>>>>>> da73fd52d1 (Deploying x509 certificate exporter on runtime cluster)
 				Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
 				FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
 				SubjectAccessReviewVersion:               "v1",
@@ -1244,7 +1239,7 @@ func (r *Reconciler) newGardenerControllerManager(garden *operatorv1alpha1.Garde
 		}
 
 		for _, defaultProjectQuota := range config.DefaultProjectQuotas {
-			values.Quotas = append(values.Quotas, controllermanagerv1alpha1.QuotaConfiguration{
+			values.Quotas = append(values.Quotas, controllermanagerconfigv1alpha1.QuotaConfiguration{
 				Config:          defaultProjectQuota.Config,
 				ProjectSelector: defaultProjectQuota.ProjectSelector,
 			})
