@@ -76,4 +76,9 @@ spec:
                     request_handle:respond({[":status"] = "400"}, "Invalid certificate subject")
                   end
                 end
+
+                -- Route timeouts to upstream have to be disabled. Otherwise, watches would be terminated after 15 seconds.
+                -- See https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#route-timeouts
+                request_handle:headers():add("x-envoy-upstream-rq-timeout-ms", "0")
+                request_handle:headers():add("x-envoy-upstream-rq-per-try-timeout-ms", "0")
               end
