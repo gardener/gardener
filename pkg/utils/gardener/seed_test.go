@@ -74,9 +74,10 @@ var _ = Describe("utils", func() {
 
 	Describe("#GetWildcardCertificate", func() {
 		var (
-			ctx        = context.TODO()
-			fakeClient client.Client
-			secret     *corev1.Secret
+			ctx          = context.TODO()
+			fakeClient   client.Client
+			secret       *corev1.Secret
+			gardenSecret *corev1.Secret
 		)
 
 		BeforeEach(func() {
@@ -89,6 +90,13 @@ var _ = Describe("utils", func() {
 					Labels:       map[string]string{"gardener.cloud/role": "controlplane-cert"},
 				},
 			}
+			gardenSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "secret-",
+					Namespace:    "garden",
+					Labels:       map[string]string{"gardener.cloud/role": "garden-cert"},
+				},
+			}
 		})
 
 		It("should return an error because there are more than one wildcard certificates", func() {
@@ -98,7 +106,7 @@ var _ = Describe("utils", func() {
 
 			result, err := GetWildcardCertificate(ctx, fakeClient)
 			Expect(result).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("misconfigured cluster: not possible to provide more than one secret with annotation")))
+			Expect(err).To(MatchError(ContainSubstring("misconfigured cluster: not possible to provide more than one secret with label")))
 		})
 
 		It("should return the wildcard certificate secret", func() {
@@ -112,6 +120,37 @@ var _ = Describe("utils", func() {
 		It("should return nil because there is no wildcard certificate secret", func() {
 			result, err := GetWildcardCertificate(ctx, fakeClient)
 			Expect(result).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the Garden wildcard certificate secret with old role name", func() {
+			Expect(fakeClient.Create(ctx, gardenSecret)).To(Succeed())
+
+			result, err := GetGardenWildcardCertificate(ctx, fakeClient)
+			Expect(result).To(Equal(gardenSecret))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return an error because there are more than one Garden wildcard certificates", func() {
+			secret2 := gardenSecret.DeepCopy()
+			Expect(fakeClient.Create(ctx, gardenSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
+
+			result, err := GetGardenWildcardCertificate(ctx, fakeClient)
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("misconfigured cluster: not possible to provide more than one secret with label")))
+		})
+
+		It("should return the correct wildcard certificate secrets if secrets for seed and garden are existing", func() {
+			Expect(fakeClient.Create(ctx, gardenSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := GetWildcardCertificate(ctx, fakeClient)
+			Expect(result).To(Equal(secret))
+			Expect(err).NotTo(HaveOccurred())
+
+			result, err = GetGardenWildcardCertificate(ctx, fakeClient)
+			Expect(result).To(Equal(gardenSecret))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

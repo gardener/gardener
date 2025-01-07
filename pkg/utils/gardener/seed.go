@@ -92,21 +92,41 @@ func hasExactUsages(usages, requiredUsages []certificatesv1.KeyUsage) bool {
 	return true
 }
 
-// GetWildcardCertificate gets the wildcard certificate for the ingress domain.
+// GetWildcardCertificate gets the wildcard TLS certificate for the seed ingress domain.
 // Nil is returned if no wildcard certificate is configured.
 func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secret, error) {
+	return getWildcardCertificate(ctx, c, v1beta1constants.GardenRoleControlPlaneWildcardCert)
+}
+
+// GetGardenWildcardCertificate gets the wildcard TLS certificate for the Garden runtime ingress domain.
+// Nil is returned if no wildcard certificate is configured.
+func GetGardenWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secret, error) {
+	secret, error := getWildcardCertificate(ctx, c, v1beta1constants.GardenRoleGardenWildcardCert)
+	if error != nil {
+		return nil, error
+	}
+	if secret == nil {
+		// try to lookup secret with old role name
+		secret, error = getWildcardCertificate(ctx, c, v1beta1constants.GardenRoleControlPlaneWildcardCert)
+	}
+	return secret, error
+}
+
+// getWildcardCertificate gets the wildcard TLS certificate for the ingress domain for the given role.
+// Nil is returned if no wildcard certificate is configured.
+func getWildcardCertificate(ctx context.Context, c client.Client, role string) (*corev1.Secret, error) {
 	wildcardCerts := &corev1.SecretList{}
 	if err := c.List(
 		ctx,
 		wildcardCerts,
 		client.InNamespace(v1beta1constants.GardenNamespace),
-		client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlaneWildcardCert},
+		client.MatchingLabels{v1beta1constants.GardenRole: role},
 	); err != nil {
 		return nil, err
 	}
 
 	if len(wildcardCerts.Items) > 1 {
-		return nil, fmt.Errorf("misconfigured cluster: not possible to provide more than one secret with annotation %s", v1beta1constants.GardenRoleControlPlaneWildcardCert)
+		return nil, fmt.Errorf("misconfigured cluster: not possible to provide more than one secret with label %s=%s", v1beta1constants.GardenRole, role)
 	}
 
 	if len(wildcardCerts.Items) == 1 {

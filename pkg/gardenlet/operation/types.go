@@ -59,6 +59,6 @@ type Operation struct {
 	APIServerClusterIP    string
 	SeedNamespaceObject   *corev1.Namespace
 
-	// ControlPlaneWildcardCert is a wildcard tls certificate which is issued for the seed's ingress domain.
+	// ControlPlaneWildcardCert is a wildcard TLS certificate which is issued for the seed's ingress domain.
 	ControlPlaneWildcardCert *corev1.Secret
 }

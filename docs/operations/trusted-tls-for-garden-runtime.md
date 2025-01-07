@@ -31,7 +31,7 @@ data:
 kind: Secret
 metadata:
   labels:
-    gardener.cloud/role: controlplane-cert
+    gardener.cloud/role: garden-cert
   name: garden-ingress-certificate
   namespace: garden
 type: Opaque

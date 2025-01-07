@@ -116,7 +116,7 @@ type Values struct {
 	VPAEnabled bool
 	// VPNHighAvailabilityEnabled specifies whether the cluster is configured with HA VPN.
 	VPNHighAvailabilityEnabled bool
-	// WildcardCertName is name of wildcard tls certificate which is issued for the seed's ingress domain.
+	// WildcardCertName is name of wildcard TLS certificate which is issued for the seed's ingress domain.
 	WildcardCertName *string
 }
 

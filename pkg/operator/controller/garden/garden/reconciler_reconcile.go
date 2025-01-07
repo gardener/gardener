@@ -111,7 +111,7 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	wildcardCert, err := gardenerutils.GetWildcardCertificate(ctx, r.RuntimeClientSet.Client())
+	wildcardCert, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client())
 	if err != nil {
 		return reconcile.Result{}, err
 	}
