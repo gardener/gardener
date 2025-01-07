@@ -153,13 +153,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed reloading systemd daemon: %w", err)
 	}
 
-	// The containerd service stops as soon as units were removed that were required to run before (via containerd.service dropin).
-	// We want to start the service here explicitly (again) as a precautious measure.
-	log.Info("Starting containerd", "unitName", v1beta1constants.OperatingSystemConfigUnitNameContainerDService)
-	if err := r.DBus.Start(ctx, r.Recorder, node, v1beta1constants.OperatingSystemConfigUnitNameContainerDService); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed starting containerd: %w", err)
-	}
-
 	log.Info("Executing unit commands (start/stop)", "unitCommands", len(oscChanges.Units.Commands))
 	if err := r.executeUnitCommands(ctx, log, node, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
