@@ -1624,7 +1624,7 @@ type Worker struct {
 	Priority *int32 `json:"priority,omitempty" protobuf:"varint,22,opt,name=priority"`
 	// UpdateStrategy specifies the machine update strategy for the worker pool.
 	// +optional
-	UpdateStrategy *MachineUpdateStrategy `json:"updateStrategy,omitempty"`
+	UpdateStrategy *MachineUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,23,opt,name=updateStrategy,casttype=MachineUpdateStrategy"`
 }
 
 // MachineUpdateStrategy specifies the machine update strategy for the worker pool.

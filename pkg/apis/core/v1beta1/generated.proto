@@ -1097,6 +1097,15 @@ message HorizontalPodAutoscalerConfig {
   optional double tolerance = 6;
 }
 
+// InPlaceUpdateConfig contains the configuration for in-place updates for a machine image version.
+message InPlaceUpdateConfig {
+  // Supported indicates whether in-place updates are supported for this machine image version.
+  optional bool supported = 1;
+
+  // MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
+  optional string minVersionForUpdate = 2;
+}
+
 // Ingress configures the Ingress specific settings of the cluster
 message Ingress {
   // Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used
@@ -1767,6 +1776,9 @@ message MachineImageVersion {
   // - '< 1.26' - supports only kubelet versions less than 1.26
   // +optional
   optional string kubeletVersionConstraint = 4;
+
+  // InPlaceUpdateConfig contains the configuration for in-place updates for this machine image version.
+  optional InPlaceUpdateConfig inPlaceUpdateConfig = 5;
 }
 
 // MachineType contains certain properties of a machine type.
@@ -3503,6 +3515,10 @@ message Worker {
   // Priority (or weight) is the importance by which this worker group will be scaled by cluster autoscaling.
   // +optional
   optional int32 priority = 22;
+
+  // UpdateStrategy specifies the machine update strategy for the worker pool.
+  // +optional
+  optional string updateStrategy = 23;
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.

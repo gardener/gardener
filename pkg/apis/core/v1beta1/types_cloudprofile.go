@@ -131,7 +131,7 @@ type MachineImageVersion struct {
 	// +optional
 	KubeletVersionConstraint *string `json:"kubeletVersionConstraint,omitempty" protobuf:"bytes,4,opt,name=kubeletVersionConstraint"`
 	// InPlaceUpdateConfig contains the configuration for in-place updates for this machine image version.
-	InPlaceUpdateConfig *InPlaceUpdateConfig `json:"inPlaceUpdateConfig,omitempty"`
+	InPlaceUpdateConfig *InPlaceUpdateConfig `json:"inPlaceUpdateConfig,omitempty" protobuf:"bytes,5,opt,name=inPlaceUpdateConfig"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -292,7 +292,7 @@ const (
 // InPlaceUpdateConfig contains the configuration for in-place updates for a machine image version.
 type InPlaceUpdateConfig struct {
 	// Supported indicates whether in-place updates are supported for this machine image version.
-	Supported bool `json:"supported"`
+	Supported bool `json:"supported" protobuf:"varint,1,opt,name=supported"`
 	// MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
-	MinVersionForUpdate *string `json:"minVersionForUpdate,omitempty"`
+	MinVersionForUpdate *string `json:"minVersionForUpdate,omitempty" protobuf:"bytes,2,opt,name=minVersionForUpdate"`
 }
