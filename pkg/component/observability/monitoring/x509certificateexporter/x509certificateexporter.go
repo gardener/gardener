@@ -41,6 +41,8 @@ const (
 	labelComponent                   = "x509-certificate-exporter"
 	defuaultCertificateRenewalDays   = 14
 	defaultCertificateExpirationDays = 7
+	defaultReplicas                  = 1
+	defaultCertCacheDuration         = 24 * time.Hour
 )
 
 type x509CertificateExporter struct {
@@ -100,10 +102,10 @@ func New(
 		values.CertificateExpirationDays = defaultCertificateExpirationDays
 	}
 	if values.Replicas == 0 {
-		values.Replicas = 1
+		values.Replicas = defaultReplicas
 	}
 	if values.CacheDuration.Duration == 0 {
-		values.CacheDuration.Duration = 24 * time.Hour
+		values.CacheDuration.Duration = defaultCertCacheDuration
 	}
 	return &x509CertificateExporter{
 		client:         client,
@@ -116,6 +118,10 @@ func New(
 func (x *x509CertificateExporter) Deploy(ctx context.Context) error {
 	if x.values.NameSuffix != SuffixRuntime && x.values.NameSuffix != SuffixSeed {
 		return errors.New("x509CertificateExporter is currently supported only on the seed and runtime clusters")
+	}
+
+	if x.values.WorkerGroups != nil && len(x.values.SecretTypes) == 0 && len(x.values.ConfigMapKeys) == 0 {
+		return fmt.Errorf("no secret types, configmap keys and worker groups provided, nothing to monitor")
 	}
 	var (
 		res                 []client.Object
