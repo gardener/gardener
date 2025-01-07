@@ -378,7 +378,7 @@ images:
 - name: x509-certificate-exporter
   sourceRepository: github.com/enix/x509-certificate-exporter
   repository: docker.io/enix/x509-certificate-exporter
-  tag: 3.18.0
+  tag: 3.18.1
 
 # Shoot core addons
 - name: vpn-client

@@ -174,16 +174,16 @@ type Settings struct {
 type HostCertificates struct {
 	// MountPath is the host path that will be mounted
 	MountPath string
-	// Certificate paths is a list of certificates withion the specified mount
+	// CertificatePaths is a list of certificates withion the specified mount
 	// All relative paths are configured base on the specified mount
 	// +optional
 	CertificatePaths []string `json:"certificatePaths,omitempty"`
-	// Similat to CertificatePaths but for dirs
+	// CertificateDirPaths are similat to CertificatePaths but for dirs
 	// +optional
 	CertificateDirPaths []string `json:"certificateDirPaths,omitempty"`
 }
 
-// WorkerGroupCertificates contains the definition of the worker group certificate paths.
+// WorkerGroup describes worker groups and configures paths to host certificates
 type WorkerGroup struct {
 	// Selector is a label selector that selects the worker nodes of this group.
 	// +optional
