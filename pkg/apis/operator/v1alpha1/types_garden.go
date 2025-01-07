@@ -101,6 +101,9 @@ type RuntimeCluster struct {
 	// Volume contains settings for persistent volumes created in the runtime cluster.
 	// +optional
 	Volume *Volume `json:"volume,omitempty"`
+	// WorkerGroups contains the worker group representations
+	// +optional
+	WorkerGroups map[string]WorkerGroup `json:"workerGroups,omitempty"`
 }
 
 // Ingress configures the Ingress specific settings of the runtime cluster.
@@ -164,6 +167,29 @@ type Settings struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/operations/topology_aware_routing.md.
 	// +optional
 	TopologyAwareRouting *SettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty"`
+}
+
+// HostCertificates describes certificates that will be configured for monitoring
+// from the host nodes
+type HostCertificates struct {
+	// MountPath is the host path that will be mounted
+	MountPath string
+	// Certificate paths is a list of certificates withion the specified mount
+	// All relative paths are configured base on the specified mount
+	// +optional
+	CertificatePaths []string `json:"certificatePaths,omitempty"`
+	// Similat to CertificatePaths but for dirs
+	// +optional
+	CertificateDirPaths []string `json:"certificateDirPaths,omitempty"`
+}
+
+// WorkerGroupCertificates contains the definition of the worker group certificate paths.
+type WorkerGroup struct {
+	// Selector is a label selector that selects the worker nodes of this group.
+	// +optional
+	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+	// HostCertificates contains the definition of the host certificates.
+	HostCertificates []HostCertificates `json:"hostCertificates,omitempty"`
 }
 
 // SettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the

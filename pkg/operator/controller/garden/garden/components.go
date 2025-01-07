@@ -321,7 +321,7 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 
-	c.x509CertificateExporter, err = r.newx509CertificateExporter()
+	c.x509CertificateExporter, err = r.newx509CertificateExporter(garden)
 	if err != nil {
 		return
 	}
@@ -1530,7 +1530,7 @@ func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {
 	return "https://" + discoveryServerDomain(garden) + "/garden/workload-identity/issuer"
 }
 
-func (r *Reconciler) newx509CertificateExporter() (component.DeployWaiter, error) {
+func (r *Reconciler) newx509CertificateExporter(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
 	return sharedcomponent.NewX509CertificateExporter(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -1538,5 +1538,6 @@ func (r *Reconciler) newx509CertificateExporter() (component.DeployWaiter, error
 		v1beta1constants.PriorityClassNameGardenSystem100,
 		x509certificateexporter.SuffixRuntime,
 		"garden",
+		garden.Spec.RuntimeCluster.WorkerGroups,
 	)
 }
