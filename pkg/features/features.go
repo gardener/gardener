@@ -35,12 +35,6 @@ const (
 	// alpha: v1.92.0
 	UseNamespacedCloudProfile featuregate.Feature = "UseNamespacedCloudProfile"
 
-	// ShootManagedIssuer enables the shoot managed issuer functionality described in GEP 24.
-	// If enabled it will force gardenlet to fail if shoot service account hostname is not configured.
-	// owner: @dimityrmirchev
-	// alpha: v1.93.0
-	ShootManagedIssuer featuregate.Feature = "ShootManagedIssuer"
-
 	// ShootCredentialsBinding enables the usage of the CredentialsBindingName API in shoot spec.
 	// owner: @vpnachev @dimityrmirchev
 	// alpha: v1.98.0
@@ -93,7 +87,6 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},
-	ShootManagedIssuer:        {Default: false, PreRelease: featuregate.Alpha},
 	ShootForceDeletion:        {Default: true, PreRelease: featuregate.Beta},
 	UseNamespacedCloudProfile: {Default: false, PreRelease: featuregate.Alpha},
 	ShootCredentialsBinding:   {Default: true, PreRelease: featuregate.Beta},

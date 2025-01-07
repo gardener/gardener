@@ -24,7 +24,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootForceDeletion        | `false` | `Alpha` | `1.81`  | `1.90`  |
 | ShootForceDeletion        | `true`  | `Beta`  | `1.91`  |         |
 | UseNamespacedCloudProfile | `false` | `Alpha` | `1.92`  |         |
-| ShootManagedIssuer        | `false` | `Alpha` | `1.93`  |         |
 | ShootCredentialsBinding   | `false` | `Alpha` | `1.98`  | `1.106` |
 | ShootCredentialsBinding   | `true`  | `Beta`  | `1.107` |         |
 | NewWorkerPoolHash         | `false` | `Alpha` | `1.98`  |         |
@@ -176,6 +175,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | HVPAForShootedSeed                           |         | `Removed`    | `1.109` |         |
 | IPv6SingleStack                              | `false` | `Alpha`      | `1.63`  |         |
 | IPv6SingleStack                              |         | `Removed`    | `1.107` |         |
+| ShootManagedIssuer                           | `false` | `Alpha`      | `1.93`  | `1.110` |
+| ShootManagedIssuer                           |         | `Removed`    | `1.111` |         |
 
 ## Using a Feature
 

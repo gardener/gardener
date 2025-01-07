@@ -5771,5 +5771,85 @@ var _ = Describe("validator", func() {
 				Entry("should not reject if the shoot has lastOperation=Restore:Succeeded ", core.LastOperationTypeRestore, core.LastOperationStateSucceeded, BeNil()),
 				Entry("should not reject the delete operation", core.LastOperationTypeReconcile, core.LastOperationStateSucceeded, BeNil()))
 		})
+
+		Context("checks for managed service account issuer", func() {
+			var (
+				oldShoot     *core.Shoot
+				issuerSecret *corev1.Secret
+			)
+
+			BeforeEach(func() {
+				issuerSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "sa-issuer",
+						Namespace: "garden",
+						Labels: map[string]string{
+							"gardener.cloud/role": "shoot-service-account-issuer",
+						},
+					},
+					Data: map[string][]byte{
+						"hostname": []byte("foo.bar"),
+					},
+				}
+
+				shoot.Annotations = map[string]string{
+					"authentication.gardener.cloud/issuer": "managed",
+				}
+				oldShoot = shoot.DeepCopy()
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seedBase)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+			})
+
+			It("should reject creating a shoot if managed service account issuer is not configured", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("cannot enable managed service account issuer as it is not supported in this Gardener installation"))
+			})
+
+			It("should reject updating a shoot if managed service account issuer is not configured but old shoot has been annotated", func() {
+				shoot.Annotations = nil
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeInternalServerError())
+				Expect(err.Error()).To(ContainSubstring("old shoot object has managed service account issuer enabled, but Gardener configuration is missing"))
+			})
+
+			It("should reject disabling managed service account issuer", func() {
+				shoot.Annotations = nil
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(issuerSecret)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("once enabled managed service account issuer cannot be disabled"))
+			})
+
+			It("should reject shoots with conflicting configuration managed service account issuer", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
+					ServiceAccountConfig: &core.ServiceAccountConfig{
+						Issuer: ptr.To("foo"),
+					},
+				}
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(issuerSecret)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("managed service account issuer cannot be enabled when .kubernetes.kubeAPIServer.serviceAccountConfig.issuer is set"))
+			})
+
+			It("should allow enabling managed service account issuer", func() {
+				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(issuerSecret)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+		})
 	})
 })

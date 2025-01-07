@@ -104,7 +104,6 @@ func ReadGardenSecrets(
 	c client.Reader,
 	namespace string,
 	enforceInternalDomainSecret bool,
-	enforceShootServiceAccountIssuerSecret bool,
 ) (
 	map[string]*corev1.Secret,
 	error,
@@ -186,9 +185,9 @@ func ReadGardenSecrets(
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShootServiceAccountIssuer {
 			shootIssuer := secret
 			if hostname, ok := secret.Data["hostname"]; !ok {
-				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret '%s' as it does not contain key 'hostname'", secret.Name)
+				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret %q as it does not contain key 'hostname'", secret.Name)
 			} else if strings.TrimSpace(string(hostname)) == "" {
-				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret '%s' as it does contain an empty 'hostname' key", secret.Name)
+				return nil, fmt.Errorf("cannot use Shoot Service Account Issuer secret %q as it does contain an empty 'hostname' key", secret.Name)
 			}
 			secretsMap[v1beta1constants.GardenRoleShootServiceAccountIssuer] = &shootIssuer
 			logInfo = append(logInfo, fmt.Sprintf("Shoot Service Account Issuer secret %q", secret.Name))
@@ -216,11 +215,6 @@ func ReadGardenSecrets(
 
 	if numberOfGlobalMonitoringSecrets > 1 {
 		return nil, fmt.Errorf("can only accept at most one global monitoring secret, but found %d", numberOfGlobalMonitoringSecrets)
-	}
-
-	// Ensure that configuration exists if the ShootManagedIssuer feature gate is enabled.
-	if enforceShootServiceAccountIssuerSecret && numberOfShootServiceAccountIssuerSecrets == 0 {
-		return nil, fmt.Errorf("feature gate ShootManagedIssuer is enabled, but shoot service account issuer secret is missing")
 	}
 
 	// The managed shoot service account issuer is configured centrally per Garden cluster.

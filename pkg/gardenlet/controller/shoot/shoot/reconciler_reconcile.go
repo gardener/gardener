@@ -453,14 +453,8 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name: "Sync public service account signing keys to Garden cluster",
 			Fn:   botanist.SyncPublicServiceAccountKeys,
 			SkipIf: o.Shoot.HibernationEnabled ||
-				!features.DefaultFeatureGate.Enabled(features.ShootManagedIssuer) ||
 				!v1beta1helper.HasManagedIssuer(botanist.Shoot.GetInfo()),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
-		})
-		_ = g.Add(flow.Task{
-			Name:   "Delete public service account signing keys from Garden cluster",
-			Fn:     botanist.DeletePublicServiceAccountKeys,
-			SkipIf: features.DefaultFeatureGate.Enabled(features.ShootManagedIssuer),
 		})
 		rewriteResourcesAddLabel = g.Add(flow.Task{
 			Name: "Labeling resources after modification of encryption config or to encrypt them with new ETCD encryption key",

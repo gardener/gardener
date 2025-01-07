@@ -116,7 +116,6 @@ debugging:
   enableContentionProfiling: false
 featureGates:
   DefaultSeccompProfile: true
-  ShootManagedIssuer: false
 # seedConfig:
 #   metadata:
 #     name: my-seed
