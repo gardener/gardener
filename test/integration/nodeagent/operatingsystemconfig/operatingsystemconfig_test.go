@@ -468,7 +468,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
-			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit2.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit3.Name}},
@@ -553,13 +552,11 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit2.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
-			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionStop, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit2.Name}},
 			// failure was injected here, so we expect the next attempt to only retry the failed action (restart unit2)
 			// and the actions that are taken on every reconcile.
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
-			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit2.Name}},
 		))
 	})
@@ -675,7 +672,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
-			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit2.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit5.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit6.Name}},
@@ -757,7 +753,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
-			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"containerd.service"}},
 		))
@@ -821,7 +816,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
-			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"containerd.service"}},
 		))
@@ -883,7 +877,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
-			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"containerd.service"}},
 		))
@@ -928,7 +921,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
-			fakedbus.SystemdAction{Action: fakedbus.ActionStart, UnitNames: []string{"containerd.service"}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{gnaUnit.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 		))
