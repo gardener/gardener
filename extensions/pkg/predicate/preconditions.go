@@ -7,6 +7,7 @@ package predicate
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -38,6 +39,12 @@ type shootNotFailedPredicate struct {
 func (p *shootNotFailedPredicate) Create(e event.CreateEvent) bool {
 	if e.Object == nil {
 		return false
+	}
+
+	ns := &corev1.Namespace{}
+	if err := p.reader.Get(p.ctx, client.ObjectKey{Name: e.Object.GetNamespace()}, ns); err == nil && ns.Labels[v1beta1constants.GardenRole] != v1beta1constants.GardenRoleShoot {
+		// there is no cluster resource for non-shoot namespaces (like extension or garden)
+		return true
 	}
 
 	cluster, err := extensionscontroller.GetCluster(p.ctx, p.reader, e.Object.GetNamespace())
