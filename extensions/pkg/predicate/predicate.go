@@ -29,15 +29,21 @@ func HasType(typeName string) predicate.Predicate {
 	})
 }
 
-// AddTypePredicate returns a new slice which contains a type predicate and the given `predicates`.
-// if more than one extensionTypes is given all given types are or combined
-func AddTypePredicate(predicates []predicate.Predicate, extensionTypes ...string) []predicate.Predicate {
-	resultPredicates := make([]predicate.Predicate, 0, len(predicates)+1)
+// AddTypeAndClassPredicates returns a new slice which contains a HasClass, a type predicate and the given `predicates`.
+// If more than one extensionTypes is given they are combined with an OR.
+func AddTypeAndClassPredicates(predicates []predicate.Predicate, extensionClass extensionsv1alpha1.ExtensionClass, extensionTypes ...string) []predicate.Predicate {
+	resultPredicates := make([]predicate.Predicate, 0, len(predicates)+2)
+	resultPredicates = append(resultPredicates, HasClass(extensionClass))
+	resultPredicates = append(resultPredicates, HasOneOfTypesPredicate(extensionTypes...))
 	resultPredicates = append(resultPredicates, predicates...)
+	return resultPredicates
+}
 
+// HasOneOfTypesPredicate returns a new slice which contains a type predicate.
+// If more than one extensionTypes is given they are combined with an OR.
+func HasOneOfTypesPredicate(extensionTypes ...string) predicate.Predicate {
 	if len(extensionTypes) == 1 {
-		resultPredicates = append(resultPredicates, HasType(extensionTypes[0]))
-		return resultPredicates
+		return HasType(extensionTypes[0])
 	}
 
 	orPreds := make([]predicate.Predicate, 0, len(extensionTypes))
@@ -45,7 +51,7 @@ func AddTypePredicate(predicates []predicate.Predicate, extensionTypes ...string
 		orPreds = append(orPreds, HasType(extensionType))
 	}
 
-	return append(resultPredicates, predicate.Or(orPreds...))
+	return predicate.Or(orPreds...)
 }
 
 // HasClass filters the incoming objects for the given extension class.
