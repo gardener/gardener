@@ -257,7 +257,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
-		deploymentFor = func(withConfig bool, withWorkerPriority bool) *appsv1.Deployment {
+		deploymentFor = func(withConfig, withWorkerPriority bool) *appsv1.Deployment {
 			var commandConfigFlags []string
 
 			expander := string(configExpander)
@@ -593,7 +593,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Namespace: metav1.NamespaceSystem,
 			},
 			Data: map[string]string{
-				"priorities": "\"0\":\n- shoot--foo--bar.pool1\n- shoot--foo--bar.pool3\n\"40\":\n- shoot--foo--bar.pool2\n",
+				"priorities": "\"0\":\n- shoot--foo--bar\\.pool1\n- shoot--foo--bar\\.pool3\n\"40\":\n- shoot--foo--bar\\.pool2\n",
 			},
 		}
 
@@ -633,11 +633,15 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#Deploy", func() {
 		Context("should successfully deploy all the resources", func() {
-			test := func(withConfig bool, withWorkerConfig bool, runtimeVersionGreaterEquals126 bool) {
+			test := func(withConfig bool, withWorkerConfig bool, runtimeVersionGreaterEquals126 bool, withPriorityExpander bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
 				var shootWorkerConfig []gardencorev1beta1.Worker
 				if withConfig {
-					config = configFull
+					// Copy `configFull` so that te test doesn't overwrite it.
+					config = configFull.DeepCopy()
+					if withPriorityExpander {
+						config.Expander = ptr.To(gardencorev1beta1.ClusterAutoscalerExpanderPriority + "," + configExpander)
+					}
 				}
 
 				if withWorkerConfig {
@@ -709,10 +713,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			}
 
-			It("w/o config", func() { test(false, false, false) })
-			It("w/ config, kubernetes version < 1.26", func() { test(true, false, false) })
-			It("w/ config, kubernetes version >= 1.26", func() { test(true, false, true) })
-			It("w/ config, w/ workerConfig, kubernetes version >= 1.26", func() { test(true, true, true) })
+			It("w/o config", func() { test(false, false, false, false) })
+			It("w/ config, kubernetes version < 1.26", func() { test(true, false, false, false) })
+			It("w/ config, kubernetes version >= 1.26", func() { test(true, false, true, false) })
+			It("w/ config, w/ workerConfig, kubernetes version >= 1.26", func() { test(true, true, true, false) })
+			It("w/ config, w/ workerConfig, kubernetes version >= 1.26, w/ 'priority' expander already configured", func() { test(true, true, true, true) })
 
 		})
 	})

@@ -652,7 +652,7 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string,
 func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigMap, error) {
 	priorities := map[int32][]string{}
 	for _, machineDeployment := range c.machineDeployments {
-		priorities[machineDeployment.Priority] = append(priorities[machineDeployment.Priority], fmt.Sprintf("%s.%s", c.namespace, machineDeployment.Name))
+		priorities[machineDeployment.Priority] = append(priorities[machineDeployment.Priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
 	}
 
 	priorityConfig, err := yaml.Marshal(priorities)
@@ -674,7 +674,7 @@ func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigM
 }
 
 func ensureExpanderInExpanderConfig(expander string, expanderConfig gardencorev1beta1.ExpanderMode) gardencorev1beta1.ExpanderMode {
-	if strings.Contains(expander, string(expanderConfig)) {
+	if strings.Contains(string(expanderConfig), expander) {
 		return expanderConfig
 	}
 	return gardencorev1beta1.ExpanderMode(fmt.Sprintf("%s,%s", expander, string(expanderConfig)))
