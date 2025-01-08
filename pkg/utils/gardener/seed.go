@@ -106,7 +106,8 @@ func GetGardenWildcardCertificate(ctx context.Context, c client.Client) (*corev1
 		return nil, error
 	}
 	if secret == nil {
-		// try to lookup secret with old role name
+		// TODO(MartinWeindel): Remove this fallback after the next release (v1.111.0)
+		// try to look up secret with old role name
 		secret, error = getWildcardCertificate(ctx, c, v1beta1constants.GardenRoleControlPlaneWildcardCert)
 	}
 	return secret, error
