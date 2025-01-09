@@ -164,7 +164,10 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.extensionCRD = extensioncrds.NewCRD(applier, true, false)
+	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
+	if err != nil {
+		return
+	}
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)

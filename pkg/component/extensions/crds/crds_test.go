@@ -26,6 +26,7 @@ import (
 
 var _ = Describe("#CRDs", func() {
 	var (
+		err         error
 		ctx         context.Context
 		c           client.Client
 		crdDeployer component.DeployWaiter
@@ -52,7 +53,8 @@ var _ = Describe("#CRDs", func() {
 
 	When("shoot CRDs are included", func() {
 		BeforeEach(func() {
-			crdDeployer = crds.NewCRD(applier, true, true)
+			crdDeployer, err = crds.NewCRD(c, applier, true, true)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		DescribeTable("CRD is deployed",
@@ -99,7 +101,8 @@ var _ = Describe("#CRDs", func() {
 
 	When("shoot CRDs are not included", func() {
 		BeforeEach(func() {
-			crdDeployer = crds.NewCRD(applier, true, false)
+			crdDeployer, err = crds.NewCRD(c, applier, true, false)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		DescribeTable("CRD is deployed",
@@ -146,7 +149,8 @@ var _ = Describe("#CRDs", func() {
 
 	When("general CRDs are not included", func() {
 		BeforeEach(func() {
-			crdDeployer = crds.NewCRD(applier, false, true)
+			crdDeployer, err = crds.NewCRD(c, applier, false, true)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		DescribeTable("CRD is deployed",
@@ -193,7 +197,8 @@ var _ = Describe("#CRDs", func() {
 
 	When("deleting CRDs", func() {
 		BeforeEach(func() {
-			crdDeployer = crds.NewCRD(applier, true, true)
+			crdDeployer, err = crds.NewCRD(c, applier, true, true)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should delete all CRDs", func() {
@@ -214,7 +219,8 @@ var _ = Describe("#CRDs", func() {
 		})
 
 		It("should delete shoot CRDs only", func() {
-			crdDeployer = crds.NewCRD(applier, false, true)
+			crdDeployer, err = crds.NewCRD(c, applier, false, true)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer.Destroy(ctx)).To(Succeed(), "extensions crds deletion succeeds")
 
 			Expect(c.Get(ctx, client.ObjectKey{Name: "backupbuckets.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
@@ -232,7 +238,7 @@ var _ = Describe("#CRDs", func() {
 		})
 
 		It("should delete general CRDs only", func() {
-			crdDeployer = crds.NewCRD(applier, true, false)
+			crdDeployer, err = crds.NewCRD(c, applier, true, false)
 			Expect(crdDeployer.Destroy(ctx)).To(Succeed(), "extensions crds deletion succeeds")
 
 			Expect(c.Get(ctx, client.ObjectKey{Name: "backupbuckets.extensions.gardener.cloud"}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
