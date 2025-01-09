@@ -77,27 +77,4 @@ if [[ ! -z "$image_vector_path" ]]; then
   component-cli image-vector add ${COMPONENT_CLI_ARGS}
 fi
 
-if [[ -d "$repo_root_dir/charts/" ]]; then
-  for image_tpl_path in "$repo_root_dir/charts/"*"/templates/_images.tpl"; do
-    if [[ ! -f "$image_tpl_path" ]]; then
-      continue
-    fi
-
-    outputFile=$(sed 's/{{-//' $image_tpl_path | sed 's/}}//' | sed 's/define//' | sed 's/-//' | sed 's/end//' | sed 's/"//' | sed 's/"//' |sed 's/image.//' |  sed -e 's/^[ \t]*//' | awk -v RS= '{for (i=1; i<=NF; i++) printf "%s%s", $i, (i==NF?"\n":" ")}')
-    echo "enriching component descriptor from ${image_tpl_path}"
-
-    while read p; do
-      line="$(echo -e "$p")"
-      IFS=' ' read -r -a array <<< "$line"
-      IFS=': ' read -r -a imageAndTag <<< ${array[1]}
-
-      NAME=${array[0]}
-      REPOSITORY=${imageAndTag[0]}
-      TAG=${imageAndTag[1]}
-
-      ${ADD_DEPENDENCIES_CMD} --container-image-dependencies "{\"name\": \"${NAME}\", \"image_reference\": \"${REPOSITORY}:${TAG}\", \"version\": \"$TAG\"}"
-    done < <(echo "$outputFile")
-  done
-fi
-
 cp "${BASE_DEFINITION_PATH}" "${descriptor_out_file}"
