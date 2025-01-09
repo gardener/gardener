@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -23,10 +24,11 @@ type crdDeployer struct {
 	client            client.Client
 	applier           kubernetes.Applier
 	crdNameToManifest map[string]string
+	confirmDeletion   bool
 }
 
 // New returns a new instance of DeployWaiter for CRDs.
-func New(client client.Client, applier kubernetes.Applier, manifests []string) (component.DeployWaiter, error) {
+func New(client client.Client, applier kubernetes.Applier, manifests []string, confirmDeletion bool) (component.DeployWaiter, error) {
 	crdNameToManifest, err := generateNameToCRDMap(manifests)
 	if err != nil {
 		return nil, err
@@ -35,6 +37,7 @@ func New(client client.Client, applier kubernetes.Applier, manifests []string) (
 		client:            client,
 		applier:           applier,
 		crdNameToManifest: crdNameToManifest,
+		confirmDeletion:   confirmDeletion,
 	}, nil
 }
 
@@ -62,6 +65,13 @@ func (c *crdDeployer) Destroy(ctx context.Context) error {
 					Name: resourceName,
 				},
 			}
+
+			if c.confirmDeletion {
+				if err := gardenerutils.ConfirmDeletion(ctx, c.client, crd); client.IgnoreNotFound(err) != nil {
+					return err
+				}
+			}
+
 			return client.IgnoreNotFound(c.client.Delete(ctx, crd))
 		})
 	}

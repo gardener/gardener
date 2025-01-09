@@ -6,6 +6,7 @@ package crddeployer_test
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -18,10 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/crddeployer"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -31,6 +34,26 @@ var _ = Describe("CRD", func() {
 		ctx        context.Context
 		applier    kubernetes.Applier
 		testClient client.Client
+
+		removeFinalizerOnDeletionAnnotation = func(ctx context.Context, crdName string, c client.Client) {
+			Expect(retry.Until(ctx, 1*time.Second, func(ctx context.Context) (done bool, err error) {
+				currentCRD := &apiextensionsv1.CustomResourceDefinition{}
+				if err := c.Get(ctx, client.ObjectKey{Name: crdName}, currentCRD); err != nil {
+					return false, err
+				}
+
+				if v, ok := currentCRD.Annotations[v1beta1constants.ConfirmationDeletion]; ok && v == "true" {
+					currentCRD.Finalizers = slices.DeleteFunc(currentCRD.Finalizers, func(el string) bool {
+						return el == "foo"
+					})
+					if err := c.Update(ctx, currentCRD); err != nil {
+						return false, err
+					}
+				}
+
+				return false, nil
+			})).To(Succeed())
+		}
 
 		readyCRD = &apiextensionsv1.CustomResourceDefinition{
 			ObjectMeta: metav1.ObjectMeta{
@@ -44,9 +67,28 @@ var _ = Describe("CRD", func() {
 			},
 		}
 
-		crd1      string
-		crd2      string
-		crd1Ready string
+		confirmationCRD = &apiextensionsv1.CustomResourceDefinition{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "myresources.mygroup.example.com",
+				Annotations: map[string]string{
+					"gardener.cloud/deletion-protected": "true",
+				},
+				Finalizers: []string{
+					"foo",
+				},
+			},
+			Status: apiextensionsv1.CustomResourceDefinitionStatus{
+				Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
+					{Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue},
+					{Type: apiextensionsv1.NamesAccepted, Status: apiextensionsv1.ConditionTrue},
+				},
+			},
+		}
+
+		crd1                  string
+		crd2                  string
+		confirmationCRDString string
+		crd1Ready             string
 
 		crdDeployer component.DeployWaiter
 	)
@@ -59,6 +101,16 @@ var _ = Describe("CRD", func() {
 kind: CustomResourceDefinition
 metadata:
     name: myresources.mygroup.example.com`
+		confirmationCRDString = `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+    name: myresources.mygroup.example.com
+status:
+    conditions:
+    - type: NamesAccepted
+      status: "True"
+    - type: Established
+      status: "True"`
 		crd2 = `apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -79,7 +131,7 @@ status:
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier = kubernetes.NewApplier(testClient, mapper)
-		crdDeployer, err = New(testClient, applier, []string{crd1, crd2})
+		crdDeployer, err = New(testClient, applier, []string{crd1, crd2}, false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(crdDeployer).ToNot(BeNil())
 	})
@@ -107,10 +159,36 @@ status:
 		})
 	})
 
+	Describe("#Destroy for CRDs that need deletion confirmation", func() {
+		It("should not destroy CRDs when CRDDeployer has confirmDeletion set to false", func() {
+			crdDeployer, err := New(testClient, applier, []string{confirmationCRDString}, false)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crdDeployer).NotTo(BeNil())
+
+			Expect(testClient.Create(ctx, confirmationCRD.DeepCopy())).To(Succeed())
+
+			go removeFinalizerOnDeletionAnnotation(ctx, confirmationCRD.Name, testClient)
+
+			Eventually(component.OpWait(crdDeployer).Destroy).WithArguments(ctx).Should(MatchError(ContainSubstring("resource /myresources.mygroup.example.com still exists")))
+		})
+
+		It("should destroy CRDs when CRDDeployer has confirmDeletion set to true", func() {
+			crdDeployer, err := New(testClient, applier, []string{confirmationCRDString}, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crdDeployer).NotTo(BeNil())
+
+			Expect(testClient.Create(ctx, confirmationCRD.DeepCopy())).To(Succeed())
+
+			go removeFinalizerOnDeletionAnnotation(ctx, confirmationCRD.Name, testClient)
+
+			Eventually(component.OpWait(crdDeployer).Destroy).WithArguments(ctx).Should(Succeed())
+		})
+	})
+
 	Describe("#Wait", func() {
 		It("should return true because the CRD is ready", func() {
 			// Use a CRDDeployer that deploys a CRD that already has the ready status
-			crdDeployer, err := New(testClient, applier, []string{crd1Ready})
+			crdDeployer, err := New(testClient, applier, []string{crd1Ready}, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
