@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -24,6 +25,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
+	"github.com/gardener/gardener/pkg/extensions"
 )
 
 // reconciler reconciles Extension resources of Gardener's
@@ -69,16 +71,25 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	var result reconcile.Result
+	var cluster *extensions.Cluster
+	if ex.Namespace != v1beta1constants.GardenNamespace {
+		ns := &corev1.Namespace{}
+		if err := r.reader.Get(ctx, client.ObjectKey{Name: ex.Namespace}, ns); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error retrieving namespace: %w", err)
+		}
 
-	cluster, err := extensionscontroller.GetCluster(ctx, r.client, ex.Namespace)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+		if ns.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShoot {
+			var err error
+			cluster, err = extensionscontroller.GetCluster(ctx, r.client, ex.Namespace)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 
-	if extensionscontroller.IsFailed(cluster) {
-		log.Info("Skipping the reconciliation of Extension of failed shoot")
-		return reconcile.Result{}, nil
+			if extensionscontroller.IsFailed(cluster) {
+				log.Info("Skipping the reconciliation of Extension of failed shoot")
+				return reconcile.Result{}, nil
+			}
+		}
 	}
 
 	operationType := v1beta1helper.ComputeOperationType(ex.ObjectMeta, ex.Status.LastOperation)
@@ -93,7 +104,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
 		return r.restore(ctx, log, ex, operationType)
 	default:
-		if result, err = r.reconcile(ctx, log, ex, operationType); err != nil {
+		if result, err := r.reconcile(ctx, log, ex, operationType); err != nil {
 			return result, err
 		}
 		return reconcile.Result{Requeue: r.resync != 0, RequeueAfter: r.resync}, nil
