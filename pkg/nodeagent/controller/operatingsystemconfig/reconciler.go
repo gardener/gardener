@@ -494,6 +494,13 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 				return fmt.Errorf("unable to restart unit %q: %w", unitName, err)
 			}
 			log.Info("Successfully restarted unit", "unitName", unitName)
+
+			if unitName == v1beta1constants.OperatingSystemConfigUnitNameContainerDService {
+				if err := oscChanges.completedContainerdConfigFileChange(); err != nil {
+					return err
+				}
+			}
+
 			return oscChanges.completedUnitCommand(unitName)
 		}
 
@@ -536,10 +543,7 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 
 	if oscChanges.Containerd.ConfigFileChanged && !containerdChanged {
 		fns = append(fns, func(ctx context.Context) error {
-			if err := restart(ctx, v1beta1constants.OperatingSystemConfigUnitNameContainerDService); err != nil {
-				return err
-			}
-			return oscChanges.completedContainerdConfigFileChange()
+			return restart(ctx, v1beta1constants.OperatingSystemConfigUnitNameContainerDService)
 		})
 	}
 

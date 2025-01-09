@@ -465,6 +465,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/existing-unit.service", "#existingunit", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/existing-unit.service.d/existing-dropin.conf", "#existingdropin", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+existingUnitDropIn.Name+".d/"+existingUnitDropIn.DropIns[0].Name, "#unit11drop", 0600)
+		test.AssertFileOnDisk(fakeFS, "/var/lib/gardener-node-agent/last-computed-osc-changes.yaml", "containerd:\n  configFileChanged: false\n  registries: {}\nfiles: {}\nmustRestartNodeAgent: false\noperatingSystemConfigChecksum: 43b154622b6da9c7a28d3337eececad055a1f7eeaed5420c405c83c11b1ab6c4\nunits: {}\n", 0600)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
