@@ -135,7 +135,10 @@ func (r *Reconciler) instantiateComponents(
 	c.etcdCRD = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	c.istioCRD = istio.NewCRD(r.SeedClientSet.ChartApplier())
 	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Applier(), nil)
-	c.fluentCRD = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
+	c.fluentCRD, err = fluentoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return
