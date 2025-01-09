@@ -27,6 +27,7 @@ const (
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.81.0
 	// beta: v1.91.0
+	// GA: v1.111.0
 	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
 
 	// UseNamespacedCloudProfile enables the usage of the NamespacedCloudProfile API object
@@ -87,7 +88,7 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},
-	ShootForceDeletion:        {Default: true, PreRelease: featuregate.Beta},
+	ShootForceDeletion:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	UseNamespacedCloudProfile: {Default: false, PreRelease: featuregate.Alpha},
 	ShootCredentialsBinding:   {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:         {Default: false, PreRelease: featuregate.Alpha},

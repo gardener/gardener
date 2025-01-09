@@ -19,10 +19,8 @@ The following tables are a summary of the feature gates that you can set on diff
 ## Feature Gates for Alpha or Beta Features
 
 | Feature                   | Default | Stage   | Since   | Until   |
-|---------------------------|---------|---------|---------|---------|
+| ------------------------- | ------- | ------- | ------- | ------- |
 | DefaultSeccompProfile     | `false` | `Alpha` | `1.54`  |         |
-| ShootForceDeletion        | `false` | `Alpha` | `1.81`  | `1.90`  |
-| ShootForceDeletion        | `true`  | `Beta`  | `1.91`  |         |
 | UseNamespacedCloudProfile | `false` | `Alpha` | `1.92`  |         |
 | ShootCredentialsBinding   | `false` | `Alpha` | `1.98`  | `1.106` |
 | ShootCredentialsBinding   | `true`  | `Beta`  | `1.107` |         |
@@ -33,7 +31,7 @@ The following tables are a summary of the feature gates that you can set on diff
 ## Feature Gates for Graduated or Deprecated Features
 
 | Feature                                      | Default | Stage        | Since   | Until   |
-|----------------------------------------------|---------|--------------|---------|---------|
+| -------------------------------------------- | ------- | ------------ | ------- | ------- |
 | NodeLocalDNS                                 | `false` | `Alpha`      | `1.7`   | `1.25`  |
 | NodeLocalDNS                                 |         | `Removed`    | `1.26`  |         |
 | KonnectivityTunnel                           | `false` | `Alpha`      | `1.6`   | `1.26`  |
@@ -68,6 +66,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | RotateSSHKeypairOnMaintenance                | `true`  | `Beta`       | `1.45`  | `1.47`  |
 | RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`       | `1.48`  | `1.50`  |
 | RotateSSHKeypairOnMaintenance (deprecated)   |         | `Removed`    | `1.51`  |         |
+| ShootForceDeletion                           | `false` | `Alpha`      | `1.81`  | `1.90`  |
+| ShootForceDeletion                           | `true`  | `Beta`       | `1.91`  | `1.110` |
+| ShootForceDeletion                           | `true`  | `GA`         | `1.111` |         |
 | ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`      | `1.43`  | `1.44`  |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`       | `1.45`  | `1.47`  |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `GA`         | `1.48`  | `1.50`  |
