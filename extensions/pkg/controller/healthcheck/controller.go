@@ -192,8 +192,7 @@ func add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	log.Log.Info("Registered health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 
 	// add type predicate to only watch registered resource (e.g. ControlPlane) with a certain type (e.g. aws)
-	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClass))
+	predicates := extensionspredicate.AddTypeAndClassPredicates(args.Predicates, args.ExtensionClass, args.Type)
 
 	if err := ctrl.Watch(source.Kind[client.Object](mgr.GetCache(), args.registeredExtension.getExtensionObjFunc(), &handler.EnqueueRequestForObject{}, predicates...)); err != nil {
 		return err
