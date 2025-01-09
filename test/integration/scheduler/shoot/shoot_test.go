@@ -234,7 +234,7 @@ us-central-2: 220`,
 				By("Wait until manager has observed region config")
 				// Use the manager's cache to ensure it has observed the configMap.
 				Eventually(func() error {
-					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
 				shoot := createShoot(cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil, nil)
@@ -276,7 +276,7 @@ us-central-2: 220`,
 				By("Wait until manager has observed region config")
 				// Use the manager's cache to ensure it has observed the configMap.
 				Eventually(func() error {
-					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
 				shoot := createShoot(cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil, nil)
@@ -340,7 +340,7 @@ us-central-2: 220`,
 				// Use the manager's cache to ensure it has observed the configMap.
 				Eventually(func() ([]corev1.ConfigMap, error) {
 					configMapList := &corev1.ConfigMapList{}
-					if err := testClient.List(ctx, configMapList, client.HasLabels{"scheduling.gardener.cloud/purpose"}); err != nil {
+					if err := mgrClient.List(ctx, configMapList, client.HasLabels{"scheduling.gardener.cloud/purpose"}); err != nil {
 						return nil, err
 					}
 					return configMapList.Items, nil
@@ -382,7 +382,7 @@ us-central-2: 220`,
 				By("Wait until manager has observed region config")
 				// Use the manager's cache to ensure it has observed the configMap.
 				Eventually(func() error {
-					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
 				shoot := createShoot(cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil, nil)
@@ -424,7 +424,7 @@ us-central-3: 220`,
 				By("Wait until manager has observed region config")
 				// Use the manager's cache to ensure it has observed the configMap.
 				Eventually(func() error {
-					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
 				shoot := createShoot(cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil, nil)
@@ -460,7 +460,7 @@ us-central-3: 220`,
 				By("Wait until manager has observed region config")
 				// Use the manager's cache to ensure it has observed the configMap.
 				Eventually(func() error {
-					return testClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
+					return mgrClient.Get(ctx, client.ObjectKeyFromObject(regionConfig), &corev1.ConfigMap{})
 				}).Should(Succeed())
 
 				shoot := createShoot(cloudProfile.Name, "eu-west-1", nil, ptr.To("somedns.example.com"), nil, nil)
@@ -565,6 +565,7 @@ func createAndStartManager(config *schedulerconfigv1alpha1.ShootSchedulerConfigu
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
+	mgrClient = mgr.GetClient()
 
 	By("Register controller")
 	Expect((&shootcontroller.Reconciler{
@@ -627,6 +628,12 @@ func createSeed(region string, zones []string, accessRestrictions []gardencorev1
 	ExpectWithOffset(1, testClient.Create(ctx, seed)).To(Succeed())
 	log.Info("Created Seed for test", "seed", client.ObjectKeyFromObject(seed), "region", seed.Spec.Provider.Region)
 
+	By("Wait until the manager has observed the Seed")
+	// Use the manager's cache to ensure it has observed the Seed.
+	Eventually(func() error {
+		return mgrClient.Get(ctx, client.ObjectKeyFromObject(seed), &gardencorev1beta1.Seed{})
+	}).Should(Succeed())
+
 	DeferCleanup(func() {
 		By("Delete Seed")
 		ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, seed))).To(Succeed())
@@ -681,6 +688,13 @@ func createCloudProfile(region string) *gardencorev1beta1.CloudProfile {
 	ExpectWithOffset(1, testClient.Create(ctx, cloudProfile)).To(Succeed())
 	log.Info("Created CloudProfile for test", "cloudProfile", client.ObjectKeyFromObject(cloudProfile))
 
+	By("Wait until the manager has observed the CloudProfile")
+	// Use the manager's cache to ensure it has observed the Cloudprofile.
+	// Otherwise, the creation of Shoot might fail because the Cloudprofile is not present.
+	Eventually(func() error {
+		return mgrClient.Get(ctx, client.ObjectKeyFromObject(cloudProfile), &gardencorev1beta1.CloudProfile{})
+	}).Should(Succeed())
+
 	DeferCleanup(func() {
 		By("Delete CloudProfile")
 		ExpectWithOffset(1, client.IgnoreNotFound(testClient.Delete(ctx, cloudProfile))).To(Succeed())
@@ -730,6 +744,12 @@ func createShoot(cloudProfile, region string, schedulerName, dnsDomain *string, 
 	}
 	Expect(testClient.Create(ctx, shoot)).To(Succeed())
 	log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
+
+	By("Wait until the manager has observed the Shoot")
+	// Use the manager's cache to ensure it has observed the Shoot.
+	Eventually(func() error {
+		return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
+	}).Should(Succeed())
 
 	DeferCleanup(func() {
 		By("Delete Shoot")

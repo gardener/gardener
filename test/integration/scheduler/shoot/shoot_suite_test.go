@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
@@ -42,10 +41,10 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
-	restConfig          *rest.Config
-	testEnv             *gardenerenvtest.GardenerTestEnvironment
-	testClient          client.Client
-	versionedTestClient *gardencoreclientset.Clientset
+	restConfig *rest.Config
+	testEnv    *gardenerenvtest.GardenerTestEnvironment
+	testClient client.Client
+	mgrClient  client.Reader
 
 	testNamespace     *corev1.Namespace
 	testSecretBinding *gardencorev1beta1.SecretBinding
@@ -77,10 +76,6 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(testClient).NotTo(BeNil())
-
-	versionedTestClient, err = gardencoreclientset.NewForConfig(restConfig)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(versionedTestClient).NotTo(BeNil())
 
 	By("Create test Namespace")
 	testNamespace = &corev1.Namespace{
