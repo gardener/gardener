@@ -132,7 +132,7 @@ var _ = Describe("Preconditions", func() {
 					Expect(run()).To(BeFalse())
 				})
 
-				It("should return true if it is no shoot namespace", func() {
+				It("should return true if it is not a shoot namespace", func() {
 					ns := &corev1.Namespace{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: namespace,
