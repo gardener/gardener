@@ -878,9 +878,6 @@ func (c *validationContext) validateScaleDownConfiguration(a admission.Attribute
 		} else if worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration < 1*time.Minute && scaleDownDelayAfterAdd < 1*time.Minute {
 			stringRepresentation = "ScaleDownDelayAfterAdd: " + scaleDownDelayAfterAdd.String() + ", ScaleDownUnneededTime: " + worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration.String()
 			allErrs = append(allErrs, field.Invalid(path.Child("scaleDownUnneededTime"), stringRepresentation, "ScaleDownUnneededTime and ScaleDownDelayAfterAdd should not be less than a minute at the same time"))
-			return allErrs
-		} else if worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration > scaleDownUnneededTime {
-			scaleDownUnneededTime = worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration
 		}
 	}
 
