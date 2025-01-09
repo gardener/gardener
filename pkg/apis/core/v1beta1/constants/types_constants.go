@@ -276,8 +276,11 @@ const (
 	// GardenRoleAlerting is the value of GardenRole key indicating type 'alerting'.
 	GardenRoleAlerting = "alerting"
 	// GardenRoleControlPlaneWildcardCert is the value of the GardenRole key indicating type 'controlplane-cert'.
-	// It refers to a wildcard tls certificate which can be used for services exposed under the corresponding domain.
+	// It refers to a wildcard TLS certificate which can be used for seed services exposed under the corresponding domain.
 	GardenRoleControlPlaneWildcardCert = "controlplane-cert"
+	// GardenRoleGardenWildcardCert is the value of the GardenRole key indicating type 'garden-cert'.
+	// It refers to a wildcard TLS certificate which can be used for Garden runtime services exposed under the corresponding domain.
+	GardenRoleGardenWildcardCert = "garden-cert"
 	// GardenRoleExposureClassHandler is the value of the GardenRole key indicating type 'exposureclass-handler'.
 	GardenRoleExposureClassHandler = "exposureclass-handler"
 	// GardenRoleShootServiceAccountIssuer is the value of the GardenRole key indicating type 'shoot-service-account-issuer'.
