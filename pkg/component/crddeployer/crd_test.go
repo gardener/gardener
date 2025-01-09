@@ -36,7 +36,7 @@ var _ = Describe("CRD", func() {
 		testClient client.Client
 
 		removeFinalizerOnDeletionAnnotation = func(ctx context.Context, crdName string, c client.Client) {
-			Expect(retry.Until(ctx, 1*time.Second, func(ctx context.Context) (done bool, err error) {
+			ExpectWithOffset(1, retry.Until(ctx, 1*time.Second, func(ctx context.Context) (done bool, err error) {
 				currentCRD := &apiextensionsv1.CustomResourceDefinition{}
 				if err := c.Get(ctx, client.ObjectKey{Name: crdName}, currentCRD); err != nil {
 					return false, err
@@ -49,6 +49,7 @@ var _ = Describe("CRD", func() {
 					if err := c.Update(ctx, currentCRD); err != nil {
 						return false, err
 					}
+					return true, nil
 				}
 
 				return false, nil
@@ -105,6 +106,8 @@ metadata:
 kind: CustomResourceDefinition
 metadata:
     name: myresources.mygroup.example.com
+    labels:
+      gardener.cloud/deletion-protected: "true"
 status:
     conditions:
     - type: NamesAccepted
