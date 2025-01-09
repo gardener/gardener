@@ -193,6 +193,11 @@ var _ = Describe("Handler", func() {
 						ReadOnly:  true,
 						MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					}))
+					Expect(pod.Spec.SecurityContext).To(Equal(&corev1.PodSecurityContext{
+						RunAsUser:  ptr.To[int64](65532),
+						RunAsGroup: ptr.To[int64](65532),
+						FSGroup:    ptr.To[int64](65532),
+					}))
 				})
 
 				It("normal case", func() {})

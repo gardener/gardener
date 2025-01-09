@@ -88,6 +88,21 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		pod.Spec.InitContainers[i].VolumeMounts = append(pod.Spec.InitContainers[i].VolumeMounts, getVolumeMount())
 	}
 
+	// add SecurityContext.FSGroup and related fields to the pod, to ensure that the pod can access the token mounted with mode 0640
+	if pod.Spec.SecurityContext != nil {
+		if pod.Spec.SecurityContext.FSGroup == nil {
+			pod.Spec.SecurityContext.FSGroup = getPodFSGroup()
+			if pod.Spec.SecurityContext.RunAsUser == nil {
+				pod.Spec.SecurityContext.RunAsUser = getPodRunAsUser()
+			}
+			if pod.Spec.SecurityContext.RunAsGroup == nil {
+				pod.Spec.SecurityContext.RunAsGroup = getPodRunAsGroup()
+			}
+		}
+	} else {
+		pod.Spec.SecurityContext = getPodSecurityContext()
+	}
+
 	return nil
 }
 
@@ -153,5 +168,27 @@ func getVolumeMount() corev1.VolumeMount {
 		Name:      volumeName(),
 		MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 		ReadOnly:  true,
+	}
+}
+
+const nonRootUser = int64(65532)
+
+func getPodRunAsUser() *int64 {
+	return ptr.To[int64](nonRootUser)
+}
+
+func getPodRunAsGroup() *int64 {
+	return ptr.To[int64](nonRootUser)
+}
+
+func getPodFSGroup() *int64 {
+	return ptr.To[int64](nonRootUser)
+}
+
+func getPodSecurityContext() *corev1.PodSecurityContext {
+	return &corev1.PodSecurityContext{
+		RunAsUser:  getPodRunAsUser(),
+		RunAsGroup: getPodRunAsGroup(),
+		FSGroup:    getPodFSGroup(),
 	}
 }
