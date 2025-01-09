@@ -354,6 +354,60 @@ var _ = Describe("validator", func() {
 			admissionHandler.SetAuthorizer(auth)
 		})
 
+		Context("cluster autoscaler configuration check for ScaleDownUnneededTime and ScaleDownDelayAfterAdd time", func() {
+			BeforeEach(func() {
+				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{}
+			})
+
+			DescribeTable("validate cluster autoscaler configuration on shoot create", func(workerUnneededTime, unneededTime, afterAddTime *metav1.Duration, errorMatcher types.GomegaMatcher) {
+				var (
+					worker core.Worker
+				)
+
+				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{
+					ScaleDownDelayAfterAdd: afterAddTime,
+					ScaleDownUnneededTime:  unneededTime,
+				}
+
+				worker = core.Worker{
+					Name: "machine-name-1",
+					Machine: core.Machine{
+						Type: "machine-type-1",
+						Image: &core.ShootMachineImage{
+							Name: validMachineImageName,
+						},
+						Architecture: ptr.To("amd64"),
+					},
+					Minimum: 1,
+					Maximum: 1,
+					ClusterAutoscaler: &core.ClusterAutoscalerOptions{
+						ScaleDownUnneededTime: workerUnneededTime,
+					},
+				}
+
+				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker)
+
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(errorMatcher)
+			},
+				Entry("should allow when configuration is valid", ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), BeNil()),
+				Entry("should allow when configuration for worker ScaleDownUnneededTime is nil and others are > 1m", nil, ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), BeNil()),
+				Entry("should allow when configuration for worker ScaleDownUnneededTime is nil and only ScaleDownDelayAfterAdd is < 1m", nil, ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), BeNil()),
+				Entry("should forbid when configuration for worker ScaleDownUnneededTime is nil, ScaleDownUnneededTime is < 1m and ScaleDownDelayAfterAdd is < 1m", nil, ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), Not(BeNil())),
+				Entry("should allow when configuration for worker ScaleDownUnneededTime is < 1m, ScaleDownUnneededTime is > 1m and ScaleDownDelayAfterAdd is > 1m", ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), BeNil()),
+				Entry("should forbid when configuration for worker ScaleDownUnneededTime is < 1m, ScaleDownUnneededTime is > 1m and ScaleDownDelayAfterAdd is < 1m", ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), Not(BeNil())),
+				Entry("should allow when configuration for worker ScaleDownUnneededTime is > 1m, ScaleDownUnneededTime is < 1m and ScaleDownDelayAfterAdd is < 1m", ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), BeNil()),
+			)
+		})
+
 		Context("name/project length checks", func() {
 			It("should reject create operations on Shoot resources in projects which shall be deleted", func() {
 				deletionTimestamp := metav1.NewTime(time.Now())
