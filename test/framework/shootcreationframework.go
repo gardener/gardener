@@ -42,6 +42,7 @@ type ShootCreationConfig struct {
 	shootK8sVersion              string
 	externalDomain               string
 	workerZone                   string
+	ipFamilies                   string
 	networkingType               string
 	networkingPods               string
 	networkingServices           string
@@ -242,6 +243,10 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 		base.workerZone = overwrite.workerZone
 	}
 
+	if StringSet(overwrite.ipFamilies) {
+		base.ipFamilies = overwrite.ipFamilies
+	}
+
 	if StringSet(overwrite.networkingType) {
 		base.networkingType = overwrite.networkingType
 	}
@@ -315,6 +320,7 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.shootK8sVersion, "k8s-version", "", "kubernetes version to use for the shoot.")
 	flag.StringVar(&newCfg.externalDomain, "external-domain", "", "external domain to use for the shoot. If not set, will use the default domain.")
 	flag.StringVar(&newCfg.workerZone, "worker-zone", "", "zone to use for every worker of the shoot.")
+	flag.StringVar(&newCfg.ipFamilies, "ip-families", "", "the spec.networking.ipFamilies to use for this shoot. Optional. Defaults to an empty string resulting in IPv4. Use a comma separated list to provide multiple values, e.g. 'IPv6,IPv4'.")
 	flag.StringVar(&newCfg.networkingType, "networking-type", "calico", "the spec.networking.type to use for this shoot. Optional. Defaults to calico.")
 	flag.StringVar(&newCfg.networkingPods, "networking-pods", "", "the spec.networking.pods to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.networkingServices, "networking-services", "", "the spec.networking.services to use for this shoot. Optional.")

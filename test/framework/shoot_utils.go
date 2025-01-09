@@ -272,6 +272,15 @@ func setShootNetworkingSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreati
 		clearDNS = false
 	}
 
+	if strings.Contains(cfg.ipFamilies, ",") {
+		shoot.Spec.Networking.IPFamilies = nil
+		for _, part := range strings.Split(cfg.ipFamilies, ",") {
+			shoot.Spec.Networking.IPFamilies = append(shoot.Spec.Networking.IPFamilies, gardencorev1beta1.IPFamily(part))
+		}
+	} else if StringSet(cfg.ipFamilies) {
+		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamily(cfg.ipFamilies)}
+	}
+
 	if StringSet(cfg.networkingType) {
 		shoot.Spec.Networking.Type = ptr.To(cfg.networkingType)
 	}
