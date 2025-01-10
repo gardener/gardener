@@ -528,7 +528,7 @@ func (r *Reconciler) reconcile(
 			Fn:   c.vali.Deploy,
 		})
 
-		_ = g.Add(flow.Task{
+		deployPrometheusOperator = g.Add(flow.Task{
 			Name: "Deploying prometheus-operator",
 			Fn:   c.prometheusOperator.Deploy,
 		})
@@ -580,9 +580,8 @@ func (r *Reconciler) reconcile(
 			Fn:   c.plutono.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying x509 certificate exporter",
-			Fn:           c.x509CertificateExporter.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployPrometheusCRD),
+			Name: "Deploying x509 certificate exporter",
+			Fn:   c.x509CertificateExporter.Deploy,
 		})
 	)
 
