@@ -110,6 +110,11 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 		}
 	}
 
+	formerRetryCycleStartTime := ptr.To(metav1.NewTime(r.Clock.Now().UTC()))
+	if shoot.Status.RetryCycleStartTime != nil {
+		formerRetryCycleStartTime = shoot.Status.RetryCycleStartTime.DeepCopy()
+	}
+
 	o, result, err := r.prepareOperation(ctx, log, shoot)
 	if err != nil || o == nil {
 		return result, err
@@ -129,6 +134,15 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 
 	if syncErr := r.syncClusterResourceToSeed(ctx, shoot, o.Garden.Project, o.Shoot.CloudProfile, o.Seed.GetInfo()); syncErr != nil {
 		log.Error(syncErr, "Cluster resource sync to seed failed")
+
+		// As the reconciliation flow has generally succeeded, the RetryCycleStartTime is already set to nil.
+		// To retry the operation, including this Cluster resource sync, the former RetryCycleStartTime is re-applied.
+		statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
+		shoot.Status.RetryCycleStartTime = formerRetryCycleStartTime
+		if statusUpdateErr := r.GardenClient.Status().Patch(ctx, shoot, statusPatch); statusUpdateErr != nil {
+			return reconcile.Result{}, errorsutils.WithSuppressed(syncErr, statusUpdateErr)
+		}
+
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, syncErr.Error(), operationType, shoot.Status.LastErrors...)
 		return reconcile.Result{}, errorsutils.WithSuppressed(syncErr, updateErr)
 	}
