@@ -10,7 +10,6 @@ import (
 	"reflect"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -150,18 +149,4 @@ func ShouldSkipOperation(operationType gardencorev1beta1.LastOperationType, obj 
 // If the object kind doesn't match the given reference kind this will result in an error.
 func GetObjectByReference(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, obj client.Object) error {
 	return c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, obj)
-}
-
-// IsShootNamespace returns true if the namespace has the garden role shoot label.
-func IsShootNamespace(ctx context.Context, reader client.Reader, namespace string) (bool, error) {
-	if namespace == v1beta1constants.GardenNamespace {
-		return false, nil
-	}
-
-	ns := &corev1.Namespace{}
-	if err := reader.Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
-		return false, fmt.Errorf("error retrieving namespace: %w", err)
-	}
-
-	return ns.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleShoot, nil
 }

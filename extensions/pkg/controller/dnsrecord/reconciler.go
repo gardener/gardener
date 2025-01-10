@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 type reconciler struct {
@@ -62,11 +63,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	var cluster *extensions.Cluster
-	isShoot, err := extensionscontroller.IsShootNamespace(ctx, r.client, dns.Namespace)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if isShoot {
+	if gardenerutils.IsShootNamespace(dns.Namespace) {
+		var err error
 		cluster, err = extensionscontroller.GetCluster(ctx, r.client, dns.Namespace)
 		if err != nil {
 			return reconcile.Result{}, err

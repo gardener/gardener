@@ -133,16 +133,7 @@ var _ = Describe("Preconditions", func() {
 				})
 
 				It("should return true if it is not a shoot namespace", func() {
-					ns := &corev1.Namespace{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: namespace,
-						},
-					}
-					Expect(fakeClient.Create(ctx, ns)).To(Succeed())
-					DeferCleanup(func() {
-						Expect(fakeClient.Delete(ctx, ns)).To(Succeed())
-					})
-
+					obj.SetNamespace("foo")
 					Expect(run()).To(BeTrue())
 				})
 

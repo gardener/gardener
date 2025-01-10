@@ -14,6 +14,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // IsInGardenNamespacePredicate is a predicate which returns true when the provided object is in the 'garden' namespace.
@@ -40,8 +41,7 @@ func (p *shootNotFailedPredicate) Create(e event.CreateEvent) bool {
 		return false
 	}
 
-	isShoot, err := extensionscontroller.IsShootNamespace(p.ctx, p.reader, e.Object.GetNamespace())
-	if err == nil && !isShoot {
+	if !gardenerutils.IsShootNamespace(e.Object.GetNamespace()) {
 		return true
 	}
 

@@ -739,6 +739,11 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) stri
 	return fmt.Sprintf("%s-%s--%s", v1beta1constants.TechnicalIDPrefix, projectName, shoot.Name)
 }
 
+// IsShootNamespace returns true if the given namespace is a shoot namespace, i.e. it starts with the technical id prefix.
+func IsShootNamespace(namespace string) bool {
+	return strings.HasPrefix(namespace, v1beta1constants.TechnicalIDPrefix)
+}
+
 // GetShootConditionTypes returns all known shoot condition types.
 func GetShootConditionTypes(workerless bool) []gardencorev1beta1.ConditionType {
 	shootConditionTypes := []gardencorev1beta1.ConditionType{
