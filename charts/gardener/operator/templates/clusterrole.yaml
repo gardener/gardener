@@ -153,6 +153,8 @@ rules:
   - get
   - list
   - watch
+  - patch
+  - update
 - apiGroups:
   - policy
   resources:
