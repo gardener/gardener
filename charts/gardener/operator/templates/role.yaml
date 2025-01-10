@@ -55,8 +55,6 @@ rules:
   verbs:
   - create
   - delete
-  - patch
-  - update
 - apiGroups:
   - autoscaling
   resources:
