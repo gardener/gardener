@@ -39,7 +39,7 @@ const (
 	SuffixRuntime                    = "-runtime"
 	SuffixShoot                      = "-shoot"
 	labelComponent                   = "x509-certificate-exporter"
-	defuaultCertificateRenewalDays   = 14
+	defaultCertificateRenewalDays   = 14
 	defaultCertificateExpirationDays = 7
 	defaultReplicas                  = 1
 	defaultCertCacheDuration         = 24 * time.Hour
@@ -70,10 +70,10 @@ type Values struct {
 	// NameSuffix is attached to the deployment name and related resources.
 	NameSuffix string
 	// IncludeNamespaces are namespaces from which secrets are monitored.
-	// If non-zero len excludes all else.
+	// If non-zero length excludes all else.
 	IncludeNamespaces IncludeNamespaces
 	// ExcludeNamespaces namespaces from which secrets are not monitored.
-	// If non-zero len includes all else.
+	// If non-zero length includes all else.
 	ExcludeNamespaces ExcludeNamespaces
 	// IncludeLabels includes labels, similar to the namespaces vars.
 	IncludeLabels IncludeLabels
@@ -83,9 +83,9 @@ type Values struct {
 	WorkerGroups map[string]operatorv1alpha1.WorkerGroup
 	// CertificateExpirationDays is the number of days before expiration that will trigger a critical alert
 	CertificateExpirationDays uint
-	// CertificateRenewalDays is the number of days bedfore expiration that will trigger a warning alert
+	// CertificateRenewalDays is the number of days before expiration that will trigger a warning alert
 	CertificateRenewalDays uint
-	// PrometheusInstance is the label for thje prometheus instance
+	// PrometheusInstance is the label for the prometheus instance
 	PrometheusInstance string
 }
 
@@ -96,7 +96,7 @@ func New(
 	values Values,
 ) component.DeployWaiter {
 	if values.CertificateRenewalDays == 0 {
-		values.CertificateRenewalDays = defuaultCertificateRenewalDays
+		values.CertificateRenewalDays = defaultCertificateRenewalDays
 	}
 	if values.CertificateExpirationDays == 0 {
 		values.CertificateExpirationDays = defaultCertificateExpirationDays

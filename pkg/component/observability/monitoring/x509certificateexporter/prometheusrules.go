@@ -19,7 +19,7 @@ func (x *x509CertificateExporter) prometheusRule(labelz labels.Set, renewalDays,
 		certificateErrorsSeverity = "info"
 		renewalSeverity           = "warning"
 		expirationSeverity        = "critical"
-		expisresTodaySeverity     = "blocker"
+		expiresTodaySeverity     = "blocker"
 		severityKey               = "severity"
 	)
 
@@ -39,7 +39,7 @@ func (x *x509CertificateExporter) prometheusRule(labelz labels.Set, renewalDays,
 		certificateErrorLabels map[string]string = genAlertLabels(certificateErrorsSeverity)
 		renewalLabels          map[string]string = genAlertLabels(renewalSeverity)
 		expirationLabels       map[string]string = genAlertLabels(expirationSeverity)
-		expiresTodayLabels     map[string]string = genAlertLabels(expisresTodaySeverity)
+		expiresTodayLabels     map[string]string = genAlertLabels(expiresTodaySeverity)
 	)
 
 	labelz["prometheus"] = x.values.PrometheusInstance

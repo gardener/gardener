@@ -56,7 +56,7 @@ type HostCertificates struct {
 // will fail if mountPath is not an absolute dir
 // if any certificatePath is not an abs path, mountPath will be prepend
 // mountPath: host path that will be mounted from the node
-// filePaths: paths that will be configured in certificate exporter ds. Paths can be either file paths or dirs. If not absolute - mountPath is prepended.
+// filePaths: paths that will be configured in certificate exporter daemonset. Paths can be either file paths or dirs. If not absolute - mountPath is prepended.
 // dirPaths: similar as above, but will be configured as dirs
 func NewHostCertificates(
 	mountPath string, filePaths []string, dirPaths []string,
@@ -75,7 +75,7 @@ func NewHostCertificates(
 	)
 
 	if !filepath.IsAbs(mountPath) {
-		return nil, errors.New("Path " + mountPath + "is not absolute file path")
+		return nil, errors.New("Path " + mountPath + " is not absolute file path")
 	}
 	ensureAbsolutePaths(filePaths)
 	if len(dirPaths) == 0 {

@@ -174,11 +174,11 @@ type Settings struct {
 type HostCertificates struct {
 	// MountPath is the host path that will be mounted
 	MountPath string
-	// CertificatePaths is a list of certificates withion the specified mount
-	// All relative paths are configured base on the specified mount
+	// CertificatePaths is a list of certificates within the specified mount
+	// All relative paths are configured based on the specified mount
 	// +optional
 	CertificatePaths []string `json:"certificatePaths,omitempty"`
-	// CertificateDirPaths are similat to CertificatePaths but for dirs
+	// CertificateDirPaths are similar to CertificatePaths but for dirs
 	// +optional
 	CertificateDirPaths []string `json:"certificateDirPaths,omitempty"`
 }
