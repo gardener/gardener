@@ -9,9 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/util/validation/field"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ManagedSeedAPIServer contains the configuration of a ManagedSeed API server.
