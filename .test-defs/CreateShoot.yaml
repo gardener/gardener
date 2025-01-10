@@ -29,6 +29,7 @@ spec:
     -networking-provider-config-filepath=$NETWORKING_PROVIDER_CONFIG_FILEPATH
     -workers-config-filepath=$WORKERS_CONFIG_FILEPATH
     -worker-zone=$ZONE
+    -ip-families=$IP_FAMILIES
     -networking-type=$NETWORKING_TYPE
     -networking-pods=$NETWORKING_PODS
     -networking-services=$NETWORKING_SERVICES
