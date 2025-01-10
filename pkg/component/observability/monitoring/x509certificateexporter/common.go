@@ -75,8 +75,7 @@ func (x *x509CertificateExporter) defaultPodSpec(sa *corev1.ServiceAccount) core
 					Capabilities: &corev1.Capabilities{
 						Drop: []corev1.Capability{"ALL"},
 					},
-					ReadOnlyRootFilesystem:   ptr.To(true),
-					AllowPrivilegeEscalation: ptr.To(true),
+					ReadOnlyRootFilesystem: ptr.To(true),
 				},
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
