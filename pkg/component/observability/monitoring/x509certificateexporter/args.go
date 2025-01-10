@@ -137,9 +137,7 @@ func (s SecretType) AsArg() string {
 type SecretTypeList []SecretType
 
 func (s SecretTypeList) AsArgs() []string {
-	var (
-		args = make([]string, len(s))
-	)
+	args := make([]string, len(s))
 	for idx, arg := range s {
 		args[idx] = arg.AsArg()
 	}
@@ -147,9 +145,7 @@ func (s SecretTypeList) AsArgs() []string {
 }
 
 func labelsToArgs(argPrefix string, data map[string]string) []string {
-	var (
-		args = []string{}
-	)
+	args := []string{}
 	for k, v := range data {
 		arg := argPrefix + k
 		if v != "" {
@@ -186,7 +182,7 @@ func listToArgs(argPrefix string, data []string) []string {
 type IncludeLabels labels.Set
 
 func (il IncludeLabels) AsArgs() []string {
-	return labelsToArgs("--include-label=", map[string]string(il))
+	return labelsToArgs("--include-label=", il)
 }
 
 // ExcludeLabels are labels used to filter certificates from the k8s API.
