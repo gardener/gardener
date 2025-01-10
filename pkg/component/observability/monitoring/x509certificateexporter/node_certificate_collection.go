@@ -10,11 +10,13 @@ import (
 	"fmt"
 	"sort"
 
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
 func (x *x509CertificateExporter) daemonSetList(resNamePrefix string, sa *corev1.ServiceAccount) ([]client.Object, error) {
@@ -114,6 +116,7 @@ func (x *x509CertificateExporter) daemonSet(
 	podSpec.Containers[0].Args = args
 	podSpec.Volumes = volumes
 	podSpec.Containers[0].VolumeMounts = volumeMounts
+	podSpec.Containers[0].SecurityContext.AllowPrivilegeEscalation = ptr.To(true)
 	if selector != nil {
 		podSpec.NodeSelector = selector.MatchLabels
 	}
