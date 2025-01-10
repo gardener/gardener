@@ -120,7 +120,7 @@ func (x *x509CertificateExporter) Deploy(ctx context.Context) error {
 		return errors.New("x509CertificateExporter is currently supported only on the seed and runtime clusters")
 	}
 
-	if x.values.WorkerGroups != nil && len(x.values.SecretTypes) == 0 && len(x.values.ConfigMapKeys) == 0 {
+	if x.values.WorkerGroups == nil && len(x.values.SecretTypes) == 0 && len(x.values.ConfigMapKeys) == 0 {
 		return fmt.Errorf("no secret types, configmap keys and worker groups provided, nothing to monitor")
 	}
 	var (
