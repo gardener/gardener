@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -18,6 +19,7 @@ import (
 
 	. "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockmanager "github.com/gardener/gardener/third_party/mock/controller-runtime/manager"
@@ -126,6 +128,28 @@ var _ = Describe("Preconditions", func() {
 							},
 						},
 					))).To(Succeed())
+
+					Expect(run()).To(BeFalse())
+				})
+
+				It("should return true if it is not a shoot namespace", func() {
+					obj.SetNamespace("foo")
+					Expect(run()).To(BeTrue())
+				})
+
+				It("should return false if it is a shoot namespace, but cluster is not existing", func() {
+					ns := &corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: namespace,
+							Labels: map[string]string{
+								v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+							},
+						},
+					}
+					Expect(fakeClient.Create(ctx, ns)).To(Succeed())
+					DeferCleanup(func() {
+						Expect(fakeClient.Delete(ctx, ns)).To(Succeed())
+					})
 
 					Expect(run()).To(BeFalse())
 				})

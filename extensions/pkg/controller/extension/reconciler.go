@@ -24,6 +24,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
+	"github.com/gardener/gardener/pkg/extensions"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // reconciler reconciles Extension resources of Gardener's
@@ -69,16 +71,18 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	var result reconcile.Result
+	var cluster *extensions.Cluster
+	if gardenerutils.IsShootNamespace(ex.Namespace) {
+		var err error
+		cluster, err = extensionscontroller.GetCluster(ctx, r.client, ex.Namespace)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 
-	cluster, err := extensionscontroller.GetCluster(ctx, r.client, ex.Namespace)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if extensionscontroller.IsFailed(cluster) {
-		log.Info("Skipping the reconciliation of Extension of failed shoot")
-		return reconcile.Result{}, nil
+		if extensionscontroller.IsFailed(cluster) {
+			log.Info("Skipping the reconciliation of Extension of failed shoot")
+			return reconcile.Result{}, nil
+		}
 	}
 
 	operationType := v1beta1helper.ComputeOperationType(ex.ObjectMeta, ex.Status.LastOperation)
@@ -93,7 +97,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
 		return r.restore(ctx, log, ex, operationType)
 	default:
-		if result, err = r.reconcile(ctx, log, ex, operationType); err != nil {
+		if result, err := r.reconcile(ctx, log, ex, operationType); err != nil {
 			return result, err
 		}
 		return reconcile.Result{Requeue: r.resync != 0, RequeueAfter: r.resync}, nil
