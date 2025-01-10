@@ -11,7 +11,7 @@ RUN rm -f /etc/systemd/system/kubelet.service && \
     rm -rf /etc/systemd/system/kubelet.service.d/
 
 # copy containerd hosts configurations for local registry mirrors
-COPY certs.d /etc/containerd/certs.d
+COPY hosts.toml /etc/containerd/certs.d/garden.local.gardener.cloud:5001/hosts.toml
 
 # add our userdata executor unit
 COPY run-userdata.sh /run-userdata.sh
