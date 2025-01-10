@@ -26,7 +26,7 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 
 	grmIsPresent, err := b.IsGardenerResourceManagerReady(ctx)
 	if err != nil {
-		b.Operation.Logger.Error(err, "Error getting "+v1beta1constants.DeploymentNameGardenerResourceManager+" deployment")
+		return err
 	}
 	b.Shoot.Components.ControlPlane.Vali.WithAuthenticationProxy(grmIsPresent)
 
