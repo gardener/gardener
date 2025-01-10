@@ -80,14 +80,11 @@ func (x *x509CertificateExporter) daemonSet(
 		return paths, certArgs
 	}()
 
-	args = append(args, func() []string {
-		return []string{
-			"--expose-relative-metrics",
-			"--watch-kube-secrets",
-			"--expose-per-cert-error-metrics",
-			fmt.Sprintf("--listen-address=:%d", port),
-		}
-	}()...,
+	args = append(args,
+		"--expose-relative-metrics",
+		"--watch-kube-secrets",
+		"--expose-per-cert-error-metrics",
+		fmt.Sprintf("--listen-address=:%d", port),
 	)
 	sort.Strings(args)
 	sort.Strings(hostPaths)
