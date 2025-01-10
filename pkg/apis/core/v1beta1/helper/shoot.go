@@ -18,35 +18,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-// ReadManagedSeedAPIServer reads the managed seed API server settings from the corresponding annotation.
-func ReadManagedSeedAPIServer(shoot *gardencorev1beta1.Shoot) (*ManagedSeedAPIServer, error) {
-	if shoot.Namespace != v1beta1constants.GardenNamespace || shoot.Annotations == nil {
-		return nil, nil
-	}
-
-	val, ok := shoot.Annotations[v1beta1constants.AnnotationManagedSeedAPIServer]
-	if !ok {
-		return nil, nil
-	}
-
-	_, settings := getFlagsAndSettings(val)
-	apiServer, err := parseManagedSeedAPIServer(settings)
-	if err != nil {
-		return nil, err
-	}
-	if apiServer == nil {
-		return nil, nil
-	}
-
-	setDefaults_ManagedSeedAPIServer(apiServer)
-
-	if errs := validateManagedSeedAPIServer(apiServer, nil); len(errs) > 0 {
-		return nil, errs.ToAggregate()
-	}
-
-	return apiServer, nil
-}
-
 // HibernationIsEnabled checks if the given shoot's desired state is hibernated.
 func HibernationIsEnabled(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled

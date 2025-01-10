@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -48,6 +50,35 @@ func getFlagsAndSettings(annotation string) (map[string]struct{}, map[string]str
 	}
 
 	return flags, settings
+}
+
+// ReadManagedSeedAPIServer reads the managed seed API server settings from the corresponding annotation.
+func ReadManagedSeedAPIServer(shoot *gardencorev1beta1.Shoot) (*ManagedSeedAPIServer, error) {
+	if shoot.Namespace != v1beta1constants.GardenNamespace || shoot.Annotations == nil {
+		return nil, nil
+	}
+
+	val, ok := shoot.Annotations[v1beta1constants.AnnotationManagedSeedAPIServer]
+	if !ok {
+		return nil, nil
+	}
+
+	_, settings := getFlagsAndSettings(val)
+	apiServer, err := parseManagedSeedAPIServer(settings)
+	if err != nil {
+		return nil, err
+	}
+	if apiServer == nil {
+		return nil, nil
+	}
+
+	setDefaults_ManagedSeedAPIServer(apiServer)
+
+	if errs := validateManagedSeedAPIServer(apiServer, nil); len(errs) > 0 {
+		return nil, errs.ToAggregate()
+	}
+
+	return apiServer, nil
 }
 
 func parseManagedSeedAPIServer(settings map[string]string) (*ManagedSeedAPIServer, error) {
