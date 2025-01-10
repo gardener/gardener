@@ -94,15 +94,14 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	)
 
 	var (
-		allowBackup                     = o.Seed.GetInfo().Spec.Backup != nil
-		hasNodesCIDR                    = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil && (o.Shoot.GetInfo().Status.Networking != nil || skipReadiness)
-		useDNS                          = botanist.ShootUsesDNS()
-		generation                      = o.Shoot.GetInfo().Generation
-		requestControlPlanePodsRestart  = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
-		kubeProxyEnabled                = v1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
-		shootControlPlaneLoggingEnabled = botanist.Shoot.IsShootControlPlaneLoggingEnabled(botanist.Config)
-		deployKubeAPIServerTaskTimeout  = defaultTimeout
-		shootSSHAccessEnabled           = v1beta1helper.ShootEnablesSSHAccess(o.Shoot.GetInfo())
+		allowBackup                    = o.Seed.GetInfo().Spec.Backup != nil
+		hasNodesCIDR                   = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil && (o.Shoot.GetInfo().Status.Networking != nil || skipReadiness)
+		useDNS                         = botanist.ShootUsesDNS()
+		generation                     = o.Shoot.GetInfo().Generation
+		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
+		kubeProxyEnabled               = v1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
+		deployKubeAPIServerTaskTimeout = defaultTimeout
+		shootSSHAccessEnabled          = v1beta1helper.ShootEnablesSSHAccess(o.Shoot.GetInfo())
 	)
 
 	// During the 'Preparing' phase of different rotation operations, components are deployed twice. Also, the
@@ -158,10 +157,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
-		_ = g.Add(flow.Task{
+		initialValiDeployment = g.Add(flow.Task{
 			Name:         "Deploying initial shoot logging stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement).InsertIf(shootControlPlaneLoggingEnabled),
+			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server ingress with trusted certificate in the Seed cluster",
@@ -395,7 +394,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeployLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement).InsertIf(shootControlPlaneLoggingEnabled, waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(initialValiDeployment, waitUntilGardenerResourceManagerReady),
 		})
 		deployShootNamespaces = g.Add(flow.Task{
 			Name:         "Deploying shoot namespaces system component",
