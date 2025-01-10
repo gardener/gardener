@@ -169,18 +169,15 @@ var _ = Describe("Logging", func() {
 
 				Expect(botanist.DeployLogging(ctx)).To(Succeed())
 			})
-			It("should successfully deploy the logging stack when there is an error fetching gardener-resource-manager", func() {
+			It("should not deploy the logging stack when there is an error fetching gardener-resource-manager", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
 						_ runtimeclient.ObjectKey, _ runtimeclient.Object, _ ...runtimeclient.GetOption) error {
 						return fakeErr
 					}),
-					valiDeployer.EXPECT().WithAuthenticationProxy(false),
-
-					valiDeployer.EXPECT().Deploy(ctx),
 				)
 
-				Expect(botanist.DeployLogging(ctx)).To(Succeed())
+				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
 		})
 
