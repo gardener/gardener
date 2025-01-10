@@ -28,14 +28,14 @@ var _ = Describe("x509 certificate exporter - arg calculation", func() {
 				It("should return error", func() {
 					_, err := x.NewHostCertificates("relative/path", []string{}, []string{})
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("Path relative/pathis not absolute file path"))
+					Expect(err.Error()).To(Equal("Path relative/path is not absolute file path"))
 				})
 			})
 			Context("Windows style path", func() {
 				It("should return error", func() {
 					_, err := x.NewHostCertificates("C:\\windows\\path", []string{}, []string{})
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal("Path C:\\windows\\pathis not absolute file path"))
+					Expect(err.Error()).To(Equal("Path C:\\windows\\path is not absolute file path"))
 				})
 			})
 			Context("Absolute paths for certificates", func() {
