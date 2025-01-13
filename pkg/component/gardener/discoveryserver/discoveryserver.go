@@ -48,7 +48,7 @@ type Values struct {
 	Image string
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
-	// Domain will be prefixed with "discovery." and used by the discovery server to serve metadata on.
+	// Domain will be used by the discovery server to serve metadata on.
 	Domain string
 	// TLSSecretName is the name of the secret that will be used by the discovery server to handle TLS.
 	// If not provided then self-signed certificate will be generated.
@@ -103,7 +103,7 @@ func (g *gardenerDiscoveryServer) Deploy(ctx context.Context) error {
 		ingressTLSSecret, err := g.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
 			Name:                        deploymentName + "-tls",
 			CommonName:                  deploymentName,
-			DNSNames:                    []string{g.hostname()},
+			DNSNames:                    []string{g.values.Domain},
 			CertType:                    secretsutils.ServerCert,
 			Validity:                    ptr.To(v1beta1constants.IngressTLSCertificateValidity),
 			SkipPublishingCACertificate: true,
