@@ -4131,6 +4131,16 @@ var _ = Describe("validator", func() {
 
 							Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machineimage:%s' is expired", expiredVersion)))
 						})
+
+						It("should reject defaulting a machine image version for worker pool with inplace update strategy if there is no machine image available in the cloud profile supporting inplace update", func() {
+							shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+
+							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							err := admissionHandler.Admit(ctx, attrs, nil)
+
+							Expect(err).To(MatchError(ContainSubstring("failed to determine latest machine image from cloud profile")))
+
+						})
 					})
 
 					It("should allow supported CRI and CRs", func() {

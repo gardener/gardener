@@ -762,7 +762,6 @@ func (c *validationContext) ensureMachineImages() field.ErrorList {
 	if c.shoot.DeletionTimestamp == nil {
 		for idx, worker := range c.shoot.Spec.Provider.Workers {
 			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
-
 			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, fldPath)
 			if err != nil {
 				allErrs = append(allErrs, err)
@@ -1729,7 +1728,7 @@ func validateZone(constraints []gardencorev1beta1.Region, region, zone string) (
 }
 
 // getDefaultMachineImage determines the latest non-preview machine image version from the first machine image in the CloudProfile and considers that as the default image
-func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, image *core.ShootMachineImage, arch *string, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, image *core.ShootMachineImage, arch *string, isUpdateStrategyInPlace bool, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	var imageReference string
 	if image != nil {
 		imageReference = fmt.Sprintf("%s@%s", image.Name, image.Version)
@@ -1810,6 +1809,12 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 		if !slices.Contains(version.Architectures, *arch) {
 			continue
 		}
+
+		// if InPlace update is true, only consider versions that support in-place updates
+		if isUpdateStrategyInPlace && (version.InPlaceUpdateConfig == nil || !version.InPlaceUpdateConfig.Supported) {
+			continue
+		}
+
 		// CloudProfile cannot contain invalid semVer machine image version
 		parsedVersion := semver.MustParse(version.Version)
 		if machineImageVersionMajor != nil && parsedVersion.Major() != *machineImageVersionMajor ||
@@ -2010,7 +2015,7 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []g
 		}
 	}
 
-	return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, fldPath)
+	return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {
