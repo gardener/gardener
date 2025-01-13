@@ -557,7 +557,7 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 		values = discoveryserver.Values{
 			RuntimeVersion:              semver.MustParse("1.26.4"),
 			Image:                       image,
-			Domain:                      "local.gardener.cloud",
+			Domain:                      "discovery.local.gardener.cloud",
 			WorkloadIdentityTokenIssuer: workloadIdentityIssuer,
 		}
 		deployer = discoveryserver.New(fakeClient, namespace, fakeSecretManager, values)
