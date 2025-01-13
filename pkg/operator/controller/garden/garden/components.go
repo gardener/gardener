@@ -221,7 +221,8 @@ func (r *Reconciler) instantiateComponents(
 	c.virtualGardenGardenerAccess = r.newGardenerAccess(garden, secretsManager)
 
 	// gardener control plane components
-	workloadIdentityTokenIssuer := "https://" + primaryIngressDomain.Name + "/garden/workload-identity/issuer"
+	discoveryServerDomain := "discovery." + primaryIngressDomain.Name
+	workloadIdentityTokenIssuer := "https://" + discoveryServerDomain + "/garden/workload-identity/issuer"
 	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager, workloadIdentityTokenIssuer)
 	if err != nil {
 		return
@@ -246,7 +247,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, primaryIngressDomain.Name, wildcardCertSecretName, workloadIdentityTokenIssuer)
+	c.gardenerDiscoveryServer, err = r.newGardenerDiscoveryServer(secretsManager, discoveryServerDomain, wildcardCertSecretName, workloadIdentityTokenIssuer)
 	if err != nil {
 		return
 	}

@@ -12,10 +12,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-func (g *gardenerDiscoveryServer) hostname() string {
-	return "discovery." + g.values.Domain
-}
-
 func (g *gardenerDiscoveryServer) ingress() *networkingv1.Ingress {
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,7 +25,7 @@ func (g *gardenerDiscoveryServer) ingress() *networkingv1.Ingress {
 		Spec: networkingv1.IngressSpec{
 			IngressClassName: ptr.To(v1beta1constants.SeedNginxIngressClass),
 			Rules: []networkingv1.IngressRule{{
-				Host: g.hostname(),
+				Host: g.values.Domain,
 				IngressRuleValue: networkingv1.IngressRuleValue{
 					HTTP: &networkingv1.HTTPIngressRuleValue{
 						Paths: []networkingv1.HTTPIngressPath{{
