@@ -43,7 +43,7 @@ var _ = Describe("Etcd Encryption Key Secrets", func() {
 
 				Expect(etcdEncryptionKey.Name).To(Equal(name))
 				Expect(etcdEncryptionKey.Key).To(Equal("key-62135596800"))
-				Expect(etcdEncryptionKey.Secret).To(Equal("_________________"))
+				Expect(etcdEncryptionKey.Secret).To(Equal([]byte("_________________")))
 			})
 		})
 

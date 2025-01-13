@@ -25,7 +25,7 @@ type ETCDEncryptionKeySecretConfig struct {
 type ETCDEncryptionKey struct {
 	Name   string
 	Key    string
-	Secret string
+	Secret []byte
 }
 
 // GetName returns the name of the secret.
@@ -35,7 +35,8 @@ func (s *ETCDEncryptionKeySecretConfig) GetName() string {
 
 // Generate implements ConfigInterface.
 func (s *ETCDEncryptionKeySecretConfig) Generate() (DataInterface, error) {
-	secret, err := GenerateRandomString(s.SecretLength)
+	key := make([]byte, s.SecretLength)
+	_, err := Read(key)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +44,7 @@ func (s *ETCDEncryptionKeySecretConfig) Generate() (DataInterface, error) {
 	return &ETCDEncryptionKey{
 		Name:   s.Name,
 		Key:    fmt.Sprintf("key%d", Clock.Now().Unix()),
-		Secret: secret,
+		Secret: key,
 	}, nil
 }
 
@@ -51,6 +52,6 @@ func (s *ETCDEncryptionKeySecretConfig) Generate() (DataInterface, error) {
 func (b *ETCDEncryptionKey) SecretData() map[string][]byte {
 	return map[string][]byte{
 		DataKeyEncryptionKeyName: []byte(b.Key),
-		DataKeyEncryptionSecret:  []byte(b.Secret),
+		DataKeyEncryptionSecret:  b.Secret,
 	}
 }

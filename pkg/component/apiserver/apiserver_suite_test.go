@@ -5,6 +5,7 @@
 package apiserver_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,10 @@ func TestAPIServer(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&secretsutils.Read, func(b []byte) (int, error) {
+		copy(b, []byte(strings.Repeat("_", len(b))))
+		return len(b), nil
+	}))
 	DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
 	DeferCleanup(test.WithVar(&secretsutils.Clock, testclock.NewFakeClock(time.Time{})))
 })
