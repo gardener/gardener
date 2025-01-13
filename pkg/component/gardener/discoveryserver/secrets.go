@@ -42,7 +42,7 @@ func (g *gardenerDiscoveryServer) newServiceAccountIssuerConfigSecret() *corev1.
 			}),
 		},
 		StringData: map[string]string{
-			"hostname": g.hostname(),
+			"hostname": g.values.Domain,
 		},
 	}
 }
