@@ -795,7 +795,7 @@ func (r *Reconciler) patchShootStatusOperationError(
 	var (
 		now          = metav1.NewTime(r.Clock.Now().UTC())
 		state        = gardencorev1beta1.LastOperationStateError
-		willNotRetry = v1beta1helper.HasNonRetryableErrorCode(lastErrors...) || utils.TimeElapsed(shoot.Status.RetryCycleStartTime, r.Config.Controllers.Shoot.RetryDuration.Duration)
+		willNotRetry = v1beta1helper.HasNonRetryableErrorCode(lastErrors...) || utils.HasTimeElapsed(shoot.Status.RetryCycleStartTime, r.Config.Controllers.Shoot.RetryDuration.Duration)
 	)
 
 	statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
