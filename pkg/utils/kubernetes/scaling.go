@@ -47,7 +47,6 @@ func scaleResource(ctx context.Context, c client.Client, obj client.Object, repl
 	return c.SubResource("scale").Patch(ctx, obj, client.RawPatch(types.MergePatchType, patch))
 }
 
-// Rada: isn't this unuse
 // WaitUntilDeploymentScaledToDesiredReplicas waits for the number of available replicas to be equal to the deployment's desired replicas count.
 func WaitUntilDeploymentScaledToDesiredReplicas(ctx context.Context, client client.Client, key types.NamespacedName, desiredReplicas int32) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {

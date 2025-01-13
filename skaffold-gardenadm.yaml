@@ -152,6 +152,7 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/clientset/versioned/scheme
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component

@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // ValidDeploymentContainerImageVersion validates compliance of a deployment container image to a minimum version

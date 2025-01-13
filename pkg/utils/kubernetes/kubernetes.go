@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -562,7 +561,7 @@ func MostRecentCompleteLogs(
 		}
 	}
 
-	lastLogLines, err := kubernetes.GetPodLogs(ctx, podInterface, pod.Name, &corev1.PodLogOptions{
+	lastLogLines, err := GetPodLogs(ctx, podInterface, pod.Name, &corev1.PodLogOptions{
 		Container: containerName,
 		TailLines: tailLines,
 		Previous:  previousLogs,
@@ -575,7 +574,7 @@ func MostRecentCompleteLogs(
 		return string(lastLogLines), nil
 	}
 
-	firstLogLines, err := kubernetes.GetPodLogs(ctx, podInterface, pod.Name, &corev1.PodLogOptions{
+	firstLogLines, err := GetPodLogs(ctx, podInterface, pod.Name, &corev1.PodLogOptions{
 		Container:  containerName,
 		Previous:   previousLogs,
 		LimitBytes: headBytes,
