@@ -109,6 +109,36 @@ var _ = Describe("NamespacedCloudProfile Mutator", func() {
 				}),
 			))
 		})
+
+		It("should correctly merge the provider configurations from a NamespacedCloudProfile and the parent CloudProfile specifying the same machine image", func() {
+			// If the machine image is added to the parent CloudProfile after it has been specified in the NamespacedCloudProfile,
+			// both profile configurations contain the same machine image (version).
+			namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"local.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[
+  {"name":"image-1","versions":[{"version":"1.0","image":"local/image:1.0-cpfl"}]}
+]}`)}
+			namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion":"local.provider.extensions.gardener.cloud/v1alpha1",
+"kind":"CloudProfileConfig",
+"machineImages":[
+  {"name":"image-1","versions":[{"version":"1.0","image":"local/image:1.0-nscpfl"}]}
+]}`)}
+
+			Expect(namespacedCloudProfileMutator.Mutate(ctx, namespacedCloudProfile, nil)).To(Succeed())
+
+			mergedConfig, err := decodeCloudProfileConfig(decoder, namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(mergedConfig.MachineImages).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"Name": Equal("image-1"),
+					"Versions": ContainElements(
+						api.MachineImageVersion{Version: "1.0", Image: "local/image:1.0-nscpfl"},
+					),
+				}),
+			))
+		})
 	})
 })
 
