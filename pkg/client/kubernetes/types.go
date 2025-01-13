@@ -42,6 +42,7 @@ import (
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -57,11 +58,7 @@ var (
 		client.PropagationPolicy(metav1.DeletePropagationForeground),
 		client.GracePeriodSeconds(60),
 	}
-	// ForceDeleteOptions use background propagation policy and grace period of 0 seconds.
-	ForceDeleteOptions = []client.DeleteOption{
-		client.PropagationPolicy(metav1.DeletePropagationBackground),
-		client.GracePeriodSeconds(0),
-	}
+
 	// GardenSerializer is a YAML serializer using the Garden scheme.
 	GardenSerializer = json.NewSerializerWithOptions(json.DefaultMetaFactory, GardenScheme, GardenScheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	// GardenCodec is a codec factory using the Garden scheme.
@@ -177,7 +174,7 @@ type Interface interface {
 	// ChartApplier returns a ChartApplier using the ClientSet's ChartRenderer and Applier.
 	ChartApplier() ChartApplier
 	// PodExecutor returns a PodExecutor for executing into pods.
-	PodExecutor() PodExecutor
+	PodExecutor() kubernetesutils.PodExecutor
 
 	Kubernetes() kubernetesclientset.Interface
 

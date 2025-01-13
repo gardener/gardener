@@ -21,8 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -439,7 +439,7 @@ func (t *terraformer) retrievePodLogs(ctx context.Context, logger logr.Logger, p
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	logs, err := kubernetes.GetPodLogs(ctx, t.coreV1Client.Pods(pod.Namespace), pod.Name, &corev1.PodLogOptions{})
+	logs, err := kubernetesutils.GetPodLogs(ctx, t.coreV1Client.Pods(pod.Namespace), pod.Name, &corev1.PodLogOptions{})
 	if err != nil {
 		logger.Error(err, "Could not retrieve the logs of Terraformer pod", "pod", client.ObjectKeyFromObject(pod))
 		return "", err

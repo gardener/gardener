@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
@@ -325,7 +324,7 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 	if err := b.DeployKubeAPIServer(ctx); err != nil {
 		return err
 	}
-	if err := kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1); err != nil {
+	if err := kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1); err != nil {
 		return err
 	}
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Wait(ctx)
@@ -333,5 +332,5 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one.
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1)
+	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1)
 }

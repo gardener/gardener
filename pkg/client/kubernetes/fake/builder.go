@@ -12,6 +12,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ClientSetBuilder is a builder for fake ClientSets
@@ -19,7 +20,7 @@ type ClientSetBuilder struct {
 	applier       kubernetes.Applier
 	chartRenderer chartrenderer.Interface
 	chartApplier  kubernetes.ChartApplier
-	podExecutor   kubernetes.PodExecutor
+	podExecutor   kubernetesutils.PodExecutor
 	restConfig    *rest.Config
 	client        client.Client
 	apiReader     client.Reader
@@ -53,7 +54,7 @@ func (b *ClientSetBuilder) WithChartApplier(chartApplier kubernetes.ChartApplier
 }
 
 // WithPodExecutor sets the podExecutor attribute of the builder.
-func (b *ClientSetBuilder) WithPodExecutor(podExecutor kubernetes.PodExecutor) *ClientSetBuilder {
+func (b *ClientSetBuilder) WithPodExecutor(podExecutor kubernetesutils.PodExecutor) *ClientSetBuilder {
 	b.podExecutor = podExecutor
 	return b
 }

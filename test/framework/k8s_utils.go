@@ -290,7 +290,7 @@ func ScaleDeployment(ctx context.Context, c client.Client, desiredReplicas *int3
 	}
 
 	// scale the deployment
-	if err := kubernetes.ScaleDeployment(ctx, c, client.ObjectKey{Namespace: namespace, Name: name}, *desiredReplicas); err != nil {
+	if err := kubernetesutils.ScaleDeployment(ctx, c, client.ObjectKey{Namespace: namespace, Name: name}, *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to scale the replica count of deployment %q: '%w'", name, err)
 	}
 

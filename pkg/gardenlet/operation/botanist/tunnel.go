@@ -15,11 +15,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // SetupPortForwarder is an alias for kubernetes.SetupPortForwarder, exposed for testing
-var SetupPortForwarder = kubernetes.SetupPortForwarder
+var SetupPortForwarder = kubernetesutils.SetupPortForwarder
 
 // CheckTunnelConnection checks if the tunnel connection between the control plane and the shoot networks
 // is established.
@@ -51,7 +52,7 @@ func CheckTunnelConnection(ctx context.Context, log logr.Logger, shootClient kub
 		return retry.MinorError(fmt.Errorf("could not setup pod port forwarding: %w", err))
 	}
 
-	if err := kubernetes.CheckForwardPodPort(fw); err != nil {
+	if err := kubernetesutils.CheckForwardPodPort(fw); err != nil {
 		log.Info("Waiting until the tunnel connection has been established")
 		return retry.MinorError(fmt.Errorf("could not forward to %s pod (timeout after 5 seconds): %v", tunnelName, err))
 	}

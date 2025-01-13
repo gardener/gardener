@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -185,7 +186,7 @@ func (f *CommonFramework) DumpLogsForPodInNamespace(ctx context.Context, k8sClie
 	log.Info("Dumping logs for corev1.Pod")
 
 	podIf := k8sClient.Kubernetes().CoreV1().Pods(namespace)
-	logs, err := kubernetes.GetPodLogs(ctx, podIf, name, options)
+	logs, err := kubernetesutils.GetPodLogs(ctx, podIf, name, options)
 	if err != nil {
 		return err
 	}

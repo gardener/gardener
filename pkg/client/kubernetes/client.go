@@ -28,6 +28,7 @@ import (
 	securityinstall "github.com/gardener/gardener/pkg/apis/security/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -343,7 +344,7 @@ func newClientSet(conf *Config) (Interface, error) {
 		restClient: kubernetes.Discovery().RESTClient(),
 
 		applier:     NewApplier(runtimeClient, conf.clientOptions.Mapper),
-		podExecutor: NewPodExecutor(conf.restConfig),
+		podExecutor: kubernetesutils.NewPodExecutor(conf.restConfig),
 
 		client:    runtimeClient,
 		apiReader: runtimeAPIReader,

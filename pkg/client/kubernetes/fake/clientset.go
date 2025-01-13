@@ -15,6 +15,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ kubernetes.Interface = &ClientSet{}
@@ -24,7 +25,7 @@ type ClientSet struct {
 	applier       kubernetes.Applier
 	chartRenderer chartrenderer.Interface
 	chartApplier  kubernetes.ChartApplier
-	podExecutor   kubernetes.PodExecutor
+	podExecutor   kubernetesutils.PodExecutor
 	restConfig    *rest.Config
 	client        client.Client
 	apiReader     client.Reader
@@ -55,7 +56,7 @@ func (c *ClientSet) ChartApplier() kubernetes.ChartApplier {
 }
 
 // PodExecutor returns a PodExecutor.
-func (c *ClientSet) PodExecutor() kubernetes.PodExecutor {
+func (c *ClientSet) PodExecutor() kubernetesutils.PodExecutor {
 	return c.podExecutor
 }
 
