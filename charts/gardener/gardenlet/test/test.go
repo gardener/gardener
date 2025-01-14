@@ -179,6 +179,11 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				Verbs:         []string{"delete"},
 			},
 			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"get", "list", "create", "patch", "update"},
+			},
+			{
 				APIGroups: []string{"admissionregistration.k8s.io"},
 				Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
 				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
@@ -480,11 +485,6 @@ func getGardenGardenletRole(labels map[string]string) *rbacv1.Role {
 			ResourceVersion: "1",
 		},
 		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"events"},
-				Verbs:     []string{"get", "list", "create", "patch", "update"},
-			},
 			{
 				APIGroups: []string{"apps"},
 				Resources: []string{"daemonsets"},
