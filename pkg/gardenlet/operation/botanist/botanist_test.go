@@ -53,16 +53,16 @@ var _ = Describe("Botanist", func() {
 		})
 	})
 
-	Describe("#NodeAgentAuthorizerWebhookReady", func() {
+	Describe("#IsGardenerResourceManagerReady", func() {
 		It("should return false if the gardener-resource-manager is not ready", func(ctx context.Context) {
-			Expect(botanist.NodeAgentAuthorizerWebhookReady(ctx)).To(BeFalse())
+			Expect(botanist.IsGardenerResourceManagerReady(ctx)).To(BeFalse())
 		})
 
 		It("should return true if the gardener-resource-manager is ready", func(ctx context.Context) {
 			resourceManagerDeployment.Status.ReadyReplicas = 1
 			Expect(fakeClient.Status().Update(ctx, resourceManagerDeployment)).To(Succeed())
 
-			Expect(botanist.NodeAgentAuthorizerWebhookReady(ctx)).To(BeTrue())
+			Expect(botanist.IsGardenerResourceManagerReady(ctx)).To(BeTrue())
 		})
 	})
 })

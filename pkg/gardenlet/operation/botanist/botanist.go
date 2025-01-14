@@ -216,8 +216,8 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	return b, nil
 }
 
-// NodeAgentAuthorizerWebhookReady checks if gardener-resource-manager is running, so that node-agent-authorizer webhook is accessible.
-func (b *Botanist) NodeAgentAuthorizerWebhookReady(ctx context.Context) (bool, error) {
+// IsGardenerResourceManagerReady checks if gardener-resource-manager is running, so that node-agent-authorizer webhook is accessible.
+func (b *Botanist) IsGardenerResourceManagerReady(ctx context.Context) (bool, error) {
 	// The reconcile flow deploys the kube-apiserver of the shoot before the gardener-resource-manager (it has to be
 	// this way, otherwise the Gardener components cannot start). However, GRM serves an authorization webhook for the
 	// NodeAgentAuthorizer feature. We can only configure kube-apiserver to consult this webhook when GRM runs, obviously.

@@ -111,6 +111,7 @@ type Values struct {
 	CuratorImage       string
 	TelegrafImage      string
 	KubeRBACProxyImage string
+	WithRBACProxy      bool
 	InitLargeDirImage  string
 
 	ClusterType             component.ClusterType
@@ -119,6 +120,12 @@ type Values struct {
 	IngressHost             string
 	ShootNodeLoggingEnabled bool
 	Storage                 *resource.Quantity
+}
+
+// Interface is the interface for the Vali deployer.
+type Interface interface {
+	component.Deployer
+	WithAuthenticationProxy(bool)
 }
 
 type vali struct {
@@ -134,13 +141,17 @@ func New(
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) component.Deployer {
+) Interface {
 	return &vali{
 		client:         client,
 		namespace:      namespace,
 		secretsManager: secretsManager,
 		values:         values,
 	}
+}
+
+func (v *vali) WithAuthenticationProxy(b bool) {
+	v.values.WithRBACProxy = b
 }
 
 func (v *vali) Deploy(ctx context.Context) error {
@@ -655,10 +666,70 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 	if v.values.Storage != nil {
 		statefulSet.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage] = *v.values.Storage
 	}
+	if !v.values.ShootNodeLoggingEnabled {
+		utilruntime.Must(references.InjectAnnotations(statefulSet))
+		return statefulSet
+	}
 
-	if v.values.ShootNodeLoggingEnabled {
-		statefulSet.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToDNS] = v1beta1constants.LabelNetworkPolicyAllowed
-		statefulSet.Spec.Template.Labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
+	statefulSet.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToDNS] = v1beta1constants.LabelNetworkPolicyAllowed
+	statefulSet.Spec.Template.Labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
+	statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers,
+		corev1.Container{
+			Name:  telegrafName,
+			Image: v.values.TelegrafImage,
+			Command: []string{
+				"/bin/bash",
+				"-c",
+				`
+trap 'kill %1; wait' SIGTERM
+bash ` + telegrafVolumeMountPath + `/` + telegrafDataKeyStartScript + ` &
+wait
+`,
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("5m"),
+					corev1.ResourceMemory: resource.MustParse("45Mi"),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{
+					Add: []corev1.Capability{"NET_ADMIN"},
+				},
+			},
+			Ports: []corev1.ContainerPort{{
+				Name:          telegrafName,
+				ContainerPort: telegrafServicePort,
+				Protocol:      corev1.ProtocolTCP,
+			}},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      telegrafVolumeName,
+					MountPath: telegrafVolumeMountPath + "/" + telegrafDataKeyConfig,
+					SubPath:   telegrafDataKeyConfig,
+					ReadOnly:  true,
+				},
+				{
+					Name:      telegrafVolumeName,
+					MountPath: telegrafVolumeMountPath + "/" + telegrafDataKeyStartScript,
+					SubPath:   telegrafDataKeyStartScript,
+					ReadOnly:  true,
+				},
+			},
+		},
+	)
+	statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: telegrafVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: telegrafConfigMapName,
+				},
+			},
+		},
+	})
+
+	if v.values.WithRBACProxy {
 		statefulSet.Spec.Template.Spec.Containers = append(statefulSet.Spec.Template.Spec.Containers,
 			corev1.Container{
 				Name:  kubeRBACProxyName,
@@ -687,62 +758,7 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 					RunAsNonRoot:           ptr.To(true),
 					ReadOnlyRootFilesystem: ptr.To(true),
 				},
-			},
-			corev1.Container{
-				Name:  telegrafName,
-				Image: v.values.TelegrafImage,
-				Command: []string{
-					"/bin/bash",
-					"-c",
-					`
-trap 'kill %1; wait' SIGTERM
-bash ` + telegrafVolumeMountPath + `/` + telegrafDataKeyStartScript + ` &
-wait
-`,
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("5m"),
-						corev1.ResourceMemory: resource.MustParse("45Mi"),
-					},
-				},
-				SecurityContext: &corev1.SecurityContext{
-					Capabilities: &corev1.Capabilities{
-						Add: []corev1.Capability{"NET_ADMIN"},
-					},
-				},
-				Ports: []corev1.ContainerPort{{
-					Name:          telegrafName,
-					ContainerPort: telegrafServicePort,
-					Protocol:      corev1.ProtocolTCP,
-				}},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      telegrafVolumeName,
-						MountPath: telegrafVolumeMountPath + "/" + telegrafDataKeyConfig,
-						SubPath:   telegrafDataKeyConfig,
-						ReadOnly:  true,
-					},
-					{
-						Name:      telegrafVolumeName,
-						MountPath: telegrafVolumeMountPath + "/" + telegrafDataKeyStartScript,
-						SubPath:   telegrafDataKeyStartScript,
-						ReadOnly:  true,
-					},
-				},
-			},
-		)
-		statefulSet.Spec.Template.Spec.Volumes = append(statefulSet.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: telegrafVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: telegrafConfigMapName,
-					},
-				},
-			},
-		})
-
+			})
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(statefulSet, genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, kubeRBACProxyName))
 	}
 

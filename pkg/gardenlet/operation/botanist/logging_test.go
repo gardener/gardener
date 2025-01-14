@@ -12,16 +12,20 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/component/mock"
+	mockvali "github.com/gardener/gardener/pkg/component/observability/logging/vali/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -40,7 +44,7 @@ var _ = Describe("Logging", func() {
 		k8sSeedClient       kubernetes.Interface
 		botanist            *Botanist
 		eventLoggerDeployer *mockcomponent.MockDeployer
-		valiDeployer        *mockcomponent.MockDeployer
+		valiDeployer        *mockvali.MockInterface
 		fakeSecretManager   secretsmanager.Interface
 		chartApplier        *mock.MockChartApplier
 		ctx                 = context.TODO()
@@ -65,7 +69,7 @@ var _ = Describe("Logging", func() {
 			Build()
 
 		eventLoggerDeployer = mockcomponent.NewMockDeployer(ctrl)
-		valiDeployer = mockcomponent.NewMockDeployer(ctrl)
+		valiDeployer = mockvali.NewMockInterface(ctrl)
 		fakeSecretManager = fakesecretsmanager.New(c, seedNamespace)
 
 		botanist = &Botanist{
@@ -132,9 +136,7 @@ var _ = Describe("Logging", func() {
 		It("should successfully delete the logging stack when shoot is with testing purpose", func() {
 			botanist.Shoot.Purpose = shootPurposeTesting
 			gomock.InOrder(
-				// Destroying the Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Destroy(ctx),
-				// Delete Vali
 				valiDeployer.EXPECT().Destroy(ctx),
 			)
 
@@ -144,119 +146,261 @@ var _ = Describe("Logging", func() {
 		It("should successfully delete the logging stack when it is disabled", func() {
 			*botanist.Config.Logging.Enabled = false
 			gomock.InOrder(
-				// Destroying the Shoot Event Logging
 				eventLoggerDeployer.EXPECT().Destroy(ctx),
-				// Delete Vali
 				valiDeployer.EXPECT().Destroy(ctx),
 			)
 
 			Expect(botanist.DeployLogging(ctx)).To(Succeed())
 		})
 
-		It("should successfully deploy all of the components in the logging stack when it is enabled", func() {
-			gomock.InOrder(
-				// deploy Shoot Event Logging
-				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				// deploy Vali
-				valiDeployer.EXPECT().Deploy(ctx),
-			)
-
-			Expect(botanist.DeployLogging(ctx)).To(Succeed())
-		})
-
-		It("should not deploy event logger when it is disabled", func() {
-			*botanist.Config.Logging.ShootEventLogging.Enabled = false
-			gomock.InOrder(
-				// destroy Shoot Event Logging
-				eventLoggerDeployer.EXPECT().Destroy(ctx),
-				// deploy Vali
-				valiDeployer.EXPECT().Deploy(ctx),
-			)
-
-			Expect(botanist.DeployLogging(ctx)).To(Succeed())
-		})
-
-		It("should not deploy shoot node logging for workerless shoot", func() {
-			botanist.Shoot.IsWorkerless = true
-			gomock.InOrder(
-				// deploy Shoot Event Logging
-				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				// deploy Vali
-				valiDeployer.EXPECT().Deploy(ctx),
-			)
-
-			Expect(botanist.DeployLogging(ctx)).To(Succeed())
-		})
-
-		It("should not deploy shoot node logging when it is disabled", func() {
-			botanist.Config.Logging.ShootNodeLogging = nil
-			gomock.InOrder(
-				// deploy Shoot Event Logging
-				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				// deploy Vali
-				valiDeployer.EXPECT().Deploy(ctx),
-			)
-
-			Expect(botanist.DeployLogging(ctx)).To(Succeed())
-		})
-
-		It("should not deploy shoot node logging and Vali when Vali is disabled", func() {
-			*botanist.Config.Logging.Vali.Enabled = false
-			gomock.InOrder(
-				// deploy Shoot Event Logging
-				eventLoggerDeployer.EXPECT().Deploy(ctx),
-				// deploy Vali
-				valiDeployer.EXPECT().Destroy(ctx),
-			)
-
-			Expect(botanist.DeployLogging(ctx)).To(Succeed())
-		})
-
-		Context("Tests expecting a failure", func() {
-			It("should fail to delete the logging stack when ShootEventLoggerDeployer Destroy return error", func() {
-				*botanist.Config.Logging.Enabled = false
-				// Destroying the Shoot Event Logging
-				eventLoggerDeployer.EXPECT().Destroy(ctx).Return(fakeErr)
-
-				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
-			})
-
-			It("should fail to delete the logging stack when logging is disabled and ShootValiDeployer Destroy return error", func() {
-				*botanist.Config.Logging.Enabled = false
+		Context("When there are no control plane components yet", func() {
+			It("should successfully deploy the logging stack when it is enabled and there is no gardener-resource-manager", func() {
 				gomock.InOrder(
-					// Destroying the Shoot Event Logging
-					eventLoggerDeployer.EXPECT().Destroy(ctx),
-					// Delete Vali
-					valiDeployer.EXPECT().Destroy(ctx).Return(fakeErr),
+					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+						deployment := &appsv1.Deployment{}
+						*obj.(*appsv1.Deployment) = *deployment
+						return nil
+					}),
+					valiDeployer.EXPECT().WithAuthenticationProxy(false),
+
+					valiDeployer.EXPECT().Deploy(ctx),
+				)
+
+				Expect(botanist.DeployLogging(ctx)).To(Succeed())
+			})
+			It("should not deploy the logging stack when there is an error fetching gardener-resource-manager", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+						_ runtimeclient.ObjectKey, _ runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+						return fakeErr
+					}),
 				)
 
 				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
 			})
+		})
 
-			It("should fail to deploy the logging stack when ShootEventLoggerDeployer Deploy returns an error", func() {
+		Context("When gardener-resource-manager is present in the control plane", func() {
+			It("should successfully deploy all of the components in the logging stack when it is enabled", func() {
 				gomock.InOrder(
-					eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
-				)
+					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+						deployment := &appsv1.Deployment{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+								Namespace: seedNamespace,
+							},
+							Status: appsv1.DeploymentStatus{
+								ReadyReplicas: 1,
+							},
+						}
+						*obj.(*appsv1.Deployment) = *deployment
+						return nil
+					}),
+					valiDeployer.EXPECT().WithAuthenticationProxy(true),
 
-				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
-			})
-
-			It("should fail to deploy the logging stack when deploying of the shoot event logging fails", func() {
-				gomock.InOrder(
-					// deploy Shoot Event Logging
-					eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
-				)
-
-				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
-			})
-
-			It("should fail to deploy the logging stack when ValiDeployer Deploy returns error", func() {
-				gomock.InOrder(
 					eventLoggerDeployer.EXPECT().Deploy(ctx),
-					valiDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
+					valiDeployer.EXPECT().Deploy(ctx),
 				)
 
-				Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
+				Expect(botanist.DeployLogging(ctx)).To(Succeed())
+			})
+
+			It("should not deploy event logger when it is disabled", func() {
+				*botanist.Config.Logging.ShootEventLogging.Enabled = false
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+						deployment := &appsv1.Deployment{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+								Namespace: seedNamespace,
+							},
+							Status: appsv1.DeploymentStatus{
+								ReadyReplicas: 1,
+							},
+						}
+						*obj.(*appsv1.Deployment) = *deployment
+						return nil
+					}),
+					valiDeployer.EXPECT().WithAuthenticationProxy(true),
+
+					eventLoggerDeployer.EXPECT().Destroy(ctx),
+					valiDeployer.EXPECT().Deploy(ctx),
+				)
+
+				Expect(botanist.DeployLogging(ctx)).To(Succeed())
+			})
+
+			It("should not deploy shoot node logging for workerless shoot", func() {
+				botanist.Shoot.IsWorkerless = true
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+						deployment := &appsv1.Deployment{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+								Namespace: seedNamespace,
+							},
+							Status: appsv1.DeploymentStatus{
+								ReadyReplicas: 1,
+							},
+						}
+						*obj.(*appsv1.Deployment) = *deployment
+						return nil
+					}),
+					valiDeployer.EXPECT().WithAuthenticationProxy(true),
+
+					eventLoggerDeployer.EXPECT().Deploy(ctx),
+					valiDeployer.EXPECT().Deploy(ctx),
+				)
+
+				Expect(botanist.DeployLogging(ctx)).To(Succeed())
+			})
+
+			It("should not deploy shoot node logging when it is disabled", func() {
+				botanist.Config.Logging.ShootNodeLogging = nil
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+						deployment := &appsv1.Deployment{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+								Namespace: seedNamespace,
+							},
+							Status: appsv1.DeploymentStatus{
+								ReadyReplicas: 1,
+							},
+						}
+						*obj.(*appsv1.Deployment) = *deployment
+						return nil
+					}),
+					valiDeployer.EXPECT().WithAuthenticationProxy(true),
+
+					eventLoggerDeployer.EXPECT().Deploy(ctx),
+					valiDeployer.EXPECT().Deploy(ctx),
+				)
+
+				Expect(botanist.DeployLogging(ctx)).To(Succeed())
+			})
+
+			It("should not deploy shoot node logging and Vali when Vali is disabled", func() {
+				*botanist.Config.Logging.Vali.Enabled = false
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+						_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+						deployment := &appsv1.Deployment{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+								Namespace: seedNamespace,
+							},
+							Status: appsv1.DeploymentStatus{
+								ReadyReplicas: 1,
+							},
+						}
+						*obj.(*appsv1.Deployment) = *deployment
+						return nil
+					}),
+					valiDeployer.EXPECT().WithAuthenticationProxy(true),
+
+					eventLoggerDeployer.EXPECT().Deploy(ctx),
+					valiDeployer.EXPECT().Destroy(ctx),
+				)
+
+				Expect(botanist.DeployLogging(ctx)).To(Succeed())
+			})
+
+			Context("Tests expecting a failure", func() {
+				It("should fail to delete the logging stack when ShootEventLoggerDeployer Destroy return error", func() {
+					*botanist.Config.Logging.Enabled = false
+					eventLoggerDeployer.EXPECT().Destroy(ctx).Return(fakeErr)
+					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
+				})
+
+				It("should fail to delete the logging stack when logging is disabled and ShootValiDeployer Destroy return error", func() {
+					*botanist.Config.Logging.Enabled = false
+					gomock.InOrder(
+						eventLoggerDeployer.EXPECT().Destroy(ctx),
+						valiDeployer.EXPECT().Destroy(ctx).Return(fakeErr),
+					)
+
+					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
+				})
+
+				It("should fail to deploy the logging stack when ShootEventLoggerDeployer Deploy returns an error", func() {
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+							deployment := &appsv1.Deployment{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+									Namespace: seedNamespace,
+								},
+								Status: appsv1.DeploymentStatus{
+									ReadyReplicas: 1,
+								},
+							}
+							*obj.(*appsv1.Deployment) = *deployment
+							return nil
+						}),
+						valiDeployer.EXPECT().WithAuthenticationProxy(true),
+
+						eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
+					)
+
+					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
+				})
+
+				It("should fail to deploy the logging stack when deploying of the shoot event logging fails", func() {
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context,
+							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+							deployment := &appsv1.Deployment{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+									Namespace: seedNamespace,
+								},
+								Status: appsv1.DeploymentStatus{
+									ReadyReplicas: 1,
+								},
+							}
+							*obj.(*appsv1.Deployment) = *deployment
+							return nil
+						}),
+						valiDeployer.EXPECT().WithAuthenticationProxy(true),
+
+						eventLoggerDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
+					)
+
+					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
+				})
+
+				It("should fail to deploy the logging stack when ValiDeployer Deploy returns error", func() {
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.
+							Context,
+							_ runtimeclient.ObjectKey, obj runtimeclient.Object, _ ...runtimeclient.GetOption) error {
+							deployment := &appsv1.Deployment{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+									Namespace: seedNamespace,
+								},
+								Status: appsv1.DeploymentStatus{
+									ReadyReplicas: 1,
+								},
+							}
+							*obj.(*appsv1.Deployment) = *deployment
+							return nil
+						}),
+						valiDeployer.EXPECT().WithAuthenticationProxy(true),
+
+						eventLoggerDeployer.EXPECT().Deploy(ctx),
+						valiDeployer.EXPECT().Deploy(ctx).Return(fakeErr),
+					)
+
+					Expect(botanist.DeployLogging(ctx)).ToNot(Succeed())
+				})
 			})
 		})
 	})

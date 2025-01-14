@@ -12,6 +12,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
+	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/shared"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
@@ -23,11 +24,17 @@ func (b *Botanist) DeployLogging(ctx context.Context) error {
 		return b.DestroySeedLogging(ctx)
 	}
 
-	if b.isShootEventLoggerEnabled() {
+	grmIsPresent, err := b.IsGardenerResourceManagerReady(ctx)
+	if err != nil {
+		return err
+	}
+	b.Shoot.Components.ControlPlane.Vali.WithAuthenticationProxy(grmIsPresent)
+
+	if b.isShootEventLoggerEnabled() && grmIsPresent {
 		if err := b.Shoot.Components.ControlPlane.EventLogger.Deploy(ctx); err != nil {
 			return err
 		}
-	} else {
+	} else if !b.isShootEventLoggerEnabled() {
 		if err := b.Shoot.Components.ControlPlane.EventLogger.Destroy(ctx); err != nil {
 			return err
 		}
@@ -86,7 +93,7 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 }
 
 // DefaultVali returns a deployer for Vali.
-func (b *Botanist) DefaultVali() (component.Deployer, error) {
+func (b *Botanist) DefaultVali() (vali.Interface, error) {
 	return shared.NewVali(
 		b.SeedClientSet.Client(),
 		b.Shoot.SeedNamespace,

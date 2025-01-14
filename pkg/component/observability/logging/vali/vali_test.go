@@ -135,6 +135,7 @@ var _ = Describe("Vali", func() {
 					InitLargeDirImage:       initLargeDirImage,
 					TelegrafImage:           telegrafImage,
 					KubeRBACProxyImage:      kubeRBACProxyImage,
+					WithRBACProxy:           true,
 					PriorityClassName:       priorityClassName,
 					ClusterType:             "shoot",
 					IngressHost:             valiHost,
@@ -1289,43 +1290,6 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 
 		sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, []corev1.Container{
 			{
-				Name:  "kube-rbac-proxy",
-				Image: kubeRBACProxyImage,
-				Args: []string{
-					"--insecure-listen-address=0.0.0.0:8080",
-					"--upstream=http://127.0.0.1:3100/",
-					"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
-					"--logtostderr=true",
-					"--v=6",
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("5m"),
-						corev1.ResourceMemory: resource.MustParse("30Mi"),
-					},
-				},
-				Ports: []corev1.ContainerPort{
-					{
-						Name:          "kube-rbac-proxy",
-						ContainerPort: 8080,
-						Protocol:      corev1.ProtocolTCP,
-					},
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "kubeconfig",
-						MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
-						ReadOnly:  true,
-					},
-				},
-				SecurityContext: &corev1.SecurityContext{
-					RunAsUser:              ptr.To[int64](65532),
-					RunAsGroup:             ptr.To[int64](65534),
-					RunAsNonRoot:           ptr.To(true),
-					ReadOnlyRootFilesystem: ptr.To(true),
-				},
-			},
-			{
 				Name:  "telegraf",
 				Image: telegrafImage,
 				Command: []string{
@@ -1370,6 +1334,43 @@ wait
 						SubPath:   "start.sh",
 						ReadOnly:  true,
 					},
+				},
+			},
+			{
+				Name:  "kube-rbac-proxy",
+				Image: kubeRBACProxyImage,
+				Args: []string{
+					"--insecure-listen-address=0.0.0.0:8080",
+					"--upstream=http://127.0.0.1:3100/",
+					"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+					"--logtostderr=true",
+					"--v=6",
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("5m"),
+						corev1.ResourceMemory: resource.MustParse("30Mi"),
+					},
+				},
+				Ports: []corev1.ContainerPort{
+					{
+						Name:          "kube-rbac-proxy",
+						ContainerPort: 8080,
+						Protocol:      corev1.ProtocolTCP,
+					},
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      "kubeconfig",
+						MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+						ReadOnly:  true,
+					},
+				},
+				SecurityContext: &corev1.SecurityContext{
+					RunAsUser:              ptr.To[int64](65532),
+					RunAsGroup:             ptr.To[int64](65534),
+					RunAsNonRoot:           ptr.To(true),
+					ReadOnlyRootFilesystem: ptr.To(true),
 				},
 			},
 		}...)
