@@ -1008,6 +1008,33 @@ var _ = Describe("Validation Tests", func() {
 
 		})
 
+		Context("extensions", func() {
+			BeforeEach(func() {
+				garden.Spec.Extensions = []operatorv1alpha1.GardenExtension{
+					{
+						Type:           "extension-1",
+						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{}`)},
+					},
+					{
+						Type: "extension-2",
+					},
+				}
+			})
+
+			It("should succeed if valid extensions are set", func() {
+				Expect(ValidateGarden(garden)).To(BeEmpty())
+			})
+
+			It("should fail if the same extension type is set multiple times", func() {
+				garden.Spec.Extensions = append(garden.Spec.Extensions, garden.Spec.Extensions[0])
+
+				Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.extensions[2].type"),
+				}))))
+			})
+		})
+
 		Context("runtime cluster", func() {
 			Context("networking", func() {
 				It("should complain when pod network of runtime cluster intersects with service network of runtime cluster", func() {

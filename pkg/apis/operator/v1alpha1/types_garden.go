@@ -56,6 +56,9 @@ type GardenSpec struct {
 	// DNS contains specifications of DNS providers.
 	// +optional
 	DNS *DNSManagement `json:"dns,omitempty"`
+	// Extensions contain type and provider information for Garden extensions.
+	// +optional
+	Extensions []GardenExtension `json:"extensions,omitempty"`
 	// RuntimeCluster contains configuration for the runtime cluster.
 	RuntimeCluster RuntimeCluster `json:"runtimeCluster"`
 	// VirtualCluster contains configuration for the virtual cluster.
@@ -668,6 +671,16 @@ type DashboardTerminalContainer struct {
 
 // GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.
 type GardenerDiscoveryServerConfig struct{}
+
+// GardenExtension contains type and provider information for Garden extensions.
+type GardenExtension struct {
+	// Type is the type of the extension resource.
+	// +kubebuilder:validation:MinLength=1
+	Type string `json:"type"`
+	// ProviderConfig is the configuration passed to extension resource.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty"`
+}
 
 // GardenStatus is the status of a garden environment.
 type GardenStatus struct {

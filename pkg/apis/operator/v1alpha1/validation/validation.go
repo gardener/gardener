@@ -54,6 +54,7 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 
 	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, validateDNS(garden.Spec.DNS, field.NewPath("spec", "dns"))...)
+	allErrs = append(allErrs, validateExtensions(garden.Spec.Extensions, field.NewPath("spec", "extensions"))...)
 	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.DNS, garden.Spec.RuntimeCluster, field.NewPath("spec", "runtimeCluster"))...)
 	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.DNS, garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
 
@@ -638,4 +639,20 @@ func hasProvider(dns *operatorv1alpha1.DNSManagement, provider string) bool {
 	return slices.ContainsFunc(dns.Providers, func(p operatorv1alpha1.DNSProvider) bool {
 		return p.Name == provider
 	})
+}
+
+func validateExtensions(extensions []operatorv1alpha1.GardenExtension, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		types   = sets.Set[string]{}
+	)
+
+	for i, extension := range extensions {
+		if types.Has(extension.Type) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), extension.Type))
+		} else {
+			types.Insert(extension.Type)
+		}
+	}
+	return allErrs
 }
