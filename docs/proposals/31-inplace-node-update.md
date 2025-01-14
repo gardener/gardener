@@ -132,8 +132,8 @@ Gardener will introduce two additional update strategies, `AutoInPlaceUpdate` an
 
 1. On a shoot spec change for a worker pool, `machine-controller-manager` will label all nodes of the changed worker pool with the `node.machine.sapcloud.io/candidate-for-update` label. This label is used to identify nodes that require an update.
 2. `machine-controller-manager` will add the necessary annotation to the nodes to prevent them from being scaled down by `cluster-autoscaler` during the update process.
-3. `machine-controller-manager` will wait for the `node.machine.sapcloud.io/selected-for-update` label on the node. The orchestration of the update is solely the responsibility of the user. The user is free to select the nodes to be updated at will.
-4. Once the `node.machine.sapcloud.io/selected-for-update` label is added by the user, steps 4-7 of the `AutoInPlaceUpdate` strategy will be performed.
+3. `machine-controller-manager` will wait for the `node.machine.sapcloud.io/selected-for-update` label on the node. The user is solely responsible for orchestrating the update and is free to select the nodes to be updated at will.
+4. Once the user adds the `node.machine.sapcloud.io/selected-for-update` label, steps 4-7 of the `AutoInPlaceUpdate` strategy will be performed.
 
 ![ManualInPlaceUpdate](assets/31-manual-inplace-update.png "Manual In Place Update Strategy")
 
@@ -367,7 +367,7 @@ However, these fields are included in the [`WorkerPoolHashV2` function](https://
 
 ### Failures and Recovery Strategy
 
-In-place updates may fail because of several factors ranging from network issues to compatibility problems. This section outlines the failure scenarios, error classifications, and the specific roles `gardener-node-agent` and `machine-controller-manager` play in failure handling and recovery to ensure minimal disruption. The error will be reported in `node.machine.sapcloud.io/update-failure-message` annotation on the node which can be used subsequently by the Shoot care controller.
+In-place updates may fail because of several factors ranging from network issues to compatibility problems. This section outlines the failure scenarios, error classifications, and the specific roles `gardener-node-agent` and `machine-controller-manager` play in failure handling and recovery to ensure minimal disruption. The error will be reported in the `node.machine.sapcloud.io/update-failure-message` annotation on the node which can be used subsequently by the Shoot care controller.
 
 #### Types of Failures During Update
 
