@@ -84,7 +84,7 @@ func CreateMapFromSlice[K comparable, T any](arr []T, keyFunc func(T) K) map[K]T
 }
 
 // HasTimeElapsed takes a <timestamp> and a <duration> checks whether the elapsed time until now is less than the <duration>.
-// If yes, it returns true, otherwise it returns false.
+// If yes, it returns false (i.e. the <duration> has not elapsed yet), otherwise it returns true (i.e. the <duration> has elapsed).
 func HasTimeElapsed(timestamp *metav1.Time, duration time.Duration) bool {
 	if timestamp == nil {
 		return true
