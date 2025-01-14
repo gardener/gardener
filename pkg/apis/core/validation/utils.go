@@ -248,6 +248,12 @@ func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use a semantic version. In case there is no semantic version for this image use the extensibility provider (define mapping in the CloudProfile) to map to the actual non semantic version"))
 			}
 
+			if machineVersion.InPlaceUpdateConfig != nil && machineVersion.InPlaceUpdateConfig.MinVersionForUpdate != nil {
+				if _, err = semver.NewVersion(*machineVersion.InPlaceUpdateConfig.MinVersionForUpdate); err != nil {
+					allErrs = append(allErrs, field.Invalid(versionsPath.Child("minVersionForInPlaceUpdate"), machineVersion.Version, "could not parse version. Use a semantic version."))
+				}
+			}
+
 			if machineVersion.Classification != nil && !supportedVersionClassifications.Has(string(*machineVersion.Classification)) {
 				allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
 			}

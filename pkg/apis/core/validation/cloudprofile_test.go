@@ -549,6 +549,50 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
+				It("should forbid non semver min supported version for in-place update", func() {
+					cloudProfile.Spec.MachineImages = []core.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "0.1.2",
+										Classification: &supportedClassification,
+									},
+									CRI:           []core.CRI{{Name: "containerd"}},
+									Architectures: []string{"amd64"},
+								},
+							},
+							UpdateStrategy: &updateStrategyMajor,
+						},
+						{
+							Name: "xy",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "1.1.2",
+										Classification: &supportedClassification,
+									},
+									CRI:           []core.CRI{{Name: "containerd"}},
+									Architectures: []string{"amd64"},
+									InPlaceUpdateConfig: &core.InPlaceUpdateConfig{
+										MinVersionForUpdate: ptr.To("a.b.c"),
+									},
+								},
+							},
+							UpdateStrategy: &updateStrategyMajor,
+						},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.machineImages[1].versions[0].minVersionForInPlaceUpdate"),
+						"Detail": Equal("could not parse version. Use a semantic version."),
+					}))))
+				})
+
 				It("should allow expiration date on latest machine image version", func() {
 					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
