@@ -12,16 +12,6 @@ metadata:
     heritage: "{{ .Release.Service }}"
 rules:
 - apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - get
-  - list
-  - create
-  - patch
-  - update
-- apiGroups:
   - apps
   resources:
   - daemonsets
