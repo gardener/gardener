@@ -307,7 +307,7 @@ return true
 
 ### Migration Strategy
 
-Capabilities are **OPT-IN** and not all infrastructure providers or Gardener installation might use them.
+Capabilities are **OPT-IN** and not all infrastructure providers or Gardener installations might use them.
 All API changes in Gardener core are backwards compatible.
 They can be implemented first including its filter and admission logic.
 In a second step each provider extension can be updated to include the capabilities in the cloud profile.
