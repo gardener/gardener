@@ -37,6 +37,10 @@ var TimeNow = time.Now
 
 // Interface contains references to an Extension deployer.
 type Interface interface {
+	// DeleteResources deletes Extension resources from the namespace.
+	DeleteResources(context.Context) error
+	// WaitCleanupResources waits until all Extension resources are gone in the namespace.
+	WaitCleanupResources(context.Context) error
 	// DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all unused Extension resources are cleaned up.
@@ -384,6 +388,20 @@ func (e *extension) WaitMigrateAfterKubeAPIServer(ctx context.Context) error {
 			return extensionsAfterKAPI.Has(obj.GetExtensionSpec().GetExtensionType())
 		},
 	)
+}
+
+// DeleteResources deletes Extension resources from the namespace.
+func (e *extension) DeleteResources(ctx context.Context) error {
+	return e.deleteExtensionResources(ctx, func(_ extensionsv1alpha1.Object) bool {
+		return true
+	})
+}
+
+// WaitCleanupResources waits until all Extension resources are gone in the namespace.
+func (e *extension) WaitCleanupResources(ctx context.Context) error {
+	return e.waitCleanup(ctx, func(_ extensionsv1alpha1.Object) bool {
+		return true
+	})
 }
 
 // DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
