@@ -77,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		r.Recorder.Event(exposureClass, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, fmt.Sprintf("Cannot delete ExposureClass, because it is still associated by the following Shoots: %+v", associatedShoots))
-		return reconcile.Result{}, fmt.Errorf("Cannot delete ExposureClasss, because it is still associated by the following Shoots: %+v", associatedShoots)
+		return reconcile.Result{}, fmt.Errorf("Cannot delete ExposureClass, because it is still associated by the following Shoots: %+v", associatedShoots)
 	}
 
 	if !controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {

@@ -281,7 +281,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))),
 			),
 			Entry("should forbid Shoot with name containing two consecutive hyphens",
-				metav1.ObjectMeta{Name: "sho--ot", Namespace: "my-namespace"},
+				metav1.ObjectMeta{Name: "sho--oot", Namespace: "my-namespace"},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("metadata.name"),

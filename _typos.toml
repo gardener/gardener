@@ -1,0 +1,42 @@
+[default]
+extend-ignore-re = [
+    # This enables # spellchecker:disable-line
+    "(?Rm)^.*(#|//)\\s*spellchecker:disable-line$",
+    # This enables # spellchecker:off/on
+    "(?s)(#|//)\\s*spellchecker:off.*?\\n\\s*(#|//)\\s*spellchecker:on",
+]
+
+[default.extend-words]
+AKS = "AKS"
+alse = "alse"
+ANDed = "ANDed"
+Ba = "Ba"
+Creater = "Creater"
+Ded = "Ded"
+equest = "equest"
+IiF = "IiF"
+IIF = "IIF"
+IY = "IY"
+Nd = "Nd"
+requestor = "requestor"
+RTO = "RTO"
+ser = "ser"
+Ue = "Ue"
+UE = "UE"
+uest = "uest"
+
+[files]
+extend-exclude = [
+    "*.svg",
+    "*.drawio",
+    "third_party/*",
+    "go.mod",
+    "go.sum",
+    "*fluentbit*.yaml",
+    "*machine.sapcloud.io_machines.yaml",
+    "*sapcloud.io_machineclasses.yaml",
+    "*crd-monitoring.coreos.com_alertmanagers.yaml",
+    "10-crd-cert.gardener.cloud_certificates.yaml",
+    "generated.pb.go",
+    "openapi_generated.go",
+]

@@ -344,15 +344,15 @@ usage(){
     echo ""
 
     echo "========================================================USAGE======================================================================"
-    echo "> ./hack/hook-me.sh <service e.g., gardener-extension-provider-aws> <extension namespace e.g. extension-provider-aws-fpr6w> <webhookserver port e.g., 8443> [<quic-server port, e.g. 9443>]"
-    echo "> \`make start [EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> WEBHOOK_CONFIG_MODE=service GARDEN_KUBECONFIG=<path to kubeconfig for garden cluster>]\`"
+    echo "> ./hack/hook-me.sh <service e.g., gardener-extension-provider-aws> <extension namespace e.g. extension-provider-aws-fec6w> <webhookserver port e.g., 8443> [<quic-server port, e.g. 9443>]"
+    echo "> \`make start [EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fec6w> WEBHOOK_CONFIG_MODE=service GARDEN_KUBECONFIG=<path to kubeconfig for garden cluster>]\`"
     echo "=================================================================================================================================="
 
     echo ""
 
     echo "===================================CLEAN UP COMMANDS========================================="
-    echo "> kubectl -n <extension namespace e.g. extension-provider-aws-fpr6w> delete --ignore-not-found svc/quic-lb"
-    echo "> kubectl -n <extension namespace e.g. extension-provider-aws-fpr6w> delete --ignore-not-found deploy/quic-server"
+    echo "> kubectl -n <extension namespace e.g. extension-provider-aws-fec6w> delete --ignore-not-found svc/quic-lb"
+    echo "> kubectl -n <extension namespace e.g. extension-provider-aws-fec6w> delete --ignore-not-found deploy/quic-server"
     echo "============================================================================================="
 
     exit 0

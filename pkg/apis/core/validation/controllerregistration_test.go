@@ -166,14 +166,14 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should allow to set required field for kind Extension", func() {
-			strat := core.BeforeKubeAPIServer
+			strategy := core.BeforeKubeAPIServer
 			resource := core.ControllerResource{
 				Kind:             extensionsv1alpha1.ExtensionResource,
 				Type:             "arbitrary",
 				GloballyEnabled:  ptr.To(true),
 				ReconcileTimeout: &metav1.Duration{Duration: 10 * time.Second},
 				Lifecycle: &core.ControllerResourceLifecycle{
-					Reconcile: &strat,
+					Reconcile: &strategy,
 				},
 			}
 
@@ -184,11 +184,11 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid to set certain fields for kind != Extension", func() {
-			strat := core.BeforeKubeAPIServer
+			strategy := core.BeforeKubeAPIServer
 			ctrlResource.GloballyEnabled = ptr.To(true)
 			ctrlResource.ReconcileTimeout = &metav1.Duration{Duration: 10 * time.Second}
 			ctrlResource.Lifecycle = &core.ControllerResourceLifecycle{
-				Reconcile: &strat,
+				Reconcile: &strategy,
 			}
 			controllerRegistration.Spec.Resources = []core.ControllerResource{ctrlResource}
 
@@ -207,12 +207,12 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should allow setting the BeforeKubeAPIServer lifecycle strategy", func() {
-			beforeStrat := core.BeforeKubeAPIServer
+			beforeStrategy := core.BeforeKubeAPIServer
 			controllerRegistration.Spec.Resources[0].Kind = "Extension"
 			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
-				Reconcile: &beforeStrat,
-				Delete:    &beforeStrat,
-				Migrate:   &beforeStrat,
+				Reconcile: &beforeStrategy,
+				Delete:    &beforeStrategy,
+				Migrate:   &beforeStrategy,
 			}
 
 			errorList := ValidateControllerRegistration(controllerRegistration)
@@ -221,12 +221,12 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should allow setting the AfterKubeAPIServer lifecycle strategy", func() {
-			afterStrat := core.AfterKubeAPIServer
+			afterStrategy := core.AfterKubeAPIServer
 			controllerRegistration.Spec.Resources[0].Kind = "Extension"
 			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
-				Reconcile: &afterStrat,
-				Delete:    &afterStrat,
-				Migrate:   &afterStrat,
+				Reconcile: &afterStrategy,
+				Delete:    &afterStrategy,
+				Migrate:   &afterStrategy,
 			}
 
 			errorList := ValidateControllerRegistration(controllerRegistration)
@@ -235,10 +235,10 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should allow setting the AfterWorker lifecycle strategy on reconcile", func() {
-			afterStrat := core.AfterWorker
+			afterStrategy := core.AfterWorker
 			controllerRegistration.Spec.Resources[0].Kind = "Extension"
 			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
-				Reconcile: &afterStrat,
+				Reconcile: &afterStrategy,
 			}
 
 			errorList := ValidateControllerRegistration(controllerRegistration)
@@ -247,11 +247,11 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should not allow setting AfterWorker lifecycle strategy on migrate or delete", func() {
-			afterStrat := core.AfterWorker
+			afterStrategy := core.AfterWorker
 			controllerRegistration.Spec.Resources[0].Kind = "Extension"
 			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
-				Migrate: &afterStrat,
-				Delete:  &afterStrat,
+				Migrate: &afterStrategy,
+				Delete:  &afterStrategy,
 			}
 
 			errorList := ValidateControllerRegistration(controllerRegistration)
