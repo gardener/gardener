@@ -514,13 +514,3 @@ func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.Expirable
 		return expirableVersion.Classification != nil && *expirableVersion.Classification == gardencorev1beta1.ClassificationDeprecated, nil
 	}
 }
-
-// GetResourceByName returns the NamedResourceReference with the given name in the given slice, or nil if not found.
-func GetResourceByName(resources []gardencorev1beta1.NamedResourceReference, name string) *gardencorev1beta1.NamedResourceReference {
-	for _, resource := range resources {
-		if resource.Name == name {
-			return &resource
-		}
-	}
-	return nil
-}

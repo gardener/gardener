@@ -5,7 +5,6 @@
 package helper
 
 import (
-	"strings"
 	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -196,15 +195,4 @@ func NewConditionOrError(clock clock.Clock, oldCondition gardencorev1beta1.Condi
 		return UpdatedConditionUnknownErrorWithClock(clock, oldCondition, err)
 	}
 	return *newCondition
-}
-
-// IsResourceSupported returns true if a given combination of kind/type is part of a controller resources list.
-func IsResourceSupported(resources []gardencorev1beta1.ControllerResource, resourceKind, resourceType string) bool {
-	for _, resource := range resources {
-		if resource.Kind == resourceKind && strings.EqualFold(resource.Type, resourceType) {
-			return true
-		}
-	}
-
-	return false
 }

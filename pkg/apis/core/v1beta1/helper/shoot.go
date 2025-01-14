@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -390,28 +389,6 @@ func AnonymousAuthenticationEnabled(kubeAPIServerConfig *gardencorev1beta1.KubeA
 	return *kubeAPIServerConfig.EnableAnonymousAuthentication
 }
 
-// CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.
-// It takes both spec.seedName and status.seedName into account.
-func CalculateSeedUsage(shootList []*gardencorev1beta1.Shoot) map[string]int {
-	m := map[string]int{}
-
-	for _, shoot := range shootList {
-		var (
-			specSeed   = ptr.Deref(shoot.Spec.SeedName, "")
-			statusSeed = ptr.Deref(shoot.Status.SeedName, "")
-		)
-
-		if specSeed != "" {
-			m[specSeed]++
-		}
-		if statusSeed != "" && specSeed != statusSeed {
-			m[statusSeed]++
-		}
-	}
-
-	return m
-}
-
 // KubeAPIServerFeatureGateDisabled returns whether the given feature gate is explicitly disabled for the kube-apiserver for the given Shoot spec.
 func KubeAPIServerFeatureGateDisabled(shoot *gardencorev1beta1.Shoot, featureGate string) bool {
 	kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer
@@ -643,6 +620,16 @@ func IsNodeLocalDNSEnabled(systemComponents *gardencorev1beta1.SystemComponents)
 func GetNodeLocalDNS(systemComponents *gardencorev1beta1.SystemComponents) *gardencorev1beta1.NodeLocalDNS {
 	if systemComponents != nil {
 		return systemComponents.NodeLocalDNS
+	}
+	return nil
+}
+
+// GetResourceByName returns the NamedResourceReference with the given name in the given slice, or nil if not found.
+func GetResourceByName(resources []gardencorev1beta1.NamedResourceReference, name string) *gardencorev1beta1.NamedResourceReference {
+	for _, resource := range resources {
+		if resource.Name == name {
+			return &resource
+		}
 	}
 	return nil
 }
