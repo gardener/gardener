@@ -166,7 +166,7 @@ This is not the intended use of the classification key.
 
 3. Currently extension providers define their own capabilities that are processed after shoot admission, like `acceleratedNetworking` in the [gardener-extension-provider-azure](https://github.com/gardener/gardener-extension-provider-azure/blob/28c977612898ed40e9d179052633fee0b9600d3e/pkg/apis/azure/types_cloudprofile.go#L78).
 This can lead to a situation where the machine supports accelerated networking but the machine image does not.
-In this case it does not result in an error but to performance loss.
+In this case it does not result in an error but in performance loss.
 
 ### Goals
 
