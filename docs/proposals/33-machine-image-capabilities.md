@@ -26,7 +26,7 @@ reviewers:
 
 This GEP proposes the introduction of capabilities for machineType and machineImage in the Gardener CloudProfile to ensure only shoots with a matching set of capabilities on machine type and image will be admitted by Gardener.
 This will prevent the creation of incompatible worker pools on shoot creation and maintenance operations.
-It will also provide an mechanism to filter out incompatible images for a machine type in the Gardener Dashboard.
+It will also provide a mechanism to filter out incompatible images for a machine type in the Gardener Dashboard.
 
 ## Motivation
 
