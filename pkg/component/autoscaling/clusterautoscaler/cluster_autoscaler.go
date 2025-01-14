@@ -466,7 +466,7 @@ func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) [
 
 	expanderMode := *c.config.Expander
 	if workersHavePriorityConfigured {
-		expanderMode = ensureExpanderInExpanderConfig("priority", expanderMode)
+		expanderMode = ensureExpanderInExpanderConfig(string(gardencorev1beta1.ClusterAutoscalerExpanderPriority), expanderMode)
 	}
 
 	command = append(command,
@@ -652,7 +652,20 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string,
 func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigMap, error) {
 	priorities := map[int32][]string{}
 	for _, machineDeployment := range c.machineDeployments {
-		priorities[machineDeployment.Priority] = append(priorities[machineDeployment.Priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
+		// TODO(tobschli): Remove this once all well-known extensions have revendored to use the generic actuator that sets the priorities.
+		if machineDeployment.Priority == nil {
+			// In this case, the extension did not set the priorities that were configured in the worker.
+			// fall back to try to determine the pool name.
+			for _, pool := range c.workerConfig {
+				if strings.Contains(machineDeployment.Name, pool.Name) {
+					priority := ptr.Deref(pool.Priority, 0)
+					priorities[priority] = append(priorities[priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
+				}
+			}
+		} else {
+			priority := ptr.Deref(machineDeployment.Priority, 0)
+			priorities[priority] = append(priorities[priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
+		}
 	}
 
 	priorityConfig, err := yaml.Marshal(priorities)

@@ -63,11 +63,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 		machineDeployment1Name           = "pool1"
 		machineDeployment1Min      int32 = 2
 		machineDeployment1Max      int32 = 4
-		machineDeployment1Priority int32 = 0
+		machineDeployment1Priority       = ptr.To(int32(0))
 		machineDeployment2Name           = "pool2"
 		machineDeployment2Min      int32 = 3
 		machineDeployment2Max      int32 = 5
-		machineDeployment2Priority int32 = 40
+		machineDeployment2Priority       = ptr.To(int32(40))
 		machineDeployment3Name           = "pool3"
 		machineDeployment3Min      int32 = 3
 		machineDeployment3Max      int32 = 5
@@ -82,13 +82,13 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Name:     machineDeployment1Name,
 				Minimum:  machineDeployment1Min,
 				Maximum:  machineDeployment1Max,
-				Priority: ptr.To(machineDeployment1Priority),
+				Priority: machineDeployment1Priority,
 			},
 			{
 				Name:     machineDeployment2Name,
 				Minimum:  machineDeployment2Min,
 				Maximum:  machineDeployment2Max,
-				Priority: ptr.To(machineDeployment2Priority),
+				Priority: machineDeployment2Priority,
 			},
 			{
 				Name:    machineDeployment3Name,

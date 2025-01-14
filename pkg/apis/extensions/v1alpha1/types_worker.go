@@ -256,5 +256,5 @@ type MachineDeployment struct {
 	// Maximum is the maximum number for this machine deployment.
 	Maximum int32 `json:"maximum"`
 	// Priority (or weight) is the importance by which this machine deployment will be scaled by cluster autoscaling.
-	Priority int32 `json:"priority"`
+	Priority *int32 `json:"priority,omitempty"`
 }

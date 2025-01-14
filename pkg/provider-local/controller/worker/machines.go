@@ -153,7 +153,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			Minimum:                      pool.Minimum,
 			Maximum:                      pool.Maximum,
 			MaxSurge:                     pool.MaxSurge,
-			Priority:                     ptr.Deref(pool.Priority, 0),
+			Priority:                     pool.Priority,
 			MaxUnavailable:               pool.MaxUnavailable,
 			Labels:                       pool.Labels,
 			Annotations:                  pool.Annotations,
