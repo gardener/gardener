@@ -66,7 +66,7 @@ The user has to know about that and select the proper machine image manually AND
 
 ### Context: Cloud Profile
 
-For each infrastructure provider Gardener operators must provide CloudProfile.
+For each infrastructure provider Gardener operators must provide a CloudProfile.
 It describes the catalog of machines, images and other resources of the infrastructure provider.
 Only machines and images that are described in the CloudProfile can be used to create a shoot.
 
