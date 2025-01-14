@@ -3876,6 +3876,100 @@ var _ = Describe("validator", func() {
 						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, is expired, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", validMachineImageName, expiredVersion), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
 					})
 
+					It("should reject due to a machine image version with no support for inplace updates when the workerpool update strategy is an in-place update strategy", func() {
+						shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    validMachineImageName,
+							Version: latestNonExpiredVersion,
+						}
+
+						cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: validMachineImageName,
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: latestNonExpiredVersion,
+										},
+										Architectures: []string{"amd64", "arm64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported: false,
+										},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: nonExpiredVersion1,
+										},
+										Architectures: []string{"amd64", "arm64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported: true,
+										},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: nonExpiredVersion2,
+										},
+										Architectures: []string{"amd64", "arm64"},
+									},
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support in-place updates, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", validMachineImageName, latestNonExpiredVersion), fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1))))
+					})
+
+					It("should reject due to a machine image version with non-supported architecture, expired version and no support for inplace updates when the workerpool update strategy is an in-place update strategy", func() {
+						shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    validMachineImageName,
+							Version: expiredVersion,
+						}
+						shoot.Spec.Provider.Workers[0].Machine.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+
+						cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+							{
+								Name: validMachineImageName,
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version:        expiredVersion,
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+										},
+										Architectures: []string{"arm64"},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: nonExpiredVersion1,
+										},
+										Architectures: []string{"amd64", "arm64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported: true,
+										},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: nonExpiredVersion2,
+										},
+										Architectures: []string{"amd64", "arm64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported: true,
+										},
+									},
+								},
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, is expired, does not support in-place updates, supported machine image versions are: [%s %s]]", fmt.Sprintf("%s:%s", validMachineImageName, expiredVersion), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1), fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
+					})
+
 					It("should reject due to a machine image that does not match the kubeletVersionConstraint when the control plane K8s version does not match", func() {
 						cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, gardencorev1beta1.ExpirableVersion{Version: "1.26.0"})
 						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
@@ -4650,6 +4744,229 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("should forbid updating to a higher machine image for an existing worker pool with in-place update stategy if the image does not support in-place update", func() {
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							gardencorev1beta1.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version:        "1.2.5",
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+										},
+										Architectures: []string{"amd64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported: false,
+										},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version:        "1.2.4",
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+										},
+										Architectures: []string{"amd64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported:           true,
+											MinVersionForUpdate: ptr.To("1.2.3"),
+										},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										Architectures: []string{"amd64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported: true,
+										},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.3",
+									},
+									Architecture: ptr.To("amd64"),
+								},
+								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							},
+						}
+
+						newShoot := shoot.DeepCopy()
+
+						newShoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name: "constraint-image-name",
+										// updated to higher non-expired version
+										Version: "1.2.5",
+									},
+									Architecture: ptr.To("amd64"),
+								},
+								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be inplace updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.4"))))
+					})
+
+					It("should forbid updating to a higher machine image for an existing worker pool with in-place update stategy if MinVersionForUpdate is higher than current version", func() {
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							gardencorev1beta1.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version:        "1.2.5",
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+										},
+										Architectures: []string{"amd64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported:           true,
+											MinVersionForUpdate: ptr.To("1.2.4"),
+										},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version:        "1.2.4",
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+										},
+										Architectures: []string{"amd64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported:           true,
+											MinVersionForUpdate: ptr.To("1.2.2"),
+										},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										Architectures: []string{"amd64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported:           true,
+											MinVersionForUpdate: ptr.To("1.2.2"),
+										},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.2",
+									},
+									Architecture: ptr.To("amd64"),
+								},
+								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							},
+						}
+
+						newShoot := shoot.DeepCopy()
+
+						newShoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name: "constraint-image-name",
+										// updated to higher expired version
+										Version: "1.2.5",
+									},
+									Architecture: ptr.To("amd64"),
+								},
+								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be inplace updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s %s:%s", "constraint-image-name", "1.2.3", "constraint-image-name", "1.2.4"))))
+					})
+
+					It("should allow updating to a higher machine image for an existing worker pool with in-place update stategy if MinVersionForUpdate is less or equal current version", func() {
+						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
+							gardencorev1beta1.MachineImage{
+								Name: "constraint-image-name",
+								Versions: []gardencorev1beta1.MachineImageVersion{
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version:        "1.2.4",
+											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+										},
+										Architectures: []string{"amd64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported:           true,
+											MinVersionForUpdate: ptr.To("1.2.3"),
+										},
+									},
+									{
+										ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										Architectures: []string{"amd64"},
+										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+											Supported:           true,
+											MinVersionForUpdate: ptr.To("1.2.3"),
+										},
+									},
+								},
+							},
+						)
+
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.3",
+									},
+									Architecture: ptr.To("amd64"),
+								},
+								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							},
+						}
+
+						newShoot := shoot.DeepCopy()
+
+						newShoot.Spec.Provider.Workers = []core.Worker{
+							{
+								Machine: core.Machine{
+									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name:    "constraint-image-name",
+										Version: "1.2.4",
+									},
+									Architecture: ptr.To("amd64"),
+								},
+								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+							},
+						}
+
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+						err := admissionHandler.Admit(ctx, attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{Name: "constraint-image-name", Version: "1.2.4"}))
 					})
 
 					It("should keep machine image of the old shoot (unset in new shoot)", func() {
