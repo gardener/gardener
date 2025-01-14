@@ -263,7 +263,7 @@ spec:
       name: Standard_S896om
       usable: true
       capabilities:
-        - hypervisorType: ["gen2"] # <-- hypervisorType is overwritten
+        hypervisorType: ["gen2"] # <-- hypervisorType is overwritten
 
   providerConfig:
     machineImages:
@@ -271,20 +271,20 @@ spec:
         versions:
           - architecture: arm64 # <-- architecture is overwritten as only amd64 is supported
             capabilities:
-              - hypervisorType: ["gen2"]
-              - network: ["accelerated", "standard"] # <-- not required as its the default
+              hypervisorType: ["gen2"]
+              network: ["accelerated", "standard"] # <-- not required as its the default
             communityGalleryImageID: /CommunityGalleries/xzy/Images/gardenlinux-nvme-arm64-gen2/Versions/1592.2.0
             version: 1592.2.0 # <-- no pre-release tag required anymore
             #acceleratedNetworking: true # <-- not required anymore
 
           - architecture: amd64
             capabilities:
-              - hypervisorType: ["gen2"]
+              hypervisorType: ["gen2"]
             communityGalleryImageID: /CommunityGalleries/xzy/Images/gardenlinux-nvme-gen2/Versions/1592.2.0
             version: 1592.2.0
           - architecture: amd64
             capabilities:
-              - hypervisorType: ["gen1"]
+              hypervisorType: ["gen1"]
             communityGalleryImageID: /CommunityGalleries/xzy/Images/gardenlinux-nvme/Versions/1592.2.0
             version: 1592.2.0
 
@@ -558,21 +558,21 @@ spec:
         - architectures: arm64
           classification: supported
           capabilities:
-            - hypervisorType: ["gen2"]
-            - network: ["accelerated", "standard"]
+            hypervisorType: ["gen2"]
+            network: ["accelerated", "standard"]
           imageReference: someIDstring
           version: 1592.2.0
           region: eu-west-1
         - architecture: amd64
           classification: supported
           capabilities:
-            - hypervisorType: ["gen2"]
+            hypervisorType: ["gen2"]
           imageReference: someIDstring
           version: 1592.2.0
           region: eu-west-2
         - architecture: amd64
           capabilities:
-            - hypervisorType: ["gen1"]
+            hypervisorType: ["gen1"]
           imageReference: someIDstring
           version: 1592.2.0
           region: eu-west-1
@@ -585,7 +585,7 @@ spec:
       name: Standard_S896om
       usable: true
       capabilities:
-        - hypervisorType: ["gen2"]
+        hypervisorType: ["gen2"]
 ```
 
 </details></br>
