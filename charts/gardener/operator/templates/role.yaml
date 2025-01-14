@@ -125,3 +125,12 @@ rules:
   - pods/log
   verbs:
   - get
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - extensions
+  verbs:
+  - create
+  - delete
+  - patch
+  - update
