@@ -670,7 +670,7 @@ images:
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-recommender
-  tag: "1.2.1"
+  tag: "1.2.2"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
