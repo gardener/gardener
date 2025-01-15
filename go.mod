@@ -54,7 +54,7 @@ require (
 	gonum.org/v1/gonum v0.15.0
 	google.golang.org/protobuf v1.36.1
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.16.4
+	helm.sh/helm/v3 v3.17.0
 	istio.io/api v1.23.4
 	istio.io/client-go v1.23.3
 	k8s.io/api v0.31.4
