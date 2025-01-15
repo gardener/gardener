@@ -53,7 +53,7 @@ type WorkloadIdentityStatus struct {
 	Sub string `json:"sub" protobuf:"bytes,1,opt,name=sub"`
 	// Issuer is the issuer URL of the ID token.
 	// +optional
-	Issuer string `json:"issuer" protobuf:"bytes,2,opt,name=issuer"`
+	Issuer *string `json:"issuer" protobuf:"bytes,2,opt,name=issuer"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

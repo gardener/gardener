@@ -22,11 +22,11 @@ type workloadIdentityStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
 
-	tokenIssuerURL string
+	tokenIssuerURL *string
 }
 
 // NewStrategy creates new storage strategy for WorkloadIdentity.
-func NewStrategy(tokenIssuerURL string) workloadIdentityStrategy {
+func NewStrategy(tokenIssuerURL *string) workloadIdentityStrategy {
 	return workloadIdentityStrategy{api.Scheme, names.SimpleNameGenerator, tokenIssuerURL}
 }
 

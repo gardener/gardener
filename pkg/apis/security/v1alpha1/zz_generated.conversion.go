@@ -444,7 +444,7 @@ func Convert_security_WorkloadIdentitySpec_To_v1alpha1_WorkloadIdentitySpec(in *
 
 func autoConvert_v1alpha1_WorkloadIdentityStatus_To_security_WorkloadIdentityStatus(in *WorkloadIdentityStatus, out *security.WorkloadIdentityStatus, s conversion.Scope) error {
 	out.Sub = in.Sub
-	out.Issuer = in.Issuer
+	out.Issuer = (*string)(unsafe.Pointer(in.Issuer))
 	return nil
 }
 
@@ -455,7 +455,7 @@ func Convert_v1alpha1_WorkloadIdentityStatus_To_security_WorkloadIdentityStatus(
 
 func autoConvert_security_WorkloadIdentityStatus_To_v1alpha1_WorkloadIdentityStatus(in *security.WorkloadIdentityStatus, out *WorkloadIdentityStatus, s conversion.Scope) error {
 	out.Sub = in.Sub
-	out.Issuer = in.Issuer
+	out.Issuer = (*string)(unsafe.Pointer(in.Issuer))
 	return nil
 }
 
