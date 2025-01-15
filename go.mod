@@ -30,7 +30,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.36.0
 	github.com/opencontainers/image-spec v1.1.0
-	github.com/pelletier/go-toml v1.9.5
+	github.com/pelletier/go-toml/v2 v2.2.3
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.78.2
 	github.com/prometheus/blackbox_exporter v0.25.0
 	github.com/prometheus/client_golang v1.20.5
@@ -83,6 +83,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.3
 	sigs.k8s.io/yaml v1.4.0
 )
+
+require github.com/pelletier/go-toml v1.9.5
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
@@ -190,7 +192,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/runtime-spec v1.1.0 // indirect
 	github.com/opencontainers/selinux v1.11.0 // indirect
-	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
