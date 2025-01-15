@@ -657,7 +657,7 @@ images:
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-admission-controller
-  tag: "1.2.1"
+  tag: "1.2.2"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
@@ -667,16 +667,10 @@ images:
         confidentiality_requirement: 'low'
         integrity_requirement: 'high'
         availability_requirement: 'high'
-# We use a forked version of the vpa-recommender for the following reason:
-#   - It adds verbose logging when the vpa-recommender estimates memory values which are less than or equal to the minAllowed defined in the
-# corresponding VPA resource. A new metric is also included which counts how many times such estimations have occurred for each VPA resource.
-# (check https://github.com/gardener/autoscaler/pull/322 for more info).
-#
-# TODO(plkokanov): Switch back to the upstream vpa-recommender image when we no longer need to use the forked version.
 - name: vpa-recommender
-  sourceRepository: github.com/gardener/autoscaler
-  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/vertical-pod-autoscaler/vpa-recommender
-  tag: "1.2.1-gardener-build.3"
+  sourceRepository: github.com/kubernetes/autoscaler
+  repository: registry.k8s.io/autoscaling/vpa-recommender
+  tag: "1.2.2"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
@@ -689,7 +683,7 @@ images:
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
   repository: registry.k8s.io/autoscaling/vpa-updater
-  tag: "1.2.1"
+  tag: "1.2.2"
   labels:
     - name: 'gardener.cloud/cve-categorisation'
       value:
