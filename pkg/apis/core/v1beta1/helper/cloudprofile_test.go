@@ -22,16 +22,6 @@ var _ = Describe("Helper", func() {
 		expirationDateInThePast = metav1.Time{Time: time.Now().AddDate(0, 0, -1)}
 	)
 
-	DescribeTable("#FindMachineTypeByName",
-		func(machines []gardencorev1beta1.MachineType, name string, expectedMachine *gardencorev1beta1.MachineType) {
-			Expect(FindMachineTypeByName(machines, name)).To(Equal(expectedMachine))
-		},
-
-		Entry("no workers", nil, "", nil),
-		Entry("worker not found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "bar", nil),
-		Entry("worker found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "foo", &gardencorev1beta1.MachineType{Name: "foo"}),
-	)
-
 	Describe("#FindMachineImageVersion", func() {
 		var machineImages []gardencorev1beta1.MachineImage
 
@@ -127,6 +117,16 @@ var _ = Describe("Helper", func() {
 			Expect(exists).To(BeFalse())
 		})
 	})
+
+	DescribeTable("#FindMachineTypeByName",
+		func(machines []gardencorev1beta1.MachineType, name string, expectedMachine *gardencorev1beta1.MachineType) {
+			Expect(FindMachineTypeByName(machines, name)).To(Equal(expectedMachine))
+		},
+
+		Entry("no workers", nil, "", nil),
+		Entry("worker not found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "bar", nil),
+		Entry("worker found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "foo", &gardencorev1beta1.MachineType{Name: "foo"}),
+	)
 
 	var previewClassification = gardencorev1beta1.ClassificationPreview
 	var deprecatedClassification = gardencorev1beta1.ClassificationDeprecated

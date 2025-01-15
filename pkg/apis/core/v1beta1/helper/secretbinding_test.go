@@ -12,16 +12,6 @@ import (
 )
 
 var _ = Describe("Helper", func() {
-	DescribeTable("#GetSecretBindingTypes",
-		func(secretBinding *gardencorev1beta1.SecretBinding, expected []string) {
-			actual := GetSecretBindingTypes(secretBinding)
-			Expect(actual).To(Equal(expected))
-		},
-
-		Entry("with single-value provider type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, []string{"foo"}),
-		Entry("with multi-value provider type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar,baz"}}, []string{"foo", "bar", "baz"}),
-	)
-
 	DescribeTable("#SecretBindingHasType",
 		func(secretBinding *gardencorev1beta1.SecretBinding, toFind string, expected bool) {
 			actual := SecretBindingHasType(secretBinding, toFind)
@@ -46,5 +36,15 @@ var _ = Describe("Helper", func() {
 		Entry("when single-value provider type does not exist", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, "bar", "foo,bar"),
 		Entry("when multi-value provider type already exists", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar"}}, "foo", "foo,bar"),
 		Entry("when multi-value provider type does not exist", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar"}}, "baz", "foo,bar,baz"),
+	)
+
+	DescribeTable("#GetSecretBindingTypes",
+		func(secretBinding *gardencorev1beta1.SecretBinding, expected []string) {
+			actual := GetSecretBindingTypes(secretBinding)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with single-value provider type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, []string{"foo"}),
+		Entry("with multi-value provider type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar,baz"}}, []string{"foo", "bar", "baz"}),
 	)
 })

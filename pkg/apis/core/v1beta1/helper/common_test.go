@@ -17,49 +17,6 @@ import (
 )
 
 var _ = Describe("Helper", func() {
-	DescribeTable("#HasOperationAnnotation",
-		func(objectMeta metav1.ObjectMeta, expected bool) {
-			Expect(HasOperationAnnotation(objectMeta.Annotations)).To(Equal(expected))
-		},
-		Entry("reconcile", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, true),
-		Entry("restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}}, true),
-		Entry("migrate", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate}}, true),
-		Entry("unknown", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: "unknown"}}, false),
-		Entry("not present", metav1.ObjectMeta{}, false),
-	)
-
-	DescribeTable("#AccessRestrictionsAreSupported",
-		func(seedAccessRestrictions []gardencorev1beta1.AccessRestriction, shootAccessRestrictions []gardencorev1beta1.AccessRestrictionWithOptions, expectation bool) {
-			Expect(AccessRestrictionsAreSupported(seedAccessRestrictions, shootAccessRestrictions)).To(Equal(expectation))
-		},
-
-		Entry("both have no access restrictions",
-			nil,
-			nil,
-			true,
-		),
-		Entry("shoot has no access restrictions",
-			[]gardencorev1beta1.AccessRestriction{{Name: "foo"}},
-			nil,
-			true,
-		),
-		Entry("seed has no access restrictions",
-			nil,
-			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
-			false,
-		),
-		Entry("both have access restrictions and they match",
-			[]gardencorev1beta1.AccessRestriction{{Name: "foo"}},
-			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
-			true,
-		),
-		Entry("both have access restrictions and they don't match",
-			[]gardencorev1beta1.AccessRestriction{{Name: "bar"}},
-			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
-			false,
-		),
-	)
-
 	Describe("Version helper", func() {
 
 		DescribeTable("#UpsertLastError",
@@ -156,5 +113,48 @@ var _ = Describe("Helper", func() {
 		Entry("last operation nil", nil, gardencorev1beta1.LastOperationTypeCreate, BeFalse()),
 		Entry("last operation type does not match", &gardencorev1beta1.LastOperation{}, gardencorev1beta1.LastOperationTypeCreate, BeFalse()),
 		Entry("last operation type matches", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}, gardencorev1beta1.LastOperationTypeCreate, BeTrue()),
+	)
+
+	DescribeTable("#HasOperationAnnotation",
+		func(objectMeta metav1.ObjectMeta, expected bool) {
+			Expect(HasOperationAnnotation(objectMeta.Annotations)).To(Equal(expected))
+		},
+		Entry("reconcile", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, true),
+		Entry("restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}}, true),
+		Entry("migrate", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate}}, true),
+		Entry("unknown", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: "unknown"}}, false),
+		Entry("not present", metav1.ObjectMeta{}, false),
+	)
+
+	DescribeTable("#AccessRestrictionsAreSupported",
+		func(seedAccessRestrictions []gardencorev1beta1.AccessRestriction, shootAccessRestrictions []gardencorev1beta1.AccessRestrictionWithOptions, expectation bool) {
+			Expect(AccessRestrictionsAreSupported(seedAccessRestrictions, shootAccessRestrictions)).To(Equal(expectation))
+		},
+
+		Entry("both have no access restrictions",
+			nil,
+			nil,
+			true,
+		),
+		Entry("shoot has no access restrictions",
+			[]gardencorev1beta1.AccessRestriction{{Name: "foo"}},
+			nil,
+			true,
+		),
+		Entry("seed has no access restrictions",
+			nil,
+			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
+			false,
+		),
+		Entry("both have access restrictions and they match",
+			[]gardencorev1beta1.AccessRestriction{{Name: "foo"}},
+			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
+			true,
+		),
+		Entry("both have access restrictions and they don't match",
+			[]gardencorev1beta1.AccessRestriction{{Name: "bar"}},
+			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
+			false,
+		),
 	)
 })
