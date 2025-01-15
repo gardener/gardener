@@ -34,8 +34,8 @@ type TokenIssuer interface {
 	// IssueToken generates JSON Web Token based on the provided subject, audiences, duration and claims.
 	// It returns the token and its expiration time if successfully generated
 	IssueToken(sub string, aud []string, duration int64, claims ...any) (string, *time.Time, error)
-	// IssuerURL returns the URL used as issuer value in the tokens.
-	IssuerURL() string
+	// Issuer is the URL of the authority that issues tokens. This value is populated in the "iss" claim of each token.
+	Issuer() string
 }
 
 // tokenIssuer is JSON Web Token issuer implementing the TokenIssuer interface.
@@ -211,7 +211,7 @@ func getKeyID(publicKey crypto.PublicKey) (string, error) {
 	return id, nil
 }
 
-// IssuerURL returns the URL used as issuer value in the tokens.
-func (t *tokenIssuer) IssuerURL() string {
+// Issuer is the URL of the authority that issues tokens. This value is populated in the "iss" claim of each token.
+func (t *tokenIssuer) Issuer() string {
 	return t.issuer
 }
