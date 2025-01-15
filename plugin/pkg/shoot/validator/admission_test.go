@@ -355,21 +355,13 @@ var _ = Describe("validator", func() {
 		})
 
 		Context("cluster autoscaler configuration check for ScaleDownUnneededTime and ScaleDownDelayAfterAdd time", func() {
-			BeforeEach(func() {
-				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{}
-			})
-
-			DescribeTable("validate cluster autoscaler configuration on shoot create", func(workerUnneededTime, unneededTime, afterAddTime *metav1.Duration, errorMatcher types.GomegaMatcher) {
-				var (
-					worker core.Worker
-				)
-
+			DescribeTable("validate cluster autoscaler configuration on shoot create with more than one worker", func(worker2UnneededTime, workerUnneededTime, unneededTime, afterAddTime *metav1.Duration, errorMatcher types.GomegaMatcher) {
 				shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{
 					ScaleDownDelayAfterAdd: afterAddTime,
 					ScaleDownUnneededTime:  unneededTime,
 				}
 
-				worker = core.Worker{
+				worker := core.Worker{
 					Name: "machine-name-1",
 					Machine: core.Machine{
 						Type: "machine-type-1",
@@ -396,9 +388,11 @@ var _ = Describe("validator", func() {
 					},
 					Minimum: 1,
 					Maximum: 1,
+					ClusterAutoscaler: &core.ClusterAutoscalerOptions{
+						ScaleDownUnneededTime: worker2UnneededTime,
+					},
 				}
-
-				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, worker, worker2)
+				shoot.Spec.Provider.Workers = append([]core.Worker{}, worker, worker2)
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -411,13 +405,15 @@ var _ = Describe("validator", func() {
 
 				Expect(err).To(errorMatcher)
 			},
-				Entry("should allow when configuration is valid", ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), BeNil()),
-				Entry("should allow when configuration for worker ScaleDownUnneededTime is nil and others are > 1m", nil, ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), BeNil()),
-				Entry("should allow when configuration for worker ScaleDownUnneededTime is nil and only ScaleDownDelayAfterAdd is < 1m", nil, ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), BeNil()),
-				Entry("should forbid when configuration for worker ScaleDownUnneededTime is nil, ScaleDownUnneededTime is < 1m and ScaleDownDelayAfterAdd is < 1m", nil, ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), Not(BeNil())),
-				Entry("should allow when configuration for worker ScaleDownUnneededTime is < 1m, ScaleDownUnneededTime is > 1m and ScaleDownDelayAfterAdd is > 1m", ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), BeNil()),
-				Entry("should forbid when configuration for worker ScaleDownUnneededTime is < 1m, ScaleDownUnneededTime is > 1m and ScaleDownDelayAfterAdd is < 1m", ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), Not(BeNil())),
-				Entry("should allow when configuration for worker ScaleDownUnneededTime is > 1m, ScaleDownUnneededTime is < 1m and ScaleDownDelayAfterAdd is < 1m", ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), Not(BeNil())),
+				Entry("should allow when configuration is full and valid", ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), BeNil()),
+				Entry("should allow when configuration for a worker ScaleDownUnneededTime is nil and others are > 1m", nil, nil, ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), BeNil()),
+				Entry("should allow when configuration for a worker ScaleDownUnneededTime is nil and only ScaleDownDelayAfterAdd is < 1m", nil, nil, ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), BeNil()),
+				Entry("should forbid when configuration for a worker ScaleDownUnneededTime is nil, ScaleDownUnneededTime is < 1m and ScaleDownDelayAfterAdd is < 1m", nil, nil, ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), Not(BeNil())),
+				Entry("should allow when configuration for a worker ScaleDownUnneededTime is < 1m, ScaleDownUnneededTime is > 1m and ScaleDownDelayAfterAdd is > 1m", nil, ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), BeNil()),
+				Entry("should forbid when configuration for a worker ScaleDownUnneededTime is < 1m, the other isn't configured, ScaleDownUnneededTime is > 1m and ScaleDownDelayAfterAdd is < 1m", nil, ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), Not(BeNil())),
+				Entry("should forbid when configuration for a worker ScaleDownUnneededTime is > 1m, ScaleDownUnneededTime is < 1m and ScaleDownDelayAfterAdd is < 1m", nil, ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), Not(BeNil())),
+				Entry("should allow when configuration for both workers ScaleDownUnneededTime is > 1m, ScaleDownUnneededTime is < 1m and ScaleDownDelayAfterAdd is < 1m", ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), BeNil()),
+				Entry("should forbid when configuration for a worker ScaleDownUnneededTime is < 1m, the other worker is valid, ScaleDownUnneededTime is > 1m and ScaleDownDelayAfterAdd is < 1m", ptr.To(metav1.Duration{Duration: 1 * time.Second}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Hour}), ptr.To(metav1.Duration{Duration: 1 * time.Second}), Not(BeNil())),
 			)
 		})
 

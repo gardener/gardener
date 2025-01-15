@@ -848,42 +848,34 @@ func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, sec
 
 // For backwards-compatibility, we want to validate the scaleDownUnneededTime and scaleDownDelayAfterAdd only for newly created Shoot clusters.
 // Performing the validation for all Shoots would prevent already existing Shoots with the wrong spec to be updated/deleted.
+// Validation implies that ScaleDownDelayAfterAdd and ScaleDownUnneededTime shouldn't be less than a minute at the same time to avoid scaling cycles.
 func (c *validationContext) validateScaleDownConfiguration(a admission.Attributes) field.ErrorList {
 	var (
-		allErrs                field.ErrorList
-		stringRepresentation   string
-		path                   = field.NewPath("spec", "kubernetes", "clusterAutoscaler")
-		scaleDownUnneededTime  = 30 * time.Minute //default
-		scaleDownDelayAfterAdd = 1 * time.Hour    //default
+		allErrs              field.ErrorList
+		stringRepresentation string
+		path                 = field.NewPath("spec", "kubernetes", "clusterAutoscaler")
 	)
 
 	if a.GetOperation() != admission.Create {
 		return nil
 	}
 
-	//in order to check in the case where the ScaleDownDelayAfterAdd is set generally, but the worker settings may set and overwrite ScaleDownUnneededTime
-	if c.shoot.Spec.Kubernetes.ClusterAutoscaler != nil {
-		if c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd != nil {
-			scaleDownDelayAfterAdd = c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd.Duration
-		}
-		if c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime != nil {
-			scaleDownUnneededTime = c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime.Duration
-		}
+	if c.shoot.Spec.Kubernetes.ClusterAutoscaler == nil || c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd == nil || c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime == nil {
+		return nil
 	}
+
+	scaleDownDelayAfterAdd := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd.Duration
+	scaleDownUnneededTime := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime.Duration
 
 	path = field.NewPath("spec", "provider", "workers", "clusterAutoscaler")
 	for _, worker := range c.shoot.Spec.Provider.Workers {
-		if worker.ClusterAutoscaler == nil || worker.ClusterAutoscaler.ScaleDownUnneededTime == nil {
-			continue
-		} else if worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration < 1*time.Minute && scaleDownDelayAfterAdd < 1*time.Minute {
-			stringRepresentation = "ScaleDownDelayAfterAdd: " + scaleDownDelayAfterAdd.String() + ", ScaleDownUnneededTime: " + worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration.String()
+		if (worker.ClusterAutoscaler == nil || worker.ClusterAutoscaler.ScaleDownUnneededTime == nil) && scaleDownDelayAfterAdd < 1*time.Minute && scaleDownUnneededTime < 1*time.Minute {
+			stringRepresentation = "ScaleDownDelayAfterAdd: " + scaleDownDelayAfterAdd.String() + ", ScaleDownUnneededTime: " + scaleDownDelayAfterAdd.String()
 			allErrs = append(allErrs, field.Invalid(path.Child("scaleDownUnneededTime"), stringRepresentation, "ScaleDownUnneededTime and ScaleDownDelayAfterAdd should not be less than a minute at the same time"))
+		} else if worker.ClusterAutoscaler != nil && worker.ClusterAutoscaler.ScaleDownUnneededTime != nil && worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration < 1*time.Minute && scaleDownDelayAfterAdd < 1*time.Minute {
+			stringRepresentation = "ScaleDownDelayAfterAdd: " + scaleDownDelayAfterAdd.String() + ", ScaleDownUnneededTime: " + worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration.String()
+			allErrs = append(allErrs, field.Invalid(path.Child("scaleDownUnneededTime"), stringRepresentation, "Worker ScaleDownUnneededTime and ScaleDownDelayAfterAdd should not be less than a minute at the same time"))
 		}
-	}
-
-	if scaleDownDelayAfterAdd < 1*time.Minute && scaleDownUnneededTime < 1*time.Minute {
-		stringRepresentation = "ScaleDownDelayAfterAdd: " + scaleDownDelayAfterAdd.String() + ", ScaleDownUnneededTime: " + scaleDownDelayAfterAdd.String()
-		allErrs = append(allErrs, field.Invalid(path.Child("scaleDownUnneededTime"), stringRepresentation, "ScaleDownUnneededTime and ScaleDownDelayAfterAdd should not be less than a minute at the same time"))
 	}
 
 	return allErrs
