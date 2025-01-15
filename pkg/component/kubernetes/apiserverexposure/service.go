@@ -153,7 +153,7 @@ func (s *service) Deploy(ctx context.Context) error {
 		}
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, namespaceSelectors...))
-		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
+		gardenerutils.ReconcileTopologyAwareRoutingSettings(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
 
 		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
 		obj.Spec.Type = corev1.ServiceTypeClusterIP
