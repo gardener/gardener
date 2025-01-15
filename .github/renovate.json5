@@ -200,7 +200,7 @@
         '/.+gardener-discovery-server$/'
       ],
     },
-        {
+    {
       // Group machine-controller-manager updates in one PR.
       groupName: 'machine-controller-manager',
       matchDatasources: [
@@ -209,6 +209,18 @@
       ],
       matchPackageNames: [
         '/.*gardener\/machine-controller-manager$/'
+      ],
+    },
+    {
+      // Group Vertical Pod Autoscaler (VPA) component updates in one PR.
+      groupName: 'vpa-components',
+      matchDatasources: [
+        'docker',
+      ],
+      matchPackageNames: [
+        'registry.k8s.io/autoscaling/vpa-admission-controller',
+        'registry.k8s.io/autoscaling/vpa-recommender',
+        'registry.k8s.io/autoscaling/vpa-updater',
       ],
     },
     {
