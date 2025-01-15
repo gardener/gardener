@@ -223,7 +223,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, alertingSMTPSecret)
+	c.aggregatePrometheus, err = r.newAggregatePrometheus(log, seed, seedIsGarden, secretsManager, globalMonitoringSecretSeed, wildCardCertSecret, alertingSMTPSecret)
 	if err != nil {
 		return
 	}
@@ -577,7 +577,7 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 	})
 }
 
-func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed, secretsManager secretsmanager.Interface, globalMonitoringSecret, wildcardCertSecret, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
+func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed, seedIsGarden bool, secretsManager secretsmanager.Interface, globalMonitoringSecret, wildcardCertSecret, alertingSMTPSecret *corev1.Secret) (component.DeployWaiter, error) {
 	values := prometheus.Values{
 		Name:              "aggregate",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
@@ -588,7 +588,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 		ExternalLabels:    map[string]string{"seed": seed.GetInfo().Name},
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("1000M")},
 		CentralConfigs: prometheus.CentralConfigs{
-			PrometheusRules: aggregateprometheus.CentralPrometheusRules(),
+			PrometheusRules: aggregateprometheus.CentralPrometheusRules(seedIsGarden),
 			ScrapeConfigs:   aggregateprometheus.CentralScrapeConfigs(),
 			ServiceMonitors: aggregateprometheus.CentralServiceMonitors(),
 		},
