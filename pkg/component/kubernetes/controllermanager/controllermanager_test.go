@@ -797,7 +797,6 @@ namespace: kube-system
 					"batch/v1":                       false,
 					"apps/v1":                        true,
 					"policy/v1/poddisruptionbudgets": false,
-					"storage.k8s.io/v1/csidrivers":   false,
 					"storage.k8s.io/v1/csinodes":     false,
 				},
 				false,

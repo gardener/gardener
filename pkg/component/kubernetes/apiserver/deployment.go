@@ -423,7 +423,6 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 			"batch/v1":                       false,
 			"apps/v1":                        false,
 			"policy/v1/poddisruptionbudgets": false,
-			"storage.k8s.io/v1/csidrivers":   false,
 			"storage.k8s.io/v1/csinodes":     false,
 		}
 
