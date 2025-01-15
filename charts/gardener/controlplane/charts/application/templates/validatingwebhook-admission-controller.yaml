@@ -346,4 +346,34 @@ webhooks:
     {{- end }}
     caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
   sideEffects: None
+- name: update-restriction.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
+  timeoutSeconds: 10
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - secrets
+    - configmaps
+  failurePolicy: Fail
+  objectSelector:
+    matchLabels:
+      gardener.cloud/update-restriction: "true"
+  clientConfig:
+    {{- if .Values.global.deployment.virtualGarden.enabled }}
+    url: https://gardener-admission-controller.garden/webhooks/update-restriction
+    {{- else }}
+    service:
+      namespace: garden
+      name: gardener-admission-controller
+      path: /webhooks/update-restriction
+    {{- end }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
+  sideEffects: None
 {{- end }}

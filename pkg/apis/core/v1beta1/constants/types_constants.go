@@ -725,6 +725,10 @@ const (
 	// LabelWorkerPoolGardenerNodeAgentSecretName is the name of the secret used by the gardener node agent
 	LabelWorkerPoolGardenerNodeAgentSecretName = "worker.gardener.cloud/gardener-node-agent-secret-name"
 
+	// LabelUpdateRestriction is a constant for a label key that indicates
+	// that a resource must be only updated by the gardenlet.
+	LabelUpdateRestriction = "gardener.cloud/update-restriction"
+
 	// EventResourceReferenced indicates that the resource deletion is in waiting mode because the resource is still
 	// being referenced by at least one other resource (e.g. a SecretBinding is still referenced by a Shoot)
 	EventResourceReferenced = "ResourceReferenced"
