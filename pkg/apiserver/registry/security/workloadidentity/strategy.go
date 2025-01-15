@@ -22,7 +22,7 @@ type workloadIdentityStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
 
-	tokenIssuerURL *string
+	issuer *string
 }
 
 // NewStrategy creates new storage strategy for WorkloadIdentity.
@@ -53,12 +53,12 @@ func (s workloadIdentityStrategy) PrepareForCreate(_ context.Context, obj runtim
 	if wi.Status.Sub == "" {
 		wi.Status.Sub = strings.Join([]string{p, wi.GetNamespace(), wi.GetName(), string(wi.GetUID())}, d)
 	}
-	wi.Status.Issuer = s.tokenIssuerURL
+	wi.Status.Issuer = s.issuer
 }
 
 func (s workloadIdentityStrategy) PrepareForUpdate(_ context.Context, obj, _ runtime.Object) {
 	wi := obj.(*security.WorkloadIdentity)
-	wi.Status.Issuer = s.tokenIssuerURL
+	wi.Status.Issuer = s.issuer
 }
 
 func (workloadIdentityStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
