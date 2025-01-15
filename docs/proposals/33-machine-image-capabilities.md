@@ -183,10 +183,10 @@ In this case it does not result in an error but in performance loss.
 
 ## Proposal
 
-Introduce a top level capabilities array in the CloudProfile `spec.capabilities`.
+Introduce a top level capabilities map in the CloudProfile `spec.capabilities`.
 
 Capabilities are very specific to the provider and the selected catalog offered by Gardener in the cloud profile.
-To minimize complexity and data size in the cloud profile, the capabilities are defined as a key-value array.
+To minimize complexity and data size in the cloud profile, the capabilities are defined as a map with string keys and string arrays as values.
 The key is the capability name and the value is an array of possible values.
 
 ```go
@@ -195,7 +195,7 @@ type Spec struct {
 }
 ```
 
-For each cloud profile the capabilities are defined in the `spec.capabilities` array.
+For each cloud profile the capabilities are defined in the `spec.capabilities` map.
 The full set of possibilities for each capability is defined here.
 As some capabilities can have multiple values at the same time an array of possible values is used instead of a single value.
 
@@ -294,6 +294,7 @@ spec:
 ```
 
 The algorithm to determine if an image is valid for a machine type is given as follows: 
+
 For every capability the union of values that is supported by the machine type and the machine image must not be empty.
 In other words, the machine image must support at least one value of each capability of the machine type.
 
@@ -328,8 +329,7 @@ This limit is configurable through --max-request-bytes flag for etcd server. - [
 
 Every Capability must be defined in a way that each value is framed positively.
 This means that a capability must define all values that are supported by the machine image or machine type.
-This way the capability values of a machine type can be compared to the capabilities of the machine image.
-If the values of the machine image is a superset of the machine type the image is valid for the machine type.
+This way the capability values can be matched using a union operation.
 With a mixed or boolean framing its harder to compare values in a consistent way or to add a new value as option to the capability.
 
 E.g. Disc Controller Types:
