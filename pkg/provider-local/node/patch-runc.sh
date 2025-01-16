@@ -8,10 +8,11 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+RUNC_VERSION="1.2.4"
 ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
 
-echo "Installing runc v1.2.4 ..."
-curl -sSL --retry 5 --output "/tmp/runc.${ARCH}" "https://github.com/opencontainers/runc/releases/download/v1.2.4/runc.${ARCH}"
+echo "Installing runc v${RUNC_VERSION} ..."
+curl -sSL --retry 5 --output "/tmp/runc.${ARCH}" "https://github.com/opencontainers/runc/releases/download/v${RUNC_VERSION}/runc.${ARCH}"
 mv "/tmp/runc.${ARCH}" /usr/local/sbin/runc
 chmod 0755 /usr/local/sbin/runc
 runc --version
