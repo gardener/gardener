@@ -23,6 +23,7 @@ import (
 	kubernetesclient "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -54,7 +55,7 @@ func NewActuator(mgr manager.Manager) extension.Actuator {
 func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv1alpha1.Extension) error {
 	namespace := ex.Namespace
 
-	shootResources, err := getShootResources()
+	resources, err := getResources()
 	if err != nil {
 		return err
 	}
@@ -73,7 +74,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv
 		map[string]string{},
 		secretNameWithPrefix,
 		"",
-		shootResources,
+		resources,
 		&keepObjects,
 		injectedLabels,
 		nil,
@@ -81,27 +82,29 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, ex *extensionsv
 		return err
 	}
 
-	cluster, err := extensionscontroller.GetCluster(ctx, a.client, ex.Namespace)
-	if err != nil {
-		return err
-	}
+	if gardenerutils.IsShootNamespace(ex.Namespace) {
+		cluster, err := extensionscontroller.GetCluster(ctx, a.client, ex.Namespace)
+		if err != nil {
+			return err
+		}
 
-	// Create the resources only for force-delete e2e test
-	if kubernetesutils.HasMetaDataAnnotation(cluster.Shoot, AnnotationTestForceDeleteShoot, "true") {
-		for i := 1; i <= 2; i++ {
-			networkPolicy := &networkingv1.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "test-netpol-",
-					Namespace:    ex.Namespace,
-					Finalizers:   []string{finalizer},
-				},
-			}
+		// Create the resources only for force-delete e2e test
+		if kubernetesutils.HasMetaDataAnnotation(cluster.Shoot, AnnotationTestForceDeleteShoot, "true") {
+			for i := 1; i <= 2; i++ {
+				networkPolicy := &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "test-netpol-",
+						Namespace:    ex.Namespace,
+						Finalizers:   []string{finalizer},
+					},
+				}
 
-			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, networkPolicy, func() error {
-				networkPolicy.Labels = getLabels()
-				return nil
-			}); err != nil {
-				return err
+				if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, networkPolicy, func() error {
+					networkPolicy.Labels = getLabels()
+					return nil
+				}); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -151,7 +154,7 @@ func getLabels() map[string]string {
 	return map[string]string{"app.kubernetes.io/name": ApplicationName}
 }
 
-func getShootResources() (map[string][]byte, error) {
+func getResources() (map[string][]byte, error) {
 	shootRegistry := managedresources.NewRegistry(kubernetesclient.ShootScheme, kubernetesclient.ShootCodec, kubernetesclient.ShootSerializer)
 	return shootRegistry.AddAllAndSerialize(
 		&corev1.ServiceAccount{

@@ -123,6 +123,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				healthyManagedResource("extension-admission-virtual-provider-local"),
 				healthyManagedResource("extension-registration-provider-local"),
 				healthyManagedResource("extension-provider-local-garden"),
+				healthyManagedResource("local-ext-shoot"),
 			))
 
 			g.Expect(runtimeClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())

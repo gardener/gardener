@@ -70,7 +70,7 @@ spec:
         - --heartbeat-renew-interval-seconds={{ .Values.controllers.heartbeat.renewIntervalSeconds }}
         {{- if .Values.gardener.runtimeCluster.enabled }}
         - --disable-webhooks="*"
-        - --controllers=backupbucket,dnsrecord
+        - --controllers=backupbucket,dnsrecord,local-ext-shoot
         - --extension-class=garden
         {{- else }}
         - --webhook-config-namespace={{ .Release.Namespace }}

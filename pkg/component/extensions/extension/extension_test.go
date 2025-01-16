@@ -697,6 +697,32 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
+	Describe("#DeleteResources", func() {
+		It("should delete extensions resources", func() {
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+
+			Expect(ext.DeleteResources(ctx)).To(Succeed())
+
+			extensionList := &extensionsv1alpha1.ExtensionList{}
+			Expect(fakeSeedClient.List(ctx, extensionList)).To(Succeed())
+			Expect(extensionList.Items).To(BeEmpty())
+		})
+	})
+
+	Describe("#WaitCleanupResources", func() {
+		It("should not return error if all resources are gone", func() {
+			Expect(ext.WaitCleanupStaleResources(ctx)).To(Succeed())
+		})
+
+		It("should return error if resources still exist", func() {
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+
+			Expect(ext.WaitCleanupResources(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/def is still present")))
+		})
+	})
+
 	Describe("#DeleteStaleResources", func() {
 		It("should delete stale extensions resources", func() {
 			staleExtension := defaultExtension.DeepCopy()
@@ -714,6 +740,7 @@ var _ = Describe("Extension", func() {
 			Expect(extensionList.Items).To(consistOfObjects(defaultName, beforeName, afterName))
 		})
 	})
+
 	Describe("#WaitCleanupStaleResources", func() {
 		It("should not return error if all resources are gone", func() {
 			Expect(ext.WaitCleanupStaleResources(ctx)).To(Succeed())
