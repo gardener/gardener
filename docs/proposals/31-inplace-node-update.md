@@ -177,7 +177,7 @@ spec:
 
 #### `Shoot` API
 
-A new field `updateStrategy` is introduced under `spec.provider.workers[]` in the Shoot spec. This field will be passed on to the worker extension. Once set, changing the `updateStrategy` between in-place and replace strategies is prohibited through validation. Additionally, when `AutoInPlaceUpdate` or `ManualInPlaceUpdate` is configured as an update strategy, skipping an intermediate Kubernetes minor version is no longer allowed, because of potential breaking changes that are then not carried out anymore when skipping versions (only allowed with `AutoReplace` as the machines/nodes are created from scratch in this case).
+A new field `updateStrategy` is introduced under `spec.provider.workers[]` in the Shoot spec. This field will be passed on to the worker extension. Once set, changing the `updateStrategy` from an in-place strategy to a replace strategy and vice versa is prohibited through validation. Additionally, when `AutoInPlaceUpdate` or `ManualInPlaceUpdate` is configured as an update strategy, skipping an intermediate Kubernetes minor version is no longer allowed, because of potential breaking changes that are then not carried out anymore when skipping versions (only allowed with `AutoReplaceUpdate` as the machines/nodes are created from scratch in this case).
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -254,7 +254,9 @@ New fields `osVersion`, `kubeletVersion`, and `credentialsRotation` are introduc
 - `credentialsRotation` contains two subfields:
   - `certificateAuthorities` contains `lastInitiationTime` which records the timestamp of the most recent Certificate Authority (CA) rotation initiation.
   - `serviceAccountKey` contains `lastInitiationTime` which records the timestamp of the most recent `ServiceAccount` signing key rotation initiation.
-- `inPlaceUpdateConfig` contains a subfield `osUpdateCommand` which defines the command responsible for performing machine image updates. The command could be invoking an inbuilt utility/tool or a custom script, optionally accompanied by additional arguments or flags like the target version or the OCI registry from which the updated machine image should be pulled, offering flexibility tailored to the needs of different OS extensions.
+- The inPlaceUpdateConfig field includes two subfields:
+  - `osUpdateCommand` specifies the command responsible for performing machine image updates. The command can invoke either an inbuilt utility/tool or a custom script.
+  - `osUpdateCommandArgs` provides a mechanism to pass additional arguments or flags to the update script, like the target version or the OCI registry from which the updated machine image should be pulled, offering flexibility tailored to the needs of different OS extensions.
 
 ```yaml
 apiVersion: extensions.gardener.cloud/v1alpha1
@@ -277,7 +279,12 @@ spec:
     - ...
 status:
   inPlaceUpdateConfig:
-    osUpdateCommand: /opt/gardener/bin/inplace-update.sh --version 1631.0 --repo <someOCIregistry>
+    osUpdateCommand: /opt/gardener/bin/inplace-update.sh
+    osUpdateCommandArgs:
+      - --version
+      - 1631.0
+      - --repo
+      - <someOCIregistry>
 ```
 
 #### Gardener Node Agent
