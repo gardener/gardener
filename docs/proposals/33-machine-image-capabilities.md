@@ -28,7 +28,7 @@ This GEP proposes the introduction of capabilities for machineType and machineIm
 This will prevent the creation of incompatible worker pools on shoot creation and maintenance operations.
 It will also provide a mechanism to filter out incompatible images for a machine type in the Gardener Dashboard.
 
-❗️❗️❗️One decisions in this GEP is to deprecate the current architecture field in the CloudProfile. Otherwise the information will be duplicated within the CloudProfile as the architecture mandatory for capabilities❗️❗️❗️
+❗️❗️❗️One decisions in this GEP is to deprecate the current architecture field in the CloudProfile. Otherwise the information will be duplicated within the CloudProfile as the architecture is mandatory for capabilities❗️❗️❗️
 
 ## Motivation
 
