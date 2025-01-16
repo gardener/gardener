@@ -325,8 +325,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
 			Quota:                   ptr.To(resource.MustParse("8Gi")),
 			ClientService: &druidv1alpha1.ClientService{
-				Annotations: clientService.Annotations,
-				Labels:      clientService.Labels,
+				Annotations:         clientService.Annotations,
+				Labels:              clientService.Labels,
+				TrafficDistribution: clientService.Spec.TrafficDistribution,
 			},
 		}
 

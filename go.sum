@@ -186,8 +186,6 @@ github.com/gardener/cert-management v0.17.2 h1:yM+iG2KNS5uzwzAqbvbpPdjpZ/YRotfK3
 github.com/gardener/cert-management v0.17.2/go.mod h1:FvFlrSonrEHxPLkLF9o6aicSfFkJvcSBrVYmj5gpG2Y=
 github.com/gardener/dependency-watchdog v1.3.0 h1:C5EO/4GKv1TosvqVepJfzGssu8dDR06q1y05b11ozqI=
 github.com/gardener/dependency-watchdog v1.3.0/go.mod h1:KNUla1c54x6AGh7SXK/OlM0LrghMXXZG0f+d7+XojaA=
-github.com/gardener/etcd-druid v0.26.1 h1:x8mZfcIkZS29bJKupy0PVTsIrPUNVxvcJlLAXKb0agw=
-github.com/gardener/etcd-druid v0.26.1/go.mod h1:SKjfV8bvdLGF1ynFbWF4ioK2a6M33g7N6lct45p50J8=
 github.com/gardener/machine-controller-manager v0.55.1 h1:d6mTnuYko+jWeIi7tAFWgWnL1nR5hGcI6pRCDcH0TGY=
 github.com/gardener/machine-controller-manager v0.55.1/go.mod h1:eCng7De6OE15rndmMm6Q1fwMQI39esASCd3WKZ/lLmY=
 github.com/gardener/terminal-controller-manager v0.34.0 h1:qE8xIKsOFnVr1yZ2meesRR0q65uZ1Nyf5oSluAiLTeM=
@@ -342,6 +340,8 @@ github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
 github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
+github.com/ialidzhikov/etcd-druid v0.15.1-0.20250116142344-5ee984d8ce53 h1:KfwBnmLx3RAvyu3OrIXcFPo9Iu3FTsM9tbPSo6mhhoA=
+github.com/ialidzhikov/etcd-druid v0.15.1-0.20250116142344-5ee984d8ce53/go.mod h1:6C0eyfdlw6CowLm/l4ZiKwrvkc+5NHrnc/rY2wCUwys=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/imdario/mergo v0.3.5/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/imdario/mergo v0.3.16 h1:wwQJbIsHYGMUyLSPrEq1CT16AhnhNJQ51+4fdHUnCl4=
