@@ -28,6 +28,8 @@ This GEP proposes the introduction of capabilities for machineType and machineIm
 This will prevent the creation of incompatible worker pools on shoot creation and maintenance operations.
 It will also provide a mechanism to filter out incompatible images for a machine type in the Gardener Dashboard.
 
+❗️❗️❗️One decisions in this GEP is to deprecate the current architecture field in the CloudProfile. Otherwise the information will be duplicated within the CloudProfile as the architecture mandatory for capabilities❗️❗️❗️
+
 ## Motivation
 
 On cloud providers, not every machine type is compatible with every machine image.
@@ -223,18 +225,22 @@ The last value is the least preferred value.
 Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`.
 Then the image with `gen2` will be preferred.
 
+Other edge cases will be deterministic solved as well to ensure a consistent behavior.
 
-In addition to the default capabilities, the `spec.machineTypes` and the `spec.providerConfig.machineImages.versions` are extended with the `capabilities` structure described above.
-The image versions in `spec.machineImages.versions` will receive an array of capabilities structures, one entry for each image reference in the providerConfig.
+In addition to the default capabilities, the `spec.machineTypes` is extended with the `capabilities` structure described above.
+The image versions in `spec.machineImages.versions` will be extended with `capabilityCombinations` - an array of capabilities structures, one entry for each image reference of an image version in the cloud provider.
 
-The specific architecture is also added to the capabilities as the existing architecture field is insufficient to define the set of capabilities including the supported architecture.
+The architecture is also added to the capabilityCombinations. This is required as the architecture is a capability itself. 
+
+❗️❗️❗️NOTE: To avoid duplication and remove the possibility of inconsistencies the existing `architecture` field on `machineImages.versions` and `machineTypes` will be marked as deprecated. Architecture will become the only mandatory capability and will take precedence over the deprecated field if both are present.
 
 ```yaml
 # CloudProfile
 spec:
-  capabilities:
+  capabilities: # <-- Full list of possible capabilities used as default
+    architecture: ["amd64", "arm64"]
     hypervisorType: ["gen2", "gen1"]
-    network: ["accelerated", "standard"] # <-- replaces acceleratedNetworking
+    network: ["accelerated", "standard"]
 
   machineImages:
     - name: gardenlinux
@@ -243,8 +249,8 @@ spec:
         # - architectures: [arm64, amd64] # not required anymore
         #   version: 1592.2.0-gen2
 
-        - architectures: [amd64, arm64] 
-          capabilities:
+        - architectures: [amd64, arm64] # <-- marked as deprecated
+          capabilityCombinations:
             - architecture: [arm64] # <-- architecture must be added to the capabilities to ensure compatibility
               hypervisorType: ["gen2"]
               network: ["accelerated", "standard"] # <-- not required as its the default
@@ -255,8 +261,11 @@ spec:
           classification: supported
           version: 1592.2.0
 
+        - classification: supported
+          version: 1592.1.0 # <-- if no capabilityCombinations are defined the default capabilities are assigned as only combination
+
   machineTypes:
-    - architecture: amd64
+    - architecture: amd64 # <-- marked as deprecated
       cpu: "896"
       gpu: "0"
       memory: 12Ti
@@ -264,33 +273,46 @@ spec:
       usable: true
       capabilities:
         hypervisorType: ["gen2"] # <-- hypervisorType is overwritten
+        architecture: ["amd64"] # <-- architecture is overwritten
 
+    - cpu: "896" # <-- as no capabilities are defined the default capabilities are assigned
+      gpu: "0"
+      memory: 12Ti
+      name: Standard_S896
+      usable: true
+```
+
+The changes to the gardener CloudProfile above are sufficient to select the correct image version selection. This enables:
+- The shoot admission controller to check if the selected machine image is supported by the selected machine type. 
+- The maintenance controller to performed automated upgrades correctly without breaking worker nodes.
+- The Gardener Dashboard to filter out incompatible images for a machine type.
+
+The selection of the actual image reference is still done by the provider extension. Therefore the provider extension must be updated to include the capabilities in the cloud profile as well in `spec.providerConfig.machineImages.versions` also here the architecture field will be marked as deprecated.
+
+```yaml 
   providerConfig:
     machineImages:
       - name: gardenlinux
         versions:
-          - architecture: arm64 # <-- architecture is overwritten as only amd64 is supported
+          - architecture: arm64 # <-- deprecated
             capabilities:
+              architecture: ["arm64"] # <-- architecture is overwritten as only amd64 is supported
               hypervisorType: ["gen2"]
               network: ["accelerated", "standard"] # <-- not required as its the default
             communityGalleryImageID: /CommunityGalleries/xzy/Images/gardenlinux-nvme-arm64-gen2/Versions/1592.2.0
             version: 1592.2.0 # <-- no pre-release tag required anymore
             #acceleratedNetworking: true # <-- not required anymore
 
-          - architecture: amd64
-            capabilities:
+          - capabilities:
+              architecture: [amd64]
               hypervisorType: ["gen2"]
             communityGalleryImageID: /CommunityGalleries/xzy/Images/gardenlinux-nvme-gen2/Versions/1592.2.0
             version: 1592.2.0
-          - architecture: amd64
-            capabilities:
+          - capabilities:
+              architecture: [amd64]
               hypervisorType: ["gen1"]
             communityGalleryImageID: /CommunityGalleries/xzy/Images/gardenlinux-nvme/Versions/1592.2.0
             version: 1592.2.0
-
-    # machineTypes: # <--- not required anymore
-    #   - acceleratedNetworking: true
-    #     name: Standard_S896om
 ```
 
 The algorithm to determine if an image is valid for a machine type is given as follows: 
@@ -313,6 +335,8 @@ All API changes in Gardener core are backwards compatible.
 They can be implemented first including its filter and admission logic.
 In a second step each provider extension can be updated to include the capabilities in the cloud profile.
 In a third wave cloud profiles and the Gardener Dashboard can be updated to react to the capabilities.
+
+❗️❗️❗️ when the architecture field is marked as deprecated the eventual removal in the  CloudProfile API will be a breaking change. Latest this point all cloud profiles must be updated to include the architecture in the capabilities. It will no longer be opt in.❗️❗️❗️
 
 ### Considerations
 
