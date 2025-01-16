@@ -57,25 +57,25 @@ require (
 	helm.sh/helm/v3 v3.16.4
 	istio.io/api v1.23.4
 	istio.io/client-go v1.23.3
-	k8s.io/api v0.31.4
-	k8s.io/apiextensions-apiserver v0.31.4
-	k8s.io/apimachinery v0.31.4
-	k8s.io/apiserver v0.31.4
+	k8s.io/api v0.31.5
+	k8s.io/apiextensions-apiserver v0.31.5
+	k8s.io/apimachinery v0.31.5
+	k8s.io/apiserver v0.31.5
 	k8s.io/autoscaler/vertical-pod-autoscaler v1.2.1
-	k8s.io/cli-runtime v0.31.4
-	k8s.io/client-go v0.31.4
-	k8s.io/cluster-bootstrap v0.31.4
-	k8s.io/code-generator v0.31.4
-	k8s.io/component-base v0.31.4
-	k8s.io/component-helpers v0.31.4
+	k8s.io/cli-runtime v0.31.5
+	k8s.io/client-go v0.31.5
+	k8s.io/cluster-bootstrap v0.31.5
+	k8s.io/code-generator v0.31.5
+	k8s.io/component-base v0.31.5
+	k8s.io/component-helpers v0.31.5
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kube-aggregator v0.31.4
+	k8s.io/kube-aggregator v0.31.5
 	k8s.io/kube-openapi v0.0.0-20240903163716-9e1beecbcb38
-	k8s.io/kube-proxy v0.31.4
+	k8s.io/kube-proxy v0.31.5
 	k8s.io/kube-state-metrics/v2 v2.13.0
-	k8s.io/kubelet v0.31.4
-	k8s.io/metrics v0.31.4
-	k8s.io/pod-security-admission v0.31.4
+	k8s.io/kubelet v0.31.5
+	k8s.io/metrics v0.31.5
+	k8s.io/pod-security-admission v0.31.5
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/controller-runtime v0.19.4
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20231015215740-bf15e44028f9 // v0.16.3
@@ -258,7 +258,7 @@ require (
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/gengo/v2 v2.0.0-20240826214909-a7b603a56eb7 // indirect
 	k8s.io/klog v1.0.0 // indirect
-	k8s.io/kms v0.31.4 // indirect
+	k8s.io/kms v0.31.5 // indirect
 	k8s.io/sample-controller v0.30.3 // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.3 // indirect
