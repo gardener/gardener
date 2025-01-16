@@ -288,6 +288,9 @@ func SetDefaults_Worker(obj *Worker) {
 			Allow: DefaultWorkerSystemComponentsAllow,
 		}
 	}
+	if obj.UpdateStrategy == nil {
+		obj.UpdateStrategy = ptr.To(AutoRollingUpdate)
+	}
 }
 
 // SetDefaults_ClusterAutoscaler sets default values for ClusterAutoscaler object.
