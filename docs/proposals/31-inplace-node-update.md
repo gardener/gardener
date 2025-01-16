@@ -7,6 +7,11 @@ authors:
   - "@acumino"
   - "@ary1992"
   - "@shafeeqes"
+reviewers:
+  - "@rfranzke"
+  - "@ScheererJ"
+  - "@unmarshall"
+  - "@vlerenc"
 ---
 
 # GEP-31: In-Place Node Updates of Shoot Clusters
