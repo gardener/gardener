@@ -426,7 +426,7 @@ var _ = Describe("Extension controller tests", func() {
 
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRegistrationFoo), &resourcesv1alpha1.ManagedResource{})
-		}).Should(BeNotFoundError())
+		}).WithPolling(1 * time.Second).WithTimeout(5 * time.Second).Should(BeNotFoundError())
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKey{Namespace: testNamespace.Name, Name: "extension-admission-runtime-provider-foo"}, &resourcesv1alpha1.ManagedResource{})
 		}).Should(BeNotFoundError())
@@ -462,7 +462,7 @@ var _ = Describe("Extension controller tests", func() {
 		}).Should(BeNotFoundError())
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(extensionFoo), extensionFoo)
-		}).Should(BeNotFoundError())
+		}).WithPolling(1 * time.Second).WithTimeout(5 * time.Second).Should(BeNotFoundError())
 
 		By("Delete garden")
 		Expect(testClient.Delete(ctx, garden)).To(Succeed())

@@ -8,16 +8,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
+	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -84,7 +90,12 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 		}
 	}
 
-	renderedChart, err := d.runtimeClientSet.ChartRenderer().RenderArchive(archive, extension.Name, d.gardenNamespace, utils.MergeMaps(helmValues, gardenerValues))
+	namespace := namespaceName(extension)
+	if err := d.ensureNamespace(ctx, namespace, extension); err != nil {
+		return fmt.Errorf("failed ensuring namespace %q: %w", namespace, err)
+	}
+
+	renderedChart, err := d.runtimeClientSet.ChartRenderer().RenderArchive(archive, extension.Name, namespace, utils.MergeMaps(helmValues, gardenerValues))
 	if err != nil {
 		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository.GetURL(), err)
 	}
@@ -102,20 +113,76 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 
 func (d *deployer) deleteResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
 	mrName := managedResourceName(extension)
+	namespace := namespaceName(extension)
 
 	log.Info("Deleting extension ManagedResource for runtime cluster if present", "managedResource", client.ObjectKey{Name: mrName, Namespace: d.gardenNamespace})
-	if err := managedresources.DeleteForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName); err != nil {
+	if err := client.IgnoreNotFound(managedresources.DeleteForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName)); err != nil {
 		return fmt.Errorf("failed deleting ManagedResource: %w", err)
 	}
 
 	if err := managedresources.WaitUntilDeleted(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName); err != nil {
 		return fmt.Errorf("failed waiting for ManagedResource to be deleted: %w", err)
 	}
+
+	if err := d.deleteNamespace(ctx, namespace); err != nil {
+		return fmt.Errorf("failed deleting namespace %q: %w", namespace, err)
+	}
+
 	return nil
+}
+
+func (d *deployer) ensureNamespace(ctx context.Context, name string, extension *operatorv1alpha1.Extension) error {
+	gardenNamespace := &corev1.Namespace{}
+	if err := d.runtimeClientSet.Client().Get(ctx, client.ObjectKey{Name: d.gardenNamespace}, gardenNamespace); err != nil {
+		return err
+	}
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, d.runtimeClientSet.Client(), namespace, func() error {
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigConsider, "true")
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelNetworkPolicyAccessTargetAPIServer, "allowed")
+
+		if zones := gardenNamespace.Annotations[resourcesv1alpha1.HighAvailabilityConfigZones]; zones != "" {
+			metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, resourcesv1alpha1.HighAvailabilityConfigZones, zones)
+		} else {
+			delete(namespace.Annotations, resourcesv1alpha1.HighAvailabilityConfigZones)
+		}
+
+		if podSecurityEnforce, ok := extension.Annotations[v1beta1constants.AnnotationPodSecurityEnforce]; ok {
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, podsecurityadmissionapi.EnforceLevelLabel, podSecurityEnforce)
+		} else {
+			delete(namespace.Labels, podsecurityadmissionapi.EnforceLevelLabel)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *deployer) deleteNamespace(ctx context.Context, name string) error {
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+	if err := client.IgnoreNotFound(d.runtimeClientSet.Client().Delete(ctx, namespace)); err != nil {
+		return err
+	}
+	return kubernetesutils.WaitUntilResourceDeleted(ctx, d.runtimeClientSet.Client(), namespace, time.Second)
 }
 
 func managedResourceName(extension *operatorv1alpha1.Extension) string {
 	return fmt.Sprintf("extension-%s-garden", extension.Name)
+}
+
+func namespaceName(extension *operatorv1alpha1.Extension) string {
+	return fmt.Sprintf("runtime-extension-%s", extension.Name)
 }
 
 func extensionDeploymentSpecified(extension *operatorv1alpha1.Extension) bool {
