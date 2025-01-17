@@ -213,7 +213,7 @@ spec:
     network: ["accelerated", "standard"]
     storageAccess: ["NVMe", "SCSI"]
     secureBoot: ["secure", "none"]
-    bootMode: ["uefi-prefered", "uefi", "legacy-bios"]
+    bootMode: ["uefi-preferred", "uefi", "legacy-bios"]
     ...
 ```
 
