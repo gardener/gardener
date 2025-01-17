@@ -57,10 +57,10 @@ var _ = Describe("Gateway", func() {
 		Entry("Some values", map[string]string{"foo": "bar", "key": "value"}, map[string]string{"app": "istio", "istio": "gateway"}, []string{"host-1", "host-2"}, uint32(123456), "my-secret"),
 	)
 
-	DescribeTable("#GatewayWithMutalTLS", func(labels map[string]string, istioLabels map[string]string, hosts []string, port uint32, tlsSecret string) {
+	DescribeTable("#GatewayWithMutualTLS", func(labels map[string]string, istioLabels map[string]string, hosts []string, port uint32, tlsSecret string) {
 		gateway := &istionetworkingv1beta1.Gateway{}
 
-		function := GatewayWithMutalTLS(gateway, labels, istioLabels, hosts, port, tlsSecret)
+		function := GatewayWithMutualTLS(gateway, labels, istioLabels, hosts, port, tlsSecret)
 
 		Expect(function).NotTo(BeNil())
 

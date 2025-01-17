@@ -18,7 +18,7 @@ func DestinationRuleWithLocalityPreference(destinationRule *istionetworkingv1bet
 }
 
 // DestinationRuleWithTLSTermination returns a function setting the given attributes to a destination rule object.
-func DestinationRuleWithTLSTermination(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, destinationHost, sni, caSecret string, mode istioapinetworkingv1beta1.ClientTLSSettings_TLSmode) func() error {
+func DestinationRuleWithTLSTermination(destinationRule *istionetworkingv1beta1.DestinationRule, labels map[string]string, destinationHost, caSecret string, mode istioapinetworkingv1beta1.ClientTLSSettings_TLSmode) func() error {
 	return destinationRuleWithTrafficPolicy(
 		destinationRule,
 		labels,
@@ -32,7 +32,6 @@ func DestinationRuleWithTLSTermination(destinationRule *istionetworkingv1beta1.D
 		nil,
 		&istioapinetworkingv1beta1.ClientTLSSettings{
 			Mode:           mode,
-			Sni:            sni,
 			CredentialName: caSecret,
 		},
 	)
