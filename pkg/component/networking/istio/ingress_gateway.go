@@ -76,8 +76,8 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 				"enabled": istioIngressGateway.VPNEnabled,
 			},
 			"enforceSpreadAcrossHosts":                  istioIngressGateway.EnforceSpreadAcrossHosts,
-			"apiServerRequestHeaderUserName":            kubeapiserverconstants.RequestHeaderUserNameHeaders,
-			"apiServerRequestHeaderGroups":              kubeapiserverconstants.RequestHeaderGroupHeaders,
+			"apiServerRequestHeaderUserName":            kubeapiserverconstants.RequestHeaderUserName,
+			"apiServerRequestHeaderGroup":               kubeapiserverconstants.RequestHeaderGroup,
 			"apiServerAuthenticationDynamicMetadataKey": apiserverexposure.AuthenticationDynamicMetadataKey,
 		}
 

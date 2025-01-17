@@ -21,7 +21,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -36,8 +35,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-const managedResourceName = "kube-apiserver-sni"
-
 const (
 	// MutualTLSServiceNameSuffix is used to create a second service instance for
 	// use with mutual tls authentication from istio using the ca-front-proxy secrets.
@@ -50,6 +47,7 @@ const (
 	// istioTLSSecretSuffix is the suffix for the Istio TLS secret.
 	istioTLSSecretSuffix = "-kube-apiserver-tls" // #nosec G101 -- No credential.
 
+	managedResourceName                = "kube-apiserver-sni"
 	managedResourceNameIstioTLSSecrets = "istio-tls-secrets" // #nosec G101 -- No credential.
 )
 
@@ -129,7 +127,6 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	Name                        string
 	Namespace                   string
 	Host                        string
-	MutualTLSHost               string
 	Port                        int
 	APIServerClusterIPPrefixLen int
 }
@@ -155,7 +152,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		virtualService      = s.emptyVirtualService()
 
 		hostName                       = fmt.Sprintf("%s.%s.svc.%s", s.name, s.namespace, gardencorev1beta1.DefaultDomain)
-		mTLSHostName                   = fmt.Sprintf("%s.%s.svc.%s", s.name+MutualTLSServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
+		mTLSHostName                   = fmt.Sprintf("%s%s.%s.svc.%s", s.name, MutualTLSServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
 		envoyFilterAPIServerProxy      bytes.Buffer
 		envoyFilterIstioTLSTermination bytes.Buffer
 	)
@@ -176,7 +173,6 @@ func (s *sni) Deploy(ctx context.Context) error {
 			Namespace:                   envoyFilter.Namespace,
 			Host:                        hostName,
 			Port:                        kubeapiserverconstants.Port,
-			MutualTLSHost:               mTLSHostName,
 			APIServerClusterIPPrefixLen: apiServerClusterIPPrefixLen,
 		}); err != nil {
 			return err
@@ -234,7 +230,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 	var destinationMutateFn func() error
 	destinationMutateFn = istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), hostName)
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, s.valuesFunc().Hosts[0], s.namespace+istioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
+		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, s.namespace+istioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, destinationRule, destinationMutateFn); err != nil {
@@ -242,7 +238,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 	}
 
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), mTLSHostName, s.valuesFunc().Hosts[0], s.namespace+istioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
+		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), mTLSHostName, s.namespace+istioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, mTLSDestinationRule, destinationMTLSMutateFn); err != nil {
 			return err
 		}
@@ -251,7 +247,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 	var gatewayMutateFn func() error
 	gatewayMutateFn = istio.GatewayWithTLSPassthrough(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port)
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-		gatewayMutateFn = istio.GatewayWithMutalTLS(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port, s.namespace+istioTLSSecretSuffix)
+		gatewayMutateFn = istio.GatewayWithMutualTLS(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port, s.namespace+istioTLSSecretSuffix)
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, gateway, gatewayMutateFn); err != nil {
@@ -276,6 +272,10 @@ func (s *sni) Destroy(ctx context.Context) error {
 		return err
 	}
 
+	if err := managedresources.DeleteForSeed(ctx, s.client, s.namespace, managedResourceNameIstioTLSSecrets); err != nil {
+		return err
+	}
+
 	return kubernetesutils.DeleteObjects(
 		ctx,
 		s.client,
@@ -283,7 +283,6 @@ func (s *sni) Destroy(ctx context.Context) error {
 		s.emptyMTLSDestinationRule(),
 		s.emptyGateway(),
 		s.emptyVirtualService(),
-		s.emptyManagedResourceIstioTLSSecrets(),
 	)
 }
 
@@ -330,10 +329,6 @@ func (s *sni) emptyIstioTLSSecret() *corev1.Secret {
 			Namespace: s.valuesFunc().IstioIngressGateway.Namespace,
 		},
 	}
-}
-
-func (s *sni) emptyManagedResourceIstioTLSSecrets() *resourcesv1alpha1.ManagedResource {
-	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceNameIstioTLSSecrets, Namespace: s.namespace}}
 }
 
 func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {

@@ -243,6 +243,11 @@ var _ = Describe("istiod", func() {
 			data, _ := os.ReadFile("./test_charts/apiserver_tls_termination.yaml")
 			return string(data)
 		}
+
+		istioStripTrailingDotsEnvoyFilter = func() string {
+			data, _ := os.ReadFile("./test_charts/strip_trailing_dots_envoyfilter.yaml")
+			return string(data)
+		}
 	)
 
 	BeforeEach(func() {
@@ -379,6 +384,7 @@ var _ = Describe("istiod", func() {
 				istioIngressDeployment(minReplicas),
 				istioIngressServiceMonitor(),
 				istioIngressEnvoyFilter(),
+				istioStripTrailingDotsEnvoyFilter(),
 			}
 
 			expectedIstioSystemManifests := []string{

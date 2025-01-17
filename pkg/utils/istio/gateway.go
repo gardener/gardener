@@ -54,8 +54,8 @@ func GatewayWithTLSTermination(gateway *istionetworkingv1beta1.Gateway, labels m
 	}
 }
 
-// GatewayWithMutalTLS returns a function setting the given attributes to a gateway object.
-func GatewayWithMutalTLS(gateway *istionetworkingv1beta1.Gateway, labels map[string]string, istioLabels map[string]string, hosts []string, port uint32, tlsSecret string) func() error {
+// GatewayWithMutualTLS returns a function setting the given attributes to a gateway object.
+func GatewayWithMutualTLS(gateway *istionetworkingv1beta1.Gateway, labels map[string]string, istioLabels map[string]string, hosts []string, port uint32, tlsSecret string) func() error {
 	return func() error {
 		gateway.Labels = labels
 		gateway.Spec = istioapinetworkingv1beta1.Gateway{

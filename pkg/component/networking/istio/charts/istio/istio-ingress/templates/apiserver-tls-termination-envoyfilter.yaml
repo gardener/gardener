@@ -51,17 +51,20 @@ spec:
                 -- TODO(oliver-goetz) switch to ssl:parsedSubjectPeerCertificate() once it is available.
                 local cn = ssl:subjectPeerCertificate()
                 if cn ~= "" then
-                  -- Get the host header from the request and set it as dynamic metadata.
-                  local host = request_handle:headers():get(":authority")
-                  if not host then
-                    host = request_handle:headers():get("host")
-                  end
+                  -- Get the host from the request and set it as dynamic metadata.
+                  local host = streamInfo:requestedServerName()
                   streamInfo:dynamicMetadata():set("envoy.filters.http.lua", "{{ .Values.apiServerAuthenticationDynamicMetadataKey }}", host)
 
                   -- Add request headers for kube-apiserver authentication.
                   local remoteUserHeaderAdded = false
+                  -- Iterate over all substrings in cn that are separated by commas.
                   for pair in string.gmatch(cn, "([^,]+)") do
+                      -- For each substring extract key and value that are separated by '='.
                       local key, value = pair:match("([^=]+)=([^=]+)")
+                      -- Istio is an authenticating proxy in this case, so we must set the defined headers accordingly.
+                      -- https://kubernetes.io/docs/reference/access-authn-authz/authentication/#authenticating-proxy
+                      -- CN of the client certificate defines the username, O defines groups.
+                      -- see https://kubernetes.io/docs/setup/best-practices/certificates/#configure-certificates-for-user-accounts
                       if key == "CN" then
                         request_handle:headers():add("{{ .Values.apiServerRequestHeaderUserName }}", value)
                         remoteUserHeaderAdded = true

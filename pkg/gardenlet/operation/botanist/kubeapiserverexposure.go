@@ -107,20 +107,6 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 			b.APIServerClusterIP = clusterIPs[0]
 		}
 	}
-
-	hosts := []string{
-		gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-		gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-	}
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-		// FDQN domains must be explicitly specified to work correctly in istio.
-		// Without it in-shoot components like CoreDNS don't work.
-		hosts = append(hosts,
-			gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)+".",
-			gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain)+".",
-		)
-	}
-
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),
 		v1beta1constants.DeploymentNameKubeAPIServer,
@@ -128,7 +114,10 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
 			values := &kubeapiserverexposure.SNIValues{
-				Hosts: hosts,
+				Hosts: []string{
+					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+					gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				},
 				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
 					APIServerClusterIP: b.APIServerClusterIP,
 				},
