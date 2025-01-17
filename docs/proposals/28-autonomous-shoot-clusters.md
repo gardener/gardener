@@ -85,7 +85,7 @@ Part of this success is its architecture, i.e., running control planes in seed c
 However, there is sufficient pull to also find a way to create autonomous shoot clusters using Gardener (e.g., for the edge or for temporarily air-gapped scenarios) where the control plane must run side-by-side and cannot run in seed clusters.
 We want to establish Gardener in (new) environments where clusters cannot run their control plane "somewhere else", but where it needs to be co-located with the worker nodes, e.g., to avoid costly or exposed network traffic, firewall the entire cluster off, rely on the control plane while the cluster is air-gapped/has no internet access, generally avoid runtime dependencies, fulfill compliance obligations, etc.
 
-In addition, Gardener itself requires to run in a conformant Kubernetes cluster satisfying the [minimum Kubernetes version requirements](../usage/supported_k8s_versions.md#garden-clusters), but so far there was no way of setting up or managing this initial cluster via Gardener itself.
+In addition, Gardener itself requires to run in a conformant Kubernetes cluster satisfying the [minimum Kubernetes version requirements](../usage/shoot-operations/supported_k8s_versions.md#garden-clusters), but so far there was no way of setting up or managing this initial cluster via Gardener itself.
 It was always required to leverage third-party tools or services, which is not only inconvenient but also somewhat paradoxical, given that Gardener itself already is a tool for managing Kubernetes clusters.
 Augmenting Gardener's capability to also manage the initial cluster will help to reduce operational complexity and enable new use-cases and scenarios.
 
@@ -169,7 +169,7 @@ They can then be provided locally (that's why `gardenadm discover` and `gardenad
 The high-level steps executed by the command are as follows:
 
 1. Generate certificate authorities, certificates and keys using the [secrets manager](../development/secrets_management.md).
-2. Generate [`OperatingSystemConfig` resource](../extensions/operatingsystemconfig.md) (in memory) containing `systemd` units and files.
+2. Generate [`OperatingSystemConfig` resource](../extensions/resources/operatingsystemconfig.md) (in memory) containing `systemd` units and files.
    This includes the files for the minimal standard Kubernetes control plane, i.e., `kubelet`, `etcd`, `kube-apiserver`, `kube-controller-manager`, and `kube-scheduler`.
    Also, it should be OS-agnostic (since there is no operating system config extension running anywhere yet).
 3. Reconcile the `OperatingSystemConfig` resource using the controller logic of [`gardener-node-agent`](../concepts/node-agent.md).
@@ -177,12 +177,12 @@ The high-level steps executed by the command are as follows:
 5. Deploy [`gardener-resource-manager`](../concepts/resource-manager.md) in [host network mode](#host-network-vs-pod-network) into the `kube-system` namespace.
 6. Apply the corresponding provider and networking extensions in [host network mode](#host-network-vs-pod-network).
 7. Deploy `kube-proxy` and CoreDNS for service routing and domain name resolution.
-8. Create a [`Network` resource](../extensions/network.md) and apply it to generate `ManagedResource` associated with the pod network.
+8. Create a [`Network` resource](../extensions/resources/network.md) and apply it to generate `ManagedResource` associated with the pod network.
 9. Apply the corresponding provider and networking extensions in [pod network mode](#host-network-vs-pod-network).
    Also deploy the operating system config extensions.
 10. Redeploy `gardener-resource-manager` in [pod network mode](#host-network-vs-pod-network).
-11. Create the [`OperatingSystemConfig` resource](../extensions/operatingsystemconfig.md) now in the cluster and activate the `gardener-node-agent` process via its `systemd` unit.
-12. Apply [`ControlPlane` resource](../extensions/controlplane.md).
+11. Create the [`OperatingSystemConfig` resource](../extensions/resources/operatingsystemconfig.md) now in the cluster and activate the `gardener-node-agent` process via its `systemd` unit.
+12. Apply [`ControlPlane` resource](../extensions/resources/controlplane.md).
 
 ##### Problems & Solutions
 
@@ -344,7 +344,7 @@ This will also include operating system upgrades [planned for Garden Linux](http
 
 #### Medium Touch
 
-In this scenario, we can leverage the existing [`extensions.gardener.cloud/v1alpha1.Infrastructure` API](../extensions/infrastructure.md) in order to let the respective provider extension generate the necessary network resources (VPCs, subnets, etc., whatever is needed for the respective infrastructure).
+In this scenario, we can leverage the existing [`extensions.gardener.cloud/v1alpha1.Infrastructure` API](../extensions/resources/infrastructure.md) in order to let the respective provider extension generate the necessary network resources (VPCs, subnets, etc., whatever is needed for the respective infrastructure).
 `machine-controller-manager` can be used to create the control plane nodes (and later also the worker nodes) of the autonomous shoot cluster.
 
 The challenge is that both Gardener provider extensions and `machine-controller-manager` depend on a pre-existing Kubernetes cluster or in general an API server.
@@ -500,7 +500,7 @@ It may also be useful for scenarios that are not fully air-gapped, but only desi
 
 ### Scaling the Control Plane of Autonomous Shoot Clusters
 
-The control plane components of ordinary Gardener shoot clusters are scaled horizontally and vertically in various way.
+The control plane components of ordinary Gardener shoot clusters are scaled horizontally and vertically in various ways.
 Autoscaling is not covered in this GEP, but it is important in the long run to ensure efficient resource usage.
 
 As far as this GEP is concerned, the control plane of autonomous shoot clusters is scaled horizontally by adding more control plane nodes (see [`gardenadm join`](#gardenadm-join)).
