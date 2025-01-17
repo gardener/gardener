@@ -58,7 +58,7 @@ One such example is on Azure: machine types have a `generation` [attribute](http
 While `gen1` machine types boot with legacy BIOS support, `gen2` machine types make use of UEFI.
 While most machine types actually support both, `gen1` and `gen2`, there are certain machine types which support only one.
 Machine images in Azure also have the generation in their metadata, however, while a machine type can be `gen1` **and** `gen2`, a machine image can only be `gen1` **or** `gen2`.
-For machine types, that support either generation, it depends on the selected machine image wether the machine will be booted with legacy BIOS or with UEFI.
+For machine types, that support either generation, it depends on the selected machine image whether the machine will be booted with legacy BIOS or with UEFI.
 For those machines however, that only support a single generation, providing a mismatching machine image in the `create_or_update` API call will result in an error.
 
 The information given on the Gardener Dashboard provide no information about that incompatibility.
@@ -332,11 +332,11 @@ return true
 
 The following implications are to be considered in regards to `NamespacedCloudProfile`s:
  
-* `NamespacedCloudProfile`s won't have a global `capabilities` definition
+* `NamespacedCloudProfile`s won't have a global `capabilities` definition.
 * For overridden machine image versions, no `capabilities` must be defined, as they are inherited from the machine image versions of the parent `CloudProfile`.
-* For custom machine image versions, the `capabilities` need to be defined in the `NamespacedCloudProfile` as they would be in the `CloudProfile` (as well as for the `providerConfig`).
+* For custom machine image versions, the `capabilities` need to be defined in the `NamespacedCloudProfile`, as they would be in the `CloudProfile` (as well as for the `providerConfig`).
    
-* This has also implications on later-added equal machine image versions to the parent `CloudProfile`: On conflicting definition, the machine image version of the `NamespacedCloudProfile` will be rendered in the resulting status (see [Fix `NamespacedCloudProfile` validation for {`MachineImages`,`MachineTypes`} added to parent `CloudProfile` later #11093](https://github.com/gardener/gardener/pull/11093) for reference).
+* This has also implications on later-added equal machine image versions to the parent `CloudProfile`: On conflicting definition, the machine image version of the `NamespacedCloudProfile` will be rendered in the resulting status (see [this PR](https://github.com/gardener/gardener/pull/11093) for reference).
 
 
 ### Migration Strategy
