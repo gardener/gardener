@@ -328,6 +328,17 @@ for capabilityName, machineCapabilities in machineType.capabilities:
 return true
 ```
 
+## Implications on NamespacedCloudProfiles. 
+
+The following implications are to be considered in regards to `NamespacedCloudProfile`s:
+ 
+* `NamespacedCloudProfile`s won't have a global `capabilities` definition
+* For overridden machine image versions, no `capabilities` must be defined, as they are inherited from the machine image versions of the parent `CloudProfile`.
+* For custom machine image versions, the `capabilities` need to be defined in the `NamespacedCloudProfile` as they would be in the `CloudProfile` (as well as for the `providerConfig`).
+   
+* This has also implications on later-added equal machine image versions to the parent `CloudProfile`: On conflicting definition, the machine image version of the `NamespacedCloudProfile` will be rendered in the resulting status (see [Fix `NamespacedCloudProfile` validation for {`MachineImages`,`MachineTypes`} added to parent `CloudProfile` later #11093](https://github.com/gardener/gardener/pull/11093) for reference).
+
+
 ### Migration Strategy
 
 Capabilities are **OPT-IN** and not all infrastructure providers or Gardener installations might use them.
