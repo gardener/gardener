@@ -62,6 +62,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 	"github.com/gardener/gardener/test/utils/operationannotation"
 )
 
@@ -158,6 +159,8 @@ var _ = Describe("Garden controller tests", func() {
 		// reconciler for it since envtest does not run the responsible controller (e.g. etcd-druid).
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidv1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &extensionsv1alpha1.Extension{} }}).AddToManager(mgr)).To(Succeed())
+
+		Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
 		By("Register controller")
 		extensionType = "test-extension"
