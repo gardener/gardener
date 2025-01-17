@@ -16,24 +16,10 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
-  "iteration": 1734701406787,
+  "id": 14,
+  "iteration": 1737034390340,
   "links": [],
   "panels": [
-    {
-      "collapsed": false,
-      "datasource": null,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 10,
-      "panels": [],
-      "title": "Shoot Durations",
-      "type": "row"
-    },
     {
       "datasource": "seed-prometheus",
       "description": "The average time it takes for shoot $operation_type operation.",
@@ -60,7 +46,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 1
+        "y": 0
       },
       "id": 4,
       "options": {
@@ -105,7 +91,7 @@
       },
       "dataFormat": "timeseries",
       "datasource": "seed-prometheus",
-      "description": "The histogram provides a visual representation of the distribution of create and delete shoot operations.",
+      "description": "The histogram provides a visual representation of the distribution of create and delete shoot operations. Currently displaying P($percentile).",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -114,7 +100,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 9
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -128,16 +114,16 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.95, sum(rate(gardenlet_shoot_operation_duration_seconds_bucket{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile($percentile/100, sum(rate(gardenlet_shoot_operation_duration_seconds_bucket{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval])) by (le))",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{le}}",
+          "legendFormat": "",
           "refId": "A"
         }
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Shoot $operation_type Duration Over Time",
+      "title": "Shoot $operation_type Duration Over Time P($percentile)",
       "tooltip": {
         "show": true,
         "showHistogram": true
@@ -294,11 +280,47 @@
         "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "99",
+          "value": "99"
+        },
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "percentile",
+        "options": [
+          {
+            "selected": false,
+            "text": "50",
+            "value": "50"
+          },
+          {
+            "selected": false,
+            "text": "90",
+            "value": "90"
+          },
+          {
+            "selected": true,
+            "text": "99",
+            "value": "99"
+          }
+        ],
+        "query": "50,90,99",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
       }
     ]
   },
   "time": {
-    "from": "now-12h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
