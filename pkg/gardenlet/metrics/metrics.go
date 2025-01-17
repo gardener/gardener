@@ -14,13 +14,13 @@ const Namespace = "gardenlet"
 
 var (
 	// Factory is used for registering metrics in the controller-runtime metrics registry.
-	Factory = promauto.With(runtimemetrics.Registry)
-	// ShootOperationTimings defines the histogram shoot_operation_duration_seconds.
-	ShootOperationTimings = Factory.NewHistogramVec(
+	factory = promauto.With(runtimemetrics.Registry)
+	// ShootOperationDurationSeconds defines the histogram shoot_operation_duration_seconds.
+	ShootOperationDurationSeconds = factory.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Namespace: Namespace,
 			Name:      "shoot_operation_duration_seconds",
-			Help:      "Duration of shoot operations.",
+			Help:      "Duration of shoot operations in seconds.",
 			Buckets:   prometheus.LinearBuckets(180, 120, 10),
 		},
 		[]string{

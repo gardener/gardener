@@ -149,28 +149,11 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 		return reconcile.Result{}, errorsutils.WithSuppressed(syncErr, updateErr)
 	}
 
+	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.CreationTimestamp.Time).Seconds())
+
 	// determine when the next shoot reconciliation is supposed to happen
 	result = helper.CalculateControllerInfos(shoot, r.Clock, *r.Config.Controllers.Shoot).RequeueAfter
 	nextReconciliation := r.Clock.Now().UTC().Add(result.RequeueAfter)
-
-	var (
-		workerless = "false"
-		hibernated = "false"
-	)
-
-	if v1beta1helper.IsWorkerless(shoot) {
-		workerless = "true"
-	}
-
-	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled {
-		hibernated = "true"
-	}
-
-	if operationType == gardencorev1beta1.LastOperationTypeCreate {
-		gardenletmetrics.ShootOperationTimings.
-			WithLabelValues(string(operationType), workerless, hibernated).
-			Observe(r.Clock.Now().UTC().Sub(shoot.CreationTimestamp.Time).Seconds())
-	}
 
 	log.Info("Shoot operation finished successfully, scheduling next reconciliation for Shoot", "requeueAfter", result.RequeueAfter, "nextReconciliation", nextReconciliation)
 	return result, nil
@@ -497,7 +480,10 @@ func (r *Reconciler) deleteClusterResourceFromSeed(ctx context.Context, shoot *g
 }
 
 func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-	if err := r.patchShootStatusOperationSuccess(ctx, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
+
+	operationType := gardencorev1beta1.LastOperationTypeDelete
+
+	if err := r.patchShootStatusOperationSuccess(ctx, shoot, "", nil, operationType); err != nil {
 		return err
 	}
 
@@ -508,22 +494,7 @@ func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logg
 		}
 	}
 
-	var (
-		workerless = "false"
-		hibernated = "false"
-	)
-
-	if v1beta1helper.IsWorkerless(shoot) {
-		workerless = "true"
-	}
-
-	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled {
-		hibernated = "true"
-	}
-
-	gardenletmetrics.ShootOperationTimings.
-		WithLabelValues(string(gardencorev1beta1.LastOperationTypeDelete), workerless, hibernated).
-		Observe(r.Clock.Now().UTC().Sub(shoot.DeletionTimestamp.Time).Seconds())
+	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.DeletionTimestamp.Time).Seconds())
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
@@ -1188,4 +1159,23 @@ func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time
 	v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ObservabilityRotation) {
 		rotation.LastInitiationTime = now
 	})
+}
+
+func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1beta1.LastOperationType, duration float64) {
+	var (
+		workerless = "false"
+		hibernated = "false"
+	)
+
+	if v1beta1helper.IsWorkerless(shoot) {
+		workerless = "true"
+	}
+
+	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled {
+		hibernated = "true"
+	}
+
+	gardenletmetrics.ShootOperationDurationSeconds.
+		WithLabelValues(string(operationType), workerless, hibernated).
+		Observe(duration)
 }
