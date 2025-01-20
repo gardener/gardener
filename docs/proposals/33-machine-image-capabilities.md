@@ -31,7 +31,7 @@ This will prevent the creation of incompatible worker pools on shoot creation an
 It will also provide a mechanism to filter out incompatible images for a machine type in the Gardener Dashboard.
 
 > [!Note]
-> One decision in this GEP is to deprecate the current architecture fields in the `CloudProfile`. Otherwise the information will be duplicated as the architecture is mandatory to be included into capability combinations.
+> One decision in this GEP is to deprecate the current `architecture` fields in the `CloudProfile`. Otherwise the information will be duplicated as the architecture is mandatory to be included into capability combinations.
 
 ## Motivation
 
