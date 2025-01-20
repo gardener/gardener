@@ -102,7 +102,7 @@
       // Run make generate when Go API packages have been changed because CRDs might have changed.
       matchDatasources: [
         'go',
-        'github-releases', // Required for the `etc-druid` and `machine-controller-manager` groups.
+        'github-releases', // Required for the gardener groups.
       ],
       postUpgradeTasks: {
         commands: [
@@ -113,8 +113,9 @@
       matchPackageNames: [
         '/.+/api/.+/',
         '/.+/apis/.+/',
-        '/.*gardener\/machine-controller-manager$/',
         '/.*gardener\/etcd-druid$/',
+        '/.*gardener\/machine-controller-manager$/',
+        '/.*gardener\/terminal-controller-manager$/',
       ],
     },
     {
@@ -209,6 +210,17 @@
       ],
       matchPackageNames: [
         '/.*gardener\/machine-controller-manager$/'
+      ],
+    },
+        {
+      // Group terminal-controller-manager updates in one PR.
+      groupName: 'terminal-controller-manager',
+      matchDatasources: [
+        'github-releases',
+        'go',
+      ],
+      matchPackageNames: [
+        '/.*gardener\/terminal-controller-manager$/'
       ],
     },
     {
