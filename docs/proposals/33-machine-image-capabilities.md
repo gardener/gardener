@@ -8,6 +8,8 @@ authors:
   - "@Roncossek"
 reviewers:
   - "@rfranzke"
+  - "@LucaBernstein"
+  - "@timuthy"
 
 ---
 
@@ -28,7 +30,8 @@ This GEP proposes the introduction of capabilities for machineType and machineIm
 This will prevent the creation of incompatible worker pools on shoot creation and maintenance operations.
 It will also provide a mechanism to filter out incompatible images for a machine type in the Gardener Dashboard.
 
-❗️❗️❗️One decisions in this GEP is to deprecate the current architecture field in the CloudProfile. Otherwise the information will be duplicated within the CloudProfile as the architecture is mandatory to be included into capability combinations❗️❗️❗️
+> [!Note]
+> One decision in this GEP is to deprecate the current architecture fields in the `CloudProfile`. Otherwise the information will be duplicated as the architecture is mandatory to be included into capability combinations.
 
 ## Motivation
 
@@ -66,7 +69,7 @@ The user has to know about that and select the proper machine image manually AND
 
 ![](assets/gep-33-screenshot-dashboard.png)
 
-### Context: Cloud Profile
+### Context: `CloudProfile`
 
 For each infrastructure provider Gardener operators must provide a CloudProfile.
 It describes the catalog of machines, images and other resources of the infrastructure provider.
@@ -142,7 +145,7 @@ spec:
 </details></br>
 
 While a machineType in `spec.machineType` always refers to exactly one resource in the cloud provider, the `spec.machineImages` section is a bit confusing.
-A machineImage defines an operating system, like gardenLinux or SUSE.
+A machineImage defines an operating system, like GardenLinux or SUSE.
 That operating system in turn can have multiple versions.
 And going further down, each version can have multiple architectures or other capabilities that are in fact different resources in the cloud provider.
 
@@ -201,9 +204,8 @@ For each cloud profile the capabilities are defined in the `spec.capabilities` m
 The full set of possibilities for each capability is defined here.
 As some capabilities can have multiple values at the same time an array of possible values is used instead of a single value.
 
-This structure defines the default set of capabilities.
-If no further information are provided each machine type and machine image will be assigned the default set of capabilities.
-Thus being compatible with each other.
+This structure defines the **default set** of capabilities.
+If no further information is provided each machine type and machine image will be assigned the default set of capabilities.
 
 ```yaml
 # CloudProfile Example
@@ -217,10 +219,11 @@ spec:
     ...
 ```
 
-The array of a capability is ordered.
-The order defines the priority of the values in case of multiple supported images.
-The first value in the array is the most preferred value.
-The last value is the least preferred value.
+Please note the following characteristics:
+- The array of a capability is ordered.
+- The order defines the priority of the values in case of multiple supported images.
+- The first value in the array is the most preferred value.
+- The last value is the least preferred value.
 
 Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`.
 Then the image with `gen2` will be preferred.
@@ -232,7 +235,8 @@ The image versions in `spec.machineImages.versions` will be extended with `capab
 
 The architecture is also added to the capabilityCombinations. This is required as the architecture is a capability itself. 
 
-❗️❗️❗️NOTE: To avoid duplication and remove the possibility of inconsistencies the existing `architecture` field on `machineImages.versions` and `machineTypes` will be marked as deprecated. Architecture will become the only mandatory capability and will take precedence over the deprecated field if both are present.
+> [!NOTE]
+> To avoid duplication and remove the possibility of inconsistencies the existing `architecture` field in `machineImages.versions` and `machineTypes` will be marked as deprecated. `architecture` will become the only mandatory capability and will take precedence over the deprecated field if both are present.
 
 ```yaml
 # CloudProfile
@@ -250,7 +254,7 @@ spec:
         #   version: 1592.2.0-gen2
 
         - architectures: [amd64, arm64] # <-- marked as deprecated
-          capabilityCombinations:
+          capabilitySets:
             - architecture: [arm64] # <-- architecture must be added to the capabilities to ensure compatibility
               hypervisorType: ["gen2"]
               network: ["accelerated", "standard"] # <-- not required as its the default
@@ -282,7 +286,7 @@ spec:
       usable: true
 ```
 
-The changes to the gardener CloudProfile above are sufficient to select the correct image version selection. This enables:
+The changes to the gardener `CloudProfile` above are sufficient to select the correct image version selection. This enables:
 - The shoot admission controller to check if the selected machine image is supported by the selected machine type. 
 - The maintenance controller to performed automated upgrades correctly without breaking worker nodes.
 - The Gardener Dashboard to filter out incompatible images for a machine type.
@@ -347,7 +351,8 @@ They can be implemented first including its filter and admission logic.
 In a second step each provider extension can be updated to include the capabilities in the cloud profile.
 In a third wave cloud profiles and the Gardener Dashboard can be updated to react to the capabilities.
 
-❗️❗️❗️ when the architecture field is marked as deprecated the eventual removal in the  CloudProfile API will be a breaking change. Latest this point all cloud profiles must be updated to include the architecture in the capabilities. It will no longer be opt in.❗️❗️❗️
+> [!IMPORTANT]
+> When the `architecture` field is marked as deprecated the eventual removal in the `CloudProfile` API will be a breaking change. Latest at this point all `CloudProfile`s must be updated to include the architecture in the capabilities. It will no longer be opt in.
 
 ### Considerations
 
