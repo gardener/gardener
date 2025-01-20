@@ -342,7 +342,7 @@ spec:
 
     - alert: SeedKubeApiServerLatency
       expr: |
-        ((1 - sum(shoot:apiserver_latency:percentage{project="garden"}) by (name)) * 100) < 99.5
+        shoot:apiserver_latency:percentage{project="garden"} > 0.01
       for: 30m
       labels:
         severity: warning
@@ -352,4 +352,4 @@ spec:
           Seed Kube API server Latency
         description: >-
           The seed cluster {{$labels.name}} in {{$externalLabels.landscape}}
-          Kube API server has latency issue. 
+          Kube API server has latency issues. 
