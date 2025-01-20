@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
@@ -67,6 +68,40 @@ mkdir -p "` + unitDropInsDirectoryPath + `"`
 	}
 
 	return out
+}
+
+// WrapProvisionOSCIntoOneshotScript wraps the given script into an oneshot script which exits early when it is called again after finishing successfully.
+func WrapProvisionOSCIntoOneshotScript(script string) string {
+	var wrappedLines []string
+
+	lines := strings.Split(script, "\n")
+
+	for i, line := range lines {
+		if strings.HasPrefix(line, "#") {
+			wrappedLines = append(wrappedLines, line)
+			continue
+		}
+
+		wrappedLines = append(wrappedLines,
+			`if [ -f "/var/lib/osc/provision-osc-applied" ]; then`,
+			`  echo "Provision OSC already applied, exiting..."`,
+			`  exit 0`,
+			`fi`,
+			``,
+		)
+
+		wrappedLines = append(wrappedLines, lines[i:]...)
+
+		break
+	}
+
+	wrappedLines = append(wrappedLines,
+		`mkdir -p /var/lib/osc`,
+		`touch /var/lib/osc/provision-osc-applied`,
+		``,
+	)
+
+	return strings.Join(wrappedLines, "\n")
 }
 
 func dataForFileContent(ctx context.Context, c client.Reader, namespace string, content *extensionsv1alpha1.FileContent) ([]byte, error) {
