@@ -379,12 +379,12 @@ With a mixed or boolean framing its harder to compare values in a consistent way
 
 E.g. Disc Controller Types:
 
-positively framed ✅
+✅ positively framed: 
 
 - capability name: discControllerType
 - capability values: SCSI, NVMe, SCSI_MULTIQUEUE
 
-mixed framed ❌.
+❌ mixed framed:
 
 - capability name: supportsNVMe
 - capability values: true, false
