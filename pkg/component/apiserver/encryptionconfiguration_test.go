@@ -52,8 +52,8 @@ resources:
 - providers:
   - aescbc:
       keys:
-      - name: key-62135596800
-        secret: ________________________________
+      - name: key-62135596800-0ebe2f
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
   - identity: {}
   resources:
   - foo
@@ -113,8 +113,8 @@ resources:
 - providers:
   - aescbc:
       keys:
-      - name: key-62135596800
-        secret: ________________________________
+      - name: key-62135596800-0ebe2f
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
   - identity: {}
   resources:
   - foo
@@ -123,8 +123,8 @@ resources:
   - identity: {}
   - aescbc:
       keys:
-      - name: key-62135596800
-        secret: ________________________________
+      - name: key-62135596800-0ebe2f
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
   resources:
   - bar
 `
@@ -199,16 +199,16 @@ resources:
 
 				if encryptWithCurrentKey {
 					etcdEncryptionConfiguration += `
-      - name: key-62135596800
-        secret: ________________________________
+      - name: key-62135596800-0ebe2f
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
       - name: ` + oldKeyName + `
         secret: ` + oldKeySecret
 				} else {
 					etcdEncryptionConfiguration += `
       - name: ` + oldKeyName + `
         secret: ` + oldKeySecret + `
-      - name: key-62135596800
-        secret: ________________________________`
+      - name: key-62135596800-0ebe2f
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=`
 				}
 
 				etcdEncryptionConfiguration += `
