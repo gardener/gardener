@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -68,13 +69,14 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 		g.Expect(runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)).To(Succeed())
 
 		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
+
 		g.Expect(encryptionConfiguration.Resources[0].Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
 			{
 				AESCBC: &apiserverconfigv1.AESConfiguration{
 					Keys: []apiserverconfigv1.Key{{
 						// old key
 						Name:   string(v.secretsBefore[v.EncryptionKey][0].Data["key"]),
-						Secret: string(v.secretsBefore[v.EncryptionKey][0].Data["secret"]),
+						Secret: getEncodedETCDEncryptionKeyFromSecret(v.secretsBefore[v.EncryptionKey][0]),
 					}},
 				},
 			},
@@ -131,11 +133,11 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 					Keys: []apiserverconfigv1.Key{{
 						// new key
 						Name:   string(v.secretsPrepared[v.EncryptionKey][1].Data["key"]),
-						Secret: string(v.secretsPrepared[v.EncryptionKey][1].Data["secret"]),
+						Secret: getEncodedETCDEncryptionKeyFromSecret(v.secretsPrepared[v.EncryptionKey][1]),
 					}, {
 						// old key
 						Name:   string(v.secretsPrepared[v.EncryptionKey][0].Data["key"]),
-						Secret: string(v.secretsPrepared[v.EncryptionKey][0].Data["secret"]),
+						Secret: getEncodedETCDEncryptionKeyFromSecret(v.secretsPrepared[v.EncryptionKey][0]),
 					}},
 				},
 			},
@@ -191,7 +193,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 					Keys: []apiserverconfigv1.Key{{
 						// new key
 						Name:   string(v.secretsPrepared[v.EncryptionKey][1].Data["key"]),
-						Secret: string(v.secretsPrepared[v.EncryptionKey][1].Data["secret"]),
+						Secret: getEncodedETCDEncryptionKeyFromSecret(v.secretsPrepared[v.EncryptionKey][1]),
 					}},
 				},
 			},
@@ -200,4 +202,14 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 			},
 		}))
 	}).Should(Succeed(), "etcd encryption config should only have new key")
+}
+
+func getEncodedETCDEncryptionKeyFromSecret(secret corev1.Secret) string {
+	var key string
+	if encoding := secret.Data["encoding"]; string(encoding) == "none" {
+		key = utils.EncodeBase64(secret.Data["secret"])
+	} else {
+		key = string(secret.Data["secret"])
+	}
+	return key
 }
