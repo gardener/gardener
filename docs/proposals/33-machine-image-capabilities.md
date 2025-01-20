@@ -319,6 +319,11 @@ The selection of the actual image reference is still done by the provider extens
             version: 1592.2.0
 ```
 
+All capability combination provided in the `spec.machineImages.versions.capabilitySets` must have an matching entry in the `spec.providerConfig.machineImages.versions.capabilities` to ensure that the provider extension can select the correct image reference.
+Each provider extension must validate its part of the cloud profile to ensure that the capability combinations are correctly defined.
+
+## Matching Algorithm
+
 The algorithm to determine if an image is valid for a machine type is given as follows: 
 
 For every capability the union of values that is supported by the machine type and the machine image must not be empty.
