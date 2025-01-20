@@ -13,7 +13,7 @@ Now, Gardener commissions an external, provider-specific controller to take over
 
 ## What Is the Lifespan of a `BackupEntry`?
 
-The bucket associated with `BackupEntry` will be created by using a `BackupBucket` resource. The `BackupEntry` resource will be created as a part of the `Shoot` creation. But resources might continue to exist post deletion of a `Shoot` (see [gardenlet](../concepts/gardenlet.md#backupentry-controller) for more details).
+The bucket associated with `BackupEntry` will be created by using a `BackupBucket` resource. The `BackupEntry` resource will be created as a part of the `Shoot` creation. But resources might continue to exist post deletion of a `Shoot` (see [gardenlet](../../concepts/gardenlet.md#backupentry-controller) for more details).
 
 ## What Needs to be Implemented to Support a New Infrastructure Provider?
 
