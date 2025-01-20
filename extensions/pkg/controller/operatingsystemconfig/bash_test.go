@@ -222,6 +222,42 @@ EOF`))
 			)
 		})
 	})
+
+	Describe("#WrapProvisionOSCIntoOneshotScript", func() {
+		It("should wrap the script into an oneshot script", func() {
+			script := `echo "Hello, World!"
+`
+			Expect(WrapProvisionOSCIntoOneshotScript(script)).To(Equal(`if [ -f "/var/lib/osc/provision-osc-applied" ]; then
+  echo "Provision OSC already applied, exiting..."
+  exit 0
+fi
+
+echo "Hello, World!"
+
+mkdir -p /var/lib/osc
+touch /var/lib/osc/provision-osc-applied
+`))
+		})
+
+		It("should wrap the script with shebang and comments into an oneshot script", func() {
+			script := `#/bin/bash
+# This is a hello world script
+echo "Hello, World!"
+`
+			Expect(WrapProvisionOSCIntoOneshotScript(script)).To(Equal(`#/bin/bash
+# This is a hello world script
+if [ -f "/var/lib/osc/provision-osc-applied" ]; then
+  echo "Provision OSC already applied, exiting..."
+  exit 0
+fi
+
+echo "Hello, World!"
+
+mkdir -p /var/lib/osc
+touch /var/lib/osc/provision-osc-applied
+`))
+		})
+	})
 })
 
 func runScriptAndCheckFiles(script string, filePaths ...string) {
