@@ -9654,6 +9654,19 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"memoryAggregationInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MemoryAggregationInterval is the length of a single interval, for which the peak memory usage is computed. (default: 24h)",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"memoryAggregationIntervalCount": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MemoryAggregationIntervalCount is the number of consecutive memory-aggregation-intervals which make up the MemoryAggregationWindowLength which in turn is the period for memory usage aggregation by VPA. In other words, `MemoryAggregationWindowLength = memory-aggregation-interval * memory-aggregation-interval-count`. (default: 8)",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},

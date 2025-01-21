@@ -13473,6 +13473,36 @@ Kubernetes meta/v1.Duration
 (default: 24h)</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>memoryAggregationInterval</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MemoryAggregationInterval is the length of a single interval, for which the peak memory usage is computed.
+(default: 24h)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>memoryAggregationIntervalCount</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MemoryAggregationIntervalCount is the number of consecutive memory-aggregation-intervals which make up the
+MemoryAggregationWindowLength which in turn is the period for memory usage aggregation by VPA. In other words,
+<code>MemoryAggregationWindowLength = memory-aggregation-interval * memory-aggregation-interval-count</code>.
+(default: 8)</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume
