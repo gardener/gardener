@@ -381,7 +381,7 @@ This configures horizontal pod autoscaling in Gardener-managed clusters. See [ab
 
 #### On `spec.kubernetes.verticalPodAutoscaler...`
 
-This configures vertical pod autoscaling in Gardener-managed clusters. See [above](#resources-vertical-scaling) and the [docs](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/docs/faq.md) for the detailed fields.
+This configures vertical pod autoscaling in Gardener-managed clusters. See [above](#resources-vertical-scaling) and the [docs](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/README.md) for the detailed fields.
 
 #### On `spec.kubernetes.clusterAutoscaler...`
 
