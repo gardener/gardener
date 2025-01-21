@@ -306,21 +306,18 @@ To access an Ingress resource from the `Seed`, use the Ingress host with port `8
 
 ## (Optional): Setting Up a Second Seed Cluster
 
-There are cases where you would want to create a second seed cluster in your local setup. For example, if you want to test the [control plane migration](../operations/control_plane_migration.md) feature. The following steps describe how to do that.
+There are cases where you would want to create a second seed cluster in your local setup.
+For example, if you want to test the [control plane migration](../operations/control_plane_migration.md) feature.
+The following steps describe how to do that.
 
-If you are on macOS, add a new IP address on your loopback device which will be necessary for the new KinD cluster that you will create. On macOS, the default loopback device is `lo0`.
-
-```bash
-sudo ip addr add 172.18.255.2 dev lo0                                  # adding 172.18.255.2 ip to the loopback interface
-```
-
-Next, setup the second KinD cluster:
+Start by setting up the second KinD cluster:
 
 ```bash
 make kind2-up
 ```
 
 This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind/local2/kubeconfig` file.
+It adds another IP address (`172.18.255.2`) to your loopback device which is necessary for you to reach the new cluster locally.
 
 In order to deploy required resources in the KinD cluster that you just created, run:
 
@@ -355,6 +352,12 @@ If you want to perform control plane migration, you can follow the steps outline
 
 ``` shell
 make kind2-down
+```
+
+On macOS, if you want to remove the additional IP address on your loopback device run the following script:
+
+```shell
+sudo ip addr del 172.18.255.2 dev lo0
 ```
 
 ## Tear Down the Gardener Environment
