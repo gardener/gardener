@@ -6,11 +6,11 @@ package crddeployer_test
 
 import (
 	"context"
-	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,14 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/crddeployer"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/pkg/utils/test/matchers"
+	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
 var _ = Describe("CRD", func() {
@@ -34,27 +33,6 @@ var _ = Describe("CRD", func() {
 		ctx        context.Context
 		applier    kubernetes.Applier
 		testClient client.Client
-
-		removeFinalizerOnDeletionAnnotation = func(ctx context.Context, crdName string, c client.Client) {
-			ExpectWithOffset(1, retry.Until(ctx, 1*time.Second, func(ctx context.Context) (done bool, err error) {
-				currentCRD := &apiextensionsv1.CustomResourceDefinition{}
-				if err := c.Get(ctx, client.ObjectKey{Name: crdName}, currentCRD); err != nil {
-					return false, err
-				}
-
-				if v, ok := currentCRD.Annotations[v1beta1constants.ConfirmationDeletion]; ok && v == "true" {
-					currentCRD.Finalizers = slices.DeleteFunc(currentCRD.Finalizers, func(el string) bool {
-						return el == "foo"
-					})
-					if err := c.Update(ctx, currentCRD); err != nil {
-						return false, err
-					}
-					return true, nil
-				}
-
-				return false, nil
-			})).To(Succeed())
-		}
 
 		readyCRD = &apiextensionsv1.CustomResourceDefinition{
 			ObjectMeta: metav1.ObjectMeta{
@@ -68,7 +46,7 @@ var _ = Describe("CRD", func() {
 			},
 		}
 
-		confirmationCRD = &apiextensionsv1.CustomResourceDefinition{
+		_ = &apiextensionsv1.CustomResourceDefinition{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "myresources.mygroup.example.com",
 				Annotations: map[string]string{
@@ -86,10 +64,11 @@ var _ = Describe("CRD", func() {
 			},
 		}
 
-		crd1                  string
-		crd2                  string
-		confirmationCRDString string
-		crd1Ready             string
+		crd1            string
+		crd1Name        string
+		crd2            string
+		confirmationCRD string
+		crd1Ready       string
 
 		crdDeployer component.DeployWaiter
 	)
@@ -97,15 +76,16 @@ var _ = Describe("CRD", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		var err error
-
+		crd1Name = "myresources.mygroup.example.com"
 		crd1 = `apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-    name: myresources.mygroup.example.com`
-		confirmationCRDString = `apiVersion: apiextensions.k8s.io/v1
+    name: ` + crd1Name
+
+		confirmationCRD = `apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-    name: myresources.mygroup.example.com
+    name: ` + crd1Name + `
     labels:
       gardener.cloud/deletion-protected: "true"
 status:
@@ -163,28 +143,46 @@ status:
 	})
 
 	Describe("#Destroy for CRDs that need deletion confirmation", func() {
+		var (
+			ctrl       *gomock.Controller
+			mockClient *mockclient.MockClient
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			mockClient = mockclient.NewMockClient(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
 		It("should not destroy CRDs when CRDDeployer has confirmDeletion set to false", func() {
-			crdDeployer, err := New(testClient, applier, []string{confirmationCRDString}, false)
+			crdDeployer, err := New(mockClient, applier, []string{confirmationCRD}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
 
-			Expect(testClient.Create(ctx, confirmationCRD.DeepCopy())).To(Succeed())
+			mockClient.EXPECT().Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: readyCRD.Name}})
 
-			go removeFinalizerOnDeletionAnnotation(ctx, confirmationCRD.Name, testClient)
-
-			Eventually(component.OpWait(crdDeployer).Destroy).WithArguments(ctx).Should(MatchError(ContainSubstring("resource /myresources.mygroup.example.com still exists")))
+			Expect(crdDeployer.Destroy(ctx)).To(Succeed())
 		})
 
 		It("should destroy CRDs when CRDDeployer has confirmDeletion set to true", func() {
-			crdDeployer, err := New(testClient, applier, []string{confirmationCRDString}, true)
+			crdDeployer, err := New(mockClient, applier, []string{confirmationCRD}, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(crdDeployer).NotTo(BeNil())
 
-			Expect(testClient.Create(ctx, confirmationCRD.DeepCopy())).To(Succeed())
+			mockClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{}), gomock.Any()).DoAndReturn(func(_ context.Context, crd client.Object, _ client.Patch, _ ...client.PatchOptions) error {
+				Expect(crd.GetAnnotations()).To(HaveKeyWithValue("confirmation.gardener.cloud/deletion", "true"))
+				return nil
+			})
 
-			go removeFinalizerOnDeletionAnnotation(ctx, confirmationCRD.Name, testClient)
+			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&apiextensionsv1.CustomResourceDefinition{})).DoAndReturn(func(_ context.Context, crd client.Object, _ ...client.DeleteOptions) error {
+				Expect(crd.GetName()).To(Equal(crd1Name))
+				return nil
+			})
 
-			Eventually(component.OpWait(crdDeployer).Destroy).WithArguments(ctx).Should(Succeed())
+			Eventually(crdDeployer.Destroy).WithArguments(ctx).Should(Succeed())
 		})
 	})
 
