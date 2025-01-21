@@ -46,24 +46,6 @@ var _ = Describe("CRD", func() {
 			},
 		}
 
-		_ = &apiextensionsv1.CustomResourceDefinition{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "myresources.mygroup.example.com",
-				Annotations: map[string]string{
-					"gardener.cloud/deletion-protected": "true",
-				},
-				Finalizers: []string{
-					"foo",
-				},
-			},
-			Status: apiextensionsv1.CustomResourceDefinitionStatus{
-				Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
-					{Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue},
-					{Type: apiextensionsv1.NamesAccepted, Status: apiextensionsv1.ConditionTrue},
-				},
-			},
-		}
-
 		crd1            string
 		crd1Name        string
 		crd2            string
@@ -87,13 +69,7 @@ kind: CustomResourceDefinition
 metadata:
     name: ` + crd1Name + `
     labels:
-      gardener.cloud/deletion-protected: "true"
-status:
-    conditions:
-    - type: NamesAccepted
-      status: "True"
-    - type: Established
-      status: "True"`
+      gardener.cloud/deletion-protected: "true"`
 		crd2 = `apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
