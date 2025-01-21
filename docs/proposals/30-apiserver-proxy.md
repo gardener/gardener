@@ -37,26 +37,48 @@ reviewers:
 
 ## Summary
 
-This proposal introduces secure routing mechanisms for Gardener's API server proxy to prevent security vulnerabilities when using opaque LoadBalancers.
+This proposal reworks the API server proxy (originally introduced in [GEP-08](08-shoot-apiserver-via-sni.md)) to use [HTTP CONNECT requests](https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.6) (i.e., HTTP proxy) instead of the [proxy protocol](https://www.haproxy.org/download/3.2/doc/proxy-protocol.txt) for connecting in-cluster clients on the shoot side to the corresponding API server on the seed side.
+With this, the API server proxy uses the same network infrastructure and protocol to connect to the shoot control plane as the shoot's VPN client (see [GEP-14](14-reversed-cluster-vpn.md)).
+
+The rework allows more scenarios like using the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl) with opaque (non-transparent) LoadBalancers on the seed side that rely on the proxy protocol themselves to preserve the client's IP.
 
 ## Motivation
 
-The current architecture of Gardener, when used with opaque/intransparent LoadBalancer configurations and the ACL extension, can result in a security vulnerability. This vulnerability stems from the addition of multiple proxy protocol headers to network packets, which can lead to possible unauthorized access attempts to incorrect kube-api servers.
+Since [GEP-08](08-shoot-apiserver-via-sni.md) introduced shared LoadBalancers for shoot control planes on the seed side, clients need to indicate which control plane they want to connect to through the LoadBalancer.
+The Envoy proxy in the Istio ingress gateway receives the traffic from the shared LoadBalancer and is responsible routing traffic to the indicated control plane.
+For this, Gardener currently uses different protocols based on the connection type:
 
-Alternatively, reducing the number of supported connection architectures by removing the proxy protocol method would simplify the system. The remaining two architectures already utilize HTTP CONNECT and are inherently immune to these security concerns, making them more reliable choices for secure communication.
+- When connecting to a shoot's API server directly, this is done using TLS SNI (Server Name Indication). I.e., the destination API server is indicated by the hostname in the SNI header of the TLS handshake.
+- When connecting to a shoot's API server via the `kubernetes` Service (fallback to the previous protocol for in-cluster clients), the SNI header is set to the same value (`kubernetes.default.svc.cluster.local`) on all shoots and cannot be used to indicate the destination API server. Therefore, the API server proxy handles traffic on this service and prepends a proxy protocol header with a shoot-specific destination IP to indicate the destination.
+- When connecting to a shoot's VPN server, the shoot VPN client sends an HTTP CONNECT request to the shared LoadBalancer and indicates the destination by adding the `Reversed-VPN` HTTP header with the Envoy cluster string as a value (e.g., `outbound|1194||vpn-seed-server-0.shoot--foo--bar.svc.cluster.local`). I.e., it uses the ingress gateway as an HTTP proxy. In contrast to usual HTTP proxies, the target in the CONNECT request line is discarded.
 
-The proposed solution involves implementing a custom header for secure routing using HTTP CONNECT (as currently used by the VPN listener), introducing a new port or path for API traffic, and gradually transitioning to this system through a feature gate.
+Note that in all cases the payload (HTTP request or OpenVPN tunnel) is end-to-end encrypted even if it is tunneled via an unencrypted HTTP connection.
+
+Shoot owners can use the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl) for restricting traffic to the control plane based on client IPs – on all three of the described connection types.
+In seed setups where only opaque LoadBalancers are available, the Gardener operator needs to configure the LoadBalancer to use the proxy protocol to preserve the original client IP.
+With the proxy protocol, the original client IP is lost and the ACL extension cannot restrict the traffic as configured.
+
+Restricting control plane traffic in such setups works for traffic using the TLS SNI and the HTTP CONNECT protocol.
+However, this doesn't work for traffic using the proxy protocol (API server proxy) because it contains two proxy protocol headers and Envoy only allows using the information from the last header.
+Because the last header is the one added by the API server proxy (indicating the destination), traffic is routed correctly to the desired destination API server.
+However, the original client IP from the first proxy protocol header (added by the LoadBalancer) is lost and replaced by the client IP connecting to the API server proxy (typically a pod IP).
+In short, the ACL extension cannot restrict traffic using the proxy protocol if an opaque LoadBalancer is used on the seed side.
+
+In addition to supporting this use case, reworking the API server proxy to use HTTP CONNECT instead of proxy protocol removes one the connection protocols and reduces complexity.
 
 ### Goals
 
-- Eliminate the vulnerability caused by dual proxy protocol headers
-- Ensure secure routing of traffic to the correct API server
-- Provide a clear migration path for existing Gardener deployments
-- Allow [`gardener-extension-acl`](https://github.com/stackitcloud/gardener-extension-acl) to be used with proxy protocol on (non-transparent) LoadBalancers
+- allow [gardener-extension-acl](https://github.com/stackitcloud/gardener-extension-acl) to work with opaque LoadBalancers using proxy protocol
+- reduce complexity by removing one protocol for connections to the shoot control plane
+- reuse existing network infrastructure (e.g., existing ingress gateway ports)
+  - opening new LoadBalancer ports could require manual actions and shoot owner alignment
+- share the network infrastructure for both the API server proxy and VPN connection path
+- implement a migration path for existing shoot clusters
 
 ### Non-Goals
 
-- Modifying the core functionality of the ACL extension
+- change the core architecture of the ACL extension
+- change the functionality of the API server proxy
 
 ## Proposal
 
@@ -68,34 +90,6 @@ The proposed solution involves the following key changes:
 - Reconfigure the `apiserver-proxy` to use HTTP CONNECT for secure tunneling
 - Develop a feature gate to control the rollout of the new routing mechanism
 - Provide a phased implementation approach for gradual adoption
-
-## Concerns with the [Current Architecture](./11-apiserver-network-proxy.md)
-
-The `apiserver-proxy` creates a proxy protocol header for each connection, containing information about the source and destination of the traffic. This header gets forwarded by the LoadBalancer towards the `istio-ingressgateway`.
-
-A second proxy protocol header may be created when:
-- The LoadBalancer is configured through the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl)
-- The LoadBalancer is operating in an opaque/intransparent mode
-- Proxy protocol is explicitly enabled in the LoadBalancer configuration
-
-In cases where dual proxy protocol headers exist, we require specific information from each header:
-- The destination IP address from the `apiserver-proxy`'s proxy protocol header
-- The source IP address from the LoadBalancer's proxy protocol header
-
-However, the `istio-ingressgateway` processes these headers sequentially, reading the first proxy protocol header and then overwriting its information with the second proxy protocol header. This behavior means only the information from the second header is ultimately used for traffic filtering decisions in the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl).
-
-This situation becomes problematic under these conditions:
-- When the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl) is actively filtering traffic based on source IP addresses
-- When multiple shoot clusters are using overlapping private IP ranges
-- When the LoadBalancer is not maintaining the original client source IP information
-
-The issue does not impact environments where:
-- The LoadBalancer operates in transparent mode
-- Only a single proxy protocol header is present
-- Alternative authentication methods are the primary security control
-- Client IP ranges are strictly segregated between shoots
-
-![Current State with opaque LB](./assets/30-current-architecture.png "Current State with opaque LB")
 
 ## Proposed Changes
 
