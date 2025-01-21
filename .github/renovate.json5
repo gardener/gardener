@@ -212,7 +212,7 @@
         '/.*gardener\/machine-controller-manager$/'
       ],
     },
-        {
+    {
       // Group terminal-controller-manager updates in one PR.
       groupName: 'terminal-controller-manager',
       matchDatasources: [
