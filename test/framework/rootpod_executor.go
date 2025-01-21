@@ -71,15 +71,33 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command ...string) ([]byt
 	stdout, stderr, err := e.client.PodExecutor().Execute(ctx, e.Pod.Namespace, e.Pod.Name, e.Pod.Spec.Containers[0].Name,
 		append([]string{"chroot", "/hostroot"}, command...)...,
 	)
-	if err != nil {
-		return nil, err
-	}
 
+	var stderrBytes, stdoutBytes []byte
 	if stderr != nil {
-		return io.ReadAll(stderr)
+		var err2 error
+		stderrBytes, err2 = io.ReadAll(stderr)
+		if err != nil {
+			return nil, err2
+		}
 	}
 	if stdout != nil {
-		return io.ReadAll(stdout)
+		var err2 error
+		stdoutBytes, err2 = io.ReadAll(stdout)
+		if err != nil {
+			return nil, err2
+		}
+	}
+
+	if err != nil {
+		return stderrBytes, err
+	}
+
+	if len(stderrBytes) > 0 {
+		return stderrBytes, nil
+	}
+
+	if len(stdoutBytes) > 0 {
+		return stdoutBytes, nil
 	}
 
 	return nil, fmt.Errorf("no output from command execution")
