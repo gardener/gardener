@@ -13,7 +13,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	DescribeTable("#GetDNSRecordType",
 		func(address string, expected extensionsv1alpha1.DNSRecordType) {
 			Expect(GetDNSRecordType(address)).To(Equal(expected))

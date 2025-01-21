@@ -633,3 +633,26 @@ func GetResourceByName(resources []gardencorev1beta1.NamedResourceReference, nam
 	}
 	return nil
 }
+
+// AccessRestrictionsAreSupported returns true when all the given access restrictions are supported.
+func AccessRestrictionsAreSupported(seedAccessRestrictions []gardencorev1beta1.AccessRestriction, shootAccessRestrictions []gardencorev1beta1.AccessRestrictionWithOptions) bool {
+	if len(shootAccessRestrictions) == 0 {
+		return true
+	}
+	if len(shootAccessRestrictions) > len(seedAccessRestrictions) {
+		return false
+	}
+
+	seedAccessRestrictionsNames := sets.New[string]()
+	for _, seedAccessRestriction := range seedAccessRestrictions {
+		seedAccessRestrictionsNames.Insert(seedAccessRestriction.Name)
+	}
+
+	for _, accessRestriction := range shootAccessRestrictions {
+		if !seedAccessRestrictionsNames.Has(accessRestriction.Name) {
+			return false
+		}
+	}
+
+	return true
+}

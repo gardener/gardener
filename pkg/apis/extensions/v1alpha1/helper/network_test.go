@@ -12,7 +12,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	Describe("#DeterminePrimaryIPFamily", func() {
 		It("should return IPv4 for empty ipFamilies", func() {
 			Expect(DeterminePrimaryIPFamily(nil)).To(Equal(extensionsv1alpha1.IPFamilyIPv4))

@@ -29,14 +29,6 @@ var _ = Describe("Helper", func() {
 		trueVar  = true
 		falseVar = false
 	)
-	DescribeTable("#SystemComponentsAllowed",
-		func(worker *gardencorev1beta1.Worker, allowsSystemComponents bool) {
-			Expect(SystemComponentsAllowed(worker)).To(Equal(allowsSystemComponents))
-		},
-		Entry("no systemComponents section", &gardencorev1beta1.Worker{}, true),
-		Entry("systemComponents.allowed = false", &gardencorev1beta1.Worker{SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: false}}, false),
-		Entry("systemComponents.allowed = true", &gardencorev1beta1.Worker{SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true}}, true),
-	)
 
 	DescribeTable("#HibernationIsEnabled",
 		func(shoot *gardencorev1beta1.Shoot, hibernated bool) {
@@ -107,6 +99,66 @@ var _ = Describe("Helper", func() {
 		It("should return true", func() {
 			shoot.Spec.Kubernetes.VerticalPodAutoscaler = &gardencorev1beta1.VerticalPodAutoscaler{Enabled: true}
 			Expect(ShootWantsVerticalPodAutoscaler(shoot)).To(BeTrue())
+		})
+	})
+
+	Context("Shoot Alerts", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{}
+		})
+
+		Describe("#ShootIgnoresAlerts", func() {
+			It("should not ignore alerts because no annotations given", func() {
+				Expect(ShootIgnoresAlerts(shoot)).To(BeFalse())
+			})
+			It("should not ignore alerts because annotation is not given", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "foo", "bar")
+				Expect(ShootIgnoresAlerts(shoot)).To(BeFalse())
+			})
+			It("should not ignore alerts because annotation value is false", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "false")
+				Expect(ShootIgnoresAlerts(shoot)).To(BeFalse())
+			})
+			It("should ignore alerts because annotation value is true", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "true")
+				Expect(ShootIgnoresAlerts(shoot)).To(BeTrue())
+			})
+		})
+
+		Describe("#ShootWantsAlertManager", func() {
+			It("should not want alert manager because alerts are ignored", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "true")
+				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
+			})
+			It("should not want alert manager because of missing monitoring configuration", func() {
+				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
+			})
+			It("should not want alert manager because of missing alerting configuration", func() {
+				shoot.Spec = gardencorev1beta1.ShootSpec{
+					Monitoring: &gardencorev1beta1.Monitoring{},
+				}
+				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
+			})
+			It("should not want alert manager because of missing email configuration", func() {
+				shoot.Spec = gardencorev1beta1.ShootSpec{
+					Monitoring: &gardencorev1beta1.Monitoring{
+						Alerting: &gardencorev1beta1.Alerting{},
+					},
+				}
+				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
+			})
+			It("should want alert manager", func() {
+				shoot.Spec = gardencorev1beta1.ShootSpec{
+					Monitoring: &gardencorev1beta1.Monitoring{
+						Alerting: &gardencorev1beta1.Alerting{
+							EmailReceivers: []string{"operators@gardener.clou"},
+						},
+					},
+				}
+				Expect(ShootWantsAlertManager(shoot)).To(BeTrue())
+			})
 		})
 	})
 
@@ -182,502 +234,123 @@ var _ = Describe("Helper", func() {
 		),
 	)
 
-	DescribeTable("#FindPrimaryDNSProvider",
-		func(providers []gardencorev1beta1.DNSProvider, matcher gomegatypes.GomegaMatcher) {
-			Expect(FindPrimaryDNSProvider(providers)).To(matcher)
-		},
-
-		Entry("no providers", nil, BeNil()),
-		Entry("one non primary provider", []gardencorev1beta1.DNSProvider{
-			{Type: ptr.To("provider")},
-		}, BeNil()),
-		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: ptr.To("provider"),
-			Primary: ptr.To(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
-		Entry("multiple w/ one primary provider", []gardencorev1beta1.DNSProvider{
-			{
-				Type: ptr.To("provider2"),
-			},
-			{
-				Type:    ptr.To("provider1"),
-				Primary: ptr.To(true),
-			},
-			{
-				Type: ptr.To("provider3"),
-			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
-		Entry("multiple w/ multiple primary providers", []gardencorev1beta1.DNSProvider{
-			{
-				Type:    ptr.To("provider1"),
-				Primary: ptr.To(true),
-			},
-			{
-				Type:    ptr.To("provider2"),
-				Primary: ptr.To(true),
-			},
-			{
-				Type: ptr.To("provider3"),
-			},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
-	)
-
-	DescribeTable("#GetResourceByName",
-		func(resources []gardencorev1beta1.NamedResourceReference, name string, expected *gardencorev1beta1.NamedResourceReference) {
-			actual := GetResourceByName(resources, name)
-			Expect(actual).To(Equal(expected))
-		},
-
-		Entry("resources is nil", nil, "foo", nil),
-		Entry("resources doesn't contain a resource with the given name",
-			[]gardencorev1beta1.NamedResourceReference{
-				{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
-				{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
-			},
-			"foo",
-			nil,
-		),
-		Entry("resources contains a resource with the given name",
-			[]gardencorev1beta1.NamedResourceReference{
-				{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
-				{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
-				{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
-			},
-			"foo",
-			&gardencorev1beta1.NamedResourceReference{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
-		),
-	)
-
-	Describe("ShootItems", func() {
-		Describe("#Union", func() {
-			It("tests if provided two sets of shoot slices will return ", func() {
-				shootList1 := gardencorev1beta1.ShootList{
-					Items: []gardencorev1beta1.Shoot{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "shoot1",
-								Namespace: "namespace1",
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "shoot2",
-								Namespace: "namespace1",
-							},
-						}, {
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "shoot3",
-								Namespace: "namespace2",
-							},
-						},
-					},
-				}
-
-				shootList2 := gardencorev1beta1.ShootList{
-					Items: []gardencorev1beta1.Shoot{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "shoot2",
-								Namespace: "namespace2",
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "shoot1",
-								Namespace: "namespace1",
-							},
-						}, {
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "shoot3",
-								Namespace: "namespace3",
-							},
-						},
-					},
-				}
-
-				s := ShootItems(shootList1)
-				s2 := ShootItems(shootList2)
-				shootSet := s.Union(&s2)
-
-				Expect(shootSet).To(HaveLen(5))
-			})
-
-			It("should not fail if one of the lists is empty", func() {
-				shootList1 := gardencorev1beta1.ShootList{
-					Items: []gardencorev1beta1.Shoot{},
-				}
-
-				shootList2 := gardencorev1beta1.ShootList{
-					Items: []gardencorev1beta1.Shoot{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "shoot2",
-								Namespace: "namespace2",
-							},
-						},
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "shoot1",
-								Namespace: "namespace1",
-							},
-						}, {
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "shoot3",
-								Namespace: "namespace3",
-							},
-						},
-					},
-				}
-
-				s := ShootItems(shootList1)
-				s2 := ShootItems(shootList2)
-				shootSet := s.Union(&s2)
-				Expect(shootSet).To(HaveLen(3))
-
-				shootSet2 := s2.Union(&s)
-				Expect(shootSet).To(HaveLen(3))
-				Expect(shootSet).To(ConsistOf(shootSet2))
-
-			})
-		})
-
-		It("should not fail if no items", func() {
-			shootList1 := gardencorev1beta1.ShootList{}
-
-			shootList2 := gardencorev1beta1.ShootList{}
-
-			s := ShootItems(shootList1)
-			s2 := ShootItems(shootList2)
-			shootSet := s.Union(&s2)
-			Expect(shootSet).To(BeEmpty())
-		})
-	})
-
-	Describe("#GetPurpose", func() {
-		var shoot *gardencorev1beta1.Shoot
-
-		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{
-				Spec: gardencorev1beta1.ShootSpec{},
-			}
-		})
-
-		It("should get default purpose if not defined", func() {
-			purpose := GetPurpose(shoot)
-			Expect(purpose).To(Equal(gardencorev1beta1.ShootPurposeEvaluation))
-		})
-
-		It("should get purpose", func() {
-			shootPurpose := gardencorev1beta1.ShootPurposeProduction
-			shoot.Spec.Purpose = &shootPurpose
-			purpose := GetPurpose(shoot)
-			Expect(purpose).To(Equal(shootPurpose))
-		})
-	})
-
-	Context("Shoot Alerts", func() {
+	Describe("#IsHAControlPlaneConfigured", func() {
 		var shoot *gardencorev1beta1.Shoot
 
 		BeforeEach(func() {
 			shoot = &gardencorev1beta1.Shoot{}
 		})
 
-		Describe("#ShootIgnoresAlerts", func() {
-			It("should not ignore alerts because no annotations given", func() {
-				Expect(ShootIgnoresAlerts(shoot)).To(BeFalse())
-			})
-			It("should not ignore alerts because annotation is not given", func() {
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "foo", "bar")
-				Expect(ShootIgnoresAlerts(shoot)).To(BeFalse())
-			})
-			It("should not ignore alerts because annotation value is false", func() {
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "false")
-				Expect(ShootIgnoresAlerts(shoot)).To(BeFalse())
-			})
-			It("should ignore alerts because annotation value is true", func() {
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "true")
-				Expect(ShootIgnoresAlerts(shoot)).To(BeTrue())
-			})
+		It("return false when HighAvailability is not set", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
 		})
 
-		Describe("#ShootWantsAlertManager", func() {
-			It("should not want alert manager because alerts are ignored", func() {
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "true")
-				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
-			})
-			It("should not want alert manager because of missing monitoring configuration", func() {
-				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
-			})
-			It("should not want alert manager because of missing alerting configuration", func() {
-				shoot.Spec = gardencorev1beta1.ShootSpec{
-					Monitoring: &gardencorev1beta1.Monitoring{},
-				}
-				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
-			})
-			It("should not want alert manager because of missing email configuration", func() {
-				shoot.Spec = gardencorev1beta1.ShootSpec{
-					Monitoring: &gardencorev1beta1.Monitoring{
-						Alerting: &gardencorev1beta1.Alerting{},
-					},
-				}
-				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
-			})
-			It("should want alert manager", func() {
-				shoot.Spec = gardencorev1beta1.ShootSpec{
-					Monitoring: &gardencorev1beta1.Monitoring{
-						Alerting: &gardencorev1beta1.Alerting{
-							EmailReceivers: []string{"operators@gardener.clou"},
+		It("return false when ControlPlane is not set", func() {
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("should return true when HighAvailability is set", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{},
+			}
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
+		})
+	})
+
+	Describe("#IsMultiZonalShootControlPlane", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{}
+		})
+
+		It("should return false when shoot has no ControlPlane Spec", func() {
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
+		})
+
+		It("should return false when shoot has no HighAvailability Spec", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
+		})
+
+		It("should return false when shoot defines failure tolerance type 'node'", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
+		})
+
+		It("should return true when shoot defines failure tolerance type 'zone'", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
+		})
+	})
+
+	Describe("#IsWorkerless", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: "worker",
+							},
 						},
 					},
-				}
-				Expect(ShootWantsAlertManager(shoot)).To(BeTrue())
-			})
+				},
+			}
+		})
+
+		It("should return false when shoot has workers", func() {
+			Expect(IsWorkerless(shoot)).To(BeFalse())
+		})
+
+		It("should return true when shoot has zero workers", func() {
+			shoot.Spec.Provider.Workers = nil
+			Expect(IsWorkerless(shoot)).To(BeTrue())
 		})
 	})
 
-	DescribeTable("#KubernetesDashboardEnabled",
-		func(addons *gardencorev1beta1.Addons, matcher gomegatypes.GomegaMatcher) {
-			Expect(KubernetesDashboardEnabled(addons)).To(matcher)
-		},
-
-		Entry("addons nil", nil, BeFalse()),
-		Entry("kubernetesDashboard nil", &gardencorev1beta1.Addons{}, BeFalse()),
-		Entry("kubernetesDashboard disabled", &gardencorev1beta1.Addons{KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{Addon: gardencorev1beta1.Addon{Enabled: false}}}, BeFalse()),
-		Entry("kubernetesDashboard enabled", &gardencorev1beta1.Addons{KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{Addon: gardencorev1beta1.Addon{Enabled: true}}}, BeTrue()),
-	)
-
-	DescribeTable("#NginxIngressEnabled",
-		func(addons *gardencorev1beta1.Addons, matcher gomegatypes.GomegaMatcher) {
-			Expect(NginxIngressEnabled(addons)).To(matcher)
-		},
-
-		Entry("addons nil", nil, BeFalse()),
-		Entry("nginxIngress nil", &gardencorev1beta1.Addons{}, BeFalse()),
-		Entry("nginxIngress disabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: false}}}, BeFalse()),
-		Entry("nginxIngress enabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: true}}}, BeTrue()),
-	)
-
-	DescribeTable("#KubeProxyEnabled",
-		func(kubeProxy *gardencorev1beta1.KubeProxyConfig, matcher gomegatypes.GomegaMatcher) {
-			Expect(KubeProxyEnabled(kubeProxy)).To(matcher)
-		},
-
-		Entry("kubeProxy nil", nil, BeFalse()),
-		Entry("kubeProxy empty", &gardencorev1beta1.KubeProxyConfig{}, BeFalse()),
-		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(false)}, BeFalse()),
-		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true)}, BeTrue()),
-	)
-
-	DescribeTable("#ShootDNSProviderSecretNamesEqual",
-		func(oldDNS, newDNS *gardencorev1beta1.DNS, matcher gomegatypes.GomegaMatcher) {
-			Expect(ShootDNSProviderSecretNamesEqual(oldDNS, newDNS)).To(matcher)
-		},
-
-		Entry("both nil", nil, nil, BeTrue()),
-		Entry("old nil, new w/o secret names", nil, &gardencorev1beta1.DNS{}, BeTrue()),
-		Entry("old w/o secret names, new nil", &gardencorev1beta1.DNS{}, nil, BeTrue()),
-		Entry("difference due to old", &gardencorev1beta1.DNS{}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, BeFalse()),
-		Entry("difference due to new", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, &gardencorev1beta1.DNS{}, BeFalse()),
-		Entry("equality", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, BeTrue()),
-	)
-
-	DescribeTable("#ShootResourceReferencesEqual",
-		func(oldResources, newResources []gardencorev1beta1.NamedResourceReference, matcher gomegatypes.GomegaMatcher) {
-			Expect(ShootResourceReferencesEqual(oldResources, newResources)).To(matcher)
-		},
-
-		Entry("both nil", nil, nil, BeTrue()),
-		Entry("old empty, new w/o secrets", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{Name: "foo"}}}, BeTrue()),
-		Entry("old empty, new w/ secrets", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeFalse()),
-		Entry("old empty, new w/ configMap", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
-		Entry("old w/o secrets, new empty", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{}, BeTrue()),
-		Entry("old w/ secrets, new empty", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{}, BeFalse()),
-		Entry("difference", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar"}}}, BeFalse()),
-		Entry("difference because no secret", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "bar"}}}, BeFalse()),
-		Entry("difference because new is configMap with same name", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
-		Entry("equality", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeTrue()),
-	)
-
-	DescribeTable("#AnonymousAuthenticationEnabled",
-		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, wantsAnonymousAuth bool) {
-			actualWantsAnonymousAuth := AnonymousAuthenticationEnabled(kubeAPIServerConfig)
-			Expect(actualWantsAnonymousAuth).To(Equal(wantsAnonymousAuth))
-		},
-
-		Entry("no kubeapiserver configuration", nil, false),
-		Entry("field not set", &gardencorev1beta1.KubeAPIServerConfig{}, false),
-		Entry("explicitly enabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &trueVar}, true),
-		Entry("explicitly disabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &falseVar}, false),
-	)
-
-	Describe("GetShootAuditPolicyConfigMapName", func() {
-		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
-			It(description, Offset(1), func() {
-				Expect(GetShootAuditPolicyConfigMapName(config)).To(Equal(expectedName))
-			})
-		}
-
-		test("KubeAPIServerConfig = nil", nil, "")
-		test("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, "")
-		test("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
-			AuditConfig: &gardencorev1beta1.AuditConfig{},
-		}, "")
-		test("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
-			AuditConfig: &gardencorev1beta1.AuditConfig{
-				AuditPolicy: &gardencorev1beta1.AuditPolicy{},
-			},
-		}, "")
-		test("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
-			AuditConfig: &gardencorev1beta1.AuditConfig{
-				AuditPolicy: &gardencorev1beta1.AuditPolicy{
-					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
+	DescribeTable("#ShootEnablesSSHAccess",
+		func(workers []gardencorev1beta1.Worker, workersSettings *gardencorev1beta1.WorkersSettings, expectedResult bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers:         workers,
+						WorkersSettings: workersSettings,
+					},
 				},
-			},
-		}, "foo")
+			}
+			Expect(ShootEnablesSSHAccess(shoot)).To(Equal(expectedResult))
+		},
+
+		Entry("should return false when shoot provider has zero workers", nil, nil, false),
+		Entry("should return true when shoot provider has no WorkersSettings", []gardencorev1beta1.Worker{{}}, nil, true),
+		Entry("should return true when shoot worker settings has no SSHAccess", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{}, true),
+		Entry("should return true when shoot worker settings has SSHAccess set to true", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: true}}, true),
+		Entry("should return false when shoot worker settings has SSHAccess set to false", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false}}, false),
+	)
+
+	Describe("#GetFailureToleranceType", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{}
+		})
+
+		It("should return 'nil' when ControlPlane is empty", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+			Expect(GetFailureToleranceType(shoot)).To(BeNil())
+		})
+
+		It("should return type 'node' when set in ControlPlane.HighAvailability", func() {
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
+			}
+			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeNode)))
+		})
 	})
-
-	Describe("GetShootAuditPolicyConfigMapRef", func() {
-		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedRef *corev1.ObjectReference) {
-			It(description, Offset(1), func() {
-				Expect(GetShootAuditPolicyConfigMapRef(config)).To(Equal(expectedRef))
-			})
-		}
-
-		test("KubeAPIServerConfig = nil", nil, nil)
-		test("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, nil)
-		test("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
-			AuditConfig: &gardencorev1beta1.AuditConfig{},
-		}, nil)
-		test("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
-			AuditConfig: &gardencorev1beta1.AuditConfig{
-				AuditPolicy: &gardencorev1beta1.AuditPolicy{},
-			},
-		}, nil)
-		test("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
-			AuditConfig: &gardencorev1beta1.AuditConfig{
-				AuditPolicy: &gardencorev1beta1.AuditPolicy{
-					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
-				},
-			},
-		}, &corev1.ObjectReference{Name: "foo"})
-	})
-
-	DescribeTable("#GetShootAuthenticationConfigurationConfigMapName",
-		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
-			authConfigName := GetShootAuthenticationConfigurationConfigMapName(kubeAPIServerConfig)
-			Expect(authConfigName).To(Equal(expectedName))
-		},
-
-		Entry("KubeAPIServerConfig = nil", nil, ""),
-		Entry("StructuredAuthentication = nil", &gardencorev1beta1.KubeAPIServerConfig{}, ""),
-		Entry("ConfigMapName not set", &gardencorev1beta1.KubeAPIServerConfig{
-			StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{},
-		}, ""),
-		Entry("ConfigMapName set", &gardencorev1beta1.KubeAPIServerConfig{
-			StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
-				ConfigMapName: "foo",
-			},
-		}, "foo"),
-	)
-
-	DescribeTable("#GetShootAuthorizationConfigurationConfigMapName",
-		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
-			authConfigName := GetShootAuthorizationConfigurationConfigMapName(kubeAPIServerConfig)
-			Expect(authConfigName).To(Equal(expectedName))
-		},
-
-		Entry("KubeAPIServerConfig = nil", nil, ""),
-		Entry("StructuredAuthorization = nil", &gardencorev1beta1.KubeAPIServerConfig{}, ""),
-		Entry("ConfigMapName not set", &gardencorev1beta1.KubeAPIServerConfig{
-			StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{},
-		}, ""),
-		Entry("ConfigMapName set", &gardencorev1beta1.KubeAPIServerConfig{
-			StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
-				ConfigMapName: "foo",
-			},
-		}, "foo"),
-	)
-
-	DescribeTable("#GetShootAuthorizationConfiguration",
-		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedResult *gardencorev1beta1.StructuredAuthorization) {
-			Expect(GetShootAuthorizationConfiguration(kubeAPIServerConfig)).To(Equal(expectedResult))
-		},
-
-		Entry("KubeAPIServerConfig = nil", nil, nil),
-		Entry("StructuredAuthorization not set", &gardencorev1beta1.KubeAPIServerConfig{}, nil),
-		Entry("StructuredAuthorization set", &gardencorev1beta1.KubeAPIServerConfig{StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{}}, &gardencorev1beta1.StructuredAuthorization{}),
-	)
-
-	DescribeTable("#CalculateEffectiveKubernetesVersion",
-		func(controlPlaneVersion *semver.Version, workerKubernetes *gardencorev1beta1.WorkerKubernetes, expectedRes *semver.Version) {
-			res, err := CalculateEffectiveKubernetesVersion(controlPlaneVersion, workerKubernetes)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(res).To(Equal(expectedRes))
-		},
-
-		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{}, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
-	)
-
-	var (
-		sampleShootKubelet = &gardencorev1beta1.KubeletConfig{
-			MaxPods: ptr.To(int32(50)),
-		}
-		sampleWorkerKubelet = &gardencorev1beta1.KubeletConfig{
-			MaxPods: ptr.To(int32(100)),
-		}
-	)
-	DescribeTable("#CalculateEffectiveKubeletConfiguration",
-		func(shootKubelet *gardencorev1beta1.KubeletConfig, workerKubernetes *gardencorev1beta1.WorkerKubernetes, expectedRes *gardencorev1beta1.KubeletConfig) {
-			res := CalculateEffectiveKubeletConfiguration(shootKubelet, workerKubernetes)
-			Expect(res).To(Equal(expectedRes))
-		},
-
-		Entry("all nil", nil, nil, nil),
-		Entry("workerKubernetes = nil", sampleShootKubelet, nil, sampleShootKubelet),
-		Entry("workerKubernetes.kubelet = nil", sampleShootKubelet, &gardencorev1beta1.WorkerKubernetes{}, sampleShootKubelet),
-		Entry("workerKubernetes.kubelet != nil", sampleShootKubelet, &gardencorev1beta1.WorkerKubernetes{Kubelet: sampleWorkerKubelet}, sampleWorkerKubelet),
-	)
-
-	DescribeTable("#IsCoreDNSAutoscalingModeUsed",
-		func(systemComponents *gardencorev1beta1.SystemComponents, autoscalingMode gardencorev1beta1.CoreDNSAutoscalingMode, expected bool) {
-			Expect(IsCoreDNSAutoscalingModeUsed(systemComponents, autoscalingMode)).To(Equal(expected))
-		},
-
-		Entry("with nil (cluster-proportional)", nil, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
-		Entry("with nil (horizontal)", nil, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, true),
-		Entry("with empty system components (cluster-proportional)", &gardencorev1beta1.SystemComponents{}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
-		Entry("with empty system components (horizontal)", &gardencorev1beta1.SystemComponents{}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, true),
-		Entry("with empty core dns (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
-		Entry("with empty core dns (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, true),
-		Entry("with empty core dns autoscaling (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{}}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
-		Entry("with empty core dns autoscaling (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, false),
-		Entry("with incorrect autoscaling mode (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "test"}}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
-		Entry("with incorrect autoscaling mode (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "test"}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, false),
-		Entry("with horizontal autoscaling mode (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "horizontal"}}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
-		Entry("with horizontal autoscaling mode (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "horizontal"}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, true),
-		Entry("with cluster-proportional autoscaling mode (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "cluster-proportional"}}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, true),
-		Entry("with cluster-proportional autoscaling mode (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "cluster-proportional"}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, false),
-	)
-
-	DescribeTable("#IsNodeLocalDNSEnabled",
-		func(systemComponents *gardencorev1beta1.SystemComponents, expected bool) {
-			Expect(IsNodeLocalDNSEnabled(systemComponents)).To(Equal(expected))
-		},
-
-		Entry("with nil (disabled)", nil, false),
-		Entry("with empty system components", &gardencorev1beta1.SystemComponents{}, false),
-		Entry("with system components and node-local-dns is enabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, true),
-		Entry("with system components and node-local-dns is disabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, false),
-	)
-
-	DescribeTable("#GetNodeLocalDNS",
-		func(systemComponents *gardencorev1beta1.SystemComponents, expected *gardencorev1beta1.NodeLocalDNS) {
-			Expect(GetNodeLocalDNS(systemComponents)).To(Equal(expected))
-		},
-		Entry("with nil", nil, nil),
-		Entry("with system components and nil", nil, nil),
-		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}),
-	)
 
 	DescribeTable("#GetShootCARotationPhase",
 		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.CredentialsRotationPhase) {
@@ -923,174 +596,219 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	Describe("#IsHAControlPlaneConfigured", func() {
-		var shoot *gardencorev1beta1.Shoot
-
-		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{}
-		})
-
-		It("return false when HighAvailability is not set", func() {
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
-		})
-
-		It("return false when ControlPlane is not set", func() {
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
-		})
-
-		It("should return true when HighAvailability is set", func() {
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-				HighAvailability: &gardencorev1beta1.HighAvailability{},
-			}
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
-		})
-	})
-
-	Describe("#IsMultiZonalShootControlPlane", func() {
-		var shoot *gardencorev1beta1.Shoot
-
-		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{}
-		})
-
-		It("should return false when shoot has no ControlPlane Spec", func() {
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
-		})
-
-		It("should return false when shoot has no HighAvailability Spec", func() {
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
-		})
-
-		It("should return false when shoot defines failure tolerance type 'node'", func() {
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}}}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
-		})
-
-		It("should return true when shoot defines failure tolerance type 'zone'", func() {
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
-		})
-	})
-
-	Describe("#IsWorkerless", func() {
-		var shoot *gardencorev1beta1.Shoot
-
-		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{
-				Spec: gardencorev1beta1.ShootSpec{
-					Provider: gardencorev1beta1.Provider{
-						Workers: []gardencorev1beta1.Worker{
-							{
-								Name: "worker",
+	Describe("ShootItems", func() {
+		Describe("#Union", func() {
+			It("tests if provided two sets of shoot slices will return ", func() {
+				shootList1 := gardencorev1beta1.ShootList{
+					Items: []gardencorev1beta1.Shoot{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot1",
+								Namespace: "namespace1",
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot2",
+								Namespace: "namespace1",
+							},
+						}, {
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot3",
+								Namespace: "namespace2",
 							},
 						},
 					},
-				},
-			}
-		})
+				}
 
-		It("should return false when shoot has workers", func() {
-			Expect(IsWorkerless(shoot)).To(BeFalse())
-		})
-
-		It("should return true when shoot has zero workers", func() {
-			shoot.Spec.Provider.Workers = nil
-			Expect(IsWorkerless(shoot)).To(BeTrue())
-		})
-	})
-
-	Describe("#HasManagedIssuer", func() {
-		It("should return false when the shoot does not have managed issuer", func() {
-			Expect(HasManagedIssuer(&gardencorev1beta1.Shoot{})).To(BeFalse())
-		})
-
-		It("should return true when the shoot has managed issuer", func() {
-			shoot := &gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{"authentication.gardener.cloud/issuer": "managed"},
-				},
-			}
-			Expect(HasManagedIssuer(shoot)).To(BeTrue())
-		})
-	})
-
-	DescribeTable("#ShootEnablesSSHAccess",
-		func(workers []gardencorev1beta1.Worker, workersSettings *gardencorev1beta1.WorkersSettings, expectedResult bool) {
-			shoot := &gardencorev1beta1.Shoot{
-				Spec: gardencorev1beta1.ShootSpec{
-					Provider: gardencorev1beta1.Provider{
-						Workers:         workers,
-						WorkersSettings: workersSettings,
+				shootList2 := gardencorev1beta1.ShootList{
+					Items: []gardencorev1beta1.Shoot{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot2",
+								Namespace: "namespace2",
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot1",
+								Namespace: "namespace1",
+							},
+						}, {
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot3",
+								Namespace: "namespace3",
+							},
+						},
 					},
+				}
+
+				s := ShootItems(shootList1)
+				s2 := ShootItems(shootList2)
+				shootSet := s.Union(&s2)
+
+				Expect(shootSet).To(HaveLen(5))
+			})
+
+			It("should not fail if one of the lists is empty", func() {
+				shootList1 := gardencorev1beta1.ShootList{
+					Items: []gardencorev1beta1.Shoot{},
+				}
+
+				shootList2 := gardencorev1beta1.ShootList{
+					Items: []gardencorev1beta1.Shoot{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot2",
+								Namespace: "namespace2",
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot1",
+								Namespace: "namespace1",
+							},
+						}, {
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot3",
+								Namespace: "namespace3",
+							},
+						},
+					},
+				}
+
+				s := ShootItems(shootList1)
+				s2 := ShootItems(shootList2)
+				shootSet := s.Union(&s2)
+				Expect(shootSet).To(HaveLen(3))
+
+				shootSet2 := s2.Union(&s)
+				Expect(shootSet).To(HaveLen(3))
+				Expect(shootSet).To(ConsistOf(shootSet2))
+
+			})
+		})
+
+		It("should not fail if no items", func() {
+			shootList1 := gardencorev1beta1.ShootList{}
+
+			shootList2 := gardencorev1beta1.ShootList{}
+
+			s := ShootItems(shootList1)
+			s2 := ShootItems(shootList2)
+			shootSet := s.Union(&s2)
+			Expect(shootSet).To(BeEmpty())
+		})
+	})
+
+	Describe("GetShootAuditPolicyConfigMapName", func() {
+		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
+			It(description, Offset(1), func() {
+				Expect(GetShootAuditPolicyConfigMapName(config)).To(Equal(expectedName))
+			})
+		}
+
+		test("KubeAPIServerConfig = nil", nil, "")
+		test("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, "")
+		test("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{},
+		}, "")
+		test("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{
+				AuditPolicy: &gardencorev1beta1.AuditPolicy{},
+			},
+		}, "")
+		test("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{
+				AuditPolicy: &gardencorev1beta1.AuditPolicy{
+					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
 				},
-			}
-			Expect(ShootEnablesSSHAccess(shoot)).To(Equal(expectedResult))
+			},
+		}, "foo")
+	})
+
+	Describe("GetShootAuditPolicyConfigMapRef", func() {
+		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedRef *corev1.ObjectReference) {
+			It(description, Offset(1), func() {
+				Expect(GetShootAuditPolicyConfigMapRef(config)).To(Equal(expectedRef))
+			})
+		}
+
+		test("KubeAPIServerConfig = nil", nil, nil)
+		test("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, nil)
+		test("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{},
+		}, nil)
+		test("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{
+				AuditPolicy: &gardencorev1beta1.AuditPolicy{},
+			},
+		}, nil)
+		test("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{
+				AuditPolicy: &gardencorev1beta1.AuditPolicy{
+					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
+				},
+			},
+		}, &corev1.ObjectReference{Name: "foo"})
+	})
+
+	DescribeTable("#GetShootAuthenticationConfigurationConfigMapName",
+		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
+			authConfigName := GetShootAuthenticationConfigurationConfigMapName(kubeAPIServerConfig)
+			Expect(authConfigName).To(Equal(expectedName))
 		},
 
-		Entry("should return false when shoot provider has zero workers", nil, nil, false),
-		Entry("should return true when shoot provider has no WorkersSettings", []gardencorev1beta1.Worker{{}}, nil, true),
-		Entry("should return true when shoot worker settings has no SSHAccess", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{}, true),
-		Entry("should return true when shoot worker settings has SSHAccess set to true", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: true}}, true),
-		Entry("should return false when shoot worker settings has SSHAccess set to false", []gardencorev1beta1.Worker{{}}, &gardencorev1beta1.WorkersSettings{SSHAccess: &gardencorev1beta1.SSHAccess{Enabled: false}}, false),
+		Entry("KubeAPIServerConfig = nil", nil, ""),
+		Entry("StructuredAuthentication = nil", &gardencorev1beta1.KubeAPIServerConfig{}, ""),
+		Entry("ConfigMapName not set", &gardencorev1beta1.KubeAPIServerConfig{
+			StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{},
+		}, ""),
+		Entry("ConfigMapName set", &gardencorev1beta1.KubeAPIServerConfig{
+			StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{
+				ConfigMapName: "foo",
+			},
+		}, "foo"),
 	)
 
-	Describe("#GetFailureToleranceType", func() {
-		var shoot *gardencorev1beta1.Shoot
-
-		BeforeEach(func() {
-			shoot = &gardencorev1beta1.Shoot{}
-		})
-
-		It("should return 'nil' when ControlPlane is empty", func() {
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
-			Expect(GetFailureToleranceType(shoot)).To(BeNil())
-		})
-
-		It("should return type 'node' when set in ControlPlane.HighAvailability", func() {
-			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-				HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeNode}},
-			}
-			Expect(GetFailureToleranceType(shoot)).To(PointTo(Equal(gardencorev1beta1.FailureToleranceTypeNode)))
-		})
-	})
-
-	DescribeTable("#IsTopologyAwareRoutingForShootControlPlaneEnabled",
-		func(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, matcher gomegatypes.GomegaMatcher) {
-			Expect(IsTopologyAwareRoutingForShootControlPlaneEnabled(seed, shoot)).To(matcher)
+	DescribeTable("#GetShootAuthorizationConfigurationConfigMapName",
+		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
+			authConfigName := GetShootAuthorizationConfigurationConfigMapName(kubeAPIServerConfig)
+			Expect(authConfigName).To(Equal(expectedName))
 		},
 
-		Entry("seed setting is nil, shoot control plane is not HA",
-			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
-			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
-			BeFalse(),
-		),
-		Entry("seed setting is disabled, shoot control plane is not HA",
-			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
-			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
-			BeFalse(),
-		),
-		Entry("seed setting is enabled, shoot control plane is not HA",
-			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
-			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
-			BeFalse(),
-		),
-		Entry("seed setting is nil, shoot control plane is HA with failure tolerance type 'zone'",
-			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
-			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
-			BeFalse(),
-		),
-		Entry("seed setting is disabled, shoot control plane is HA with failure tolerance type 'zone'",
-			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
-			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
-			BeFalse(),
-		),
-		Entry("seed setting is enabled, shoot control plane is HA with failure tolerance type 'zone'",
-			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
-			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
-			BeTrue(),
-		),
+		Entry("KubeAPIServerConfig = nil", nil, ""),
+		Entry("StructuredAuthorization = nil", &gardencorev1beta1.KubeAPIServerConfig{}, ""),
+		Entry("ConfigMapName not set", &gardencorev1beta1.KubeAPIServerConfig{
+			StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{},
+		}, ""),
+		Entry("ConfigMapName set", &gardencorev1beta1.KubeAPIServerConfig{
+			StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{
+				ConfigMapName: "foo",
+			},
+		}, "foo"),
+	)
+
+	DescribeTable("#GetShootAuthorizationConfiguration",
+		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, expectedResult *gardencorev1beta1.StructuredAuthorization) {
+			Expect(GetShootAuthorizationConfiguration(kubeAPIServerConfig)).To(Equal(expectedResult))
+		},
+
+		Entry("KubeAPIServerConfig = nil", nil, nil),
+		Entry("StructuredAuthorization not set", &gardencorev1beta1.KubeAPIServerConfig{}, nil),
+		Entry("StructuredAuthorization set", &gardencorev1beta1.KubeAPIServerConfig{StructuredAuthorization: &gardencorev1beta1.StructuredAuthorization{}}, &gardencorev1beta1.StructuredAuthorization{}),
+	)
+
+	DescribeTable("#AnonymousAuthenticationEnabled",
+		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, wantsAnonymousAuth bool) {
+			actualWantsAnonymousAuth := AnonymousAuthenticationEnabled(kubeAPIServerConfig)
+			Expect(actualWantsAnonymousAuth).To(Equal(wantsAnonymousAuth))
+		},
+
+		Entry("no kubeapiserver configuration", nil, false),
+		Entry("field not set", &gardencorev1beta1.KubeAPIServerConfig{}, false),
+		Entry("explicitly enabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &trueVar}, true),
+		Entry("explicitly disabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &falseVar}, false),
 	)
 
 	DescribeTable("#KubeAPIServerFeatureGateDisabled",
@@ -1368,6 +1086,223 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
+	Describe("#HasManagedIssuer", func() {
+		It("should return false when the shoot does not have managed issuer", func() {
+			Expect(HasManagedIssuer(&gardencorev1beta1.Shoot{})).To(BeFalse())
+		})
+
+		It("should return true when the shoot has managed issuer", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"authentication.gardener.cloud/issuer": "managed"},
+				},
+			}
+			Expect(HasManagedIssuer(shoot)).To(BeTrue())
+		})
+	})
+
+	Describe("#GetPurpose", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{},
+			}
+		})
+
+		It("should get default purpose if not defined", func() {
+			purpose := GetPurpose(shoot)
+			Expect(purpose).To(Equal(gardencorev1beta1.ShootPurposeEvaluation))
+		})
+
+		It("should get purpose", func() {
+			shootPurpose := gardencorev1beta1.ShootPurposeProduction
+			shoot.Spec.Purpose = &shootPurpose
+			purpose := GetPurpose(shoot)
+			Expect(purpose).To(Equal(shootPurpose))
+		})
+	})
+
+	DescribeTable("#IsTopologyAwareRoutingForShootControlPlaneEnabled",
+		func(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot, matcher gomegatypes.GomegaMatcher) {
+			Expect(IsTopologyAwareRoutingForShootControlPlaneEnabled(seed, shoot)).To(matcher)
+		},
+
+		Entry("seed setting is nil, shoot control plane is not HA",
+			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
+			BeFalse(),
+		),
+		Entry("seed setting is disabled, shoot control plane is not HA",
+			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
+			BeFalse(),
+		),
+		Entry("seed setting is enabled, shoot control plane is not HA",
+			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: nil}}},
+			BeFalse(),
+		),
+		Entry("seed setting is nil, shoot control plane is HA with failure tolerance type 'zone'",
+			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: nil}},
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
+			BeFalse(),
+		),
+		Entry("seed setting is disabled, shoot control plane is HA with failure tolerance type 'zone'",
+			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: false}}}},
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
+			BeFalse(),
+		),
+		Entry("seed setting is enabled, shoot control plane is HA with failure tolerance type 'zone'",
+			&gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Settings: &gardencorev1beta1.SeedSettings{TopologyAwareRouting: &gardencorev1beta1.SeedSettingTopologyAwareRouting{Enabled: true}}}},
+			&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{ControlPlane: &gardencorev1beta1.ControlPlane{HighAvailability: &gardencorev1beta1.HighAvailability{FailureTolerance: gardencorev1beta1.FailureTolerance{Type: gardencorev1beta1.FailureToleranceTypeZone}}}}},
+			BeTrue(),
+		),
+	)
+
+	DescribeTable("#KubernetesDashboardEnabled",
+		func(addons *gardencorev1beta1.Addons, matcher gomegatypes.GomegaMatcher) {
+			Expect(KubernetesDashboardEnabled(addons)).To(matcher)
+		},
+
+		Entry("addons nil", nil, BeFalse()),
+		Entry("kubernetesDashboard nil", &gardencorev1beta1.Addons{}, BeFalse()),
+		Entry("kubernetesDashboard disabled", &gardencorev1beta1.Addons{KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{Addon: gardencorev1beta1.Addon{Enabled: false}}}, BeFalse()),
+		Entry("kubernetesDashboard enabled", &gardencorev1beta1.Addons{KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{Addon: gardencorev1beta1.Addon{Enabled: true}}}, BeTrue()),
+	)
+
+	DescribeTable("#NginxIngressEnabled",
+		func(addons *gardencorev1beta1.Addons, matcher gomegatypes.GomegaMatcher) {
+			Expect(NginxIngressEnabled(addons)).To(matcher)
+		},
+
+		Entry("addons nil", nil, BeFalse()),
+		Entry("nginxIngress nil", &gardencorev1beta1.Addons{}, BeFalse()),
+		Entry("nginxIngress disabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: false}}}, BeFalse()),
+		Entry("nginxIngress enabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: true}}}, BeTrue()),
+	)
+
+	DescribeTable("#KubeProxyEnabled",
+		func(kubeProxy *gardencorev1beta1.KubeProxyConfig, matcher gomegatypes.GomegaMatcher) {
+			Expect(KubeProxyEnabled(kubeProxy)).To(matcher)
+		},
+
+		Entry("kubeProxy nil", nil, BeFalse()),
+		Entry("kubeProxy empty", &gardencorev1beta1.KubeProxyConfig{}, BeFalse()),
+		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(false)}, BeFalse()),
+		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: ptr.To(true)}, BeTrue()),
+	)
+
+	DescribeTable("#FindPrimaryDNSProvider",
+		func(providers []gardencorev1beta1.DNSProvider, matcher gomegatypes.GomegaMatcher) {
+			Expect(FindPrimaryDNSProvider(providers)).To(matcher)
+		},
+
+		Entry("no providers", nil, BeNil()),
+		Entry("one non primary provider", []gardencorev1beta1.DNSProvider{
+			{Type: ptr.To("provider")},
+		}, BeNil()),
+		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: ptr.To("provider"),
+			Primary: ptr.To(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
+		Entry("multiple w/ one primary provider", []gardencorev1beta1.DNSProvider{
+			{
+				Type: ptr.To("provider2"),
+			},
+			{
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
+			},
+			{
+				Type: ptr.To("provider3"),
+			},
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
+		Entry("multiple w/ multiple primary providers", []gardencorev1beta1.DNSProvider{
+			{
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
+			},
+			{
+				Type:    ptr.To("provider2"),
+				Primary: ptr.To(true),
+			},
+			{
+				Type: ptr.To("provider3"),
+			},
+		}, Equal(&gardencorev1beta1.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
+	)
+
+	DescribeTable("#ShootDNSProviderSecretNamesEqual",
+		func(oldDNS, newDNS *gardencorev1beta1.DNS, matcher gomegatypes.GomegaMatcher) {
+			Expect(ShootDNSProviderSecretNamesEqual(oldDNS, newDNS)).To(matcher)
+		},
+
+		Entry("both nil", nil, nil, BeTrue()),
+		Entry("old nil, new w/o secret names", nil, &gardencorev1beta1.DNS{}, BeTrue()),
+		Entry("old w/o secret names, new nil", &gardencorev1beta1.DNS{}, nil, BeTrue()),
+		Entry("difference due to old", &gardencorev1beta1.DNS{}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, BeFalse()),
+		Entry("difference due to new", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, &gardencorev1beta1.DNS{}, BeFalse()),
+		Entry("equality", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, BeTrue()),
+	)
+
+	DescribeTable("#ShootResourceReferencesEqual",
+		func(oldResources, newResources []gardencorev1beta1.NamedResourceReference, matcher gomegatypes.GomegaMatcher) {
+			Expect(ShootResourceReferencesEqual(oldResources, newResources)).To(matcher)
+		},
+
+		Entry("both nil", nil, nil, BeTrue()),
+		Entry("old empty, new w/o secrets", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{Name: "foo"}}}, BeTrue()),
+		Entry("old empty, new w/ secrets", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeFalse()),
+		Entry("old empty, new w/ configMap", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
+		Entry("old w/o secrets, new empty", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{}, BeTrue()),
+		Entry("old w/ secrets, new empty", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{}, BeFalse()),
+		Entry("difference", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar"}}}, BeFalse()),
+		Entry("difference because no secret", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "bar"}}}, BeFalse()),
+		Entry("difference because new is configMap with same name", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
+		Entry("equality", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeTrue()),
+	)
+
+	DescribeTable("#CalculateEffectiveKubernetesVersion",
+		func(controlPlaneVersion *semver.Version, workerKubernetes *gardencorev1beta1.WorkerKubernetes, expectedRes *semver.Version) {
+			res, err := CalculateEffectiveKubernetesVersion(controlPlaneVersion, workerKubernetes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(Equal(expectedRes))
+		},
+
+		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
+		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{}, semver.MustParse("1.2.3")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
+	)
+
+	var (
+		sampleShootKubelet = &gardencorev1beta1.KubeletConfig{
+			MaxPods: ptr.To(int32(50)),
+		}
+		sampleWorkerKubelet = &gardencorev1beta1.KubeletConfig{
+			MaxPods: ptr.To(int32(100)),
+		}
+	)
+
+	DescribeTable("#CalculateEffectiveKubeletConfiguration",
+		func(shootKubelet *gardencorev1beta1.KubeletConfig, workerKubernetes *gardencorev1beta1.WorkerKubernetes, expectedRes *gardencorev1beta1.KubeletConfig) {
+			res := CalculateEffectiveKubeletConfiguration(shootKubelet, workerKubernetes)
+			Expect(res).To(Equal(expectedRes))
+		},
+
+		Entry("all nil", nil, nil, nil),
+		Entry("workerKubernetes = nil", sampleShootKubelet, nil, sampleShootKubelet),
+		Entry("workerKubernetes.kubelet = nil", sampleShootKubelet, &gardencorev1beta1.WorkerKubernetes{}, sampleShootKubelet),
+		Entry("workerKubernetes.kubelet != nil", sampleShootKubelet, &gardencorev1beta1.WorkerKubernetes{Kubelet: sampleWorkerKubelet}, sampleWorkerKubelet),
+	)
+
+	DescribeTable("#SystemComponentsAllowed",
+		func(worker *gardencorev1beta1.Worker, allowsSystemComponents bool) {
+			Expect(SystemComponentsAllowed(worker)).To(Equal(allowsSystemComponents))
+		},
+		Entry("no systemComponents section", &gardencorev1beta1.Worker{}, true),
+		Entry("systemComponents.allowed = false", &gardencorev1beta1.Worker{SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: false}}, false),
+		Entry("systemComponents.allowed = true", &gardencorev1beta1.Worker{SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: true}}, true),
+	)
+
 	DescribeTable("#SumResourceReservations",
 		func(left, right, expected *gardencorev1beta1.KubeletConfigReserved) {
 			actual := SumResourceReservations(left, right)
@@ -1388,6 +1323,105 @@ var _ = Describe("Helper", func() {
 			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(50, resource.DecimalSI), Memory: resource.NewQuantity(55, resource.DecimalSI), EphemeralStorage: resource.NewQuantity(60, resource.DecimalSI)},
 			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(100, resource.DecimalSI), Memory: resource.NewQuantity(105, resource.DecimalSI), PID: resource.NewQuantity(10, resource.DecimalSI)},
 			&gardencorev1beta1.KubeletConfigReserved{CPU: resource.NewQuantity(150, resource.DecimalSI), Memory: resource.NewQuantity(160, resource.DecimalSI), EphemeralStorage: resource.NewQuantity(60, resource.DecimalSI), PID: resource.NewQuantity(10, resource.DecimalSI)},
+		),
+	)
+
+	DescribeTable("#IsCoreDNSAutoscalingModeUsed",
+		func(systemComponents *gardencorev1beta1.SystemComponents, autoscalingMode gardencorev1beta1.CoreDNSAutoscalingMode, expected bool) {
+			Expect(IsCoreDNSAutoscalingModeUsed(systemComponents, autoscalingMode)).To(Equal(expected))
+		},
+
+		Entry("with nil (cluster-proportional)", nil, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
+		Entry("with nil (horizontal)", nil, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, true),
+		Entry("with empty system components (cluster-proportional)", &gardencorev1beta1.SystemComponents{}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
+		Entry("with empty system components (horizontal)", &gardencorev1beta1.SystemComponents{}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, true),
+		Entry("with empty core dns (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
+		Entry("with empty core dns (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, true),
+		Entry("with empty core dns autoscaling (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{}}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
+		Entry("with empty core dns autoscaling (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, false),
+		Entry("with incorrect autoscaling mode (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "test"}}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
+		Entry("with incorrect autoscaling mode (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "test"}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, false),
+		Entry("with horizontal autoscaling mode (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "horizontal"}}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, false),
+		Entry("with horizontal autoscaling mode (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "horizontal"}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, true),
+		Entry("with cluster-proportional autoscaling mode (cluster-proportional)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "cluster-proportional"}}}, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional, true),
+		Entry("with cluster-proportional autoscaling mode (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "cluster-proportional"}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, false),
+	)
+
+	DescribeTable("#IsNodeLocalDNSEnabled",
+		func(systemComponents *gardencorev1beta1.SystemComponents, expected bool) {
+			Expect(IsNodeLocalDNSEnabled(systemComponents)).To(Equal(expected))
+		},
+
+		Entry("with nil (disabled)", nil, false),
+		Entry("with empty system components", &gardencorev1beta1.SystemComponents{}, false),
+		Entry("with system components and node-local-dns is enabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, true),
+		Entry("with system components and node-local-dns is disabled", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, false),
+	)
+
+	DescribeTable("#GetNodeLocalDNS",
+		func(systemComponents *gardencorev1beta1.SystemComponents, expected *gardencorev1beta1.NodeLocalDNS) {
+			Expect(GetNodeLocalDNS(systemComponents)).To(Equal(expected))
+		},
+		Entry("with nil", nil, nil),
+		Entry("with system components and nil", nil, nil),
+		Entry("with system components and node local DNS spec", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}}, &gardencorev1beta1.NodeLocalDNS{Enabled: true, ForceTCPToClusterDNS: ptr.To(true), ForceTCPToUpstreamDNS: ptr.To(true), DisableForwardToUpstreamDNS: ptr.To(true)}),
+	)
+
+	DescribeTable("#GetResourceByName",
+		func(resources []gardencorev1beta1.NamedResourceReference, name string, expected *gardencorev1beta1.NamedResourceReference) {
+			actual := GetResourceByName(resources, name)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("resources is nil", nil, "foo", nil),
+		Entry("resources doesn't contain a resource with the given name",
+			[]gardencorev1beta1.NamedResourceReference{
+				{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
+				{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
+			},
+			"foo",
+			nil,
+		),
+		Entry("resources contains a resource with the given name",
+			[]gardencorev1beta1.NamedResourceReference{
+				{Name: "bar", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "bar"}},
+				{Name: "baz", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "ConfigMap", Name: "baz"}},
+				{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
+			},
+			"foo",
+			&gardencorev1beta1.NamedResourceReference{Name: "foo", ResourceRef: autoscalingv1.CrossVersionObjectReference{Kind: "Secret", Name: "foo"}},
+		),
+	)
+
+	DescribeTable("#AccessRestrictionsAreSupported",
+		func(seedAccessRestrictions []gardencorev1beta1.AccessRestriction, shootAccessRestrictions []gardencorev1beta1.AccessRestrictionWithOptions, expectation bool) {
+			Expect(AccessRestrictionsAreSupported(seedAccessRestrictions, shootAccessRestrictions)).To(Equal(expectation))
+		},
+
+		Entry("both have no access restrictions",
+			nil,
+			nil,
+			true,
+		),
+		Entry("shoot has no access restrictions",
+			[]gardencorev1beta1.AccessRestriction{{Name: "foo"}},
+			nil,
+			true,
+		),
+		Entry("seed has no access restrictions",
+			nil,
+			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
+			false,
+		),
+		Entry("both have access restrictions and they match",
+			[]gardencorev1beta1.AccessRestriction{{Name: "foo"}},
+			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
+			true,
+		),
+		Entry("both have access restrictions and they don't match",
+			[]gardencorev1beta1.AccessRestriction{{Name: "bar"}},
+			[]gardencorev1beta1.AccessRestrictionWithOptions{{AccessRestriction: gardencorev1beta1.AccessRestriction{Name: "foo"}}},
+			false,
 		),
 	)
 })

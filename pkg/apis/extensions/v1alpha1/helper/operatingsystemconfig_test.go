@@ -12,7 +12,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	Describe("#HasContainerdConfiguration", func() {
 		It("should return false when CRI config is nil", func() {
 			Expect(HasContainerdConfiguration(nil)).To(BeFalse())

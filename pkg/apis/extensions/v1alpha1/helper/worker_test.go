@@ -16,7 +16,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	DescribeTable("#ClusterAutoscalerRequired",
 		func(pools []extensionsv1alpha1.WorkerPool, expected bool) {
 			Expect(ClusterAutoscalerRequired(pools)).To(Equal(expected))

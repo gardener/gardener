@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -98,27 +97,4 @@ func HasOperationAnnotation(annotations map[string]string) bool {
 	return annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
 		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
 		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
-}
-
-// AccessRestrictionsAreSupported returns true when all the given access restrictions are supported.
-func AccessRestrictionsAreSupported(seedAccessRestrictions []gardencorev1beta1.AccessRestriction, shootAccessRestrictions []gardencorev1beta1.AccessRestrictionWithOptions) bool {
-	if len(shootAccessRestrictions) == 0 {
-		return true
-	}
-	if len(shootAccessRestrictions) > len(seedAccessRestrictions) {
-		return false
-	}
-
-	seedAccessRestrictionsNames := sets.New[string]()
-	for _, seedAccessRestriction := range seedAccessRestrictions {
-		seedAccessRestrictionsNames.Insert(seedAccessRestriction.Name)
-	}
-
-	for _, accessRestriction := range shootAccessRestrictions {
-		if !seedAccessRestrictionsNames.Has(accessRestriction.Name) {
-			return false
-		}
-	}
-
-	return true
 }
