@@ -218,7 +218,13 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 	if err := b.syncShootConfigMapToGarden(
 		ctx,
 		gardenerutils.ShootProjectConfigMapSuffixCACluster,
-		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleCACluster},
+		map[string]string{
+			v1beta1constants.GardenRole:             v1beta1constants.GardenRoleCACluster,
+			v1beta1constants.LabelDiscoveryPublic:   v1beta1constants.DiscoveryShootCA,
+			v1beta1constants.LabelShootName:         b.Shoot.GetInfo().Name,
+			v1beta1constants.LabelShootUID:          string(b.Shoot.GetInfo().UID),
+			v1beta1constants.LabelUpdateRestriction: "true",
+		},
 		nil,
 		map[string]string{secretsutils.DataKeyCertificateCA: string(caBundle)},
 	); err != nil {
