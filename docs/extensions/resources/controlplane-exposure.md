@@ -16,7 +16,7 @@ Its purpose is to trigger the deployment of such provider-specific components in
 
 The shoot cluster's kube-apiserver are exposed via a `Service` of type `LoadBalancer` from the shoot provider (you may run the control plane of an Azure shoot in a GCP seed). It's the seed provider extension controller that should act on the `ControlPlane` resources with purpose `exposure`.
 
-If [SNI](../proposals/08-shoot-apiserver-via-sni.md) is enabled, then the `Service` from above is of type `ClusterIP` and  Gardner will not create `ControlPlane` resources with purpose `exposure`.
+If [SNI](../../proposals/08-shoot-apiserver-via-sni.md) is enabled, then the `Service` from above is of type `ClusterIP` and  Gardner will not create `ControlPlane` resources with purpose `exposure`.
 
 ## What needs to be implemented to support a new infrastructure provider?
 

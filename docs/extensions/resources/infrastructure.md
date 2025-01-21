@@ -8,7 +8,7 @@ Now, Gardener commissions an external, provider-specific controller to take over
 ## Which infrastructure resources are required?
 
 Unfortunately, there is no general answer to this question as it is highly provider specific.
-Consider the above mentioned resources, i.e. VPC, subnets, route tables, security groups, IAM roles, SSH key pairs.
+Consider the above mentioned resources, i.e., VPC, subnets, route tables, security groups, IAM roles, SSH key pairs.
 Most of the resources are required in order to create VMs (the shoot cluster worker nodes), load balancers, and volumes.
 
 ## What needs to be implemented to support a new infrastructure provider?
@@ -122,7 +122,7 @@ They are part of the [`Cluster` extension resource](../cluster.md) and can be us
 
 ### `Actuator` interface
 
-Most existing infrastructure controller implementations follow a common pattern where a generic `Reconciler` delegates to [an `Actuator` interface](../../../extensions/pkg/controller/infrastructure/actuator.go) that contains the methods `Reconcile`, `Delete`, `Migrate`, and `Restore`. These methods are called by the generic `Reconciler` for the respective operations, and should be implemented by the extension according to the contract described here and the [migration guidelines](migration.md).
+Most existing infrastructure controller implementations follow a common pattern where a generic `Reconciler` delegates to [an `Actuator` interface](../../../extensions/pkg/controller/infrastructure/actuator.go) that contains the methods `Reconcile`, `Delete`, `Migrate`, and `Restore`. These methods are called by the generic `Reconciler` for the respective operations, and should be implemented by the extension according to the contract described here and the [migration guidelines](../migration.md).
 
 ### `ConfigValidator` interface
 

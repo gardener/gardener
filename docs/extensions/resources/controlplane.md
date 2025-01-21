@@ -64,7 +64,7 @@ The control plane controller as part of the `ControlPlane` reconciliation often 
 Because the namespace contains [network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) that per default [deny all ingress and egress traffic](https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-deny-all-ingress-and-all-egress-traffic),
 the pods may need to have proper labels matching to the selectors of the network policies in order to allow the required network traffic.
 Otherwise, they won't be allowed to talk to certain other components (e.g., the kube-apiserver of the shoot).
-For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../operations/network_policies.md).
+For more information, see [`NetworkPolicy`s In Garden, Seed, Shoot Clusters](../../operations/network_policies.md).
 
 ## Non-Provider Specific Information Required for Infrastructure Creation
 
