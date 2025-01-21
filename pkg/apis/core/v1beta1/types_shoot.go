@@ -760,6 +760,16 @@ type VerticalPodAutoscaler struct {
 	// (default: 24h)
 	// +optional
 	MemoryHistogramDecayHalfLife *metav1.Duration `json:"memoryHistogramDecayHalfLife,omitempty" protobuf:"bytes,16,opt,name=memoryHistogramDecayHalfLife"`
+	// MemoryAggregationInterval is the length of a single interval, for which the peak memory usage is computed.
+	// (default: 24h)
+	// +optional
+	MemoryAggregationInterval *metav1.Duration `json:"memoryAggregationInterval,omitempty" protobuf:"bytes,17,opt,name=memoryAggregationInterval"`
+	// MemoryAggregationIntervalCount is the number of consecutive memory-aggregation-intervals which make up the
+	// MemoryAggregationWindowLength which in turn is the period for memory usage aggregation by VPA. In other words,
+	// `MemoryAggregationWindowLength = memory-aggregation-interval * memory-aggregation-interval-count`.
+	// (default: 8)
+	// +optional
+	MemoryAggregationIntervalCount *int64 `json:"memoryAggregationIntervalCount,omitempty" protobuf:"fixed64,18,opt,name=memoryAggregationIntervalCount"`
 }
 
 const (
@@ -796,6 +806,10 @@ var (
 	DefaultCPUHistogramDecayHalfLife = metav1.Duration{Duration: 24 * time.Hour}
 	// DefaultMemoryHistogramDecayHalfLife is the default value for the MemoryHistogramDecayHalfLife field in the VPA configuration.
 	DefaultMemoryHistogramDecayHalfLife = metav1.Duration{Duration: 24 * time.Hour}
+	// DefaultMemoryAggregationInterval is the default value for the MemoryAggregationInterval field in the VPA configuration.
+	DefaultMemoryAggregationInterval = metav1.Duration{Duration: 24 * time.Hour}
+	// DefaultMemoryAggregationIntervalCount is the default value for the MemoryAggregationIntervalCount field in the VPA configuration.
+	DefaultMemoryAggregationIntervalCount = int64(8)
 )
 
 // KubernetesConfig contains common configuration fields for the control plane components.

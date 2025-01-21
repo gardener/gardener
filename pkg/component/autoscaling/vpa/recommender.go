@@ -59,6 +59,12 @@ type ValuesRecommender struct {
 	RecommendationUpperBoundMemoryPercentile *float64
 	// MemoryHistogramDecayHalfLife is the amount of time it takes a historical memory usage sample to lose half of its weight.
 	MemoryHistogramDecayHalfLife *metav1.Duration
+	// MemoryAggregationInterval is the length of a single interval, for which the peak memory usage is computed.
+	MemoryAggregationInterval *metav1.Duration
+	// MemoryAggregationIntervalCount is the number of consecutive memory-aggregation-intervals which make up the
+	// MemoryAggregationWindowLength which in turn is the period for memory usage aggregation by VPA. In other words,
+	// `MemoryAggregationWindowLength = memory-aggregation-interval * memory-aggregation-interval-count`.
+	MemoryAggregationIntervalCount *int64
 	// Image is the container image.
 	Image string
 	// Interval is the interval how often the recommender should run.
@@ -271,6 +277,8 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						fmt.Sprintf("--recommendation-lower-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundMemoryPercentile)),
 						fmt.Sprintf("--recommendation-upper-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundMemoryPercentile)),
 						fmt.Sprintf("--memory-histogram-decay-half-life=%s", ptr.Deref(v.values.Recommender.MemoryHistogramDecayHalfLife, gardencorev1beta1.DefaultMemoryHistogramDecayHalfLife).Duration),
+						fmt.Sprintf("--memory-aggregation-interval=%s", ptr.Deref(v.values.Recommender.MemoryAggregationInterval, gardencorev1beta1.DefaultMemoryAggregationInterval).Duration),
+						fmt.Sprintf("--memory-aggregation-interval-count=%v", ptr.Deref(v.values.Recommender.MemoryAggregationIntervalCount, gardencorev1beta1.DefaultMemoryAggregationIntervalCount)),
 						"--leader-elect=true",
 						fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
 					},
