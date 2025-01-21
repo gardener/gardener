@@ -431,7 +431,7 @@ spec:
 
 By default, the `alertmanager-garden` deployed by `gardener-operator` does not come with any configuration.
 It is the responsibility of the human operators to design and provide it.
-This can be done by creating `monitoring.coreos.com/v1alpha1.AlertmanagerConfig` resources labeled with [`alertmanager=garden`](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/getting-started/design.md#alertmanagerconfig), for example:
+This can be done by creating `monitoring.coreos.com/v1alpha1.AlertmanagerConfig` resources labeled with `alertmanager=garden` (read more about them [here](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/getting-started/design.md#alertmanagerconfig)), for example:
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1alpha1
