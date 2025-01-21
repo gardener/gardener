@@ -886,6 +886,8 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationLowerBoundMemoryPercentile).To(PointTo(Equal(0.5)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationUpperBoundMemoryPercentile).To(PointTo(Equal(0.95)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryHistogramDecayHalfLife).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryAggregationInterval).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryAggregationIntervalCount).To(PointTo(Equal(int64(8))))
 		})
 
 		It("should not overwrite the already set values for VerticalPodAutoscaler field", func() {
@@ -905,6 +907,8 @@ var _ = Describe("Shoot defaulting", func() {
 				RecommendationLowerBoundMemoryPercentile: ptr.To(0.404),
 				RecommendationUpperBoundMemoryPercentile: ptr.To(0.494),
 				MemoryHistogramDecayHalfLife:             &metav1.Duration{Duration: 7 * time.Second},
+				MemoryAggregationInterval:                &metav1.Duration{Duration: 22 * time.Minute},
+				MemoryAggregationIntervalCount:           ptr.To[int64](42),
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -925,6 +929,8 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationLowerBoundMemoryPercentile).To(PointTo(Equal(0.404)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.RecommendationUpperBoundMemoryPercentile).To(PointTo(Equal(0.494)))
 			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryHistogramDecayHalfLife).To(PointTo(Equal(metav1.Duration{Duration: 7 * time.Second})))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryAggregationInterval).To(PointTo(Equal(metav1.Duration{Duration: 22 * time.Minute})))
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.MemoryAggregationIntervalCount).To(PointTo(Equal(int64(42))))
 		})
 	})
 })

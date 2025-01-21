@@ -282,6 +282,14 @@ func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 		v := DefaultMemoryHistogramDecayHalfLife
 		obj.MemoryHistogramDecayHalfLife = &v
 	}
+	if obj.MemoryAggregationInterval == nil {
+		v := DefaultMemoryAggregationInterval
+		obj.MemoryAggregationInterval = &v
+	}
+	if obj.MemoryAggregationIntervalCount == nil {
+		v := DefaultMemoryAggregationIntervalCount
+		obj.MemoryAggregationIntervalCount = &v
+	}
 }
 
 // SetDefaults_Worker sets default values for Worker objects.
