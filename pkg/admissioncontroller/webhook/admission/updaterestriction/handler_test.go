@@ -65,5 +65,39 @@ var _ = Describe("handler", func() {
 				},
 			}))
 		})
+
+		It("should allow the delete request as it is made by the generic-garbage-collector serviceaccount", func() {
+			req.UserInfo = authenticationv1.UserInfo{
+				Username: "system:serviceaccount:kube-system:generic-garbage-collector",
+			}
+			req.Operation = admissionv1.Delete
+			resp := handler.Handle(ctx, req)
+			Expect(resp.Allowed).To(BeTrue())
+			Expect(resp.AdmissionResponse).To(Equal(admissionv1.AdmissionResponse{
+				Allowed: true,
+				Result: &metav1.Status{
+					Code:    int32(200),
+					Reason:  "",
+					Message: "",
+				},
+			}))
+		})
+
+		It("should not allow the update request even if it is made by the generic-garbage-collector serviceaccount", func() {
+			req.UserInfo = authenticationv1.UserInfo{
+				Username: "system:serviceaccount:kube-system:generic-garbage-collector",
+			}
+			req.Operation = admissionv1.Update
+			resp := handler.Handle(ctx, req)
+			Expect(resp.Allowed).To(BeFalse())
+			Expect(resp.AdmissionResponse).To(Equal(admissionv1.AdmissionResponse{
+				Allowed: false,
+				Result: &metav1.Status{
+					Code:    int32(403),
+					Reason:  "Forbidden",
+					Message: "user \"system:serviceaccount:kube-system:generic-garbage-collector\" is not allowed to UPDATE system configmaps",
+				},
+			}))
+		})
 	})
 })
