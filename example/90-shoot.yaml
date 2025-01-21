@@ -323,6 +323,8 @@ spec:
   #   recommendationLowerBoundMemoryPercentile: 0.5
   #   recommendationUpperBoundMemoryPercentile: 0.95
   #   memoryHistogramDecayHalfLife: 24h
+  #   memoryAggregationInterval: 24h
+  #   memoryAggregationIntervalCount: 8
   dns:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain based on the default domains in the garden cluster.
