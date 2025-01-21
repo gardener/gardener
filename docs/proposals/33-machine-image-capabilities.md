@@ -420,13 +420,13 @@ The Capability struct must be added to the following component:
 
 - Gardener Core:
 
-  - MachineImageVersion\* in [gardener/pkg/apis/core
+  - MachineImageVersion (*) in [gardener/pkg/apis/core
     /types_cloudprofile.go](https://github.com/gardener/gardener/blob/c0486a3187b5e2e0697f9e373c008c588689960a/pkg/apis/core/types_cloudprofile.go#L96)
   - MachineType in [gardener/pkg/apis/core/types_cloudprofile.go](https://github.com/gardener/gardener/blob/c0486a3187b5e2e0697f9e373c008c588689960a/pkg/apis/core/types_cloudprofile.go#L121)
   - Worker in [gardener/pkg/apis/core
     /types_shoot.go](https://github.com/gardener/gardener/blob/c0486a3187b5e2e0697f9e373c008c588689960a/pkg/apis/core/types_shoot.go#L1161)
 
-\* an array of Capability structs must be added
+(*) an array of Capability structs must be added
 
 - Provider Extension MachineImageVersion Implementation:
 
