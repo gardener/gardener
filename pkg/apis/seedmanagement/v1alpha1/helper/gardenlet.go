@@ -11,17 +11,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
-
-// GetBootstrap returns the value of the given Bootstrap, or None if nil.
-func GetBootstrap(bootstrap *seedmanagementv1alpha1.Bootstrap) seedmanagementv1alpha1.Bootstrap {
-	if bootstrap != nil {
-		return *bootstrap
-	}
-	return seedmanagementv1alpha1.BootstrapNone
-}
 
 // ExtractSeedTemplateAndGardenletConfig extracts SeedTemplate and GardenletConfig from the given `managedSeed`.
 // An error is returned if either SeedTemplate of GardenletConfig is not specified.
