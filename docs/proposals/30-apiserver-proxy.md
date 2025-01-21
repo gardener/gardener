@@ -1,16 +1,17 @@
 ---
-title: Rework apiserver-proxy to drop PROXY protocol
+title: Rework apiserver-proxy to drop proxy protocol
 gep-number: 30
 creation-date: 2024-10-11
 status: implementable
 authors:
 - "@robinschneider"
 - "@knht"
-reviewers:
 - "@timebertt"
+reviewers:
+- "@ScheererJ"
 ---
 
-# GEP-30: Rework apiserver-proxy to drop PROXY protocol
+# GEP-30: Rework apiserver-proxy to drop proxy protocol
 
 ## Table of Contents
 
@@ -35,22 +36,26 @@ reviewers:
 - [Alternatives](#alternatives)
 
 ## Summary
+
 This proposal introduces secure routing mechanisms for Gardener's API server proxy to prevent security vulnerabilities when using opaque LoadBalancers.
 
 ## Motivation
-The current architecture of Gardener, when used with opaque/instransparent LoadBalancer configurations and the ACL extension, can result in a security vulnerability. This vulnerability stems from the addition of multiple proxy protocol headers to network packets, which can lead to possible unauthorized access attempts to incorrect kube-api servers.
+
+The current architecture of Gardener, when used with opaque/intransparent LoadBalancer configurations and the ACL extension, can result in a security vulnerability. This vulnerability stems from the addition of multiple proxy protocol headers to network packets, which can lead to possible unauthorized access attempts to incorrect kube-api servers.
 
 Alternatively, reducing the number of supported connection architectures by removing the proxy protocol method would simplify the system. The remaining two architectures already utilize HTTP CONNECT and are inherently immune to these security concerns, making them more reliable choices for secure communication.
 
 The proposed solution involves implementing a custom header for secure routing using HTTP CONNECT (as currently used by the VPN listener), introducing a new port or path for API traffic, and gradually transitioning to this system through a feature gate.
 
 ### Goals
+
 - Eliminate the vulnerability caused by dual proxy protocol headers
 - Ensure secure routing of traffic to the correct API server
 - Provide a clear migration path for existing Gardener deployments
 - Allow [`gardener-extension-acl`](https://github.com/stackitcloud/gardener-extension-acl) to be used with proxy protocol on (non-transparent) LoadBalancers
 
 ### Non-Goals
+
 - Modifying the core functionality of the ACL extension
 
 ## Proposal
@@ -65,6 +70,7 @@ The proposed solution involves the following key changes:
 - Provide a phased implementation approach for gradual adoption
 
 ## Concerns with the [Current Architecture](./11-apiserver-network-proxy.md)
+
 The `apiserver-proxy` creates a proxy protocol header for each connection, containing information about the source and destination of the traffic. This header gets forwarded by the LoadBalancer towards the `istio-ingressgateway`.
 
 A second proxy protocol header may be created when:
@@ -79,7 +85,7 @@ In cases where dual proxy protocol headers exist, we require specific informatio
 However, the `istio-ingressgateway` processes these headers sequentially, reading the first proxy protocol header and then overwriting its information with the second proxy protocol header. This behavior means only the information from the second header is ultimately used for traffic filtering decisions in the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl).
 
 This situation becomes problematic under these conditions:
-- When [ACL extension](https://github.com/stackitcloud/gardener-extension-acl) is actively filtering traffic based on source IP addresses
+- When the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl) is actively filtering traffic based on source IP addresses
 - When multiple shoot clusters are using overlapping private IP ranges
 - When the LoadBalancer is not maintaining the original client source IP information
 
@@ -233,6 +239,7 @@ spec:
       protocol: HTTP
 {{- end }}
 ```
+
 ### Implementation Steps
 
 1. Apply the Istio Gateway and VirtualService configurations.
@@ -246,6 +253,7 @@ spec:
 The implementation will be controlled by two distinct feature gates that handle different aspects of the solution. Each feature gate can be disabled per shoot to allow testing of the old implementation via E2E tests.
 
 ### Feature Gate 1: `APIServerSecureRouting`
+
 Controls whether shoots use the new secure routing implementation with HTTP CONNECT and custom headers.
 
 **Rollout Plan:**
@@ -255,6 +263,7 @@ Controls whether shoots use the new secure routing implementation with HTTP CONN
 - When fully proven, the feature gate will be removed and the functionality will become permanent
 
 ### Feature Gate 2: `APIServerLegacyPortDisable`
+
 Controls whether the legacy port is available. This feature gate can only be enabled after `APIServerSecureRouting` has been fully rolled out.
 
 **Rollout Plan:**
