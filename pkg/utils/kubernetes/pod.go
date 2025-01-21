@@ -32,9 +32,9 @@ import (
 	"k8s.io/client-go/transport/spdy"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // VisitPodSpec calls the given visitor for the PodSpec contained in the given object. The visitor may mutate the
