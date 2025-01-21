@@ -231,9 +231,9 @@ Then the image with `gen2` will be preferred.
 Other edge cases will be deterministic solved as well to ensure a consistent behavior.
 
 In addition to the default capabilities, the `spec.machineTypes` is extended with the `capabilities` structure described above.
-The image versions in `spec.machineImages.versions` will be extended with `capabilityCombinations` - an array of capabilities structures, one entry for each image reference of an image version in the cloud provider.
+The image versions in `spec.machineImages.versions` will be extended with `capabilitySets` - an array of capabilities structures, one entry for each image reference of an image version in the cloud provider.
 
-The architecture is also added to the capabilityCombinations. This is required as the architecture is a capability itself. 
+The architecture is also added to the capabilitySets. This is required as the architecture is a capability itself. 
 
 > [!NOTE]
 > To avoid duplication and remove the possibility of inconsistencies the existing `architecture` field in `machineImages.versions` and `machineTypes` will be marked as deprecated. `architecture` will become the only mandatory capability and will take precedence over the deprecated field if both are present.
@@ -266,7 +266,7 @@ spec:
           version: 1592.2.0
 
         - classification: supported
-          version: 1592.1.0 # <-- if no capabilityCombinations are defined the default capabilities are assigned as only combination
+          version: 1592.1.0 # <-- if no capabilitySets are defined the default capabilities are assigned as only combination
 
   machineTypes:
     - architecture: amd64 # <-- marked as deprecated
@@ -286,7 +286,7 @@ spec:
       usable: true
 ```
 
-The changes to the gardener `CloudProfile` above are sufficient to select the correct image version selection. This enables:
+The changes to the gardener `CloudProfile` above are sufficient to support the correct image version selection. This enables:
 - The shoot admission controller to check if the selected machine image is supported by the selected machine type. 
 - The maintenance controller to performed automated upgrades correctly without breaking worker nodes.
 - The Gardener Dashboard to filter out incompatible images for a machine type.
