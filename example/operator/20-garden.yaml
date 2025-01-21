@@ -28,6 +28,10 @@ spec:
     #   <some-provider-specific-config-for-the-dns-records>
       secretRef:
         name: garden-dns-local
+# extensions:
+# - type: foobar
+#   providerConfig:
+#     <some-provider-specific-config-for-extension>
   runtimeCluster:
     ingress:
       domains:

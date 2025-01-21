@@ -87,10 +87,10 @@ It contains configuration for the following scenarios:
 - The deployment of `ControllerRegistration` and `ControllerDeployment` resources in the (virtual) garden cluster.
 - The deployment of [extension admissions charts](../extensions/admission.md) in runtime and virtual clusters.
 
-In the near future, the `Extension` will be used by the `gardener-operator` to automate the management of the backup bucket for ETCD and DNS records required by the garden cluster.
-To do that, `gardener-operator` will leverage extensions that support `DNSRecord` and `BackupBucket` resources.
-As of today, the support for managed `DNSRecords` and `BackupBuckets` in the `gardener-operator` is still being built.
-However, the `Extension`'s specification already reflects the target picture.
+With regard to the `Garden` reconciliation process, there are specific types of extensions that are of key interest, namely the `BackupBucket`, `DNSRecord`, and `Extension` types.
+The `BackupBucket` extension is utilized to manage the backup bucket dedicated to the garden's main etcd.
+The `DNSRecord` extension type is essential to manage the API server and ingress DNS records.
+Lastly, the `Extension` type plays a crucial role in managing generic Gardener extensions which deploy various components within the runtime cluster. These extensions can be activated and configured in the `.spec.extensions` field of the `Garden` resource. These extensions can supplement functionality and provide new capabilities.
 
 Please find an exemplary `Extension` resource [here](../../example/operator/15-extension.yaml).
 

@@ -1438,6 +1438,20 @@ DNSManagement
 </tr>
 <tr>
 <td>
+<code>extensions</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenExtension">
+[]GardenExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Garden extensions.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>runtimeCluster</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.RuntimeCluster">
@@ -1480,6 +1494,48 @@ GardenStatus
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.GardenExtension">GardenExtension
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenSpec">GardenSpec</a>)
+</p>
+<p>
+<p>GardenExtension contains type and provider information for Garden extensions.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type is the type of the extension resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to extension resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenSpec">GardenSpec
 </h3>
 <p>
@@ -1509,6 +1565,20 @@ DNSManagement
 <td>
 <em>(Optional)</em>
 <p>DNS contains specifications of DNS providers.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenExtension">
+[]GardenExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Garden extensions.</p>
 </td>
 </tr>
 <tr>

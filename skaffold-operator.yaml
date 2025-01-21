@@ -104,6 +104,7 @@ build:
             - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_operatingsystemconfigs.yaml
             - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_workers.yaml
             - pkg/component/extensions/dnsrecord
+            - pkg/component/extensions/extension
             - pkg/component/extensions/operatingsystemconfig/original/components
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd
             - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate

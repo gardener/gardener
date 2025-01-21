@@ -124,6 +124,26 @@ spec:
                 required:
                 - providers
                 type: object
+              extensions:
+                description: Extensions contain type and provider information for
+                  Garden extensions.
+                items:
+                  description: GardenExtension contains type and provider information
+                    for Garden extensions.
+                  properties:
+                    providerConfig:
+                      description: ProviderConfig is the configuration passed to extension
+                        resource.
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    type:
+                      description: Type is the type of the extension resource.
+                      minLength: 1
+                      type: string
+                  required:
+                  - type
+                  type: object
+                type: array
               runtimeCluster:
                 description: RuntimeCluster contains configuration for the runtime
                   cluster.

@@ -138,6 +138,9 @@ func (r *Reconciler) reconcile(
 		secretsTypeGardenAccess        = "garden access"
 		secretsTypeWorkloadIdentity    = "workload identity"
 		secretsTypeGardenletKubeconfig = "gardenlet kubeconfig" // #nosec G101 -- No credential.
+
+		defaultTimeout  = 30 * time.Second
+		defaultInterval = 5 * time.Second
 	)
 
 	var (
@@ -288,6 +291,16 @@ func (r *Reconciler) reconcile(
 			Fn:           flow.Parallel(c.etcdMain.Wait, c.etcdEvents.Wait),
 			Dependencies: flow.NewTaskIDs(deployEtcds),
 		})
+		deployExtensionResourcesBeforeKAPI = g.Add(flow.Task{
+			Name:         "Deploying extension resources before kube-apiserver",
+			Fn:           flow.TaskFn(c.extensions.DeployBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployExtensionCRD),
+		})
+		waitUntilExtensionResourcesBeforeKAPIReady = g.Add(flow.Task{
+			Name:         "Waiting until extension resources handled before kube-apiserver are ready",
+			Fn:           c.extensions.WaitBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(deployExtensionResourcesBeforeKAPI),
+		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Deploying and waiting for kube-apiserver service in the runtime cluster",
 			Fn:           component.OpWait(c.kubeAPIServerService).Deploy,
@@ -301,7 +314,7 @@ func (r *Reconciler) reconcile(
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API Server",
 			Fn:           r.deployKubeAPIServerFunc(garden, c.kubeAPIServer),
-			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdsReady, waitUntilExtensionResourcesBeforeKAPIReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server rolled out",
@@ -386,7 +399,7 @@ func (r *Reconciler) reconcile(
 					client.InNamespace(r.GardenNamespace),
 					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
 				)
-			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployVirtualGardenGardenerAccess, deployGardenerAPIServer, deployGardenerAdmissionController, deployGardenerControllerManager, deployGardenerScheduler),
 		})
@@ -400,8 +413,28 @@ func (r *Reconciler) reconcile(
 				virtualClusterClient = virtualClusterClientSet.Client()
 				return nil
 			}).
-				RetryUntilTimeout(time.Second, 30*time.Second),
+				RetryUntilTimeout(time.Second, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService, deployVirtualGardenGardenerAccess, renewVirtualClusterAccess),
+		})
+		deployExtensionResources = g.Add(flow.Task{
+			Name:         "Deploying extension resources",
+			Fn:           flow.Parallel(c.extensions.DeployAfterKubeAPIServer, c.extensions.DeployAfterWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extension resources are ready",
+			Fn:           flow.Parallel(c.extensions.WaitAfterKubeAPIServer, c.extensions.WaitAfterWorker),
+			Dependencies: flow.NewTaskIDs(deployExtensionResources),
+		})
+		deleteStaleExtensionResources = g.Add(flow.Task{
+			Name:         "Deleting stale extension resources",
+			Fn:           flow.TaskFn(c.extensions.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until stale extension resources are deleted",
+			Fn:           c.extensions.WaitCleanupStaleResources,
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Reconciling Gardener Dashboard",
@@ -421,7 +454,7 @@ func (r *Reconciler) reconcile(
 			Name: "Label seeds to trigger renewal of their garden access secrets",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log.WithValues(secretsTypeKey, secretsTypeGardenAccess), virtualClusterClient, v1beta1constants.SeedOperationRenewGardenAccessSecrets)
-			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient),
 		})
@@ -429,7 +462,7 @@ func (r *Reconciler) reconcile(
 			Name: "Check if all seeds finished the renewal of their garden access secrets",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx, virtualClusterClient, v1beta1constants.SeedOperationRenewGardenAccessSecrets, secretsTypeGardenAccess)
-			}).RetryUntilTimeout(5*time.Second, 2*time.Minute),
+			}).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(renewGardenAccessSecretsInAllSeeds),
 		})
@@ -437,7 +470,7 @@ func (r *Reconciler) reconcile(
 			Name: "Annotate seeds to trigger renewal of workload identity tokens",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log.WithValues(secretsTypeKey, secretsTypeWorkloadIdentity), virtualClusterClient, v1beta1constants.SeedOperationRenewWorkloadIdentityTokens)
-			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady),
 		})
@@ -445,7 +478,7 @@ func (r *Reconciler) reconcile(
 			Name: "Check if all seeds finished the renewal of their workload identity tokens",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx, virtualClusterClient, v1beta1constants.SeedOperationRenewWorkloadIdentityTokens, secretsTypeWorkloadIdentity)
-			}).RetryUntilTimeout(5*time.Second, 2*time.Minute),
+			}).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(renewWorkloadIdentityTokensInAllSeeds),
 		})
@@ -453,7 +486,7 @@ func (r *Reconciler) reconcile(
 			Name: "Label seeds to trigger renewal of their gardenlet kubeconfig",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.RenewGardenSecretsInAllSeeds(ctx, log.WithValues(secretsTypeKey, secretsTypeGardenletKubeconfig), virtualClusterClient, v1beta1constants.GardenerOperationRenewKubeconfig)
-			}).RetryUntilTimeout(5*time.Second, 30*time.Second),
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(checkIfGardenAccessSecretsRenewalCompletedInAllSeeds),
 		})
@@ -461,7 +494,7 @@ func (r *Reconciler) reconcile(
 			Name: "Check if all seeds finished the renewal of their gardenlet kubeconfig",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return secretsrotation.CheckIfGardenSecretsRenewalCompletedInAllSeeds(ctx, virtualClusterClient, v1beta1constants.GardenerOperationRenewKubeconfig, secretsTypeGardenletKubeconfig)
-			}).RetryUntilTimeout(5*time.Second, 2*time.Minute),
+			}).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(renewGardenletKubeconfigInAllSeeds),
 		})

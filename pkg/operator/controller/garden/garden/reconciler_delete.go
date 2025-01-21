@@ -57,6 +57,11 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, err
 	}
 
+	const (
+		defaultTimeout  = 30 * time.Second
+		defaultInterval = 5 * time.Second
+	)
+
 	var (
 		g = flow.NewGraph("Garden deletion")
 
@@ -113,23 +118,36 @@ func (r *Reconciler) delete(
 			Name: "Destroying Gardener Scheduler",
 			Fn:   component.OpDestroyAndWait(c.gardenerScheduler).Destroy,
 		})
+		deleteExtensionResourcesBeforeKubeAPIServer = g.Add(flow.Task{
+			Name: "Destroying extension resources before kube-apiserver",
+			Fn:   flow.TaskFn(c.extensions.DestroyBeforeKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		waitUntilExtensionResourcesBeforeKubeAPIServerDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension resources that should be handled before kube-apiserver have been deleted",
+			Fn:           c.extensions.WaitCleanupBeforeKubeAPIServer,
+			Dependencies: flow.NewTaskIDs(deleteExtensionResourcesBeforeKubeAPIServer),
+		})
 		destroyGardenerControllerManager = g.Add(flow.Task{
-			Name: "Destroying Gardener Controller Manager",
-			Fn:   component.OpDestroyAndWait(c.gardenerControllerManager).Destroy,
+			Name:         "Destroying Gardener Controller Manager",
+			Fn:           component.OpDestroyAndWait(c.gardenerControllerManager).Destroy,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesBeforeKubeAPIServerDeleted),
 		})
 		destroyGardenerAdmissionController = g.Add(flow.Task{
-			Name: "Destroying Gardener Admission Controller",
-			Fn:   component.OpDestroyAndWait(c.gardenerAdmissionController).Destroy,
+			Name:         "Destroying Gardener Admission Controller",
+			Fn:           component.OpDestroyAndWait(c.gardenerAdmissionController).Destroy,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesBeforeKubeAPIServerDeleted),
 		})
 		destroyGardenerAPIServer = g.Add(flow.Task{
-			Name: "Destroying Gardener API Server",
-			Fn:   component.OpDestroyAndWait(c.gardenerAPIServer).Destroy,
+			Name:         "Destroying Gardener API Server",
+			Fn:           component.OpDestroyAndWait(c.gardenerAPIServer).Destroy,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesBeforeKubeAPIServerDeleted),
 		})
 		destroyVirtualSystemResources = g.Add(flow.Task{
 			Name:         "Destroying virtual system resources",
 			Fn:           component.OpDestroyAndWait(c.virtualSystem).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerAPIServer),
 		})
+
 		syncPointVirtualGardenManagedResourcesDestroyed = flow.NewTaskIDs(
 			destroyGardenerDiscoveryServer,
 			destroyTerminalControllerManager,
@@ -218,13 +236,21 @@ func (r *Reconciler) delete(
 			invalidateClient,
 		)
 
+		deleteExtensionResources = g.Add(flow.Task{
+			Name: "Destroying extension resources",
+			Fn:   flow.TaskFn(c.extensions.DeleteResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension resources have been deleted",
+			Fn:           c.extensions.WaitCleanupResources,
+			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
+		})
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Destroying DNSRecords for virtual garden cluster and ingress controller",
 			Fn:           func(ctx context.Context) error { return r.destroyDNSRecords(ctx, log) },
 			SkipIf:       garden.Spec.DNS == nil,
 			Dependencies: flow.NewTaskIDs(syncPointVirtualGardenControlPlaneDestroyed),
 		})
-
 		destroyMainETCDBackupBucket = g.Add(flow.Task{
 			Name: "Destroying main ETCD backup bucket",
 			Fn: func(ctx context.Context) error {
@@ -292,6 +318,7 @@ func (r *Reconciler) delete(
 			Dependencies: flow.NewTaskIDs(destroyFluentOperatorCustomResources),
 		})
 		syncPointCleanedUp = flow.NewTaskIDs(
+			waitUntilExtensionResourcesDeleted,
 			destroyDNSRecords,
 			destroyMainETCDBackupBucket,
 			destroyEtcdDruid,

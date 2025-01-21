@@ -76,6 +76,9 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 			Name: name,
 		},
 		Spec: operatorv1alpha1.GardenSpec{
+			Extensions: []operatorv1alpha1.GardenExtension{{
+				Type: "local-ext-shoot",
+			}},
 			RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 				Networking: operatorv1alpha1.RuntimeNetworking{
 					Pods:     "10.1.0.0/16",

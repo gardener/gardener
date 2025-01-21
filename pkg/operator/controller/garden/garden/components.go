@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
@@ -43,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
+	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	runtimegardensystem "github.com/gardener/gardener/pkg/component/garden/system/runtime"
 	virtualgardensystem "github.com/gardener/gardener/pkg/component/garden/system/virtual"
 	gardeneraccess "github.com/gardener/gardener/pkg/component/gardener/access"
@@ -98,6 +100,8 @@ type components struct {
 	etcdDruid               component.DeployWaiter
 	istio                   istio.Interface
 	nginxIngressController  component.DeployWaiter
+
+	extensions extension.Interface
 
 	etcdMain                             etcd.Interface
 	etcdEvents                           etcd.Interface
@@ -181,6 +185,12 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.nginxIngressController, err = r.newNginxIngressController(garden, c.istio.GetValues().IngressGateway)
+	if err != nil {
+		return
+	}
+
+	// garden extensions
+	c.extensions, err = r.newExtensions(ctx, log, garden)
 	if err != nil {
 		return
 	}
@@ -1349,4 +1359,55 @@ func domainNames(domains []operatorv1alpha1.DNSDomain) []string {
 		names = append(names, domain.Name)
 	}
 	return names
+}
+
+func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) (extension.Interface, error) {
+	values := &extension.Values{
+		Namespace:  r.GardenNamespace,
+		Extensions: make(map[string]extension.Extension),
+	}
+
+	// Transform extension definition from Garden to extensionsv1alpha1.Extension resource.
+	for _, ext := range garden.Spec.Extensions {
+		values.Extensions[ext.Type] = extension.Extension{
+			Extension: extensionsv1alpha1.Extension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ext.Type,
+					Namespace: r.GardenNamespace,
+				},
+				Spec: extensionsv1alpha1.ExtensionSpec{
+					DefaultSpec: extensionsv1alpha1.DefaultSpec{
+						Type:           ext.Type,
+						Class:          ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+						ProviderConfig: ext.ProviderConfig,
+					},
+				},
+			},
+			Timeout: extension.DefaultTimeout,
+		}
+	}
+
+	extensions := &operatorv1alpha1.ExtensionList{}
+	if err := r.RuntimeClientSet.Client().List(ctx, extensions); err != nil {
+		return nil, fmt.Errorf("error calculating extensions: %w", err)
+	}
+
+	// Apply resource specific settings from operatorv1alpha1.Extension resource.
+	for _, ext := range extensions.Items {
+		for _, res := range ext.Spec.Resources {
+			wantedExtension, ok := values.Extensions[res.Type]
+			if !ok || res.Kind != extensionsv1alpha1.ExtensionResource {
+				continue
+			}
+
+			wantedExtension.Lifecycle = res.Lifecycle
+			if res.ReconcileTimeout != nil {
+				wantedExtension.Timeout = res.ReconcileTimeout.Duration
+			}
+
+			values.Extensions[res.Type] = wantedExtension
+		}
+	}
+
+	return extension.New(log, r.RuntimeClientSet.Client(), values, extension.DefaultInterval, extension.DefaultSevereThreshold, extension.DefaultTimeout), nil
 }
