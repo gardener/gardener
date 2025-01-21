@@ -50,25 +50,10 @@ spec:
                     description: ClusterCredentials define the credentials to the
                       host cluster
                     properties:
-                      secretRef:
-                        description: |-
-                          SecretRef is a reference to a secret that contains the cluster specific credentials
-                          Either ShootRef, SecretRef or ServiceAccountRef is mandatory. ShootRef will be used if more than one ref is provided.
-                        properties:
-                          name:
-                            description: name is unique within a namespace to reference
-                              a secret resource.
-                            type: string
-                          namespace:
-                            description: namespace defines the space within which
-                              the secret name must be unique.
-                            type: string
-                        type: object
-                        x-kubernetes-map-type: atomic
                       serviceAccountRef:
-                        description: ServiceAccountRef is a reference to a service
-                          account that should be used, usually to manage resources
-                          on the same cluster as the service account is residing in
+                        description: |-
+                          ServiceAccountRef is a reference to a service account that should be used, usually to manage resources on the same cluster as the service account is residing in
+                          Either ShootRef or ServiceAccountRef must be set, but not both.
                         properties:
                           apiVersion:
                             description: API version of the referent.
@@ -111,9 +96,9 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       shootRef:
-                        description: ShootRef references the shoot cluster. The admin
-                          kubeconfig retrieved from the shoots/adminkubeconfig endpoint
-                          is used
+                        description: |-
+                          ShootRef references the shoot cluster. The admin kubeconfig retrieved from the shoots/adminkubeconfig endpoint is used
+                          Either ShootRef or ServiceAccountRef must be set, but not both.
                         properties:
                           name:
                             description: Name is the name of the shoot cluster
@@ -503,25 +488,10 @@ spec:
                     description: ClusterCredentials define the credentials to the
                       target cluster
                     properties:
-                      secretRef:
-                        description: |-
-                          SecretRef is a reference to a secret that contains the cluster specific credentials
-                          Either ShootRef, SecretRef or ServiceAccountRef is mandatory. ShootRef will be used if more than one ref is provided.
-                        properties:
-                          name:
-                            description: name is unique within a namespace to reference
-                              a secret resource.
-                            type: string
-                          namespace:
-                            description: namespace defines the space within which
-                              the secret name must be unique.
-                            type: string
-                        type: object
-                        x-kubernetes-map-type: atomic
                       serviceAccountRef:
-                        description: ServiceAccountRef is a reference to a service
-                          account that should be used, usually to manage resources
-                          on the same cluster as the service account is residing in
+                        description: |-
+                          ServiceAccountRef is a reference to a service account that should be used, usually to manage resources on the same cluster as the service account is residing in
+                          Either ShootRef or ServiceAccountRef must be set, but not both.
                         properties:
                           apiVersion:
                             description: API version of the referent.
@@ -564,9 +534,9 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       shootRef:
-                        description: ShootRef references the shoot cluster. The admin
-                          kubeconfig retrieved from the shoots/adminkubeconfig endpoint
-                          is used
+                        description: |-
+                          ShootRef references the shoot cluster. The admin kubeconfig retrieved from the shoots/adminkubeconfig endpoint is used
+                          Either ShootRef or ServiceAccountRef must be set, but not both.
                         properties:
                           name:
                             description: Name is the name of the shoot cluster

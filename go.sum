@@ -190,8 +190,8 @@ github.com/gardener/etcd-druid v0.26.1 h1:x8mZfcIkZS29bJKupy0PVTsIrPUNVxvcJlLAXK
 github.com/gardener/etcd-druid v0.26.1/go.mod h1:SKjfV8bvdLGF1ynFbWF4ioK2a6M33g7N6lct45p50J8=
 github.com/gardener/machine-controller-manager v0.55.1 h1:d6mTnuYko+jWeIi7tAFWgWnL1nR5hGcI6pRCDcH0TGY=
 github.com/gardener/machine-controller-manager v0.55.1/go.mod h1:eCng7De6OE15rndmMm6Q1fwMQI39esASCd3WKZ/lLmY=
-github.com/gardener/terminal-controller-manager v0.33.0 h1:XxRVD9zrO1loFHFYeJG0+1XRLik2KOjQvwahHX19K28=
-github.com/gardener/terminal-controller-manager v0.33.0/go.mod h1:QEfUme8xXfye0fo/6dKSp9PowkdJ7jm5uXgeC9j8GfY=
+github.com/gardener/terminal-controller-manager v0.34.0 h1:qE8xIKsOFnVr1yZ2meesRR0q65uZ1Nyf5oSluAiLTeM=
+github.com/gardener/terminal-controller-manager v0.34.0/go.mod h1:g1PHUb95LzP/iMFF6aU6yBxGLXpw+yuisvfHcxYQoYY=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-jose/go-jose/v4 v4.0.4 h1:VsjPI33J0SB9vQM6PLmNjoHqMQNGPiZ0rHL7Ni7Q6/E=
