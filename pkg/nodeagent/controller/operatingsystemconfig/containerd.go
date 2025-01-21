@@ -58,7 +58,7 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 	return nil
 }
 
-// ReconcileContainerdRegistries configures desired registries for containerd and cleans up abandoned ones.
+// ReconcileContainerdRegistries configures changed registries for containerd and cleans up abandoned ones.
 // Registries without readiness probes are added synchronously and related errors are returned immediately.
 // Registries with configured readiness probes are added asynchronously and must be waited for by invoking the returned function.
 func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) (func() error, error) {
@@ -295,7 +295,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 		registriesWithReadiness    []extensionsv1alpha1.RegistryConfig
 	)
 
-	for _, registryConfig := range changes.Containerd.Registries.Desired {
+	for _, registryConfig := range changes.Containerd.Registries.Changed {
 		if ptr.Deref(registryConfig.ReadinessProbe, false) {
 			registriesWithReadiness = append(registriesWithReadiness, registryConfig)
 		} else {
@@ -310,7 +310,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 			errChan <- err
 			return errChan
 		}
-		if err := changes.completedContainerdRegistriesDesired(registryConfig.Upstream); err != nil {
+		if err := changes.completedContainerdRegistriesChanged(registryConfig.Upstream); err != nil {
 			errChan <- err
 			return errChan
 		}
@@ -322,7 +322,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 			if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS); err != nil {
 				return err
 			}
-			return changes.completedContainerdRegistriesDesired(registryConfig.Upstream)
+			return changes.completedContainerdRegistriesChanged(registryConfig.Upstream)
 		})
 	}
 

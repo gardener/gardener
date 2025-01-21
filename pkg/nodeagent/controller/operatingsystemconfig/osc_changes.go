@@ -61,7 +61,7 @@ type containerd struct {
 }
 
 type containerdRegistries struct {
-	Desired []extensionsv1alpha1.RegistryConfig `json:"desired,omitempty"`
+	Changed []extensionsv1alpha1.RegistryConfig `json:"changed,omitempty"`
 	Deleted []extensionsv1alpha1.RegistryConfig `json:"deleted,omitempty"`
 }
 
@@ -178,11 +178,11 @@ func (o *operatingSystemConfigChanges) completedContainerdConfigFileChange() err
 	return o.persist()
 }
 
-func (o *operatingSystemConfigChanges) completedContainerdRegistriesDesired(upstream string) error {
+func (o *operatingSystemConfigChanges) completedContainerdRegistriesChanged(upstream string) error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	o.Containerd.Registries.Desired = slices.DeleteFunc(o.Containerd.Registries.Desired, func(c extensionsv1alpha1.RegistryConfig) bool {
+	o.Containerd.Registries.Changed = slices.DeleteFunc(o.Containerd.Registries.Changed, func(c extensionsv1alpha1.RegistryConfig) bool {
 		return c.Upstream == upstream
 	})
 

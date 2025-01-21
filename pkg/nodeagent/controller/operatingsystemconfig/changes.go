@@ -7,7 +7,6 @@ package operatingsystemconfig
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"slices"
 
 	"github.com/go-logr/logr"
@@ -117,7 +116,7 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 
 		changes.Containerd.ConfigFileChanged = true
 		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
-			changes.Containerd.Registries.Desired = newOSC.Spec.CRIConfig.Containerd.Registries
+			changes.Containerd.Registries.Changed = newOSC.Spec.CRIConfig.Containerd.Registries
 		}
 		changes.lock.Lock()
 		defer changes.lock.Unlock()
@@ -322,22 +321,26 @@ func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensions
 }
 
 func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) containerdRegistries {
-	// suppress host probing if no Hosts changes are detected
-	suppressHostsProbing(newRegistries, oldRegistries)
+	var r containerdRegistries
 
-	r := containerdRegistries{
-		Desired: newRegistries,
+	for _, oldRegistry := range oldRegistries {
+		if !slices.ContainsFunc(newRegistries, func(newRegistry extensionsv1alpha1.RegistryConfig) bool {
+			return oldRegistry.Upstream == newRegistry.Upstream
+		}) {
+			r.Deleted = append(r.Deleted, oldRegistry)
+		}
 	}
 
-	upstreamsInUse := sets.New[string]()
-	for _, registryConfig := range r.Desired {
-		upstreamsInUse.Insert(registryConfig.Upstream)
+	for _, newRegistry := range newRegistries {
+		oldRegistryIndex := slices.IndexFunc(oldRegistries, func(oldRegistry extensionsv1alpha1.RegistryConfig) bool {
+			return oldRegistry.Upstream == newRegistry.Upstream
+		})
+
+		if oldRegistryIndex == -1 || !apiequality.Semantic.DeepEqual(oldRegistries[oldRegistryIndex], newRegistry) {
+			r.Changed = append(r.Changed, newRegistry)
+			continue
+		}
 	}
-
-	r.Deleted = slices.DeleteFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
-		return upstreamsInUse.Has(config.Upstream)
-	})
-
 	return r
 }
 
@@ -347,17 +350,4 @@ func getCommandToExecute(newUnit extensionsv1alpha1.Unit) extensionsv1alpha1.Uni
 		commandToExecute = extensionsv1alpha1.CommandStop
 	}
 	return commandToExecute
-}
-
-func suppressHostsProbing(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) {
-	for i := 0; i < len(newRegistries); i++ {
-		if ptr.Deref(newRegistries[i].ReadinessProbe, false) {
-			index := slices.IndexFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
-				return newRegistries[i].Upstream == config.Upstream
-			})
-			if index != -1 && reflect.DeepEqual(newRegistries[i].Hosts, oldRegistries[index].Hosts) {
-				newRegistries[i].ReadinessProbe = ptr.To(false)
-			}
-		}
-	}
 }
