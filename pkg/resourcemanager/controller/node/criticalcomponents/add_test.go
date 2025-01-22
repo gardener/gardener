@@ -58,8 +58,33 @@ var _ = Describe("Add", func() {
 		})
 
 		Describe("#Update", func() {
-			It("should return false", func() {
-				Expect(p.Update(event.UpdateEvent{})).To(BeFalse())
+			It("should return false if the object is not a Node", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: &corev1.ConfigMap{}})).To(BeFalse())
+			})
+
+			It("should return false if Node doesn't have any taints", func() {
+				Expect(p.Update(event.UpdateEvent{ObjectNew: node})).To(BeFalse())
+			})
+
+			It("should return false if Node doesn't have critical components taint", func() {
+				node.Spec.Taints = []corev1.Taint{{
+					Key:    "node.kubernetes.io/not-ready",
+					Effect: "NoExecute",
+				}, {
+					Key:    "other-taint",
+					Effect: "NoSchedule",
+				}}
+
+				Expect(p.Update(event.UpdateEvent{ObjectNew: node})).To(BeFalse())
+			})
+
+			It("should return true if Node has critical components taint", func() {
+				node.Spec.Taints = []corev1.Taint{{
+					Key:    "node.gardener.cloud/critical-components-not-ready",
+					Effect: "NoExecute",
+				}}
+
+				Expect(p.Update(event.UpdateEvent{ObjectNew: node})).To(BeTrue())
 			})
 		})
 
