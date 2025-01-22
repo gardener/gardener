@@ -7,8 +7,8 @@ package migration
 import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -37,12 +37,28 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 // ShootPredicate reacts on Shoot events that indicate that the control plane needs to be prepared for migration.
 func (r *Reconciler) ShootPredicate() predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		shoot, ok := obj.(*gardencorev1beta1.Shoot)
-		if !ok {
-			return false
-		}
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
 
-		return v1beta1helper.ShouldPrepareShootForMigration(shoot)
-	})
+			return v1beta1helper.ShouldPrepareShootForMigration(shoot) || v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootReadyForMigration) != nil
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			shoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+
+			return v1beta1helper.ShouldPrepareShootForMigration(shoot)
+		},
+		DeleteFunc: func(_ event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(_ event.GenericEvent) bool {
+			return false
+		},
+	}
 }

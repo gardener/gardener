@@ -24,8 +24,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/migration"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
@@ -42,10 +40,10 @@ var (
 	ctx = context.Background()
 	log logr.Logger
 
+	mgr        manager.Manager
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
 	testClient client.Client
-	mgrClient  client.Client
 
 	testNamespace *corev1.Namespace
 	testRunID     string
@@ -93,7 +91,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Setup manager")
-	mgr, err := manager.New(restConfig, manager.Options{
+	mgr, err = manager.New(restConfig, manager.Options{
 		Scheme:  kubernetes.GardenScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
@@ -104,14 +102,6 @@ var _ = BeforeSuite(func() {
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
-	mgrClient = mgr.GetClient()
-
-	By("Register controller")
-	Expect((&migration.Reconciler{
-		Config: config.ShootMigrationControllerConfiguration{
-			ConcurrentSyncs: ptr.To(5),
-		},
-	}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

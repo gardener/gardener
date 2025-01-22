@@ -13,11 +13,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/migration"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Shoot Migration controller tests", func() {
+var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 	var (
 		shoot           *gardencorev1beta1.Shoot
 		sourceSeed      *gardencorev1beta1.Seed
@@ -130,6 +132,31 @@ var _ = Describe("Shoot Migration controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(sourceSeed), sourceSeed)).Should(BeNotFoundError())
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(destinationSeed), destinationSeed)).Should(BeNotFoundError())
 			}).Should(Succeed())
+		})
+	})
+
+	When("controller is starting and shoot is being restored", Ordered, func() {
+		It("should prepare the shoot before controller is started", func() {
+			patch := client.MergeFrom(shoot.DeepCopy())
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}
+			shoot.Status.Constraints = []gardencorev1beta1.Condition{{Type: gardencorev1beta1.ShootReadyForMigration}}
+			shoot.Status.SeedName = shoot.Spec.SeedName
+			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+		})
+
+		It("should successfully add and start the controller", func() {
+			Expect((&migration.Reconciler{
+				Config: config.ShootMigrationControllerConfiguration{
+					ConcurrentSyncs: ptr.To(5),
+				},
+			}).AddToManager(mgr)).To(Succeed())
+		})
+
+		It("should remove the constraint when it is still present", func() {
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				return shoot.Status.Constraints
+			}).Should(BeEmpty())
 		})
 	})
 
