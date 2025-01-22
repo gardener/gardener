@@ -76,14 +76,14 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command ...string) ([]byt
 	if stderr != nil {
 		var err2 error
 		stderrBytes, err2 = io.ReadAll(stderr)
-		if err != nil {
+		if err2 != nil {
 			return nil, err2
 		}
 	}
 	if stdout != nil {
 		var err2 error
 		stdoutBytes, err2 = io.ReadAll(stdout)
-		if err != nil {
+		if err2 != nil {
 			return nil, err2
 		}
 	}
