@@ -5,17 +5,13 @@
 package extension_test
 
 import (
-	"bytes"
 	"context"
-	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
-	"time"
 
+	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -23,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -206,6 +201,9 @@ var _ = BeforeSuite(func() {
 		GardenClientMap: gardenClientMap,
 	}).AddToManager(mgr)).Should(Succeed())
 
+	// We create runtime-extension namespaces and delete them again, so let's ensure it gets finalized.
+	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
+
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
 
@@ -214,63 +212,8 @@ var _ = BeforeSuite(func() {
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 
-	go func() {
-		defer GinkgoRecover()
-		namespaceDeleter(mgrContext)
-	}()
-
 	DeferCleanup(func() {
 		By("Stop manager")
 		mgrCancel()
 	})
 })
-
-// namespaceDeleter finalises deletion of namespaces.
-// This is normally done by the kube-controller-manager which is not running in the integration test environment.
-func namespaceDeleter(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			namespaces := &corev1.NamespaceList{}
-			Expect(testClient.List(ctx, namespaces)).To(Succeed())
-			for _, ns := range namespaces.Items {
-				if ns.DeletionTimestamp != nil && ns.Status.Phase == corev1.NamespaceTerminating {
-					clone := ns.DeepCopy()
-					clone.Spec.Finalizers = nil
-					data, err := json.Marshal(clone)
-					Expect(err).NotTo(HaveOccurred())
-
-					// Send the finalizer request
-					req, err := http.NewRequest("PUT", fmt.Sprintf("%sapi/v1/namespaces/%s/finalize", restConfig.Host, ns.Name), bytes.NewBuffer(data))
-					req.Header.Set("Content-Type", "application/json")
-					tlsConfig, err := rest.TLSConfigFor(restConfig)
-					Expect(err).NotTo(HaveOccurred())
-					client := &http.Client{
-						Transport: &http.Transport{
-							TLSClientConfig: tlsConfig,
-						},
-					}
-					resp, err := client.Do(req)
-					Expect(err).NotTo(HaveOccurred())
-					defer resp.Body.Close()
-
-					// Read the response
-					body, err := io.ReadAll(resp.Body)
-					if err != nil {
-						Expect(err).NotTo(HaveOccurred(), string(body))
-					}
-					if resp.StatusCode != http.StatusOK {
-						Expect(fmt.Errorf("unexpected status code: %d", resp.StatusCode)).NotTo(HaveOccurred(), string(body))
-					} else {
-						log.Info("Finalized Namespace", "namespace", ns.Name)
-					}
-				}
-			}
-		}
-	}
-}
