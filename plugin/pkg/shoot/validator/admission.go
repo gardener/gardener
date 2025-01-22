@@ -1847,27 +1847,29 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 	)
 
 	for _, machineImage := range constraints {
-		for _, machineVersion := range machineImage.Versions {
-			machineImageVersion := fmt.Sprintf("%s:%s", machineImage.Name, machineVersion.Version)
+		if machine.Image == nil || machine.Image.Name == machineImage.Name {
+			for _, machineVersion := range machineImage.Versions {
+				machineImageVersion := fmt.Sprintf("%s:%s", machineImage.Name, machineVersion.Version)
 
-			if machineVersion.ExpirationDate == nil || machineVersion.ExpirationDate.Time.UTC().After(time.Now().UTC()) {
-				activeMachineImageVersions.Insert(machineImageVersion)
-			} else if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) && a.GetOperation() == admission.Update && !isNewWorkerPool {
-				// An already expired machine image version is a viable machine image version for the worker pool if-and-only-if:
-				//  - this is an update call (no new Shoot creation)
-				//  - updates an existing worker pool (not for a new worker pool)
-				//  - the expired version is higher than the old machine's version
-				// Reason: updating an existing worker pool to an expired machine image version is required for maintenance force updates
-				downgrade, _ := versionutils.CompareVersions(machineVersion.Version, "<", oldMachine.Image.Version)
-				if !downgrade {
+				if machineVersion.ExpirationDate == nil || machineVersion.ExpirationDate.Time.UTC().After(time.Now().UTC()) {
 					activeMachineImageVersions.Insert(machineImageVersion)
+				} else if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) && a.GetOperation() == admission.Update && !isNewWorkerPool {
+					// An already expired machine image version is a viable machine image version for the worker pool if-and-only-if:
+					//  - this is an update call (no new Shoot creation)
+					//  - updates an existing worker pool (not for a new worker pool)
+					//  - the expired version is higher than the old machine's version
+					// Reason: updating an existing worker pool to an expired machine image version is required for maintenance force updates
+					downgrade, _ := versionutils.CompareVersions(machineVersion.Version, "<", oldMachine.Image.Version)
+					if !downgrade {
+						activeMachineImageVersions.Insert(machineImageVersion)
+					}
 				}
-			}
 
-			if slices.Contains(machineVersion.Architectures, *machine.Architecture) {
-				machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
+				if slices.Contains(machineVersion.Architectures, *machine.Architecture) {
+					machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
+				}
+				machineImageVersionsInCloudProfile.Insert(machineImageVersion)
 			}
-			machineImageVersionsInCloudProfile.Insert(machineImageVersion)
 		}
 	}
 
