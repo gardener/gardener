@@ -34,6 +34,7 @@ var _ = Describe("handler", func() {
 		req.Resource = metav1.GroupVersionResource{
 			Resource: "configmaps",
 		}
+		req.Operation = admissionv1.Update
 	})
 
 	Describe("#Handle", func() {
@@ -45,7 +46,7 @@ var _ = Describe("handler", func() {
 				Result: &metav1.Status{
 					Code:    int32(200),
 					Reason:  "",
-					Message: "",
+					Message: "gardenlet is allowed to modify system resources",
 				},
 			}))
 		})
@@ -61,7 +62,7 @@ var _ = Describe("handler", func() {
 				Result: &metav1.Status{
 					Code:    int32(403),
 					Reason:  "Forbidden",
-					Message: "user \"not-gardenlet\" is not allowed to modify system configmaps",
+					Message: "user \"not-gardenlet\" is not allowed to UPDATE system configmaps",
 				},
 			}))
 		})
@@ -78,7 +79,7 @@ var _ = Describe("handler", func() {
 				Result: &metav1.Status{
 					Code:    int32(200),
 					Reason:  "",
-					Message: "",
+					Message: "generic-garbage-collector is allowed to delete system resources",
 				},
 			}))
 		})

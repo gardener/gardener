@@ -25,16 +25,13 @@ func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Res
 	// Allow the garbage-collector-controller to delete resources.
 	// This is required as KCM is used to GC resources
 	// that might be considered stale as their owner object is already gone.
-	if req.UserInfo.Username == "system:serviceaccount:kube-system:generic-garbage-collector" {
-		if req.Operation == admissionv1.Delete {
-			return admission.Allowed("")
-		}
-		return admission.Denied(fmt.Sprintf("user %q is not allowed to %s system %s", req.UserInfo.Username, req.Operation, req.Resource.Resource))
+	if req.UserInfo.Username == "system:serviceaccount:kube-system:generic-garbage-collector" && req.Operation == admissionv1.Delete {
+		return admission.Allowed("generic-garbage-collector is allowed to delete system resources")
 	}
 
-	if !slices.Contains(req.UserInfo.Groups, v1beta1constants.SeedsGroup) {
-		return admission.Denied(fmt.Sprintf("user %q is not allowed to modify system %s", req.UserInfo.Username, req.Resource.Resource))
+	if slices.Contains(req.UserInfo.Groups, v1beta1constants.SeedsGroup) {
+		return admission.Allowed("gardenlet is allowed to modify system resources")
 	}
 
-	return admission.Allowed("")
+	return admission.Denied(fmt.Sprintf("user %q is not allowed to %s system %s", req.UserInfo.Username, req.Operation, req.Resource.Resource))
 }
