@@ -74,6 +74,11 @@ func getConfig(seed *gardencorev1beta1.Seed) (map[string]string, error) {
 			"use-proxy-protocol":           "false",
 			"worker-processes":             "2",
 			"allow-snippet-annotations":    "true",
+			// This is needed to override the default which is "High" starting from nginx-ingress-controller v1.12.0
+			// and we use the nginx.ingress.kubernetes.io/server-snippet annotation in our plutono and alertmanager ingresses.
+			// This is acceptable for the seed as we control the ingress resources solely and no malicious configuration can be injected by users.
+			// See https://github.com/gardener/gardener/pull/11087 for more details.
+			"annotations-risk-level": "Critical",
 		}
 		providerConfig = map[string]any{}
 	)

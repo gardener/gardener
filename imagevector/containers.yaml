@@ -76,8 +76,22 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.11.3"
-  targetVersion: ">= 1.26"
+  tag: "v1.12.0"
+  targetVersion: ">= 1.28"
+  labels:
+  - name: 'gardener.cloud/cve-categorisation'
+    value:
+      network_exposure: 'public'
+      authentication_enforced: true
+      user_interaction: 'end-user'
+      confidentiality_requirement: 'low'
+      integrity_requirement: 'low'
+      availability_requirement: 'low'
+- name: nginx-ingress-controller
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: registry.k8s.io/ingress-nginx/controller-chroot
+  tag: "v1.11.4"
+  targetVersion: ">= 1.26 < 1.28"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
