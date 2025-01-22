@@ -1921,8 +1921,7 @@ spec:
                               properties:
                                 lastInitiationTime:
                                   description: LastInitiationTime is the most recent
-                                    time when the certificate authority credential
-                                    rotation was initiated.
+                                    time when the credential rotation was initiated.
                                   format: date-time
                                   type: string
                                 name:
@@ -2029,8 +2028,7 @@ spec:
                               properties:
                                 lastInitiationTime:
                                   description: LastInitiationTime is the most recent
-                                    time when the certificate authority credential
-                                    rotation was initiated.
+                                    time when the credential rotation was initiated.
                                   format: date-time
                                   type: string
                                 name:

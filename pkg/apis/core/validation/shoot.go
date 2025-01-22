@@ -1258,7 +1258,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 			}
 		}
 		if new.Status.Credentials != nil && new.Status.Credentials.Rotation != nil && new.Status.Credentials.Rotation.ServiceAccountKey != nil {
-			if serviceAccountKeyRotation := new.Status.Credentials.Rotation.ServiceAccountKey; serviceAccountKeyRotation.Phase == core.RotationPreparing || serviceAccountKeyRotation.Phase == core.RotationPreparingWithoutWorkersRollout || serviceAccountKeyRotation.Phase == core.RotationCompleting {
+			if serviceAccountKeyRotation := new.Status.Credentials.Rotation.ServiceAccountKey; sets.New(core.RotationPreparing, core.RotationPreparingWithoutWorkersRollout, core.RotationCompleting).Has(serviceAccountKeyRotation.Phase) {
 				allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("shoot cannot be hibernated when .status.credentials.rotation.serviceAccountKey.phase is %q", string(serviceAccountKeyRotation.Phase))))
 			}
 		}

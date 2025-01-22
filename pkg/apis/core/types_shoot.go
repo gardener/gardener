@@ -317,7 +317,7 @@ const (
 type PendingWorkersRollout struct {
 	// Name is the name of a worker pool.
 	Name string
-	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// LastInitiationTime is the most recent time when the credential rotation was initiated.
 	LastInitiationTime *metav1.Time
 }
 

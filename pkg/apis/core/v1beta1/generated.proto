@@ -2137,7 +2137,7 @@ message PendingWorkersRollout {
   // Name is the name of a worker pool.
   optional string name = 1;
 
-  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // LastInitiationTime is the most recent time when the credential rotation was initiated.
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 2;
 }

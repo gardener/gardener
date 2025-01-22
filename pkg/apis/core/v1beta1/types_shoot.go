@@ -401,7 +401,7 @@ const (
 type PendingWorkersRollout struct {
 	// Name is the name of a worker pool.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// LastInitiationTime is the most recent time when the credential rotation was initiated.
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,2,opt,name=lastInitiationTime"`
 }

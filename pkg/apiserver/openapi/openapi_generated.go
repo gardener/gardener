@@ -6409,7 +6409,7 @@ func schema_pkg_apis_core_v1beta1_PendingWorkersRollout(ref common.ReferenceCall
 					},
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.",
+							Description: "LastInitiationTime is the most recent time when the credential rotation was initiated.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},

@@ -9158,7 +9158,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
+<p>LastInitiationTime is the most recent time when the credential rotation was initiated.</p>
 </td>
 </tr>
 </tbody>
