@@ -88,12 +88,8 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command ...string) ([]byt
 		}
 	}
 
-	if err != nil {
+	if err != nil || len(stderrBytes) > 0 {
 		return stderrBytes, err
-	}
-
-	if len(stderrBytes) > 0 {
-		return stderrBytes, nil
 	}
 
 	if len(stdoutBytes) > 0 {

@@ -93,23 +93,23 @@ var _ = Describe("Shoot container runtime testing", func() {
 
 		// check the configuration on the host
 		containerdServiceCommand := []string{"systemctl", "is-active", "containerd"}
-		executeCommand(ctx, rootPodExecutor, containerdServiceCommand, "active")
+		executeCommand(ctx, f, rootPodExecutor, containerdServiceCommand, "active")
 
 		// check that config.toml is configured
 		checkConfigurationCommand := []string{"sh", "-c", "cat /etc/systemd/system/containerd.service.d/11-exec_config.conf | grep 'usr/bin/containerd --config=/etc/containerd/config.toml' | echo $?"}
-		executeCommand(ctx, rootPodExecutor, checkConfigurationCommand, "0")
+		executeCommand(ctx, f, rootPodExecutor, checkConfigurationCommand, "0")
 
 		// check that config.toml exists
 		checkConfigCommand := []string{"sh", "-c", "[ -f /etc/containerd/config.toml ] && echo 'found' || echo 'Not found'"}
-		executeCommand(ctx, rootPodExecutor, checkConfigCommand, "found")
+		executeCommand(ctx, f, rootPodExecutor, checkConfigCommand, "found")
 	}, scaleWorkerTimeout)
 })
 
 // executeCommand executes a command on the host and checks the returned result
-func executeCommand(ctx context.Context, rootPodExecutor framework.RootPodExecutor, command []string, expected string) {
+func executeCommand(ctx context.Context, f *framework.ShootFramework, rootPodExecutor framework.RootPodExecutor, command []string, expected string) {
 	response, err := rootPodExecutor.Execute(ctx, command...)
 	if err != nil {
-		GinkgoWriter.Printf("Error executing command: %q returned %q\n", command, response)
+		f.Logger.Error(err, "Error executing command", "command", command, "response", response)
 	}
 	framework.ExpectNoError(err)
 	Expect(response).ToNot(BeNil())
