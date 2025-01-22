@@ -281,6 +281,11 @@ func setShootNetworkingSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreati
 		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamily(cfg.ipFamilies)}
 	}
 
+	if gardencorev1beta1.IsIPv6SingleStack(shoot.Spec.Networking.IPFamilies) {
+		// Node IP range will be set by the infrastructure and should not be provided
+		shoot.Spec.Networking.Nodes = nil
+	}
+
 	if StringSet(cfg.networkingType) {
 		shoot.Spec.Networking.Type = ptr.To(cfg.networkingType)
 	}
