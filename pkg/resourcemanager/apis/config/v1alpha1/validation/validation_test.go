@@ -14,34 +14,34 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
-	. "github.com/gardener/gardener/pkg/resourcemanager/apis/config/validation"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	. "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1/validation"
 )
 
 var _ = Describe("Validation", func() {
 	Describe("#ValidateResourceManagerConfiguration", func() {
-		var conf *config.ResourceManagerConfiguration
+		var conf *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration
 
 		BeforeEach(func() {
-			conf = &config.ResourceManagerConfiguration{
+			conf = &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
 				LogLevel:  "info",
 				LogFormat: "text",
-				Server: config.ServerConfiguration{
-					HealthProbes: &config.Server{
+				Server: resourcemanagerconfigv1alpha1.ServerConfiguration{
+					HealthProbes: &resourcemanagerconfigv1alpha1.Server{
 						Port: 1234,
 					},
-					Metrics: &config.Server{
+					Metrics: &resourcemanagerconfigv1alpha1.Server{
 						Port: 5678,
 					},
 				},
-				Controllers: config.ResourceManagerControllerConfiguration{
+				Controllers: resourcemanagerconfigv1alpha1.ResourceManagerControllerConfiguration{
 					ClusterID:     ptr.To(""),
 					ResourceClass: ptr.To("foo"),
-					Health: config.HealthControllerConfig{
+					Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
 						ConcurrentSyncs: ptr.To(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 					},
-					ManagedResource: config.ManagedResourceControllerConfig{
+					ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
 						ConcurrentSyncs:     ptr.To(5),
 						SyncPeriod:          &metav1.Duration{Duration: time.Minute},
 						ManagedByLabelValue: ptr.To("foo"),
@@ -74,7 +74,7 @@ var _ = Describe("Validation", func() {
 
 		Context("target client connection", func() {
 			It("should return errors because some values are not satisfying", func() {
-				conf.TargetClientConnection = &config.ClientConnection{}
+				conf.TargetClientConnection = &resourcemanagerconfigv1alpha1.ClientConnection{}
 				conf.TargetClientConnection.CacheResyncPeriod = &metav1.Duration{Duration: time.Second}
 				conf.TargetClientConnection.Burst = -1
 

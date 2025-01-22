@@ -26,7 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents/helper"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -35,7 +35,7 @@ import (
 // components are ready.
 type Reconciler struct {
 	TargetClient client.Client
-	Config       config.NodeCriticalComponentsControllerConfig
+	Config       resourcemanagerconfigv1alpha1.NodeCriticalComponentsControllerConfig
 	Recorder     record.EventRecorder
 }
 

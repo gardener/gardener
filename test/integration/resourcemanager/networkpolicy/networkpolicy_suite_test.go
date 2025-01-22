@@ -25,7 +25,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
@@ -91,10 +91,10 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&networkpolicy.Reconciler{
-		Config: config.NetworkPolicyControllerConfig{
+		Config: resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig{
 			ConcurrentSyncs:    ptr.To(5),
 			NamespaceSelectors: []metav1.LabelSelector{{MatchLabels: map[string]string{testID: testRunID}}},
-			IngressControllerSelector: &config.IngressControllerSelector{
+			IngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 				Namespace:   ingressControllerNamespace,
 				PodSelector: ingressControllerPodSelector,
 			},

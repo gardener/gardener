@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/crddeletionprotection"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/endpointslicehints"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/extensionvalidation"
@@ -27,7 +27,7 @@ import (
 )
 
 // AddToManager adds all webhook handlers to the given manager.
-func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
 	if cfg.Webhooks.CRDDeletionProtection.Enabled {
 		if err := (&crddeletionprotection.Handler{
 			Logger:       mgr.GetLogger().WithName("webhook").WithName(crddeletionprotection.HandlerName),

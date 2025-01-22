@@ -28,7 +28,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -114,7 +114,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&criticalcomponents.Reconciler{
-		Config: config.NodeCriticalComponentsControllerConfig{
+		Config: resourcemanagerconfigv1alpha1.NodeCriticalComponentsControllerConfig{
 			ConcurrentSyncs: ptr.To(5),
 			Backoff:         &metav1.Duration{Duration: 100 * time.Millisecond},
 		},

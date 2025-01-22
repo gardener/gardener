@@ -18,7 +18,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controller/tokenrequestor"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/csrapprover"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/health"
@@ -30,7 +30,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *config.ResourceManagerConfiguration) error {
+func AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster, targetCluster cluster.Cluster, cfg *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
 	targetClientSet, err := kubernetesclientset.NewForConfig(targetCluster.GetConfig())
 	if err != nil {
 		return fmt.Errorf("failed creating Kubernetes client: %w", err)

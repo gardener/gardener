@@ -1245,7 +1245,6 @@ build:
             - pkg/logger
             - pkg/nodeagent/apis/config/v1alpha1
             - pkg/operator/client
-            - pkg/resourcemanager/apis/config
             - pkg/resourcemanager/apis/config/v1alpha1
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/resourcemanager/webhook/crddeletionprotection
@@ -1374,9 +1373,8 @@ build:
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
-            - pkg/resourcemanager/apis/config
             - pkg/resourcemanager/apis/config/v1alpha1
-            - pkg/resourcemanager/apis/config/validation
+            - pkg/resourcemanager/apis/config/v1alpha1/validation
             - pkg/resourcemanager/client
             - pkg/resourcemanager/controller
             - pkg/resourcemanager/controller/csrapprover

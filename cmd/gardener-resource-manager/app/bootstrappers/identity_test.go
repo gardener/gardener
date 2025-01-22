@@ -18,22 +18,22 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	. "github.com/gardener/gardener/cmd/gardener-resource-manager/app/bootstrappers"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 )
 
 var _ = Describe("Identity", func() {
 	var (
 		ctx               = context.TODO()
 		fakeClient        client.Client
-		cfg               *config.ResourceManagerConfiguration
+		cfg               *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration
 		determiner        *IdentityDeterminer
 		identityConfigMap *corev1.ConfigMap
 	)
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
-		cfg = &config.ResourceManagerConfiguration{
-			Controllers: config.ResourceManagerControllerConfiguration{
+		cfg = &resourcemanagerconfigv1alpha1.ResourceManagerConfiguration{
+			Controllers: resourcemanagerconfigv1alpha1.ResourceManagerControllerConfiguration{
 				ClusterID: ptr.To(""),
 			},
 		}

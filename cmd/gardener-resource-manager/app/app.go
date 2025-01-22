@@ -39,7 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook"
@@ -72,13 +72,13 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfiguration) error {
+func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
 	log.Info("Getting rest configs")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		cfg.SourceClientConnection.Kubeconfig = kubeconfig
 	}
 
-	sourceRESTConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.SourceClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
+	sourceRESTConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SourceClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 		}
 
 		var err error
-		targetRESTConfig, err = kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.TargetClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
+		targetRESTConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.TargetClientConnection.ClientConnectionConfiguration, nil, kubernetes.AuthTokenFile)
 		if err != nil {
 			return err
 		}
@@ -103,9 +103,9 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 	}
 
 	var extraHandlers map[string]http.Handler
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+	if cfg.Debugging != nil && ptr.Deref(cfg.Debugging.EnableProfiling, false) {
 		extraHandlers = routes.ProfilingHandlers
-		if cfg.Debugging.EnableContentionProfiling {
+		if ptr.Deref(cfg.Debugging.EnableContentionProfiling, false) {
 			goruntime.SetBlockProfileRate(1)
 		}
 	}
@@ -125,7 +125,7 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ResourceManagerConfig
 			ExtraHandlers: extraHandlers,
 		},
 
-		LeaderElection:                cfg.LeaderElection.LeaderElect,
+		LeaderElection:                *cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
 		LeaderElectionID:              cfg.LeaderElection.ResourceName,
 		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,

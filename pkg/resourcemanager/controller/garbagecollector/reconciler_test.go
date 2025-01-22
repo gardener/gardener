@@ -22,7 +22,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 )
@@ -43,7 +43,7 @@ var _ = Describe("Collector", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		gc = &Reconciler{
 			TargetClient:          c,
-			Config:                config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
+			Config:                resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
 			Clock:                 fakeClock,
 			MinimumObjectLifetime: &minimumObjectLifetime,
 		}

@@ -10,13 +10,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/agentreconciliationdelay"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/node/criticalcomponents"
 )
 
 // AddToManager adds all node controllers to the given manager.
-func AddToManager(mgr manager.Manager, targetCluster cluster.Cluster, cfg config.ResourceManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, targetCluster cluster.Cluster, cfg resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) error {
 	if cfg.Controllers.NodeCriticalComponents.Enabled {
 		if err := (&criticalcomponents.Reconciler{
 			Config: cfg.Controllers.NodeCriticalComponents,
