@@ -92,22 +92,25 @@ var _ = Describe("Shoot container runtime testing", func() {
 		rootPodExecutor := framework.NewRootPodExecutor(f.Logger, f.ShootClient, &nodeList.Items[0].Name, "kube-system")
 
 		// check the configuration on the host
-		containerdServiceCommand := fmt.Sprintf("systemctl is-active %s", "containerd")
-		executeCommand(ctx, rootPodExecutor, containerdServiceCommand, "active")
+		containerdServiceCommand := []string{"systemctl", "is-active", "containerd"}
+		executeCommand(ctx, f, rootPodExecutor, containerdServiceCommand, "active")
 
 		// check that config.toml is configured
-		checkConfigurationCommand := "cat /etc/systemd/system/containerd.service.d/11-exec_config.conf | grep 'usr/bin/containerd --config=/etc/containerd/config.toml' |  echo $?"
-		executeCommand(ctx, rootPodExecutor, checkConfigurationCommand, "0")
+		checkConfigurationCommand := []string{"sh", "-c", "cat /etc/systemd/system/containerd.service.d/11-exec_config.conf | grep 'usr/bin/containerd --config=/etc/containerd/config.toml' | echo $?"}
+		executeCommand(ctx, f, rootPodExecutor, checkConfigurationCommand, "0")
 
 		// check that config.toml exists
-		checkConfigCommand := "[ -f /etc/containerd/config.toml ] && echo 'found' || echo 'Not found'"
-		executeCommand(ctx, rootPodExecutor, checkConfigCommand, "found")
+		checkConfigCommand := []string{"sh", "-c", "[ -f /etc/containerd/config.toml ] && echo 'found' || echo 'Not found'"}
+		executeCommand(ctx, f, rootPodExecutor, checkConfigCommand, "found")
 	}, scaleWorkerTimeout)
 })
 
 // executeCommand executes a command on the host and checks the returned result
-func executeCommand(ctx context.Context, rootPodExecutor framework.RootPodExecutor, command, expected string) {
-	response, err := rootPodExecutor.Execute(ctx, command)
+func executeCommand(ctx context.Context, f *framework.ShootFramework, rootPodExecutor framework.RootPodExecutor, command []string, expected string) {
+	response, err := rootPodExecutor.Execute(ctx, command...)
+	if err != nil {
+		f.Logger.Error(err, "Error executing command", "command", command, "response", response)
+	}
 	framework.ExpectNoError(err)
 	Expect(response).ToNot(BeNil())
 	Expect(string(response)).To(Equal(fmt.Sprintf("%s\n", expected)))
