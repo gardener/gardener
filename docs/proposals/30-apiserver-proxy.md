@@ -82,171 +82,202 @@ In addition to supporting this use case, reworking the API server proxy to use H
 
 ## Proposal
 
-The proposed solution involves the following key changes:
+### Reconfiguring the API Server Proxy
 
-- Reconfigure the `istio-ingressgateway` to use the new routing method
-    - Introduce a new port/path for API traffic from apiserver-proxy
-    - Implement a new custom header for secure API server routing
-- Reconfigure the `apiserver-proxy` to use HTTP CONNECT for secure tunneling
-- Develop a feature gate to control the rollout of the new routing mechanism
-- Provide a phased implementation approach for gradual adoption
+The API server proxy's Envoy config is changed to stop adding proxy protocol headers and start using HTTP CONNECT as a tunneling mechanism instead.
 
-## Proposed Changes
+Essentially, the config will be changed like this (assuming a shoot `shoot--foo--bar`):
 
-1. Custom Header Implementation
-    - Introduce a new custom header `X-Gardener-API-Route`
-    - Define the structure and encoding of the header value to include necessary routing information
+```diff
+ static_resources:
+   listeners:
+   - name: kube_apiserver
+     filter_chains:
+     - filters:
+       - name: envoy.filters.network.tcp_proxy
+         typed_config:
+           "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+           cluster: kube_apiserver
++          tunneling_config:
++            hostname: "api.bar.foo.internal.local.gardener.cloud:443"
++            headers_to_add:
++            - header:
++                key: X-Gardener-Destination
++                value: "outbound|443||kube-apiserver.shoot--foo--bar.svc.cluster.local"
 
-2. New Port/Path
-    - Implement a new port or path on the `istio-ingressgateway` for the new routing mechanism
-    - Ensure this new route is separate from any existing VPN or tunnel infrastructure
+# ...
 
-3. HTTP CONNECT Reconfiguration:
-    - Reconfigure the `apiserver-proxy` to use HTTP CONNECT for establishing a secure tunnel
-    - This will replace the current TCP proxy protocol method
-    - The HTTP CONNECT method will be used on the newly implemented port/path
-
-4. Feature Gate
-    - Implement a feature gate to control the rollout of the new routing mechanism
-    - Define stages for the feature gate: alpha, beta, and stable
-
-5. Phased Implementation
-    - Phase 1: Add the new port/path and custom header processing
-    - Phase 2: Gradually reconfigure shoots to use the new routing method
-    - Phase 3: Deprecate and remove the old routing method
-
-![Proposed Architecture](./assets/30-proposed-architecture-http-connect.png "Proposed Architecture")
-![Proposed Architecture](./assets/30-proposed-architecture-tls.png "Proposed Architecture")
-    
-    
-## Custom Header Specification
-
-The new custom header will be structured as follows:
-
-```
-X-Gardener-API-Route: <routing-information>
-```
-
-The routing information will be a concatenated string, joined by pipes, containing the following fields:
-
-- `direction`: The direction of traffic.
-- `port`: The destination port.
-- `subset`: Istio subset/version.
-- `destination`: The destination.
-
-Putting this to practice should result in a header formatted like this:
-
-`X-Gardener-API-Route: outbound|8134||kube-apiserver.foobar.svc.cluster.local`
-
-During the transition period, the system should be able to handle both the new custom header and the existing routing method. This can be controlled via the feature gate.
-
-If the header is missing, malformed, or fails verification, the error should be logged with appropriate details for debugging and return an HTTP 400 (Bad Request) status code. It should never fall back to the old routing method to ensure security.
-
-## HTTP CONNECT Implementation
-
-The `apiserver-proxy` will be reconfigured to use HTTP CONNECT for establishing a secure tunnel to the `kube-apiserver`. This involves:
-
-1. Initiating an HTTP CONNECT request to the new port/path on the `istio-ingressgateway`
-2. Including the new custom header in the CONNECT request
-3. Creating a secure connection over the established tunnel once the CONNECT request is accepted
-4. Forwarding the original API server request through this secure tunnel
-
-### Technical Implementation Details
-
-The `apiserver-proxy` will be required to be updated to use HTTP CONNECT. This should involve modifying its configuration and potentially its code. One example of how the configuration might look like after reusing its Envoy tunneling config:
-
-```yaml
-...
-- domains: 
-  - api.*
-  name: gardener-api-route
-  routes:
-  - match:
-      connect_matcher: {}
-    route:
-     cluster_header: X-Gardener-API-Route
-     upgrade_configs:
-     - connect_config: {}
-       upgrade_type: CONNECT
-...
+ clusters:
+ - name: kube_apiserver
+   load_assignment:
+     cluster_name: kube_apiserver
+     endpoints:
+     - lb_endpoints:
+       - endpoint:
+           address:
+             socket_address:
+               address: api.bar.foo.internal.local.gardener.cloud
+-               port_value: 8443
++               port_value: 8132
+-  transport_socket:
+-    name: envoy.transport_sockets.upstream_proxy_protocol
+-    typed_config:
+-      "@type": type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
+-      config:
+-        version: V2
+-      transport_socket:
+-        name: envoy.transport_sockets.raw_buffer
+-        typed_config:
+-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
 ```
 
-This solution would be reusing existing Envoy filtering on the `apiserver-proxy` pod and simply exchange its Proxy Protocol configuration for the new proposed header.
+The TCP proxy filter of the listener is extended with a `tunneling_config` that configures the proxy to tunnel the TCP payload over HTTP CONNECT (see the [Envoy reference](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-tunneling-config)).
+The `hostname` field is sent in the CONNECT request to the upstream proxy (ingress gateway).
+This value is discarded, but required in the config.
+Additionally, the custom header `X-Gardener-Destination` is added to the CONNECT request to indicate the destination API server.
+We don't reuse the `Reversed-VPN` header which fulfills the same purpose to avoid confusion.
+However, the value of the `X-Gardener-Destination` header follows the same format (i.e., the Envoy cluster string format):
 
-### Istio IngressGateway Configuration
-
-Similarly, it would be required to configure the Istio IngressGateway to accept HTTP CONNECT requests and route them appropriately. This could e.g. be achieved utilizing Istio Custom Resources (Gateway, VirtualService):
-
-```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: Gateway
-metadata:
-  name: api-gateway
-  namespace: istio-system
-spec:
-  selector:
-    istio: ingressgateway
-  servers:
-    ...
----
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: api-routes
-  namespace: istio-system
-spec:
-  ...
-  gateways:
-  - api-gateway
-  http:
-  - match:
-    - method:
-        exact: CONNECT
-      headers:
-        X-Gardener-API-Route:
-          regex: ".*"
-    ...
+```text
+outbound|443||kube-apiserver.<technical-shoot-id>.svc.cluster.local
 ```
 
-This configuration sets up the Istio IngressGateway to accept HTTPS traffic and route HTTP CONNECT requests with the proposed custom header to the `kube-apiserver`.
+In the corresponding upstream cluster section of the config, the destination port to connect to on istio-ingressgateway is changed from 8443 (`proxy`) to 8132 (`tls-tunnel`).
+This configures the API server proxy to reuse the existing VPN infrastructure on the seed side.
+Finally, the `transport_socket` is removed which disables adding the proxy protocol headers.
 
-### EnvoyFilter for Custom Header Processing
+With this, a connection is established as follows:
 
-To process the proposed custom header and make routing decisions based on it, it will be required to additionally add and/or modify an EnvoyFilter. Again, existing configuration may be reused adjusted to this new use case to keep convention parity within the code base.
+1. An in-cluster client (e.g., pod) opens a TLS connection to `kubernetes.default.svc.cluster.local`.
+2. The Envoy process in the API server proxy pod on the same node sends an HTTP CONNECT request to the API server domain of the shoot, i.e., to the ingress gateway on the corresponding seed.
+3. The ingress gateway discards the target from the HTTP request line and opens a TCP connection to the upstream cluster indicated by the `X-Gardener-Destination` header, i.e., in-cluster service of the shoot cluster.
+4. The TLS payload is proxied from the in-cluster client via the API server proxy and the ingress gateway to the shoot API server.
 
-```yaml
-{{- if eq .Values.vpn.enabled true -}}
-apiVersion: networking.istio.io/v1beta1
-kind: Gateway
-metadata:
-  name: reversed-vpn-auth-server
-  namespace: {{ .Release.Namespace }}
-spec:
-  selector:
-{{ .Values.labels | toYaml | indent 4 }}
-  servers:
-  - hosts:
-    - reversed-vpn-auth-server.garden.svc.cluster.local
-    port:
-      name: tls-tunnel
-      number: 8134
-      protocol: HTTP
-{{- end }}
+### Reconfiguring the Istio Ingress Gateway
+
+By configuring the API server proxy to connect to the existing VPN port on the Istio ingress gateway, we can reuse most of the existing VPN network infrastructure on the seed side without changes.
+The existing `EnvoyFilter` `reversed-vpn` is changed to handle the new use case as follows:
+
+```diff
+ apiVersion: networking.istio.io/v1alpha3
+ kind: EnvoyFilter
+ metadata:
+   name: reversed-vpn
+ spec:
+   configPatches:
+   - applyTo: NETWORK_FILTER
+     match:
+       context: GATEWAY
+       listener:
+         filterChain:
+           filter:
+             name: envoy.filters.network.http_connection_manager
+         portNumber: 8132
+     patch:
+       operation: MERGE
+       value:
+         name: envoy.filters.network.http_connection_manager
+         typed_config:
+           '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+           route_config:
+             virtual_hosts:
+             - domains: 
+               - api.*
+               name: reversed-vpn
+               routes:
+               - match:
+                   connect_matcher: {}
++                  headers:
++                  - name: Reversed-VPN
++                    string_match:
++                      safe_regex: '^outbound\|1194\|\|vpn-seed-server(-[0-4])?\..*\.svc\.cluster\.local$'
+                 route:
+                   cluster_header: Reversed-VPN
+                   upgrade_configs:
+                   - connect_config: {}
+                     upgrade_type: CONNECT
++              - match:
++                  connect_matcher: {}
++                  headers:
++                  - name: X-Gardener-Destination
++                    string_match:
++                      # see https://regex101.com/r/m0ZAAj/1
++                      safe_regex: '^outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local$'
++                route:
++                 cluster_header: X-Gardener-Destination
++                 upgrade_configs:
++                 - connect_config: {}
++                   upgrade_type: CONNECT
+               - match:
+                   headers:
+                   - invert_match: true
+                     name: :method
+                     string_match:
+                       exact: CONNECT
+                   prefix: /
+                 redirect:
+                   https_redirect: true
+                   port_redirect: 443
+-                typed_per_filter_config:
+-                  envoy.filters.http.ext_authz:
+-                    '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+-                    disabled: true
+
+# ...
+
+-  - applyTo: HTTP_FILTER
+-    match:
+-      context: GATEWAY
+-      listener:
+-        filterChain:
+-          filter:
+-            name: envoy.filters.network.http_connection_manager
+-            subFilter:
+-              name: envoy.filters.http.router
+-        portNumber: 8132
+-    patch:
+-      filterClass: AUTHZ
+-      operation: INSERT_BEFORE
+-      value:
+-        name: envoy.filters.http.ext_authz
+-        typed_config:
+-          '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+-          grpc_service:
+-            envoy_grpc:
+-              cluster_name: outbound|9001||reversed-vpn-auth-server.garden.svc.cluster.local
 ```
 
-### Implementation Steps
+The existing route matcher in the `reversed-vpn` virtual host is extended to additionally check the `Reversed-VPN` header.
+The header's value must match the given regex, so that only VPN servers can be specified as the proxy destination.
+Then, a new route is added to the same virtual host that matches and validates the new `X-Gardener-Destination` header but also allows shoot API servers as valid destinations.
+As before, all unmatched CONNECT requests are redirected to port 443.
 
-1. Apply the Istio Gateway and VirtualService configurations.
-2. Deploy the EnvoyFilter for custom header processing.
-3. Update any relevant Istio authorization policies to allow the new traffic flow.
-4. Update the `apiserver-proxy` code or configuration to use HTTP CONNECT and include the custom header.
-5. Deploy the updated `apiserver-proxy` configuration.
+Finally, the external authorization server configuration is removed, because the route matchers fulfill the same functionality but without an externally developed component (see the [ext-authz-server](https://github.com/gardener/ext-authz-server) repository).
+With the removal of the `ext_authz` filter, we can also remove the explicit disablement of the filter in the route for unmatched requests.
 
-## Phased Rollout
+With this, the 8132 port of the ingress gateway acts as a generic HTTP proxy and allows clients to open an HTTP tunnel to selected seed services (shoot API servers and VPN servers).
+An individual HTTP CONNECT request is handled as follows:
+
+1. The HTTP connection manager on the gateway port 8132 matches requests by the `api.*` host header.
+2. It then matches the CONNECT type and the content of the `X-Gardener-Destination` header. It only matches requests that indicate a valid destination (shoot API server or VPN server).
+3. If the request is matched, the gateway opens a connection to the specified destination and proxies the raw TCP payload from the client over this connection.
+
+### Unifying the HTTP Proxy Infrastructure
+
+Once the API server proxy and VPN connection use the same protocol, we want to unify the network infrastructure for handling these HTTP CONNECT requests on the seed side.
+With this, we want to ensure that all related components have intuitive names to avoid confusion and that the names and implementation will match potential future connections using the same protocol.
+For this, we ensure the following:
+
+- the VPN connection is switched to the new `X-Gardener-Destination` header and the old `Reversed-VPN` header is dropped
+- both API server proxy and shoot VPN client connect to the same port on the ingress gateway named `http-proxy`
+  - we reuse the previous `proxy` port 8443 once it is no longer used for the old API server proxy config (see [Rollout Plan](#rollout-plan))
+- all related Istio objects like `Gateway`, `EnvoyFilter`, etc. are named `http-proxy` 
+
+### Rollout Plan
 
 The implementation will be controlled by two distinct feature gates that handle different aspects of the solution. Each feature gate can be disabled per shoot to allow testing of the old implementation via E2E tests.
 
-### Feature Gate 1: `APIServerSecureRouting`
+#### Feature Gate 1: `APIServerSecureRouting`
 
 Controls whether shoots use the new secure routing implementation with HTTP CONNECT and custom headers.
 
@@ -256,7 +287,7 @@ Controls whether shoots use the new secure routing implementation with HTTP CONN
 - Existing shoots will retain their previous setting until explicitly migrated
 - When fully proven, the feature gate will be removed and the functionality will become permanent
 
-### Feature Gate 2: `APIServerLegacyPortDisable`
+#### Feature Gate 2: `APIServerLegacyPortDisable`
 
 Controls whether the legacy port is available. This feature gate can only be enabled after `APIServerSecureRouting` has been fully rolled out.
 
@@ -268,4 +299,14 @@ Controls whether the legacy port is available. This feature gate can only be ena
 
 ## Alternatives
 
-We are not aware of any other alternative solution to address this issue, as requiring a transparent Load Balancer for Gardener is no solution.
+We are not aware of any other alternative solution to address this issue, as requiring a transparent LoadBalancer for Gardener is no solution.
+
+## Appendix
+
+### Visualization of the Current Architecture
+
+![Current Architecture](assets/30-current-architecture.png)
+
+### Visualization of the Proposed Architecture
+
+![Proposed Architecture](assets/30-proposed-architecture.png)
