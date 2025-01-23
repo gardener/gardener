@@ -871,7 +871,7 @@ func (c *validationContext) validateClusterAutoscaler(a admission.Attributes) fi
 
 	fldPath := field.NewPath("spec", "provider", "workers")
 	for i, worker := range c.shoot.Spec.Provider.Workers {
-		if worker.ClusterAutoscaler != nil && worker.ClusterAutoscaler.ScaleDownUnneededTime != nil && scaleDownUnneededTime != nil {
+		if worker.ClusterAutoscaler != nil && worker.ClusterAutoscaler.ScaleDownUnneededTime != nil {
 			if scaleDownDelayAfterAdd.Duration < 1*time.Minute && worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration < 1*time.Minute {
 				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("clusterAutoscaler", "scaleDownUnneededTime"), worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration, "cannot be less than 1min when scaleDownDelayAfterAdd is also less than 1min"))
 			}
