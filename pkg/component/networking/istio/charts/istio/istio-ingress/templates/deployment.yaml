@@ -138,6 +138,10 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
+          {{- if eq .Values.dualStack true }}
+          - name: ISTIO_DUAL_STACK
+            value: "true"
+          {{- end }}
           volumeMounts:
           - name: workload-socket
             mountPath: /var/run/secrets/workload-spiffe-uds
