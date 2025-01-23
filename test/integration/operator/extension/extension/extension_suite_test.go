@@ -42,6 +42,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 	"github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
 func TestExtension(t *testing.T) {
@@ -199,6 +200,9 @@ var _ = BeforeSuite(func() {
 		GardenNamespace: testNamespace.Name,
 		GardenClientMap: gardenClientMap,
 	}).AddToManager(mgr)).Should(Succeed())
+
+	// We create runtime-extension namespaces and delete them again, so let's ensure it gets finalized.
+	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)

@@ -33,6 +33,7 @@ import (
 	ocifake "github.com/gardener/gardener/pkg/utils/oci/fake"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Deployment", func() {
@@ -52,6 +53,8 @@ var _ = Describe("Deployment", func() {
 
 		extensionName string
 		extension     *operatorv1alpha1.Extension
+
+		gardenNamespace *corev1.Namespace
 	)
 
 	BeforeEach(func() {
@@ -68,10 +71,22 @@ var _ = Describe("Deployment", func() {
 
 		runtime = New(runtimeClientSet, &record.FakeRecorder{}, "garden", ociRegistry)
 
+		gardenNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "garden",
+				Annotations: map[string]string{
+					"high-availability-config.resources.gardener.cloud/zones": "eu-west-1a,eu-west-1b",
+				},
+			},
+		}
+		Expect(runtimeClient.Create(ctx, gardenNamespace)).To(Succeed())
 		extensionName = "test-extension"
 		extension = &operatorv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: extensionName,
+				Annotations: map[string]string{
+					"security.gardener.cloud/pod-security-enforce": "baseline",
+				},
 			},
 			Spec: operatorv1alpha1.ExtensionSpec{
 				Deployment: &operatorv1alpha1.Deployment{
@@ -89,6 +104,7 @@ var _ = Describe("Deployment", func() {
 	})
 
 	AfterEach(func() {
+		Expect(client.IgnoreNotFound(runtimeClient.Delete(ctx, gardenNamespace))).To(Succeed())
 		ctrl.Finish()
 	})
 
@@ -114,7 +130,7 @@ var _ = Describe("Deployment", func() {
 				},
 			}
 
-			chartRenderer.EXPECT().RenderArchive([]byte("extension-chart"), extension.Name, "garden", expectedValues).Return(&chartrenderer.RenderedChart{}, nil)
+			chartRenderer.EXPECT().RenderArchive([]byte("extension-chart"), extension.Name, "runtime-extension-test-extension", expectedValues).Return(&chartrenderer.RenderedChart{}, nil)
 
 			defer test.WithVar(&retry.Until, func(_ context.Context, _ time.Duration, _ retry.Func) error {
 				return nil
@@ -122,6 +138,13 @@ var _ = Describe("Deployment", func() {
 
 			Expect(runtime.Reconcile(ctx, log, extension)).To(Succeed())
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}, &resourcesv1alpha1.ManagedResource{})).To(Succeed())
+			namespace := &corev1.Namespace{}
+			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "runtime-extension-test-extension"}, namespace)).To(Succeed())
+			Expect(namespace.Labels).To(HaveKeyWithValue("gardener.cloud/role", "extension"))
+			Expect(namespace.Labels).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"))
+			Expect(namespace.Labels).To(HaveKeyWithValue("networking.gardener.cloud/access-target-apiserver", "allowed"))
+			Expect(namespace.Labels).To(HaveKeyWithValue("pod-security.kubernetes.io/enforce", "baseline"))
+			Expect(namespace.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "eu-west-1a,eu-west-1b"))
 		})
 
 		It("should succeed if extension deployment is not defined", func() {
@@ -145,6 +168,9 @@ var _ = Describe("Deployment", func() {
 		})
 
 		It("should succeed if extension was deployed before", func() {
+			namespace := fmt.Sprintf("runtime-extension-%s", extensionName)
+			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+			Expect(runtimeClient.Create(ctx, ns)).To(Succeed())
 			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}})).To(Succeed())
 			Expect(runtimeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}, Spec: resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: fmt.Sprintf("extension-%s-garden", extensionName)}}}})).To(Succeed())
 
@@ -157,6 +183,8 @@ var _ = Describe("Deployment", func() {
 			secretList := &corev1.SecretList{}
 			Expect(runtimeClient.List(ctx, secretList)).To(Succeed())
 			Expect(secretList.Items).To(BeEmpty())
+
+			Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(ns), ns)).To(BeNotFoundError())
 		})
 	})
 })
