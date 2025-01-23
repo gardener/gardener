@@ -17,14 +17,14 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Reconciler reconciles Bastions.
 type Reconciler struct {
 	Client client.Client
-	Config config.BastionControllerConfiguration
+	Config controllermanagerconfigv1alpha1.BastionControllerConfiguration
 	Clock  clock.Clock
 }
 

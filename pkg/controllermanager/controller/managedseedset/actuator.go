@@ -19,7 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -34,7 +34,7 @@ type actuator struct {
 	gardenClient   client.Client
 	replicaGetter  ReplicaGetter
 	replicaFactory ReplicaFactory
-	cfg            *config.ManagedSeedSetControllerConfiguration
+	cfg            *controllermanagerconfigv1alpha1.ManagedSeedSetControllerConfiguration
 	recorder       record.EventRecorder
 }
 
@@ -43,7 +43,7 @@ func NewActuator(
 	gardenClient client.Client,
 	replicaGetter ReplicaGetter,
 	replicaFactory ReplicaFactory,
-	cfg *config.ManagedSeedSetControllerConfiguration,
+	cfg *controllermanagerconfigv1alpha1.ManagedSeedSetControllerConfiguration,
 	recorder record.EventRecorder,
 ) Actuator {
 	return &actuator{

@@ -27,7 +27,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
@@ -38,7 +38,7 @@ import (
 // Reconciler reconciles Shoots and maintains them by updating versions or triggering operations.
 type Reconciler struct {
 	Client   client.Client
-	Config   config.ShootMaintenanceControllerConfiguration
+	Config   controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration
 	Clock    clock.Clock
 	Recorder record.EventRecorder
 }
@@ -499,7 +499,7 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) string {
 	return operation
 }
 
-func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanceControllerConfiguration) {
+func maintainTasks(shoot *gardencorev1beta1.Shoot, config controllermanagerconfigv1alpha1.ShootMaintenanceControllerConfiguration) {
 	controllerutils.AddTasks(shoot.Annotations,
 		v1beta1constants.ShootTaskDeployInfrastructure,
 		v1beta1constants.ShootTaskDeployDNSRecordInternal,

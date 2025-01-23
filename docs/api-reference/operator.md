@@ -2592,12 +2592,13 @@ string
 <td>
 <code>config</code></br>
 <em>
-k8s.io/apimachinery/pkg/runtime.RawExtension
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcequota-v1-core">
+Kubernetes core/v1.ResourceQuota
+</a>
 </em>
 </td>
 <td>
-<p>Config is the quota specification used for the project set-up.
-Only v1.ResourceQuota resources are supported.</p>
+<p>Config is the corev1.ResourceQuota specification used for the project set-up.</p>
 </td>
 </tr>
 <tr>

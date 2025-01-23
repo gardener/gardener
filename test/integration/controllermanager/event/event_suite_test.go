@@ -26,7 +26,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	eventcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -108,7 +108,7 @@ var _ = BeforeSuite(func() {
 	By("Register controller")
 	Expect((&eventcontroller.Reconciler{
 		Clock: clock.RealClock{},
-		Config: config.EventControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.EventControllerConfiguration{
 			ConcurrentSyncs:   ptr.To(5),
 			TTLNonShootEvents: &metav1.Duration{Duration: 30 * time.Minute},
 		},

@@ -229,7 +229,6 @@ build:
             - pkg/controller/reference
             - pkg/controller/service
             - pkg/controller/vpaevictionrequirements
-            - pkg/controllermanager/apis/config
             - pkg/controllermanager/apis/config/v1alpha1
             - pkg/controllerutils
             - pkg/controllerutils/mapper
@@ -578,7 +577,7 @@ build:
             - pkg/client/settings/informers/externalversions/settings
             - pkg/client/settings/informers/externalversions/settings/v1alpha1
             - pkg/client/settings/listers/settings/v1alpha1
-            - pkg/controllermanager/apis/config
+            - pkg/controllermanager/apis/config/v1alpha1
             - pkg/controllermanager/controller/namespacedcloudprofile
             - pkg/controllerutils
             - pkg/controllerutils/mapper
@@ -695,9 +694,8 @@ build:
             - pkg/component
             - pkg/component/garden/projectrbac
             - pkg/controller/reference
-            - pkg/controllermanager/apis/config
             - pkg/controllermanager/apis/config/v1alpha1
-            - pkg/controllermanager/apis/config/validation
+            - pkg/controllermanager/apis/config/v1alpha1/validation
             - pkg/controllermanager/controller
             - pkg/controllermanager/controller/bastion
             - pkg/controllermanager/controller/certificatesigningrequest

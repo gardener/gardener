@@ -27,7 +27,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -109,7 +109,7 @@ var _ = BeforeSuite(func() {
 
 	By("Register controller")
 	Expect((&managedseedsetcontroller.Reconciler{
-		Config: config.ManagedSeedSetControllerConfiguration{
+		Config: controllermanagerconfigv1alpha1.ManagedSeedSetControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 			SyncPeriod:      metav1.Duration{Duration: 500 * time.Millisecond},
 		},

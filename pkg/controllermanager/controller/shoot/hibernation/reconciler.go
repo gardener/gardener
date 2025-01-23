@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -71,7 +71,7 @@ func (s *parsedHibernationSchedule) previous(from, to time.Time) *time.Time {
 // Reconciler reconciles Shoots and hibernates or wakes them up according to their hibernation schedules.
 type Reconciler struct {
 	Client   client.Client
-	Config   config.ShootHibernationControllerConfiguration
+	Config   controllermanagerconfigv1alpha1.ShootHibernationControllerConfiguration
 	Clock    clock.Clock
 	Recorder record.EventRecorder
 }

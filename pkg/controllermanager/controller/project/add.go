@@ -9,14 +9,14 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/activity"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/project"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/project/stale"
 )
 
 // AddToManager adds all Project controllers to the given manager.
-func AddToManager(mgr manager.Manager, cfg config.ControllerManagerConfiguration) error {
+func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.ControllerManagerConfiguration) error {
 	if err := (&activity.Reconciler{
 		Config: *cfg.Controllers.Project,
 	}).AddToManager(mgr); err != nil {

@@ -30,7 +30,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -137,9 +137,9 @@ var _ = BeforeSuite(func() {
 	Expect(indexer.AddControllerInstallationRegistrationRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Register controller")
-	Expect(controllerregistration.AddToManager(mgr, config.ControllerManagerConfiguration{
-		Controllers: config.ControllerManagerControllerConfiguration{
-			ControllerRegistration: &config.ControllerRegistrationControllerConfiguration{
+	Expect(controllerregistration.AddToManager(mgr, controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
+		Controllers: controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration{
+			ControllerRegistration: &controllermanagerconfigv1alpha1.ControllerRegistrationControllerConfiguration{
 				ConcurrentSyncs: ptr.To(5),
 			},
 		},
