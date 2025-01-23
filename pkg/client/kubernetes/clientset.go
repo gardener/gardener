@@ -16,7 +16,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
@@ -34,7 +33,7 @@ type clientSet struct {
 	applier       Applier
 	chartApplier  ChartApplier
 	chartRenderer chartrenderer.Interface
-	podExecutor   kubernetesutils.PodExecutor
+	podExecutor   PodExecutor
 
 	// client is the default controller-runtime client which uses SharedIndexInformers to keep its cache in sync
 	client client.Client
@@ -66,7 +65,7 @@ func (c *clientSet) ChartRenderer() chartrenderer.Interface {
 func (c *clientSet) ChartApplier() ChartApplier { return c.chartApplier }
 
 // PodExecutor returns a PodExecutor for executing into pods.
-func (c *clientSet) PodExecutor() kubernetesutils.PodExecutor { return c.podExecutor }
+func (c *clientSet) PodExecutor() PodExecutor { return c.podExecutor }
 
 // RESTConfig will return the config attribute of the Client object.
 func (c *clientSet) RESTConfig() *rest.Config {

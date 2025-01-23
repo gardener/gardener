@@ -42,7 +42,6 @@ import (
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -174,7 +173,7 @@ type Interface interface {
 	// ChartApplier returns a ChartApplier using the ClientSet's ChartRenderer and Applier.
 	ChartApplier() ChartApplier
 	// PodExecutor returns a PodExecutor for executing into pods.
-	PodExecutor() kubernetesutils.PodExecutor
+	PodExecutor() PodExecutor
 
 	Kubernetes() kubernetesclientset.Interface
 

@@ -118,30 +118,6 @@ var _ = Describe("kubernetes", func() {
 		Entry("no matching value", map[string]string{"key": "value"}, "key", "value1", false),
 	)
 
-	DescribeTable("#ValidDeploymentContainerImageVersion",
-		func(containerName, minVersion string, expected bool) {
-			fakeImage := "test:0.3.0"
-			deployment := appsv1.Deployment{
-				Spec: appsv1.DeploymentSpec{
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  "lb-deployment",
-									Image: fakeImage,
-								},
-							},
-						},
-					},
-				},
-			}
-			ok, _ := ValidDeploymentContainerImageVersion(&deployment, containerName, minVersion)
-			Expect(ok).To(Equal(expected))
-		},
-		Entry("invalid version", "lb-deployment", `0.4.0`, false),
-		Entry("invalid container name", "deployment", "0.3.0", false),
-	)
-
 	Describe("#WaitUntilResourceDeleted", func() {
 		var (
 			namespace = "bar"

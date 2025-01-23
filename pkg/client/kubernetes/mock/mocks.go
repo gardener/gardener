@@ -15,10 +15,9 @@ import (
 
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetes0 "github.com/gardener/gardener/pkg/utils/kubernetes"
 	gomock "go.uber.org/mock/gomock"
 	version "k8s.io/apimachinery/pkg/version"
-	kubernetes1 "k8s.io/client-go/kubernetes"
+	kubernetes0 "k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
@@ -148,10 +147,10 @@ func (mr *MockInterfaceMockRecorder) DiscoverVersion() *gomock.Call {
 }
 
 // Kubernetes mocks base method.
-func (m *MockInterface) Kubernetes() kubernetes1.Interface {
+func (m *MockInterface) Kubernetes() kubernetes0.Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Kubernetes")
-	ret0, _ := ret[0].(kubernetes1.Interface)
+	ret0, _ := ret[0].(kubernetes0.Interface)
 	return ret0
 }
 
@@ -162,10 +161,10 @@ func (mr *MockInterfaceMockRecorder) Kubernetes() *gomock.Call {
 }
 
 // PodExecutor mocks base method.
-func (m *MockInterface) PodExecutor() kubernetes0.PodExecutor {
+func (m *MockInterface) PodExecutor() kubernetes.PodExecutor {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PodExecutor")
-	ret0, _ := ret[0].(kubernetes0.PodExecutor)
+	ret0, _ := ret[0].(kubernetes.PodExecutor)
 	return ret0
 }
 
