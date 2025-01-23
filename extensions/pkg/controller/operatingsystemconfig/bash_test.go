@@ -234,6 +234,7 @@ fi
 
 echo "Hello, World!"
 
+
 mkdir -p /var/lib/osc
 touch /var/lib/osc/provision-osc-applied
 `))
@@ -252,6 +253,7 @@ if [ -f "/var/lib/osc/provision-osc-applied" ]; then
 fi
 
 echo "Hello, World!"
+
 
 mkdir -p /var/lib/osc
 touch /var/lib/osc/provision-osc-applied
