@@ -33,7 +33,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg config.Controlle
 		return fmt.Errorf("failed adding extension ClusterRole reconciler: %w", err)
 	}
 
-	if err := (&seedfinalizer.Reconciler{}).AddToManager(ctx, mgr); err != nil {
+	if err := (&seedfinalizer.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding Seed finalizer reconciler: %w", err)
 	}
 
