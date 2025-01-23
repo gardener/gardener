@@ -1098,10 +1098,20 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		}
 
 		if config.OIDC != nil {
+			issuerURL := config.OIDC.IssuerURL
+			if issuerURL == nil {
+				issuerURL = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL
+			}
+
+			clientIDPublic := config.OIDC.ClientIDPublic
+			if clientIDPublic == nil {
+				clientIDPublic = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.ClientID
+			}
+
 			values.OIDC = &gardenerdashboard.OIDCValues{
 				DashboardOIDC:  *config.OIDC,
-				IssuerURL:      ptr.Deref(garden.Spec.VirtualCluster.Gardener.Dashboard.OIDC.IssuerURL, *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL),
-				ClientIDPublic: ptr.Deref(garden.Spec.VirtualCluster.Gardener.Dashboard.OIDC.ClientIDPublic, *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.OIDCConfig.ClientID),
+				IssuerURL:      *issuerURL,
+				ClientIDPublic: *clientIDPublic,
 			}
 		}
 
