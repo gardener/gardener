@@ -2,8 +2,8 @@
   path: /spec/networks
   value:
     ipFamilies:
-      - IPv4
       - IPv6
+      - IPv4
     nodes: fd00:10::/64
     pods: fd00:10:1::/56
     services: fd00:10:2::/112

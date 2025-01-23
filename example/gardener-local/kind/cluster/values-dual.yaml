@@ -7,5 +7,5 @@ gardener:
 
 networking:
   ipFamily: dual
-  podSubnet: "10.1.0.0/16,fd00:10:1::/56"
-  serviceSubnet: "10.2.0.0/16,fd00:10:2::/112"
+  podSubnet: "fd00:10:1::/56,10.1.0.0/16"
+  serviceSubnet: "fd00:10:2::/112,10.2.0.0/16"

@@ -3,16 +3,16 @@ config:
     spec:
       networks:
         ipFamilies:
-        - IPv4
         - IPv6
-        nodes: 172.18.0.0/16
+        - IPv4
+        nodes: fd00:10::/64
         # Those CIDRs must match those specified in the kind Cluster configuration.
-        pods: 10.1.0.0/16
-        services: 10.2.0.0/16
+        pods: fd00:10:1::/56
+        services: fd00:10:2::/112
         shootDefaults:
           ipFamilies:
-          - IPv4
           - IPv6
+          - IPv4
           pods: fd00:10:3::/56
           services: fd00:10:4::/112
 
