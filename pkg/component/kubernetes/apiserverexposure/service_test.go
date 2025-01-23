@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -36,7 +37,7 @@ var _ = Describe("#Service", func() {
 
 		ingressIP        string
 		clusterIP        string
-		clusterIPFunc    func(string)
+		clusterIPsFunc   func([]string)
 		ingressIPFunc    func(string)
 		namePrefix       string
 		namespace        string
@@ -58,7 +59,7 @@ var _ = Describe("#Service", func() {
 		namespace = "test-namespace"
 		expectedName = "test-kube-apiserver"
 		sniServiceObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
-		clusterIPFunc = func(c string) { clusterIP = c }
+		clusterIPsFunc = func(c []string) { clusterIP = c[0] }
 		ingressIPFunc = func(c string) { ingressIP = c }
 
 		expected = &corev1.Service{
@@ -86,7 +87,9 @@ var _ = Describe("#Service", func() {
 					"app":  "kubernetes",
 					"role": "apiserver",
 				},
-				ClusterIP: "1.1.1.1",
+				ClusterIP:      "1.1.1.1",
+				ClusterIPs:     []string{"1.1.1.1"},
+				IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyPreferDualStack),
 			},
 		}
 
@@ -119,7 +122,7 @@ var _ = Describe("#Service", func() {
 			},
 			func() client.ObjectKey { return sniServiceObjKey },
 			&retryfake.Ops{MaxAttempts: 1},
-			clusterIPFunc,
+			clusterIPsFunc,
 			ingressIPFunc,
 		)
 	})
@@ -196,7 +199,7 @@ var _ = Describe("#Service", func() {
 					},
 					func() client.ObjectKey { return sniServiceObjKey },
 					&retryfake.Ops{MaxAttempts: 1},
-					clusterIPFunc,
+					clusterIPsFunc,
 					ingressIPFunc,
 				)
 

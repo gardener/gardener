@@ -70,15 +70,15 @@ func NewService(
 	values *ServiceValues,
 	sniServiceKeyFunc func() client.ObjectKey,
 	waiter retry.Ops,
-	clusterIPFunc func(clusterIP string),
+	clusterIPsFunc func(clusterIPs []string),
 	ingressFunc func(ingressIP string),
 ) component.DeployWaiter {
 	if waiter == nil {
 		waiter = retry.DefaultOps()
 	}
 
-	if clusterIPFunc == nil {
-		clusterIPFunc = func(_ string) {}
+	if clusterIPsFunc == nil {
+		clusterIPsFunc = func(_ []string) {}
 	}
 
 	if ingressFunc == nil {
@@ -108,7 +108,7 @@ func NewService(
 		values:                     internalValues,
 		loadBalancerServiceKeyFunc: loadBalancerServiceKeyFunc,
 		waiter:                     waiter,
-		clusterIPFunc:              clusterIPFunc,
+		clusterIPsFunc:             clusterIPsFunc,
 		ingressFunc:                ingressFunc,
 	}
 }
@@ -120,7 +120,7 @@ type service struct {
 	values                     *serviceValues
 	loadBalancerServiceKeyFunc func() client.ObjectKey
 	waiter                     retry.Ops
-	clusterIPFunc              func(clusterIP string)
+	clusterIPsFunc             func(clusterIPs []string)
 	ingressFunc                func(ingressIP string)
 }
 
@@ -166,13 +166,14 @@ func (s *service) Deploy(ctx context.Context) error {
 				TargetPort: intstr.FromInt32(kubeapiserverconstants.Port),
 			},
 		}, corev1.ServiceTypeClusterIP)
+		obj.Spec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicyPreferDualStack)
 
 		return nil
 	}); err != nil {
 		return err
 	}
 
-	s.clusterIPFunc(obj.Spec.ClusterIP)
+	s.clusterIPsFunc(obj.Spec.ClusterIPs)
 	return nil
 }
 

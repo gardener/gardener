@@ -10,7 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
@@ -32,7 +32,7 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 			return client.ObjectKey{Name: b.IstioServiceName(), Namespace: b.IstioNamespace()}
 		},
 		nil,
-		b.setAPIServerServiceClusterIP,
+		b.setAPIServerServiceClusterIPs,
 		func(address string) {
 			b.APIServerAddress = address
 			b.newDNSComponentsTargetingAPIServerAddress()
@@ -67,24 +67,25 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
 }
 
-func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	clusterIPv4 := net.ParseIP(clusterIP).To4()
+func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
+	clusterIPv4 := net.ParseIP(clusterIPs[0]).To4()
 
 	if clusterIPv4 != nil {
-		if b.Shoot.GetInfo().Spec.Networking.IPFamilies[0] == v1beta1.IPFamilyIPv6 {
+		if b.Shoot.GetInfo().Spec.Networking.IPFamilies[0] == gardencorev1beta1.IPFamilyIPv6 {
 			// "64:ff9b:1::" is a well known prefix for address translation for use
 			// in local networks.
-			b.APIServerClusterIP = "64:ff9b:1::" + clusterIP
+			b.APIServerClusterIP = "64:ff9b:1::" + clusterIPs[0]
 		} else {
-			// prevent leakage of real cluster ip to shoot. we use the reserved range 240.0.0.0/8 as prefix instead.
-			// e.g. cluster ip in seed:  192.168.102.23 => ip in shoot:  240.168.102.23
-			prefixIp, _, _ := net.ParseCIDR(v1beta1constants.ReservedKubeApiServerMappingRange)
-			prefix := prefixIp.To4()
-			b.APIServerClusterIP = net.IPv4(prefix[0], clusterIPv4[1], clusterIPv4[2], clusterIPv4[3]).String()
+			b.APIServerClusterIP = mapToReservedKubeApiServerRange(clusterIPv4)
 		}
 	} else {
-		// regular ipv6 cluster ip
-		b.APIServerClusterIP = clusterIP
+		if gardencorev1beta1.IsIPv4SingleStack(b.Shoot.GetInfo().Spec.Networking.IPFamilies) && len(clusterIPs) > 1 {
+			clusterIPv4 = net.ParseIP(clusterIPs[1]).To4()
+			b.APIServerClusterIP = mapToReservedKubeApiServerRange(clusterIPv4)
+		} else {
+			// regular ipv6 cluster ip
+			b.APIServerClusterIP = clusterIPs[0]
+		}
 	}
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
 		b.SeedClientSet.Client(),
@@ -106,6 +107,14 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 			}
 		},
 	)
+}
+
+func mapToReservedKubeApiServerRange(ip net.IP) string {
+	// prevent leakage of real cluster ip to shoot. we use the reserved range 240.0.0.0/8 as prefix instead.
+	// e.g. cluster ip in seed:  192.168.102.23 => ip in shoot:  240.168.102.23
+	prefixIp, _, _ := net.ParseCIDR(v1beta1constants.ReservedKubeApiServerMappingRange)
+	prefix := prefixIp.To4()
+	return net.IPv4(prefix[0], ip[1], ip[2], ip[3]).String()
 }
 
 // DefaultKubeAPIServerIngress returns a deployer for the kube-apiserver ingress.
