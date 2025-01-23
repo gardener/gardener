@@ -110,6 +110,7 @@ type Interface interface {
 func New(
 	log logr.Logger,
 	c client.Client,
+	reader client.Reader,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
@@ -119,6 +120,7 @@ func New(
 
 	return &etcd{
 		client:         c,
+		apiReader:      reader,
 		log:            log,
 		namespace:      namespace,
 		secretsManager: secretsManager,
@@ -134,6 +136,7 @@ func New(
 
 type etcd struct {
 	client         client.Client
+	apiReader      client.Reader
 	log            logr.Logger
 	namespace      string
 	secretsManager secretsmanager.Interface

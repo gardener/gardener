@@ -10,11 +10,13 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -29,7 +31,7 @@ var (
 )
 
 func (e *etcd) Wait(ctx context.Context) error {
-	return extensions.WaitUntilObjectReadyWithHealthFunction(
+	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		e.client,
 		e.log,
@@ -40,7 +42,35 @@ func (e *etcd) Wait(ctx context.Context) error {
 		DefaultSevereThreshold,
 		DefaultTimeout,
 		nil,
-	)
+	); err != nil {
+		return err
+	}
+
+	// This is a band-aid for https://github.com/gardener/etcd-druid/issues/985
+	// and can be removed as soon as the issue is fixed in Etcd-Druid.
+	return e.checkStatefulSetIsNotProgressing(ctx)
+}
+
+func (e *etcd) checkStatefulSetIsNotProgressing(ctx context.Context) error {
+	etcd := druidv1alpha1.Etcd{}
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), &etcd); err != nil {
+		return err
+	}
+
+	if etcd.Status.Etcd == nil || len(etcd.Status.Etcd.Name) == 0 {
+		e.log.Info("Skip checking etcd StatefulSet as name is not given in etcd resource")
+		return nil
+	}
+
+	etcdSts := &appsv1.StatefulSet{}
+	if err := e.apiReader.Get(ctx, client.ObjectKey{Namespace: e.namespace, Name: etcd.Status.Etcd.Name}, etcdSts); err != nil {
+		return err
+	}
+
+	if processing, message := health.IsStatefulSetProgressing(etcdSts); processing {
+		return fmt.Errorf("etcd stateful set %q is progressing: %s", etcdSts.Name, message)
+	}
+	return nil
 }
 
 func (e *etcd) WaitCleanup(_ context.Context) error { return nil }
