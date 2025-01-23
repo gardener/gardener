@@ -849,32 +849,32 @@ func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, sec
 // For backwards-compatibility, we want to validate the scaleDownUnneededTime and scaleDownDelayAfterAdd only for newly created Shoot clusters.
 // Performing the validation for all Shoots would prevent already existing Shoots with the wrong spec to be updated/deleted.
 // Validation implies that ScaleDownDelayAfterAdd and ScaleDownUnneededTime shouldn't be less than a minute at the same time to avoid scaling cycles.
-func (c *validationContext) validateScaleDownConfiguration(a admission.Attributes) field.ErrorList {
-	var (
-		allErrs              field.ErrorList
-		stringRepresentation string
-		path                 = field.NewPath("spec", "kubernetes", "clusterAutoscaler")
-	)
+func (c *validationContext) validateClusterAutoscaler(a admission.Attributes) field.ErrorList {
+	var allErrs field.ErrorList
 
 	if a.GetOperation() != admission.Create {
 		return nil
 	}
 
-	if c.shoot.Spec.Kubernetes.ClusterAutoscaler == nil || c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd == nil || c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime == nil {
+	if c.shoot.Spec.Kubernetes.ClusterAutoscaler == nil || c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd == nil {
 		return nil
 	}
 
-	scaleDownDelayAfterAdd := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd.Duration
-	scaleDownUnneededTime := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime.Duration
+	scaleDownDelayAfterAdd := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd
+	scaleDownUnneededTime := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime
+	if scaleDownUnneededTime != nil && scaleDownDelayAfterAdd != nil {
+		if scaleDownDelayAfterAdd.Duration < 1*time.Minute && scaleDownUnneededTime.Duration < 1*time.Minute {
+			fldPath := field.NewPath("spec", "kubernetes", "clusterAutoscaler", "scaleDownUnneededTime")
+			allErrs = append(allErrs, field.Invalid(fldPath, scaleDownUnneededTime.Duration, "cannot be less than 1min when scaleDownDelayAfterAdd is also less than 1min"))
+		}
+	}
 
-	path = field.NewPath("spec", "provider", "workers", "clusterAutoscaler")
-	for _, worker := range c.shoot.Spec.Provider.Workers {
-		if (worker.ClusterAutoscaler == nil || worker.ClusterAutoscaler.ScaleDownUnneededTime == nil) && scaleDownDelayAfterAdd < 1*time.Minute && scaleDownUnneededTime < 1*time.Minute {
-			stringRepresentation = "ScaleDownDelayAfterAdd: " + scaleDownDelayAfterAdd.String() + ", ScaleDownUnneededTime: " + scaleDownDelayAfterAdd.String()
-			allErrs = append(allErrs, field.Invalid(path.Child("scaleDownUnneededTime"), stringRepresentation, "ScaleDownUnneededTime and ScaleDownDelayAfterAdd should not be less than a minute at the same time"))
-		} else if worker.ClusterAutoscaler != nil && worker.ClusterAutoscaler.ScaleDownUnneededTime != nil && worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration < 1*time.Minute && scaleDownDelayAfterAdd < 1*time.Minute {
-			stringRepresentation = "ScaleDownDelayAfterAdd: " + scaleDownDelayAfterAdd.String() + ", ScaleDownUnneededTime: " + worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration.String()
-			allErrs = append(allErrs, field.Invalid(path.Child("scaleDownUnneededTime"), stringRepresentation, "Worker ScaleDownUnneededTime and ScaleDownDelayAfterAdd should not be less than a minute at the same time"))
+	fldPath := field.NewPath("spec", "provider", "workers")
+	for i, worker := range c.shoot.Spec.Provider.Workers {
+		if worker.ClusterAutoscaler != nil && worker.ClusterAutoscaler.ScaleDownUnneededTime != nil && scaleDownUnneededTime != nil {
+			if scaleDownDelayAfterAdd.Duration < 1*time.Minute && worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration < 1*time.Minute {
+				allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("clusterAutoscaler", "scaleDownUnneededTime"), worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration, "cannot be less than 1min when scaleDownDelayAfterAdd is also less than 1min"))
+			}
 		}
 	}
 
@@ -1037,7 +1037,7 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 	}
 
 	allErrs = append(allErrs, c.validateKubeAPIServerOIDCConfig(a)...)
-	allErrs = append(allErrs, c.validateScaleDownConfiguration(a)...)
+	allErrs = append(allErrs, c.validateClusterAutoscaler(a)...)
 
 	if c.shoot.DeletionTimestamp == nil {
 		performKubernetesDefaulting(c.shoot, c.oldShoot)
