@@ -83,7 +83,7 @@ var _ = Describe("#Wait", func() {
 			&retry.UntilTimeout, waiter.UntilTimeout,
 		)
 
-		etcd = New(log, c, testNamespace, sm, Values{
+		etcd = New(log, c, c, testNamespace, sm, Values{
 			Role:            testRole,
 			Class:           ClassNormal,
 			StorageCapacity: "20Gi",
@@ -158,7 +158,7 @@ var _ = Describe("#Wait", func() {
 		Expect(etcd.Wait(ctx)).NotTo(Succeed(), "etcd indicates error")
 	})
 
-	It("should return no error when is ready", func() {
+	It("should return error if statefulset is progressing", func() {
 		defer test.WithVars(
 			&TimeNow, mockNow.Do,
 		)()
@@ -167,6 +167,14 @@ var _ = Describe("#Wait", func() {
 		By("Deploy")
 		// Deploy should fill internal state with the added timestamp annotation
 		Expect(etcd.Deploy(ctx)).To(Succeed())
+
+		sts := &appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: testNamespace,
+			},
+		}
+		Expect(c.Create(ctx, sts)).To(Succeed())
 
 		By("Patch object")
 		delete(expected.Annotations, v1beta1constants.GardenerTimestamp)
@@ -177,6 +185,48 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
+		expected.Status.Etcd = &druidv1alpha1.CrossVersionObjectReference{Name: name}
+		expected.Status.Ready = ptr.To(true)
+		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
+
+		By("Wait")
+		Expect(etcd.Wait(ctx)).NotTo(Succeed(), "etcd indicates error")
+	})
+
+	It("should return no error when is ready", func() {
+		defer test.WithVars(
+			&TimeNow, mockNow.Do,
+		)()
+		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+		By("Deploy")
+		// Deploy should fill internal state with the added timestamp annotation
+		Expect(etcd.Deploy(ctx)).To(Succeed())
+
+		sts := &appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: testNamespace,
+			},
+			Spec: appsv1.StatefulSetSpec{
+				Replicas: ptr.To[int32](3),
+			},
+			Status: appsv1.StatefulSetStatus{
+				UpdatedReplicas: 3,
+			},
+		}
+		Expect(c.Create(ctx, sts)).To(Succeed())
+
+		By("Patch object")
+		delete(expected.Annotations, v1beta1constants.GardenerTimestamp)
+		patch := client.MergeFrom(expected.DeepCopy())
+		expected.Status.ObservedGeneration = ptr.To[int64](0)
+		expected.Status.LastErrors = nil
+		// remove operation annotation, add up-to-date timestamp annotation
+		expected.ObjectMeta.Annotations = map[string]string{
+			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+		}
+		expected.Status.Etcd = &druidv1alpha1.CrossVersionObjectReference{Name: name}
 		expected.Status.Ready = ptr.To(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 

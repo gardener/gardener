@@ -120,6 +120,7 @@ var _ = Describe("Etcd", func() {
 
 						validator := &newEtcdValidator{
 							expectedClient:                  Equal(c),
+							expectedReader:                  Equal(reader),
 							expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
 							expectedNamespace:               Equal(namespace),
 							expectedSecretsManager:          Equal(sm),
@@ -152,6 +153,7 @@ var _ = Describe("Etcd", func() {
 			It("should successfully create an etcd interface (normal class)", func() {
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
+					expectedReader:                  Equal(reader),
 					expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
 					expectedNamespace:               Equal(namespace),
 					expectedSecretsManager:          Equal(sm),
@@ -178,6 +180,7 @@ var _ = Describe("Etcd", func() {
 
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
+					expectedReader:                  Equal(reader),
 					expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
 					expectedNamespace:               Equal(namespace),
 					expectedSecretsManager:          Equal(sm),
@@ -500,6 +503,7 @@ type newEtcdValidator struct {
 	etcd.Interface
 
 	expectedClient                  gomegatypes.GomegaMatcher
+	expectedReader                  gomegatypes.GomegaMatcher
 	expectedLogger                  gomegatypes.GomegaMatcher
 	expectedNamespace               gomegatypes.GomegaMatcher
 	expectedSecretsManager          gomegatypes.GomegaMatcher
@@ -515,12 +519,14 @@ type newEtcdValidator struct {
 func (v *newEtcdValidator) NewEtcd(
 	log logr.Logger,
 	client client.Client,
+	reader client.Reader,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values etcd.Values,
 ) etcd.Interface {
 	Expect(log).To(v.expectedLogger)
 	Expect(client).To(v.expectedClient)
+	Expect(reader).To(v.expectedReader)
 	Expect(namespace).To(v.expectedNamespace)
 	Expect(secretsManager).To(v.expectedSecretsManager)
 	Expect(values.Role).To(v.expectedRole)
