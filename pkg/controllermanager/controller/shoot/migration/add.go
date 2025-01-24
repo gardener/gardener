@@ -47,12 +47,22 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 			return v1beta1helper.ShouldPrepareShootForMigration(shoot) || v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootReadyForMigration) != nil
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			shoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
+			newShoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return false
 			}
 
-			return v1beta1helper.ShouldPrepareShootForMigration(shoot)
+			oldShoot, ok := e.ObjectOld.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+
+			var (
+				seedNameChanged          = ptr.Deref(oldShoot.Spec.SeedName, "") != ptr.Deref(newShoot.Spec.SeedName, "")
+				requireConstraintRemoval = v1beta1helper.GetCondition(newShoot.Status.Constraints, gardencorev1beta1.ShootReadyForMigration) != nil && !v1beta1helper.ShootHasOperationType(newShoot.Status.LastOperation, gardencorev1beta1.LastOperationTypeMigrate)
+			)
+
+			return seedNameChanged || requireConstraintRemoval
 		},
 		DeleteFunc: func(_ event.DeleteEvent) bool {
 			return false

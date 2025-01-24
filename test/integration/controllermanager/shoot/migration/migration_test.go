@@ -59,7 +59,7 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 				Networking: &gardencorev1beta1.Networking{
 					Type: ptr.To("foo-networking"),
 				},
-				SeedName: ptr.To("destination-seed"),
+				SeedName: ptr.To("source-seed"),
 			},
 		}
 
@@ -102,6 +102,11 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 
 		By("Create Shoot")
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
+
+		patch := client.MergeFrom(shoot.DeepCopy())
+		shoot.Status.SeedName = shoot.Spec.SeedName
+		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
 		log.Info("Created Shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 		By("Create source Seed")
@@ -160,11 +165,10 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 		})
 	})
 
-	When("the last operation already indicates a migration has started", func() {
+	When("the last operation already indicates restore has started", func() {
 		It("should do nothing when the constraint is already removed", func() {
 			patch := client.MergeFrom(shoot.DeepCopy())
-			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeMigrate}
-			shoot.Status.SeedName = &sourceSeed.Name
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}
 			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
@@ -175,9 +179,8 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 
 		It("should remove the constraint when it is still present", func() {
 			patch := client.MergeFrom(shoot.DeepCopy())
-			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeMigrate}
+			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}
 			shoot.Status.Constraints = []gardencorev1beta1.Condition{{Type: gardencorev1beta1.ShootReadyForMigration}}
-			shoot.Status.SeedName = &sourceSeed.Name
 			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
@@ -189,30 +192,15 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 
 	When("the destination seed is being deleted", func() {
 		It("should set the constraint to False", func() {
-			By("Remove destination Seed reference from Shoot to allow Seed deletion")
-			patch := client.MergeFrom(shoot.DeepCopy())
-			shoot.Spec.SeedName = nil
-			Expect(testClient.SubResource("binding").Patch(ctx, shoot, patch)).To(Succeed())
-
-			Eventually(func(g Gomega) *string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-				return shoot.Spec.SeedName
-			}).Should(BeNil())
-
 			By("Delete destination Seed")
 			destinationSeed.Finalizers = []string{"foo"}
 			Expect(testClient.Update(ctx, destinationSeed)).To(Succeed())
 			Expect(testClient.Delete(ctx, destinationSeed)).To(Succeed())
 
 			By("Add destination Seed reference back to Shoot")
-			patch = client.MergeFrom(shoot.DeepCopy())
+			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Spec.SeedName = &destinationSeed.Name
 			Expect(testClient.SubResource("binding").Patch(ctx, shoot, patch)).To(Succeed())
-
-			By("Trigger migration controller")
-			patch = client.MergeFrom(shoot.DeepCopy())
-			shoot.Status.SeedName = &sourceSeed.Name
-			Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -233,8 +221,8 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 
 		By("Trigger migration controller")
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.SeedName = &sourceSeed.Name
-		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+		shoot.Spec.SeedName = &destinationSeed.Name
+		Expect(testClient.SubResource("binding").Patch(ctx, shoot, patch)).To(Succeed())
 
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -259,8 +247,8 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 
 		By("Trigger migration controller")
 		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Status.SeedName = &sourceSeed.Name
-		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+		shoot.Spec.SeedName = &destinationSeed.Name
+		Expect(testClient.SubResource("binding").Patch(ctx, shoot, patch)).To(Succeed())
 
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())

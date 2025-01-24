@@ -48,7 +48,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	patch := client.MergeFrom(shoot.DeepCopy())
 
-	if !v1beta1helper.ShouldPrepareShootForMigration(shoot) || v1beta1helper.ShootHasOperationType(shoot.Status.LastOperation, gardencorev1beta1.LastOperationTypeMigrate) {
+	if !v1beta1helper.ShouldPrepareShootForMigration(shoot) {
 		if v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootReadyForMigration) == nil {
 			return reconcile.Result{}, nil
 		}

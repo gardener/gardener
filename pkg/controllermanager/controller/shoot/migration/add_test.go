@@ -61,14 +61,34 @@ var _ = Describe("Add", func() {
 		})
 
 		Describe("#Update", func() {
-			It("should return false because shoot is not being migration", func() {
-				Expect(predicate.Update(event.UpdateEvent{ObjectNew: shoot})).To(BeFalse())
+			var shootNew *gardencorev1beta1.Shoot
+
+			BeforeEach(func() {
+				shootNew = shoot.DeepCopy()
 			})
 
-			It("should return true because shoot needs migration", func() {
-				shoot.Spec.SeedName = ptr.To("seed-2")
+			It("should return false because seed name is unchanged", func() {
+				Expect(predicate.Update(event.UpdateEvent{ObjectNew: shoot, ObjectOld: shoot})).To(BeFalse())
+			})
 
-				Expect(predicate.Update(event.UpdateEvent{ObjectNew: shoot})).To(BeTrue())
+			It("should return true because seed name is changed", func() {
+				shootNew.Spec.SeedName = ptr.To("seed-2")
+
+				Expect(predicate.Update(event.UpdateEvent{ObjectNew: shootNew, ObjectOld: shoot})).To(BeTrue())
+			})
+
+			It("should return false because constraint is present during migration", func() {
+				shootNew.Status.Constraints = []gardencorev1beta1.Condition{{Type: "ReadyForMigration"}}
+				shootNew.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: "Migrate"}
+
+				Expect(predicate.Update(event.UpdateEvent{ObjectNew: shootNew, ObjectOld: shoot})).To(BeFalse())
+			})
+
+			It("should return true because constraint it present during restore", func() {
+				shootNew.Status.Constraints = []gardencorev1beta1.Condition{{Type: "ReadyForMigration"}}
+				shootNew.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: "Restore"}
+
+				Expect(predicate.Update(event.UpdateEvent{ObjectNew: shootNew, ObjectOld: shoot})).To(BeTrue())
 			})
 		})
 
