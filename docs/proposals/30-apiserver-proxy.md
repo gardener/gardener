@@ -1,5 +1,5 @@
 ---
-title: Rework apiserver-proxy to drop proxy protocol
+title: Rework API Server Proxy to Drop Proxy Protocol
 gep-number: 30
 creation-date: 2024-10-11
 status: implementable
@@ -11,29 +11,23 @@ reviewers:
 - "@ScheererJ"
 ---
 
-# GEP-30: Rework apiserver-proxy to drop proxy protocol
+# GEP-30: Rework API Server Proxy to Drop Proxy Protocol
 
 ## Table of Contents
 
 - [Summary](#summary)
 - [Motivation](#motivation)
-    - [Goals](#goals)
-    - [Non-Goals](#non-goals)
+  - [Goals](#goals)
+  - [Non-Goals](#non-goals)
 - [Proposal](#proposal)
-- [Current Architecture](#current-architecture)
-- [Proposed Changes](#proposed-changes)
-- [Custom Header Specification](#custom-header-specification)
-- [HTTP CONNECT Implementation](#http-connect-implementation)
-    - [Technical Implementation Details](#technical-implementation-details)
-    - [Istio IngressGateway Configuration](#istio-ingressgateway-configuration)
-    - [EnvoyFilter for Custom Header Processing](#envoyfilter-for-custom-header-processing)
-    - [Implementation Steps](#implementation-steps)
-- [Feature Gate Implementation](#feature-gate-implementation)
-    - [Feature Gate 1: APIServerSecureRouting](#feature-gate-1-apiserversecurerouting)
-    - [Feature Gate 2: APIServerLegacyPortDisable](#feature-gate-2-apiserverlegacyportdisable)
-    - [Configuration Example](#configuration-example)
-- [Drawbacks](#drawbacks)
+  - [Reconfiguring the API Server Proxy](#reconfiguring-the-api-server-proxy)
+  - [Reconfiguring the Istio Ingress Gateway](#reconfiguring-the-istio-ingress-gateway)
+  - [Unifying the HTTP Proxy Infrastructure](#unifying-the-http-proxy-infrastructure)
+  - [Rollout Plan](#rollout-plan)
 - [Alternatives](#alternatives)
+- [Appendix](#appendix)
+  - [Visualization of the Current Architecture](#visualization-of-the-current-architecture)
+  - [Visualization of the Proposed Architecture](#visualization-of-the-proposed-architecture)
 
 ## Summary
 
