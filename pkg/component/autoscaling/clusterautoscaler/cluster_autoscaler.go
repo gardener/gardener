@@ -649,23 +649,41 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string,
 	return registry.AddAllAndSerialize(objects...)
 }
 
+type poolPriorityDefaults struct {
+	namespace string
+	poolMap   map[string]int32
+}
+
+func buildPoolPriorityDefaultsMap(workerConfig []gardencorev1beta1.Worker, namespace string) *poolPriorityDefaults {
+	fallbackMap := &poolPriorityDefaults{
+		poolMap:   make(map[string]int32),
+		namespace: namespace,
+	}
+	for _, pool := range workerConfig {
+		fallbackMap.poolMap[pool.Name] = ptr.Deref(pool.Priority, 0)
+	}
+	return fallbackMap
+}
+
+func (p *poolPriorityDefaults) forDeployment(machineDeploymentName string) int32 {
+	name := strings.TrimPrefix(machineDeploymentName, p.namespace+"-")
+	zoneIndex := strings.LastIndex(name, "-z")
+	if zoneIndex != -1 {
+		name = name[:zoneIndex]
+	}
+	return p.poolMap[name]
+}
+
 func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigMap, error) {
 	priorities := map[int32][]string{}
+	priorityDefaults := buildPoolPriorityDefaultsMap(c.workerConfig, c.namespace)
+
 	for _, machineDeployment := range c.machineDeployments {
 		// TODO(tobschli): Remove this once all well-known extensions have revendored to use the generic actuator that sets the priorities.
-		if machineDeployment.Priority == nil {
-			// In this case, the extension did not set the priorities that were configured in the worker.
-			// fall back to try to determine the pool name.
-			for _, pool := range c.workerConfig {
-				if strings.Contains(machineDeployment.Name, pool.Name) {
-					priority := ptr.Deref(pool.Priority, 0)
-					priorities[priority] = append(priorities[priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
-				}
-			}
-		} else {
-			priority := ptr.Deref(machineDeployment.Priority, 0)
-			priorities[priority] = append(priorities[priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
-		}
+		// In the case the priority is nil, the extension did not set the priorities that were configured in the worker.
+		// Fall back to try to determine the pool name.
+		priority := ptr.Deref(machineDeployment.Priority, priorityDefaults.forDeployment(machineDeployment.Name))
+		priorities[priority] = append(priorities[priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
 	}
 
 	priorityConfig, err := yaml.Marshal(priorities)
