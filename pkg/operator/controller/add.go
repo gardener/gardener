@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
@@ -70,7 +70,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *c
 						AdditionalNamespaceSelectors: cfg.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
 						RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
 							// gardener-operator only supports IPv4 single-stack networking in the runtime cluster for now.
-							IPFamilies: []gardencore.IPFamily{gardencore.IPFamilyIPv4},
+							IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 							Nodes:      nodes,
 							Pods:       []string{garden.Spec.RuntimeCluster.Networking.Pods},
 							Services:   []string{garden.Spec.RuntimeCluster.Networking.Services},

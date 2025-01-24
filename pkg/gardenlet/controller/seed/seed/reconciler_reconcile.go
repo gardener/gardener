@@ -33,7 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -516,7 +516,7 @@ func cleanupOrphanExposureClassHandlerResources(
 	ctx context.Context,
 	log logr.Logger,
 	c client.Client,
-	exposureClassHandlers []config.ExposureClassHandler,
+	exposureClassHandlers []gardenletconfigv1alpha1.ExposureClassHandler,
 	zones []string,
 ) error {
 	// Remove ordinary, orphaned istio exposure class namespaces
@@ -649,7 +649,7 @@ func removeSeedOperationAnnotation(ctx context.Context, gardenClient client.Clie
 	})
 }
 
-func renewGardenKubeconfig(ctx context.Context, seedClient client.Client, gardenClientConnection *config.GardenClientConnection) error {
+func renewGardenKubeconfig(ctx context.Context, seedClient client.Client, gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection) error {
 	if gardenClientConnection == nil || gardenClientConnection.KubeconfigSecret == nil {
 		return fmt.Errorf(
 			"unable to renew garden kubeconfig. No gardenClientConnection.kubeconfigSecret specified in configuration of gardenlet. Remove \"%s=%s\" annotation from seed to reconcile successfully",

@@ -53,7 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/apis/config"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
@@ -237,10 +237,10 @@ var _ = Describe("Garden controller tests", func() {
 					Garden: config.GardenControllerConfig{
 						ConcurrentSyncs: ptr.To(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
-						ETCDConfig: &gardenletconfig.ETCDConfig{
-							ETCDController:      &gardenletconfig.ETCDController{Workers: ptr.To[int64](5)},
-							CustodianController: &gardenletconfig.CustodianController{Workers: ptr.To[int64](5)},
-							BackupCompactionController: &gardenletconfig.BackupCompactionController{
+						ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
+							ETCDController:      &gardenletconfigv1alpha1.ETCDController{Workers: ptr.To[int64](5)},
+							CustodianController: &gardenletconfigv1alpha1.CustodianController{Workers: ptr.To[int64](5)},
+							BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 								EnableBackupCompaction: ptr.To(false),
 								Workers:                ptr.To[int64](5),
 								EventsThreshold:        ptr.To[int64](100),

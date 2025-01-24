@@ -22,7 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/care"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -74,7 +74,7 @@ var _ = Describe("Reconciler", func() {
 		reconciler = &Reconciler{
 			GardenClient: gardenClient,
 			SeedClient:   seedClient,
-			Config: config.ControllerInstallationCareControllerConfiguration{
+			Config: gardenletconfigv1alpha1.ControllerInstallationCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{Duration: syncPeriodDuration},
 			},
 			Clock:           fakeClock,

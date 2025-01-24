@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/etcd/etcd"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -51,7 +51,7 @@ var _ = Describe("Etcd", func() {
 		c            client.Client
 		sm           secretsmanager.Interface
 		bootstrapper component.DeployWaiter
-		etcdConfig   *config.ETCDConfig
+		etcdConfig   *gardenletconfigv1alpha1.ETCDConfig
 		consistOf    func(...client.Object) types.GomegaMatcher
 
 		ctx                      = context.Background()
@@ -74,14 +74,14 @@ var _ = Describe("Etcd", func() {
 	)
 
 	JustBeforeEach(func() {
-		etcdConfig = &config.ETCDConfig{
-			ETCDController: &config.ETCDController{
+		etcdConfig = &gardenletconfigv1alpha1.ETCDConfig{
+			ETCDController: &gardenletconfigv1alpha1.ETCDController{
 				Workers: ptr.To[int64](25),
 			},
-			CustodianController: &config.CustodianController{
+			CustodianController: &gardenletconfigv1alpha1.CustodianController{
 				Workers: ptr.To[int64](3),
 			},
-			BackupCompactionController: &config.BackupCompactionController{
+			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 				Workers:                   ptr.To[int64](3),
 				EnableBackupCompaction:    ptr.To(true),
 				EventsThreshold:           ptr.To[int64](1000000),

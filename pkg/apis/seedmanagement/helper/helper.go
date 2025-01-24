@@ -8,8 +8,9 @@ import (
 	"fmt"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // ExtractSeedSpec extracts the seed spec from the ManagedSeed.
@@ -19,13 +20,18 @@ func ExtractSeedSpec(managedSeed *seedmanagement.ManagedSeed) (*gardencore.SeedS
 		return nil, fmt.Errorf("no gardenlet config specified in managedseed %s", managedSeed.Name)
 	}
 
-	gardenletConfig, err := gardenlethelper.ConvertGardenletConfiguration(gardenlet.Config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert gardenlet config for managedseed %s: %w", managedSeed.Name, err)
+	gardenletConfig, ok := gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+	if !ok {
+		return nil, fmt.Errorf("expected *gardenletconfigv1alpha1.GardenletConfiguration but got %T", gardenlet.Config)
 	}
 	if gardenletConfig.SeedConfig == nil {
 		return nil, fmt.Errorf("no seed config found for managedseed %s", managedSeed.Name)
 	}
 
-	return &gardenletConfig.SeedConfig.Spec, nil
+	seedTemplate, err := gardencorehelper.ConvertSeedTemplate(&gardenletConfig.SeedConfig.SeedTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert SeedTemplate of ManagedSeed %s: %w", managedSeed.Name, err)
+	}
+
+	return &seedTemplate.Spec, nil
 }

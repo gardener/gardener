@@ -37,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/component"
-	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -81,7 +80,6 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		// for deployment
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		// for unmarshal of GardenletConfiguration
-		Expect(gardenletconfig.AddToScheme(s)).To(Succeed())
 		Expect(gardenletconfigv1alpha1.AddToScheme(s)).To(Succeed())
 		// for priority class
 		Expect(schedulingv1.AddToScheme(s)).To(Succeed())

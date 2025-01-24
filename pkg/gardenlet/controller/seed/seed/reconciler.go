@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -38,7 +38,7 @@ type Reconciler struct {
 	GardenClient                         client.Client
 	SeedClientSet                        kubernetes.Interface
 	SeedVersion                          *semver.Version
-	Config                               config.GardenletConfiguration
+	Config                               gardenletconfigv1alpha1.GardenletConfiguration
 	Clock                                clock.Clock
 	Recorder                             record.EventRecorder
 	Identity                             *gardencorev1beta1.Gardener

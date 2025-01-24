@@ -8,13 +8,12 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/imagevector"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/observability/logging/eventlogger"
 	"github.com/gardener/gardener/pkg/component/observability/logging/vali"
 	"github.com/gardener/gardener/pkg/component/shared"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -62,7 +61,7 @@ func (b *Botanist) isShootNodeLoggingEnabled() bool {
 		gardenlethelper.IsValiEnabled(b.Config) && b.Config != nil &&
 		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil {
 		for _, purpose := range b.Config.Logging.ShootNodeLogging.ShootPurposes {
-			if gardencore.ShootPurpose(b.Shoot.Purpose) == purpose {
+			if b.Shoot.Purpose == purpose {
 				return true
 			}
 		}

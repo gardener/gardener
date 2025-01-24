@@ -21,7 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver/mock"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
@@ -65,9 +65,9 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Seed = &seed.Seed{
 				KubernetesVersion: semver.MustParse("1.26.3"),
 			}
-			botanist.Config = &config.GardenletConfiguration{
-				SNI: &config.SNI{
-					Ingress: &config.SNIIngress{
+			botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+				SNI: &gardenletconfigv1alpha1.SNI{
+					Ingress: &gardenletconfigv1alpha1.SNIIngress{
 						Namespace: ptr.To("test-ns"),
 						Labels: map[string]string{
 							"istio": "foo-bar",
@@ -134,9 +134,9 @@ var _ = Describe("VPNSeedServer", func() {
 					Nodes:    []net.IPNet{{IP: net.IP{10, 0, 3, 0}, Mask: net.CIDRMask(24, 32)}},
 				},
 			}
-			botanist.Config = &config.GardenletConfiguration{
-				SNI: &config.SNI{
-					Ingress: &config.SNIIngress{
+			botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
+				SNI: &gardenletconfigv1alpha1.SNI{
+					Ingress: &gardenletconfigv1alpha1.SNIIngress{
 						Namespace: ptr.To("test-ns"),
 						Labels: map[string]string{
 							"istio": "foo-bar",

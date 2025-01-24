@@ -27,7 +27,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -57,7 +56,7 @@ type Reconciler struct {
 // RuntimeNetworkConfig is the configuration of the networks for the runtime cluster.
 type RuntimeNetworkConfig struct {
 	// IPFamilies specifies the IP protocol versions used in the runtime cluster.
-	IPFamilies []gardencore.IPFamily
+	IPFamilies []gardencorev1beta1.IPFamily
 	// Nodes are the CIDRs of the node network.
 	Nodes []string
 	// Pods are the CIDRs of the pod network.
@@ -70,7 +69,7 @@ type RuntimeNetworkConfig struct {
 
 // getBlockedNetworkPeers returns a list of CIDRs to exclude from a NetworkPolicy IPBlock. `ipFamily` should match the
 // IP family of the IPBlock.CIDR value. The resulting list still needs to be filtered for subsets of IPBlock.CIDR.
-func (r RuntimeNetworkConfig) getBlockedNetworkPeers(ipFamily gardencore.IPFamily) []string {
+func (r RuntimeNetworkConfig) getBlockedNetworkPeers(ipFamily gardencorev1beta1.IPFamily) []string {
 	// NB: BlockCIDRs can contain both IPv4 and IPv6 CIDRs.
 	var peers = append([]string(nil), r.BlockCIDRs...)
 
@@ -305,7 +304,7 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToPublicNetworks(ctx context.Con
 		// In IPv6 however, cluster networks might be "public" (e.g., if using prefix delegation from provider).
 		// As this NetworkPolicy should only allow communication with public networks *outside* the cluster,
 		// we exclude the cluster networks.
-		r.RuntimeNetworks.getBlockedNetworkPeers(gardencore.IPFamilyIPv6)...,
+		r.RuntimeNetworks.getBlockedNetworkPeers(gardencorev1beta1.IPFamilyIPv6)...,
 	)...)
 	if err != nil {
 		return err
@@ -355,8 +354,8 @@ func (r *Reconciler) reconcileNetworkPolicyAllowToBlockedCIDRs(ctx context.Conte
 }
 
 func (r *Reconciler) reconcileNetworkPolicyAllowToPrivateNetworks(ctx context.Context, log logr.Logger, networkPolicy *networkingv1.NetworkPolicy) error {
-	blockedNetworkPeersV4 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencore.IPFamilyIPv4)
-	blockedNetworkPeersV6 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencore.IPFamilyIPv6)
+	blockedNetworkPeersV4 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencorev1beta1.IPFamilyIPv4)
+	blockedNetworkPeersV6 := r.RuntimeNetworks.getBlockedNetworkPeers(gardencorev1beta1.IPFamilyIPv6)
 
 	if strings.HasPrefix(networkPolicy.Namespace, v1beta1constants.TechnicalIDPrefix) {
 		cluster := &extensionsv1alpha1.Cluster{}

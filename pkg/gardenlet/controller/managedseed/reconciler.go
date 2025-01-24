@@ -33,7 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -43,7 +43,7 @@ type Reconciler struct {
 	GardenAPIReader       client.Reader
 	GardenClient          client.Client
 	SeedClient            client.Client
-	Config                config.GardenletConfiguration
+	Config                gardenletconfigv1alpha1.GardenletConfiguration
 	Clock                 clock.Clock
 	Recorder              record.EventRecorder
 	ShootClientMap        clientmap.ClientMap

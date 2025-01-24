@@ -17,13 +17,14 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 )
 
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
-func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfiguration, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.GardenClientConnection != nil && cfg.GardenClientConnection.KubeconfigValidity != nil {
@@ -79,12 +80,19 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
+	seedConfigPath := fldPath.Child("seedConfig")
 	if !inTemplate && cfg.SeedConfig == nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedConfig"), cfg, "seed config must be set"))
+		allErrs = append(allErrs, field.Invalid(seedConfigPath, cfg, "seed config must be set"))
 	}
 
 	if cfg.SeedConfig != nil {
-		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplate(&cfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
+		seedTemplate, err := gardencorehelper.ConvertSeedTemplate(&cfg.SeedConfig.SeedTemplate)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(seedConfigPath, seedTemplate, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+			return allErrs
+		}
+
+		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplate(seedTemplate, seedConfigPath)...)
 	}
 
 	resourcesPath := fldPath.Child("resources")
@@ -134,17 +142,30 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 }
 
 // ValidateGardenletConfigurationUpdate validates a GardenletConfiguration object before an update.
-func ValidateGardenletConfigurationUpdate(newCfg, oldCfg *config.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
+func ValidateGardenletConfigurationUpdate(newCfg, oldCfg *gardenletconfigv1alpha1.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if newCfg.SeedConfig != nil && oldCfg.SeedConfig != nil {
-		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplateUpdate(&newCfg.SeedConfig.SeedTemplate, &oldCfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
+		seedConfigPath := fldPath.Child("seedConfig")
+		newSeedTemplate, err := gardencorehelper.ConvertSeedTemplate(&newCfg.SeedConfig.SeedTemplate)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(seedConfigPath, newSeedTemplate, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+			return allErrs
+		}
+
+		oldSeedTemplate, err := gardencorehelper.ConvertSeedTemplate(&oldCfg.SeedConfig.SeedTemplate)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(seedConfigPath, oldSeedTemplate, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+			return allErrs
+		}
+
+		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate, seedConfigPath)...)
 	}
 
 	return allErrs
 }
 
-func validateShootControllerConfiguration(cfg *config.ShootControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootControllerConfiguration(cfg *gardenletconfigv1alpha1.ShootControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {
@@ -177,7 +198,7 @@ func validateShootControllerConfiguration(cfg *config.ShootControllerConfigurati
 	return allErrs
 }
 
-func validateShootCareControllerConfiguration(cfg *config.ShootCareControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateShootCareControllerConfiguration(cfg *gardenletconfigv1alpha1.ShootCareControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {
@@ -203,7 +224,7 @@ func validateShootCareControllerConfiguration(cfg *config.ShootCareControllerCon
 	return allErrs
 }
 
-func validateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateManagedSeedControllerConfiguration(cfg *gardenletconfigv1alpha1.ManagedSeedControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {
@@ -222,7 +243,7 @@ func validateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControlle
 	return allErrs
 }
 
-func validateNetworkPolicyControllerConfiguration(cfg *config.NetworkPolicyControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateNetworkPolicyControllerConfiguration(cfg *gardenletconfigv1alpha1.NetworkPolicyControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {
@@ -245,7 +266,7 @@ var availableShootPurposes = sets.New(
 	string(gardencore.ShootPurposeProduction),
 )
 
-func validateBackupEntryControllerConfiguration(cfg *config.BackupEntryControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateBackupEntryControllerConfiguration(cfg *gardenletconfigv1alpha1.BackupEntryControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(cfg.DeletionGracePeriodShootPurposes) > 0 && (cfg.DeletionGracePeriodHours == nil || *cfg.DeletionGracePeriodHours <= 0) {
@@ -261,7 +282,7 @@ func validateBackupEntryControllerConfiguration(cfg *config.BackupEntryControlle
 	return allErrs
 }
 
-func validateBastionControllerConfiguration(cfg *config.BastionControllerConfiguration, fldPath *field.Path) field.ErrorList {
+func validateBastionControllerConfiguration(cfg *gardenletconfigv1alpha1.BastionControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.ConcurrentSyncs != nil {

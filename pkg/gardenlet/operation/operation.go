@@ -24,8 +24,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -38,7 +38,7 @@ import (
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
 	return &Builder{
-		configFunc: func() (*config.GardenletConfiguration, error) {
+		configFunc: func() (*gardenletconfigv1alpha1.GardenletConfiguration, error) {
 			return nil, fmt.Errorf("config is required but not set")
 		},
 		gardenFunc: func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error) {
@@ -66,8 +66,8 @@ func NewBuilder() *Builder {
 }
 
 // WithConfig sets the configFunc attribute at the Builder.
-func (b *Builder) WithConfig(cfg *config.GardenletConfiguration) *Builder {
-	b.configFunc = func() (*config.GardenletConfiguration, error) { return cfg, nil }
+func (b *Builder) WithConfig(cfg *gardenletconfigv1alpha1.GardenletConfiguration) *Builder {
+	b.configFunc = func() (*gardenletconfigv1alpha1.GardenletConfiguration, error) { return cfg, nil }
 	return b
 }
 

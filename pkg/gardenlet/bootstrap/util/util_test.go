@@ -28,9 +28,9 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -164,7 +164,7 @@ var _ = Describe("Util", func() {
 				secretReference        corev1.SecretReference
 				certClientConfig       *rest.Config
 				expectedSecret         *corev1.Secret
-				gardenClientConnection *config.GardenClientConnection
+				gardenClientConnection *gardenletconfigv1alpha1.GardenClientConnection
 			)
 
 			BeforeEach(func() {
@@ -185,7 +185,7 @@ var _ = Describe("Util", func() {
 					},
 				}
 
-				gardenClientConnection = &config.GardenClientConnection{
+				gardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
 					KubeconfigSecret: &secretReference,
 				}
 			})
@@ -422,8 +422,8 @@ var _ = Describe("Util", func() {
 	Describe("GetSeedName", func() {
 		It("should return the configured name", func() {
 			name := "test-name"
-			result := GetSeedName(&config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
+			result := GetSeedName(&gardenletconfigv1alpha1.SeedConfig{
+				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{Name: name},
 				},
 			})

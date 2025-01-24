@@ -23,8 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -48,7 +48,7 @@ type Reconciler struct {
 	GardenClient          client.Client
 	SeedClientSet         kubernetes.Interface
 	ShootClientMap        clientmap.ClientMap
-	Config                config.GardenletConfiguration
+	Config                gardenletconfigv1alpha1.GardenletConfiguration
 	Clock                 clock.Clock
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string

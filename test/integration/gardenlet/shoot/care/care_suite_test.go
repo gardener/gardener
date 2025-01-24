@@ -32,7 +32,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -41,7 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -256,14 +255,14 @@ var _ = BeforeSuite(func() {
 	Expect((&care.Reconciler{
 		SeedClientSet:  testClientSet,
 		ShootClientMap: shootClientMap,
-		Config: config.GardenletConfiguration{
-			Controllers: &config.GardenletControllerConfiguration{
-				ShootCare: &config.ShootCareControllerConfiguration{
+		Config: gardenletconfigv1alpha1.GardenletConfiguration{
+			Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
+				ShootCare: &gardenletconfigv1alpha1.ShootCareControllerConfiguration{
 					SyncPeriod: &metav1.Duration{Duration: 500 * time.Millisecond},
 				},
 			},
-			SeedConfig: &config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
+			SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
+				SeedTemplate: gardencorev1beta1.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: seedName,
 					},

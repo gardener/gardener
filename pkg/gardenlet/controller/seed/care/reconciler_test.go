@@ -21,7 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -37,7 +37,7 @@ var _ = Describe("Seed Care Control", func() {
 		gardenClient     client.Client
 		seedClient       client.Client
 		reconciler       *Reconciler
-		controllerConfig config.SeedCareControllerConfiguration
+		controllerConfig gardenletconfigv1alpha1.SeedCareControllerConfiguration
 		seed             *gardencorev1beta1.Seed
 		fakeClock        *testclock.FakeClock
 	)
@@ -64,7 +64,7 @@ var _ = Describe("Seed Care Control", func() {
 		BeforeEach(func() {
 			req = reconcile.Request{NamespacedName: client.ObjectKey{Name: seedName}}
 
-			controllerConfig = config.SeedCareControllerConfiguration{
+			controllerConfig = gardenletconfigv1alpha1.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{Duration: careSyncPeriod},
 			}
 		})
