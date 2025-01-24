@@ -275,27 +275,46 @@ For this, we ensure the following:
 
 ### Rollout Plan
 
-The implementation will be controlled by two distinct feature gates that handle different aspects of the solution. Each feature gate can be disabled per shoot to allow testing of the old implementation via E2E tests.
+To ensure a disruption-free transition for existing shoot clusters, we follow the steps described in this section.
+Here, we focus on the high-level steps that depend on each other.
+For the detailed implementation steps, see the corresponding [umbrella issue](https://github.com/gardener/gardener/issues/11214).
 
-#### Feature Gate 1: `APIServerSecureRouting`
+The first part is related to reworking the API server proxy to drop the proxy protocol:
 
-Controls whether shoots use the new secure routing implementation with HTTP CONNECT and custom headers.
+1. Prepare the existing VPN network infrastructure for reuse by the API server proxy.
+   - Handle the new `X-Gardener-Destination` header as described in [this section](#reconfiguring-the-istio-ingress-gateway).
+2. Reconfigure the API server proxy as described in [this section](#reconfiguring-the-api-server-proxy).
+   - Report a new constraint `APIServerProxyUsesHTTPProxy` in the `Shoot` status once the API server proxy has been reconfigured to use the new protocol.
+   - Can be released together with the previous step.
+3. Introduce a new feature gate `RemoveAPIServerProxyLegacyPort` to gardenlet.
+   - If enabled, gardenlet removes the old API server proxy network infrastructure on the seed side (ingress gateway port `proxy`, `Gateway`, `EnvoyFilter`, etc.)
+   - The gardenlet only allows activating the feature gate if all shoot clusters on its seed cluster report that the API server proxy has been reconfigured.
+4. Graduate the `RemoveAPIServerProxyLegacyPort` feature gate to GA and lock to `True`.
+   - Remove the `APIServerProxyUsesHTTPProxy` constraint in the `Shoot` status.
 
-**Rollout Plan:**
-- Initially introduced as disabled by default
-- Once stability is proven in production environments, enabled by default for new shoots
-- Existing shoots will retain their previous setting until explicitly migrated
-- When fully proven, the feature gate will be removed and the functionality will become permanent
+After these steps, the proxy protocol is no longer used and the related network infrastructure (including the `proxy` port 8443) is removed.
+The remaining steps are related to unifying the HTTP proxy infrastructure:
 
-#### Feature Gate 2: `APIServerLegacyPortDisable`
+1. Introduce the unified HTTP proxy network infrastructure as described in [this section](#unifying-the-http-proxy-infrastructure).
+   - Reconfigure the API server proxy and shoot VPN client to connect to the unified port.
+   - Report a new constraint `UsesUnifiedHTTPProxyPort` in the `Shoot` status once both components have been reconfigured to use the new port.
+2. Introduce a new feature gate `RemoveHTTPProxyLegacyPort` to gardenlet.
+   - If enabled, gardenlet removes the old HTTP proxy network infrastructure on the seed side (ingress gateway port `tls-tunnel`, `Gateway`, `EnvoyFilter`, etc.)
+   - The gardenlet only allows activating the feature gate if all shoot clusters on its seed cluster report that the API server proxy and shoot VPN client have been reconfigured.
+3. Graduate the `RemoveHTTPProxyLegacyPort` feature gate to GA and lock to `True`.
+   - Remove the `UsesUnifiedHTTPProxyPort` constraint in the `Shoot` status.
 
-Controls whether the legacy port is available. This feature gate can only be enabled after `APIServerSecureRouting` has been fully rolled out.
+After these steps, the legacy VPN network infrastructure on the seed side (including the `tls-tunnel` port 8132) is removed. Instead, the unifying infrastructure using the `http-proxy` port 8443 is used.
 
-**Rollout Plan:**
-- Introduced as disabled by default
-- Once all shoots have migrated to secure routing, enabled by default for new shoots
-- Existing shoots will be notified to migrate during reconciliation
-- When migration is complete, the feature gate will be removed and the legacy port will be permanently disabled
+In this plan, we need the feature gates for guarding the removal of one of the ingress gateway ports because we cannot be sure that a given Gardener version has been able to successfully reconfigure the related components in all shoot clusters.
+I.e., we cannot assume that the port in question is no longer used, because the shoot reconciliation flow might not have reached the relevant tasks.
+This might be because the shoot is marked to be ignored or an `Extension` with lifecycle `BeforeKubeAPIServer` cannot be reconciled successfully.
+The feature gate allows the Gardener operator to delay the removal of the ingress gateway port if it's still used in the environment.
+With this, we ensure the Gardener operator is not blocked in upgrading to a newer version.
+
+The constraints are used as a mechanism for reporting which shoot clusters still use the old configuration of API server proxy and shoot VPN client.
+This helps the Gardener operator to determine easily whether the corresponding feature gate be enabled.
+Additionally, gardenlet can prevent misconfiguration by iterating the relevant shoot constraints.
 
 ## Alternatives
 
