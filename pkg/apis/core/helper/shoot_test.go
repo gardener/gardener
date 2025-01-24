@@ -26,36 +26,49 @@ var _ = Describe("Helper", func() {
 		falseVar = false
 	)
 
-	DescribeTable("#AccessRestrictionsAreSupported",
-		func(seedAccessRestrictions []core.AccessRestriction, shootAccessRestrictions []core.AccessRestrictionWithOptions, expectation bool) {
-			Expect(AccessRestrictionsAreSupported(seedAccessRestrictions, shootAccessRestrictions)).To(Equal(expectation))
+	DescribeTable("#HibernationIsEnabled",
+		func(shoot *core.Shoot, hibernated bool) {
+			Expect(HibernationIsEnabled(shoot)).To(Equal(hibernated))
 		},
+		Entry("no hibernation section", &core.Shoot{}, false),
+		Entry("hibernation.enabled = false", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &falseVar},
+			},
+		}, false),
+		Entry("hibernation.enabled = true", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &trueVar},
+			},
+		}, true),
+	)
 
-		Entry("both have no access restrictions",
-			nil,
-			nil,
-			true,
-		),
-		Entry("shoot has no access restrictions",
-			[]core.AccessRestriction{{Name: "foo"}},
-			nil,
-			true,
-		),
-		Entry("seed has no access restrictions",
-			nil,
-			[]core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}},
-			false,
-		),
-		Entry("both have access restrictions and they match",
-			[]core.AccessRestriction{{Name: "foo"}},
-			[]core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}},
-			true,
-		),
-		Entry("both have access restrictions and they don't match",
-			[]core.AccessRestriction{{Name: "bar"}},
-			[]core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}},
-			false,
-		),
+	DescribeTable("#IsShootInHibernation",
+		func(shoot *core.Shoot, hibernated bool) {
+			Expect(IsShootInHibernation(shoot)).To(Equal(hibernated))
+		},
+		Entry("no hibernation section and status.isHibernated is false", &core.Shoot{}, false),
+		Entry("no hibernation section and status.isHibernated is true", &core.Shoot{
+			Status: core.ShootStatus{IsHibernated: true},
+		}, true),
+		Entry("hibernation.enabled = false and status.isHibernated is false", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &falseVar},
+			},
+		}, false),
+		Entry("hibernation.enabled = false and status.isHibernated is true", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &falseVar},
+			},
+			Status: core.ShootStatus{
+				IsHibernated: true,
+			},
+		}, true),
+		Entry("hibernation.enabled = true", &core.Shoot{
+			Spec: core.ShootSpec{
+				Hibernation: &core.Hibernation{Enabled: &trueVar},
+			},
+		}, true),
 	)
 
 	var (
@@ -99,51 +112,170 @@ var _ = Describe("Helper", func() {
 			BeTrue()),
 	)
 
-	DescribeTable("#FindPrimaryDNSProvider",
-		func(providers []core.DNSProvider, matcher gomegatypes.GomegaMatcher) {
-			Expect(FindPrimaryDNSProvider(providers)).To(matcher)
+	Describe("#IsHAControlPlaneConfigured", func() {
+		var shoot *core.Shoot
+
+		BeforeEach(func() {
+			shoot = &core.Shoot{}
+		})
+
+		It("return false when HighAvailability is not set", func() {
+			shoot.Spec.ControlPlane = &core.ControlPlane{}
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("return false when ControlPlane is not set", func() {
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
+		})
+
+		It("should return true when HighAvailability is set", func() {
+			shoot.Spec.ControlPlane = &core.ControlPlane{
+				HighAvailability: &core.HighAvailability{},
+			}
+			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
+		})
+	})
+
+	Describe("#IsMultiZonalShootControlPlane", func() {
+		var shoot *core.Shoot
+
+		BeforeEach(func() {
+			shoot = &core.Shoot{}
+		})
+
+		It("should return false when shoot has no ControlPlane Spec", func() {
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
+		})
+
+		It("should return false when shoot has no HighAvailability Spec", func() {
+			shoot.Spec.ControlPlane = &core.ControlPlane{}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
+		})
+
+		It("should return false when shoot defines failure tolerance type 'node'", func() {
+			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
+		})
+
+		It("should return true when shoot defines failure tolerance type 'zone'", func() {
+			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
+		})
+	})
+
+	Describe("#IsWorkerless", func() {
+		var shoot *core.Shoot
+
+		BeforeEach(func() {
+			shoot = &core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name: "worker",
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should return false when shoot has workers", func() {
+			Expect(IsWorkerless(shoot)).To(BeFalse())
+		})
+
+		It("should return true when shoot has zero workers", func() {
+			shoot.Spec.Provider.Workers = nil
+			Expect(IsWorkerless(shoot)).To(BeTrue())
+		})
+	})
+
+	DescribeTable("#ShootEnablesSSHAccess",
+		func(workers []core.Worker, workersSettings *core.WorkersSettings, expectedResult bool) {
+			shoot := &core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers:         workers,
+						WorkersSettings: workersSettings,
+					},
+				},
+			}
+			Expect(ShootEnablesSSHAccess(shoot)).To(Equal(expectedResult))
 		},
 
-		Entry("no providers", nil, BeNil()),
-		Entry("one non primary provider", []core.DNSProvider{{Type: ptr.To("provider")}}, BeNil()),
-		Entry("one primary provider", []core.DNSProvider{{Type: ptr.To("provider"),
-			Primary: ptr.To(true)}}, Equal(&core.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
-		Entry("multiple w/ one primary provider", []core.DNSProvider{
-			{
-				Type: ptr.To("provider2"),
-			},
-			{
-				Type:    ptr.To("provider1"),
-				Primary: ptr.To(true),
-			},
-			{
-				Type: ptr.To("provider3"),
-			},
-		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
-		Entry("multiple w/ multiple primary providers", []core.DNSProvider{
-			{
-				Type:    ptr.To("provider1"),
-				Primary: ptr.To(true),
-			},
-			{
-				Type:    ptr.To("provider2"),
-				Primary: ptr.To(true),
-			},
-			{
-				Type: ptr.To("provider3"),
-			},
-		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
+		Entry("should return false when shoot provider has zero workers", []core.Worker{}, nil, false),
+		Entry("should return true when shoot provider has no WorkersSettings", []core.Worker{{Name: "worker"}}, nil, true),
+		Entry("should return true when shoot worker settings has no SSHAccess", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{}, true),
+		Entry("should return true when shoot worker settings has SSHAccess set to true", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}, true),
+		Entry("should return false when shoot worker settings has SSHAccess set to false", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}, false),
 	)
 
-	DescribeTable("#FindWorkerByName",
-		func(workers []core.Worker, name string, expectedWorker *core.Worker) {
-			Expect(FindWorkerByName(workers, name)).To(Equal(expectedWorker))
+	DescribeTable("#GetShootCARotationPhase",
+		func(credentials *core.ShootCredentials, expectedPhase core.CredentialsRotationPhase) {
+			Expect(GetShootCARotationPhase(credentials)).To(Equal(expectedPhase))
 		},
 
-		Entry("no workers", nil, "", nil),
-		Entry("worker not found", []core.Worker{{Name: "foo"}}, "bar", nil),
-		Entry("worker found", []core.Worker{{Name: "foo"}}, "foo", &core.Worker{Name: "foo"}),
+		Entry("credentials nil", nil, core.CredentialsRotationPhase("")),
+		Entry("rotation nil", &core.ShootCredentials{}, core.CredentialsRotationPhase("")),
+		Entry("ca nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.CredentialsRotationPhase("")),
+		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.CARotation{}}}, core.CredentialsRotationPhase("")),
+		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.CARotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
 	)
+
+	DescribeTable("#GetShootServiceAccountKeyRotationPhase",
+		func(credentials *core.ShootCredentials, expectedPhase core.CredentialsRotationPhase) {
+			Expect(GetShootServiceAccountKeyRotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, core.CredentialsRotationPhase("")),
+		Entry("rotation nil", &core.ShootCredentials{}, core.CredentialsRotationPhase("")),
+		Entry("serviceAccountKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.CredentialsRotationPhase("")),
+		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ServiceAccountKeyRotation{}}}, core.CredentialsRotationPhase("")),
+		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ServiceAccountKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
+	)
+
+	DescribeTable("#GetShootETCDEncryptionKeyRotationPhase",
+		func(credentials *core.ShootCredentials, expectedPhase core.CredentialsRotationPhase) {
+			Expect(GetShootETCDEncryptionKeyRotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, core.CredentialsRotationPhase("")),
+		Entry("rotation nil", &core.ShootCredentials{}, core.CredentialsRotationPhase("")),
+		Entry("etcdEncryptionKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.CredentialsRotationPhase("")),
+		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{}}}, core.CredentialsRotationPhase("")),
+		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
+	)
+
+	Describe("#GetAllZonesFromShoot", func() {
+		It("should return an empty list because there are no zones", func() {
+			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{}))).To(BeEmpty())
+		})
+
+		It("should return the expected list when there is only one pool", func() {
+			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{Zones: []string{"a", "b"}},
+						},
+					},
+				},
+			}))).To(ConsistOf("a", "b"))
+		})
+
+		It("should return the expected list when there are more than one pools", func() {
+			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{
+				Spec: core.ShootSpec{
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{Zones: []string{"a", "c"}},
+							{Zones: []string{"b", "d"}},
+						},
+					},
+				},
+			}))).To(ConsistOf("a", "b", "c", "d"))
+		})
+	})
 
 	Describe("GetShootAuditPolicyConfigMapName", func() {
 		test := func(description string, config *core.KubeAPIServerConfig, expectedName string) {
@@ -269,49 +401,89 @@ var _ = Describe("Helper", func() {
 		}, []string{"foo", "bar"}),
 	)
 
-	DescribeTable("#HibernationIsEnabled",
-		func(shoot *core.Shoot, hibernated bool) {
-			Expect(HibernationIsEnabled(shoot)).To(Equal(hibernated))
+	Describe("#HasManagedIssuer", func() {
+		It("should return false when the shoot does not have managed issuer", func() {
+			Expect(HasManagedIssuer(&core.Shoot{})).To(BeFalse())
+		})
+
+		It("should return true when the shoot has managed issuer", func() {
+			shoot := &core.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"authentication.gardener.cloud/issuer": "managed"},
+				},
+			}
+			Expect(HasManagedIssuer(shoot)).To(BeTrue())
+		})
+	})
+
+	DescribeTable("#KubernetesDashboardEnabled",
+		func(addons *core.Addons, matcher gomegatypes.GomegaMatcher) {
+			Expect(KubernetesDashboardEnabled(addons)).To(matcher)
 		},
-		Entry("no hibernation section", &core.Shoot{}, false),
-		Entry("hibernation.enabled = false", &core.Shoot{
-			Spec: core.ShootSpec{
-				Hibernation: &core.Hibernation{Enabled: &falseVar},
-			},
-		}, false),
-		Entry("hibernation.enabled = true", &core.Shoot{
-			Spec: core.ShootSpec{
-				Hibernation: &core.Hibernation{Enabled: &trueVar},
-			},
-		}, true),
+
+		Entry("addons nil", nil, BeFalse()),
+		Entry("kubernetesDashboard nil", &core.Addons{}, BeFalse()),
+		Entry("kubernetesDashboard disabled", &core.Addons{KubernetesDashboard: &core.KubernetesDashboard{Addon: core.Addon{Enabled: false}}}, BeFalse()),
+		Entry("kubernetesDashboard enabled", &core.Addons{KubernetesDashboard: &core.KubernetesDashboard{Addon: core.Addon{Enabled: true}}}, BeTrue()),
 	)
 
-	DescribeTable("#IsShootInHibernation",
-		func(shoot *core.Shoot, hibernated bool) {
-			Expect(IsShootInHibernation(shoot)).To(Equal(hibernated))
+	DescribeTable("#NginxIngressEnabled",
+		func(addons *core.Addons, matcher gomegatypes.GomegaMatcher) {
+			Expect(NginxIngressEnabled(addons)).To(matcher)
 		},
-		Entry("no hibernation section and status.isHibernated is false", &core.Shoot{}, false),
-		Entry("no hibernation section and status.isHibernated is true", &core.Shoot{
-			Status: core.ShootStatus{IsHibernated: true},
-		}, true),
-		Entry("hibernation.enabled = false and status.isHibernated is false", &core.Shoot{
-			Spec: core.ShootSpec{
-				Hibernation: &core.Hibernation{Enabled: &falseVar},
+
+		Entry("addons nil", nil, BeFalse()),
+		Entry("nginxIngress nil", &core.Addons{}, BeFalse()),
+		Entry("nginxIngress disabled", &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: false}}}, BeFalse()),
+		Entry("nginxIngress enabled", &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}, BeTrue()),
+	)
+
+	DescribeTable("#FindPrimaryDNSProvider",
+		func(providers []core.DNSProvider, matcher gomegatypes.GomegaMatcher) {
+			Expect(FindPrimaryDNSProvider(providers)).To(matcher)
+		},
+
+		Entry("no providers", nil, BeNil()),
+		Entry("one non primary provider", []core.DNSProvider{{Type: ptr.To("provider")}}, BeNil()),
+		Entry("one primary provider", []core.DNSProvider{{Type: ptr.To("provider"),
+			Primary: ptr.To(true)}}, Equal(&core.DNSProvider{Type: ptr.To("provider"), Primary: ptr.To(true)})),
+		Entry("multiple w/ one primary provider", []core.DNSProvider{
+			{
+				Type: ptr.To("provider2"),
 			},
-		}, false),
-		Entry("hibernation.enabled = false and status.isHibernated is true", &core.Shoot{
-			Spec: core.ShootSpec{
-				Hibernation: &core.Hibernation{Enabled: &falseVar},
+			{
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
 			},
-			Status: core.ShootStatus{
-				IsHibernated: true,
+			{
+				Type: ptr.To("provider3"),
 			},
-		}, true),
-		Entry("hibernation.enabled = true", &core.Shoot{
-			Spec: core.ShootSpec{
-				Hibernation: &core.Hibernation{Enabled: &trueVar},
+		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
+		Entry("multiple w/ multiple primary providers", []core.DNSProvider{
+			{
+				Type:    ptr.To("provider1"),
+				Primary: ptr.To(true),
 			},
-		}, true),
+			{
+				Type:    ptr.To("provider2"),
+				Primary: ptr.To(true),
+			},
+			{
+				Type: ptr.To("provider3"),
+			},
+		}, Equal(&core.DNSProvider{Type: ptr.To("provider1"), Primary: ptr.To(true)})),
+	)
+
+	DescribeTable("#CalculateEffectiveKubernetesVersion",
+		func(controlPlaneVersion *semver.Version, workerKubernetes *core.WorkerKubernetes, expectedRes *semver.Version) {
+			res, err := CalculateEffectiveKubernetesVersion(controlPlaneVersion, workerKubernetes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(Equal(expectedRes))
+		},
+
+		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
+		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{}, semver.MustParse("1.2.3")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
 	DescribeTable("#SystemComponentsAllowed",
@@ -349,217 +521,45 @@ var _ = Describe("Helper", func() {
 		),
 	)
 
-	DescribeTable("#KubernetesDashboardEnabled",
-		func(addons *core.Addons, matcher gomegatypes.GomegaMatcher) {
-			Expect(KubernetesDashboardEnabled(addons)).To(matcher)
+	DescribeTable("#AccessRestrictionsAreSupported",
+		func(seedAccessRestrictions []core.AccessRestriction, shootAccessRestrictions []core.AccessRestrictionWithOptions, expectation bool) {
+			Expect(AccessRestrictionsAreSupported(seedAccessRestrictions, shootAccessRestrictions)).To(Equal(expectation))
 		},
 
-		Entry("addons nil", nil, BeFalse()),
-		Entry("kubernetesDashboard nil", &core.Addons{}, BeFalse()),
-		Entry("kubernetesDashboard disabled", &core.Addons{KubernetesDashboard: &core.KubernetesDashboard{Addon: core.Addon{Enabled: false}}}, BeFalse()),
-		Entry("kubernetesDashboard enabled", &core.Addons{KubernetesDashboard: &core.KubernetesDashboard{Addon: core.Addon{Enabled: true}}}, BeTrue()),
+		Entry("both have no access restrictions",
+			nil,
+			nil,
+			true,
+		),
+		Entry("shoot has no access restrictions",
+			[]core.AccessRestriction{{Name: "foo"}},
+			nil,
+			true,
+		),
+		Entry("seed has no access restrictions",
+			nil,
+			[]core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}},
+			false,
+		),
+		Entry("both have access restrictions and they match",
+			[]core.AccessRestriction{{Name: "foo"}},
+			[]core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}},
+			true,
+		),
+		Entry("both have access restrictions and they don't match",
+			[]core.AccessRestriction{{Name: "bar"}},
+			[]core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "foo"}}},
+			false,
+		),
 	)
 
-	DescribeTable("#NginxIngressEnabled",
-		func(addons *core.Addons, matcher gomegatypes.GomegaMatcher) {
-			Expect(NginxIngressEnabled(addons)).To(matcher)
+	DescribeTable("#FindWorkerByName",
+		func(workers []core.Worker, name string, expectedWorker *core.Worker) {
+			Expect(FindWorkerByName(workers, name)).To(Equal(expectedWorker))
 		},
 
-		Entry("addons nil", nil, BeFalse()),
-		Entry("nginxIngress nil", &core.Addons{}, BeFalse()),
-		Entry("nginxIngress disabled", &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: false}}}, BeFalse()),
-		Entry("nginxIngress enabled", &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}, BeTrue()),
+		Entry("no workers", nil, "", nil),
+		Entry("worker not found", []core.Worker{{Name: "foo"}}, "bar", nil),
+		Entry("worker found", []core.Worker{{Name: "foo"}}, "foo", &core.Worker{Name: "foo"}),
 	)
-
-	DescribeTable("#GetShootCARotationPhase",
-		func(credentials *core.ShootCredentials, expectedPhase core.CredentialsRotationPhase) {
-			Expect(GetShootCARotationPhase(credentials)).To(Equal(expectedPhase))
-		},
-
-		Entry("credentials nil", nil, core.CredentialsRotationPhase("")),
-		Entry("rotation nil", &core.ShootCredentials{}, core.CredentialsRotationPhase("")),
-		Entry("ca nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.CredentialsRotationPhase("")),
-		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.CARotation{}}}, core.CredentialsRotationPhase("")),
-		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.CARotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
-	)
-
-	DescribeTable("#GetShootServiceAccountKeyRotationPhase",
-		func(credentials *core.ShootCredentials, expectedPhase core.CredentialsRotationPhase) {
-			Expect(GetShootServiceAccountKeyRotationPhase(credentials)).To(Equal(expectedPhase))
-		},
-
-		Entry("credentials nil", nil, core.CredentialsRotationPhase("")),
-		Entry("rotation nil", &core.ShootCredentials{}, core.CredentialsRotationPhase("")),
-		Entry("serviceAccountKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.CredentialsRotationPhase("")),
-		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ServiceAccountKeyRotation{}}}, core.CredentialsRotationPhase("")),
-		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ServiceAccountKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
-	)
-
-	DescribeTable("#GetShootETCDEncryptionKeyRotationPhase",
-		func(credentials *core.ShootCredentials, expectedPhase core.CredentialsRotationPhase) {
-			Expect(GetShootETCDEncryptionKeyRotationPhase(credentials)).To(Equal(expectedPhase))
-		},
-
-		Entry("credentials nil", nil, core.CredentialsRotationPhase("")),
-		Entry("rotation nil", &core.ShootCredentials{}, core.CredentialsRotationPhase("")),
-		Entry("etcdEncryptionKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.CredentialsRotationPhase("")),
-		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{}}}, core.CredentialsRotationPhase("")),
-		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
-	)
-
-	DescribeTable("#CalculateEffectiveKubernetesVersion",
-		func(controlPlaneVersion *semver.Version, workerKubernetes *core.WorkerKubernetes, expectedRes *semver.Version) {
-			res, err := CalculateEffectiveKubernetesVersion(controlPlaneVersion, workerKubernetes)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(res).To(Equal(expectedRes))
-		},
-
-		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{}, semver.MustParse("1.2.3")),
-		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
-	)
-
-	Describe("#GetAllZonesFromShoot", func() {
-		It("should return an empty list because there are no zones", func() {
-			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{}))).To(BeEmpty())
-		})
-
-		It("should return the expected list when there is only one pool", func() {
-			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{
-				Spec: core.ShootSpec{
-					Provider: core.Provider{
-						Workers: []core.Worker{
-							{Zones: []string{"a", "b"}},
-						},
-					},
-				},
-			}))).To(ConsistOf("a", "b"))
-		})
-
-		It("should return the expected list when there are more than one pools", func() {
-			Expect(sets.List(GetAllZonesFromShoot(&core.Shoot{
-				Spec: core.ShootSpec{
-					Provider: core.Provider{
-						Workers: []core.Worker{
-							{Zones: []string{"a", "c"}},
-							{Zones: []string{"b", "d"}},
-						},
-					},
-				},
-			}))).To(ConsistOf("a", "b", "c", "d"))
-		})
-	})
-
-	Describe("#IsHAControlPlaneConfigured", func() {
-		var shoot *core.Shoot
-
-		BeforeEach(func() {
-			shoot = &core.Shoot{}
-		})
-
-		It("return false when HighAvailability is not set", func() {
-			shoot.Spec.ControlPlane = &core.ControlPlane{}
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
-		})
-
-		It("return false when ControlPlane is not set", func() {
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeFalse())
-		})
-
-		It("should return true when HighAvailability is set", func() {
-			shoot.Spec.ControlPlane = &core.ControlPlane{
-				HighAvailability: &core.HighAvailability{},
-			}
-			Expect(IsHAControlPlaneConfigured(shoot)).To(BeTrue())
-		})
-	})
-
-	Describe("#IsMultiZonalShootControlPlane", func() {
-		var shoot *core.Shoot
-
-		BeforeEach(func() {
-			shoot = &core.Shoot{}
-		})
-
-		It("should return false when shoot has no ControlPlane Spec", func() {
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
-		})
-
-		It("should return false when shoot has no HighAvailability Spec", func() {
-			shoot.Spec.ControlPlane = &core.ControlPlane{}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
-		})
-
-		It("should return false when shoot defines failure tolerance type 'node'", func() {
-			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeNode}}}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeFalse())
-		})
-
-		It("should return true when shoot defines failure tolerance type 'zone'", func() {
-			shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
-			Expect(IsMultiZonalShootControlPlane(shoot)).To(BeTrue())
-		})
-	})
-
-	Describe("#IsWorkerless", func() {
-		var shoot *core.Shoot
-
-		BeforeEach(func() {
-			shoot = &core.Shoot{
-				Spec: core.ShootSpec{
-					Provider: core.Provider{
-						Workers: []core.Worker{
-							{
-								Name: "worker",
-							},
-						},
-					},
-				},
-			}
-		})
-
-		It("should return false when shoot has workers", func() {
-			Expect(IsWorkerless(shoot)).To(BeFalse())
-		})
-
-		It("should return true when shoot has zero workers", func() {
-			shoot.Spec.Provider.Workers = nil
-			Expect(IsWorkerless(shoot)).To(BeTrue())
-		})
-	})
-
-	DescribeTable("#ShootEnablesSSHAccess",
-		func(workers []core.Worker, workersSettings *core.WorkersSettings, expectedResult bool) {
-			shoot := &core.Shoot{
-				Spec: core.ShootSpec{
-					Provider: core.Provider{
-						Workers:         workers,
-						WorkersSettings: workersSettings,
-					},
-				},
-			}
-			Expect(ShootEnablesSSHAccess(shoot)).To(Equal(expectedResult))
-		},
-
-		Entry("should return false when shoot provider has zero workers", []core.Worker{}, nil, false),
-		Entry("should return true when shoot provider has no WorkersSettings", []core.Worker{{Name: "worker"}}, nil, true),
-		Entry("should return true when shoot worker settings has no SSHAccess", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{}, true),
-		Entry("should return true when shoot worker settings has SSHAccess set to true", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: true}}, true),
-		Entry("should return false when shoot worker settings has SSHAccess set to false", []core.Worker{{Name: "worker"}}, &core.WorkersSettings{SSHAccess: &core.SSHAccess{Enabled: false}}, false),
-	)
-
-	Describe("#HasManagedIssuer", func() {
-		It("should return false when the shoot does not have managed issuer", func() {
-			Expect(HasManagedIssuer(&core.Shoot{})).To(BeFalse())
-		})
-
-		It("should return true when the shoot has managed issuer", func() {
-			shoot := &core.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{"authentication.gardener.cloud/issuer": "managed"},
-				},
-			}
-			Expect(HasManagedIssuer(shoot)).To(BeTrue())
-		})
-	})
 })

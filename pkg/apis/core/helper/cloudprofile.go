@@ -15,6 +15,22 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+// FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
+// In case no machine image version can be found with the given <name> or <version>, false is being returned.
+func FindMachineImageVersion(machineImages []core.MachineImage, name, version string) (core.MachineImageVersion, bool) {
+	for _, image := range machineImages {
+		if image.Name == name {
+			for _, imageVersion := range image.Versions {
+				if imageVersion.Version == version {
+					return imageVersion, true
+				}
+			}
+		}
+	}
+
+	return core.MachineImageVersion{}, false
+}
+
 // DetermineLatestMachineImageVersions determines the latest versions (semVer) of the given machine images from a slice of machine images
 func DetermineLatestMachineImageVersions(images []core.MachineImage) (map[string]core.MachineImageVersion, error) {
 	resultMapVersions := make(map[string]core.MachineImageVersion)
@@ -103,22 +119,6 @@ func ToExpirableVersions(versions []core.MachineImageVersion) []core.ExpirableVe
 		expirableVersions = append(expirableVersions, version.ExpirableVersion)
 	}
 	return expirableVersions
-}
-
-// FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
-// In case no machine image version can be found with the given <name> or <version>, false is being returned.
-func FindMachineImageVersion(machineImages []core.MachineImage, name, version string) (core.MachineImageVersion, bool) {
-	for _, image := range machineImages {
-		if image.Name == name {
-			for _, imageVersion := range image.Versions {
-				if imageVersion.Version == version {
-					return imageVersion, true
-				}
-			}
-		}
-	}
-
-	return core.MachineImageVersion{}, false
 }
 
 // GetRemovedVersions finds versions that have been removed in the old compared to the new version slice.

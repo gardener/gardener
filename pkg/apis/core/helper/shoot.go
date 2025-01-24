@@ -16,27 +16,23 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-// AccessRestrictionsAreSupported returns true when all the given access restrictions are supported.
-func AccessRestrictionsAreSupported(seedAccessRestrictions []core.AccessRestriction, shootAccessRestrictions []core.AccessRestrictionWithOptions) bool {
-	if len(shootAccessRestrictions) == 0 {
-		return true
-	}
-	if len(shootAccessRestrictions) > len(seedAccessRestrictions) {
-		return false
+// HibernationIsEnabled checks if the given shoot's desired state is hibernated.
+func HibernationIsEnabled(shoot *core.Shoot) bool {
+	return shoot.Spec.Hibernation != nil && ptr.Deref(shoot.Spec.Hibernation.Enabled, false)
+}
+
+// IsShootInHibernation checks if the given shoot is in hibernation or is waking up.
+func IsShootInHibernation(shoot *core.Shoot) bool {
+	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil {
+		return *shoot.Spec.Hibernation.Enabled || shoot.Status.IsHibernated
 	}
 
-	seedAccessRestrictionsNames := sets.New[string]()
-	for _, seedAccessRestriction := range seedAccessRestrictions {
-		seedAccessRestrictionsNames.Insert(seedAccessRestriction.Name)
-	}
+	return shoot.Status.IsHibernated
+}
 
-	for _, accessRestriction := range shootAccessRestrictions {
-		if !seedAccessRestrictionsNames.Has(accessRestriction.Name) {
-			return false
-		}
-	}
-
-	return true
+// ShootWantsVerticalPodAutoscaler checks if the given Shoot needs a VPA.
+func ShootWantsVerticalPodAutoscaler(shoot *core.Shoot) bool {
+	return shoot.Spec.Kubernetes.VerticalPodAutoscaler != nil && shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled
 }
 
 // ShootUsesUnmanagedDNS returns true if the shoot's DNS section is marked as 'unmanaged'.
@@ -68,26 +64,60 @@ func ShootNeedsForceDeletion(shoot *core.Shoot) bool {
 	return forceDelete
 }
 
-// FindPrimaryDNSProvider finds the primary provider among the given `providers`.
-// It returns the first provider if multiple candidates are found.
-func FindPrimaryDNSProvider(providers []core.DNSProvider) *core.DNSProvider {
-	for _, provider := range providers {
-		if provider.Primary != nil && *provider.Primary {
-			primaryProvider := provider
-			return &primaryProvider
-		}
-	}
-	return nil
+// IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set.
+func IsHAControlPlaneConfigured(shoot *core.Shoot) bool {
+	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
 }
 
-// FindWorkerByName tries to find the worker with the given name. If it cannot be found it returns nil.
-func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
-	for _, w := range workers {
-		if w.Name == name {
-			return &w
-		}
+// IsMultiZonalShootControlPlane checks if the shoot should have a multi-zonal control plane.
+func IsMultiZonalShootControlPlane(shoot *core.Shoot) bool {
+	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
+}
+
+// IsWorkerless checks if the shoot has zero workers.
+func IsWorkerless(shoot *core.Shoot) bool {
+	return len(shoot.Spec.Provider.Workers) == 0
+}
+
+// ShootEnablesSSHAccess returns true if ssh access to worker nodes should be allowed for the given shoot.
+func ShootEnablesSSHAccess(shoot *core.Shoot) bool {
+	return !IsWorkerless(shoot) &&
+		(shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled)
+}
+
+// GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string
+func GetShootCARotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.CertificateAuthorities != nil {
+		return credentials.Rotation.CertificateAuthorities.Phase
 	}
-	return nil
+	return ""
+}
+
+// GetShootServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
+// string.
+func GetShootServiceAccountKeyRotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ServiceAccountKey != nil {
+		return credentials.Rotation.ServiceAccountKey.Phase
+	}
+	return ""
+}
+
+// GetShootETCDEncryptionKeyRotationPhase returns the specified shoot ETCD encryption key rotation phase or an empty
+// string.
+func GetShootETCDEncryptionKeyRotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
+		return credentials.Rotation.ETCDEncryptionKey.Phase
+	}
+	return ""
+}
+
+// GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.
+func GetAllZonesFromShoot(shoot *core.Shoot) sets.Set[string] {
+	out := sets.New[string]()
+	for _, worker := range shoot.Spec.Provider.Workers {
+		out.Insert(worker.Zones...)
+	}
+	return out
 }
 
 // GetShootAuditPolicyConfigMapName returns the Shoot's ConfigMap reference name for the audit policy.
@@ -140,18 +170,40 @@ func GetShootServiceAccountConfigAcceptedIssuers(apiServerConfig *core.KubeAPISe
 	return nil
 }
 
-// HibernationIsEnabled checks if the given shoot's desired state is hibernated.
-func HibernationIsEnabled(shoot *core.Shoot) bool {
-	return shoot.Spec.Hibernation != nil && ptr.Deref(shoot.Spec.Hibernation.Enabled, false)
+// HasManagedIssuer checks if the shoot has managed issuer enabled.
+func HasManagedIssuer(shoot *core.Shoot) bool {
+	return shoot.GetAnnotations()[v1beta1constants.AnnotationAuthenticationIssuer] == v1beta1constants.AnnotationAuthenticationIssuerManaged
 }
 
-// IsShootInHibernation checks if the given shoot is in hibernation or is waking up.
-func IsShootInHibernation(shoot *core.Shoot) bool {
-	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil {
-		return *shoot.Spec.Hibernation.Enabled || shoot.Status.IsHibernated
-	}
+// KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.
+func KubernetesDashboardEnabled(addons *core.Addons) bool {
+	return addons != nil && addons.KubernetesDashboard != nil && addons.KubernetesDashboard.Enabled
+}
 
-	return shoot.Status.IsHibernated
+// NginxIngressEnabled returns true if the nginx-ingress addon is enabled in the Shoot manifest.
+func NginxIngressEnabled(addons *core.Addons) bool {
+	return addons != nil && addons.NginxIngress != nil && addons.NginxIngress.Enabled
+}
+
+// FindPrimaryDNSProvider finds the primary provider among the given `providers`.
+// It returns the first provider if multiple candidates are found.
+func FindPrimaryDNSProvider(providers []core.DNSProvider) *core.DNSProvider {
+	for _, provider := range providers {
+		if provider.Primary != nil && *provider.Primary {
+			primaryProvider := provider
+			return &primaryProvider
+		}
+	}
+	return nil
+}
+
+// CalculateEffectiveKubernetesVersion if a shoot has kubernetes version specified by worker group, return this,
+// otherwise the shoot kubernetes version
+func CalculateEffectiveKubernetesVersion(controlPlaneVersion *semver.Version, workerKubernetes *core.WorkerKubernetes) (*semver.Version, error) {
+	if workerKubernetes != nil && workerKubernetes.Version != nil {
+		return semver.NewVersion(*workerKubernetes.Version)
+	}
+	return controlPlaneVersion, nil
 }
 
 // SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it
@@ -169,87 +221,35 @@ func GetResourceByName(resources []core.NamedResourceReference, name string) *co
 	return nil
 }
 
-// KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.
-func KubernetesDashboardEnabled(addons *core.Addons) bool {
-	return addons != nil && addons.KubernetesDashboard != nil && addons.KubernetesDashboard.Enabled
-}
-
-// NginxIngressEnabled returns true if the nginx-ingress addon is enabled in the Shoot manifest.
-func NginxIngressEnabled(addons *core.Addons) bool {
-	return addons != nil && addons.NginxIngress != nil && addons.NginxIngress.Enabled
-}
-
-// ShootWantsVerticalPodAutoscaler checks if the given Shoot needs a VPA.
-func ShootWantsVerticalPodAutoscaler(shoot *core.Shoot) bool {
-	return shoot.Spec.Kubernetes.VerticalPodAutoscaler != nil && shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled
-}
-
-// GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string
-func GetShootCARotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
-	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.CertificateAuthorities != nil {
-		return credentials.Rotation.CertificateAuthorities.Phase
+// AccessRestrictionsAreSupported returns true when all the given access restrictions are supported.
+func AccessRestrictionsAreSupported(seedAccessRestrictions []core.AccessRestriction, shootAccessRestrictions []core.AccessRestrictionWithOptions) bool {
+	if len(shootAccessRestrictions) == 0 {
+		return true
 	}
-	return ""
-}
-
-// GetShootServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
-// string.
-func GetShootServiceAccountKeyRotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
-	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ServiceAccountKey != nil {
-		return credentials.Rotation.ServiceAccountKey.Phase
+	if len(shootAccessRestrictions) > len(seedAccessRestrictions) {
+		return false
 	}
-	return ""
-}
 
-// GetShootETCDEncryptionKeyRotationPhase returns the specified shoot ETCD encryption key rotation phase or an empty
-// string.
-func GetShootETCDEncryptionKeyRotationPhase(credentials *core.ShootCredentials) core.CredentialsRotationPhase {
-	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
-		return credentials.Rotation.ETCDEncryptionKey.Phase
+	seedAccessRestrictionsNames := sets.New[string]()
+	for _, seedAccessRestriction := range seedAccessRestrictions {
+		seedAccessRestrictionsNames.Insert(seedAccessRestriction.Name)
 	}
-	return ""
-}
 
-// CalculateEffectiveKubernetesVersion if a shoot has kubernetes version specified by worker group, return this,
-// otherwise the shoot kubernetes version
-func CalculateEffectiveKubernetesVersion(controlPlaneVersion *semver.Version, workerKubernetes *core.WorkerKubernetes) (*semver.Version, error) {
-	if workerKubernetes != nil && workerKubernetes.Version != nil {
-		return semver.NewVersion(*workerKubernetes.Version)
+	for _, accessRestriction := range shootAccessRestrictions {
+		if !seedAccessRestrictionsNames.Has(accessRestriction.Name) {
+			return false
+		}
 	}
-	return controlPlaneVersion, nil
+
+	return true
 }
 
-// GetAllZonesFromShoot returns the set of all availability zones defined in the worker pools of the Shoot specification.
-func GetAllZonesFromShoot(shoot *core.Shoot) sets.Set[string] {
-	out := sets.New[string]()
-	for _, worker := range shoot.Spec.Provider.Workers {
-		out.Insert(worker.Zones...)
+// FindWorkerByName tries to find the worker with the given name. If it cannot be found it returns nil.
+func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
+	for _, w := range workers {
+		if w.Name == name {
+			return &w
+		}
 	}
-	return out
-}
-
-// IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set.
-func IsHAControlPlaneConfigured(shoot *core.Shoot) bool {
-	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
-}
-
-// IsMultiZonalShootControlPlane checks if the shoot should have a multi-zonal control plane.
-func IsMultiZonalShootControlPlane(shoot *core.Shoot) bool {
-	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil && shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type == core.FailureToleranceTypeZone
-}
-
-// IsWorkerless checks if the shoot has zero workers.
-func IsWorkerless(shoot *core.Shoot) bool {
-	return len(shoot.Spec.Provider.Workers) == 0
-}
-
-// ShootEnablesSSHAccess returns true if ssh access to worker nodes should be allowed for the given shoot.
-func ShootEnablesSSHAccess(shoot *core.Shoot) bool {
-	return !IsWorkerless(shoot) &&
-		(shoot.Spec.Provider.WorkersSettings == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess == nil || shoot.Spec.Provider.WorkersSettings.SSHAccess.Enabled)
-}
-
-// HasManagedIssuer checks if the shoot has managed issuer enabled.
-func HasManagedIssuer(shoot *core.Shoot) bool {
-	return shoot.GetAnnotations()[v1beta1constants.AnnotationAuthenticationIssuer] == v1beta1constants.AnnotationAuthenticationIssuerManaged
+	return nil
 }

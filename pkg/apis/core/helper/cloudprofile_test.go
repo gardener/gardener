@@ -16,6 +16,54 @@ import (
 )
 
 var _ = Describe("Helper", func() {
+	Describe("#FindMachineImageVersion", func() {
+		var machineImages []core.MachineImage
+
+		BeforeEach(func() {
+			machineImages = []core.MachineImage{
+				{
+					Name: "coreos",
+					Versions: []core.MachineImageVersion{
+						{
+							ExpirableVersion: core.ExpirableVersion{
+								Version: "0.0.2",
+							},
+						},
+						{
+							ExpirableVersion: core.ExpirableVersion{
+								Version: "0.0.3",
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should find the machine image version when it exists", func() {
+			expected := core.MachineImageVersion{
+				ExpirableVersion: core.ExpirableVersion{
+					Version: "0.0.3",
+				},
+			}
+
+			actual, ok := FindMachineImageVersion(machineImages, "coreos", "0.0.3")
+			Expect(ok).To(BeTrue())
+			Expect(actual).To(Equal(expected))
+		})
+
+		It("should return false when machine image with the given name does not exist", func() {
+			actual, ok := FindMachineImageVersion(machineImages, "foo", "0.0.3")
+			Expect(ok).To(BeFalse())
+			Expect(actual).To(Equal(core.MachineImageVersion{}))
+		})
+
+		It("should return false when machine image version with the given version does not exist", func() {
+			actual, ok := FindMachineImageVersion(machineImages, "coreos", "0.0.4")
+			Expect(ok).To(BeFalse())
+			Expect(actual).To(Equal(core.MachineImageVersion{}))
+		})
+	})
+
 	classificationPreview := core.ClassificationPreview
 	classificationDeprecated := core.ClassificationDeprecated
 	classificationSupported := core.ClassificationSupported
@@ -113,54 +161,6 @@ var _ = Describe("Helper", func() {
 		Entry("should return an error - only preview versions", []core.MachineImageVersion{previewVersion}, true, nil, true),
 		Entry("should return an error - empty version slice", []core.MachineImageVersion{}, true, nil, true),
 	)
-
-	Describe("#FindMachineImageVersion", func() {
-		var machineImages []core.MachineImage
-
-		BeforeEach(func() {
-			machineImages = []core.MachineImage{
-				{
-					Name: "coreos",
-					Versions: []core.MachineImageVersion{
-						{
-							ExpirableVersion: core.ExpirableVersion{
-								Version: "0.0.2",
-							},
-						},
-						{
-							ExpirableVersion: core.ExpirableVersion{
-								Version: "0.0.3",
-							},
-						},
-					},
-				},
-			}
-		})
-
-		It("should find the machine image version when it exists", func() {
-			expected := core.MachineImageVersion{
-				ExpirableVersion: core.ExpirableVersion{
-					Version: "0.0.3",
-				},
-			}
-
-			actual, ok := FindMachineImageVersion(machineImages, "coreos", "0.0.3")
-			Expect(ok).To(BeTrue())
-			Expect(actual).To(Equal(expected))
-		})
-
-		It("should return false when machine image with the given name does not exist", func() {
-			actual, ok := FindMachineImageVersion(machineImages, "foo", "0.0.3")
-			Expect(ok).To(BeFalse())
-			Expect(actual).To(Equal(core.MachineImageVersion{}))
-		})
-
-		It("should return false when machine image version with the given version does not exist", func() {
-			actual, ok := FindMachineImageVersion(machineImages, "coreos", "0.0.4")
-			Expect(ok).To(BeFalse())
-			Expect(actual).To(Equal(core.MachineImageVersion{}))
-		})
-	})
 
 	Describe("#GetRemovedVersions", func() {
 		var (
