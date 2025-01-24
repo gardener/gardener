@@ -254,8 +254,8 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istioStripTrailingDotsEnvoyFilter = func() string {
-			data, _ := os.ReadFile("./test_charts/strip_trailing_dots_envoyfilter.yaml")
+		istioStripTrailingDotEnvoyFilter = func() string {
+			data, _ := os.ReadFile("./test_charts/strip_trailing_dot_envoyfilter.yaml")
 			return string(data)
 		}
 	)
@@ -394,7 +394,6 @@ var _ = Describe("istiod", func() {
 				istioIngressDeployment(minReplicas),
 				istioIngressServiceMonitor(),
 				istioIngressEnvoyFilter(),
-				istioStripTrailingDotsEnvoyFilter(),
 			}
 
 			expectedIstioSystemManifests := []string{
@@ -426,6 +425,7 @@ var _ = Describe("istiod", func() {
 
 			if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
 				expectedIstioManifests = append(expectedIstioManifests, istioAPIServerTLSTerminationEnvoyFilter())
+				expectedIstioManifests = append(expectedIstioManifests, istioStripTrailingDotEnvoyFilter())
 			}
 
 			if igw[0].TerminateLoadBalancerProxyProtocol {

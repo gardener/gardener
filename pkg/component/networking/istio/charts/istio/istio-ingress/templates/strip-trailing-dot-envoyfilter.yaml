@@ -1,3 +1,4 @@
+{{- if eq .Values.terminateLoadBalancerAPIServer true }}
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -19,3 +20,4 @@ spec:
         typed_config:
           "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
           strip_trailing_host_dot: true
+{{ end -}}
