@@ -29,20 +29,11 @@ spec:
           "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
           defaultSourceCode:
             inlineString: |
-              local function startsWith(str, prefix)
-                return string.sub(str, 1, #prefix) == prefix
-              end
-
               function envoy_on_request(request_handle)
-                -- Drop all x-remote- headers.
-                local remove = {}
-                for key, value in pairs(request_handle:headers()) do
-                  if startsWith(key:lower(), "x-remote-") then
-                    remove[key] = ""
-                  end
-                end
+                -- Drop headers used by kube-apiserver authentication proxy.
+                local remove = {"{{ .Values.apiServerRequestHeaderUserName }}", "{{ .Values.apiServerRequestHeaderGroup }}"}
                 for key, value in pairs(remove) do
-                  request_handle:headers():remove(key)
+                  request_handle:headers():remove(value)
                 end
 
                 local streamInfo = request_handle:streamInfo()
