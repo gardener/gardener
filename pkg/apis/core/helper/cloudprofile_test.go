@@ -15,7 +15,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	classificationPreview := core.ClassificationPreview
 	classificationDeprecated := core.ClassificationDeprecated
 	classificationSupported := core.ClassificationSupported

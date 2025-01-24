@@ -17,7 +17,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	DescribeTable("#TaintsHave",
 		func(taints []core.SeedTaint, key string, expectation bool) {
 			Expect(TaintsHave(taints, key)).To(Equal(expectation))

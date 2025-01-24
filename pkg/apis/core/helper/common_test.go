@@ -14,7 +14,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	Describe("#GetCondition", func() {
 		It("should return the found condition", func() {
 			var (

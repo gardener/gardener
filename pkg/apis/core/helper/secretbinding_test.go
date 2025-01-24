@@ -12,7 +12,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	DescribeTable("#GetSecretBindingTypes",
 		func(secretBinding *core.SecretBinding, expected []string) {
 			actual := GetSecretBindingTypes(secretBinding)

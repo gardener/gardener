@@ -20,7 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-var _ = Describe("helper", func() {
+var _ = Describe("Helper", func() {
 	var (
 		trueVar  = true
 		falseVar = false
