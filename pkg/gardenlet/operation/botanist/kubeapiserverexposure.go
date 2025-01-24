@@ -12,6 +12,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/features"
@@ -23,8 +24,11 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 	deployer := []component.Deployer{
 		b.defaultKubeAPIServerServiceWithSuffix("", true),
 	}
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
-		deployer = append(deployer, b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false))
+	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
+	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()) {
+		deployer = append(deployer, mutualTLSService)
+	} else {
+		deployer = append(deployer, component.OpDestroy(mutualTLSService))
 	}
 	return component.OpWait(deployer...)
 }
@@ -77,6 +81,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
+				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()),
 			}
 		},
 	))
@@ -125,6 +130,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
+				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()),
 			}
 
 			if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
