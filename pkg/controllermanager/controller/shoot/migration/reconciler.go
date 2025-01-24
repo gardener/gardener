@@ -17,7 +17,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
@@ -26,7 +26,7 @@ import (
 // seed is ready.
 type Reconciler struct {
 	Client client.Client
-	Config config.ShootMigrationControllerConfiguration
+	Config controllermanagerconfigv1alpha1.ShootMigrationControllerConfiguration
 }
 
 // Reconcile reconciles Shoots that should be prepared for the migration and sets a constraint when the destination

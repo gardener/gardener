@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/migration"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -151,7 +151,7 @@ var _ = Describe("Shoot Migration controller tests", Ordered, func() {
 
 		It("should successfully add and start the controller", func() {
 			Expect((&migration.Reconciler{
-				Config: config.ShootMigrationControllerConfiguration{
+				Config: controllermanagerconfigv1alpha1.ShootMigrationControllerConfiguration{
 					ConcurrentSyncs: ptr.To(5),
 				},
 			}).AddToManager(mgr)).To(Succeed())
