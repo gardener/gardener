@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/istio"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -78,6 +77,7 @@ type SNIValues struct {
 	Hosts               []string
 	APIServerProxy      *APIServerProxy
 	IstioIngressGateway IstioIngressGateway
+	IstioTLSTermination bool
 }
 
 // APIServerProxy contains values for the APIServer proxy protocol configuration.
@@ -182,7 +182,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		registry.AddSerialized(filename, envoyFilterAPIServerProxy.Bytes())
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+	if values.IstioTLSTermination {
 		if err := s.reconcileIstioTLSSecrets(ctx); err != nil {
 			return err
 		}
@@ -192,7 +192,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+	if values.IstioTLSTermination {
 		envoyFilter := s.emptyEnvoyFilterIstioTLSTermination()
 
 		if err := envoyFilterIstioTLSTerminationTemplate.Execute(&envoyFilterIstioTLSTermination, envoyFilterIstioTLSTerminationTemplateValues{
@@ -212,7 +212,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		registry.AddSerialized(filename, envoyFilterIstioTLSTermination.Bytes())
 	}
 
-	if values.APIServerProxy != nil || features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+	if values.APIServerProxy != nil || values.IstioTLSTermination {
 		serializedObjects, err := registry.SerializedObjects()
 		if err != nil {
 			return err
@@ -229,7 +229,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 	var destinationMutateFn func() error
 	destinationMutateFn = istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), hostName)
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+	if values.IstioTLSTermination {
 		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, s.namespace+istioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
 	}
 
@@ -237,16 +237,20 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+	if values.IstioTLSTermination {
 		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), mTLSHostName, s.namespace+istioCASecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, mTLSDestinationRule, destinationMTLSMutateFn); err != nil {
+			return err
+		}
+	} else {
+		if err := kubernetesutils.DeleteObject(ctx, s.client, mTLSDestinationRule); err != nil {
 			return err
 		}
 	}
 
 	var gatewayMutateFn func() error
 	gatewayMutateFn = istio.GatewayWithTLSPassthrough(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port)
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+	if values.IstioTLSTermination {
 		gatewayMutateFn = istio.GatewayWithMutualTLS(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port, s.namespace+istioTLSSecretSuffix)
 	}
 
@@ -256,7 +260,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 	var virtualServiceMutateFn func() error
 	virtualServiceMutateFn = istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), s.valuesFunc().Hosts, gateway.Name, kubeapiserverconstants.Port, hostName)
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+	if values.IstioTLSTermination {
 		virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(virtualService, getLabels(), s.valuesFunc().Hosts, gateway.Name, kubeapiserverconstants.Port, hostName)
 	}
 

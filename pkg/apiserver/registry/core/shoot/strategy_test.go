@@ -376,6 +376,12 @@ var _ = Describe("Strategy", func() {
 					},
 					true,
 				),
+				Entry("disable-istio-tls-termination annotation",
+					func(s *core.Shoot) {
+						metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.ShootDisableIstioTLSTermination, "true")
+					},
+					true,
+				),
 			)
 
 			Context("confine spec update rollout", func() {

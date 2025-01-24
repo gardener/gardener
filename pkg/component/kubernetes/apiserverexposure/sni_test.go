@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	comptest "github.com/gardener/gardener/pkg/component/test"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -43,12 +42,13 @@ var _ = Describe("#SNI", func() {
 		c   client.Client
 		sm  secretsmanager.Interface
 
-		defaultDepWaiter component.DeployWaiter
-		namespace        = "test-namespace"
-		istioLabels      = map[string]string{"foo": "bar"}
-		istioNamespace   = "istio-foo"
-		hosts            = []string{"foo.bar"}
-		hostName         = "kube-apiserver." + namespace + ".svc.cluster.local"
+		defaultDepWaiter    component.DeployWaiter
+		namespace           = "test-namespace"
+		istioLabels         = map[string]string{"foo": "bar"}
+		istioNamespace      = "istio-foo"
+		istioTLSTermination = false
+		hosts               = []string{"foo.bar"}
+		hostName            = "kube-apiserver." + namespace + ".svc.cluster.local"
 
 		apiServerProxyValues *APIServerProxy
 
@@ -228,6 +228,7 @@ var _ = Describe("#SNI", func() {
 					Namespace: istioNamespace,
 					Labels:    istioLabels,
 				},
+				IstioTLSTermination: istioTLSTermination,
 			}
 			return val
 		})
@@ -250,7 +251,7 @@ var _ = Describe("#SNI", func() {
 			Expect(actualVirtualService).To(BeComparableTo(expectedVirtualService, comptest.CmpOptsForVirtualService()))
 
 			managedResourceIstioTLS := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: "istio-tls-secrets", Namespace: namespace}}
-			if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+			if istioTLSTermination {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioTLS), managedResourceIstioTLS)).To(Succeed())
 			} else {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstioTLS), managedResourceIstioTLS)).To(BeNotFoundError())
@@ -263,7 +264,7 @@ var _ = Describe("#SNI", func() {
 				},
 			}
 
-			if apiServerProxyValues != nil || features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+			if apiServerProxyValues != nil || istioTLSTermination {
 				mrData := validateManagedResourceAndGetData(ctx, c, expectedManagedResourceSNI)
 
 				var envoyFilterObjectsMetas []metav1.ObjectMeta
@@ -284,14 +285,14 @@ var _ = Describe("#SNI", func() {
 					Expect(envoyFilterObjectsMetas).To(ContainElement(expectedEnvoyFilterObjectMetaAPIServerProxy))
 				}
 
-				if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+				if istioTLSTermination {
 					Expect(envoyFilterObjectsMetas).To(ContainElement(expectedEnvoyFilterObjectMetaIstioTLSTermination))
 				}
 			} else {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError(), "should delete EnvoyFilter for apiserver-proxy")
 			}
 
-			if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+			if istioTLSTermination {
 				mrData := validateManagedResourceAndGetData(ctx, c, expectedManagedResourceTLSSecrets)
 
 				var secretObjectsMetas []metav1.ObjectMeta
@@ -338,7 +339,7 @@ var _ = Describe("#SNI", func() {
 
 		Context("when IstioTLSTermination feature gate is true", func() {
 			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
+				istioTLSTermination = true
 
 				expectedDestinationRule.Spec.TrafficPolicy.LoadBalancer = &istioapinetworkingv1beta1.LoadBalancerSettings{
 					LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
@@ -379,7 +380,7 @@ var _ = Describe("#SNI", func() {
 	})
 
 	It("should succeed destroying", func() {
-		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
+		istioTLSTermination = true
 
 		Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
