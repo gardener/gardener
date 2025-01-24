@@ -862,11 +862,11 @@ func (c *validationContext) validateClusterAutoscaler(a admission.Attributes) fi
 
 	scaleDownDelayAfterAdd := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd
 	scaleDownUnneededTime := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime
-	if scaleDownUnneededTime != nil {
-		if scaleDownDelayAfterAdd.Duration < 1*time.Minute && scaleDownUnneededTime.Duration < 1*time.Minute {
-			fldPath := field.NewPath("spec", "kubernetes", "clusterAutoscaler", "scaleDownUnneededTime")
-			allErrs = append(allErrs, field.Invalid(fldPath, scaleDownUnneededTime.Duration, "cannot be less than 1min when scaleDownDelayAfterAdd is also less than 1min"))
-		}
+	if scaleDownUnneededTime != nil &&
+		scaleDownDelayAfterAdd.Duration < 1*time.Minute &&
+		scaleDownUnneededTime.Duration < 1*time.Minute {
+		fldPath := field.NewPath("spec", "kubernetes", "clusterAutoscaler", "scaleDownUnneededTime")
+		allErrs = append(allErrs, field.Invalid(fldPath, scaleDownUnneededTime.Duration, "cannot be less than 1min when scaleDownDelayAfterAdd is also less than 1min"))
 	}
 
 	fldPath := field.NewPath("spec", "provider", "workers")
