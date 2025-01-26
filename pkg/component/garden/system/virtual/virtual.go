@@ -611,6 +611,34 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				Name:     user.AllAuthenticated,
 			}},
 		}
+		roleReadGardenerInfoConfigMap = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:read-gardener-info-configmap",
+				Namespace: gardencorev1beta1.GardenerSystemInfoNamespace,
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups:     []string{corev1.GroupName},
+				Resources:     []string{"configmaps"},
+				ResourceNames: []string{"gardener-info"},
+				Verbs:         []string{"get", "watch"},
+			}},
+		}
+		roleBindingReadGardenerInfoConfigMap = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleReadGardenerInfoConfigMap.Name,
+				Namespace: gardencorev1beta1.GardenerSystemInfoNamespace,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     roleReadGardenerInfoConfigMap.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Group",
+				Name:     user.AllAuthenticated,
+			}},
+		}
 	)
 
 	if err := registry.Add(
@@ -635,6 +663,8 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		clusterRoleProjectViewerAggregated,
 		roleReadClusterIdentityConfigMap,
 		roleBindingReadClusterIdentityConfigMap,
+		roleReadGardenerInfoConfigMap,
+		roleBindingReadGardenerInfoConfigMap,
 	); err != nil {
 		return nil, err
 	}

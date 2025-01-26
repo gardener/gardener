@@ -37,6 +37,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -320,7 +321,7 @@ func (o *Options) Run(ctx context.Context) error {
 	}
 
 	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(_ genericapiserver.PostStartHookContext) error {
-		for _, namespace := range []string{gardencorev1beta1.GardenerSeedLeaseNamespace, gardencorev1beta1.GardenerShootIssuerNamespace} {
+		for _, namespace := range []string{gardencorev1beta1.GardenerSeedLeaseNamespace, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemInfoNamespace} {
 			if _, err := kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 				return err
 			} else if err == nil {
@@ -375,7 +376,57 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-public-info", func(_ genericapiserver.PostStartHookContext) error {
+		p := publicInfo{
+			Version:      version.Get().String(),
+			FeatureGates: fmt.Sprint(features.DefaultFeatureGate),
+		}
+
+		if len(o.ExtraOptions.WorkloadIdentityTokenIssuer) != 0 {
+			p.WorkloadIdentityIssuerURL = &o.ExtraOptions.WorkloadIdentityTokenIssuer
+		}
+
+		marsheledInfo, err := yaml.Marshal(p)
+		if err != nil {
+			return err
+		}
+
+		configMapName := "gardener-info"
+		gardenerAPIServerKey := "gardenerAPIServer"
+
+		configMap, err := kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemInfoNamespace).Get(ctx, configMapName, metav1.GetOptions{})
+		if err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				return err
+			}
+
+			configMap := corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: gardencorev1beta1.GardenerSystemInfoNamespace,
+					Name:      configMapName,
+				},
+				Data: map[string]string{
+					gardenerAPIServerKey: string(marsheledInfo),
+				},
+			}
+			_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemInfoNamespace).Create(ctx, &configMap, metav1.CreateOptions{})
+			return err
+		}
+
+		configMap.Data[gardenerAPIServerKey] = string(marsheledInfo)
+		_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemInfoNamespace).Update(ctx, configMap, metav1.UpdateOptions{})
+		return err
+	}); err != nil {
+		return err
+	}
+
 	return server.GenericAPIServer.PrepareRun().Run(ctx.Done())
+}
+
+type publicInfo struct {
+	Version                   string  `json:"version"`
+	WorkloadIdentityIssuerURL *string `json:"workloadIdentityIssuerURL,omitempty"`
+	FeatureGates              string  `json:"featureGates"`
 }
 
 // ApplyTo applies the options to the given config.

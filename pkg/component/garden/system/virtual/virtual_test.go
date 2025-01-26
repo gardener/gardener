@@ -68,6 +68,8 @@ var _ = Describe("Virtual", func() {
 		clusterRoleProjectViewerAggregated                *rbacv1.ClusterRole
 		roleReadClusterIdentityConfigMap                  *rbacv1.Role
 		roleBindingReadClusterIdentityConfigMap           *rbacv1.RoleBinding
+		roleReadGardenerInfoConfigMap                     *rbacv1.Role
+		roleBindingReadGardenerInfoConfigMap              *rbacv1.RoleBinding
 	)
 
 	BeforeEach(func() {
@@ -626,6 +628,34 @@ var _ = Describe("Virtual", func() {
 				Name:     "system:authenticated",
 			}},
 		}
+		roleReadGardenerInfoConfigMap = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:read-gardener-info-configmap",
+				Namespace: "gardener-system-info",
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups:     []string{""},
+				Resources:     []string{"configmaps"},
+				ResourceNames: []string{"gardener-info"},
+				Verbs:         []string{"get", "watch"},
+			}},
+		}
+		roleBindingReadGardenerInfoConfigMap = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:read-gardener-info-configmap",
+				Namespace: "gardener-system-info",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "gardener.cloud:system:read-gardener-info-configmap",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "system:authenticated",
+			}},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -686,6 +716,8 @@ var _ = Describe("Virtual", func() {
 				clusterRoleProjectViewer,
 				roleReadClusterIdentityConfigMap,
 				roleBindingReadClusterIdentityConfigMap,
+				roleReadGardenerInfoConfigMap,
+				roleBindingReadGardenerInfoConfigMap,
 			))
 		})
 

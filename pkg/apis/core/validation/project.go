@@ -60,8 +60,9 @@ func ValidateProjectUpdate(newProject, oldProject *core.Project) field.ErrorList
 func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if projectSpec.Namespace != nil && *projectSpec.Namespace == core.GardenerSeedLeaseNamespace {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), projectSpec.Namespace, fmt.Sprintf("Project namespace %s is reserved by Gardener", core.GardenerSeedLeaseNamespace)))
+	reservedNamespaceNames := []string{core.GardenerSeedLeaseNamespace, core.GardenerShootIssuerNamespace, core.GardenerSystemInfoNamespace}
+	if projectSpec.Namespace != nil && slices.Contains(reservedNamespaceNames, *projectSpec.Namespace) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), projectSpec.Namespace, fmt.Sprintf("Project namespaces %q are reserved by Gardener", reservedNamespaceNames)))
 	}
 	ownerFound := false
 
