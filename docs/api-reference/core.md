@@ -1259,6 +1259,7 @@ string
 <em>(Optional)</em>
 <p>Namespace is the name of the namespace that has been created for the Project object.
 A nil value means that Gardener will determine the name of the namespace.
+If set, its value must be prefixed with <code>garden-</code>.
 This field is immutable.</p>
 </td>
 </tr>
@@ -9274,6 +9275,7 @@ string
 <em>(Optional)</em>
 <p>Namespace is the name of the namespace that has been created for the Project object.
 A nil value means that Gardener will determine the name of the namespace.
+If set, its value must be prefixed with <code>garden-</code>.
 This field is immutable.</p>
 </td>
 </tr>

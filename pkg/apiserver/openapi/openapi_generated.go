@@ -6594,7 +6594,7 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 					},
 					"namespace": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace. This field is immutable.",
+							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace. If set, its value must be prefixed with `garden-`. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

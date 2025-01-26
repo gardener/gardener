@@ -280,7 +280,6 @@ func (o *Options) Run(ctx context.Context) error {
 	klog.SetLogger(log)
 
 	log.Info("Starting gardener-apiserver", "version", version.Get())
-	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	// Create clientset for the native Kubernetes API group
 	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups
@@ -308,6 +307,9 @@ func (o *Options) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// flags are now applied and the feature gates can be logged.
+	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	if err := server.GenericAPIServer.AddPostStartHook("start-gardener-apiserver-informers", func(context genericapiserver.PostStartHookContext) error {
 		o.CoreInformerFactory.Start(context.StopCh)

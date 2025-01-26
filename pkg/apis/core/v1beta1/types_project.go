@@ -65,6 +65,7 @@ type ProjectSpec struct {
 	Members []ProjectMember `json:"members,omitempty" protobuf:"bytes,5,rep,name=members"`
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// A nil value means that Gardener will determine the name of the namespace.
+	// If set, its value must be prefixed with `garden-`.
 	// This field is immutable.
 	// +optional
 	Namespace *string `json:"namespace,omitempty" protobuf:"bytes,6,opt,name=namespace"`
