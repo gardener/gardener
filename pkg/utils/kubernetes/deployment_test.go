@@ -12,9 +12,10 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -35,6 +36,30 @@ var _ = Describe("Deployments", func() {
 	AfterEach(func() {
 		ctrl.Finish()
 	})
+
+	DescribeTable("#ValidDeploymentContainerImageVersion",
+		func(containerName, minVersion string, expected bool) {
+			fakeImage := "test:0.3.0"
+			deployment := appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  "lb-deployment",
+									Image: fakeImage,
+								},
+							},
+						},
+					},
+				},
+			}
+			ok, _ := kubernetes.ValidDeploymentContainerImageVersion(&deployment, containerName, minVersion)
+			Expect(ok).To(Equal(expected))
+		},
+		Entry("invalid version", "lb-deployment", `0.4.0`, false),
+		Entry("invalid container name", "deployment", "0.3.0", false),
+	)
 
 	Describe("#HasDeploymentRolloutCompleted", func() {
 		It("Rollout is complete", func() {

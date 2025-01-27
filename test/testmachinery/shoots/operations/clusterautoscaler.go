@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
@@ -104,7 +103,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Scale up pod-anti-affinity deployment")
-		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers+1)
+		err = kubernetesutils.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers+1)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Ensure one node should be added to the worker pool")
@@ -116,7 +115,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Scale down pod-anti-affinity deployment")
-		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers)
+		err = kubernetesutils.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Ensure that one node was removed from the worker pool")
@@ -197,7 +196,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Scale up pod-anti-affinity deployment")
-		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 1)
+		err = kubernetesutils.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 1)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("One node should be added to the worker pool")
@@ -209,7 +208,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Scale down pod-anti-affinity deployment")
-		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 0)
+		err = kubernetesutils.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 0)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Worker pool should be scaled-down to 0")

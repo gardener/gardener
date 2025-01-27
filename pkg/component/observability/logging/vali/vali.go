@@ -1002,7 +1002,7 @@ func (v *vali) resizeOrDeleteValiDataVolumeIfStorageNotTheSame(ctx context.Conte
 		return err
 	}
 
-	if err := kubernetes.ScaleStatefulSetAndWaitUntilScaled(ctx, v.client, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.StatefulSetNameVali}, 0); client.IgnoreNotFound(err) != nil {
+	if err := kubernetesutils.ScaleStatefulSetAndWaitUntilScaled(ctx, v.client, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: v1beta1constants.StatefulSetNameVali}, 0); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

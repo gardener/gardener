@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubecontrollermanager "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/component/shared"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
@@ -60,5 +60,5 @@ func (b *Botanist) WaitForKubeControllerManagerToBeActive(ctx context.Context) e
 
 // ScaleKubeControllerManagerToOne scales kube-controller-manager replicas to one.
 func (b *Botanist) ScaleKubeControllerManagerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeControllerManager}, 1)
+	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeControllerManager}, 1)
 }

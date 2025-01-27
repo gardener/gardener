@@ -16,9 +16,9 @@ import (
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultClusterAutoscaler returns a deployer for the cluster-autoscaler.
@@ -60,7 +60,7 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 
 // ScaleClusterAutoscalerToZero scales cluster-autoscaler replicas to zero.
 func (b *Botanist) ScaleClusterAutoscalerToZero(ctx context.Context) error {
-	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameClusterAutoscaler}, 0))
+	return client.IgnoreNotFound(kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameClusterAutoscaler}, 0))
 }
 
 // CalculateMaxNodesForShoot returns the maximum number of nodes the shoot supports. Function returns nil if there is no limitation.

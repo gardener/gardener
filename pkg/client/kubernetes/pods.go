@@ -12,7 +12,6 @@ import (
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
@@ -83,20 +82,6 @@ func (p *podExecutor) ExecuteWithStreams(ctx context.Context, namespace, name, c
 func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName string, command ...string) (io.Reader, io.Reader, error) {
 	var stdout, stderr bytes.Buffer
 	return &stdout, &stderr, p.ExecuteWithStreams(ctx, namespace, name, containerName, nil, &stdout, &stderr, command...)
-}
-
-// GetPodLogs retrieves the pod logs of the pod of the given name with the given options.
-func GetPodLogs(ctx context.Context, podInterface corev1client.PodInterface, name string, options *corev1.PodLogOptions) ([]byte, error) {
-	request := podInterface.GetLogs(name, options)
-
-	stream, err := request.Stream(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() { utilruntime.HandleError(stream.Close()) }()
-
-	return io.ReadAll(stream)
 }
 
 // CheckForwardPodPort tries to open a portForward connection with the passed PortForwarder.

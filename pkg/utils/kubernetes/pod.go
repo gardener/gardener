@@ -7,6 +7,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"io"
 	"slices"
 	"time"
 
@@ -20,10 +21,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
@@ -212,7 +214,11 @@ func DeleteStalePods(ctx context.Context, log logr.Logger, c client.Client, pods
 
 		if shouldObjectBeRemoved(&pod) {
 			logger.V(1).Info("Deleting stuck terminating pod")
-			if err := c.Delete(ctx, &pod, kubernetes.ForceDeleteOptions...); client.IgnoreNotFound(err) != nil {
+			forceDeleteOptions := []client.DeleteOption{
+				client.PropagationPolicy(metav1.DeletePropagationBackground),
+				client.GracePeriodSeconds(0),
+			}
+			if err := c.Delete(ctx, &pod, forceDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
 		}
@@ -236,4 +242,18 @@ func shouldObjectBeRemoved(obj metav1.Object) bool {
 	}
 
 	return deletionTimestamp.Time.Before(time.Now().Add(-gardenerDeletionGracePeriod))
+}
+
+// GetPodLogs retrieves the pod logs of the pod of the given name with the given options.
+func GetPodLogs(ctx context.Context, podInterface corev1client.PodInterface, name string, options *corev1.PodLogOptions) ([]byte, error) {
+	request := podInterface.GetLogs(name, options)
+
+	stream, err := request.Stream(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() { utilruntime.HandleError(stream.Close()) }()
+
+	return io.ReadAll(stream)
 }
