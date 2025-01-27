@@ -322,8 +322,8 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(_ genericapiserver.PostStartHookContext) error {
-		for _, namespace := range []string{gardencorev1beta1.GardenerSeedLeaseNamespace, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemPublicNamespace} {
+	var createNamespaces = func(namespaces ...string) error {
+		for _, namespace := range namespaces {
 			if _, err := kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 				return err
 			} else if err == nil {
@@ -340,6 +340,10 @@ func (o *Options) Run(ctx context.Context) error {
 			}
 		}
 		return nil
+	}
+
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(_ genericapiserver.PostStartHookContext) error {
+		return createNamespaces(gardencorev1beta1.GardenerSeedLeaseNamespace, gardencorev1beta1.GardenerShootIssuerNamespace)
 	}); err != nil {
 		return err
 	}
@@ -379,6 +383,10 @@ func (o *Options) Run(ctx context.Context) error {
 	}
 
 	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-public-info", func(_ genericapiserver.PostStartHookContext) error {
+		if err := createNamespaces(gardencorev1beta1.GardenerSystemPublicNamespace); err != nil {
+			return err
+		}
+
 		p := publicInfo{
 			Version:      version.Get().String(),
 			FeatureGates: fmt.Sprint(features.DefaultFeatureGate),
