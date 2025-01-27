@@ -1794,7 +1794,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>CloudProfileName is a name of a CloudProfile object.
-This field will be deprecated soon, use <code>CloudProfile</code> instead.</p>
+Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
+Until removed, this field is synced with the <code>CloudProfile</code> field.</p>
 </td>
 </tr>
 <tr>
@@ -12035,7 +12036,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>CloudProfileName is a name of a CloudProfile object.
-This field will be deprecated soon, use <code>CloudProfile</code> instead.</p>
+Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
+Until removed, this field is synced with the <code>CloudProfile</code> field.</p>
 </td>
 </tr>
 <tr>
@@ -12748,7 +12750,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>CloudProfileName is a name of a CloudProfile object.
-This field will be deprecated soon, use <code>CloudProfile</code> instead.</p>
+Deprecated: This field will be removed in a future version of Gardener. Use <code>CloudProfile</code> instead.
+Until removed, this field is synced with the <code>CloudProfile</code> field.</p>
 </td>
 </tr>
 <tr>

@@ -2992,7 +2992,8 @@ message ShootSpec {
   optional Addons addons = 1;
 
   // CloudProfileName is a name of a CloudProfile object.
-  // This field will be deprecated soon, use `CloudProfile` instead.
+  // Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead.
+  // Until removed, this field is synced with the `CloudProfile` field.
   // +optional
   optional string cloudProfileName = 2;
 
