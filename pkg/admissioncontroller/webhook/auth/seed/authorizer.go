@@ -197,8 +197,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case seedResource:
 			return a.authorize(requestLog, seedName, graph.VertexTypeSeed, attrs,
-				nil,
-				[]string{"create", "update", "patch", "delete", "get", "list", "watch"},
+				[]string{"update", "patch", "delete"},
+				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)
 		case serviceAccountResource:
