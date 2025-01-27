@@ -526,13 +526,11 @@ var _ = Describe("Pod Utils", func() {
 
 	Describe("#GetPodLogs", func() {
 		var (
-			ctx  context.Context
 			ctrl *gomock.Controller
 			pods *mockcorev1.MockPodInterface
 		)
 
 		BeforeEach(func() {
-			ctx = context.Background()
 			ctrl = gomock.NewController(GinkgoT())
 			pods = mockcorev1.NewMockPodInterface(ctrl)
 		})
