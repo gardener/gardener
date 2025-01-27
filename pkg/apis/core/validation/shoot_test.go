@@ -177,6 +177,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 						Domain: &domain,
 					},
+					ETCD: &core.ETCD{
+						Main: &core.ETCDConfig{
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"cpu": resource.MustParse("2"),
+								},
+							},
+						},
+						Events: &core.ETCDConfig{
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"cpu": resource.MustParse("1"),
+								},
+							},
+						},
+					},
 					Kubernetes: core.Kubernetes{
 						Version: "1.30.3",
 						KubeAPIServer: &core.KubeAPIServerConfig{
@@ -206,6 +222,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 									ConfigMapRef: &corev1.ObjectReference{
 										Name: "audit-policy-config",
 									},
+								},
+							},
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"cpu":    resource.MustParse("2"),
+									"memory": resource.MustParse("4Gi"),
 								},
 							},
 						},
@@ -7309,6 +7331,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 	})
 
+	Describe("#ValidateControlPlaneAutoscaling", func() {
+		It("should succeed for valid resources", func() {
+			autoscaling := &core.ControlPlaneAutoscaling{
+				MinAllowed: map[corev1.ResourceName]resource.Quantity{
+					"cpu":    {},
+					"memory": {},
+				},
+			}
+
+			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil)).To(BeEmpty())
+		})
+
+		It("should fail for unsupported resources", func() {
+			autoscaling := &core.ControlPlaneAutoscaling{
+				MinAllowed: map[corev1.ResourceName]resource.Quantity{
+					"storage": {},
+				},
+			}
+
+			Expect(ValidateControlPlaneAutoscaling(autoscaling, field.NewPath("autoscaling"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("autoscaling.storage"),
+				})),
+			))
+		})
+	})
 })
 
 func prepareShootForUpdate(shoot *core.Shoot) *core.Shoot {

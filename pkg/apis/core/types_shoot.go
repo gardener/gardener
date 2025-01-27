@@ -110,6 +110,8 @@ type ShootSpec struct {
 	CredentialsBindingName *string
 	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
 	AccessRestrictions []AccessRestrictionWithOptions
+	// ETCD contains configuration for etcds of the shoot cluster.
+	ETCD *ETCD
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -502,6 +504,20 @@ type Kubernetes struct {
 	EnableStaticTokenKubeconfig *bool
 }
 
+// ETCD contains configuration for etcds of the shoot cluster.
+type ETCD struct {
+	// Main contains configuration for the main etcd.
+	Main *ETCDConfig
+	// Events contains configuration for the events etcd.
+	Events *ETCDConfig
+}
+
+// ETCDConfig contains etcd configuration.
+type ETCDConfig struct {
+	// Autoscaling contains auto-scaling configuration options for etcd.
+	Autoscaling *ControlPlaneAutoscaling
+}
+
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 type ClusterAutoscaler struct {
 	// ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).
@@ -683,6 +699,14 @@ type KubeAPIServerConfig struct {
 	StructuredAuthentication *StructuredAuthentication
 	// StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
 	StructuredAuthorization *StructuredAuthorization
+	// Autoscaling contains auto-scaling configuration options for the kube-apiserver.
+	Autoscaling *ControlPlaneAutoscaling
+}
+
+// ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
+type ControlPlaneAutoscaling struct {
+	// MinAllowed configures the minimum allowed resource requests.
+	MinAllowed corev1.ResourceList
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs

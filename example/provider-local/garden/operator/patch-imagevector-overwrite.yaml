@@ -1,0 +1,13 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: provider-local
+spec:
+  deployment:
+    extension:
+      values:
+        imageVectorOverwrite: |
+          images:
+          - name: machine-controller-manager-provider-local
+            repository: garden.local.gardener.cloud:5001/local-skaffold_machine-controller-manager-provider-local
+            tag: v1.113.0-dev-6b7d44d152-dirty
