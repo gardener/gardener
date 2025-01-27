@@ -51,6 +51,10 @@ const (
 	// In the future, we could add other intermediate conditions, e.g. ConditionDegraded.
 	ConditionProgressing ConditionStatus = "Progressing"
 
+	ConditionDualStackInfra ConditionStatus = "DualStackInfraReady"
+
+	ConditionDualStackNodes ConditionStatus = "DualStackNodesReady"
+
 	// ConditionCheckError is a constant for a reason in condition.
 	ConditionCheckError = "ConditionCheckError"
 	// ManagedResourceMissingConditionError is a constant for a reason in a condition that indicates

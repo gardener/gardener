@@ -24,6 +24,16 @@ func Join(cidrs []net.IPNet, sep string) string {
 	return strings.TrimSuffix(result, sep)
 }
 
+func GetIPv4CIDRs(cidrs []net.IPNet) []net.IPNet {
+	var result []net.IPNet
+	for _, c := range cidrs {
+		if c.IP.To4() != nil {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
 // CheckDualStackForKubeComponents checks if the given list of CIDRs does not include more than one element of the same IP family.
 func CheckDualStackForKubeComponents(cidrs []net.IPNet, networkType string) error {
 	if len(cidrs) > 2 {

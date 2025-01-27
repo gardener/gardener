@@ -3816,16 +3816,27 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
 
 				newShoot := prepareShootForUpdate(shoot)
-				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
+				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(errorList).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.networking.ipFamilies"),
-					"Detail": ContainSubstring(`field is immutable`),
+					"Detail": ContainSubstring(`ipFamilies can only be changed from`),
 				}))
 			})
+
+			It("should allow updating ipfamilies from [IPv4] to [IPv4,IPv6] ", func() {
+				shoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Networking.IPFamilies = []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+				Expect(errorList).To(BeEmpty())
+			})
+
 		})
 
 		Context("dual-stack", func() {

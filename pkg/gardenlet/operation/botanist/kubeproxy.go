@@ -73,6 +73,7 @@ func (b *Botanist) DeployKubeProxy(ctx context.Context) error {
 
 	b.Shoot.Components.SystemComponents.KubeProxy.SetKubeconfig(kubeconfig)
 	b.Shoot.Components.SystemComponents.KubeProxy.SetWorkerPools(workerPools)
+
 	b.Shoot.Components.SystemComponents.KubeProxy.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
 
 	return b.Shoot.Components.SystemComponents.KubeProxy.Deploy(ctx)
