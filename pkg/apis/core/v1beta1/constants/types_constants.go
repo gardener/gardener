@@ -576,6 +576,7 @@ const (
 	LabelShootUID = "shoot.gardener.cloud/uid"
 
 	// LabelPublicKeys is a constant for a label key that indicates that a resource contains public keys.
+	// Deprecated: Use LabelDiscoveryPublic instead.
 	LabelPublicKeys = "authentication.gardener.cloud/public-keys" // TODO(dimityrmirchev): Deprecate in favour of LabelDiscoveryPublic
 	// LabelPublicKeysServiceAccount is a constant for a label value that indicates that a resource contains service account public keys.
 	LabelPublicKeysServiceAccount = "serviceaccount"
