@@ -223,72 +223,55 @@ func SetDefaults_Maintenance(obj *Maintenance) {
 // SetDefaults_VerticalPodAutoscaler sets default values for VerticalPodAutoscaler objects.
 func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 	if obj.EvictAfterOOMThreshold == nil {
-		v := DefaultEvictAfterOOMThreshold
-		obj.EvictAfterOOMThreshold = &v
+		obj.EvictAfterOOMThreshold = ptr.To(DefaultEvictAfterOOMThreshold)
 	}
 	if obj.EvictionRateBurst == nil {
-		v := DefaultEvictionRateBurst
-		obj.EvictionRateBurst = &v
+		obj.EvictionRateBurst = ptr.To(DefaultEvictionRateBurst)
 	}
 	if obj.EvictionRateLimit == nil {
-		v := DefaultEvictionRateLimit
-		obj.EvictionRateLimit = &v
+		obj.EvictionRateLimit = ptr.To(DefaultEvictionRateLimit)
 	}
 	if obj.EvictionTolerance == nil {
-		v := DefaultEvictionTolerance
-		obj.EvictionTolerance = &v
+		obj.EvictionTolerance = ptr.To(DefaultEvictionTolerance)
 	}
 	if obj.RecommendationMarginFraction == nil {
-		v := DefaultRecommendationMarginFraction
-		obj.RecommendationMarginFraction = &v
+		obj.RecommendationMarginFraction = ptr.To(DefaultRecommendationMarginFraction)
 	}
 	if obj.UpdaterInterval == nil {
-		v := DefaultUpdaterInterval
-		obj.UpdaterInterval = &v
+		obj.UpdaterInterval = ptr.To(DefaultUpdaterInterval)
 	}
 	if obj.RecommenderInterval == nil {
-		v := DefaultRecommenderInterval
-		obj.RecommenderInterval = &v
+		obj.RecommenderInterval = ptr.To(DefaultRecommenderInterval)
 	}
 	if obj.TargetCPUPercentile == nil {
-		v := DefaultTargetCPUPercentile
-		obj.TargetCPUPercentile = &v
+		obj.TargetCPUPercentile = ptr.To(DefaultTargetCPUPercentile)
 	}
 	if obj.RecommendationLowerBoundCPUPercentile == nil {
-		v := DefaultRecommendationLowerBoundCPUPercentile
-		obj.RecommendationLowerBoundCPUPercentile = &v
+		obj.RecommendationLowerBoundCPUPercentile = ptr.To(DefaultRecommendationLowerBoundCPUPercentile)
 	}
 	if obj.RecommendationUpperBoundCPUPercentile == nil {
-		v := DefaultRecommendationUpperBoundCPUPercentile
-		obj.RecommendationUpperBoundCPUPercentile = &v
+		obj.RecommendationUpperBoundCPUPercentile = ptr.To(DefaultRecommendationUpperBoundCPUPercentile)
 	}
 	if obj.CPUHistogramDecayHalfLife == nil {
-		v := DefaultCPUHistogramDecayHalfLife
-		obj.CPUHistogramDecayHalfLife = &v
+		obj.CPUHistogramDecayHalfLife = ptr.To(DefaultCPUHistogramDecayHalfLife)
 	}
 	if obj.TargetMemoryPercentile == nil {
-		v := DefaultTargetMemoryPercentile
-		obj.TargetMemoryPercentile = &v
+		obj.TargetMemoryPercentile = ptr.To(DefaultTargetMemoryPercentile)
 	}
 	if obj.RecommendationLowerBoundMemoryPercentile == nil {
-		v := DefaultRecommendationLowerBoundMemoryPercentile
-		obj.RecommendationLowerBoundMemoryPercentile = &v
+		obj.RecommendationLowerBoundMemoryPercentile = ptr.To(DefaultRecommendationLowerBoundMemoryPercentile)
 	}
 	if obj.RecommendationUpperBoundMemoryPercentile == nil {
-		v := DefaultRecommendationUpperBoundMemoryPercentile
-		obj.RecommendationUpperBoundMemoryPercentile = &v
+		obj.RecommendationUpperBoundMemoryPercentile = ptr.To(DefaultRecommendationUpperBoundMemoryPercentile)
 	}
 	if obj.MemoryHistogramDecayHalfLife == nil {
-		v := DefaultMemoryHistogramDecayHalfLife
-		obj.MemoryHistogramDecayHalfLife = &v
+		obj.MemoryHistogramDecayHalfLife = ptr.To(DefaultMemoryHistogramDecayHalfLife)
 	}
 	if obj.MemoryAggregationInterval == nil {
-		v := DefaultMemoryAggregationInterval
-		obj.MemoryAggregationInterval = &v
+		obj.MemoryAggregationInterval = ptr.To(DefaultMemoryAggregationInterval)
 	}
 	if obj.MemoryAggregationIntervalCount == nil {
-		v := DefaultMemoryAggregationIntervalCount
-		obj.MemoryAggregationIntervalCount = &v
+		obj.MemoryAggregationIntervalCount = ptr.To(DefaultMemoryAggregationIntervalCount)
 	}
 }
 
