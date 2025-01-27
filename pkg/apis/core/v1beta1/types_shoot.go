@@ -769,7 +769,7 @@ type VerticalPodAutoscaler struct {
 	// `MemoryAggregationWindowLength = memory-aggregation-interval * memory-aggregation-interval-count`.
 	// (default: 8)
 	// +optional
-	MemoryAggregationIntervalCount *int64 `json:"memoryAggregationIntervalCount,omitempty" protobuf:"fixed64,18,opt,name=memoryAggregationIntervalCount"`
+	MemoryAggregationIntervalCount *int64 `json:"memoryAggregationIntervalCount,omitempty" protobuf:"varint,18,opt,name=memoryAggregationIntervalCount"`
 }
 
 const (
