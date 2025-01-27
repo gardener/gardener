@@ -523,26 +523,24 @@ var _ = Describe("Pod Utils", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(stalePod), &corev1.Pod{})).To(BeNotFoundError())
 		})
 	})
-})
-
-var _ = Describe("Pods", func() {
-	var (
-		ctx  context.Context
-		ctrl *gomock.Controller
-		pods *mockcorev1.MockPodInterface
-	)
-
-	BeforeEach(func() {
-		ctx = context.Background()
-		ctrl = gomock.NewController(GinkgoT())
-		pods = mockcorev1.NewMockPodInterface(ctrl)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
-	})
 
 	Describe("#GetPodLogs", func() {
+		var (
+			ctx  context.Context
+			ctrl *gomock.Controller
+			pods *mockcorev1.MockPodInterface
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			ctrl = gomock.NewController(GinkgoT())
+			pods = mockcorev1.NewMockPodInterface(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
 		It("should read all pod logs and close the stream", func() {
 			const name = "name"
 			var (
