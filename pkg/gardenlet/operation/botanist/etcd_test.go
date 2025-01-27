@@ -20,6 +20,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,7 +56,7 @@ var _ = Describe("Etcd", func() {
 		sm               secretsmanager.Interface
 		botanist         *Botanist
 
-		ctx                   = context.TODO()
+		ctx                   = context.Background()
 		fakeErr               = errors.New("fake err")
 		namespace             = "shoot--foo--bar"
 		role                  = "test"
@@ -198,6 +199,83 @@ var _ = Describe("Etcd", func() {
 				NewEtcd = validator.NewEtcd
 
 				etcd, err := botanist.DefaultEtcd(role, class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("with minAllowed configuration", func() {
+			var (
+				minAllowedETCDMain   corev1.ResourceList
+				minAllowedETCDEvents corev1.ResourceList
+			)
+
+			BeforeEach(func() {
+				minAllowedETCDMain = corev1.ResourceList{"cpu": resource.MustParse("500m"), "memory": resource.MustParse("1Gi")}
+				minAllowedETCDEvents = corev1.ResourceList{"cpu": resource.MustParse("100m")}
+
+				botanist.Shoot.GetInfo().Spec.ETCD = &gardencorev1beta1.ETCD{
+					Main: &gardencorev1beta1.ETCDConfig{
+						Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+							MinAllowed: minAllowedETCDMain,
+						},
+					},
+					Events: &gardencorev1beta1.ETCDConfig{
+						Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+							MinAllowed: minAllowedETCDEvents,
+						},
+					},
+				}
+			})
+
+			It("should successfully create an etcd-main interface", func() {
+				validator := &newEtcdValidator{
+					expectedClient:                   Equal(c),
+					expectedReader:                   Equal(reader),
+					expectedLogger:                   BeAssignableToTypeOf(logr.Logger{}),
+					expectedNamespace:                Equal(namespace),
+					expectedSecretsManager:           Equal(sm),
+					expectedRole:                     Equal("main"),
+					expectedClass:                    Equal(class),
+					expectedReplicas:                 PointTo(Equal(int32(1))),
+					expectedStorageCapacity:          Equal("10Gi"),
+					expectedDefragmentationSchedule:  Equal(ptr.To("34 12 */3 * *")),
+					expectedMaintenanceTimeWindow:    Equal(maintenanceTimeWindow),
+					expectedHighAvailabilityEnabled:  Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
+					expectedAutoscalingConfiguration: Equal(etcd.AutoscalingConfig{MinAllowed: minAllowedETCDMain}),
+				}
+
+				oldNewEtcd := NewEtcd
+				defer func() { NewEtcd = oldNewEtcd }()
+				NewEtcd = validator.NewEtcd
+
+				etcd, err := botanist.DefaultEtcd("main", class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should successfully create an etcd-events interface", func() {
+				validator := &newEtcdValidator{
+					expectedClient:                   Equal(c),
+					expectedReader:                   Equal(reader),
+					expectedLogger:                   BeAssignableToTypeOf(logr.Logger{}),
+					expectedNamespace:                Equal(namespace),
+					expectedSecretsManager:           Equal(sm),
+					expectedRole:                     Equal("events"),
+					expectedClass:                    Equal(class),
+					expectedReplicas:                 PointTo(Equal(int32(1))),
+					expectedStorageCapacity:          Equal("10Gi"),
+					expectedDefragmentationSchedule:  Equal(ptr.To("34 12 */3 * *")),
+					expectedMaintenanceTimeWindow:    Equal(maintenanceTimeWindow),
+					expectedHighAvailabilityEnabled:  Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
+					expectedAutoscalingConfiguration: Equal(etcd.AutoscalingConfig{MinAllowed: minAllowedETCDEvents}),
+				}
+
+				oldNewEtcd := NewEtcd
+				defer func() { NewEtcd = oldNewEtcd }()
+				NewEtcd = validator.NewEtcd
+
+				etcd, err := botanist.DefaultEtcd("events", class)
 				Expect(etcd).NotTo(BeNil())
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -502,18 +580,19 @@ var _ = Describe("Etcd", func() {
 type newEtcdValidator struct {
 	etcd.Interface
 
-	expectedClient                  gomegatypes.GomegaMatcher
-	expectedReader                  gomegatypes.GomegaMatcher
-	expectedLogger                  gomegatypes.GomegaMatcher
-	expectedNamespace               gomegatypes.GomegaMatcher
-	expectedSecretsManager          gomegatypes.GomegaMatcher
-	expectedRole                    gomegatypes.GomegaMatcher
-	expectedClass                   gomegatypes.GomegaMatcher
-	expectedReplicas                gomegatypes.GomegaMatcher
-	expectedStorageCapacity         gomegatypes.GomegaMatcher
-	expectedDefragmentationSchedule gomegatypes.GomegaMatcher
-	expectedHighAvailabilityEnabled gomegatypes.GomegaMatcher
-	expectedMaintenanceTimeWindow   gomegatypes.GomegaMatcher
+	expectedClient                   gomegatypes.GomegaMatcher
+	expectedReader                   gomegatypes.GomegaMatcher
+	expectedLogger                   gomegatypes.GomegaMatcher
+	expectedNamespace                gomegatypes.GomegaMatcher
+	expectedSecretsManager           gomegatypes.GomegaMatcher
+	expectedRole                     gomegatypes.GomegaMatcher
+	expectedClass                    gomegatypes.GomegaMatcher
+	expectedReplicas                 gomegatypes.GomegaMatcher
+	expectedStorageCapacity          gomegatypes.GomegaMatcher
+	expectedDefragmentationSchedule  gomegatypes.GomegaMatcher
+	expectedHighAvailabilityEnabled  gomegatypes.GomegaMatcher
+	expectedMaintenanceTimeWindow    gomegatypes.GomegaMatcher
+	expectedAutoscalingConfiguration gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
@@ -535,6 +614,12 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(values.StorageCapacity).To(v.expectedStorageCapacity)
 	Expect(values.DefragmentationSchedule).To(v.expectedDefragmentationSchedule)
 	Expect(values.HighAvailabilityEnabled).To(v.expectedHighAvailabilityEnabled)
+
+	if v.expectedAutoscalingConfiguration != nil {
+		Expect(values.Autoscaling).To(v.expectedAutoscalingConfiguration)
+	} else {
+		Expect(values.Autoscaling).To(Equal(etcd.AutoscalingConfig{}))
+	}
 
 	return v
 }
