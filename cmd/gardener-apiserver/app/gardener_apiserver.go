@@ -426,9 +426,9 @@ func (o *Options) Run(ctx context.Context) error {
 }
 
 type publicInfo struct {
-	Version                   string  `json:"version"`
-	WorkloadIdentityIssuerURL *string `json:"workloadIdentityIssuerURL,omitempty"`
-	FeatureGates              string  `json:"featureGates"`
+	Version                   string  `json:"version" yaml:"version"`
+	WorkloadIdentityIssuerURL *string `json:"workloadIdentityIssuerURL,omitempty" yaml:"workloadIdentityIssuerURL,omitempty"`
+	FeatureGates              string  `json:"featureGates" yaml:"featureGates"`
 }
 
 // ApplyTo applies the options to the given config.
