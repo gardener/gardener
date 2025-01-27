@@ -1,0 +1,8 @@
+# gardener-apiserver usually creates the namespace on start-up, but helm based
+# installations may install simultaneously gardener-apiserver and the role(binding)s
+# in the gardener-system-public namespace, which makes the later to fail
+# because the namespace is not yet created.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gardener-system-public
