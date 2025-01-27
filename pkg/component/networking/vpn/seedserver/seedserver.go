@@ -321,6 +321,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 								"NET_RAW",
 							},
 						},
+						AllowPrivilegeEscalation: ptr.To(false),
 					},
 					Env: []corev1.EnvVar{
 						{
@@ -472,6 +473,8 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						"all",
 					},
 				},
+
+				AllowPrivilegeEscalation: ptr.To(false),
 			},
 			Command: []string{
 				"envoy",

@@ -384,6 +384,7 @@ ip6.arpa:53 {
 									strconv.Itoa(livenessProbePort),
 								},
 								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{"NET_ADMIN"},
 									},

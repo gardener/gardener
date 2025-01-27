@@ -41,6 +41,9 @@ func ProviderSidecarContainer(namespace, providerName, image string) corev1.Cont
 			"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 			"--v=3",
 		},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{

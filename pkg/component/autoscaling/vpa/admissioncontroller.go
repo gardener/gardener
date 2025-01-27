@@ -213,6 +213,9 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 						fmt.Sprintf("--port=%d", vpaconstants.AdmissionControllerPort),
 						"--register-webhook=false",
 					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+					},
 					LivenessProbe: newDefaultLivenessProbe(),
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{

@@ -390,6 +390,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Command:         command,
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
+									},
 									Ports: []corev1.ContainerPort{
 										{
 											Name:          "metrics",

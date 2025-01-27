@@ -415,6 +415,9 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 								corev1.ResourceMemory: resource.MustParse("512Mi"),
 							},
 						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
+						},
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      volumeName,
 							MountPath: volumeMountPath,

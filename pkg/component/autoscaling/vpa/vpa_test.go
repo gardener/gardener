@@ -372,6 +372,9 @@ var _ = Describe("VPA", func() {
 									"--leader-elect=true",
 									fmt.Sprintf("--leader-elect-resource-namespace=%s", leaderElectionNamespace),
 								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+								},
 								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
 									{
@@ -743,6 +746,10 @@ var _ = Describe("VPA", func() {
 									"--leader-elect=true",
 									fmt.Sprintf("--leader-elect-resource-namespace=%s", leaderElectionNamespace),
 								},
+								SecurityContext: &corev1.SecurityContext{
+
+									AllowPrivilegeEscalation: ptr.To(false),
+								},
 								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
 									{
@@ -1028,6 +1035,10 @@ var _ = Describe("VPA", func() {
 									"--address=:8944",
 									"--port=10250",
 									"--register-webhook=false",
+								},
+								SecurityContext: &corev1.SecurityContext{
+
+									AllowPrivilegeEscalation: ptr.To(false),
 								},
 								LivenessProbe: livenessProbeVpa,
 								Resources: corev1.ResourceRequirements{

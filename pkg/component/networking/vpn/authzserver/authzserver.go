@@ -106,6 +106,9 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 							Name:            Name,
 							Image:           a.imageExtAuthzServer,
 							ImagePullPolicy: corev1.PullIfNotPresent,
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "grpc-authz",

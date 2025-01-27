@@ -115,6 +115,7 @@ var _ = Describe("VpnSeedServer", func() {
 										"NET_RAW",
 									},
 								},
+								AllowPrivilegeEscalation: ptr.To(false),
 							},
 							Env: []corev1.EnvVar{
 								{
@@ -363,6 +364,8 @@ var _ = Describe("VpnSeedServer", func() {
 								"all",
 							},
 						},
+
+						AllowPrivilegeEscalation: ptr.To(false),
 					},
 					Command: []string{
 						"envoy",
