@@ -26,8 +26,7 @@ reviewers:
   - [Rollout Plan](#rollout-plan)
 - [Alternatives](#alternatives)
 - [Appendix](#appendix)
-  - [Visualization of the Current Architecture](#visualization-of-the-current-architecture)
-  - [Visualization of the Proposed Architecture](#visualization-of-the-proposed-architecture)
+  - [Visualization of the Architecture](#visualization-of-the-architecture)
 
 ## Summary
 
@@ -57,6 +56,7 @@ However, this doesn't work for traffic using the proxy protocol (API server prox
 Because the last header is the one added by the API server proxy (indicating the destination), traffic is routed correctly to the desired destination API server.
 However, the original client IP from the first proxy protocol header (added by the LoadBalancer) is lost and replaced by the client IP connecting to the API server proxy (typically a pod IP).
 In short, the ACL extension cannot restrict traffic using the proxy protocol if an opaque LoadBalancer is used on the seed side.
+See [Visualization of the Architecture](#visualization-of-the-architecture).
 
 In addition to supporting this use case, reworking the API server proxy to use HTTP CONNECT instead of proxy protocol removes one the connection protocols and reduces complexity.
 
@@ -140,9 +140,9 @@ In the corresponding upstream cluster section of the config, the destination por
 This configures the API server proxy to reuse the existing VPN infrastructure on the seed side.
 Finally, the `transport_socket` is removed which disables adding the proxy protocol headers.
 
-With this, a connection is established as follows:
+With this, a connection is established as follows (see [Visualization of the Architecture](#visualization-of-the-architecture)):
 
-1. An in-cluster client (e.g., pod) opens a TLS connection to `kubernetes.default.svc.cluster.local`. This service domain name points to an address which the API Server proxy listens on.
+1. An in-cluster client (e.g., pod) opens a TLS connection to `kubernetes.default.svc.cluster.local`. This service domain name points to an address which the API server proxy listens on.
 2. The Envoy process in the API server proxy pod on the same node sends an HTTP CONNECT request to the API server domain of the shoot, i.e., to the ingress gateway on the corresponding seed.
 3. The ingress gateway discards the target from the HTTP request line and opens a TCP connection to the upstream cluster indicated by the `X-Gardener-Destination` header, i.e., in-cluster service of the shoot cluster.
 4. The TLS payload is proxied from the in-cluster client via the API server proxy and the ingress gateway to the shoot API server.
@@ -251,7 +251,7 @@ Finally, the external authorization server configuration is removed, because the
 With the removal of the `ext_authz` filter, we can also remove the explicit disablement of the filter in the route for unmatched requests.
 
 With this, the 8132 port of the ingress gateway acts as a generic HTTP proxy and allows clients to open an HTTP tunnel to selected seed services (shoot API servers and VPN servers).
-An individual HTTP CONNECT request is handled as follows:
+An individual HTTP CONNECT request is handled as follows (see [Visualization of the Architecture](#visualization-of-the-architecture)):
 
 1. The HTTP connection manager on the gateway port 8132 matches requests by the `api.*` host header.
 2. It then matches the CONNECT type and the content of the `X-Gardener-Destination` header. It only matches requests that indicate a valid destination (shoot API server or VPN server).
@@ -317,10 +317,27 @@ We are not aware of any other alternative solution to address this issue, as req
 
 ## Appendix
 
-### Visualization of the Current Architecture
+### Visualization of the Architecture
+
+The following diagrams visualize the API server proxy connection when using an opaque ingress gateway LoadBalancer that enables proxy protocol: the first one shows the current architecture and the second one the proposed architecture.
+
+The diagrams visualize the relevant components (blue boxes) and the packets of the layered network connection sent and received by each of them (yellow boxes).
+The most important packets (proxy protocol and HTTP CONNECT) are highlighted in red and green.
+Important IPs/values are added to the packets, while irrelevant ones are left out for the sake of simplicity.
+The arrows highlight the routing information sent and processed by the individual components (see descriptions below).
 
 ![Current Architecture](assets/30-current-architecture.png)
 
-### Visualization of the Proposed Architecture
+In the current architecture, the API server proxy adds a proxy protocol header to indicate the destination API server with a shoot-specific destination IP (1).
+The opaque LoadBalancer is configured to add another proxy protocol header to preserve the original client IP (2).
+In the following packets, the proxy protocol added by the LoadBalancer is sent and received first.
+The ingress gateway processes the proxy protocol headers in transmission order and proxies the connection to the destination IP from the last proxy protocol header (3).
+When processing the second proxy protocol header (the one added by the API server proxy), the information from the first proxy protocol header is lost and, with this, the original client IP.
+Because of this information loss, the ACL extension cannot be used to restrict traffic using the current connection protocol.
 
 ![Proposed Architecture](assets/30-proposed-architecture.png)
+
+In the new architecture, the API server proxy sends an HTTP CONNECT request with the destination in the `X-Gardener-Destination` header instead of adding a proxy protocol header (1).
+When the LoadBalancer adds the proxy protocol header to preserve the original client IP, there is no other proxy protocol header being transmitted (2).
+Therefore, the original client IP is preserved even when determining the destination API server from the HTTP CONNECT request in the ingress gateway (3).
+With this, the ACL extension can be used to restrict traffic on all connection protocols.
