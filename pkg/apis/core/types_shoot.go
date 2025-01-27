@@ -55,7 +55,8 @@ type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	Addons *Addons
 	// CloudProfileName is a name of a CloudProfile object.
-	// This field will be deprecated soon, use `CloudProfile` instead.
+	// Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead.
+	// Until removed, this field is synced with the `CloudProfile` field.
 	CloudProfileName *string
 	// DNS contains information about the DNS settings of the Shoot.
 	DNS *DNS

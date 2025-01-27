@@ -159,7 +159,6 @@ global:
         policy: ""
     featureGates:
       ShootForceDeletion: true
-      UseNamespacedCloudProfile: true
       CredentialsRotationWithoutWorkersRollout: true
     resources: {}
     podLabels:

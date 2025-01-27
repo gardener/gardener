@@ -21,7 +21,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | Feature                                  | Default | Stage   | Since   | Until   |
 |------------------------------------------|---------|---------|---------|---------|
 | DefaultSeccompProfile                    | `false` | `Alpha` | `1.54`  |         |
-| UseNamespacedCloudProfile                | `false` | `Alpha` | `1.92`  |         |
+| UseNamespacedCloudProfile                | `false` | `Alpha` | `1.92`  | `1.111` |
+| UseNamespacedCloudProfile                | `true`  | `Beta`  | `1.112` |         |
 | ShootCredentialsBinding                  | `false` | `Alpha` | `1.98`  | `1.106` |
 | ShootCredentialsBinding                  | `true`  | `Beta`  | `1.107` |         |
 | NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  |         |
