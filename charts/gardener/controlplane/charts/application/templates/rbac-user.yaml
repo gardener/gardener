@@ -358,13 +358,13 @@ subjects:
   kind: Group
   name: system:authenticated
 
-# Role with role binding allowing all authenticated users to read the gardener-system-info/gardener-info configmap
+# Role with role binding allowing all authenticated users to read the gardener-system-public/gardener-info configmap
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gardener.cloud:system:read-gardener-info-configmap
-  namespace: gardener-system-info
+  namespace: gardener-system-public
   labels:
     app: gardener
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
@@ -385,7 +385,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gardener.cloud:system:read-gardener-info-configmap
-  namespace: gardener-system-info
+  namespace: gardener-system-public
   labels:
     app: gardener
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"

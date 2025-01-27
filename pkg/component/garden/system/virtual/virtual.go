@@ -614,7 +614,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		roleReadGardenerInfoConfigMap = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud:system:read-gardener-info-configmap",
-				Namespace: gardencorev1beta1.GardenerSystemInfoNamespace,
+				Namespace: gardencorev1beta1.GardenerSystemPublicNamespace,
 			},
 			Rules: []rbacv1.PolicyRule{{
 				APIGroups:     []string{corev1.GroupName},
@@ -626,7 +626,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		roleBindingReadGardenerInfoConfigMap = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      roleReadGardenerInfoConfigMap.Name,
-				Namespace: gardencorev1beta1.GardenerSystemInfoNamespace,
+				Namespace: gardencorev1beta1.GardenerSystemPublicNamespace,
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,

@@ -16,10 +16,10 @@ const (
 	// will sync service account issuer discovery documents
 	// of Shoot clusters which require managed issuer
 	GardenerShootIssuerNamespace = "gardener-system-shoot-issuer"
-	// GardenerSystemInfoNamespace is the namespace which will contain a resources
+	// GardenerSystemPublicNamespace is the namespace which will contain a resources
 	// describing gardener installation itself. The resources in this namespace
 	// may be visible to all authenticated users.
-	GardenerSystemInfoNamespace = "gardener-system-info"
+	GardenerSystemPublicNamespace = "gardener-system-public"
 )
 
 // Object is a core object resource.

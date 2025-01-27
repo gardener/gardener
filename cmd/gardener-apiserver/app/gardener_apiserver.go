@@ -323,7 +323,7 @@ func (o *Options) Run(ctx context.Context) error {
 	}
 
 	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(_ genericapiserver.PostStartHookContext) error {
-		for _, namespace := range []string{gardencorev1beta1.GardenerSeedLeaseNamespace, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemInfoNamespace} {
+		for _, namespace := range []string{gardencorev1beta1.GardenerSeedLeaseNamespace, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemPublicNamespace} {
 			if _, err := kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 				return err
 			} else if err == nil {
@@ -396,7 +396,7 @@ func (o *Options) Run(ctx context.Context) error {
 		configMapName := "gardener-info"
 		gardenerAPIServerKey := "gardenerAPIServer"
 
-		configMap, err := kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemInfoNamespace).Get(ctx, configMapName, metav1.GetOptions{})
+		configMap, err := kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Get(ctx, configMapName, metav1.GetOptions{})
 		if err != nil {
 			if client.IgnoreNotFound(err) != nil {
 				return err
@@ -404,19 +404,19 @@ func (o *Options) Run(ctx context.Context) error {
 
 			configMap := corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: gardencorev1beta1.GardenerSystemInfoNamespace,
+					Namespace: gardencorev1beta1.GardenerSystemPublicNamespace,
 					Name:      configMapName,
 				},
 				Data: map[string]string{
 					gardenerAPIServerKey: string(marsheledInfo),
 				},
 			}
-			_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemInfoNamespace).Create(ctx, &configMap, metav1.CreateOptions{})
+			_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Create(ctx, &configMap, metav1.CreateOptions{})
 			return err
 		}
 
 		configMap.Data[gardenerAPIServerKey] = string(marsheledInfo)
-		_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemInfoNamespace).Update(ctx, configMap, metav1.UpdateOptions{})
+		_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Update(ctx, configMap, metav1.UpdateOptions{})
 		return err
 	}); err != nil {
 		return err

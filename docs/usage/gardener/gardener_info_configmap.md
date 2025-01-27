@@ -3,7 +3,7 @@
 ## Overview
 
 The gardener apiserver maintains a [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) inside the Garden cluster that contains information about the gardener apiserver itself.
-The ConfigMap is named `gardener-info` and located in the `gardener-system-info` namespace and is visible to all authenticated users.
+The ConfigMap is named `gardener-info` and located in the `gardener-system-public` namespace and is visible to all authenticated users.
 
 ## Fields
 
@@ -14,7 +14,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: gardener-info
-  namespace: gardener-system-info
+  namespace: gardener-system-public
 data:
   gardenerAPIServer: |                                                      # key name of the gardener-apiserver section
     featureGates: ShootForceDeletion=true,UseNamespacedCloudProfile=true    # list of the configured feature gates
