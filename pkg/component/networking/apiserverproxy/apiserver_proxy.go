@@ -334,6 +334,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									"--interface=lo",
 								},
 								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{
 											"NET_ADMIN",
@@ -363,6 +364,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									fmt.Sprintf("%s/%s", volumeMountPathConfig, dataKeyConfig),
 								},
 								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{
 											"NET_BIND_SERVICE",

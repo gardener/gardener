@@ -261,6 +261,8 @@ spec:
           requests:
             cpu: 50m
             memory: ` + memoryRequests + `
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server

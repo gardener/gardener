@@ -426,6 +426,9 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 										corev1.ResourceMemory: resource.MustParse("50Mi"),
 									},
 								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      volumeNameHost,

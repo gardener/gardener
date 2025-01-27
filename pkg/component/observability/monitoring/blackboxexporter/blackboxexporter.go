@@ -256,6 +256,9 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      "blackbox-exporter-config",

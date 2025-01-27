@@ -605,7 +605,8 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Env:             v.getEnvVars(index),
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: ptr.To(false),
+			Privileged:               ptr.To(false),
+			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},

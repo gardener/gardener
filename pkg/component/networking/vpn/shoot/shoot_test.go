@@ -516,7 +516,8 @@ var _ = Describe("VPNShoot", func() {
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Env:             env,
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(false),
+						Privileged:               ptr.To(false),
+						AllowPrivilegeEscalation: ptr.To(false),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN"},
 						},
