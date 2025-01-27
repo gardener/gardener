@@ -96,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if err := r.Client.Status().Patch(ctx, shoot, patch); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed patching shoot constraints: %w", err)
 	}
-	return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
+	return reconcile.Result{}, nil
 }
 
 func updateConstraint(shoot *gardencorev1beta1.Shoot, status gardencorev1beta1.ConditionStatus, reason, message string) bool {

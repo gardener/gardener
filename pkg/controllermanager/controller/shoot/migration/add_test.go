@@ -55,6 +55,9 @@ var _ = Describe("Add", func() {
 				shoot.Status.Constraints = []gardencorev1beta1.Condition{
 					{Type: "ReadyForMigration"},
 				}
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type: gardencorev1beta1.LastOperationTypeReconcile,
+				}
 
 				Expect(predicate.Create(event.CreateEvent{Object: shoot})).To(BeTrue())
 			})

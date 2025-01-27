@@ -37,6 +37,10 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 // ShootPredicate reacts on Shoot events that indicate that the control plane needs to be prepared for migration.
 func (r *Reconciler) ShootPredicate() predicate.Predicate {
+	requireConstraintRemoval := func(shoot *gardencorev1beta1.Shoot) bool {
+		return v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootReadyForMigration) != nil && !v1beta1helper.ShootHasOperationType(shoot.Status.LastOperation, gardencorev1beta1.LastOperationTypeMigrate)
+	}
+
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
@@ -44,7 +48,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 				return false
 			}
 
-			return v1beta1helper.ShouldPrepareShootForMigration(shoot) || v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootReadyForMigration) != nil
+			return v1beta1helper.ShouldPrepareShootForMigration(shoot) || requireConstraintRemoval(shoot)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			newShoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
@@ -57,12 +61,7 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 				return false
 			}
 
-			var (
-				seedNameChanged          = ptr.Deref(oldShoot.Spec.SeedName, "") != ptr.Deref(newShoot.Spec.SeedName, "")
-				requireConstraintRemoval = v1beta1helper.GetCondition(newShoot.Status.Constraints, gardencorev1beta1.ShootReadyForMigration) != nil && !v1beta1helper.ShootHasOperationType(newShoot.Status.LastOperation, gardencorev1beta1.LastOperationTypeMigrate)
-			)
-
-			return seedNameChanged || requireConstraintRemoval
+			return ptr.Deref(oldShoot.Spec.SeedName, "") != ptr.Deref(newShoot.Spec.SeedName, "") || requireConstraintRemoval(newShoot)
 		},
 		DeleteFunc: func(_ event.DeleteEvent) bool {
 			return false
