@@ -364,7 +364,6 @@ var _ = Describe("VpnSeedServer", func() {
 								"all",
 							},
 						},
-
 						AllowPrivilegeEscalation: ptr.To(false),
 					},
 					Command: []string{

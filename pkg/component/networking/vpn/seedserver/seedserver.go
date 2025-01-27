@@ -473,7 +473,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						"all",
 					},
 				},
-
 				AllowPrivilegeEscalation: ptr.To(false),
 			},
 			Command: []string{
