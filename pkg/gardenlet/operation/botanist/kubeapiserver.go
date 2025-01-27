@@ -111,6 +111,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		MinReplicas:        minReplicas,
 		MaxReplicas:        maxReplicas,
 		ScaleDownDisabled:  scaleDownDisabled,
+		MinAllowed:         v1beta1helper.GetMinAllowedForKubeAPIServer(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
 	}
 }
 

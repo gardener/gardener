@@ -7,6 +7,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -150,12 +151,38 @@ type Values struct {
 	StorageClassName            *string
 	DefragmentationSchedule     *string
 	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
+	Autoscaling                 AutoscalingConfig
 	BackupConfig                *BackupConfig
 	MaintenanceTimeWindow       gardencorev1beta1.MaintenanceTimeWindow
 	EvictionRequirement         *string
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
+}
+
+// BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
+// the etcd's data directory.
+type BackupConfig struct {
+	// Provider is the name of the infrastructure provider for the blob storage bucket.
+	Provider string
+	// Container is the name of the blob storage bucket.
+	Container string
+	// SecretRefName is the name of a Secret object containing the credentials of the selected infrastructure provider.
+	SecretRefName string
+	// Prefix is a prefix that shall be used for the filename of the backups of this etcd.
+	Prefix string
+	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
+	FullSnapshotSchedule string
+	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+	LeaderElection *gardenletconfigv1alpha1.ETCDBackupLeaderElection
+	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
+	DeltaSnapshotRetentionPeriod *metav1.Duration
+}
+
+// AutoscalingConfig contains information for configuring autoscaling settings for etcd.
+type AutoscalingConfig struct {
+	// MinAllowed are the minimum allowed resources for vertical autoscaling.
+	MinAllowed corev1.ResourceList
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -209,6 +236,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			corev1.ResourceMemory: resource.MustParse("300M"),
 		}
 	}
+
+	maps.Insert(minAllowed, maps.All(e.values.Autoscaling.MinAllowed))
 
 	etcdCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
 	if !found {
@@ -1016,23 +1045,4 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 	caSecretName = etcdPeerCASecret.Name
 	peerSecretName = peerServerSecret.Name
 	return
-}
-
-// BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
-// the etcd's data directory.
-type BackupConfig struct {
-	// Provider is the name of the infrastructure provider for the blob storage bucket.
-	Provider string
-	// Container is the name of the blob storage bucket.
-	Container string
-	// SecretRefName is the name of a Secret object containing the credentials of the selected infrastructure provider.
-	SecretRefName string
-	// Prefix is a prefix that shall be used for the filename of the backups of this etcd.
-	Prefix string
-	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
-	FullSnapshotSchedule string
-	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
-	LeaderElection *gardenletconfigv1alpha1.ETCDBackupLeaderElection
-	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
-	DeltaSnapshotRetentionPeriod *metav1.Duration
 }
