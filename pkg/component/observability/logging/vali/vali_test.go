@@ -1205,10 +1205,11 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:              ptr.To[int64](10001),
-								RunAsGroup:             ptr.To[int64](10001),
-								RunAsNonRoot:           ptr.To(true),
-								ReadOnlyRootFilesystem: ptr.To(true),
+								AllowPrivilegeEscalation: ptr.To(false),
+								RunAsUser:                ptr.To[int64](10001),
+								RunAsGroup:               ptr.To[int64](10001),
+								RunAsNonRoot:             ptr.To(true),
+								ReadOnlyRootFilesystem:   ptr.To(true),
 							},
 						},
 						{
@@ -1242,10 +1243,11 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:              ptr.To[int64](10001),
-								RunAsGroup:             ptr.To[int64](10001),
-								RunAsNonRoot:           ptr.To(true),
-								ReadOnlyRootFilesystem: ptr.To(true),
+								AllowPrivilegeEscalation: ptr.To(false),
+								RunAsUser:                ptr.To[int64](10001),
+								RunAsGroup:               ptr.To[int64](10001),
+								RunAsNonRoot:             ptr.To(true),
+								ReadOnlyRootFilesystem:   ptr.To(true),
 							},
 						},
 					},
@@ -1308,6 +1310,7 @@ wait
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
 					Capabilities: &corev1.Capabilities{
 						Add: []corev1.Capability{
 							"NET_ADMIN",
@@ -1367,10 +1370,11 @@ wait
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					RunAsUser:              ptr.To[int64](65532),
-					RunAsGroup:             ptr.To[int64](65534),
-					RunAsNonRoot:           ptr.To(true),
-					ReadOnlyRootFilesystem: ptr.To(true),
+					AllowPrivilegeEscalation: ptr.To(false),
+					RunAsUser:                ptr.To[int64](65532),
+					RunAsGroup:               ptr.To[int64](65534),
+					RunAsNonRoot:             ptr.To(true),
+					ReadOnlyRootFilesystem:   ptr.To(true),
 				},
 			},
 		}...)

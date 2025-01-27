@@ -257,6 +257,9 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 							Image:           l.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         l.computeCommand(),
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("12m"),

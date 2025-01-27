@@ -314,6 +314,9 @@ metadata:
 											{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
 											{Name: "PL_PATHS_CONFIG", Value: "/usr/local/etc/plutono/plutono.ini"},
 										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
+										},
 										VolumeMounts: []corev1.VolumeMount{
 											{
 												Name:      "datasources",
@@ -355,6 +358,10 @@ metadata:
 											"sidecar.py",
 											"--req-username-file=/etc/dashboard-refresher/plutono-admin/username",
 											"--req-password-file=/etc/dashboard-refresher/plutono-admin/password",
+										},
+										SecurityContext: &corev1.SecurityContext{
+
+											AllowPrivilegeEscalation: ptr.To(false),
 										},
 										Env: []corev1.EnvVar{
 											{Name: "LOG_LEVEL", Value: "INFO"},

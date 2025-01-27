@@ -591,10 +591,11 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									RunAsUser:              ptr.To(valiUserAndGroupId),
-									RunAsGroup:             ptr.To(valiUserAndGroupId),
-									RunAsNonRoot:           ptr.To(true),
-									ReadOnlyRootFilesystem: ptr.To(true),
+									AllowPrivilegeEscalation: ptr.To(false),
+									RunAsUser:                ptr.To(valiUserAndGroupId),
+									RunAsGroup:               ptr.To(valiUserAndGroupId),
+									RunAsNonRoot:             ptr.To(true),
+									ReadOnlyRootFilesystem:   ptr.To(true),
 								},
 							},
 							{
@@ -624,10 +625,11 @@ func (v *vali) getStatefulSet(valiConfigMapName, telegrafConfigMapName, genericT
 									},
 								},
 								SecurityContext: &corev1.SecurityContext{
-									RunAsUser:              ptr.To(valiUserAndGroupId),
-									RunAsGroup:             ptr.To(valiUserAndGroupId),
-									RunAsNonRoot:           ptr.To(true),
-									ReadOnlyRootFilesystem: ptr.To(true),
+									AllowPrivilegeEscalation: ptr.To(false),
+									RunAsUser:                ptr.To(valiUserAndGroupId),
+									RunAsGroup:               ptr.To(valiUserAndGroupId),
+									RunAsNonRoot:             ptr.To(true),
+									ReadOnlyRootFilesystem:   ptr.To(true),
 								},
 							},
 						},
@@ -693,6 +695,7 @@ wait
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
 				Capabilities: &corev1.Capabilities{
 					Add: []corev1.Capability{"NET_ADMIN"},
 				},
@@ -753,10 +756,11 @@ wait
 					Protocol:      corev1.ProtocolTCP,
 				}},
 				SecurityContext: &corev1.SecurityContext{
-					RunAsUser:              ptr.To[int64](65532),
-					RunAsGroup:             ptr.To[int64](65534),
-					RunAsNonRoot:           ptr.To(true),
-					ReadOnlyRootFilesystem: ptr.To(true),
+					AllowPrivilegeEscalation: ptr.To(false),
+					RunAsUser:                ptr.To[int64](65532),
+					RunAsGroup:               ptr.To[int64](65534),
+					RunAsNonRoot:             ptr.To(true),
+					ReadOnlyRootFilesystem:   ptr.To(true),
 				},
 			})
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(statefulSet, genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, kubeRBACProxyName))
