@@ -44,9 +44,12 @@ spec:
     networking:
       # Those CIDRs have been chosen to match with the kind Cluster configuration (see example/gardener-local/kind/cluster/values.yaml).
       # Generally, they have to match the CIDRs of the runtime cluster.
-      nodes: 172.18.0.0/16
-      pods: 10.1.0.0/16
-      services: 10.2.0.0/16
+      nodes:
+      - 172.18.0.0/16
+      pods:
+      - 10.1.0.0/16
+      services:
+      - 10.2.0.0/16
     provider:
       region: local
       zones:
@@ -280,4 +283,5 @@ spec:
         begin: 220000+0100
         end: 230000+0100
     networking:
-      services: 100.64.0.0/13
+      services:
+      - 100.64.0.0/13
