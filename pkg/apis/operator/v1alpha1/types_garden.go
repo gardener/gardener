@@ -126,19 +126,15 @@ type DNSDomain struct {
 
 // RuntimeNetworking defines the networking configuration of the runtime cluster.
 type RuntimeNetworking struct {
-	// Nodes is the CIDR of the node network. This field is immutable.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// Nodes are the CIDRs of the node network. Elements can be appended to this list, but not removed.
 	// +optional
-	Nodes *string `json:"nodes,omitempty"`
-	// Pods is the CIDR of the pod network. This field is immutable.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Pods string `json:"pods"`
-	// Services is the CIDR of the service network. This field is immutable.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Services string `json:"services"`
+	Nodes []string `json:"nodes,omitempty"`
+	// Pods are the CIDRs of the pod network. Elements can be appended to this list, but not removed.
+	// +kubebuilder:validation:MinItems=1
+	Pods []string `json:"pods"`
+	// Services are the CIDRs of the service network. Elements can be appended to this list, but not removed.
+	// +kubebuilder:validation:MinItems=1
+	Services []string `json:"services"`
 	// BlockCIDRs is a list of network addresses that should be blocked.
 	// +optional
 	BlockCIDRs []string `json:"blockCIDRs,omitempty"`
@@ -410,10 +406,9 @@ type SNI struct {
 
 // Networking defines networking parameters for the virtual garden cluster.
 type Networking struct {
-	// Services is the CIDR of the service network. This field is immutable.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Services string `json:"services"`
+	// Services are the CIDRs of the service network. Elements can be appended to this list, but not removed.
+	// +kubebuilder:validation:MinItems=1
+	Services []string `json:"services"`
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.

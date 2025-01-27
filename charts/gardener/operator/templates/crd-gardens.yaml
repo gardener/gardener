@@ -206,29 +206,25 @@ spec:
                           type: string
                         type: array
                       nodes:
-                        description: Nodes is the CIDR of the node network. This field
-                          is immutable.
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
+                        description: Nodes are the CIDRs of the node network. Elements
+                          can be appended to this list, but not removed.
+                        items:
+                          type: string
+                        type: array
                       pods:
-                        description: Pods is the CIDR of the pod network. This field
-                          is immutable.
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
+                        description: Pods are the CIDRs of the pod network. Elements
+                          can be appended to this list, but not removed.
+                        items:
+                          type: string
+                        minItems: 1
+                        type: array
                       services:
-                        description: Services is the CIDR of the service network.
-                          This field is immutable.
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
+                        description: Services are the CIDRs of the service network.
+                          Elements can be appended to this list, but not removed.
+                        items:
+                          type: string
+                        minItems: 1
+                        type: array
                     required:
                     - pods
                     - services
@@ -1806,13 +1802,12 @@ spec:
                       such as CIDRs, etc.
                     properties:
                       services:
-                        description: Services is the CIDR of the service network.
-                          This field is immutable.
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
+                        description: Services are the CIDRs of the service network.
+                          Elements can be appended to this list, but not removed.
+                        items:
+                          type: string
+                        minItems: 1
+                        type: array
                     required:
                     - services
                     type: object
