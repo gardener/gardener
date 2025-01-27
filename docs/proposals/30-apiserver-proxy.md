@@ -39,18 +39,18 @@ The rework allows more scenarios like using the [ACL extension](https://github.c
 ## Motivation
 
 Since [GEP-08](08-shoot-apiserver-via-sni.md) introduced shared LoadBalancers for shoot control planes on the seed side, clients need to indicate which control plane they want to connect to through the LoadBalancer.
-The Envoy proxy in the Istio ingress gateway receives the traffic from the shared LoadBalancer and is responsible routing traffic to the indicated control plane.
+The Envoy proxy in the Istio ingress gateway receives the traffic from the shared LoadBalancer and is responsible for routing traffic to the indicated control plane.
 For this, Gardener currently uses different protocols based on the connection type:
 
-- When connecting to a shoot's API server directly, this is done using TLS SNI (Server Name Indication). I.e., the destination API server is indicated by the hostname in the SNI header of the TLS handshake.
-- When connecting to a shoot's API server via the `kubernetes` Service (fallback to the previous protocol for in-cluster clients), the SNI header is set to the same value (`kubernetes.default.svc.cluster.local`) on all shoots and cannot be used to indicate the destination API server. Therefore, the API server proxy handles traffic on this service and prepends a proxy protocol header with a shoot-specific destination IP to indicate the destination.
+- When connecting to a shoot's API server directly, this is done using TLS SNI (Server Name Indication). I.e., the destination API server is indicated by the hostname in the SNI extension of the TLS client hello packet.
+- When connecting to a shoot's API server via the `kubernetes` Service in the shoot cluster itself, the SNI extension is set to the same value (`kubernetes.default.svc.cluster.local`) on all shoots and cannot be used to indicate the destination API server. Therefore, the API server proxy handles traffic on this service and prepends a proxy protocol header with a shoot-specific destination IP to indicate the destination.
 - When connecting to a shoot's VPN server, the shoot VPN client sends an HTTP CONNECT request to the shared LoadBalancer and indicates the destination by adding the `Reversed-VPN` HTTP header with the Envoy cluster string as a value (e.g., `outbound|1194||vpn-seed-server-0.shoot--foo--bar.svc.cluster.local`). I.e., it uses the ingress gateway as an HTTP proxy. In contrast to usual HTTP proxies, the target in the CONNECT request line is discarded.
 
 Note that in all cases the payload (HTTP request or OpenVPN tunnel) is end-to-end encrypted even if it is tunneled via an unencrypted HTTP connection.
 
 Shoot owners can use the [ACL extension](https://github.com/stackitcloud/gardener-extension-acl) for restricting traffic to the control plane based on client IPs – on all three of the described connection types.
 In seed setups where only opaque LoadBalancers are available, the Gardener operator needs to configure the LoadBalancer to use the proxy protocol to preserve the original client IP.
-With the proxy protocol, the original client IP is lost and the ACL extension cannot restrict the traffic as configured.
+Without the proxy protocol, the original client IP is lost and the ACL extension cannot restrict the traffic as configured.
 
 Restricting control plane traffic in such setups works for traffic using the TLS SNI and the HTTP CONNECT protocol.
 However, this doesn't work for traffic using the proxy protocol (API server proxy) because it contains two proxy protocol headers and Envoy only allows using the information from the last header.
@@ -142,7 +142,7 @@ Finally, the `transport_socket` is removed which disables adding the proxy proto
 
 With this, a connection is established as follows:
 
-1. An in-cluster client (e.g., pod) opens a TLS connection to `kubernetes.default.svc.cluster.local`.
+1. An in-cluster client (e.g., pod) opens a TLS connection to `kubernetes.default.svc.cluster.local`. This service domain name points to an address which the API Server proxy listens on.
 2. The Envoy process in the API server proxy pod on the same node sends an HTTP CONNECT request to the API server domain of the shoot, i.e., to the ingress gateway on the corresponding seed.
 3. The ingress gateway discards the target from the HTTP request line and opens a TCP connection to the upstream cluster indicated by the `X-Gardener-Destination` header, i.e., in-cluster service of the shoot cluster.
 4. The TLS payload is proxied from the in-cluster client via the API server proxy and the ingress gateway to the shoot API server.
@@ -243,7 +243,8 @@ The existing `EnvoyFilter` `reversed-vpn` is changed to handle the new use case 
 
 The existing route matcher in the `reversed-vpn` virtual host is extended to additionally check the `Reversed-VPN` header.
 The header's value must match the given regex, so that only VPN servers can be specified as the proxy destination.
-Then, a new route is added to the same virtual host that matches and validates the new `X-Gardener-Destination` header but also allows shoot API servers as valid destinations.
+Then, a new route is added to the same virtual host that matches and validates the new `X-Gardener-Destination` header but allows both shoot API servers and VPN servers as valid destinations.
+The VPN servers are accepted as valid destinations in preparation for [unifying the network infrastructure](#unifying-the-http-proxy-infrastructure) later on.
 As before, all unmatched CONNECT requests are redirected to port 443.
 
 Finally, the external authorization server configuration is removed, because the route matchers fulfill the same functionality but without an externally developed component (see the [ext-authz-server](https://github.com/gardener/ext-authz-server) repository).
@@ -307,7 +308,7 @@ The feature gate allows the Gardener operator to delay the removal of the ingres
 With this, we ensure the Gardener operator is not blocked in upgrading to a newer version.
 
 The constraints are used as a mechanism for reporting which shoot clusters still use the old configuration of API server proxy and shoot VPN client.
-This helps the Gardener operator to determine easily whether the corresponding feature gate be enabled.
+This helps the Gardener operator to determine easily whether the corresponding feature gate can be enabled.
 Additionally, gardenlet can prevent misconfiguration by iterating the relevant shoot constraints.
 
 ## Alternatives
