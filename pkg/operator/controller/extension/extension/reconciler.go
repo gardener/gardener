@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/admission"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/controllerregistration"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/runtime"
@@ -50,7 +50,7 @@ const (
 type Reconciler struct {
 	RuntimeClientSet kubernetes.Interface
 	GardenClientMap  clientmap.ClientMap
-	Config           config.OperatorConfiguration
+	Config           operatorconfigv1alpha1.OperatorConfiguration
 	GardenNamespace  string
 	HelmRegistry     oci.Interface
 	Clock            clock.Clock

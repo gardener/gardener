@@ -39,7 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller"
 	"github.com/gardener/gardener/pkg/operator/webhook"
@@ -73,7 +73,7 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *config.OperatorConfiguration) error {
+func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *operatorconfigv1alpha1.OperatorConfiguration) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	log.Info("Getting rest config")
@@ -81,15 +81,15 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		cfg.RuntimeClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restConfig, err := kubernetes.RESTConfigFromInternalClientConnectionConfiguration(&cfg.RuntimeClientConnection, nil, kubernetes.AuthTokenFile)
+	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.RuntimeClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}
 
 	var extraHandlers map[string]http.Handler
-	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
+	if cfg.Debugging != nil && ptr.Deref(cfg.Debugging.EnableProfiling, false) {
 		extraHandlers = routes.ProfilingHandlers
-		if cfg.Debugging.EnableContentionProfiling {
+		if ptr.Deref(cfg.Debugging.EnableContentionProfiling, false) {
 			goruntime.SetBlockProfileRate(1)
 		}
 	}
@@ -106,7 +106,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 			ExtraHandlers: extraHandlers,
 		},
 
-		LeaderElection:                cfg.LeaderElection.LeaderElect,
+		LeaderElection:                *cfg.LeaderElection.LeaderElect,
 		LeaderElectionResourceLock:    cfg.LeaderElection.ResourceLock,
 		LeaderElectionID:              cfg.LeaderElection.ResourceName,
 		LeaderElectionNamespace:       cfg.LeaderElection.ResourceNamespace,
@@ -186,7 +186,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 	gardenClientMap, err := clientmapbuilder.
 		NewGardenClientMapBuilder().
 		WithRuntimeClient(mgr.GetClient()).
-		WithInternalClientConnectionConfig(&cfg.VirtualClientConnection).
+		WithClientConnectionConfig(&cfg.VirtualClientConnection).
 		WithGardenNamespace(v1beta1constants.GardenNamespace).
 		Build(mgr.GetLogger())
 	if err != nil {

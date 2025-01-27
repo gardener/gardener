@@ -54,7 +54,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -232,9 +232,9 @@ var _ = Describe("Garden controller tests", func() {
 		gardenClientMap := fakeclientmap.NewClientMapBuilder().WithRuntimeClientForKey(keys.ForGarden(garden), mgr.GetClient(), mgr.GetConfig()).Build()
 
 		Expect((&gardencontroller.Reconciler{
-			Config: config.OperatorConfiguration{
-				Controllers: config.ControllerConfiguration{
-					Garden: config.GardenControllerConfig{
+			Config: operatorconfigv1alpha1.OperatorConfiguration{
+				Controllers: operatorconfigv1alpha1.ControllerConfiguration{
+					Garden: operatorconfigv1alpha1.GardenControllerConfig{
 						ConcurrentSyncs: ptr.To(5),
 						SyncPeriod:      &metav1.Duration{Duration: time.Minute},
 						ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{

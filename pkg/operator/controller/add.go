@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/networkpolicy"
 	"github.com/gardener/gardener/pkg/controller/service"
 	"github.com/gardener/gardener/pkg/controller/vpaevictionrequirements"
-	"github.com/gardener/gardener/pkg/operator/apis/config"
+	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
 	requiredruntime "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
@@ -34,7 +34,7 @@ import (
 )
 
 // AddToManager adds all controllers to the given manager.
-func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *config.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
+func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *operatorconfigv1alpha1.OperatorConfiguration, gardenClientMap clientmap.ClientMap) error {
 	identity, err := gardenerutils.DetermineIdentity()
 	if err != nil {
 		return err
