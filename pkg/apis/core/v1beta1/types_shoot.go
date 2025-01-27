@@ -141,6 +141,9 @@ type ShootSpec struct {
 	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
 	// +optional
 	AccessRestrictions []AccessRestrictionWithOptions `json:"accessRestrictions,omitempty" protobuf:"bytes,24,rep,name=accessRestrictions"`
+	// ETCD contains configuration for etcds of the shoot cluster.
+	// +optional
+	ETCD *ETCD `json:"etcd,omitempty" protobuf:"bytes,25,opt,name=etcd"`
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -624,6 +627,23 @@ type Kubernetes struct {
 	EnableStaticTokenKubeconfig *bool `json:"enableStaticTokenKubeconfig,omitempty" protobuf:"varint,10,opt,name=enableStaticTokenKubeconfig"`
 }
 
+// ETCD contains configuration for etcds of the shoot cluster.
+type ETCD struct {
+	// Main contains configuration for the main etcd.
+	// +optional
+	Main *ETCDConfig `json:"main,omitempty" protobuf:"bytes,1,opt,name=main"`
+	// Events contains configuration for the events etcd.
+	// +optional
+	Events *ETCDConfig `json:"events,omitempty" protobuf:"bytes,2,opt,name=events"`
+}
+
+// ETCDConfig contains etcd configuration.
+type ETCDConfig struct {
+	// Autoscaling contains auto-scaling configuration options for etcd.
+	// +optional
+	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,1,opt,name=autoscaling"`
+}
+
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 type ClusterAutoscaler struct {
 	// ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).
@@ -907,6 +927,16 @@ type KubeAPIServerConfig struct {
 	// This field is only available for Kubernetes v1.30 or later.
 	// +optional
 	StructuredAuthorization *StructuredAuthorization `json:"structuredAuthorization,omitempty" protobuf:"bytes,18,opt,name=structuredAuthorization"`
+	// Autoscaling contains auto-scaling configuration options for the kube-apiserver.
+	// +optional
+	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,19,opt,name=autoscaling"`
+}
+
+// ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
+type ControlPlaneAutoscaling struct {
+	// MinAllowed configures the minimum allowed resource requests.
+	// +optional
+	MinAllowed corev1.ResourceList `json:"minAllowed,omitempty" protobuf:"bytes,1,rep,name=minAllowed,casttype=ResourceList,castkey=ResourceName"`
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs

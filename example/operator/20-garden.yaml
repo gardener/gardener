@@ -77,18 +77,24 @@ spec:
       main:
         backup:
           provider: local
-        # providerConfig:
-        #   <some-provider-specific-config-for-the-backup-buckets>
+    #     bucketName: gardener-operator # if not provided, gardener-operator generates a name
+    #     providerConfig:
+    #       <some-provider-specific-config-for-the-backup-buckets>
           secretRef:
             name: virtual-garden-etcd-main-backup-local
-        # bucketName: gardener-operator # if not provided, gardener-operator generates a name
         storage:
           capacity: 25Gi
-        # className: default
+    #     className: default
+    #   autoscaling:
+    #     cpu: "2"
+    #     memory: 6Gi
       events:
         storage:
           capacity: 10Gi
-        # className: default
+    #     className: default
+    #   autoscaling:
+    #     cpu: "1"
+    #     memory: 3Gi
     kubernetes:
       version: 1.32.0
     # kubeAPIServer:
@@ -201,6 +207,9 @@ spec:
     #     kubeconfigSecretName: name-of-secret-containing-kubeconfig-for-audit-webhook
     #     batchMaxSize: 1337
     #     version: audit.k8s.io/v1
+    #   autoscaling:
+    #     cpu: "1"
+    #     memory: 3Gi
     #   featureGates:
     #     SomeGardenerFeature: true
     #   logging:

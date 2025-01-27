@@ -565,6 +565,13 @@ message ControlPlane {
   optional HighAvailability highAvailability = 1;
 }
 
+// ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
+message ControlPlaneAutoscaling {
+  // MinAllowed configures the minimum allowed resource requests.
+  // +optional
+  map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> minAllowed = 1;
+}
+
 // ControllerDeployment contains information about how this controller is deployed.
 message ControllerDeployment {
   // Standard object metadata.
@@ -864,6 +871,24 @@ message DualApprovalForDeletion {
   // Defaults to true.
   // +optional
   optional bool includeServiceAccounts = 3;
+}
+
+// ETCD contains configuration for etcds of the shoot cluster.
+message ETCD {
+  // Main contains configuration for the main etcd.
+  // +optional
+  optional ETCDConfig main = 1;
+
+  // Events contains configuration for the events etcd.
+  // +optional
+  optional ETCDConfig events = 2;
+}
+
+// ETCDConfig contains etcd configuration.
+message ETCDConfig {
+  // Autoscaling contains auto-scaling configuration options for etcd.
+  // +optional
+  optional ControlPlaneAutoscaling autoscaling = 1;
 }
 
 // ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
@@ -1278,6 +1303,10 @@ message KubeAPIServerConfig {
   // This field is only available for Kubernetes v1.30 or later.
   // +optional
   optional StructuredAuthorization structuredAuthorization = 18;
+
+  // Autoscaling contains auto-scaling configuration options for the kube-apiserver.
+  // +optional
+  optional ControlPlaneAutoscaling autoscaling = 19;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -3117,6 +3146,10 @@ message ShootSpec {
   // AccessRestrictions describe a list of access restrictions for this shoot cluster.
   // +optional
   repeated AccessRestrictionWithOptions accessRestrictions = 24;
+
+  // ETCD contains configuration for etcds of the shoot cluster.
+  // +optional
+  optional ETCD etcd = 25;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.

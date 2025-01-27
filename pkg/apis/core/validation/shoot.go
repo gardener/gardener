@@ -234,6 +234,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
+	allErrs = append(allErrs, validateETCD(spec.ETCD, fldPath.Child("etcd"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
@@ -902,6 +903,22 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 	return allErrs
 }
 
+func validateETCD(etcd *core.ETCD, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if etcd != nil {
+		if etcd.Main != nil {
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, fldPath.Child("main"))...)
+		}
+
+		if etcd.Events != nil {
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, fldPath.Child("events"))...)
+		}
+	}
+
+	return allErrs
+}
+
 func validateKubernetesForWorkerlessShoot(kubernetes core.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -1478,6 +1495,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		}
 	}
 
+	allErrs = append(allErrs, ValidateControlPlaneAutoscaling(kubeAPIServer.Autoscaling, fldPath.Child("autoscaling"))...)
 	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, version, fldPath.Child("featureGates"))...)
 
 	return allErrs
@@ -2782,4 +2800,21 @@ func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []stri
 	}
 
 	return sets.List(resources)
+}
+
+// ValidateControlPlaneAutoscaling validates the given auto-scaling configuration.
+func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if autoscaling != nil {
+		allowedResources := sets.New[corev1.ResourceName](corev1.ResourceCPU, corev1.ResourceMemory)
+
+		for res := range autoscaling.MinAllowed {
+			if !allowedResources.Has(res) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child(string(res)), res, allowedResources.UnsortedList()))
+			}
+		}
+	}
+
+	return allErrs
 }
