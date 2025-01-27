@@ -584,6 +584,7 @@ profiles:
   - name: ipv6
     activation:
       - env: IPFAMILY=ipv6
+      - env: IPFAMILY=dual
     patches:
       - op: add
         path: /deploy/helm/releases/0/setValues
