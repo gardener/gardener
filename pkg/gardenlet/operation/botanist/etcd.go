@@ -41,6 +41,15 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
 
+	var minAllowed corev1.ResourceList
+
+	switch role {
+	case v1beta1constants.ETCDRoleMain:
+		minAllowed = v1beta1helper.GetMinAllowedForETCDMain(b.Shoot.GetInfo().Spec.ETCD)
+	case v1beta1constants.ETCDRoleEvents:
+		minAllowed = v1beta1helper.GetMinAllowedForETCDEvents(b.Shoot.GetInfo().Spec.ETCD)
+	}
+
 	e := NewEtcd(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -50,6 +59,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			Role:                        role,
 			Class:                       class,
 			Replicas:                    replicas,
+			Autoscaling:                 etcd.AutoscalingConfig{MinAllowed: minAllowed},
 			StorageCapacity:             b.Seed.GetValidVolumeSize("10Gi"),
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),

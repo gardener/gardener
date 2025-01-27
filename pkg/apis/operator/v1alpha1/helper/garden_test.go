@@ -11,6 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -214,5 +216,72 @@ var _ = Describe("helper", func() {
 		Entry("no topology-aware routing setting", &operatorv1alpha1.Settings{}, false),
 		Entry("topology-aware routing enabled", &operatorv1alpha1.Settings{TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{Enabled: true}}, true),
 		Entry("topology-aware routing disabled", &operatorv1alpha1.Settings{TopologyAwareRouting: &operatorv1alpha1.SettingTopologyAwareRouting{Enabled: false}}, false),
+	)
+
+	DescribeTable("#GetMinAllowedForKubeAPIServer",
+		func(apiServerConfig *operatorv1alpha1.KubeAPIServerConfig, expectation corev1.ResourceList) {
+			Expect(GetMinAllowedForKubeAPIServer(apiServerConfig)).To(Equal(expectation))
+		},
+
+		Entry("no kubeAPIServer configured",
+			nil,
+			nil,
+		),
+		Entry("minAllowed configured",
+			&operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+				Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+					MinAllowed: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("100m")},
+				}}},
+			corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("100m")},
+		),
+	)
+
+	DescribeTable("#GetMinAllowedForETCD{Main,Events}",
+		func(etcd *operatorv1alpha1.ETCD, expectationETCDMain, expectationETCDEvents corev1.ResourceList) {
+			Expect(GetMinAllowedForETCDMain(etcd)).To(Equal(expectationETCDMain))
+			Expect(GetMinAllowedForETCDEvents(etcd)).To(Equal(expectationETCDEvents))
+		},
+
+		Entry("no etcd configured (nil)",
+			nil,
+			nil,
+			nil,
+		),
+		Entry("no etcd configured (empty)",
+			&operatorv1alpha1.ETCD{},
+			nil,
+			nil,
+		),
+		Entry("no minAllowed configured",
+			&operatorv1alpha1.ETCD{Main: &operatorv1alpha1.ETCDMain{Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{}}},
+			nil,
+			nil,
+		),
+		Entry("only etcd events configured",
+			&operatorv1alpha1.ETCD{Events: &operatorv1alpha1.ETCDEvents{Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+				MinAllowed: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("50m")},
+			}}},
+			nil,
+			corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("50m")},
+		),
+		Entry("only etcd main configured",
+			&operatorv1alpha1.ETCD{Main: &operatorv1alpha1.ETCDMain{Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+				MinAllowed: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("100m")},
+			}}},
+			corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("100m")},
+			nil,
+		),
+		Entry("minAllowed configured for etcd main and etcd events",
+			&operatorv1alpha1.ETCD{
+				Main: &operatorv1alpha1.ETCDMain{Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+					MinAllowed: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("100m")},
+				}},
+				Events: &operatorv1alpha1.ETCDEvents{Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+					MinAllowed: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("50m")},
+				}},
+			},
+			corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("100m")},
+			corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("50m")},
+		),
 	)
 })
