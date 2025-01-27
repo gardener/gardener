@@ -5,7 +5,6 @@
 package validation
 
 import (
-	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -92,17 +91,10 @@ func ValidateNetworkSpecUpdate(new, old *extensionsv1alpha1.NetworkSpec, deletio
 		return apivalidation.ValidateImmutableField(new, old, fldPath)
 	}
 
+	allErrs = append(allErrs, ValidateIPFamiliesUpdate(new.IPFamilies, old.IPFamilies, fldPath.Child("ipFamilies"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.PodCIDR, old.PodCIDR, fldPath.Child("podCIDR"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.ServiceCIDR, old.ServiceCIDR, fldPath.Child("serviceCIDR"))...)
-
-	// allow upgrades from empty IPFamilies to the default of IPv4
-	// the if condition can be removed once the network extension of all shoots have been updated
-	// TODO: Remove in Gardener 1.87
-	if old.IPFamilies != nil || !slices.Equal(new.IPFamilies, []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4}) {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.IPFamilies, old.IPFamilies, fldPath.Child("ipFamilies"))...)
-	}
-
 	return allErrs
 }
 
@@ -133,6 +125,44 @@ func ValidateIPFamilies(ipFamilies []extensionsv1alpha1.IPFamily, fldPath *field
 	if len(allErrs) > 0 {
 		// further validation doesn't make any sense, because there are unsupported or duplicate IP families
 		return allErrs
+	}
+
+	return allErrs
+}
+
+// ValidateIPFamiliesUpdate validates the update of IP families to ensure only allowed transitions.
+func ValidateIPFamiliesUpdate(newIPFamilies, oldIPFamilies []extensionsv1alpha1.IPFamily, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(oldIPFamilies) == 1 && oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 {
+		if len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv4 {
+			// Allow transition from [IPv6] to [IPv6, IPv4]
+			return allErrs
+		}
+	}
+
+	if len(oldIPFamilies) == 2 && oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 && oldIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv6 {
+		if len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv4 {
+			// Allow transition from [IPv4, IPv6] to [IPv6, IPv4]
+			return allErrs
+		}
+	}
+
+	if len(oldIPFamilies) == 2 && oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 && oldIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv4 {
+		if len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv6 {
+			// Allow transition from [IPv6, IPv4] to [IPv4, IPv6]
+			return allErrs
+		}
+	}
+	if len(oldIPFamilies) == 1 && oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 {
+		if len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv6 {
+			// Allow transition from [IPv4] to [IPv4, IPv6]
+			return allErrs
+		}
+	}
+
+	if !apiequality.Semantic.DeepEqual(newIPFamilies, oldIPFamilies) {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "unsupported IP family update"))
 	}
 
 	return allErrs

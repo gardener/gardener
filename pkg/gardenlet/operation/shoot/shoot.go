@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -544,6 +545,36 @@ func sortByIPFamilies(ipfamilies []gardencorev1beta1.IPFamily, cidr []net.IPNet)
 	return result
 }
 
+func getPrimaryCIDRs(cidrs []net.IPNet, ipFamilies []gardencorev1beta1.IPFamily) []net.IPNet {
+	var result []net.IPNet
+	isIPv4 := ipFamilies[0] == gardencorev1beta1.IPFamilyIPv4
+	for _, c := range cidrs {
+		if (isIPv4 && c.IP.To4() != nil) || (!isIPv4 && c.IP.To4() == nil) {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
+// CheckDualStackMigrateNetworks checks if the shoot should be migrated to dual-stack networking and sets the shoot status accoridingly.
+func (s *Shoot) CheckDualStackMigrateNetworks(ctx context.Context, gardenClient client.Client, clock clock.Clock) error {
+	shoot := s.GetInfo()
+
+	condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+	if condition == nil && len(shoot.Spec.Networking.IPFamilies) == 2 && shoot.Status.Networking != nil && len(shoot.Status.Networking.Nodes) == 1 {
+		err := s.UpdateInfoStatus(ctx, gardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+			condition := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+			condition = v1beta1helper.UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionFalse, "DualStackMigration", "The shoot is migrating to dual-stack networking.")
+			shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ToNetworks return a network with computed cidrs and ClusterIPs
 // for a Shoot
 func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) {
@@ -598,6 +629,14 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 		} else {
 			nodes = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
+	}
+
+	// During dual-stack migration, until nodes are migrated to  dual-stack, we only use the primary addresses.
+	condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+	if condition != nil && condition.Status != gardencorev1beta1.ConditionTrue {
+		nodes = getPrimaryCIDRs(nodes, shoot.Spec.Networking.IPFamilies)
+		services = getPrimaryCIDRs(services, shoot.Spec.Networking.IPFamilies)
+		pods = getPrimaryCIDRs(pods, shoot.Spec.Networking.IPFamilies)
 	}
 
 	for _, cidr := range services {

@@ -40,6 +40,7 @@ type Interface interface {
 	component.DeployMigrateWaiter
 	SetPodCIDRs([]net.IPNet)
 	SetServiceCIDRs([]net.IPNet)
+	Get(ctx context.Context) (*extensionsv1alpha1.Network, error)
 }
 
 // Values contains the values used to create a Network CRD
@@ -206,4 +207,12 @@ func (n *network) SetPodCIDRs(pods []net.IPNet) {
 
 func (n *network) SetServiceCIDRs(services []net.IPNet) {
 	n.values.ServiceCIDRs = services
+}
+
+// Get retrieves and returns the Network resources based on the configured values.
+func (n *network) Get(ctx context.Context) (*extensionsv1alpha1.Network, error) {
+	if err := n.client.Get(ctx, client.ObjectKeyFromObject(n.network), n.network); err != nil {
+		return nil, err
+	}
+	return n.network, nil
 }

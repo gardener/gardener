@@ -124,6 +124,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	}
 
 	if hasNodesCIDR {
+		err := o.Shoot.CheckDualStackMigrateNetworks(ctx, botanist.GardenClient, botanist.Clock)
+		if err != nil {
+			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+		}
 		networks, err := shoot.ToNetworks(o.Shoot.GetInfo(), o.Shoot.IsWorkerless)
 		if err != nil {
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
@@ -811,6 +815,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			}),
 			SkipIf:       o.Shoot.IsWorkerless || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployWorker, waitUntilWorkerStatusUpdate, deployManagedResourceForGardenerNodeAgent),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Checking dual-stack migration of nodes",
+			Fn:           botanist.CheckPodCIDRsInNodes,
+			SkipIf:       o.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until extension resources handled after workers are ready",
