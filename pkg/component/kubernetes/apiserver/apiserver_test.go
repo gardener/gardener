@@ -3066,6 +3066,9 @@ kind: AuthorizationConfiguration
 							corev1.ResourceMemory: resource.MustParse("4Gi"),
 						},
 					}
+					apiServerSecurityContext = &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+					}
 					eventTTL                            = 2 * time.Hour
 					externalHostname                    = "api.foo.bar.com"
 					images                              = Images{KubeAPIServer: "some-kapi-image:latest"}
@@ -3177,6 +3180,7 @@ kind: AuthorizationConfiguration
 						Protocol:      corev1.ProtocolTCP,
 					}))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(apiServerResources))
+					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext).To(Equal(apiServerSecurityContext))
 					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ConsistOf(
 						corev1.VolumeMount{
 							Name:      "audit-policy-config",

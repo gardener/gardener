@@ -605,6 +605,9 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 											SuccessThreshold:    1,
 											FailureThreshold:    2,
 										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
+										},
 										Resources: corev1.ResourceRequirements{
 											Requests: map[corev1.ResourceName]resource.Quantity{
 												corev1.ResourceCPU:    resource.MustParse("20m"),
@@ -625,6 +628,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Name:            "conntrack-fix",
 										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
 											Capabilities: &corev1.Capabilities{
 												Add: []corev1.Capability{"NET_ADMIN"},
 											},
@@ -763,6 +767,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 
 				if k8sGreaterEqual129 {
 					ds.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN", "SYS_RESOURCE"},
 						},
