@@ -1,4 +1,4 @@
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: garden
@@ -6,7 +6,6 @@ manifests:
   rawYaml:
     - example/operator/20-garden.yaml
 deploy:
-  statusCheck: false # enabled status check would watch all deployments in the garden namespace
   kubectl:
     hooks:
       after:
@@ -20,18 +19,19 @@ deploy:
               - bash
               - -ec
               - kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > $VIRTUAL_GARDEN_KUBECONFIG
+  statusCheck: false # enabled status check would watch all deployments in the garden namespace
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: garden-config
 build:
-  insecureRegistries:
-    - garden.local.gardener.cloud:5001
   artifacts:
     - image: local-skaffold/gardener-extension-provider-local-node
       context: pkg/provider-local/node
       docker: {}
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
 manifests:
   rawYaml:
     - example/00-namespace-garden.yaml
@@ -41,9 +41,10 @@ manifests:
     paths:
       - example/provider-local/garden/skaffold-operator
       - example/provider-local/seed-operator/skaffold
+deploy:
+  kubectl: {}
 resourceSelector:
   allow:
     - groupKind: CloudProfile.core.gardener.cloud
-      image: [".*"]
-deploy:
-  kubectl: {}
+      image:
+        - .*

@@ -1,21 +1,8 @@
----
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: gardenadm
 build:
-  insecureRegistries:
-    - garden.local.gardener.cloud:5001
-  tagPolicy:
-    customTemplate:
-      template: "{{.version}}-{{.sha}}"
-      components:
-        - name: version
-          envTemplate:
-            template: "{{.GARDENER_VERSION}}"
-        - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
   artifacts:
     - image: local-skaffold/gardenadm
       ko:
@@ -46,44 +33,45 @@ build:
               - -ec
               - |
                 echo "$SKAFFOLD_IMAGE" > example/gardenadm-local/.skaffold-image
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: '{{.version}}-{{.sha}}'
+      components:
+        - name: version
+          envTemplate:
+            template: '{{.GARDENER_VERSION}}'
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: provider-local-node
 build:
-  insecureRegistries:
-    - garden.local.gardener.cloud:5001
-  tagPolicy:
-    customTemplate:
-      template: "{{.version}}-{{.sha}}"
-      components:
-        - name: version
-          envTemplate:
-            template: "{{.GARDENER_VERSION}}"
-        - name: sha
-          inputDigest: {}
   artifacts:
     - image: local-skaffold/gardener-extension-provider-local-node
       context: pkg/provider-local/node
       docker: {}
----
-apiVersion: skaffold/v4beta7
-kind: Config
-metadata:
-  name: provider-local
-build:
   insecureRegistries:
     - garden.local.gardener.cloud:5001
   tagPolicy:
     customTemplate:
-      template: "{{.version}}-{{.sha}}"
+      template: '{{.version}}-{{.sha}}'
       components:
         - name: version
           envTemplate:
-            template: "{{.GARDENER_VERSION}}"
+            template: '{{.GARDENER_VERSION}}'
         - name: sha
           inputDigest: {}
+---
+apiVersion: skaffold/v4beta12
+kind: Config
+metadata:
+  name: provider-local
+build:
   artifacts:
     - image: local-skaffold/gardener-extension-provider-local
       ko:
@@ -281,22 +269,25 @@ build:
               - hack/generate-kustomize-patch-controllerdeployment-provider-local.sh
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
+        buildCommand: |
+          ./hack/push-helm.sh
         dependencies:
           paths:
             - charts/gardener/provider-local
-        buildCommand: |
-          ./hack/push-helm.sh
       requires:
         - image: local-skaffold/gardener-extension-provider-local
           alias: IMG
-resourceSelector:
-  allow:
-    # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
-    - groupKind: ControllerDeployment.core.gardener.cloud
-      image:
-        - ".helm.ociRepository.ref"
-    - groupKind: CloudProfile.core.gardener.cloud
-      image: [".*"]
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: '{{.version}}-{{.sha}}'
+      components:
+        - name: version
+          envTemplate:
+            template: '{{.GARDENER_VERSION}}'
+        - name: sha
+          inputDigest: {}
 manifests:
   kustomize:
     paths:
@@ -307,8 +298,17 @@ manifests:
           command:
             - bash
             - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
+resourceSelector:
+  # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
+  allow:
+    - groupKind: ControllerDeployment.core.gardener.cloud
+      image:
+        - .helm.ociRepository.ref
+    - groupKind: CloudProfile.core.gardener.cloud
+      image:
+        - .*
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: machine
@@ -332,8 +332,6 @@ deploy:
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-0:/tmp/.skaffold-image
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-1:/tmp/.skaffold-image
         - container:
-            podName: machine-*
-            containerName: node
             command:
               - bash
               - -ec
@@ -359,3 +357,5 @@ deploy:
                 mkdir -p "/gardenadm"
                 cp -f "$tmp_dir/ko-app/gardenadm" "/gardenadm"
                 chmod +x "/gardenadm/gardenadm"
+            podName: machine-*
+            containerName: node

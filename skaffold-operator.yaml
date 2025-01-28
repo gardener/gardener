@@ -1,20 +1,8 @@
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: gardener-operator
 build:
-  insecureRegistries:
-    - garden.local.gardener.cloud:5001
-  tagPolicy:
-    customTemplate:
-      template: "{{.version}}-{{.sha}}"
-      components:
-        - name: version
-          envTemplate:
-            template: "{{.GARDENER_VERSION}}"
-        - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
   artifacts:
     - image: local-skaffold/gardener-operator
       ko:
@@ -920,6 +908,18 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-admission-controller
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: '{{.version}}-{{.sha}}'
+      components:
+        - name: version
+          envTemplate:
+            template: '{{.GARDENER_VERSION}}'
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
 deploy:
   helm:
     releases:
@@ -929,6 +929,8 @@ deploy:
         setValueTemplates:
           env[0].name: GARDENER_OPERATOR_LOCAL
           env[0].value: "true"
+          hostAliases[0].hostnames[0]: api.virtual-garden.local.gardener.cloud
+          hostAliases[0].ip: 10.2.10.2
           image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_operator}}'
           image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_operator}}@{{.IMAGE_DIGEST_local_skaffold_gardener_operator}}'
           imageVectorOverwrite: |
@@ -948,12 +950,9 @@ deploy:
             - name: gardener-admission-controller
               repository: '{{.IMAGE_REPO_local_skaffold_gardener_admission_controller}}'
               tag: '{{.IMAGE_TAG_local_skaffold_gardener_admission_controller}}@{{.IMAGE_DIGEST_local_skaffold_gardener_admission_controller}}'
-          hostAliases[0].ip: "10.2.10.2"
-          hostAliases[0].hostnames[0]: api.virtual-garden.local.gardener.cloud
-          replicaCount: 2
-          nodeToleration:
-            defaultNotReadyTolerationSeconds: 60
-            defaultUnreachableTolerationSeconds: 60
+          nodeToleration.defaultNotReadyTolerationSeconds: "60"
+          nodeToleration.defaultUnreachableTolerationSeconds: "60"
+          replicaCount: "2"
         createNamespace: true
         wait: true
 profiles:
@@ -964,27 +963,15 @@ profiles:
       - op: add
         path: /deploy/helm/releases/0/setValues
         value:
-          replicaCount: 1
           config.leaderElection.leaderElect: false
           config.server.healthProbes.enable: false
+          replicaCount: 1
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: provider-local
 build:
-  insecureRegistries:
-    - garden.local.gardener.cloud:5001
-  tagPolicy:
-    customTemplate:
-      template: "{{.version}}-{{.sha}}"
-      components:
-        - name: version
-          envTemplate:
-            template: "{{.GARDENER_VERSION}}"
-        - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
   artifacts:
     - image: local-skaffold/gardener-extension-provider-local
       ko:
@@ -1246,11 +1233,6 @@ build:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-extension-admission-local
     - image: local-skaffold/machine-controller-manager-provider-local
-      hooks:
-        after:
-          - command:
-              - bash
-              - hack/generate-kustomize-patch-extension-provider-local.sh
       ko:
         dependencies:
           paths:
@@ -1262,6 +1244,11 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/machine-controller-manager-provider-local
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-extension-provider-local.sh
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
         buildCommand: |
@@ -1289,14 +1276,18 @@ build:
         dependencies:
           paths:
             - charts/gardener/admission-local/charts/application
-resourceSelector:
-  allow:
-    # instruct skaffold to inject the built image reference into the image fields in our Extension object
-    - groupKind: Extension.operator.gardener.cloud
-      image:
-        - .spec.deployment.extension.helm.ociRepository.ref
-        - .spec.deployment.admission.runtimeCluster.helm.ociRepository.ref
-        - .spec.deployment.admission.virtualCluster.helm.ociRepository.ref
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: '{{.version}}-{{.sha}}'
+      components:
+        - name: version
+          envTemplate:
+            template: '{{.GARDENER_VERSION}}'
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
 manifests:
   kustomize:
     paths:
@@ -1309,3 +1300,11 @@ manifests:
             - hack/generate-kustomize-patch-extension-provider-local-prow.sh
 deploy:
   kubectl: {}
+resourceSelector:
+  # instruct skaffold to inject the built image reference into the image fields in our Extension object
+  allow:
+    - groupKind: Extension.operator.gardener.cloud
+      image:
+        - .spec.deployment.extension.helm.ociRepository.ref
+        - .spec.deployment.admission.runtimeCluster.helm.ociRepository.ref
+        - .spec.deployment.admission.virtualCluster.helm.ociRepository.ref
