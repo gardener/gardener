@@ -58,8 +58,15 @@ const (
 	// NodeAgentAuthorizer enables authorization of requests from gardener-node-agents to shoot kube-apiservers using an authorization webhook.
 	// Enabling this feature gate restricts the permissions of each gardener-node-agent instance to the objects belonging to its own node only.
 	// owner: @oliver-goetz
-	// alpha: v1.109
+	// alpha: v1.109.0
 	NodeAgentAuthorizer featuregate.Feature = "NodeAgentAuthorizer"
+
+	// CredentialsRotationWithoutWorkersRollout enables starting the credentials rotation without immediately causing
+	// a rolling update of all worker nodes. Instead, the rolling update can be triggered manually by the user at a
+	// later point in time of their convenience.
+	// owner: @rfranzke
+	// alpha: v1.111.0
+	CredentialsRotationWithoutWorkersRollout featuregate.Feature = "CredentialsRotationWithoutWorkersRollout"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -87,13 +94,14 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	DefaultSeccompProfile:     {Default: false, PreRelease: featuregate.Alpha},
-	ShootForceDeletion:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	UseNamespacedCloudProfile: {Default: false, PreRelease: featuregate.Alpha},
-	ShootCredentialsBinding:   {Default: true, PreRelease: featuregate.Beta},
-	NewWorkerPoolHash:         {Default: false, PreRelease: featuregate.Alpha},
-	NewVPN:                    {Default: false, PreRelease: featuregate.Alpha},
-	NodeAgentAuthorizer:       {Default: false, PreRelease: featuregate.Alpha},
+	DefaultSeccompProfile:                    {Default: false, PreRelease: featuregate.Alpha},
+	ShootForceDeletion:                       {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	UseNamespacedCloudProfile:                {Default: false, PreRelease: featuregate.Alpha},
+	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
+	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},
+	NewVPN:                                   {Default: false, PreRelease: featuregate.Alpha},
+	NodeAgentAuthorizer:                      {Default: false, PreRelease: featuregate.Alpha},
+	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

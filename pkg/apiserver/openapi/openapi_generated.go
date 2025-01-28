@@ -148,6 +148,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig":                                 schema_pkg_apis_core_v1beta1_OIDCConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation":                      schema_pkg_apis_core_v1beta1_ObservabilityRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication":          schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout":                      schema_pkg_apis_core_v1beta1_PendingWorkersRollout(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Project":                                    schema_pkg_apis_core_v1beta1_Project(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectList":                                schema_pkg_apis_core_v1beta1_ProjectList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectMember":                              schema_pkg_apis_core_v1beta1_ProjectMember(ref),
@@ -1884,12 +1885,26 @@ func schema_pkg_apis_core_v1beta1_CARotation(ref common.ReferenceCallback) commo
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"pendingWorkersRollouts": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to credentials rotation.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"phase"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -6377,6 +6392,36 @@ func schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref common.R
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_PendingWorkersRollout(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to credentials rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of a worker pool.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_Project(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -8440,12 +8485,26 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountKeyRotation(ref common.Reference
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"pendingWorkersRollouts": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to credentials rotation.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"phase"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

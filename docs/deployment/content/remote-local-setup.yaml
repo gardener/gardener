@@ -99,7 +99,7 @@ spec:
           echo "172.18.255.3 api.virtual-garden.local.gardener.cloud" >> /etc/hosts
           echo "127.0.0.1 garden.local.gardener.cloud"                >> /etc/hosts
           
-          # Resolve e.g. gu-local--e2e-rotate{-wl}.ingress.$seed_name. ... to 127.0.0.1 for the e2e tests:
+          # Resolve e.g. gu-local--e2e-rot{ate{-wl},-noroll}.ingress.$seed_name. ... to 127.0.0.1 for the e2e tests:
           echo '
           address=/.seed.local.gardener.cloud/127.0.0.1
           address=/.garden.external.local.gardener.cloud/127.0.0.1

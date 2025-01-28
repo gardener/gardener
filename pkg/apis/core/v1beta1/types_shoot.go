@@ -293,6 +293,10 @@ type CARotation struct {
 	// triggered.
 	// +optional
 	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
+	// PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+	// credentials rotation.
+	// +optional
+	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,6,rep,name=pendingWorkersRollouts"`
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -344,6 +348,10 @@ type ServiceAccountKeyRotation struct {
 	// triggered.
 	// +optional
 	LastCompletionTriggeredTime *metav1.Time `json:"lastCompletionTriggeredTime,omitempty" protobuf:"bytes,5,opt,name=lastCompletionTriggeredTime"`
+	// PendingWorkersRollouts contains the name of a worker pool and the initiation time of their last rollout due to
+	// credentials rotation.
+	// +optional
+	PendingWorkersRollouts []PendingWorkersRollout `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,6,rep,name=pendingWorkersRollouts"`
 }
 
 // ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
@@ -373,6 +381,12 @@ type CredentialsRotationPhase string
 const (
 	// RotationPreparing is a constant for the credentials rotation phase describing that the procedure is being prepared.
 	RotationPreparing CredentialsRotationPhase = "Preparing"
+	// RotationPreparingWithoutWorkersRollout is a constant for the credentials rotation phase describing that the
+	// procedure is being prepared without triggering a worker pool rollout.
+	RotationPreparingWithoutWorkersRollout CredentialsRotationPhase = "PreparingWithoutWorkersRollout"
+	// RotationWaitingForWorkersRollout is a constant for the credentials rotation phase describing that the procedure
+	// was prepared but is still waiting for the workers to roll out.
+	RotationWaitingForWorkersRollout CredentialsRotationPhase = "WaitingForWorkersRollout"
 	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
 	RotationPrepared CredentialsRotationPhase = "Prepared"
 	// RotationCompleting is a constant for the credentials rotation phase describing that the procedure is being
@@ -381,6 +395,16 @@ const (
 	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
 	RotationCompleted CredentialsRotationPhase = "Completed"
 )
+
+// PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
+// credentials rotation.
+type PendingWorkersRollout struct {
+	// Name is the name of a worker pool.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// LastInitiationTime is the most recent time when the credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,2,opt,name=lastInitiationTime"`
+}
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.
 type ShootAdvertisedAddress struct {

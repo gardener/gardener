@@ -72,6 +72,12 @@ func (v *SSHKeypairVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.SSHKeypair.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
+// ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
+func (v *SSHKeypairVerifier) ExpectPreparingWithoutWorkersRolloutStatus(_ Gomega) {}
+
+// ExpectWaitingForWorkersRolloutStatus is called while waiting for the WaitingForWorkersRollout status.
+func (v *SSHKeypairVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomega) {}
+
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 	sshKeypairRotation := v.Shoot.Status.Credentials.Rotation.SSHKeypair

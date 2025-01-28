@@ -55,6 +55,12 @@ func (v *KubeconfigVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
+// ExpectPreparingWithoutWorkersRolloutStatus is called while waiting for the PreparingWithoutWorkersRollout status.
+func (v *KubeconfigVerifier) ExpectPreparingWithoutWorkersRolloutStatus(_ Gomega) {}
+
+// ExpectWaitingForWorkersRolloutStatus is called while waiting for the WaitingForWorkersRollout status.
+func (v *KubeconfigVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomega) {}
+
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 	kubeconfigRotation := v.Shoot.Status.Credentials.Rotation.Kubeconfig

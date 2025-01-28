@@ -1461,4 +1461,24 @@ var _ = Describe("Helper", func() {
 			Expect(ShouldPrepareShootForMigration(shoot)).To(BeTrue())
 		})
 	})
+
+	Describe("#LastInitiationTimeForWorkerPool", func() {
+		var (
+			poolName                 = "pool"
+			globalLastInitiationTime = ptr.To(metav1.Now())
+			poolLastInitiationTime   = ptr.To(metav1.Time{Time: time.Now().Add(-time.Hour)})
+		)
+
+		It("should return the global last initiation time because list is empty", func() {
+			Expect(LastInitiationTimeForWorkerPool(poolName, nil, globalLastInitiationTime)).To(Equal(globalLastInitiationTime))
+		})
+
+		It("should return the global last initiation time because pool is not found in list", func() {
+			Expect(LastInitiationTimeForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersRollout{{}}, globalLastInitiationTime)).To(Equal(globalLastInitiationTime))
+		})
+
+		It("should return the pool-specific last initiation time because pool is found in list", func() {
+			Expect(LastInitiationTimeForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersRollout{{Name: poolName, LastInitiationTime: poolLastInitiationTime}}, globalLastInitiationTime)).To(Equal(poolLastInitiationTime))
+		})
+	})
 })
