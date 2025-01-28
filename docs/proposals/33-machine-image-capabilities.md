@@ -200,6 +200,9 @@ type Spec struct {
 }
 ```
 
+> [!NOTE] 
+> Due to technical limitations of the protobuf it is not possible to define an array of maps, or a map of string arrays, see [docs](https://protobuf.dev/programming-guides/proto3/#maps). That means ether that the capabilities will be defined internally as a byte array or as a string with comma separated values. To take advantage of most api and code generation features of kubernetes libraries a map of strings seems best, but this consideration is not final and might change in the course of the implementation. I suggest to update the GAP later with whatever proved to be the best solution in terms of performance, maintainability and readability.
+
 For each cloud profile the capabilities are defined in the `spec.capabilities` map.
 The full set of possibilities for each capability is defined here.
 As some capabilities can have multiple values at the same time an array of possible values is used instead of a single value.
