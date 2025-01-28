@@ -908,11 +908,11 @@ func validateETCD(etcd *core.ETCD, fldPath *field.Path) field.ErrorList {
 
 	if etcd != nil {
 		if etcd.Main != nil {
-			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, fldPath.Child("main"))...)
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("main"))...)
 		}
 
 		if etcd.Events != nil {
-			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, fldPath.Child("events"))...)
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}, fldPath.Child("events"))...)
 		}
 	}
 
@@ -1495,7 +1495,15 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		}
 	}
 
-	allErrs = append(allErrs, ValidateControlPlaneAutoscaling(kubeAPIServer.Autoscaling, fldPath.Child("autoscaling"))...)
+	allErrs = append(allErrs, ValidateControlPlaneAutoscaling(
+		kubeAPIServer.Autoscaling,
+		corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("20m"),
+			corev1.ResourceMemory: resource.MustParse("200M"),
+		},
+		fldPath.Child("autoscaling"))...,
+	)
+
 	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, version, fldPath.Child("featureGates"))...)
 
 	return allErrs
@@ -2803,15 +2811,19 @@ func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []stri
 }
 
 // ValidateControlPlaneAutoscaling validates the given auto-scaling configuration.
-func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, fldPath *field.Path) field.ErrorList {
+func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, minRequired corev1.ResourceList, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if autoscaling != nil {
 		allowedResources := sets.New[corev1.ResourceName](corev1.ResourceCPU, corev1.ResourceMemory)
 
-		for res := range autoscaling.MinAllowed {
+		for res, quan := range autoscaling.MinAllowed {
 			if !allowedResources.Has(res) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child(string(res)), res, allowedResources.UnsortedList()))
+			}
+
+			if minValue, ok := minRequired[res]; ok && quan.Cmp(minValue) < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child(string(res)), quan, fmt.Sprintf("value must be bigger than >= %s", minValue.String())))
 			}
 		}
 	}

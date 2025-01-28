@@ -10,7 +10,9 @@ import (
 	"slices"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -267,11 +269,11 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 			}
 		}
 
-		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Main.Autoscaling, etcdMainFldPath.Child("autoscaling"))...)
+		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, etcdMainFldPath.Child("autoscaling"))...)
 	}
 
 	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Events != nil {
-		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Events.Autoscaling, fldPath.Child("etcd", "events", "autoscaling"))...)
+		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Events.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}, fldPath.Child("etcd", "events", "autoscaling"))...)
 	}
 
 	if err := kubernetesversion.CheckIfSupported(virtualCluster.Kubernetes.Version); err != nil {
@@ -337,7 +339,7 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 	return allErrs
 }
 
-func validateETCDAutoscaling(autoscaling *gardencorev1beta1.ControlPlaneAutoscaling, fldPath *field.Path) field.ErrorList {
+func validateETCDAutoscaling(autoscaling *gardencorev1beta1.ControlPlaneAutoscaling, minRequired corev1.ResourceList, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if autoscaling != nil {
@@ -346,7 +348,7 @@ func validateETCDAutoscaling(autoscaling *gardencorev1beta1.ControlPlaneAutoscal
 			allErrs = append(allErrs, field.InternalError(fldPath, err))
 		}
 
-		allErrs = append(allErrs, gardencorevalidation.ValidateControlPlaneAutoscaling(coreAutoscaling, fldPath)...)
+		allErrs = append(allErrs, gardencorevalidation.ValidateControlPlaneAutoscaling(coreAutoscaling, minRequired, fldPath)...)
 	}
 
 	return allErrs

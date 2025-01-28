@@ -1319,14 +1319,14 @@ var _ = Describe("Validation Tests", func() {
 						Main: &operatorv1alpha1.ETCDMain{
 							Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
 								MinAllowed: map[corev1.ResourceName]resource.Quantity{
-									"cpu": {},
+									"memory": resource.MustParse("300M"),
 								},
 							},
 						},
 						Events: &operatorv1alpha1.ETCDEvents{
 							Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
 								MinAllowed: map[corev1.ResourceName]resource.Quantity{
-									"cpu": {},
+									"memory": resource.MustParse("60M"),
 								},
 							},
 						},

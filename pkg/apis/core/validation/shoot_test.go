@@ -226,8 +226,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: map[corev1.ResourceName]resource.Quantity{
-									"cpu":    resource.MustParse("2"),
-									"memory": resource.MustParse("4Gi"),
+									"cpu":    resource.MustParse("20m"),
+									"memory": resource.MustParse("200M"),
 								},
 							},
 						},
@@ -7340,7 +7340,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 			}
 
-			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil)).To(BeEmpty())
+			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, nil)).To(BeEmpty())
 		})
 
 		It("should fail for unsupported resources", func() {
@@ -7350,12 +7350,51 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 			}
 
-			Expect(ValidateControlPlaneAutoscaling(autoscaling, field.NewPath("autoscaling"))).To(ConsistOf(
+			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, field.NewPath("autoscaling"))).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("autoscaling.storage"),
 				})),
 			))
+		})
+
+		When("minimum required values are configured", func() {
+			var minRequired corev1.ResourceList
+
+			BeforeEach(func() {
+				minRequired = corev1.ResourceList{
+					"cpu":    resource.MustParse("10m"),
+					"memory": resource.MustParse("50Mi"),
+				}
+			})
+
+			It("should succeed if value match", func() {
+				autoscaling := &core.ControlPlaneAutoscaling{
+					MinAllowed: map[corev1.ResourceName]resource.Quantity{
+						"cpu":    resource.MustParse("10m"),
+						"memory": resource.MustParse("50Mi"),
+					},
+				}
+
+				Expect(ValidateControlPlaneAutoscaling(autoscaling, minRequired, nil)).To(BeEmpty())
+			})
+
+			It("should fail for values falling below", func() {
+				autoscaling := &core.ControlPlaneAutoscaling{
+					MinAllowed: map[corev1.ResourceName]resource.Quantity{
+						"cpu":    resource.MustParse("9m"),
+						"memory": resource.MustParse("50Mi"),
+					},
+				}
+
+				Expect(ValidateControlPlaneAutoscaling(autoscaling, minRequired, field.NewPath("autoscaling"))).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("autoscaling.cpu"),
+						"BadValue": Equal(resource.MustParse("9m")),
+					})),
+				))
+			})
 		})
 	})
 })
