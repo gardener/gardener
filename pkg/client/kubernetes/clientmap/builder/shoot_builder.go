@@ -8,11 +8,9 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	componentbaseconfig "k8s.io/component-base/config"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 )
 
@@ -39,13 +37,6 @@ func (b *ShootClientMapBuilder) WithGardenClient(client client.Client) *ShootCli
 func (b *ShootClientMapBuilder) WithSeedClient(client client.Client) *ShootClientMapBuilder {
 	b.seedClient = client
 	return b
-}
-
-// WithInternalClientConnectionConfig sets the ClientConnectionConfiguration that should be used by ClientSets created by this ClientMap.
-// Deprecated: use WithClientConnectionConfig instead
-// TODO(timebertt): delete this when finalizing https://github.com/gardener/gardener/issues/11043
-func (b *ShootClientMapBuilder) WithInternalClientConnectionConfig(cfg *componentbaseconfig.ClientConnectionConfiguration) *ShootClientMapBuilder {
-	return b.WithClientConnectionConfig(kubernetes.ConvertClientConnectionConfigurationToExternal(cfg))
 }
 
 // WithClientConnectionConfig sets the ClientConnectionConfiguration that should be used by ClientSets created by this ClientMap.

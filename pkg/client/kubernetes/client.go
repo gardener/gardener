@@ -18,7 +18,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	componentbaseconfig "k8s.io/component-base/config"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -127,28 +126,6 @@ func NewClientFromSecretObject(secret *corev1.Secret, fns ...ConfigFunc) (Interf
 		return NewClientFromBytes(kubeconfig, fns...)
 	}
 	return nil, errors.New("the secret does not contain a field with name 'kubeconfig'")
-}
-
-// RESTConfigFromInternalClientConnectionConfiguration creates a *rest.Config from a componentbaseconfig.ClientConnectionConfiguration and the configured kubeconfig.
-// It takes an optional list of additionally allowed kubeconfig fields.
-// Deprecated: use RESTConfigFromClientConnectionConfiguration instead.
-// TODO(timebertt): delete this when finalizing https://github.com/gardener/gardener/issues/11043
-func RESTConfigFromInternalClientConnectionConfiguration(cfg *componentbaseconfig.ClientConnectionConfiguration, kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
-	return RESTConfigFromClientConnectionConfiguration(ConvertClientConnectionConfigurationToExternal(cfg), kubeconfig, allowedFields...)
-}
-
-// ConvertClientConnectionConfigurationToExternal converts a componentbaseconfig.ClientConnectionConfiguration to componentbaseconfigv1alpha1.ClientConnectionConfiguration.
-// This function is added for supporting the transition to the external version while dropping the internal version of config APIs.
-// Deprecated: use the external version of ClientConnectionConfiguration directly instead.
-// TODO(timebertt): delete this when finalizing https://github.com/gardener/gardener/issues/11043
-func ConvertClientConnectionConfigurationToExternal(cfg *componentbaseconfig.ClientConnectionConfiguration) *componentbaseconfigv1alpha1.ClientConnectionConfiguration {
-	return &componentbaseconfigv1alpha1.ClientConnectionConfiguration{
-		Kubeconfig:         cfg.Kubeconfig,
-		AcceptContentTypes: cfg.AcceptContentTypes,
-		ContentType:        cfg.ContentType,
-		QPS:                cfg.QPS,
-		Burst:              cfg.Burst,
-	}
 }
 
 // RESTConfigFromClientConnectionConfiguration creates a *rest.Config from a componentbaseconfigv1alpha1.ClientConnectionConfiguration and the configured kubeconfig.
