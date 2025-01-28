@@ -8,11 +8,9 @@ import (
 	"errors"
 
 	"github.com/go-logr/logr"
-	componentbaseconfig "k8s.io/component-base/config"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 )
 
@@ -33,13 +31,6 @@ func NewGardenClientMapBuilder() *GardenClientMapBuilder {
 func (b *GardenClientMapBuilder) WithRuntimeClient(client client.Client) *GardenClientMapBuilder {
 	b.runtimeClient = client
 	return b
-}
-
-// WithInternalClientConnectionConfig sets the ClientConnectionConfiguration that should be used by ClientSets created by this ClientMap.
-// Deprecated: use WithClientConnectionConfig instead
-// TODO(timebertt): delete this when finalizing https://github.com/gardener/gardener/issues/11043
-func (b *GardenClientMapBuilder) WithInternalClientConnectionConfig(cfg *componentbaseconfig.ClientConnectionConfiguration) *GardenClientMapBuilder {
-	return b.WithClientConnectionConfig(kubernetes.ConvertClientConnectionConfigurationToExternal(cfg))
 }
 
 // WithClientConnectionConfig sets the ClientConnectionConfiguration that should be used by ClientSets created by this ClientMap.
