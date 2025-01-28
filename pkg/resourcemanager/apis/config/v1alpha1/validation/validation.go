@@ -42,8 +42,6 @@ func ValidateResourceManagerConfiguration(conf *resourcemanagerconfigv1alpha1.Re
 		allErrs = append(allErrs, validateClientConnection(*conf.TargetClientConnection, field.NewPath("targetClientConnection"))...)
 	}
 
-	allErrs = append(allErrs, validateServerConfiguration(conf.Server, field.NewPath("server"))...)
-
 	leaderElectionPath := field.NewPath("leaderElection")
 	internalLeaderElectionConfig := &componentbaseconfig.LeaderElectionConfiguration{}
 	if err := configScheme.Convert(&conf.LeaderElection, internalLeaderElectionConfig, nil); err != nil {
@@ -51,6 +49,8 @@ func ValidateResourceManagerConfiguration(conf *resourcemanagerconfigv1alpha1.Re
 	} else {
 		allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(internalLeaderElectionConfig, leaderElectionPath)...)
 	}
+
+	allErrs = append(allErrs, validateServerConfiguration(conf.Server, field.NewPath("server"))...)
 
 	if !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), conf.LogLevel, logger.AllLogLevels))

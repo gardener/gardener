@@ -54,38 +54,94 @@ var _ = Describe("Validation", func() {
 			Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
 		})
 
-		Context("source client connection", func() {
-			It("should return errors because some values are not satisfying", func() {
-				conf.SourceClientConnection.CacheResyncPeriod = &metav1.Duration{Duration: time.Second}
-				conf.SourceClientConnection.Burst = -1
+		Context("client connection configuration", func() {
+			var (
+				clientConnection *resourcemanagerconfigv1alpha1.ClientConnection
+				fldPath          *field.Path
+			)
 
-				Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("sourceClientConnection.cacheResyncPeriod"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("sourceClientConnection.burst"),
-					})),
-				))
+			BeforeEach(func() {
+				resourcemanagerconfigv1alpha1.SetObjectDefaults_ResourceManagerConfiguration(conf)
+				conf.LeaderElection.ResourceNamespace = "garden"
+			})
+
+			commonTests := func() {
+				It("should allow default client connection configuration", func() {
+					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
+				})
+
+				It("should return errors because some values are invalid", func() {
+					clientConnection.CacheResyncPeriod = &metav1.Duration{Duration: time.Second}
+					clientConnection.Burst = -1
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal(fldPath.Child("cacheResyncPeriod").String()),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal(fldPath.Child("burst").String()),
+						})),
+					))
+				})
+			}
+
+			Context("source client connection", func() {
+				BeforeEach(func() {
+					clientConnection = &conf.SourceClientConnection
+					fldPath = field.NewPath("sourceClientConnection")
+				})
+
+				commonTests()
+			})
+
+			Context("target client connection", func() {
+				BeforeEach(func() {
+					conf.TargetClientConnection = &resourcemanagerconfigv1alpha1.ClientConnection{}
+					clientConnection = conf.TargetClientConnection
+					fldPath = field.NewPath("targetClientConnection")
+				})
+
+				It("should allow omitting target client connection", func() {
+					conf.TargetClientConnection = nil
+
+					Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
+				})
+
+				commonTests()
 			})
 		})
 
-		Context("target client connection", func() {
-			It("should return errors because some values are not satisfying", func() {
-				conf.TargetClientConnection = &resourcemanagerconfigv1alpha1.ClientConnection{}
-				conf.TargetClientConnection.CacheResyncPeriod = &metav1.Duration{Duration: time.Second}
-				conf.TargetClientConnection.Burst = -1
+		Context("leader election configuration", func() {
+			BeforeEach(func() {
+				resourcemanagerconfigv1alpha1.SetObjectDefaults_ResourceManagerConfiguration(conf)
+				conf.LeaderElection.ResourceNamespace = "garden"
+			})
+
+			It("should allow not enabling leader election", func() {
+				conf.LeaderElection.LeaderElect = nil
+
+				Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
+			})
+
+			It("should allow disabling leader election", func() {
+				conf.LeaderElection.LeaderElect = ptr.To(false)
+
+				Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
+			})
+
+			It("should allow default leader election configuration with required fields", func() {
+				Expect(ValidateResourceManagerConfiguration(conf)).To(BeEmpty())
+			})
+
+			It("should reject leader election config with missing required fields", func() {
+				conf.LeaderElection.ResourceNamespace = ""
 
 				Expect(ValidateResourceManagerConfiguration(conf)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("targetClientConnection.cacheResyncPeriod"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("targetClientConnection.burst"),
+						"Field": Equal("leaderElection.resourceNamespace"),
 					})),
 				))
 			})
