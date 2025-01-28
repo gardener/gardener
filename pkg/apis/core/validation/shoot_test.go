@@ -1407,13 +1407,27 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Describe("ClusterAutoscaler options validation", func() {
 				var (
-					negativeDuration = metav1.Duration{Duration: -time.Second}
-					positiveDuration = metav1.Duration{Duration: time.Second}
+					negativeDuration     = metav1.Duration{Duration: -time.Second}
+					positiveDuration     = metav1.Duration{Duration: time.Second}
+					kubernetes132Valid   = core.Kubernetes{Version: "1.32", ClusterAutoscaler: &core.ClusterAutoscaler{ScaleDownDelayAfterAdd: &metav1.Duration{Duration: time.Minute}}}
+					kubernetes132Invalid = core.Kubernetes{Version: "1.32", ClusterAutoscaler: &core.ClusterAutoscaler{ScaleDownDelayAfterAdd: &metav1.Duration{Duration: time.Second}}}
+				)
+
+				DescribeTable("cluster autoscaler values for version >= 1.32",
+					func(caOptions core.ClusterAutoscalerOptions, kubernetesVersion core.Kubernetes, matcher gomegatypes.GomegaMatcher) {
+						Expect(ValidateClusterAutoscalerOptions(&caOptions, kubernetesVersion, nil)).To(matcher)
+					},
+					Entry("valid with ScaleDownUnneededTime and ScaleDownDelayAfterAdd", core.ClusterAutoscalerOptions{
+						ScaleDownUnneededTime: ptr.To(metav1.Duration{Duration: time.Minute}),
+					}, kubernetes132Valid, BeEmpty()),
+					Entry("invalid less than 1min ScaleDownUnneededTime and ScaleDownDelayAfterAdd", core.ClusterAutoscalerOptions{
+						ScaleDownUnneededTime: ptr.To(metav1.Duration{Duration: time.Second}),
+					}, kubernetes132Invalid, ConsistOf(field.Invalid(field.NewPath("scaleDownUnneededTime"), metav1.Duration{Duration: time.Second}, "for Kubernetes versions >= 1.32, worker ScaleDownUnneededTime can not be less than 1min when kubernetes.clusterAutoscaler.ScaleDownDelayAfterAdd is also less than 1min"))),
 				)
 
 				DescribeTable("cluster autoscaler values",
 					func(caOptions core.ClusterAutoscalerOptions, matcher gomegatypes.GomegaMatcher) {
-						Expect(ValidateClusterAutoscalerOptions(&caOptions, nil)).To(matcher)
+						Expect(ValidateClusterAutoscalerOptions(&caOptions, core.Kubernetes{Version: "1.31"}, nil)).To(matcher)
 					},
 					Entry("valid with empty options", core.ClusterAutoscalerOptions{}, BeEmpty()),
 					Entry("valid with nil options", nil, BeEmpty()),
@@ -2821,6 +2835,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		var (
+			underOneMinute                      = metav1.Duration{Duration: time.Second}
+			overOneMinute                       = metav1.Duration{Duration: time.Minute}
 			negativeDuration                    = metav1.Duration{Duration: -time.Second}
 			negativeInteger               int32 = -100
 			positiveInteger               int32 = 100
@@ -2964,6 +2980,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("invalid with negative maxEmptyBulkDelete", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete: &negativeInteger,
 				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("maxEmptyBulkDelete"), negativeInteger, "can not be negative"))),
+				Entry("valid with ScaleDownUnneededTime and ScaleDownDelayAfterAdd both greater than 1min", core.ClusterAutoscaler{
+					ScaleDownUnneededTime: &overOneMinute, ScaleDownDelayAfterAdd: &overOneMinute,
+				}, version_1_32, BeEmpty()),
+				Entry("valid with ScaleDownUnneededTime less than 1min and ScaleDownDelayAfterAdd greater than 1min", core.ClusterAutoscaler{
+					ScaleDownUnneededTime: &underOneMinute, ScaleDownDelayAfterAdd: &overOneMinute,
+				}, version_1_32, BeEmpty()),
+				Entry("valid with ScaleDownUnneededTime greater than 1min and ScaleDownDelayAfterAdd less than 1min", core.ClusterAutoscaler{
+					ScaleDownUnneededTime: &overOneMinute, ScaleDownDelayAfterAdd: &underOneMinute,
+				}, version_1_32, BeEmpty()),
+				Entry("invalid ScaleDownUnneededTime less than 1min and ScaleDownDelayAfterAdd less than 1min", core.ClusterAutoscaler{
+					ScaleDownUnneededTime: &underOneMinute, ScaleDownDelayAfterAdd: &underOneMinute,
+				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("scaleDownUnneededTime"), metav1.Duration{Duration: underOneMinute.Duration}, "for Kubernetes versions >= 1.32, ScaleDownUnneededTime cannot be less than 1min when ScaleDownDelayAfterAdd is also less than 1min"))),
 			)
 
 			Describe("taint validation", func() {

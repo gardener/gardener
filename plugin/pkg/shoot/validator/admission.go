@@ -846,41 +846,6 @@ func (c *validationContext) validateAdmissionPlugins(a admission.Attributes, sec
 	return allErrs
 }
 
-// For backwards-compatibility, we want to validate the scaleDownUnneededTime and scaleDownDelayAfterAdd only for newly created Shoot clusters.
-// Performing the validation for all Shoots would prevent already existing Shoots with the wrong spec to be updated/deleted.
-// Validation implies that ScaleDownDelayAfterAdd and ScaleDownUnneededTime shouldn't be less than a minute at the same time to avoid scaling cycles.
-func (c *validationContext) validateClusterAutoscaler(a admission.Attributes) field.ErrorList {
-	var allErrs field.ErrorList
-
-	if a.GetOperation() != admission.Create {
-		return nil
-	}
-
-	if c.shoot.Spec.Kubernetes.ClusterAutoscaler == nil || c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd == nil {
-		return nil
-	}
-
-	scaleDownDelayAfterAdd := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd
-	scaleDownUnneededTime := c.shoot.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime
-	if scaleDownUnneededTime != nil &&
-		scaleDownDelayAfterAdd.Duration < 1*time.Minute &&
-		scaleDownUnneededTime.Duration < 1*time.Minute {
-		fldPath := field.NewPath("spec", "kubernetes", "clusterAutoscaler", "scaleDownUnneededTime")
-		allErrs = append(allErrs, field.Invalid(fldPath, scaleDownUnneededTime.Duration, "cannot be less than 1min when scaleDownDelayAfterAdd is also less than 1min"))
-	}
-
-	fldPath := field.NewPath("spec", "provider", "workers")
-	for i, worker := range c.shoot.Spec.Provider.Workers {
-		if worker.ClusterAutoscaler != nil && worker.ClusterAutoscaler.ScaleDownUnneededTime != nil &&
-			scaleDownDelayAfterAdd.Duration < 1*time.Minute &&
-			worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration < 1*time.Minute {
-			allErrs = append(allErrs, field.Invalid(fldPath.Index(i).Child("clusterAutoscaler", "scaleDownUnneededTime"), worker.ClusterAutoscaler.ScaleDownUnneededTime.Duration, "cannot be less than 1min when scaleDownDelayAfterAdd is also less than 1min"))
-		}
-	}
-
-	return allErrs
-}
-
 // For backwards-compatibility, we want to validate the oidc config only for newly created Shoot clusters.
 // Performing the validation for all Shoots would prevent already existing Shoots with the wrong spec to be updated/deleted.
 // There is additional oidc config validation in the static API validation.
@@ -1037,7 +1002,6 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 	}
 
 	allErrs = append(allErrs, c.validateKubeAPIServerOIDCConfig(a)...)
-	allErrs = append(allErrs, c.validateClusterAutoscaler(a)...)
 
 	if c.shoot.DeletionTimestamp == nil {
 		performKubernetesDefaulting(c.shoot, c.oldShoot)

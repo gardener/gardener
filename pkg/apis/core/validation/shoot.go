@@ -1127,6 +1127,12 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxGracefulTerminationSeconds"), *maxGracefulTerminationSeconds, "can not be negative"))
 	}
 
+	k8sGreaterEqual132, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.32")
+	if k8sGreaterEqual132 && autoScaler.ScaleDownDelayAfterAdd != nil && autoScaler.ScaleDownUnneededTime != nil &&
+		autoScaler.ScaleDownDelayAfterAdd.Duration < 1*time.Minute && autoScaler.ScaleDownUnneededTime.Duration < 1*time.Minute {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUnneededTime"), *autoScaler.ScaleDownUnneededTime, "for Kubernetes versions >= 1.32, ScaleDownUnneededTime cannot be less than 1min when ScaleDownDelayAfterAdd is also less than 1min"))
+	}
+
 	if expander := autoScaler.Expander; expander != nil {
 		expanderArray := strings.Split(string(*expander), ",")
 		for _, exp := range expanderArray {
@@ -1788,14 +1794,14 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 	}
 
 	if worker.ClusterAutoscaler != nil {
-		allErrs = append(allErrs, ValidateClusterAutoscalerOptions(worker.ClusterAutoscaler, fldPath.Child("autoscaler"))...)
+		allErrs = append(allErrs, ValidateClusterAutoscalerOptions(worker.ClusterAutoscaler, kubernetes, fldPath.Child("autoscaler"))...)
 	}
 
 	return allErrs
 }
 
 // ValidateClusterAutoscalerOptions validates the cluster autoscaler options of worker pools.
-func ValidateClusterAutoscalerOptions(caOptions *core.ClusterAutoscalerOptions, fldPath *field.Path) field.ErrorList {
+func ValidateClusterAutoscalerOptions(caOptions *core.ClusterAutoscalerOptions, kubernetes core.Kubernetes, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if scaleDownUtilThreshold := caOptions.ScaleDownUtilizationThreshold; scaleDownUtilThreshold != nil {
@@ -1822,6 +1828,11 @@ func ValidateClusterAutoscalerOptions(caOptions *core.ClusterAutoscalerOptions, 
 	}
 	if maxNodeProvisionTime := caOptions.MaxNodeProvisionTime; maxNodeProvisionTime != nil && maxNodeProvisionTime.Duration < 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNodeProvisionTime"), *maxNodeProvisionTime, "can not be negative"))
+	}
+	k8sGreaterEqual132, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.32")
+	if scaleDownUnneededTime := caOptions.ScaleDownUnneededTime; k8sGreaterEqual132 && kubernetes.ClusterAutoscaler != nil && kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd != nil && scaleDownUnneededTime != nil &&
+		kubernetes.ClusterAutoscaler.ScaleDownDelayAfterAdd.Duration < 1*time.Minute && scaleDownUnneededTime.Duration < 1*time.Minute {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUnneededTime"), *scaleDownUnneededTime, "for Kubernetes versions >= 1.32, worker ScaleDownUnneededTime can not be less than 1min when kubernetes.clusterAutoscaler.ScaleDownDelayAfterAdd is also less than 1min"))
 	}
 
 	return allErrs
