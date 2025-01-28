@@ -11,6 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/utils/ptr"
 
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1/validation"
@@ -23,6 +25,74 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 		conf = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
 			Controllers: controllermanagerconfigv1alpha1.ControllerManagerControllerConfiguration{},
 		}
+	})
+
+	Context("client connection configuration", func() {
+		var (
+			clientConnection *componentbaseconfigv1alpha1.ClientConnectionConfiguration
+			fldPath          *field.Path
+		)
+
+		BeforeEach(func() {
+			controllermanagerconfigv1alpha1.SetObjectDefaults_ControllerManagerConfiguration(conf)
+
+			clientConnection = &conf.GardenClientConnection
+			fldPath = field.NewPath("gardenClientConnection")
+		})
+
+		It("should allow default client connection configuration", func() {
+			Expect(ValidateControllerManagerConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should return errors because some values are invalid", func() {
+			clientConnection.Burst = -1
+
+			Expect(ValidateControllerManagerConfiguration(conf)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fldPath.Child("burst").String()),
+				})),
+			))
+		})
+	})
+
+	Context("leader election configuration", func() {
+		BeforeEach(func() {
+			controllermanagerconfigv1alpha1.SetObjectDefaults_ControllerManagerConfiguration(conf)
+		})
+
+		It("should allow omitting leader election config", func() {
+			conf.LeaderElection = nil
+
+			Expect(ValidateControllerManagerConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should allow not enabling leader election", func() {
+			conf.LeaderElection.LeaderElect = nil
+
+			Expect(ValidateControllerManagerConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should allow disabling leader election", func() {
+			conf.LeaderElection.LeaderElect = ptr.To(false)
+
+			Expect(ValidateControllerManagerConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should allow default leader election configuration with required fields", func() {
+			Expect(ValidateControllerManagerConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should reject leader election config with missing required fields", func() {
+			conf.LeaderElection.ResourceNamespace = ""
+
+			Expect(ValidateControllerManagerConfiguration(conf)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("leaderElection.resourceNamespace"),
+				})),
+			))
+		})
 	})
 
 	Context("ProjectControllerConfiguration", func() {

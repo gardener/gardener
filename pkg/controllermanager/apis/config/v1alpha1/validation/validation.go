@@ -6,16 +6,49 @@ package validation
 
 import (
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
 
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 )
 
+var configScheme = runtime.NewScheme()
+
+func init() {
+	schemeBuilder := runtime.NewSchemeBuilder(
+		controllermanagerconfigv1alpha1.AddToScheme,
+		componentbaseconfigv1alpha1.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
+}
+
 // ValidateControllerManagerConfiguration validates the given `ControllerManagerConfiguration`.
 func ValidateControllerManagerConfiguration(conf *controllermanagerconfigv1alpha1.ControllerManagerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	clientConnectionPath := field.NewPath("gardenClientConnection")
+	internalClientConnectionConfig := &componentbaseconfig.ClientConnectionConfiguration{}
+	if err := configScheme.Convert(&conf.GardenClientConnection, internalClientConnectionConfig, nil); err != nil {
+		allErrs = append(allErrs, field.InternalError(clientConnectionPath, err))
+	} else {
+		allErrs = append(allErrs, componentbaseconfigvalidation.ValidateClientConnectionConfiguration(internalClientConnectionConfig, clientConnectionPath)...)
+	}
+
+	if conf.LeaderElection != nil {
+		leaderElectionPath := field.NewPath("leaderElection")
+		internalLeaderElectionConfig := &componentbaseconfig.LeaderElectionConfiguration{}
+		if err := configScheme.Convert(conf.LeaderElection, internalLeaderElectionConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(leaderElectionPath, err))
+		} else {
+			allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(internalLeaderElectionConfig, leaderElectionPath)...)
+		}
+	}
 
 	if conf.LogLevel != "" {
 		if !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
