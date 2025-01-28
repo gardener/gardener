@@ -12,12 +12,52 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1/validation"
 )
 
 var _ = Describe("#ValidateAdmissionControllerConfiguration", func() {
+	var conf *admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration
+
+	BeforeEach(func() {
+		conf = &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
+			LogLevel:  "info",
+			LogFormat: "text",
+		}
+	})
+
+	Context("client connection configuration", func() {
+		var (
+			clientConnection *componentbaseconfigv1alpha1.ClientConnectionConfiguration
+			fldPath          *field.Path
+		)
+
+		BeforeEach(func() {
+			admissioncontrollerconfigv1alpha1.SetObjectDefaults_AdmissionControllerConfiguration(conf)
+
+			clientConnection = &conf.GardenClientConnection
+			fldPath = field.NewPath("gardenClientConnection")
+		})
+
+		It("should allow default client connection configuration", func() {
+			Expect(ValidateAdmissionControllerConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should return errors because some values are invalid", func() {
+			clientConnection.Burst = -1
+
+			Expect(ValidateAdmissionControllerConfiguration(conf)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fldPath.Child("burst").String()),
+				})),
+			))
+		})
+	})
+
 	Context("Resource validation configuration", func() {
 		DescribeTable("Operation mode validation",
 			func(mode string, matcher gomegatypes.GomegaMatcher) {

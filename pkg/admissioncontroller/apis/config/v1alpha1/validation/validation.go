@@ -7,16 +7,39 @@ package validation
 import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
 
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 )
 
+var configScheme = runtime.NewScheme()
+
+func init() {
+	schemeBuilder := runtime.NewSchemeBuilder(
+		admissioncontrollerconfigv1alpha1.AddToScheme,
+		componentbaseconfigv1alpha1.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
+}
+
 // ValidateAdmissionControllerConfiguration validates the given `AdmissionControllerConfiguration`.
 func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	clientConnectionPath := field.NewPath("gardenClientConnection")
+	internalClientConnectionConfig := &componentbaseconfig.ClientConnectionConfiguration{}
+	if err := configScheme.Convert(&config.GardenClientConnection, internalClientConnectionConfig, nil); err != nil {
+		allErrs = append(allErrs, field.InternalError(clientConnectionPath, err))
+	} else {
+		allErrs = append(allErrs, componentbaseconfigvalidation.ValidateClientConnectionConfiguration(internalClientConnectionConfig, clientConnectionPath)...)
+	}
 
 	if !sets.New(logger.AllLogLevels...).Has(config.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), config.LogLevel, logger.AllLogLevels))
