@@ -656,7 +656,7 @@ type poolPriorityDefaults struct {
 
 func buildPoolPriorityDefaultsMap(workerConfig []gardencorev1beta1.Worker, namespace string) *poolPriorityDefaults {
 	fallbackMap := &poolPriorityDefaults{
-		poolMap:   make(map[string]int32),
+		poolMap:   make(map[string]int32, len(workerConfig)),
 		namespace: namespace,
 	}
 	for _, pool := range workerConfig {
