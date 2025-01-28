@@ -572,11 +572,19 @@ const (
 	LabelShootNamespace = "shoot.gardener.cloud/namespace"
 	// LabelShootName is a constant for a label key that indicates a relationship to a shoot with the specified name.
 	LabelShootName = "shoot.gardener.cloud/name"
+	// LabelShootUID is a constant for a label key that indicates a relationship to a shoot with the specified UID.
+	LabelShootUID = "shoot.gardener.cloud/uid"
 
 	// LabelPublicKeys is a constant for a label key that indicates that a resource contains public keys.
-	LabelPublicKeys = "authentication.gardener.cloud/public-keys"
+	// Deprecated: Use LabelDiscoveryPublic instead.
+	LabelPublicKeys = "authentication.gardener.cloud/public-keys" // TODO(dimityrmirchev): Deprecate in favour of LabelDiscoveryPublic
 	// LabelPublicKeysServiceAccount is a constant for a label value that indicates that a resource contains service account public keys.
 	LabelPublicKeysServiceAccount = "serviceaccount"
+
+	// LabelDiscoveryPublic is a constant for a label key that indicates that the labeled resource is of interest to the Gardener Discovery Server.
+	LabelDiscoveryPublic = "discovery.gardener.cloud/public"
+	// DiscoveryShootCA is a constant for a label value that indicates that the labeled resource contains shoot cluster certificate authority.
+	DiscoveryShootCA = "shoot-ca"
 
 	// LabelExposureClassHandlerName is the label key for exposure class handler names.
 	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
