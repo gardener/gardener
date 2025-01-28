@@ -150,7 +150,12 @@ Subsequent updates to the worker pool will be blocked by validation if an in-pla
 
 #### `CloudProfile` API
 
-A new field `minVersionForInPlaceUpdate` is introduced under `.spec.machineImages[].versions[]` in the `CloudProfile`. This field specifies the minimum machine image version eligible for direct in-place upgrades to a newer version. If the current version is lower than `minVersionForInPlaceUpdate`, the update will be disallowed by validation.
+A new field, `inPlaceUpdateConfig`, has been added under `.spec.machineImages[].versions[]` in the CloudProfile resource. This field includes two subfields:
+
+- `supported` indicates whether this machine image version supports configuring in-place update strategies in the Shoot.
+- `minVersionForUpdate` specifies the minimum machine image version required to perform direct in-place upgrades to this version.
+
+If the `supported` field is set to false or the current version is below the value specified in `minVersionForUpdate`, validation will disallow the update.
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -168,7 +173,9 @@ spec:
       versions:
         - version: 1443.8.0
           expirationDate: "2025-02-28T23:59:59Z"
-          minVersionForInPlaceUpdate: 1312.3.0
+          `inPlaceUpdateConfig`:
+            supported: true # true/false
+            minVersionForUpdate: 1312.3.0
         - version: 1443.7.0 # if minVersionForInPlaceUpdate is not specified, in-place update cannot be performed on this version
   machineTypes:
     - name: m5.large
@@ -341,7 +348,7 @@ spec:
     inPlaceUpdate:
       maxUnavailable: 1
       maxSurge: 0
-      manualUpdate: false # true/false, defaulted to false
+      orchestrationType: auto # auto/manual
     type: InPlaceUpdate # RollingUpdate/InPlaceUpdate/Recreate, defaulted to RollingUpdate
   template: {}
     spec: {}
@@ -352,7 +359,7 @@ status: {}
 
 `maxSurge`: Specifies the maximum number of machines that can be scheduled above the desired number of machines. Set `maxSurge` to zero if you don't want any new machines/nodes to be provisioned during the update. You can set it to a value greater than zero if you like to avoid pending pods because of lack of capacity during the update; in that case, first new machines/nodes will be created with the updated configuration and then the old machines/nodes will undergo in-place updates.
 
-`manualUpdate`: If the update strategy is `ManualInPlaceUpdate` in the worker spec, the worker controller will set this field to true.
+`orchestrationType`: Indicates the type of update orchestration. If the update strategy in the worker specification is set to `ManualInPlaceUpdate`, the worker controller will assign the value `manual` to this field; otherwise, it will be set to `auto`.
 
 ### Dependency Watchdog
 
