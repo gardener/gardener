@@ -360,7 +360,6 @@ metadata:
 											"--req-password-file=/etc/dashboard-refresher/plutono-admin/password",
 										},
 										SecurityContext: &corev1.SecurityContext{
-
 											AllowPrivilegeEscalation: ptr.To(false),
 										},
 										Env: []corev1.EnvVar{

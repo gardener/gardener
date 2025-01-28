@@ -747,7 +747,6 @@ var _ = Describe("VPA", func() {
 									fmt.Sprintf("--leader-elect-resource-namespace=%s", leaderElectionNamespace),
 								},
 								SecurityContext: &corev1.SecurityContext{
-
 									AllowPrivilegeEscalation: ptr.To(false),
 								},
 								LivenessProbe: livenessProbeVpa,
@@ -1037,7 +1036,6 @@ var _ = Describe("VPA", func() {
 									"--register-webhook=false",
 								},
 								SecurityContext: &corev1.SecurityContext{
-
 									AllowPrivilegeEscalation: ptr.To(false),
 								},
 								LivenessProbe: livenessProbeVpa,

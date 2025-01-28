@@ -617,7 +617,6 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 								"--req-password-file=" + volumeMountPathAdminUser + "/" + secretsutils.DataKeyPassword,
 							},
 							SecurityContext: &corev1.SecurityContext{
-
 								AllowPrivilegeEscalation: ptr.To(false),
 							},
 							Env: []corev1.EnvVar{
