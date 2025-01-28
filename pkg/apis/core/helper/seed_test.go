@@ -152,34 +152,6 @@ var _ = Describe("Helper", func() {
 		Entry("topology-aware routing disabled", &core.SeedSettings{TopologyAwareRouting: &core.SeedSettingTopologyAwareRouting{Enabled: false}}, false),
 	)
 
-	Describe("#ConvertSeed", func() {
-		It("should convert the external Seed version to an internal one", func() {
-			result, err := ConvertSeed(&gardencorev1beta1.Seed{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-					Kind:       "Seed",
-				},
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(&core.Seed{}))
-		})
-	})
-
-	Describe("#ConvertSeedExternal", func() {
-		It("should convert the internal Seed version to an external one", func() {
-			result, err := ConvertSeedExternal(&core.Seed{})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(&gardencorev1beta1.Seed{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-					Kind:       "Seed",
-				},
-			}))
-		})
-	})
-
 	Describe("#CalculateSeedUsage", func() {
 		type shootCase struct {
 			specSeedName, statusSeedName string
@@ -229,6 +201,34 @@ var _ = Describe("Helper", func() {
 				{specSeedName: "seed3", statusSeedName: "seed2"},
 				{specSeedName: "seed3", statusSeedName: "seed4"},
 			}, map[string]int{"seed": 1, "seed2": 3, "seed3": 2, "seed4": 1})
+		})
+	})
+
+	Describe("#ConvertSeed", func() {
+		It("should convert the external Seed version to an internal one", func() {
+			result, err := ConvertSeed(&gardencorev1beta1.Seed{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Seed",
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(&core.Seed{}))
+		})
+	})
+
+	Describe("#ConvertSeedExternal", func() {
+		It("should convert the internal Seed version to an external one", func() {
+			result, err := ConvertSeedExternal(&core.Seed{})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(&gardencorev1beta1.Seed{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Seed",
+				},
+			}))
 		})
 	})
 

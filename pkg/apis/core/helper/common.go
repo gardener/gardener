@@ -5,11 +5,6 @@
 package helper
 
 import (
-	"errors"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 )
 
@@ -31,20 +26,6 @@ func GetCondition(conditions []core.Condition, conditionType core.ConditionType)
 		return &conditions[index]
 	}
 	return nil
-}
-
-// QuotaScope returns the scope of a quota scope reference.
-func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
-	if gvk := schema.FromAPIVersionAndKind(scopeRef.APIVersion, scopeRef.Kind); gvk.Group == "core.gardener.cloud" && gvk.Kind == "Project" {
-		return "project", nil
-	}
-	if scopeRef.APIVersion == "v1" && scopeRef.Kind == "Secret" {
-		return "credentials", nil
-	}
-	if gvk := schema.FromAPIVersionAndKind(scopeRef.APIVersion, scopeRef.Kind); gvk.Group == "security.gardener.cloud" && gvk.Kind == "WorkloadIdentity" {
-		return "credentials", nil
-	}
-	return "", errors.New("unknown quota scope")
 }
 
 // DeterminePrimaryIPFamily determines the primary IP family out of a specified list of IP families.

@@ -16,6 +16,14 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
+var scheme *runtime.Scheme
+
+func init() {
+	scheme = runtime.NewScheme()
+	utilruntime.Must(core.AddToScheme(scheme))
+	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
+}
+
 // TaintsHave returns true if the given key is part of the taints list.
 func TaintsHave(taints []core.SeedTaint, key string) bool {
 	for _, taint := range taints {
@@ -67,12 +75,26 @@ func SeedSettingTopologyAwareRoutingEnabled(settings *core.SeedSettings) bool {
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
 }
 
-var scheme *runtime.Scheme
+// CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.
+// It takes both spec.seedName and status.seedName into account.
+func CalculateSeedUsage(shootList []*core.Shoot) map[string]int {
+	m := map[string]int{}
 
-func init() {
-	scheme = runtime.NewScheme()
-	utilruntime.Must(core.AddToScheme(scheme))
-	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
+	for _, shoot := range shootList {
+		var (
+			specSeed   = ptr.Deref(shoot.Spec.SeedName, "")
+			statusSeed = ptr.Deref(shoot.Status.SeedName, "")
+		)
+
+		if specSeed != "" {
+			m[specSeed]++
+		}
+		if statusSeed != "" && specSeed != statusSeed {
+			m[statusSeed]++
+		}
+	}
+
+	return m
 }
 
 // ConvertSeed converts the given external Seed version to an internal version.
@@ -99,28 +121,6 @@ func ConvertSeedExternal(obj runtime.Object) (*gardencorev1beta1.Seed, error) {
 		return nil, fmt.Errorf("could not convert Seed to version %s", gardencorev1beta1.SchemeGroupVersion.String())
 	}
 	return result, nil
-}
-
-// CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.
-// It takes both spec.seedName and status.seedName into account.
-func CalculateSeedUsage(shootList []*core.Shoot) map[string]int {
-	m := map[string]int{}
-
-	for _, shoot := range shootList {
-		var (
-			specSeed   = ptr.Deref(shoot.Spec.SeedName, "")
-			statusSeed = ptr.Deref(shoot.Status.SeedName, "")
-		)
-
-		if specSeed != "" {
-			m[specSeed]++
-		}
-		if statusSeed != "" && specSeed != statusSeed {
-			m[statusSeed]++
-		}
-	}
-
-	return m
 }
 
 // ConvertSeedTemplate converts the given external SeedTemplate version to an internal version.
