@@ -209,7 +209,6 @@
   * [Extension Admission](extensions/admission.md)
   * [Heartbeat controller](extensions/heartbeat.md)
 * [Provider Local](extensions/provider-local.md)
-  * [machine-controller-manager-provider-local](extensions/machine-controller-provider-local.md)
 * [Access to the Garden Cluster](extensions/garden-api-access.md)
 * [Control plane migration](extensions/migration.md)
 * [Force Deletion](extensions/force-deletion.md)
