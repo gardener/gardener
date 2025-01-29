@@ -8,17 +8,40 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
 
 	"github.com/gardener/gardener/pkg/logger"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
+var configScheme = runtime.NewScheme()
+
+func init() {
+	schemeBuilder := runtime.NewSchemeBuilder(
+		nodeagentconfigv1alpha1.AddToScheme,
+		componentbaseconfigv1alpha1.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
+}
+
 // ValidateNodeAgentConfiguration validates the given `NodeAgentConfiguration`.
 func ValidateNodeAgentConfiguration(conf *nodeagentconfigv1alpha1.NodeAgentConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	clientConnectionPath := field.NewPath("clientConnection")
+	internalClientConnectionConfig := &componentbaseconfig.ClientConnectionConfiguration{}
+	if err := configScheme.Convert(&conf.ClientConnection, internalClientConnectionConfig, nil); err != nil {
+		allErrs = append(allErrs, field.InternalError(clientConnectionPath, err))
+	} else {
+		allErrs = append(allErrs, componentbaseconfigvalidation.ValidateClientConnectionConfiguration(internalClientConnectionConfig, clientConnectionPath)...)
+	}
 
 	if conf.LogLevel != "" && !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), conf.LogLevel, logger.AllLogLevels))
