@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -27,6 +26,13 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils"
 )
+
+// Request contains the information necessary to reconcile a shoot or managed resource
+type Request struct {
+	// NamespacedName is the name and namespace of the object to reconcile.
+	types.NamespacedName
+	IsManagedResource bool
+}
 
 // ControllerName is the name of this controller.
 const ControllerName = "shoot-care"
@@ -41,23 +47,23 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 	}
 
 	return builder.
-		ControllerManagedBy(mgr).
+		TypedControllerManagedBy[Request](mgr).
 		Named(ControllerName).
-		WithOptions(controller.Options{
+		WithOptions(controller.TypedOptions[Request]{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.Controllers.ShootCare.ConcurrentSyncs, 0),
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
+			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(workqueue.DefaultTypedControllerRateLimiter[Request](), r.Config.Controllers.ShootCare.SyncPeriod.Duration),
 		}).
 		WatchesRawSource(
-			source.Kind[client.Object](gardenCluster.GetCache(),
+			source.TypedKind[client.Object](gardenCluster.GetCache(),
 				&gardencorev1beta1.Shoot{},
 				r.EventHandler(),
 				r.ShootPredicate()),
 		).
 		WatchesRawSource(
-			source.Kind[client.Object](r.SeedClientSet.Cache(),
+			source.TypedKind[client.Object](r.SeedClientSet.Cache(),
 				&resourcesv1alpha1.ManagedResource{},
-				handler.EnqueueRequestsFromMapFunc(r.MapManagedResourceToShoot),
+				handler.TypedEnqueueRequestsFromMapFunc(r.MapManagedResource),
 				predicateutils.ManagedResourceConditionsChanged()),
 		).
 		Complete(r)
@@ -67,15 +73,15 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster cluster.Clu
 var RandomDurationWithMetaDuration = utils.RandomDurationWithMetaDuration
 
 // EventHandler returns a handler for Shoot events.
-func (r *Reconciler) EventHandler() handler.EventHandler {
-	return &handler.Funcs{
-		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+func (r *Reconciler) EventHandler() handler.TypedEventHandler[client.Object, Request] {
+	return &handler.TypedFuncs[client.Object, Request]{
+		CreateFunc: func(_ context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[Request]) {
 			shoot, ok := e.Object.(*gardencorev1beta1.Shoot)
 			if !ok {
 				return
 			}
 
-			req := reconcile.Request{NamespacedName: types.NamespacedName{
+			req := Request{NamespacedName: types.NamespacedName{
 				Name:      e.Object.GetName(),
 				Namespace: e.Object.GetNamespace(),
 			}}
@@ -90,8 +96,8 @@ func (r *Reconciler) EventHandler() handler.EventHandler {
 			// don't add random duration for enqueueing new Shoots which have never been health checked yet
 			q.Add(req)
 		},
-		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
-			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
+		UpdateFunc: func(_ context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[Request]) {
+			q.Add(Request{NamespacedName: types.NamespacedName{
 				Name:      e.ObjectNew.GetName(),
 				Namespace: e.ObjectNew.GetNamespace(),
 			}})
@@ -129,10 +135,13 @@ func seedGotAssigned(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
 	return oldShoot.Status.SeedName == nil && newShoot.Status.SeedName != nil
 }
 
-// MapManagedResourceToShoot is a mapper.MapFunc for mapping a ManagedResource to the owning Shoot.
-func (r *Reconciler) MapManagedResourceToShoot(_ context.Context, mr client.Object) []reconcile.Request {
-	if name, ok := r.namespaceToShootName.Load(mr.GetNamespace()); ok {
-		return []reconcile.Request{{NamespacedName: name.(types.NamespacedName)}}
-	}
-	return nil
+// MapManagedResource is a mapper.MapFunc for mapping a ManagedResource to a request reference.
+func (r *Reconciler) MapManagedResource(_ context.Context, mr client.Object) []Request {
+	return []Request{{
+		NamespacedName: types.NamespacedName{
+			Name:      mr.GetName(),
+			Namespace: mr.GetNamespace(),
+		},
+		IsManagedResource: true,
+	}}
 }

@@ -14,10 +14,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -49,15 +49,15 @@ var _ = Describe("Add", func() {
 	Describe("#EventHandler", func() {
 		var (
 			ctx   = context.TODO()
-			hdlr  handler.EventHandler
-			queue *mockworkqueue.MockTypedRateLimitingInterface[reconcile.Request]
-			req   reconcile.Request
+			hdlr  handler.TypedEventHandler[client.Object, Request]
+			queue *mockworkqueue.MockTypedRateLimitingInterface[Request]
+			req   Request
 		)
 
 		BeforeEach(func() {
 			hdlr = reconciler.EventHandler()
-			queue = mockworkqueue.NewMockTypedRateLimitingInterface[reconcile.Request](gomock.NewController(GinkgoT()))
-			req = reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}}
+			queue = mockworkqueue.NewMockTypedRateLimitingInterface[Request](gomock.NewController(GinkgoT()))
+			req = Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}}
 		})
 
 		It("should enqueue the object for Create events according to the calculated duration", func() {
