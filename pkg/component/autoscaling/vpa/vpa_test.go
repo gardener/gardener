@@ -743,7 +743,7 @@ var _ = Describe("VPA", func() {
 									fmt.Sprintf("--recommendation-upper-bound-memory-percentile=%f", ptr.Deref(recommendationUpperBoundMemoryPercentile, 0.95)),
 									fmt.Sprintf("--memory-histogram-decay-half-life=%s", ptr.Deref(memoryHistogramDecayHalfLife, metav1.Duration{Duration: 24 * time.Hour}).Duration),
 									fmt.Sprintf("--memory-aggregation-interval=%s", ptr.Deref(memoryAggregationInterval, metav1.Duration{Duration: 24 * time.Hour}).Duration),
-									fmt.Sprintf("--memory-aggregation-interval-count=%v", ptr.Deref(memoryAggregationIntervalCount, 8)),
+									fmt.Sprintf("--memory-aggregation-interval-count=%d", ptr.Deref(memoryAggregationIntervalCount, 8)),
 									"--leader-elect=true",
 									fmt.Sprintf("--leader-elect-resource-namespace=%s", leaderElectionNamespace),
 								},

@@ -278,7 +278,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						fmt.Sprintf("--recommendation-upper-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundMemoryPercentile)),
 						fmt.Sprintf("--memory-histogram-decay-half-life=%s", ptr.Deref(v.values.Recommender.MemoryHistogramDecayHalfLife, gardencorev1beta1.DefaultMemoryHistogramDecayHalfLife).Duration),
 						fmt.Sprintf("--memory-aggregation-interval=%s", ptr.Deref(v.values.Recommender.MemoryAggregationInterval, gardencorev1beta1.DefaultMemoryAggregationInterval).Duration),
-						fmt.Sprintf("--memory-aggregation-interval-count=%v", ptr.Deref(v.values.Recommender.MemoryAggregationIntervalCount, gardencorev1beta1.DefaultMemoryAggregationIntervalCount)),
+						fmt.Sprintf("--memory-aggregation-interval-count=%d", ptr.Deref(v.values.Recommender.MemoryAggregationIntervalCount, gardencorev1beta1.DefaultMemoryAggregationIntervalCount)),
 						"--leader-elect=true",
 						fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
 					},
