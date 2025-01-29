@@ -538,6 +538,7 @@ func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
 		// core API group
 		indexer.AddShootSeedName,
 		indexer.AddShootStatusSeedName,
+		indexer.AddShootStatusTechnicalID,
 		indexer.AddBackupBucketSeedName,
 		indexer.AddBackupEntrySeedName,
 		indexer.AddBackupEntryBucketName,
