@@ -147,6 +147,7 @@
 * [GEP-28: Autonomous Shoot Clusters](proposals/28-autonomous-shoot-clusters.md)
 * [GEP-30: Rework API Server Proxy to Drop Proxy Protocol](proposals/30-apiserver-proxy.md)
 * [GEP-32: Cloud Profile Version Classification Lifecycles](proposals/32-version-classification-lifecycles.md)
+* [GEP-33: Machine Image Capabilities](proposals/33-machine-image-capabilities.md)
 
 ## Development
 
