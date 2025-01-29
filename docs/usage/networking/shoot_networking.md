@@ -68,8 +68,10 @@ A smaller IP range per node means more `podCIDRs` and thus the ability to provis
 apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 spec:
-  kubeControllerManager:
-    nodeCIDRMaskSize: 24 (default)
+spec:
+  kubernetes:
+    kubeControllerManager:
+      nodeCIDRMaskSize: 24 (default)
 ```
 
 > :warning: The `nodeCIDRMaskSize` configuration is immutable and cannot be changed afterwards.
