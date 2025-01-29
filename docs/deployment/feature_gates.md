@@ -27,7 +27,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  |         |
 | NewVPN                                   | `false` | `Alpha` | `1.104` |         |
 | NodeAgentAuthorizer                      | `false` | `Alpha` | `1.109` |         |
-| CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.111` |         |
+| CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
