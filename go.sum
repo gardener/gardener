@@ -182,8 +182,8 @@ github.com/fsnotify/fsnotify v1.8.0 h1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/
 github.com/fsnotify/fsnotify v1.8.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/fxamacker/cbor/v2 v2.7.0 h1:iM5WgngdRBanHcxugY4JySA0nk1wZorNOpTgCMedv5E=
 github.com/fxamacker/cbor/v2 v2.7.0/go.mod h1:pxXPTn3joSm21Gbwsv0w9OSA2y1HFR9qXEeXQVeNoDQ=
-github.com/gardener/cert-management v0.17.2 h1:yM+iG2KNS5uzwzAqbvbpPdjpZ/YRotfK3bzHxDnelBY=
-github.com/gardener/cert-management v0.17.2/go.mod h1:FvFlrSonrEHxPLkLF9o6aicSfFkJvcSBrVYmj5gpG2Y=
+github.com/gardener/cert-management v0.17.3 h1:QZwM0jEjlZjJsGUcHuo2sXDd+9kuSNhYTU9HU5LRK5U=
+github.com/gardener/cert-management v0.17.3/go.mod h1:LW26oGAdRqPqg0E/roJ3muX7s+fOgVkcyTKS0lrSFJ4=
 github.com/gardener/dependency-watchdog v1.3.0 h1:C5EO/4GKv1TosvqVepJfzGssu8dDR06q1y05b11ozqI=
 github.com/gardener/dependency-watchdog v1.3.0/go.mod h1:KNUla1c54x6AGh7SXK/OlM0LrghMXXZG0f+d7+XojaA=
 github.com/gardener/etcd-druid v0.26.1 h1:x8mZfcIkZS29bJKupy0PVTsIrPUNVxvcJlLAXKb0agw=
@@ -901,8 +901,8 @@ honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
 istio.io/api v1.24.2 h1:jYjcN6Iq0RPtQj/3KMFsybxmfqmjGN/dxhL7FGJEdIM=
 istio.io/api v1.24.2/go.mod h1:MQnRok7RZ20/PE56v0LxmoWH0xVxnCQPNuf9O7PAN1I=
-istio.io/client-go v1.24.1 h1:m1hYt+S7zZZpiWHVnJkp9SFfQ9EApBhKL0LUaviKh9c=
-istio.io/client-go v1.24.1/go.mod h1:sCDBDJWQGJQz/1t3CHwUTDE5V7Nk6pFFkqBwhIg+LrI=
+istio.io/client-go v1.24.2 h1:JTTfBV6dv+AAW+AfccyrdX4T1f9CpsXd1Yzo1s/IYAI=
+istio.io/client-go v1.24.2/go.mod h1:dgZ9EmJzh1EECzf6nQhwNL4R6RvlyeH/RXeNeNp/MRg=
 k8s.io/api v0.19.0/go.mod h1:I1K45XlvTrDjmj5LoM5LuP/KYrhWbjUKT/SoPG0qTjw=
 k8s.io/api v0.31.5 h1:7jP74egbPUOCLJV5KheUnwo9gz3zzUsMIj2EPkuYK1E=
 k8s.io/api v0.31.5/go.mod h1:RMyMdZG1kJjou2ng5buEti0OHlo0uFXgSzTZ/k5LeVk=
