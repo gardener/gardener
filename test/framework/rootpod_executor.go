@@ -6,7 +6,6 @@ package framework
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"time"
 
@@ -92,11 +91,7 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command ...string) ([]byt
 		return stderrBytes, err
 	}
 
-	if len(stdoutBytes) > 0 {
-		return stdoutBytes, nil
-	}
-
-	return nil, fmt.Errorf("no output from command execution")
+	return stdoutBytes, nil
 }
 
 // deploy deploys a root pod on the specified node and waits until it is running
