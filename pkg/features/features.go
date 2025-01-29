@@ -65,7 +65,7 @@ const (
 	// a rolling update of all worker nodes. Instead, the rolling update can be triggered manually by the user at a
 	// later point in time of their convenience.
 	// owner: @rfranzke
-	// alpha: v1.111.0
+	// alpha: v1.112.0
 	CredentialsRotationWithoutWorkersRollout featuregate.Feature = "CredentialsRotationWithoutWorkersRollout"
 )
 
