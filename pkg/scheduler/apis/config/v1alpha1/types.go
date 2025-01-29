@@ -50,7 +50,7 @@ type CandidateDeterminationStrategy string
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SchedulerConfiguration provides the configuration for the SeedManager admission plugin.
+// SchedulerConfiguration defines the configuration for the Gardener scheduler.
 type SchedulerConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 	// ClientConnection specifies the kubeconfig file and client connection

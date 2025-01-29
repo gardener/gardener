@@ -14,84 +14,82 @@ import (
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
 
-var _ = Describe("gardener-scheduler", func() {
-	Describe("#ValidateConfiguration", func() {
-		var defaultAdmissionConfiguration schedulerconfigv1alpha1.SchedulerConfiguration
+var _ = Describe("#ValidateConfiguration", func() {
+	var conf *schedulerconfigv1alpha1.SchedulerConfiguration
 
-		BeforeEach(func() {
-			defaultAdmissionConfiguration = schedulerconfigv1alpha1.SchedulerConfiguration{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "scheduler.config.gardener.cloud/v1alpha1",
-					Kind:       "SchedulerConfiguration",
+	BeforeEach(func() {
+		conf = &schedulerconfigv1alpha1.SchedulerConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "scheduler.config.gardener.cloud/v1alpha1",
+				Kind:       "SchedulerConfiguration",
+			},
+			Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
+				BackupBucket: &schedulerconfigv1alpha1.BackupBucketSchedulerConfiguration{
+					ConcurrentSyncs: 2,
 				},
-				Schedulers: schedulerconfigv1alpha1.SchedulerControllerConfiguration{
-					BackupBucket: &schedulerconfigv1alpha1.BackupBucketSchedulerConfiguration{
-						ConcurrentSyncs: 2,
-					},
-					Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
-						ConcurrentSyncs: 2,
-						Strategy:        schedulerconfigv1alpha1.SameRegion,
-					},
+				Shoot: &schedulerconfigv1alpha1.ShootSchedulerConfiguration{
+					ConcurrentSyncs: 2,
+					Strategy:        schedulerconfigv1alpha1.SameRegion,
 				},
-			}
+			},
+		}
+	})
+
+	Context("scheduler controller configuration", func() {
+		It("should pass because the Gardener Scheduler Configuration with the 'Same Region' Strategy is a valid configuration", func() {
+			sameRegionConfiguration := conf.DeepCopy()
+			sameRegionConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.SameRegion
+			err := ValidateConfiguration(sameRegionConfiguration)
+
+			Expect(err).To(BeEmpty())
 		})
 
-		Context("Validate Admission Plugin SchedulerConfiguration", func() {
-			It("should pass because the Gardener Scheduler Configuration with the 'Same Region' Strategy is a valid configuration", func() {
-				sameRegionConfiguration := defaultAdmissionConfiguration
-				sameRegionConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.SameRegion
-				err := ValidateConfiguration(&sameRegionConfiguration)
+		It("should pass because the Gardener Scheduler Configuration with the 'Minimal Distance' Strategy is a valid configuration", func() {
+			minimalDistanceConfiguration := conf.DeepCopy()
+			minimalDistanceConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.MinimalDistance
+			err := ValidateConfiguration(minimalDistanceConfiguration)
 
-				Expect(err).To(BeEmpty())
-			})
+			Expect(err).To(BeEmpty())
+		})
 
-			It("should pass because the Gardener Scheduler Configuration with the 'Minimal Distance' Strategy is a valid configuration", func() {
-				minimalDistanceConfiguration := defaultAdmissionConfiguration
-				minimalDistanceConfiguration.Schedulers.Shoot.Strategy = schedulerconfigv1alpha1.MinimalDistance
-				err := ValidateConfiguration(&minimalDistanceConfiguration)
+		It("should pass because the Gardener Scheduler Configuration with the default Strategy is a valid configuration", func() {
+			err := ValidateConfiguration(conf)
+			Expect(err).To(BeEmpty())
+		})
 
-				Expect(err).To(BeEmpty())
-			})
+		It("should fail because the Gardener Scheduler Configuration contains an invalid strategy", func() {
+			invalidConfiguration := conf.DeepCopy()
+			invalidConfiguration.Schedulers.Shoot.Strategy = "invalidStrategy"
+			err := ValidateConfiguration(invalidConfiguration)
 
-			It("should pass because the Gardener Scheduler Configuration with the default Strategy is a valid configuration", func() {
-				err := ValidateConfiguration(&defaultAdmissionConfiguration)
-				Expect(err).To(BeEmpty())
-			})
+			Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("schedulers.shoot.strategy"),
+			}))))
+		})
 
-			It("should fail because the Gardener Scheduler Configuration contains an invalid strategy", func() {
-				invalidConfiguration := defaultAdmissionConfiguration
-				invalidConfiguration.Schedulers.Shoot.Strategy = "invalidStrategy"
-				err := ValidateConfiguration(&invalidConfiguration)
+		It("should fail because backupBucket concurrentSyncs are negative", func() {
+			invalidConfiguration := conf.DeepCopy()
+			invalidConfiguration.Schedulers.BackupBucket.ConcurrentSyncs = -1
 
-				Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("schedulers.shoot.strategy"),
-				}))))
-			})
+			err := ValidateConfiguration(invalidConfiguration)
 
-			It("should fail because backupBucket concurrentSyncs are negative", func() {
-				invalidConfiguration := defaultAdmissionConfiguration
-				invalidConfiguration.Schedulers.BackupBucket.ConcurrentSyncs = -1
+			Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("schedulers.backupBucket.concurrentSyncs"),
+			}))))
+		})
 
-				err := ValidateConfiguration(&invalidConfiguration)
+		It("should fail because shoot concurrentSyncs are negative", func() {
+			invalidConfiguration := conf.DeepCopy()
+			invalidConfiguration.Schedulers.Shoot.ConcurrentSyncs = -1
 
-				Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("schedulers.backupBucket.concurrentSyncs"),
-				}))))
-			})
+			err := ValidateConfiguration(invalidConfiguration)
 
-			It("should fail because shoot concurrentSyncs are negative", func() {
-				invalidConfiguration := defaultAdmissionConfiguration
-				invalidConfiguration.Schedulers.Shoot.ConcurrentSyncs = -1
-
-				err := ValidateConfiguration(&invalidConfiguration)
-
-				Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("schedulers.shoot.concurrentSyncs"),
-				}))))
-			})
+			Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("schedulers.shoot.concurrentSyncs"),
+			}))))
 		})
 	})
 })
