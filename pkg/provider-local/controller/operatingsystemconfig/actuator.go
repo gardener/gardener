@@ -76,7 +76,7 @@ systemctl daemon-reload
 `, unit.Name, unit.Name)
 	}
 
-	return script, nil
+	return operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script), nil
 }
 
 func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
