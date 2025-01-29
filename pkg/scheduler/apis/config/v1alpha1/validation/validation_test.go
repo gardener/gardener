@@ -10,6 +10,8 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/utils/ptr"
 
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 )
@@ -33,6 +35,74 @@ var _ = Describe("#ValidateConfiguration", func() {
 				},
 			},
 		}
+	})
+
+	Context("client connection configuration", func() {
+		var (
+			clientConnection *componentbaseconfigv1alpha1.ClientConnectionConfiguration
+			fldPath          *field.Path
+		)
+
+		BeforeEach(func() {
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(conf)
+
+			clientConnection = &conf.ClientConnection
+			fldPath = field.NewPath("clientConnection")
+		})
+
+		It("should allow default client connection configuration", func() {
+			Expect(ValidateConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should return errors because some values are invalid", func() {
+			clientConnection.Burst = -1
+
+			Expect(ValidateConfiguration(conf)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fldPath.Child("burst").String()),
+				})),
+			))
+		})
+	})
+
+	Context("leader election configuration", func() {
+		BeforeEach(func() {
+			schedulerconfigv1alpha1.SetObjectDefaults_SchedulerConfiguration(conf)
+		})
+
+		It("should allow omitting leader election config", func() {
+			conf.LeaderElection = nil
+
+			Expect(ValidateConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should allow not enabling leader election", func() {
+			conf.LeaderElection.LeaderElect = nil
+
+			Expect(ValidateConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should allow disabling leader election", func() {
+			conf.LeaderElection.LeaderElect = ptr.To(false)
+
+			Expect(ValidateConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should allow default leader election configuration with required fields", func() {
+			Expect(ValidateConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should reject leader election config with missing required fields", func() {
+			conf.LeaderElection.ResourceNamespace = ""
+
+			Expect(ValidateConfiguration(conf)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("leaderElection.resourceNamespace"),
+				})),
+			))
+		})
 	})
 
 	Context("scheduler controller configuration", func() {
