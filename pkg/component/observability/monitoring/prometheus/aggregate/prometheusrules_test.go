@@ -35,20 +35,6 @@ var _ = Describe("PrometheusRules", func() {
 				},
 			},
 			{
-				Alert: "NodeNotHealthy",
-				Expr:  intstr.FromString(`count_over_time((sum by (node) (kube_node_spec_taint{effect="NoSchedule", key!~"node.kubernetes.io/unschedulable|deployment.machine.sapcloud.io/prefer-no-schedule|node-role.kubernetes.io/control-plane|ToBeDeletedByClusterAutoscaler|` + v1beta1constants.TaintNodeCriticalComponentsNotReady + `"}))[30m:]) > 9`),
-				For:   ptr.To(monitoringv1.Duration("0m")),
-				Labels: map[string]string{
-					"severity":   "warning",
-					"type":       "seed",
-					"visibility": "operator",
-				},
-				Annotations: map[string]string{
-					"description": "Node {{$labels.node}} in seed {{$externalLabels.seed}} was not healthy for ten scrapes in the past 30 mins.",
-					"summary":     "A node is not healthy.",
-				},
-			},
-			{
 				Alert: "TooManyEtcdSnapshotCompactionJobsFailing",
 				Expr:  intstr.FromString(`count(increase(etcddruid_compaction_jobs_total{succeeded="false"}[3h]) >= 1) / count(increase(etcddruid_compaction_jobs_total[3h])) > 0.1`),
 				Labels: map[string]string{
