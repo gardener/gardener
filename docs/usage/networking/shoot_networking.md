@@ -71,7 +71,7 @@ spec:
 spec:
   kubernetes:
     kubeControllerManager:
-      nodeCIDRMaskSize: 24 (default)
+      nodeCIDRMaskSize: 24 # (default)
 ```
 
 > :warning: The `nodeCIDRMaskSize` configuration is immutable and cannot be changed afterwards.
