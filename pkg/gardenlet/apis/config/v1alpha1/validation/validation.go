@@ -11,14 +11,9 @@ import (
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	componentbaseconfig "k8s.io/component-base/config"
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
 	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -26,17 +21,8 @@ import (
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 )
-
-var configScheme = runtime.NewScheme()
-
-func init() {
-	schemeBuilder := runtime.NewSchemeBuilder(
-		gardenletconfigv1alpha1.AddToScheme,
-		componentbaseconfigv1alpha1.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
-}
 
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
 func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfiguration, fldPath *field.Path, inTemplate bool) field.ErrorList {
@@ -54,15 +40,7 @@ func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfig
 		allErrs = append(allErrs, validateShootClientConnection(cfg.ShootClientConnection, fldPath.Child("shootClientConnection"))...)
 	}
 
-	if cfg.LeaderElection != nil {
-		leaderElectionPath := field.NewPath("leaderElection")
-		internalLeaderElectionConfig := &componentbaseconfig.LeaderElectionConfiguration{}
-		if err := configScheme.Convert(cfg.LeaderElection, internalLeaderElectionConfig, nil); err != nil {
-			allErrs = append(allErrs, field.InternalError(leaderElectionPath, err))
-		} else {
-			allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(internalLeaderElectionConfig, leaderElectionPath)...)
-		}
-	}
+	allErrs = append(allErrs, validationutils.ValidateLeaderElectionConfiguration(cfg.LeaderElection, field.NewPath("leaderElection"))...)
 
 	if cfg.Controllers != nil {
 		if cfg.Controllers.BackupEntry != nil {
@@ -185,7 +163,7 @@ func ValidateGardenletConfigurationUpdate(newCfg, oldCfg *gardenletconfigv1alpha
 func validateGardenClientConnection(conf *gardenletconfigv1alpha1.GardenClientConnection, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateClientConnectionConfiguration(conf.ClientConnectionConfiguration, fldPath)...)
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.ClientConnectionConfiguration, fldPath)...)
 
 	if conf.KubeconfigValidity != nil {
 		allErrs = append(allErrs, validateKubeconfigValidity(conf.KubeconfigValidity, fldPath.Child("kubeconfigValidity"))...)
@@ -219,7 +197,7 @@ func validateKubeconfigValidity(conf *gardenletconfigv1alpha1.KubeconfigValidity
 func validateSeedClientConnection(conf *gardenletconfigv1alpha1.SeedClientConnection, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateClientConnectionConfiguration(conf.ClientConnectionConfiguration, fldPath)...)
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.ClientConnectionConfiguration, fldPath)...)
 
 	return allErrs
 }
@@ -227,20 +205,7 @@ func validateSeedClientConnection(conf *gardenletconfigv1alpha1.SeedClientConnec
 func validateShootClientConnection(conf *gardenletconfigv1alpha1.ShootClientConnection, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateClientConnectionConfiguration(conf.ClientConnectionConfiguration, fldPath)...)
-
-	return allErrs
-}
-
-func validateClientConnectionConfiguration(conf componentbaseconfigv1alpha1.ClientConnectionConfiguration, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	internalClientConnectionConfig := &componentbaseconfig.ClientConnectionConfiguration{}
-	if err := configScheme.Convert(&conf, internalClientConnectionConfig, nil); err != nil {
-		allErrs = append(allErrs, field.InternalError(fldPath, err))
-	} else {
-		allErrs = append(allErrs, componentbaseconfigvalidation.ValidateClientConnectionConfiguration(internalClientConnectionConfig, fldPath)...)
-	}
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.ClientConnectionConfiguration, fldPath)...)
 
 	return allErrs
 }

@@ -6,49 +6,20 @@ package validation
 
 import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	componentbaseconfig "k8s.io/component-base/config"
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
 
 	"github.com/gardener/gardener/pkg/logger"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 )
-
-var configScheme = runtime.NewScheme()
-
-func init() {
-	schemeBuilder := runtime.NewSchemeBuilder(
-		schedulerconfigv1alpha1.AddToScheme,
-		componentbaseconfigv1alpha1.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
-}
 
 // ValidateConfiguration validates the configuration.
 func ValidateConfiguration(config *schedulerconfigv1alpha1.SchedulerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	clientConnectionPath := field.NewPath("clientConnection")
-	internalClientConnectionConfig := &componentbaseconfig.ClientConnectionConfiguration{}
-	if err := configScheme.Convert(&config.ClientConnection, internalClientConnectionConfig, nil); err != nil {
-		allErrs = append(allErrs, field.InternalError(clientConnectionPath, err))
-	} else {
-		allErrs = append(allErrs, componentbaseconfigvalidation.ValidateClientConnectionConfiguration(internalClientConnectionConfig, clientConnectionPath)...)
-	}
-
-	if config.LeaderElection != nil {
-		leaderElectionPath := field.NewPath("leaderElection")
-		internalLeaderElectionConfig := &componentbaseconfig.LeaderElectionConfiguration{}
-		if err := configScheme.Convert(config.LeaderElection, internalLeaderElectionConfig, nil); err != nil {
-			allErrs = append(allErrs, field.InternalError(leaderElectionPath, err))
-		} else {
-			allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(internalLeaderElectionConfig, leaderElectionPath)...)
-		}
-	}
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&config.ClientConnection, field.NewPath("clientConnection"))...)
+	allErrs = append(allErrs, validationutils.ValidateLeaderElectionConfiguration(config.LeaderElection, field.NewPath("leaderElection"))...)
 
 	allErrs = append(allErrs, validateSchedulerControllerConfiguration(config.Schedulers, field.NewPath("schedulers"))...)
 

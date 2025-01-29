@@ -9,29 +9,15 @@ import (
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	componentbaseconfig "k8s.io/component-base/config"
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/logger"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
-
-var configScheme = runtime.NewScheme()
-
-func init() {
-	schemeBuilder := runtime.NewSchemeBuilder(
-		resourcemanagerconfigv1alpha1.AddToScheme,
-		componentbaseconfigv1alpha1.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
-}
 
 // ValidateResourceManagerConfiguration validates the given `ResourceManagerConfiguration`.
 func ValidateResourceManagerConfiguration(conf *resourcemanagerconfigv1alpha1.ResourceManagerConfiguration) field.ErrorList {
@@ -42,14 +28,7 @@ func ValidateResourceManagerConfiguration(conf *resourcemanagerconfigv1alpha1.Re
 		allErrs = append(allErrs, validateClientConnection(*conf.TargetClientConnection, field.NewPath("targetClientConnection"))...)
 	}
 
-	leaderElectionPath := field.NewPath("leaderElection")
-	internalLeaderElectionConfig := &componentbaseconfig.LeaderElectionConfiguration{}
-	if err := configScheme.Convert(&conf.LeaderElection, internalLeaderElectionConfig, nil); err != nil {
-		allErrs = append(allErrs, field.InternalError(leaderElectionPath, err))
-	} else {
-		allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(internalLeaderElectionConfig, leaderElectionPath)...)
-	}
-
+	allErrs = append(allErrs, validationutils.ValidateLeaderElectionConfiguration(&conf.LeaderElection, field.NewPath("leaderElection"))...)
 	allErrs = append(allErrs, validateServerConfiguration(conf.Server, field.NewPath("server"))...)
 
 	if !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
@@ -77,12 +56,7 @@ func validateClientConnection(conf resourcemanagerconfigv1alpha1.ClientConnectio
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("cacheResyncPeriod"), conf.CacheResyncPeriod.Duration, "must be at least 10s"))
 	}
 
-	internalClientConnectionConfig := &componentbaseconfig.ClientConnectionConfiguration{}
-	if err := configScheme.Convert(&conf.ClientConnectionConfiguration, internalClientConnectionConfig, nil); err != nil {
-		allErrs = append(allErrs, field.InternalError(fldPath, err))
-	} else {
-		allErrs = append(allErrs, componentbaseconfigvalidation.ValidateClientConnectionConfiguration(internalClientConnectionConfig, fldPath)...)
-	}
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.ClientConnectionConfiguration, fldPath)...)
 
 	return allErrs
 }
