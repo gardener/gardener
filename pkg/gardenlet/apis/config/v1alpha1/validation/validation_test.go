@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -114,95 +115,181 @@ var _ = Describe("GardenletConfiguration", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		Context("garden client connection", func() {
-			Context("kubeconfig validity", func() {
-				It("should allow when config is not set", func() {
+		Context("client connection configuration", func() {
+			var (
+				clientConnection *componentbaseconfigv1alpha1.ClientConnectionConfiguration
+				fldPath          *field.Path
+			)
+
+			BeforeEach(func() {
+				gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(cfg)
+			})
+
+			commonTests := func() {
+				It("should allow default client connection configuration", func() {
 					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
 				})
 
-				It("should allow valid configurations", func() {
-					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
-						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-							Validity:                        &metav1.Duration{Duration: time.Hour},
-							AutoRotationJitterPercentageMin: ptr.To[int32](13),
-							AutoRotationJitterPercentageMax: ptr.To[int32](37),
-						},
-					}
+				It("should return errors because some values are invalid", func() {
+					clientConnection.Burst = -1
 
-					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal(fldPath.Child("burst").String()),
+						})),
+					))
+				})
+			}
+
+			Context("garden client connection", func() {
+				BeforeEach(func() {
+					clientConnection = &cfg.GardenClientConnection.ClientConnectionConfiguration
+					fldPath = field.NewPath("gardenClientConnection")
 				})
 
-				It("should forbid validity less than 10m", func() {
-					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
-						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-							Validity: &metav1.Duration{Duration: time.Second},
-						},
-					}
+				commonTests()
 
-					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("gardenClientConnection.kubeconfigValidity.validity"),
-						"Detail": ContainSubstring("must be at least 10m"),
-					}))))
+				Context("kubeconfig validity", func() {
+					It("should allow when config is not set", func() {
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+					})
+
+					It("should allow valid configurations", func() {
+						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
+								Validity:                        &metav1.Duration{Duration: time.Hour},
+								AutoRotationJitterPercentageMin: ptr.To[int32](13),
+								AutoRotationJitterPercentageMax: ptr.To[int32](37),
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+					})
+
+					It("should forbid validity less than 10m", func() {
+						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
+								Validity: &metav1.Duration{Duration: time.Second},
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("gardenClientConnection.kubeconfigValidity.validity"),
+							"Detail": ContainSubstring("must be at least 10m"),
+						}))))
+					})
+
+					It("should forbid auto rotation jitter percentage min less than 1", func() {
+						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
+								AutoRotationJitterPercentageMin: ptr.To[int32](0),
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
+							"Detail": ContainSubstring("must be at least 1"),
+						}))))
+					})
+
+					It("should forbid auto rotation jitter percentage max more than 100", func() {
+						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
+								AutoRotationJitterPercentageMax: ptr.To[int32](101),
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMax"),
+							"Detail": ContainSubstring("must be at most 100"),
+						}))))
+					})
+
+					It("should forbid auto rotation jitter percentage min equal max", func() {
+						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
+								AutoRotationJitterPercentageMin: ptr.To[int32](13),
+								AutoRotationJitterPercentageMax: ptr.To[int32](13),
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
+							"Detail": ContainSubstring("minimum percentage must be less than maximum percentage"),
+						}))))
+					})
+
+					It("should forbid auto rotation jitter percentage min higher than max", func() {
+						cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
+							KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
+								AutoRotationJitterPercentageMin: ptr.To[int32](14),
+								AutoRotationJitterPercentageMax: ptr.To[int32](13),
+							},
+						}
+
+						Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
+							"Detail": ContainSubstring("minimum percentage must be less than maximum percentage"),
+						}))))
+					})
+				})
+			})
+
+			Context("seed client connection", func() {
+				BeforeEach(func() {
+					clientConnection = &cfg.SeedClientConnection.ClientConnectionConfiguration
+					fldPath = field.NewPath("seedClientConnection")
 				})
 
-				It("should forbid auto rotation jitter percentage min less than 1", func() {
-					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
-						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-							AutoRotationJitterPercentageMin: ptr.To[int32](0),
-						},
-					}
+				commonTests()
+			})
 
-					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
-						"Detail": ContainSubstring("must be at least 1"),
-					}))))
+			Context("shoot client connection", func() {
+				BeforeEach(func() {
+					clientConnection = &cfg.ShootClientConnection.ClientConnectionConfiguration
+					fldPath = field.NewPath("shootClientConnection")
 				})
 
-				It("should forbid auto rotation jitter percentage max more than 100", func() {
-					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
-						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-							AutoRotationJitterPercentageMax: ptr.To[int32](101),
-						},
-					}
+				commonTests()
+			})
+		})
 
-					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMax"),
-						"Detail": ContainSubstring("must be at most 100"),
-					}))))
-				})
+		Context("leader election configuration", func() {
+			BeforeEach(func() {
+				gardenletconfigv1alpha1.SetObjectDefaults_GardenletConfiguration(cfg)
+			})
 
-				It("should forbid auto rotation jitter percentage min equal max", func() {
-					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
-						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-							AutoRotationJitterPercentageMin: ptr.To[int32](13),
-							AutoRotationJitterPercentageMax: ptr.To[int32](13),
-						},
-					}
+			It("should allow not enabling leader election", func() {
+				cfg.LeaderElection.LeaderElect = nil
 
-					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
-						"Detail": ContainSubstring("minimum percentage must be less than maximum percentage"),
-					}))))
-				})
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+			})
 
-				It("should forbid auto rotation jitter percentage min higher than max", func() {
-					cfg.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{
-						KubeconfigValidity: &gardenletconfigv1alpha1.KubeconfigValidity{
-							AutoRotationJitterPercentageMin: ptr.To[int32](14),
-							AutoRotationJitterPercentageMax: ptr.To[int32](13),
-						},
-					}
+			It("should allow disabling leader election", func() {
+				cfg.LeaderElection.LeaderElect = ptr.To(false)
 
-					Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("gardenClientConnection.kubeconfigValidity.autoRotationJitterPercentageMin"),
-						"Detail": ContainSubstring("minimum percentage must be less than maximum percentage"),
-					}))))
-				})
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+			})
+
+			It("should allow default leader election configuration with required fields", func() {
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
+			})
+
+			It("should reject leader election config with missing required fields", func() {
+				cfg.LeaderElection.ResourceNamespace = ""
+
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("leaderElection.resourceNamespace"),
+					})),
+				))
 			})
 		})
 

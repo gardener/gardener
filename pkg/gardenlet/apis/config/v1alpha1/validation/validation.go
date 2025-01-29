@@ -11,9 +11,14 @@ import (
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfig "k8s.io/component-base/config"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	componentbaseconfigvalidation "k8s.io/component-base/config/validation"
 	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -23,27 +28,39 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 )
 
+var configScheme = runtime.NewScheme()
+
+func init() {
+	schemeBuilder := runtime.NewSchemeBuilder(
+		gardenletconfigv1alpha1.AddToScheme,
+		componentbaseconfigv1alpha1.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
+}
+
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
 func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfiguration, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if cfg.GardenClientConnection != nil && cfg.GardenClientConnection.KubeconfigValidity != nil {
-		fldPath := field.NewPath("gardenClientConnection", "kubeconfigValidity")
+	if cfg.GardenClientConnection != nil {
+		allErrs = append(allErrs, validateGardenClientConnection(cfg.GardenClientConnection, fldPath.Child("gardenClientConnection"))...)
+	}
 
-		if v := cfg.GardenClientConnection.KubeconfigValidity.Validity; v != nil && v.Duration < 10*time.Minute {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("validity"), *v, "validity must be at least 10m"))
-		}
+	if cfg.SeedClientConnection != nil {
+		allErrs = append(allErrs, validateSeedClientConnection(cfg.SeedClientConnection, fldPath.Child("seedClientConnection"))...)
+	}
 
-		if v := cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin; v != nil && *v < 1 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *v, "minimum percentage must be at least 1"))
-		}
-		if v := cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax; v != nil && *v > 100 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMax"), *v, "maximum percentage must be at most 100"))
-		}
-		if cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin != nil &&
-			cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax != nil &&
-			*cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin >= *cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin, "minimum percentage must be less than maximum percentage"))
+	if cfg.ShootClientConnection != nil {
+		allErrs = append(allErrs, validateShootClientConnection(cfg.ShootClientConnection, fldPath.Child("shootClientConnection"))...)
+	}
+
+	if cfg.LeaderElection != nil {
+		leaderElectionPath := field.NewPath("leaderElection")
+		internalLeaderElectionConfig := &componentbaseconfig.LeaderElectionConfiguration{}
+		if err := configScheme.Convert(cfg.LeaderElection, internalLeaderElectionConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(leaderElectionPath, err))
+		} else {
+			allErrs = append(allErrs, componentbaseconfigvalidation.ValidateLeaderElectionConfiguration(internalLeaderElectionConfig, leaderElectionPath)...)
 		}
 	}
 
@@ -160,6 +177,69 @@ func ValidateGardenletConfigurationUpdate(newCfg, oldCfg *gardenletconfigv1alpha
 		}
 
 		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate, seedConfigPath)...)
+	}
+
+	return allErrs
+}
+
+func validateGardenClientConnection(conf *gardenletconfigv1alpha1.GardenClientConnection, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateClientConnectionConfiguration(conf.ClientConnectionConfiguration, fldPath)...)
+
+	if conf.KubeconfigValidity != nil {
+		allErrs = append(allErrs, validateKubeconfigValidity(conf.KubeconfigValidity, fldPath.Child("kubeconfigValidity"))...)
+	}
+
+	return allErrs
+}
+
+func validateKubeconfigValidity(conf *gardenletconfigv1alpha1.KubeconfigValidity, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if v := conf.Validity; v != nil && v.Duration < 10*time.Minute {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("validity"), *v, "validity must be at least 10m"))
+	}
+
+	if v := conf.AutoRotationJitterPercentageMin; v != nil && *v < 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *v, "minimum percentage must be at least 1"))
+	}
+	if v := conf.AutoRotationJitterPercentageMax; v != nil && *v > 100 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMax"), *v, "maximum percentage must be at most 100"))
+	}
+	if conf.AutoRotationJitterPercentageMin != nil &&
+		conf.AutoRotationJitterPercentageMax != nil &&
+		*conf.AutoRotationJitterPercentageMin >= *conf.AutoRotationJitterPercentageMax {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *conf.AutoRotationJitterPercentageMin, "minimum percentage must be less than maximum percentage"))
+	}
+
+	return allErrs
+}
+
+func validateSeedClientConnection(conf *gardenletconfigv1alpha1.SeedClientConnection, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateClientConnectionConfiguration(conf.ClientConnectionConfiguration, fldPath)...)
+
+	return allErrs
+}
+
+func validateShootClientConnection(conf *gardenletconfigv1alpha1.ShootClientConnection, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateClientConnectionConfiguration(conf.ClientConnectionConfiguration, fldPath)...)
+
+	return allErrs
+}
+
+func validateClientConnectionConfiguration(conf componentbaseconfigv1alpha1.ClientConnectionConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	internalClientConnectionConfig := &componentbaseconfig.ClientConnectionConfiguration{}
+	if err := configScheme.Convert(&conf, internalClientConnectionConfig, nil); err != nil {
+		allErrs = append(allErrs, field.InternalError(fldPath, err))
+	} else {
+		allErrs = append(allErrs, componentbaseconfigvalidation.ValidateClientConnectionConfiguration(internalClientConnectionConfig, fldPath)...)
 	}
 
 	return allErrs
