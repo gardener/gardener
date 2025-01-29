@@ -22,6 +22,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -465,11 +466,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 			Context("on ManagedResource change", func() {
 				BeforeEach(func() {
-					oldDuration := syncPeriod.Duration
-					syncPeriod.Duration = time.Minute
-					DeferCleanup(func() {
-						syncPeriod.Duration = oldDuration
-					})
+					DeferCleanup(test.WithVars(&syncPeriod.Duration, time.Minute))
 				})
 
 				It("should trigger a reconcile", func() {
@@ -478,11 +475,11 @@ var _ = Describe("Shoot Care controller tests", func() {
 					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 						return shoot.Status.Conditions
-					}).Should(And(
+					}).Should(
 						// here SystemComponentsHealthy condition is not healthy because for SystemComponentsHealthy to be healthy a tunnel connection is required
 						// which can't be faked, if it would have been failing because of MangedResource is not healthy then the reason will not be `NoTunnelDeployed`.
 						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithReason("NoTunnelDeployed"), WithMessageSubstrings("no tunnels are currently deployed to perform health-check on")),
-					))
+					)
 
 					By("Patch Managed Resource status to failed")
 					Eventually(func(g Gomega) {
@@ -523,11 +520,11 @@ var _ = Describe("Shoot Care controller tests", func() {
 					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 						return shoot.Status.Conditions
-					}).WithTimeout(5 * time.Second).Should(And(
+					}).Should(
 						// here SystemComponentsHealthy condition is not healthy because for SystemComponentsHealthy to be healthy a tunnel connection is required
 						// which can't be faked, if it would have been failing because of MangedResource is not healthy then the reason will not be `NoTunnelDeployed`.
 						ContainCondition(OfType(gardencorev1beta1.ShootSystemComponentsHealthy), WithStatus(gardencorev1beta1.ConditionProgressing), WithMessageSubstrings("Resources failed to get applied")),
-					))
+					)
 				})
 			})
 

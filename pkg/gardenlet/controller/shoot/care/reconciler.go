@@ -96,7 +96,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue.
 	if ptr.Deref(shoot.Status.SeedName, "") != r.SeedName {
 		if shoot.Status.TechnicalID != "" {
-			// cleanup mapping
+			// forget mapping as this gardenlet is no longer responsible for the shoot
 			r.namespaceToShootName.Delete(shoot.Status.TechnicalID)
 		}
 		return reconcile.Result{}, nil
