@@ -119,7 +119,7 @@ Additionally, the update tool or utility may offer configuration options, such a
 
 ### Update Strategies
 
-Gardener will introduce two additional update strategies, `AutoInPlaceUpdate` and `ManualInPlaceUpdate`, for worker pools, in addition to the existing rolling update which will be now named as `AutoReplaceUpdate` strategy. In the future, there could also be `ManualReplaceUpdate` which could give more control to the users in rolling updates as well. The two new strategies are described as follows:
+Gardener will introduce two additional update strategies, `AutoInPlaceUpdate` and `ManualInPlaceUpdate`, for worker pools, in addition to the existing rolling update which will be now named as `AutoRollingUpdate` strategy. In the future, there could also be `ManualRollingUpdate` which could give more control to the users in rolling updates as well. The two new strategies are described as follows:
 
 #### `AutoInPlaceUpdate` strategy
 
@@ -189,7 +189,7 @@ spec:
 
 #### `Shoot` API
 
-A new field `updateStrategy` is introduced under `spec.provider.workers[]` in the Shoot spec. This field will be passed on to the worker extension. Once set, changing the `updateStrategy` from an in-place strategy to a replace strategy and vice versa is prohibited through validation. Additionally, when `AutoInPlaceUpdate` or `ManualInPlaceUpdate` is configured as an update strategy, skipping an intermediate Kubernetes minor version is no longer allowed, because of potential breaking changes that are then not carried out anymore when skipping versions (only allowed with `AutoReplaceUpdate` as the machines/nodes are created from scratch in this case).
+A new field `updateStrategy` is introduced under `spec.provider.workers[]` in the Shoot spec. This field will be passed on to the worker extension. Once set, changing the `updateStrategy` from an in-place strategy to a replace strategy and vice versa is prohibited through validation. Additionally, when `AutoInPlaceUpdate` or `ManualInPlaceUpdate` is configured as an update strategy, skipping an intermediate Kubernetes minor version is no longer allowed, because of potential breaking changes that are then not carried out anymore when skipping versions (only allowed with `AutoRollingUpdate` as the machines/nodes are created from scratch in this case).
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
@@ -210,7 +210,7 @@ spec:
         maximum: 5
         maxSurge: 0
         maxUnavailable: 2
-        updateStrategy: AutoInPlaceUpdate # AutoReplaceUpdate/AutoInPlaceUpdate/ManualInPlaceUpdate, defaulted for now to AutoReplaceUpdate
+        updateStrategy: AutoInPlaceUpdate # AutoRollingUpdate/AutoInPlaceUpdate/ManualInPlaceUpdate, defaulted for now to AutoRollingUpdate
         machine:
           type: m5.large
           image:
@@ -250,7 +250,7 @@ spec:
       maximum: 5
       maxSurge: 0
       maxUnavailable: 2
-      updateStrategy: AutoInPlaceUpdate # AutoReplaceUpdate/AutoInPlaceUpdate/ManualInPlaceUpdate
+      updateStrategy: AutoInPlaceUpdate # AutoRollingUpdate/AutoInPlaceUpdate/ManualInPlaceUpdate
       kubelet:
         evictionHard:
           memoryAvailable: 100Mi
@@ -431,7 +431,7 @@ To resolve the issue, the error must be fixed manually, and the `node.machine.sa
 ## Future Work
 
 - Support node updates without draining the scheduled pods first/at all.
-- Allow to switch the update strategy from `AutoReplaceUpdate` to `AutoInPlaceUpdate`/`ManualInPlaceUpdate` or vice-versa.
+- Allow to switch the update strategy from `AutoRollingUpdate` to `AutoInPlaceUpdate`/`ManualInPlaceUpdate` or vice-versa.
 - Evaluate whether nodes can consistently be updated in-place for supported update triggers, eliminating the need to offer a choice between in-place and rolling updates.
 
 ## Alternatives
