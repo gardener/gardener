@@ -61,6 +61,9 @@ type CloudProfileSpec struct {
 	VolumeTypes []VolumeType
 	// Bastion contains machine and image properties
 	Bastion *Bastion
+	// Limits configures operational limits for Shoot clusters using this CloudProfile.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
+	Limits *Limits
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -206,6 +209,13 @@ type BastionMachineImage struct {
 type BastionMachineType struct {
 	// Name of the machine type
 	Name string
+}
+
+// Limits configures operational limits for Shoot clusters using this CloudProfile.
+// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
+type Limits struct {
+	// MaxNodesTotal configures the maximum node count a Shoot cluster can have during runtime.
+	MaxNodesTotal *int32
 }
 
 const (

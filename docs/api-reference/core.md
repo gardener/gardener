@@ -468,6 +468,21 @@ Bastion
 <p>Bastion contains the machine and image properties</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>limits</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Limits">
+Limits
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Limits configures operational limits for Shoot clusters using this CloudProfile.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3539,6 +3554,21 @@ Bastion
 <td>
 <em>(Optional)</em>
 <p>Bastion contains the machine and image properties</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>limits</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Limits">
+Limits
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Limits configures operational limits for Shoot clusters using this CloudProfile.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
 </td>
 </tr>
 </tbody>
@@ -7629,6 +7659,38 @@ LastOperationType
 <p>
 <p>LastOperationType is a string alias.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.Limits">Limits
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+</p>
+<p>
+<p>Limits configures operational limits for Shoot clusters using this CloudProfile.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxNodesTotal</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNodesTotal configures the maximum node count a Shoot cluster can have during runtime.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.LoadBalancerServicesProxyProtocol">LoadBalancerServicesProxyProtocol
 </h3>
 <p>

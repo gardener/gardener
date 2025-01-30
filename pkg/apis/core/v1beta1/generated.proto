@@ -421,6 +421,11 @@ message CloudProfileSpec {
   // Bastion contains the machine and image properties
   // +optional
   optional Bastion bastion = 10;
+
+  // Limits configures operational limits for Shoot clusters using this CloudProfile.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
+  // +optional
+  optional Limits limits = 11;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -1690,6 +1695,14 @@ message LastOperation {
 
   // Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.
   optional string type = 5;
+}
+
+// Limits configures operational limits for Shoot clusters using this CloudProfile.
+// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
+message Limits {
+  // MaxNodesTotal configures the maximum node count a Shoot cluster can have during runtime.
+  // +optional
+  optional int32 maxNodesTotal = 1;
 }
 
 // LoadBalancerServicesProxyProtocol controls whether ProxyProtocol is (optionally) allowed for the load balancer services.

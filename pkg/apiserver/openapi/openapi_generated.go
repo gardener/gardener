@@ -124,6 +124,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError":                                  schema_pkg_apis_core_v1beta1_LastError(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance":                            schema_pkg_apis_core_v1beta1_LastMaintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation":                              schema_pkg_apis_core_v1beta1_LastOperation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits":                                     schema_pkg_apis_core_v1beta1_Limits(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.LoadBalancerServicesProxyProtocol":          schema_pkg_apis_core_v1beta1_LoadBalancerServicesProxyProtocol(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine":                                    schema_pkg_apis_core_v1beta1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings":           schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
@@ -2198,12 +2199,18 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion"),
 						},
 					},
+					"limits": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Limits configures operational limits for Shoot clusters using this CloudProfile. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits"),
+						},
+					},
 				},
 				Required: []string{"kubernetes", "machineImages", "machineTypes", "regions", "type"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -5232,6 +5239,26 @@ func schema_pkg_apis_core_v1beta1_LastOperation(ref common.ReferenceCallback) co
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_Limits(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Limits configures operational limits for Shoot clusters using this CloudProfile. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"maxNodesTotal": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxNodesTotal configures the maximum node count a Shoot cluster can have during runtime.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
