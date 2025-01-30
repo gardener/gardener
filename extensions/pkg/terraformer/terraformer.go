@@ -309,7 +309,7 @@ func (t *terraformer) ensureRole(ctx context.Context) error {
 		role.Rules = []rbacv1.PolicyRule{{
 			APIGroups: []string{""},
 			Resources: []string{"configmaps", "secrets"},
-			Verbs:     []string{"create", "get", "list", "watch", "patch", "update", "delete"},
+			Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
 		}}
 		return nil
 	})
