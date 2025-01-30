@@ -68,7 +68,7 @@
           "expr": "rate(gardenlet_shoot_operation_duration_seconds_sum{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval]) / rate(gardenlet_shoot_operation_duration_seconds_count{operation=~\"$operation_type\",workerless=~\"$workerless\",hibernated=~\"$hibernated\"}[$__rate_interval])",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{workerless}}",
+          "legendFormat": "",
           "refId": "B"
         }
       ],
@@ -202,13 +202,13 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
+          "selected": false,
           "tags": [],
           "text": [
-            "true"
+            "false"
           ],
           "value": [
-            "true"
+            "false"
           ]
         },
         "description": null,
@@ -225,12 +225,12 @@
             "value": "$__all"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "true",
             "value": "true"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "false",
             "value": "false"
           }

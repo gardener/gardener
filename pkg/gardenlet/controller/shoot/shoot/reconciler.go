@@ -149,7 +149,7 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 		return reconcile.Result{}, errorsutils.WithSuppressed(syncErr, updateErr)
 	}
 
-	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.CreationTimestamp.Time).Seconds())
+	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.CreationTimestamp.UTC()))
 
 	// determine when the next shoot reconciliation is supposed to happen
 	result = helper.CalculateControllerInfos(shoot, r.Clock, *r.Config.Controllers.Shoot).RequeueAfter
@@ -480,7 +480,6 @@ func (r *Reconciler) deleteClusterResourceFromSeed(ctx context.Context, shoot *g
 }
 
 func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-
 	operationType := gardencorev1beta1.LastOperationTypeDelete
 
 	if err := r.patchShootStatusOperationSuccess(ctx, shoot, "", nil, operationType); err != nil {
@@ -494,7 +493,7 @@ func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logg
 		}
 	}
 
-	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.DeletionTimestamp.Time).Seconds())
+	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.DeletionTimestamp.Time))
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
@@ -1161,7 +1160,7 @@ func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time
 	})
 }
 
-func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1beta1.LastOperationType, duration float64) {
+func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1beta1.LastOperationType, duration time.Duration) {
 	var (
 		workerless = "false"
 		hibernated = "false"
@@ -1171,11 +1170,11 @@ func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1bet
 		workerless = "true"
 	}
 
-	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled {
+	if v1beta1helper.HibernationIsEnabled(shoot) {
 		hibernated = "true"
 	}
 
 	gardenletmetrics.ShootOperationDurationSeconds.
 		WithLabelValues(string(operationType), workerless, hibernated).
-		Observe(duration)
+		Observe(float64(duration.Seconds()))
 }
