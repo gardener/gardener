@@ -62,6 +62,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	allErrs = append(allErrs, validateCloudProfileRegions(spec.Regions, fldPath.Child("regions"))...)
 	allErrs = append(allErrs, validateCloudProfileBastion(spec, fldPath.Child("bastion"))...)
+	allErrs = append(allErrs, validateCloudProfileLimits(spec.Limits, fldPath.Child("limits"))...)
 	if spec.SeedSelector != nil {
 		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("seedSelector"))...)
 	}
@@ -342,4 +343,18 @@ func checkImageSupport(bastionImageName string, imageVersions []core.MachineImag
 
 	return field.ErrorList{field.Invalid(fldPath, bastionImageName,
 		fmt.Sprintf("no image with classification supported and arch %q found", ptr.Deref(machineArch, "<nil>")))}
+}
+
+func validateCloudProfileLimits(limits *core.Limits, fldPath *field.Path) field.ErrorList {
+	if limits == nil {
+		return nil
+	}
+
+	var allErrs field.ErrorList
+
+	if maxNodesTotal := limits.MaxNodesTotal; maxNodesTotal != nil && *maxNodesTotal <= 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNodesTotal"), *maxNodesTotal, "maxNodesTotal must be greater than 0"))
+	}
+
+	return allErrs
 }
