@@ -71,10 +71,20 @@ var _ = Describe("ClusterAutoscaler", func() {
 		machineDeployment3Name           = "pool3"
 		machineDeployment3Min      int32 = 3
 		machineDeployment3Max      int32 = 5
+		machineDeployment4Name           = "pool4"
+		machineDeployment4Min      int32 = 3
+		machineDeployment4Max      int32 = 5
+		workerPool4Priority              = ptr.To(int32(50))
+		machineDeployment5Name           = "irregular-machine-deployment-name"
+		machineDeployment5Min      int32 = 3
+		machineDeployment5Max      int32 = 5
+		workerPool5Priority              = ptr.To(int32(60))
 		machineDeployments               = []extensionsv1alpha1.MachineDeployment{
 			{Name: machineDeployment1Name, Minimum: machineDeployment1Min, Maximum: machineDeployment1Max, Priority: machineDeployment1Priority},
 			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max, Priority: machineDeployment2Priority},
 			{Name: machineDeployment3Name, Minimum: machineDeployment3Min, Maximum: machineDeployment3Max},
+			{Name: machineDeployment4Name, Minimum: machineDeployment4Min, Maximum: machineDeployment4Max},
+			{Name: machineDeployment5Name, Minimum: machineDeployment5Min, Maximum: machineDeployment5Max},
 		}
 
 		workerConfig = []gardencorev1beta1.Worker{
@@ -94,6 +104,18 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Name:    machineDeployment3Name,
 				Minimum: machineDeployment3Min,
 				Maximum: machineDeployment3Max,
+			},
+			{
+				Name:     machineDeployment4Name,
+				Minimum:  machineDeployment4Min,
+				Maximum:  machineDeployment4Max,
+				Priority: workerPool4Priority,
+			},
+			{
+				Name:     "pool-5-that-has-no-matching-machine-deployment-name",
+				Minimum:  machineDeployment5Min,
+				Maximum:  machineDeployment5Max,
+				Priority: workerPool5Priority,
 			},
 		}
 
@@ -323,6 +345,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment1Min, machineDeployment1Max, namespace, machineDeployment1Name),
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment2Min, machineDeployment2Max, namespace, machineDeployment2Name),
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment3Min, machineDeployment3Max, namespace, machineDeployment3Name),
+				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment4Min, machineDeployment4Max, namespace, machineDeployment4Name),
+				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment5Min, machineDeployment5Max, namespace, machineDeployment5Name),
 			)
 
 			deploy := &appsv1.Deployment{
@@ -593,7 +617,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Namespace: metav1.NamespaceSystem,
 			},
 			Data: map[string]string{
-				"priorities": "\"0\":\n- shoot--foo--bar\\.pool1\n- shoot--foo--bar\\.pool3\n\"40\":\n- shoot--foo--bar\\.pool2\n",
+				"priorities": "\"0\":\n- shoot--foo--bar\\.pool1\n- shoot--foo--bar\\.pool3\n- shoot--foo--bar\\.irregular-machine-deployment-name\n\"40\":\n- shoot--foo--bar\\.pool2\n\"50\":\n- shoot--foo--bar\\.pool4\n",
 			},
 		}
 
@@ -718,7 +742,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			It("w/ config, kubernetes version >= 1.26", func() { test(true, false, true, false) })
 			It("w/ config, w/ workerConfig, kubernetes version >= 1.26", func() { test(true, true, true, false) })
 			It("w/ config, w/ workerConfig, kubernetes version >= 1.26, w/ 'priority' expander already configured", func() { test(true, true, true, true) })
-
 		})
 	})
 

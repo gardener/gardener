@@ -1771,8 +1771,6 @@ var (
 	DefaultWorkerMaxUnavailable = intstr.FromInt32(0)
 	// DefaultWorkerSystemComponentsAllow is the default value for Worker AllowSystemComponents
 	DefaultWorkerSystemComponentsAllow = true
-	// DefaultWorkerPriority is the default value for Worker Priority
-	DefaultWorkerPriority = int32(0)
 )
 
 // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.

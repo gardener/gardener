@@ -82,21 +82,23 @@ spec:
       scaleDownUtilizationThreshold: 0.5
 ```
 
-In addition to that, it is also possible to configure the CA priority expander by adding priorities to the worker groups like this:
+In addition to that, it is also possible to configure the [`cluster-autoscaler` priority expander](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/expander/priority/readme.md) by adding priorities to the worker groups like this:
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 spec:
   provider:
     workers:
-      - name: worker1
-        priority: 40 # priority of this worker group
-        machine:
-          type: local
-      - name: worker2
-        machine:
-          type: local
+    - name: worker1
+      priority: 40 # priority of this worker group
+      machine:
+        type: local
+    - name: worker2
+      machine:
+        type: local
 ```
+When at least one worker group has a priority defined, the respective `ConfigMap` will be generated and deployed, which the `cluster-autoscaler` uses.
+When only a part of the worker groups have priorities configured, those who do not have these configured, will be defaulted to `0`. 
 
 If you want to be ready for a sudden spike or have some buffer in general, [over-provision nodes by means of "placeholder" pods](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#how-can-i-configure-overprovisioning-with-cluster-autoscaler) with [low priority](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption) and appropriate resource requests. This way, they will demand nodes to be provisioned for them, but if any pod comes up with a regular/higher priority, the low priority pods will be evicted to make space for the more important ones. Strictly speaking, this is not related to HA, but it may be important to keep this in mind as you generally want critical components to be rescheduled as fast as possible and if there is no node available, it may take 3 minutes or longer to do so (depending on the cloud provider). Besides, not only zones can fail, but also individual nodes.
 
