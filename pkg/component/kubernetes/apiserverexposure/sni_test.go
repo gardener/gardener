@@ -57,7 +57,7 @@ var _ = Describe("#SNI", func() {
 		expectedVirtualService                           *istionetworkingv1beta1.VirtualService
 		expectedEnvoyFilterObjectMetaAPIServerProxy      metav1.ObjectMeta
 		expectedEnvoyFilterObjectMetaIstioTLSTermination metav1.ObjectMeta
-		expectedSecretObjectMetaIstioCA                  metav1.ObjectMeta
+		expectedSecretObjectMetaIstioMTLS                metav1.ObjectMeta
 		expectedSecretObjectMetaIstioTLS                 metav1.ObjectMeta
 		expectedManagedResourceSNI                       *resourcesv1alpha1.ManagedResource
 		expectedManagedResourceTLSSecrets                *resourcesv1alpha1.ManagedResource
@@ -124,8 +124,8 @@ var _ = Describe("#SNI", func() {
 			Name:      namespace + "-istio-tls-termination",
 			Namespace: istioNamespace,
 		}
-		expectedSecretObjectMetaIstioCA = metav1.ObjectMeta{
-			Name:      namespace + "-kube-apiserver-ca",
+		expectedSecretObjectMetaIstioMTLS = metav1.ObjectMeta{
+			Name:      namespace + "-kube-apiserver-istio-mtls",
 			Namespace: istioNamespace,
 		}
 		expectedSecretObjectMetaIstioTLS = metav1.ObjectMeta{
@@ -215,8 +215,6 @@ var _ = Describe("#SNI", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
-		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy", Namespace: namespace}})).To(Succeed())
-		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy-current", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-current", Namespace: namespace}})).To(Succeed())
 
@@ -309,7 +307,7 @@ var _ = Describe("#SNI", func() {
 					secretObjectsMetas = append(secretObjectsMetas, actualSecret.ObjectMeta)
 				}
 
-				Expect(secretObjectsMetas).To(ContainElement(expectedSecretObjectMetaIstioCA))
+				Expect(secretObjectsMetas).To(ContainElement(expectedSecretObjectMetaIstioMTLS))
 				Expect(secretObjectsMetas).To(ContainElement(expectedSecretObjectMetaIstioTLS))
 			}
 		}
@@ -349,7 +347,7 @@ var _ = Describe("#SNI", func() {
 				expectedDestinationRule.Spec.TrafficPolicy.OutlierDetection = nil
 				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
 					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
-					CredentialName: namespace + "-kube-apiserver-ca",
+					CredentialName: namespace + "-kube-apiserver-istio-mtls",
 				}
 
 				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
