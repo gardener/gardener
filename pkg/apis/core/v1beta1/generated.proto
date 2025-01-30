@@ -3486,6 +3486,10 @@ message Worker {
   // ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
   // +optional
   optional ClusterAutoscalerOptions clusterAutoscaler = 21;
+
+  // Priority (or weight) is the importance by which this worker group will be scaled by cluster autoscaling.
+  // +optional
+  optional int32 priority = 22;
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.

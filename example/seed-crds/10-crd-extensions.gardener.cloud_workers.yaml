@@ -249,6 +249,11 @@ spec:
                       required:
                       - capacity
                       type: object
+                    priority:
+                      description: Priority (or weight) is the importance by which
+                        this worker pool will be scaled by cluster autoscaling.
+                      format: int32
+                      type: integer
                     providerConfig:
                       description: ProviderConfig is a provider specific configuration
                         for the worker pool.
@@ -509,6 +514,11 @@ spec:
                     name:
                       description: Name is the name of the `MachineDeployment` resource.
                       type: string
+                    priority:
+                      description: Priority (or weight) is the importance by which
+                        this machine deployment will be scaled by cluster autoscaling.
+                      format: int32
+                      type: integer
                   required:
                   - maximum
                   - minimum
