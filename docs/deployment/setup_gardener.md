@@ -14,12 +14,12 @@ Within this cluster another Kubernetes cluster is hosted, which is referred to a
 
 Any new Gardener landscape starts with the deployment of the Gardener Operator and the creation of a `garden` namespace on the designated runtime cluster.
 
-With the operator in place, the `Garden` resource can be deployed. It is reconciled by the Gardener Operator, which will create the "virtual" Garden cluster with its `etcd`, `kube-api-server`, `gardener-apiserver`, and so on.
+With the operator in place, the `Garden` resource can be deployed. It is reconciled by the Gardener Operator, which will create the "virtual" Garden cluster with its `etcd`, `kube-apiserver`, `gardener-apiserver`, and so on.
 The API server is exposed through a LoadBalancer `Service` and a DNS record pointing to its external IP address is created.
 
 Once the `Garden` reports readiness, basic building blocks like `Cloudprofiles`, `ControllerDeployments`, and `ControllerRegistrations`, as well as `Secrets` granting access to DNS management for the internal domain and external default domain, are deployed to the virtual Garden cluster.
 
-To be able to host any `Shoots`, at least one `Seed` is required. The very first `Seed` is created via a `gardenlet` resource deployed to the virtual Garden cluster. The actual `gardenlet` `Pods` run on the runtime cluster or another Kubernetes cluster not managed by Gardener. Typically, this `Seed` is referred to as an __unmanaged__ `Seed` and is considered part of the Gardener infrastructure.
+To be able to host any `Shoots`, at least one `Seed` is required. The very first `Seed` is created via a `Gardenlet` resource deployed to the virtual Garden cluster. The actual `gardenlet` `Pods` run on the runtime cluster or another Kubernetes cluster not managed by Gardener. Typically, this `Seed` is referred to as an __unmanaged__ `Seed` and is considered part of the Gardener infrastructure.
 In this setup, the very first `Seed` will not be responsible for hosting end-user `Shoot` clusters. Instead, it will be reserved for one or several "infrastructure" `Shoots`. Those will be turned into `Seeds` again through a `ManagedSeed` resource. These __Gardener-managed__ `Seeds` will then host control planes of any users' `Shoot` clusters.
 
 ![Gardener Setup](./content/gardener-setup.png)
@@ -46,14 +46,15 @@ The virtual Garden API endpoint (`kube-apiserver`) is exposed through a LoadBala
 
 Additionally, Gardener advertises `kube-apiservers` of `Shoots` through two DNS records, which requires at least one DNS zone and credentials to interact with it through automation.
 
-Assuming the base domain for a Gardener landscape is `gardener.crazy-botany.cloud`, the following example shows a possible way to structure DNS records:
+Assuming the base domain for a Gardener landscape is `crazy-botany.gardener.cloud`, the following example shows a possible way to structure DNS records:
 
 | Component                | General                                            | Example                                              |
 |:-------------------------|:---------------------------------------------------|:-----------------------------------------------------|
 | Gardener Base            | gardener.\<showroom-base-domain\>                  | gardener.crazy-botany.cloud                          |
 | Virtual Garden           | api.garden.\<gardener-base-domain\>                | api.garden.gardener.crazy-botany.cloud               |
 | Gardener Ingress         | ingress.garden\<gardener-base-domain\>             | ingress.garden.gardener.crazy-botany.cloud           |
-| Gardener Dashboard       | dashboard.ingress.\<gardener-base-domain\>         | dashboard.ingress.garden.gardener.crazy-botany.cloud |
+| Gardener Dashboard       | dashboard.ingress.\<gardener-base-domain\>         | dashboard.ingress.garden.crazy-botany.gardener.cloud |
+| Gardener Discovery       | discovery.ingress.\<gardener-base-domain\>         | dashboard.ingress.garden.crazy-botany.gardener.cloud |
 | Shoot Internal           | internal.\<gardener-base-domain\>                  | internal.gardener.crazy-botany.cloud                 |
 | Shoot (default) External | shoot.\<gardener-base-domain\>                     | shoot.gardener.crazy-botany.cloud                    |
 | Unmanaged Seed Ingress   | ingress.soil.\<gardener-base-domain\>              | ingress.soil.gardener.crazy-botany.cloud             |
@@ -180,7 +181,7 @@ Additionally, the `BackupBucket` and credentials to access it are configured alo
 ![Garden](./content/garden.png)
 
 Upon the first reconciliation of the `Garden` resource, a Kubernetes control plane will be bootstrapped in the `garden` namespace. `etcd-main` and `etcd-events` are managed by [etcd-druid](https://github.com/gardener/etcd-druid) and use the `BackupBucket` created by the `provider-extension`.
-To be able to serve any Gardener resource, the `gardener-apiserver` is deployed and registered through an `Apiservice` resource with the `kube-apiserver` of the virtual Garden cluster. Components like `gardener-scheduler` and `gardener-controller-manager` are deployed to act on Gardener's resources.
+To be able to serve any Gardener resource, the `gardener-apiserver` is deployed and registered through an `APIService` resource with the `kube-apiserver` of the virtual Garden cluster. Components like `gardener-scheduler` and `gardener-controller-manager` are deployed to act on Gardener's resources.
 
 Once the `Garden` resource reports readiness, the virtual Garden cluster can be targeted.
 
@@ -193,7 +194,7 @@ crazy-botany   1.31.1        v1.110.0           Succeeded        True      True 
 
 In case the automatic DNS record creation is not supported, a record with the external address of the `virtual-garden-istio-ingress` (found in namespace `istio-ingressgateway`) service has to be created manually.
 
-To obtain credentials and interact with the virtual Garden cluster, please follow this [guide](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#virtual-garden-kubeconfig).
+To obtain credentials and interact with the virtual Garden cluster, please follow this [guide](../concepts/operator.md#virtual-garden-kubeconfig).
 
 Reference documentation and examples:
 
@@ -248,7 +249,7 @@ More details can be found in the [Extension Resource documentation](https://gith
 
 ### Cloud Profile
 
-In order to host any `Shoot` cluster, at least one `CloudProfile` is required. The resource describes supported Kubernetes and OS versions, as well as infrastructure capabilities like regions and their availability zones.
+In order to host any `Shoot` cluster, at least one `CloudProfile` is required. The `CloudProfile` resource describes supported Kubernetes and OS versions, as well as infrastructure capabilities like regions and their availability zones.
 
 Hence, the next step is to craft a `CloudProfile` for each infrastructure provider and combine it with the information where the operating system images can be found. The resulting `CloudProfile` resource has to be deployed to the virtual Garden cluster.
 
@@ -268,7 +269,7 @@ kind: CloudProfile
 metadata:
   name: openstack-example
 spec:
-  caBundle: |
+  caBundle: | # CA Bundle installed on all nodes of the shoot clusters using this CloudProfile
     <redacted>
   kubernetes:
     versions:
@@ -314,7 +315,7 @@ spec:
       versions:
       - version: 1592.3.0
         regions:
-        - id: abcd-1234
+        - id: abcd-1234 # The ID of the image in the given OpenStack installation for the specified region.
           name: my-region-1
     # ...
  ```
