@@ -11,11 +11,15 @@ import (
 
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 )
 
 // ValidateControllerManagerConfiguration validates the given `ControllerManagerConfiguration`.
 func ValidateControllerManagerConfiguration(conf *controllermanagerconfigv1alpha1.ControllerManagerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.GardenClientConnection, field.NewPath("gardenClientConnection"))...)
+	allErrs = append(allErrs, validationutils.ValidateLeaderElectionConfiguration(conf.LeaderElection, field.NewPath("leaderElection"))...)
 
 	if conf.LogLevel != "" {
 		if !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {

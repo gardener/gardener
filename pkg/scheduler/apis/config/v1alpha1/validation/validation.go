@@ -11,11 +11,15 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 )
 
 // ValidateConfiguration validates the configuration.
 func ValidateConfiguration(config *schedulerconfigv1alpha1.SchedulerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&config.ClientConnection, field.NewPath("clientConnection"))...)
+	allErrs = append(allErrs, validationutils.ValidateLeaderElectionConfiguration(config.LeaderElection, field.NewPath("leaderElection"))...)
 
 	allErrs = append(allErrs, validateSchedulerControllerConfiguration(config.Schedulers, field.NewPath("schedulers"))...)
 

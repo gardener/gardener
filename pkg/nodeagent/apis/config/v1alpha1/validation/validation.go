@@ -13,12 +13,15 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 )
 
 // ValidateNodeAgentConfiguration validates the given `NodeAgentConfiguration`.
 func ValidateNodeAgentConfiguration(conf *nodeagentconfigv1alpha1.NodeAgentConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.ClientConnection, field.NewPath("clientConnection"))...)
 
 	if conf.LogLevel != "" && !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), conf.LogLevel, logger.AllLogLevels))

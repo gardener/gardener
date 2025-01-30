@@ -12,11 +12,14 @@ import (
 
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 )
 
 // ValidateAdmissionControllerConfiguration validates the given `AdmissionControllerConfiguration`.
 func ValidateAdmissionControllerConfiguration(config *admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&config.GardenClientConnection, field.NewPath("gardenClientConnection"))...)
 
 	if !sets.New(logger.AllLogLevels...).Has(config.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), config.LogLevel, logger.AllLogLevels))

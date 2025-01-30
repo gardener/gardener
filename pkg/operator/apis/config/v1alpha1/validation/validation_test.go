@@ -13,6 +13,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
@@ -54,6 +55,85 @@ var _ = Describe("#ValidateOperatorConfiguration", func() {
 
 	It("should return no errors because the config is valid", func() {
 		Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
+	})
+
+	Context("client connection configuration", func() {
+		var (
+			clientConnection *componentbaseconfigv1alpha1.ClientConnectionConfiguration
+			fldPath          *field.Path
+		)
+
+		BeforeEach(func() {
+			operatorconfigv1alpha1.SetObjectDefaults_OperatorConfiguration(conf)
+		})
+
+		commonTests := func() {
+			It("should allow default client connection configuration", func() {
+				Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
+			})
+
+			It("should return errors because some values are invalid", func() {
+				clientConnection.Burst = -1
+
+				Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fldPath.Child("burst").String()),
+					})),
+				))
+			})
+		}
+
+		Context("runtime client connection", func() {
+			BeforeEach(func() {
+				clientConnection = &conf.RuntimeClientConnection
+				fldPath = field.NewPath("runtimeClientConnection")
+			})
+
+			commonTests()
+		})
+
+		Context("virtual client connection", func() {
+			BeforeEach(func() {
+				clientConnection = &conf.VirtualClientConnection
+				fldPath = field.NewPath("virtualClientConnection")
+			})
+
+			commonTests()
+		})
+	})
+
+	Context("leader election configuration", func() {
+		BeforeEach(func() {
+			operatorconfigv1alpha1.SetObjectDefaults_OperatorConfiguration(conf)
+		})
+
+		It("should allow not enabling leader election", func() {
+			conf.LeaderElection.LeaderElect = nil
+
+			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should allow disabling leader election", func() {
+			conf.LeaderElection.LeaderElect = ptr.To(false)
+
+			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should allow default leader election configuration with required fields", func() {
+			Expect(ValidateOperatorConfiguration(conf)).To(BeEmpty())
+		})
+
+		It("should reject leader election config with missing required fields", func() {
+			conf.LeaderElection.ResourceNamespace = ""
+
+			Expect(ValidateOperatorConfiguration(conf)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("leaderElection.resourceNamespace"),
+				})),
+			))
+		})
 	})
 
 	DescribeTable("logging configuration",

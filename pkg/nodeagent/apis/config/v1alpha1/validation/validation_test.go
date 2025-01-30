@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 
 	. "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1/validation"
@@ -42,6 +43,35 @@ var _ = Describe("#ValidateNodeAgentConfiguration", func() {
 
 	It("should pass because all necessary fields is specified", func() {
 		Expect(ValidateNodeAgentConfiguration(config)).To(BeEmpty())
+	})
+
+	Context("client connection configuration", func() {
+		var (
+			clientConnection *componentbaseconfigv1alpha1.ClientConnectionConfiguration
+			fldPath          *field.Path
+		)
+
+		BeforeEach(func() {
+			SetObjectDefaults_NodeAgentConfiguration(config)
+
+			clientConnection = &config.ClientConnection
+			fldPath = field.NewPath("clientConnection")
+		})
+
+		It("should allow default client connection configuration", func() {
+			Expect(ValidateNodeAgentConfiguration(config)).To(BeEmpty())
+		})
+
+		It("should return errors because some values are invalid", func() {
+			clientConnection.Burst = -1
+
+			Expect(ValidateNodeAgentConfiguration(config)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fldPath.Child("burst").String()),
+				})),
+			))
+		})
 	})
 
 	Context("Operating System Config Controller", func() {

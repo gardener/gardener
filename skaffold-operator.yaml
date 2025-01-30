@@ -303,6 +303,7 @@ build:
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
             - pkg/utils/timewindow
+            - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/apigroups
             - pkg/utils/validation/cidr
@@ -412,6 +413,7 @@ build:
             - pkg/utils/secrets
             - pkg/utils/time
             - pkg/utils/timewindow
+            - pkg/utils/validation
             - pkg/utils/validation/cidr
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
@@ -594,6 +596,7 @@ build:
             - pkg/utils/secrets
             - pkg/utils/time
             - pkg/utils/timewindow
+            - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/apigroups
             - pkg/utils/validation/cidr
@@ -752,6 +755,7 @@ build:
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
             - pkg/utils/timewindow
+            - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/features
             - pkg/utils/validation/kubernetesversion
@@ -821,6 +825,7 @@ build:
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/timewindow
+            - pkg/utils/validation
             - pkg/utils/validation/cidr
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
@@ -904,6 +909,7 @@ build:
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/timewindow
+            - pkg/utils/validation
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - pkg/webhook/authorizer

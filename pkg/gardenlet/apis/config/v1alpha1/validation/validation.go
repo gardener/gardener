@@ -21,31 +21,26 @@ import (
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 )
 
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
 func ValidateGardenletConfiguration(cfg *gardenletconfigv1alpha1.GardenletConfiguration, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if cfg.GardenClientConnection != nil && cfg.GardenClientConnection.KubeconfigValidity != nil {
-		fldPath := field.NewPath("gardenClientConnection", "kubeconfigValidity")
-
-		if v := cfg.GardenClientConnection.KubeconfigValidity.Validity; v != nil && v.Duration < 10*time.Minute {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("validity"), *v, "validity must be at least 10m"))
-		}
-
-		if v := cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin; v != nil && *v < 1 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *v, "minimum percentage must be at least 1"))
-		}
-		if v := cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax; v != nil && *v > 100 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMax"), *v, "maximum percentage must be at most 100"))
-		}
-		if cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin != nil &&
-			cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax != nil &&
-			*cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin >= *cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMax {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *cfg.GardenClientConnection.KubeconfigValidity.AutoRotationJitterPercentageMin, "minimum percentage must be less than maximum percentage"))
-		}
+	if cfg.GardenClientConnection != nil {
+		allErrs = append(allErrs, validateGardenClientConnection(cfg.GardenClientConnection, fldPath.Child("gardenClientConnection"))...)
 	}
+
+	if cfg.SeedClientConnection != nil {
+		allErrs = append(allErrs, validateSeedClientConnection(cfg.SeedClientConnection, fldPath.Child("seedClientConnection"))...)
+	}
+
+	if cfg.ShootClientConnection != nil {
+		allErrs = append(allErrs, validateShootClientConnection(cfg.ShootClientConnection, fldPath.Child("shootClientConnection"))...)
+	}
+
+	allErrs = append(allErrs, validationutils.ValidateLeaderElectionConfiguration(cfg.LeaderElection, field.NewPath("leaderElection"))...)
 
 	if cfg.Controllers != nil {
 		if cfg.Controllers.BackupEntry != nil {
@@ -161,6 +156,56 @@ func ValidateGardenletConfigurationUpdate(newCfg, oldCfg *gardenletconfigv1alpha
 
 		allErrs = append(allErrs, gardencorevalidation.ValidateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate, seedConfigPath)...)
 	}
+
+	return allErrs
+}
+
+func validateGardenClientConnection(conf *gardenletconfigv1alpha1.GardenClientConnection, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.ClientConnectionConfiguration, fldPath)...)
+
+	if conf.KubeconfigValidity != nil {
+		allErrs = append(allErrs, validateKubeconfigValidity(conf.KubeconfigValidity, fldPath.Child("kubeconfigValidity"))...)
+	}
+
+	return allErrs
+}
+
+func validateKubeconfigValidity(conf *gardenletconfigv1alpha1.KubeconfigValidity, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if v := conf.Validity; v != nil && v.Duration < 10*time.Minute {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("validity"), *v, "validity must be at least 10m"))
+	}
+
+	if v := conf.AutoRotationJitterPercentageMin; v != nil && *v < 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *v, "minimum percentage must be at least 1"))
+	}
+	if v := conf.AutoRotationJitterPercentageMax; v != nil && *v > 100 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMax"), *v, "maximum percentage must be at most 100"))
+	}
+	if conf.AutoRotationJitterPercentageMin != nil &&
+		conf.AutoRotationJitterPercentageMax != nil &&
+		*conf.AutoRotationJitterPercentageMin >= *conf.AutoRotationJitterPercentageMax {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("autoRotationJitterPercentageMin"), *conf.AutoRotationJitterPercentageMin, "minimum percentage must be less than maximum percentage"))
+	}
+
+	return allErrs
+}
+
+func validateSeedClientConnection(conf *gardenletconfigv1alpha1.SeedClientConnection, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.ClientConnectionConfiguration, fldPath)...)
+
+	return allErrs
+}
+
+func validateShootClientConnection(conf *gardenletconfigv1alpha1.ShootClientConnection, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.ClientConnectionConfiguration, fldPath)...)
 
 	return allErrs
 }

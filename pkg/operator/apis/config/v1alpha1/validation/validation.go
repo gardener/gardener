@@ -16,11 +16,16 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
+	validationutils "github.com/gardener/gardener/pkg/utils/validation"
 )
 
 // ValidateOperatorConfiguration validates the given `OperatorConfiguration`.
 func ValidateOperatorConfiguration(conf *operatorconfigv1alpha1.OperatorConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.RuntimeClientConnection, field.NewPath("runtimeClientConnection"))...)
+	allErrs = append(allErrs, validationutils.ValidateClientConnectionConfiguration(&conf.VirtualClientConnection, field.NewPath("virtualClientConnection"))...)
+	allErrs = append(allErrs, validationutils.ValidateLeaderElectionConfiguration(&conf.LeaderElection, field.NewPath("leaderElection"))...)
 
 	if conf.LogLevel != "" && !sets.New(logger.AllLogLevels...).Has(conf.LogLevel) {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), conf.LogLevel, logger.AllLogLevels))
