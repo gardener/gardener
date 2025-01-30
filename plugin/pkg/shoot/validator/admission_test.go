@@ -6189,5 +6189,116 @@ var _ = Describe("validator", func() {
 				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 			})
 		})
+
+		Context("limits enforcement", func() {
+			BeforeEach(func() {
+				cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{}
+			})
+
+			JustBeforeEach(func() {
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+			})
+
+			It("should allow shoots if there are no limits", func() {
+				cloudProfile.Spec.Limits = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow deleting shoots independent of limits", func() {
+				attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+
+			Context("maxPodsTotal", func() {
+				const limit int32 = 3
+
+				BeforeEach(func() {
+					cloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(limit)
+				})
+
+				It("should allow shoots within the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit - 1
+					shoot.Spec.Provider.Workers[0].Maximum = limit
+					worker2 := shoot.Spec.Provider.Workers[0].DeepCopy()
+					worker2.Minimum = 1
+					worker2.Maximum = limit
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *worker2)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				})
+
+				It("should forbid shoots with individual maximum over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = 1
+					shoot.Spec.Provider.Workers[0].Maximum = limit + 1
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *shoot.Spec.Provider.Workers[0].DeepCopy())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(ctx, attrs, nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(And(
+						ContainSubstring("spec.provider.workers[0].maximum"),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", limit),
+						ContainSubstring("spec.provider.workers[1].maximum"),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", limit),
+						Not(ContainSubstring("total minimum node count")),
+					)))
+				})
+
+				It("should forbid shoots with total minimum over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit
+					worker2 := shoot.Spec.Provider.Workers[0].DeepCopy()
+					worker2.Minimum = 1
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *worker2)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(ctx, attrs, nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(And(
+						ContainSubstring("spec.provider.workers"),
+						ContainSubstring("total minimum node count"),
+						Not(ContainSubstring("maximum node count of a worker pool")),
+					)))
+				})
+
+				It("should forbid shoots with individual maximum and total minimum over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit
+					shoot.Spec.Provider.Workers[0].Maximum = limit + 1
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *shoot.Spec.Provider.Workers[0].DeepCopy())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(ctx, attrs, nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(And(
+						ContainSubstring("spec.provider.workers[0].maximum"),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", limit),
+						ContainSubstring("spec.provider.workers[1].maximum"),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", limit),
+						ContainSubstring("spec.provider.workers"),
+						ContainSubstring("total minimum node count"),
+					)))
+				})
+
+				It("should allow deleting shoots over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit + 1
+
+					attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				})
+			})
+		})
 	})
 })

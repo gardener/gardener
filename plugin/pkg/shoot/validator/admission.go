@@ -339,6 +339,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	allErrs = append(allErrs, validationContext.validateAccessRestrictions()...)
 	allErrs = append(allErrs, validationContext.validateProvider(a)...)
 	allErrs = append(allErrs, validationContext.validateAdmissionPlugins(a, v.secretLister)...)
+	allErrs = append(allErrs, validationContext.validateLimits(a)...)
 
 	// Skip the validation if the operation is admission.Delete or the spec hasn't changed.
 	if a.GetOperation() != admission.Delete && !reflect.DeepEqual(validationContext.shoot.Spec, validationContext.oldShoot.Spec) {
@@ -2134,4 +2135,39 @@ func (c *validationContext) validateManagedServiceAccountIssuer(
 	}
 
 	return nil
+}
+
+func (c *validationContext) validateLimits(a admission.Attributes) field.ErrorList {
+	var allErrs field.ErrorList
+
+	if a.GetOperation() == admission.Delete || c.cloudProfileSpec.Limits == nil {
+		return nil
+	}
+
+	if maxNodesTotal := c.cloudProfileSpec.Limits.MaxNodesTotal; maxNodesTotal != nil {
+		allErrs = append(allErrs, validateMaxNodesTotal(c.shoot.Spec.Provider.Workers, *maxNodesTotal)...)
+	}
+
+	return allErrs
+}
+
+func validateMaxNodesTotal(workers []core.Worker, maxNodesTotal int32) field.ErrorList {
+	var (
+		allErrs      field.ErrorList
+		fldPath      = field.NewPath("spec", "provider", "workers")
+		totalMinimum int32
+	)
+
+	for i, worker := range workers {
+		totalMinimum += worker.Minimum
+		if worker.Maximum > maxNodesTotal {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), fmt.Sprintf("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", maxNodesTotal)))
+		}
+	}
+
+	if totalMinimum > maxNodesTotal {
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("the total minimum node count of all worker pools must not exceed the operator-configured limit of %d", maxNodesTotal)))
+	}
+
+	return allErrs
 }
