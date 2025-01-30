@@ -3036,6 +3036,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					TargetMemoryPercentile:                   &percentileGreaterThanOne,
 					RecommendationLowerBoundMemoryPercentile: &percentileLessThanZero,
 					RecommendationUpperBoundMemoryPercentile: &percentileGreaterThanOne,
+					CPUHistogramDecayHalfLife:                &negativeDuration,
+					MemoryHistogramDecayHalfLife:             &negativeDuration,
+					MemoryAggregationInterval:                &negativeDuration,
+					MemoryAggregationIntervalCount:           ptr.To[int64](-1),
 				}, ConsistOf(
 					field.Invalid(field.NewPath("evictAfterOOMThreshold"), negativeDuration, "can not be negative"),
 					field.Invalid(field.NewPath("updaterInterval"), negativeDuration, "can not be negative"),
@@ -3046,6 +3050,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 					field.Invalid(field.NewPath("targetMemoryPercentile"), percentileGreaterThanOne, "percentile value must be in the range [0, 1]"),
 					field.Invalid(field.NewPath("recommendationLowerBoundMemoryPercentile"), percentileLessThanZero, "percentile value must be in the range [0, 1]"),
 					field.Invalid(field.NewPath("recommendationUpperBoundMemoryPercentile"), percentileGreaterThanOne, "percentile value must be in the range [0, 1]"),
+					field.Invalid(field.NewPath("cpuHistogramDecayHalfLife"), negativeDuration, "can not be negative"),
+					field.Invalid(field.NewPath("memoryHistogramDecayHalfLife"), negativeDuration, "can not be negative"),
+					field.Invalid(field.NewPath("memoryAggregationInterval"), negativeDuration, "can not be negative"),
+					field.Invalid(field.NewPath("memoryAggregationIntervalCount"), int64(-1), "must be greater than or equal to 0"),
 				)),
 			)
 		})

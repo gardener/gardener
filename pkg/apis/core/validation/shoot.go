@@ -1220,6 +1220,18 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	if percentile := autoScaler.RecommendationUpperBoundMemoryPercentile; percentile != nil {
 		allErrs = append(allErrs, validatePercentile(*percentile, fldPath.Child("recommendationUpperBoundMemoryPercentile"))...)
 	}
+	if halfLife := autoScaler.CPUHistogramDecayHalfLife; halfLife != nil && halfLife.Duration < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("cpuHistogramDecayHalfLife"), *halfLife, "can not be negative"))
+	}
+	if halfLife := autoScaler.MemoryHistogramDecayHalfLife; halfLife != nil && halfLife.Duration < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("memoryHistogramDecayHalfLife"), *halfLife, "can not be negative"))
+	}
+	if interval := autoScaler.MemoryAggregationInterval; interval != nil && interval.Duration < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("memoryAggregationInterval"), *interval, "can not be negative"))
+	}
+	if count := autoScaler.MemoryAggregationIntervalCount; count != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*count, fldPath.Child("memoryAggregationIntervalCount"))...)
+	}
 
 	return allErrs
 }
