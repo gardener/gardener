@@ -60,7 +60,7 @@ type Interface interface {
 	SetNamespaceUID(types.UID)
 	// SetMachineDeployments sets the machine deployments.
 	SetMachineDeployments([]extensionsv1alpha1.MachineDeployment)
-	// SetMaxNodesTotal sets the maximum number of nodes that can be created in the cluster.
+	// SetMaxNodesTotal sets the maximum number of nodes that can be created in the cluster. 0 means unlimited.
 	SetMaxNodesTotal(int64)
 }
 
