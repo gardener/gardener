@@ -4,7 +4,7 @@ title: Resource Admission in the Garden Cluster
 
 # Validating and Mutating Resources in the Garden Cluster
 
-The `Shoot` resource itself can contain some extension-specific data blobs:
+The `Shoot` resource itself can contain some extension-specific data blobs (see `providerConfig`):
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
