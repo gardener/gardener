@@ -172,8 +172,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 		})
 	})
 
-	DescribeTable("#CalculateMaxNodesForShoot",
-		func(shoot *gardencorev1beta1.Shoot, expectedResult *int64) {
+	DescribeTable("#CalculateMaxNodesForShootNetworks",
+		func(shoot *gardencorev1beta1.Shoot, expectedResult int) {
 			if shoot.Spec.Networking != nil {
 				if shoot.Spec.Networking.Pods != nil {
 					_, pods, err := net.ParseCIDR(*shoot.Spec.Networking.Pods)
@@ -198,9 +198,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 					botanist.Shoot.Networks.Nodes = append(botanist.Shoot.Networks.Nodes, *nodes)
 				}
 			}
-			maxNode, err := botanist.CalculateMaxNodesForShoot(shoot)
+			maxNodes, err := botanist.CalculateMaxNodesForShootNetworks(shoot)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(maxNode).To(Equal(expectedResult))
+			Expect(maxNodes).To(BeEquivalentTo(expectedResult))
 		},
 
 		Entry(
@@ -212,7 +212,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			}},
-			nil,
+			0,
 		),
 		Entry(
 			"Pods network only",
@@ -226,7 +226,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Pods: ptr.To("100.64.0.0/12"),
 				},
 			}},
-			ptr.To[int64](4096),
+			4096,
 		),
 		Entry(
 			"Default Pods network",
@@ -241,7 +241,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Nodes: ptr.To("10.250.0.0/16"),
 				},
 			}},
-			ptr.To[int64](8192),
+			8192,
 		),
 		Entry(
 			"Pods network is restriction",
@@ -256,7 +256,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Nodes: ptr.To("10.250.0.0/16"),
 				},
 			}},
-			ptr.To[int64](4096),
+			4096,
 		),
 		Entry(
 			"Nodes network is restriction",
@@ -271,7 +271,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Nodes: ptr.To("10.250.0.0/20"),
 				},
 			}},
-			ptr.To[int64](4094),
+			4094,
 		),
 		Entry(
 			"IPv6",
@@ -287,7 +287,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
 				},
 			}},
-			ptr.To[int64](65536),
+			65536,
 		),
 		Entry(
 			"Multiple pods network only",
@@ -308,7 +308,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](4098),
+			4098,
 		),
 		Entry(
 			"Pods network is restriction (with multiple networks)",
@@ -331,7 +331,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](12288),
+			12288,
 		),
 		Entry(
 			"Nodes network is restriction (with multiple networks)",
@@ -354,7 +354,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](8188),
+			8188,
 		),
 		Entry(
 			"Dual-stack - IPv4 nodes network is restriction",
@@ -376,7 +376,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](4094),
+			4094,
 		),
 		Entry(
 			"Dual-stack - IPv4 pods network is restriction",
@@ -398,7 +398,33 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](4096),
+			4096,
 		),
 	)
+
+	Describe("#MinGreaterThanZero", func() {
+		It("should return 0 if no value is greater than 0", func() {
+			Expect(MinGreaterThanZero(-1, -1)).To(BeEquivalentTo(0))
+			Expect(MinGreaterThanZero(-1, 0)).To(BeEquivalentTo(0))
+			Expect(MinGreaterThanZero(0, -1)).To(BeEquivalentTo(0))
+			Expect(MinGreaterThanZero(0, 0)).To(BeEquivalentTo(0))
+		})
+
+		It("should return the larger value if the other value is not greater than 0", func() {
+			Expect(MinGreaterThanZero(0, 1)).To(BeEquivalentTo(1))
+			Expect(MinGreaterThanZero(-1, 1)).To(BeEquivalentTo(1))
+			Expect(MinGreaterThanZero(1, 0)).To(BeEquivalentTo(1))
+			Expect(MinGreaterThanZero(1, -1)).To(BeEquivalentTo(1))
+		})
+
+		It("should return the smaller value if both values are greater than 0", func() {
+			Expect(MinGreaterThanZero(1, 2)).To(BeEquivalentTo(1))
+			Expect(MinGreaterThanZero(2, 1)).To(BeEquivalentTo(1))
+		})
+
+		It("should return the value if both are equal", func() {
+			Expect(MinGreaterThanZero(0, 0)).To(BeEquivalentTo(0))
+			Expect(MinGreaterThanZero(1, 1)).To(BeEquivalentTo(1))
+		})
+	})
 })
