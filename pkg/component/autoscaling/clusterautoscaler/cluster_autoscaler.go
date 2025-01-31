@@ -11,6 +11,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	yaml2 "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,7 +26,6 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -685,8 +685,7 @@ func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigM
 		priority := ptr.Deref(machineDeployment.Priority, priorityDefaults.forDeployment(machineDeployment.Name))
 		priorities[priority] = append(priorities[priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
 	}
-
-	priorityConfig, err := yaml.Marshal(priorities)
+	priorityConfig, err := yaml2.Marshal(priorities)
 	if err != nil {
 		return nil, err
 	}
