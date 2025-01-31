@@ -393,7 +393,7 @@ spec:
       apiVersion: gardenlet.config.gardener.cloud/v1alpha1
       kind: GardenletConfiguration
       gardenClientConnection:
-        gardenClusterAddress: https://api.garden.gardener.crazy-botany.cloud
+        gardenClusterAddress: https://api.garden.crazy-botany.gardener.cloud
 ```
 
 ![managed seed](./content/managedseed.png)
