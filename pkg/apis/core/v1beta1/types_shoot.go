@@ -1604,6 +1604,9 @@ type Worker struct {
 	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
 	// +optional
 	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty" protobuf:"bytes,21,opt,name=clusterAutoscaler"`
+	// Priority (or weight) is the importance by which this worker group will be scaled by cluster autoscaling.
+	// +optional
+	Priority *int32 `json:"priority,omitempty" protobuf:"varint,22,opt,name=priority"`
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.

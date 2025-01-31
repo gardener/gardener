@@ -13953,6 +13953,18 @@ ClusterAutoscalerOptions
 <p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>priority</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Priority (or weight) is the importance by which this worker group will be scaled by cluster autoscaling.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.WorkerKubernetes">WorkerKubernetes

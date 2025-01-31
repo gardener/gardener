@@ -164,6 +164,9 @@ type WorkerPool struct {
 	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
 	// +optional
 	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty"`
+	// Priority (or weight) is the importance by which this worker pool will be scaled by cluster autoscaling.
+	// +optional
+	Priority *int32 `json:"priority,omitempty"`
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
@@ -252,4 +255,7 @@ type MachineDeployment struct {
 	Minimum int32 `json:"minimum"`
 	// Maximum is the maximum number for this machine deployment.
 	Maximum int32 `json:"maximum"`
+	// Priority (or weight) is the importance by which this machine deployment will be scaled by cluster autoscaling.
+	// +optional
+	Priority *int32 `json:"priority,omitempty"`
 }

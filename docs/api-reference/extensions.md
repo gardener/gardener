@@ -3655,6 +3655,18 @@ int32
 <p>Maximum is the maximum number for this machine deployment.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>priority</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Priority (or weight) is the importance by which this machine deployment will be scaled by cluster autoscaling.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.MachineImage">MachineImage
@@ -4713,6 +4725,18 @@ ClusterAutoscalerOptions
 <td>
 <em>(Optional)</em>
 <p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>priority</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Priority (or weight) is the importance by which this worker pool will be scaled by cluster autoscaling.</p>
 </td>
 </tr>
 </tbody>

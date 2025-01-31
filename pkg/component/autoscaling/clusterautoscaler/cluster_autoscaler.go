@@ -7,6 +7,7 @@ package clusterautoscaler
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -24,6 +25,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -70,6 +72,7 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
+	workerConfig []gardencorev1beta1.Worker,
 	maxNodesTotal int64,
 	runtimeVersion *semver.Version,
 ) Interface {
@@ -80,6 +83,7 @@ func New(
 		image:          image,
 		replicas:       replicas,
 		config:         config,
+		workerConfig:   workerConfig,
 		maxNodesTotal:  maxNodesTotal,
 		runtimeVersion: runtimeVersion,
 	}
@@ -92,6 +96,7 @@ type clusterAutoscaler struct {
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.ClusterAutoscaler
+	workerConfig   []gardencorev1beta1.Worker
 	maxNodesTotal  int64
 	runtimeVersion *semver.Version
 
@@ -101,15 +106,16 @@ type clusterAutoscaler struct {
 
 func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	var (
-		shootAccessSecret   = c.newShootAccessSecret()
-		serviceAccount      = c.emptyServiceAccount()
-		clusterRoleBinding  = c.emptyClusterRoleBinding()
-		vpa                 = c.emptyVPA()
-		service             = c.emptyService()
-		deployment          = c.emptyDeployment()
-		podDisruptionBudget = c.emptyPodDisruptionBudget()
-		serviceMonitor      = c.emptyServiceMonitor()
-		prometheusRule      = c.emptyPrometheusRule()
+		shootAccessSecret             = c.newShootAccessSecret()
+		serviceAccount                = c.emptyServiceAccount()
+		clusterRoleBinding            = c.emptyClusterRoleBinding()
+		vpa                           = c.emptyVPA()
+		service                       = c.emptyService()
+		deployment                    = c.emptyDeployment()
+		podDisruptionBudget           = c.emptyPodDisruptionBudget()
+		serviceMonitor                = c.emptyServiceMonitor()
+		prometheusRule                = c.emptyPrometheusRule()
+		workersHavePriorityConfigured = c.workersHavePriorityConfigured()
 	)
 
 	genericTokenKubeconfigSecret, found := c.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -201,7 +207,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 						Name:            containerName,
 						Image:           c.image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						Command:         c.computeCommand(),
+						Command:         c.computeCommand(workersHavePriorityConfigured),
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          portNameMetrics,
@@ -342,7 +348,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	data, err := c.computeShootResourcesData(shootAccessSecret.ServiceAccountName)
+	data, err := c.computeShootResourcesData(shootAccessSecret.ServiceAccountName, workersHavePriorityConfigured)
 	if err != nil {
 		return err
 	}
@@ -425,7 +431,16 @@ func (c *clusterAutoscaler) emptyManagedResource() *resourcesv1alpha1.ManagedRes
 	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceTargetName, Namespace: c.namespace}}
 }
 
-func (c *clusterAutoscaler) computeCommand() []string {
+func (c *clusterAutoscaler) workersHavePriorityConfigured() bool {
+	for _, worker := range c.workerConfig {
+		if worker.Priority != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) []string {
 	var (
 		command = []string{
 			"./cluster-autoscaler",
@@ -449,8 +464,13 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	}
 	gardencorev1beta1.SetDefaults_ClusterAutoscaler(c.config)
 
+	expanderMode := *c.config.Expander
+	if workersHavePriorityConfigured {
+		expanderMode = ensureExpanderInExpanderConfig(string(gardencorev1beta1.ClusterAutoscalerExpanderPriority), expanderMode)
+	}
+
 	command = append(command,
-		fmt.Sprintf("--expander=%s", *c.config.Expander),
+		fmt.Sprintf("--expander=%s", expanderMode),
 		fmt.Sprintf("--max-graceful-termination-sec=%d", *c.config.MaxGracefulTerminationSeconds),
 		fmt.Sprintf("--max-node-provision-time=%s", c.config.MaxNodeProvisionTime.Duration),
 		fmt.Sprintf("--scale-down-utilization-threshold=%f", *c.config.ScaleDownUtilizationThreshold),
@@ -485,7 +505,7 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	return command
 }
 
-func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string) (map[string][]byte, error) {
+func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string, workersHavePrioritiesConfigured bool) (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -617,11 +637,76 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 			},
 		}
 	)
+	objects := []client.Object{clusterRole, clusterRoleBinding, role, rolebinding}
 
-	return registry.AddAllAndSerialize(
-		clusterRole,
-		clusterRoleBinding,
-		role,
-		rolebinding,
-	)
+	if workersHavePrioritiesConfigured {
+		configMap, err := c.generatePriorityExpanderConfigMap()
+		if err != nil {
+			return nil, err
+		}
+		objects = append(objects, configMap)
+	}
+	return registry.AddAllAndSerialize(objects...)
+}
+
+type poolPriorityDefaults struct {
+	namespace string
+	poolMap   map[string]int32
+}
+
+func buildPoolPriorityDefaultsMap(workerConfig []gardencorev1beta1.Worker, namespace string) *poolPriorityDefaults {
+	fallbackMap := &poolPriorityDefaults{
+		poolMap:   make(map[string]int32, len(workerConfig)),
+		namespace: namespace,
+	}
+	for _, pool := range workerConfig {
+		fallbackMap.poolMap[pool.Name] = ptr.Deref(pool.Priority, 0)
+	}
+	return fallbackMap
+}
+
+func (p *poolPriorityDefaults) forDeployment(machineDeploymentName string) int32 {
+	name := strings.TrimPrefix(machineDeploymentName, p.namespace+"-")
+	zoneIndex := strings.LastIndex(name, "-z")
+	if zoneIndex != -1 {
+		name = name[:zoneIndex]
+	}
+	return p.poolMap[name]
+}
+
+func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigMap, error) {
+	priorities := map[int32][]string{}
+	priorityDefaults := buildPoolPriorityDefaultsMap(c.workerConfig, c.namespace)
+
+	for _, machineDeployment := range c.machineDeployments {
+		// TODO(tobschli): Remove this once all well-known extensions have revendored to use the generic actuator that sets the priorities.
+		// In the case the priority is nil, the extension did not set the priorities that were configured in the worker.
+		// Fall back to try to determine the pool name.
+		priority := ptr.Deref(machineDeployment.Priority, priorityDefaults.forDeployment(machineDeployment.Name))
+		priorities[priority] = append(priorities[priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
+	}
+
+	priorityConfig, err := yaml.Marshal(priorities)
+	if err != nil {
+		return nil, err
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster-autoscaler-priority-expander",
+			Namespace: metav1.NamespaceSystem,
+		},
+		Data: map[string]string{
+			"priorities": string(priorityConfig),
+		},
+	}
+
+	return configMap, nil
+}
+
+func ensureExpanderInExpanderConfig(expander string, expanderConfig gardencorev1beta1.ExpanderMode) gardencorev1beta1.ExpanderMode {
+	if strings.Contains(string(expanderConfig), expander) {
+		return expanderConfig
+	}
+	return gardencorev1beta1.ExpanderMode(fmt.Sprintf("%s,%s", expander, string(expanderConfig)))
 }
