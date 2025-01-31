@@ -630,17 +630,20 @@ func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserve
 		minReplicas = 3
 	}
 
+	minAllowed := helper.GetMinAllowedForKubeAPIServer(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer)
+
 	return apiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
+			Requests: kubernetesutils.MaximumResourcesFromResourceList(corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("600m"),
 				corev1.ResourceMemory: resource.MustParse("512Mi"),
 			},
-		},
+				minAllowed,
+			)},
 		MinReplicas:       minReplicas,
 		MaxReplicas:       6,
 		ScaleDownDisabled: false,
-		MinAllowed:        helper.GetMinAllowedForKubeAPIServer(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer),
+		MinAllowed:        minAllowed,
 	}
 }
 

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -693,4 +694,21 @@ func (c *ComparableTolerations) Transform(toleration corev1.Toleration) corev1.T
 
 	toleration.TolerationSeconds = c.tolerationSeconds[tolerationSeconds]
 	return toleration
+}
+
+// MaximumResourcesFromResourceList merges the given resource lists.
+// If the same resource is defined in both lists, the higher quantity is taken into account.
+func MaximumResourcesFromResourceList(list1, list2 corev1.ResourceList) corev1.ResourceList {
+	resources := maps.Clone(list1)
+
+	for res, quan := range list2 {
+		if quanExiting, ok := resources[res]; ok {
+			if quanExiting.Cmp(quan) > 0 {
+				continue
+			}
+		}
+		resources[res] = quan
+	}
+
+	return resources
 }

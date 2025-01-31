@@ -1712,8 +1712,8 @@ var _ = Describe("Etcd", func() {
 
 			BeforeEach(func() {
 				minAllowed = corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("1"),
-					corev1.ResourceMemory: resource.MustParse("1Gi"),
+					corev1.ResourceCPU:    resource.MustParse("250m"),
+					corev1.ResourceMemory: resource.MustParse("1.5Gi"),
 				}
 
 				autoscalingConfig.MinAllowed = minAllowed
@@ -1734,7 +1734,12 @@ var _ = Describe("Etcd", func() {
 							nil,
 							"",
 							"",
-							nil,
+							&corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("300m"),
+									corev1.ResourceMemory: resource.MustParse("1.5Gi"),
+								},
+							},
 							nil,
 							secretNameCA,
 							secretNameClient,

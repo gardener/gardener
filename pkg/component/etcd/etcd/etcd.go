@@ -202,12 +202,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		replicas = e.computeReplicas(existingEtcd)
 
-		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources()
-		resourcesCompactionJob                = e.computeCompactionJobContainerResources()
-		garbageCollectionPolicy               = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
-		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
-		compressionPolicy                     = druidv1alpha1.GzipCompression
-		compressionSpec                       = druidv1alpha1.CompressionSpec{
+		resourcesCompactionJob  = e.computeCompactionJobContainerResources()
+		garbageCollectionPolicy = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
+		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
+		compressionPolicy       = druidv1alpha1.GzipCompression
+		compressionSpec         = druidv1alpha1.CompressionSpec{
 			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
@@ -215,29 +214,18 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		annotations         map[string]string
 		metrics             = druidv1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
-		minAllowed          = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("60M"),
-		}
 	)
 
 	if e.values.Class == ClassImportant {
 		if !e.values.HighAvailabilityEnabled {
 			annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		}
-		resourcesBackupRestore = &corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("20m"),
-				corev1.ResourceMemory: resource.MustParse("80Mi"),
-			},
-		}
 		metrics = druidv1alpha1.Extensive
 		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
-		minAllowed = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("300M"),
-		}
 	}
 
-	maps.Insert(minAllowed, maps.All(e.values.Autoscaling.MinAllowed))
+	minAllowed := e.computeMinAllowedForETCDContainer()
+	resourcesEtcd, resourcesBackupRestore := e.computeContainerResources(minAllowed)
 
 	etcdCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
 	if !found {
@@ -786,7 +774,7 @@ func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutosca
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
 }
 
-func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed corev1.ResourceList) error {
+func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowedETCD corev1.ResourceList) error {
 	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
 	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
@@ -823,7 +811,7 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
 						ContainerName:    containerNameEtcd,
-						MinAllowed:       minAllowed,
+						MinAllowed:       minAllowedETCD,
 						ControlledValues: &controlledValues,
 						Mode:             &containerPolicyAuto,
 					},
@@ -968,18 +956,43 @@ func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
 
 func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
-func (e *etcd) computeContainerResources() (*corev1.ResourceRequirements, *corev1.ResourceRequirements) {
-	return &corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("300m"),
-				corev1.ResourceMemory: resource.MustParse("1G"),
-			},
-		}, &corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("10m"),
-				corev1.ResourceMemory: resource.MustParse("40Mi"),
-			},
+func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
+	minAllowed := corev1.ResourceList{
+		corev1.ResourceMemory: resource.MustParse("60M"),
+	}
+
+	if e.values.Class == ClassImportant {
+		minAllowed = corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("300M"),
 		}
+	}
+
+	maps.Insert(minAllowed, maps.All(e.values.Autoscaling.MinAllowed))
+	return minAllowed
+}
+
+func (e *etcd) computeContainerResources(minAllowedETCD corev1.ResourceList) (*corev1.ResourceRequirements, *corev1.ResourceRequirements) {
+	resourcesETCD := kubernetesutils.MaximumResourcesFromResourceList(
+		corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("300m"),
+			corev1.ResourceMemory: resource.MustParse("1G"),
+		},
+		minAllowedETCD,
+	)
+
+	resourcesBackupRestore := corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("10m"),
+		corev1.ResourceMemory: resource.MustParse("40Mi"),
+	}
+
+	if e.values.Class == ClassImportant {
+		resourcesBackupRestore = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("20m"),
+			corev1.ResourceMemory: resource.MustParse("80Mi"),
+		}
+	}
+
+	return &corev1.ResourceRequirements{Requests: resourcesETCD}, &corev1.ResourceRequirements{Requests: resourcesBackupRestore}
 }
 
 func (e *etcd) computeCompactionJobContainerResources() *corev1.ResourceRequirements {
