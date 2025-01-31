@@ -26,8 +26,6 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// This admission plugin was supposed to be removed in favor of static validation in a future release, see https://github.com/gardener/gardener/pull/4228.
-// However, it cannot be removed, because the static validation cannot differ `CREATE` from `UPDATE` operation.
 type handler struct {
 	*admission.Handler
 }
@@ -58,6 +56,7 @@ func (v *handler) Validate(_ context.Context, a admission.Attributes, _ admissio
 		return apierrors.NewBadRequest("could not convert object to Project")
 	}
 
+	// TODO: Remove this admission plugin in favor of static validation in a future release, see https://github.com/gardener/gardener/pull/4228.
 	if project.Spec.Namespace != nil && *project.Spec.Namespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(*project.Spec.Namespace, gardenerutils.ProjectNamespacePrefix) {
 		return admission.NewForbidden(a, fmt.Errorf(".spec.namespace must start with %s", gardenerutils.ProjectNamespacePrefix))
 	}
