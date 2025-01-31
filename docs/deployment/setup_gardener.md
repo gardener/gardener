@@ -15,11 +15,11 @@ Within this cluster another Kubernetes cluster is hosted, which is referred to a
 Any new Gardener landscape starts with the deployment of the Gardener Operator and the creation of a `garden` namespace on the designated runtime cluster.
 
 With the operator in place, the `Garden` resource can be deployed. It is reconciled by the Gardener Operator, which will create the "virtual" Garden cluster with its `etcd`, `kube-apiserver`, `gardener-apiserver`, and so on.
-The API server is exposed through a LoadBalancer `Service` and a DNS record pointing to its external IP address is created.
+The API server is exposed through an Istio `Gateway` and a DNS record pointing to the `Gateway's` external IP address is created.
 
 Once the `Garden` reports readiness, basic building blocks like `Cloudprofiles`, `ControllerDeployments`, and `ControllerRegistrations`, as well as `Secrets` granting access to DNS management for the internal domain and external default domain, are deployed to the virtual Garden cluster.
 
-To be able to host any `Shoots`, at least one `Seed` is required. The very first `Seed` is created via a `Gardenlet` resource deployed to the virtual Garden cluster. The actual `gardenlet` `Pods` run on the runtime cluster or another Kubernetes cluster not managed by Gardener. Typically, this `Seed` is referred to as an __unmanaged__ `Seed` and is considered part of the Gardener infrastructure.
+To be able to host any `Shoots`, at least one `Seed` is required. The very first `Seed` is created via a `Gardenlet` resource (more precisely `gardenlets.seedmanagement.gardener.cloud`) deployed to the virtual Garden cluster. The actual `gardenlet` `Pods` run on the runtime cluster or another Kubernetes cluster not managed by Gardener. Typically, this `Seed` is referred to as an __unmanaged__ `Seed` and is considered part of the Gardener infrastructure.
 In this setup, the very first `Seed` will not be responsible for hosting end-user `Shoot` clusters. Instead, it will be reserved for one or several "infrastructure" `Shoots`. Those will be turned into `Seeds` again through a `ManagedSeed` resource. These __Gardener-managed__ `Seeds` will then host control planes of any users' `Shoot` clusters.
 
 ![Gardener Setup](./content/gardener-setup.png)
@@ -35,40 +35,41 @@ In order to install and run Gardener an already existing Kubernetes cluster is r
 
 Reference documentation:
 
-- [Gardener Architecture](https://github.com/gardener/gardener/blob/master/docs/concepts/architecture.md)
+- [Gardener Architecture](../concepts/architecture.md)
 - [Gardener concepts](https://github.com/gardener/gardener/tree/master/docs#concepts)
 
 In this example, the runtime cluster is also used to host the very first `gardenlet`, which will register this cluster as a `Seed` as well. The `gardenlet` can be deployed to another Kubernetes cluster (recommended for productive setups). Here, using the runtime cluster keeps the amount of unmanaged clusters at a bare minimum.
 
 ### DNS Zone
 
-The virtual Garden API endpoint (`kube-apiserver`) is exposed through a LoadBalancer `Service` and its IP address is made discoverable through DNS. Hence, a zone where an `A` record can be created is required.
+The virtual Garden API endpoint (`kube-apiserver`) is exposed through an Istio `Gateway`. This in turn is reachable via a LoadBalancer `Service`. The IP address is made discoverable through DNS. Hence, a zone where an `A` record can be created is required.
 
 Additionally, Gardener advertises `kube-apiservers` of `Shoots` through two DNS records, which requires at least one DNS zone and credentials to interact with it through automation.
 
 Assuming the base domain for a Gardener landscape is `crazy-botany.gardener.cloud`, the following example shows a possible way to structure DNS records:
 
-| Component                | General                                            | Example                                              |
-|:-------------------------|:---------------------------------------------------|:-----------------------------------------------------|
-| Gardener Base            | gardener.\<showroom-base-domain\>                  | gardener.crazy-botany.cloud                          |
-| Virtual Garden           | api.garden.\<gardener-base-domain\>                | api.garden.gardener.crazy-botany.cloud               |
-| Gardener Ingress         | ingress.garden\<gardener-base-domain\>             | ingress.garden.gardener.crazy-botany.cloud           |
-| Gardener Dashboard       | dashboard.ingress.\<gardener-base-domain\>         | dashboard.ingress.garden.crazy-botany.gardener.cloud |
-| Gardener Discovery       | discovery.ingress.\<gardener-base-domain\>         | dashboard.ingress.garden.crazy-botany.gardener.cloud |
-| Shoot Internal           | internal.\<gardener-base-domain\>                  | internal.gardener.crazy-botany.cloud                 |
-| Shoot (default) External | shoot.\<gardener-base-domain\>                     | shoot.gardener.crazy-botany.cloud                    |
-| Unmanaged Seed Ingress   | ingress.soil.\<gardener-base-domain\>              | ingress.soil.gardener.crazy-botany.cloud             |
-| Managed Seed             | \<seed-name>.seed.\<gardener-base-domain\>         | cc-ha.seed.gardener.crazy-botany.cloud               |
-| Managed Seed Ingress     | ingress.\<seed-name>.seed.\<gardener-base-domain\> | ingress.cc-ha.seed.gardener.crazy-botany.cloud       |
+| Component                | General                                            | Example                                                 |
+|:-------------------------|:---------------------------------------------------|:--------------------------------------------------------|
+| Gardener Base            | gardener.\<base-domain\>                           | gardener.crazy-botany.gardener.cloud                    |
+| Virtual Garden           | api.garden.\<base-domain\>                         | api.garden.gardener.crazy-botany.gardener.cloud         |
+| Gardener Ingress         | ingress.garden\<gardener-base-domain\>             | ingress.garden.gardener.crazy-botany.gardener.cloud     |
+| Gardener Dashboard       | dashboard.ingress.\<gardener-base-domain\>         | dashboard.ingress.garden.crazy-botany.gardener.cloud    |
+| Gardener Discovery       | discovery.ingress.\<gardener-base-domain\>         | discovery.ingress.garden.crazy-botany.gardener.cloud    |
+| Shoot Internal           | internal.\<gardener-base-domain\>                  | internal.gardener.crazy-botany.gardener.cloud           |
+| Shoot (default) External | shoot.\<gardener-base-domain\>                     | shoot.gardener.crazy-botany.gardener.cloud              |
+| Unmanaged Seed Ingress   | ingress.soil.\<gardener-base-domain\>              | ingress.soil.gardener.crazy-botany.gardener.cloud       |
+| Managed Seed             | \<seed-name>.seed.\<gardener-base-domain\>         | cc-ha.seed.gardener.crazy-botany.gardener.cloud         |
+| Managed Seed Ingress     | ingress.\<seed-name>.seed.\<gardener-base-domain\> | ingress.cc-ha.seed.gardener.crazy-botany.gardener.cloud |
 
 Reference documentation:
 
-- [Gardener Configuration](https://github.com/gardener/gardener/blob/master/docs/operations/configuration.md#system-configuration)
-- [DNS records](https://github.com/gardener/gardener/blob/master/docs/extensions/resources/dnsrecord.md)
+- [Gardener Configuration](../operations/configuration.md#system-configuration)
+- [DNS records](../extensions/resources/dnsrecord.md)
 
 ### Backup Bucket
 
-The virtual Garden cluster's `etcd` is governed by [etcd-druid](https://github.com/gardener/etcd-druid). Backups are created continuously and stored to a supported object store. Credentials to manage an object store on the chosen infrastructure are required.
+The virtual Garden cluster's `etcd` is governed by [etcd-druid](https://github.com/gardener/etcd-druid). If configured, backups are created continuously and stored to a supported object store. This requires credentials to manage an object store on the chosen infrastructure.
+It is recommended for any productive installation of Gardener.
 
 ### Infrastructure
 
@@ -78,7 +79,7 @@ Access to the respective infrastructure is required and needs to be handed over 
 
 Reference documentation:
 
-- [Gardener extensibility](https://github.com/gardener/gardener/tree/master/docs#extensions)
+- [Gardener extensibility](../README.md#extensions)
 - [Provider openstack](https://github.com/gardener/gardener-extension-provider-openstack/tree/master/docs)
 
 ## Configure and deploy components
@@ -87,7 +88,7 @@ This section focuses on the individual building blocks of a Gardener landscape a
 
 ### Gardener Operator
 
-The Gardener Operator is provided as a [helm chart](https://github.com/gardener/gardener/tree/master/charts/gardener/operator), which is also published as an OCI artifact and attached to each release of the [gardener/gardener](https://github.com/gardener/gardener/releases) repository.
+The Gardener Operator is provided as a [helm chart](../../charts/gardener/operator), which is also published as an OCI artifact and attached to each release of the [gardener/gardener](https://github.com/gardener/gardener/releases) repository.
 
 When setting up a new Gardener landscape, choose the latest version and either install the chart or render the templates e.g.:
 
@@ -97,12 +98,12 @@ helm template ./charts/gardener/operator --namespace garden --set replicaCount=2
 
 Reference documentation:
 
-- [Gardener Operator](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md)
+- [Gardener Operator](../concepts/operator.md)
 
 ### Garden
 
 The Gardener Operator reconciles the so-called `Garden` resource, which contains a detailed configuration of the Garden landscape to be created. Specify the domain name for the Garden's API endpoint, CIDR blocks for the virtual cluster, high availability, and other options here.
-To get familiar with the available options, check the [Garden example](https://github.com/gardener/gardener/blob/master/example/operator/20-garden.yaml).
+To get familiar with the available options, check the [Garden example](../../example/operator/20-garden.yaml).
 
 While most operations are carried out in the realm of the runtime cluster, two external services are required. To automate both the creation of DNS records and a `BackupBucket`, a `provider-extension` needs to be deployed to the runtime cluster as well.
 To facilitate the extension's deployment, the API group `operator.gardener.cloud/v1alpha1` contains an `Extension` resources, which is reconciled by the Gardener Operator. Such an `Extension` resource specifies how to install it into the runtime cluster, as well as the virtual Garden cluster. More details can be found in the [Extensions section](#extensions).
@@ -198,10 +199,10 @@ To obtain credentials and interact with the virtual Garden cluster, please follo
 
 Reference documentation and examples:
 
-- [Garden configuration example](https://github.com/gardener/gardener/blob/master/example/operator/20-garden.yaml)
-- [Backup secret examples](https://gardener.cloud/docs/)
-- [Configuration options](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#garden-resources)
-- [Accessing the virtual Garden](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#virtual-garden-kubeconfig)
+- [Garden configuration example](../../example/operator/20-garden.yaml)
+- [Backup secret examples](https://github.com/gardener/etcd-backup-restore/tree/master/example/storage-provider-secrets)
+- [Configuration options](../concepts/operator.md#garden-resources)
+- [Accessing the virtual Garden](../concepts/operator.md#virtual-garden-kubeconfig)
 
 ### Extensions
 
@@ -209,9 +210,9 @@ Gardener is provider-agnostic and relies on a growing set of extensions. An exte
 
 There are a few extensions considered essential to any Gardener installation:
 
-- at least one [infrastructure provider](https://github.com/gardener/gardener/tree/master/extensions#infrastructure-provider)
-- at least one [operating system extension](https://github.com/gardener/gardener/tree/master/extensions#operating-system) - [Garden Linux](https://github.com/gardener/gardener-extension-os-gardenlinux) is recommended
-- at least one [network plugin (CNI)](https://github.com/gardener/gardener/tree/master/extensions#network-plugin)
+- at least one [infrastructure provider](../../extensions/README.md#infrastructure-provider)
+- at least one [operating system extension](../../extensions/README.md#operating-system) - [Garden Linux](https://github.com/gardener/gardener-extension-os-gardenlinux) is recommended
+- at least one [network plugin (CNI)](../../extensions/README.md#network-plugin)
 - Shoot services
 
 An extension often consists of two components - a controller implementing the Gardener's extension contract and an admission controller. The latter is deployed to the runtime cluster and prevents misconfiguration of `Shoots`.
@@ -227,23 +228,23 @@ For this example, the following choices are made:
 - [OIDC service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
 
 Reference documentation:
-- [Extension Contract](https://github.com/gardener/gardener/blob/master/docs/extensions/resources/extension.md#contract-extension-resource)
-- [GEP 01 Extensibility](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md)
-- [Extension Library](https://github.com/gardener/gardener/tree/master/extensions#known-extension-implementations)
+- [Extension Contract](../extensions/resources/extension.md#contract-extension-resource)
+- [GEP 01 Extensibility](../proposals/01-extensibility.md)
+- [Extension Library](../../extensions/README.md#known-extension-implementations)
 
 #### How to install an extension
 
 In order to make an extension known to a Gardener landscape, two resources have to be applied to the virtual Garden cluster - firstly, a `ControllerDeployment` and secondly, a matching `ControllerRegistration`. With both in place, Gardener-managed `ControllerInstallations` take care of the actual deployment of the extension to the target environment.
 
-Check the [controller registration documentation](https://github.com/gardener/gardener/blob/master/docs/extensions/controllerregistration.md) for more details.
+Check the [controller registration documentation](../extensions/controllerregistration.md) for more details.
 
-Now, the classical way of installing `ControllerDeployment` and `ControllerRegistration` is to prepare the resources and apply them to the virtual Garden cluster. Please note, the `ControllerDeployment` contains a base64 encoded archive of extension's helm chart.
+Now, the classical way of installing `ControllerDeployment` and `ControllerRegistration` is to prepare the resources and apply them to the virtual Garden cluster. The `ControllerDeployment` references an OCI repository containing the extension's helm chart.
 
 For example, to deploy the [provider Openstack](https://github.com/gardener/gardener-extension-provider-openstack) extension, the [example file](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/controller-registration.yaml) can be used.
 
 To simplify this procedure, extensions can be registered through `Extension` resources in the runtime cluster. The Gardener Operator will take care of deploying the required resources to the virtual Garden cluster.
 In addition, this approach allows the extensions and their admission controllers to be deployed to the runtime cluster as well. There, they can provide additional functionality like creating DNS records or `BackupBuckets`.
-More details can be found in the [Extension Resource documentation](https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#extension-resource).
+More details can be found in the [Extension Resource documentation](../concepts/operator.md#extension-resource).
 
 ![extensions](./content/extensions.png)
 
@@ -322,12 +323,12 @@ spec:
 
 Reference documentation:
 
-- [Cloud profiles](https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md#cloudprofiles)
-- [Cloud profile example](https://github.com/gardener/gardener/blob/master/example/30-cloudprofile.yaml)
+- [Cloud profiles](../concepts/apiserver.md#cloudprofiles)
+- [Cloud profile example](../../example/30-cloudprofile.yaml)
 - [Openstack cloud profile example](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/docs/operations/operations.md)
 - [Garden Linux release notes example](https://github.com/gardenlinux/gardenlinux/releases/tag/1592.3)
-- [Image vector](https://github.com/gardener/gardener/blob/master/docs/deployment/image_vector.md)
-- [Image vector container defaults](https://github.com/gardener/gardener/blob/master/imagevector/containers.yaml)
+- [Image vector](../deployment/image_vector.md)
+- [Image vector container defaults](../../imagevector/containers.yaml)
 
 ### DNS setup for internal & external domains
 
@@ -335,18 +336,18 @@ Gardener maintains DNS records for a `Shoot` which requires a DNS zone and crede
 
 Reference documentation:
 
-- [DNS records](https://github.com/gardener/gardener/blob/master/docs/extensions/resources/dnsrecord.md#what-does-gardener-create-dns-records-for)
-- [Default domain example](https://github.com/gardener/gardener/blob/master/example/10-secret-default-domain.yaml)
-- [Internal domain example](https://github.com/gardener/gardener/blob/master/example/10-secret-internal-domain.yaml)
+- [DNS records](../extensions/resources/dnsrecord.md#what-does-gardener-create-dns-records-for)
+- [Default domain example](../../example/10-secret-default-domain.yaml)
+- [Internal domain example](../../example/10-secret-internal-domain.yaml)
 
 ### Gardenlet
 
-Before the first `Shoot` can be created in a new Gardener landscape, at least one `Seed` is required. The very first `Seed` is typically created by deploying a properly configured `gardenlet` to an existing Kubernetes cluster. In this example, the `gardenlet` will be deployed to the runtime cluster - effectively turning it into a `Seed` as well.
-It is also possible (and strongly recommended for larger installations) to deploy a `gardenlet` to another cluster thus separating virtual Garden cluster and the first `Seed` with the control planes hosted there.
+Before the first `Shoot` can be created in a new Gardener landscape, at least one `Seed` is required. Typically, the very first `Seed` is created by deploying a properly configured `gardenlet` to an existing Kubernetes cluster. In this example, the `gardenlet` will be deployed to the runtime cluster - effectively turning it into a `Seed` as well. 
+Thus, the runtime cluster serves two purposes now - it hosts the virtual Garden cluster and control planes. It is possible, and strongly recommended for larger installations, to deploy a `gardenlet` to another cluster. This separates the virtual Garden cluster from the first `Seed` with the control planes hosted there.
 
-For the `gardenlet` to function properly, it needs a `provider-extension` matching its configuration to create a `BackupBucket`, as well as valid infrastructure credentials. A `Secret` with the credentials needs to be created in the virtual Garden cluster and linked in the `gardenlet`'s configuration.
+For the `Seed` to function properly, a `provider-extension` matching the target infrastructure is required. Alongside, valid infrastructure credentials have to be provided. A `Secret` with the credentials needs to be created in the virtual Garden cluster and linked in the `gardenlet`'s configuration. If configured (`spec.backup`), the `Seed` will get a dedicated `BackupBucket` to store `etcd` backups.
 
-The easiest way to deploy a `gardenlet` is to create a `gardenlet` resource in the virtual Garden cluster. Make sure to configure the CIDR blocks properly to avoid conflicts or overlaps with the runtime cluster.
+The easiest way to deploy a `gardenlet` is to create a `Gardenlet` resource in the virtual Garden cluster. Make sure to configure the CIDR blocks properly to avoid conflicts or overlaps with the runtime cluster.
 
 ![gardenlet](./content/gardenlet.png)
 
@@ -368,10 +369,10 @@ spec:
 
 Reference documentation:
 
-- [Gardenlet documentation](https://github.com/gardener/gardener/blob/master/docs/concepts/gardenlet.md)
-- [Deploying a Gardenlet](https://github.com/gardener/gardener/blob/master/docs/deployment/deploy_gardenlet.md)
-- [Gardenlet example](https://github.com/gardener/gardener/blob/master/example/55-gardenlet.yaml)
-- [Gardenlet configuration example](https://github.com/gardener/gardener/blob/master/example/20-componentconfig-gardenlet.yaml)
+- [Gardenlet documentation](../concepts/gardenlet.md)
+- [Deploying a Gardenlet](../deployment/deploy_gardenlet.md)
+- [Gardenlet example](../../example/55-gardenlet.yaml)
+- [Gardenlet configuration example](../../example/20-componentconfig-gardenlet.yaml)
 
 ### Shoot & Managed Seed
 
@@ -399,7 +400,7 @@ spec:
 
 Reference documentation:
 
-- [Managed Seeds](https://github.com/gardener/gardener/blob/master/docs/operations/managed_seed.md)
+- [Managed Seeds](../operations/managed_seed.md)
 
 ## Conclusion
 
