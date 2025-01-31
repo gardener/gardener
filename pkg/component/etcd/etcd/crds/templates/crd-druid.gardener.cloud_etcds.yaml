@@ -406,6 +406,11 @@ spec:
                         description: Labels specify the labels that should be added
                           to the client service
                         type: object
+                      trafficDistribution:
+                        description: |-
+                          TrafficDistribution defines the traffic distribution preference that should be added to the client service.
+                          More info: https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution
+                        type: string
                     type: object
                   clientUrlTls:
                     description: ClientUrlTLS contains the ca, server TLS and client

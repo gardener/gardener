@@ -24,7 +24,7 @@ import (
 
 // DefaultResourceManager returns an instance of Gardener Resource Manager with defaults configured for being deployed in a Shoot namespace
 func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
-	version, err := semver.NewVersion(b.SeedClientSet.Version())
+	seedVersion, err := semver.NewVersion(b.SeedClientSet.Version())
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		b.Seed.GetInfo().Status.ClusterIdentity,
 		defaultNotReadyTolerationSeconds,
 		defaultUnreachableTolerationSeconds,
-		version,
+		seedVersion,
 		logger.InfoLevel, logger.FormatJSON,
 		"",
 		true,

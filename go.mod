@@ -264,3 +264,5 @@ require (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.3 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 )
+
+replace github.com/gardener/etcd-druid => github.com/ialidzhikov/etcd-druid v0.15.1-0.20250116142344-5ee984d8ce53

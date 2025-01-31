@@ -251,7 +251,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	clientService := &corev1.Service{}
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
+	gardenerutils.ReconcileTopologyAwareRoutingSettings(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
 
 	ports := []networkingv1.NetworkPolicyPort{
 		{Port: ptr.To(intstr.FromInt32(etcdconstants.PortEtcdClient)), Protocol: ptr.To(corev1.ProtocolTCP)},
@@ -328,8 +328,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
 			Quota:                   ptr.To(resource.MustParse("8Gi")),
 			ClientService: &druidv1alpha1.ClientService{
-				Annotations: clientService.Annotations,
-				Labels:      clientService.Labels,
+				Annotations:         clientService.Annotations,
+				Labels:              clientService.Labels,
+				TrafficDistribution: clientService.Spec.TrafficDistribution,
 			},
 		}
 
