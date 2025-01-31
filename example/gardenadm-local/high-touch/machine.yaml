@@ -18,7 +18,6 @@ spec:
       containers:
       - name: node
         image: local-skaffold/gardener-extension-provider-local-node
-        imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true
         env:
