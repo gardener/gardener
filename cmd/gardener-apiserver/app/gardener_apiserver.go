@@ -396,7 +396,7 @@ func (o *Options) Run(ctx context.Context) error {
 			p.WorkloadIdentityIssuerURL = &o.ExtraOptions.WorkloadIdentityTokenIssuer
 		}
 
-		marsheledInfo, err := yaml.Marshal(p)
+		marshelledInfo, err := yaml.Marshal(p)
 		if err != nil {
 			return err
 		}
@@ -416,14 +416,14 @@ func (o *Options) Run(ctx context.Context) error {
 					Name:      configMapName,
 				},
 				Data: map[string]string{
-					gardenerAPIServerKey: string(marsheledInfo),
+					gardenerAPIServerKey: string(marshelledInfo),
 				},
 			}
 			_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Create(ctx, &configMap, metav1.CreateOptions{})
 			return err
 		}
 
-		configMap.Data[gardenerAPIServerKey] = string(marsheledInfo)
+		configMap.Data[gardenerAPIServerKey] = string(marshelledInfo)
 		_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Update(ctx, configMap, metav1.UpdateOptions{})
 		return err
 	}); err != nil {
