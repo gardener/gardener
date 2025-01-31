@@ -49,7 +49,10 @@ var _ = Describe("ClusterAutoscaler", func() {
 		botanist.Seed = &seedpkg.Seed{
 			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
-		botanist.Shoot = &shootpkg.Shoot{Networks: &shootpkg.Networks{}}
+		botanist.Shoot = &shootpkg.Shoot{
+			Networks:     &shootpkg.Networks{},
+			CloudProfile: &gardencorev1beta1.CloudProfile{},
+		}
 		botanist.SeedClientSet = kubernetesClient
 	})
 
@@ -89,14 +92,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 					UID: namespaceUID,
 				},
 			}
-			botanist.Shoot = &shootpkg.Shoot{
-				Components: &shootpkg.Components{
-					ControlPlane: &shootpkg.ControlPlane{
-						ClusterAutoscaler: clusterAutoscaler,
-					},
-					Extensions: &shootpkg.Extensions{
-						Worker: worker,
-					},
+			botanist.Shoot.Components = &shootpkg.Components{
+				ControlPlane: &shootpkg.ControlPlane{
+					ClusterAutoscaler: clusterAutoscaler,
+				},
+				Extensions: &shootpkg.Extensions{
+					Worker: worker,
 				},
 			}
 		})
@@ -169,6 +170,68 @@ var _ = Describe("ClusterAutoscaler", func() {
 		It("should fail when the scale call fails", func() {
 			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), patch).Return(fakeErr)
 			Expect(botanist.ScaleClusterAutoscalerToZero(ctx)).To(MatchError(fakeErr))
+		})
+	})
+
+	Describe("#CalculateMaxNodesTotal", func() {
+		var (
+			shoot *gardencorev1beta1.Shoot
+
+			maxNetworks int32
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+						NodeCIDRMaskSize: ptr.To[int32](24),
+					},
+				},
+				Networking: &gardencorev1beta1.Networking{
+					Pods: ptr.To("100.64.0.0/12"),
+				},
+			}}
+			_, pods, err := net.ParseCIDR(*shoot.Spec.Networking.Pods)
+			Expect(err).NotTo(HaveOccurred())
+			botanist.Shoot.Networks.Pods = append(botanist.Shoot.Networks.Pods, *pods)
+			// -> shoot networks allow the following number of nodes:
+			maxNetworks = 4096
+
+			botanist.Shoot.CloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+				MaxNodesTotal: ptr.To[int32](100),
+			}
+		})
+
+		It("should return 0 if there are no limits", func() {
+			shoot.Spec.Networking = nil
+			botanist.Shoot.CloudProfile.Spec.Limits = nil
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(0))
+		})
+
+		It("should return 0 if maxNodesTotal is not limited", func() {
+			shoot.Spec.Networking = nil
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = nil
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(0))
+		})
+
+		It("should return the network limit if maxNodesTotal is not limited", func() {
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = nil
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(maxNetworks))
+		})
+
+		It("should return the CloudProfile limit if network is not limited", func() {
+			shoot.Spec.Networking = nil
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
+		})
+
+		It("should return the CloudProfile limit if it is lower than the network limit", func() {
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To[int32](maxNetworks - 10)
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
+		})
+
+		It("should return the network limit if it is lower than the CloudProfile limit", func() {
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To[int32](maxNetworks + 10)
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(maxNetworks))
 		})
 	})
 
