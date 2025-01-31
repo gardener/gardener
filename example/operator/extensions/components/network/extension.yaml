@@ -1,0 +1,8 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: example-extension
+spec:
+  resources:
+  - kind: Network
+    type: example
