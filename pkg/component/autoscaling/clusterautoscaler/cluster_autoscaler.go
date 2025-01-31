@@ -73,7 +73,6 @@ func New(
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
 	workerConfig []gardencorev1beta1.Worker,
-	maxNodesTotal int64,
 	runtimeVersion *semver.Version,
 ) Interface {
 	return &clusterAutoscaler{
@@ -84,7 +83,6 @@ func New(
 		replicas:       replicas,
 		config:         config,
 		workerConfig:   workerConfig,
-		maxNodesTotal:  maxNodesTotal,
 		runtimeVersion: runtimeVersion,
 	}
 }
