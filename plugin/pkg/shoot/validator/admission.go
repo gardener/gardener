@@ -327,7 +327,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		return err
 	}
 	if allErrs = validationContext.ensureMachineImages(); len(allErrs) > 0 {
-		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
+		return admission.NewForbidden(a, allErrs.ToAggregate())
 	}
 
 	validationContext.addMetadataAnnotations(a)
@@ -350,7 +350,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	}
 
 	if len(allErrs) > 0 {
-		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
+		return admission.NewForbidden(a, allErrs.ToAggregate())
 	}
 
 	return nil
