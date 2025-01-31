@@ -45,7 +45,7 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.Components.Extensions.Worker.MachineDeployments())
 
-		maxNodesTotal, err := b.CalculateMaxNodesForShootNetworks(b.Shoot.GetInfo())
+		maxNodesTotal, err := b.CalculateMaxNodesTotal(b.Shoot.GetInfo())
 		if err != nil {
 			return err
 		}
@@ -60,6 +60,22 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 // ScaleClusterAutoscalerToZero scales cluster-autoscaler replicas to zero.
 func (b *Botanist) ScaleClusterAutoscalerToZero(ctx context.Context) error {
 	return client.IgnoreNotFound(kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameClusterAutoscaler}, 0))
+}
+
+// CalculateMaxNodesTotal returns the maximum number of nodes the shoot can have based on the shoot networks and
+// operator-configured limits in the CloudProfile. It returns 0 if there is no limitation.
+func (b *Botanist) CalculateMaxNodesTotal(shoot *gardencorev1beta1.Shoot) (int64, error) {
+	maxNetworks, err := b.CalculateMaxNodesForShootNetworks(shoot)
+	if err != nil {
+		return 0, err
+	}
+
+	var maxLimit int64
+	if limits := b.Shoot.CloudProfile.Spec.Limits; limits != nil && limits.MaxNodesTotal != nil {
+		maxLimit = int64(*limits.MaxNodesTotal)
+	}
+
+	return MinGreaterThanZero(maxNetworks, maxLimit), nil
 }
 
 // CalculateMaxNodesForShootNetworks returns the maximum number of nodes the shoot networks supports or 0 if there is no limitation.
