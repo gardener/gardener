@@ -2,8 +2,8 @@
 
 ## Overview
 
-The gardener apiserver maintains a [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) inside the Garden cluster that contains information about the gardener apiserver itself.
-The ConfigMap is named `gardener-info` and located in the `gardener-system-public` namespace and is visible to all authenticated users.
+The gardener apiserver maintains a [ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) inside the Garden cluster that contains information about the garden landscape.
+The ConfigMap is named `gardener-info` and located in the `gardener-system-public` namespace. It is visible to all authenticated users.
 
 ## Fields
 
