@@ -1,5 +1,5 @@
 ---
-title: ControllerRegistration
+title: Registering Extension Controllers
 ---
 
 # Registering Extension Controllers
@@ -197,45 +197,6 @@ There are the following policies:
 Also, the `.spec.deployment.seedSelector` allows to specify a label selector for seed clusters.
 Only if it matches the labels of a seed, then it will be deployed to it.
 Please note that a seed selector can only be specified for secondary controllers (`primary=false` for all `.spec.resources[]`).
-
-## Extensions in the Garden Cluster Itself
-
-The `Shoot` resource itself will contain some provider-specific data blobs.
-As a result, some extensions might also want to run in the garden cluster, e.g., to provide `ValidatingWebhookConfiguration`s for validating the correctness of their provider-specific blobs:
-
-```yaml
-apiVersion: core.gardener.cloud/v1beta1
-kind: Shoot
-metadata:
-  name: johndoe-aws
-  namespace: garden-dev
-spec:
-  ...
-  cloud:
-    type: aws
-    region: eu-west-1
-    providerConfig:
-      apiVersion: aws.cloud.gardener.cloud/v1alpha1
-      kind: InfrastructureConfig
-      networks:
-        vpc: # specify either 'id' or 'cidr'
-        # id: vpc-123456
-          cidr: 10.250.0.0/16
-        internal:
-        - 10.250.112.0/22
-        public:
-        - 10.250.96.0/22
-        workers:
-        - 10.250.0.0/19
-      zones:
-      - eu-west-1a
-...
-```
-
-In the above example, Gardener itself does not understand the AWS-specific provider configuration for the infrastructure.
-However, if this part of the `Shoot` resource should be validated, then you should run an AWS-specific component in the garden cluster that registers a webhook. You can do it similarly if you want to default some fields of a resource (by using a `MutatingWebhookConfiguration`).
-
-Again, similar to how Gardener is deployed to the garden cluster, these components must be deployed and managed by the Gardener administrator.
 
 ### `Extension` Resource Configurations
 
