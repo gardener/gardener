@@ -336,6 +336,7 @@ rules:
   - cluster-identity
   verbs:
   - get
+  - list
   - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -375,9 +376,10 @@ rules:
   resources:
   - configmaps
   resourceNames:
-  - "gardener-info"
+  - gardener-info
   verbs:
   - get
+  - list
   - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1

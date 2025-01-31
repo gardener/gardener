@@ -637,7 +637,7 @@ var _ = Describe("Virtual", func() {
 				APIGroups:     []string{""},
 				Resources:     []string{"configmaps"},
 				ResourceNames: []string{"gardener-info"},
-				Verbs:         []string{"get", "watch"},
+				Verbs:         []string{"get", "list", "watch"},
 			}},
 		}
 		roleBindingReadGardenerInfoConfigMap = &rbacv1.RoleBinding{

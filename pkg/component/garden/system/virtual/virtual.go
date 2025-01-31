@@ -620,7 +620,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				APIGroups:     []string{corev1.GroupName},
 				Resources:     []string{"configmaps"},
 				ResourceNames: []string{"gardener-info"},
-				Verbs:         []string{"get", "watch"},
+				Verbs:         []string{"get", "list", "watch"},
 			}},
 		}
 		roleBindingReadGardenerInfoConfigMap = &rbacv1.RoleBinding{
