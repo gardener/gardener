@@ -2,7 +2,7 @@
 title: Resource Admission in the Garden Cluster
 ---
 
-# Validating and Mutating Resources in the Garden Cluster
+# Resource Admission in the Garden Cluster
 
 The `Shoot` resource itself can contain some extension-specific data blobs (see `providerConfig`):
 
@@ -35,7 +35,7 @@ spec:
 ...
 ```
 
-In the above example, Gardener itself does not understand the AWS-specific provider configuration for the infrastructure. However, if this part of the `Shoot` resource should be validated, then you should run an AWS-specific component in the garden cluster that registers a webhook. You can do it similarly if you want to default some fields of a resource (by using a `MutatingWebhookConfiguration`). Similarly to how Gardener is deployed to the garden cluster, these components must be deployed and managed by the Gardener administrator.
+In the above example, Gardener itself does not understand the AWS-specific provider configuration for the infrastructure. However, if this part of the `Shoot` resource should be validated, then you should run an AWS-specific component in the garden cluster that registers a webhook. The same is true for values defaulting via `MutatingWebhookConfiguration`. Similarly to how Gardener is deployed to the garden cluster, these components must be deployed and managed by the Gardener administrator.
 
 Examples of extensions performing validation:
 - [provider extensions](../../extensions/README.md#infrastructure-provider) would validate `spec.provider.infrastructureConfig` and `spec.provider.controlPlaneConfig` in the `Shoot` resource and `spec.providerConfig` in the `CloudProfile` resource.
