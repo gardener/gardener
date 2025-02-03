@@ -45,9 +45,11 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // AppendAuthorizationWebhook mocks base method.
-func (m *MockInterface) AppendAuthorizationWebhook(arg0 apiserver0.AuthorizationWebhook) {
+func (m *MockInterface) AppendAuthorizationWebhook(arg0 apiserver0.AuthorizationWebhook) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AppendAuthorizationWebhook", arg0)
+	ret := m.ctrl.Call(m, "AppendAuthorizationWebhook", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // AppendAuthorizationWebhook indicates an expected call of AppendAuthorizationWebhook.

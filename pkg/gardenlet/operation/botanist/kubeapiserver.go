@@ -157,7 +157,7 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 }
 
 // DeployKubeAPIServer deploys the Kubernetes API server.
-func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
+func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAuthorizer bool) error {
 	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(false)
 
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(true)
@@ -166,47 +166,43 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
-	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
-		nodeAgentAuthorizerWebhookReady, err := b.NodeAgentAuthorizerWebhookReady(ctx)
-		if err != nil {
-			return err
+	if enableNodeAgentAuthorizer {
+		caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 		}
 
-		if nodeAgentAuthorizerWebhookReady {
-			caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-			if !found {
-				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-			}
+		kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+			"authorization-webhook",
+			clientcmdv1.Cluster{
+				Server:                   fmt.Sprintf("https://%s/webhooks/auth/nodeagent", resourcemanagerconstants.ServiceName),
+				CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
+			},
+			clientcmdv1.AuthInfo{},
+		))
+		if err != nil {
+			return fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
+		}
 
-			kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
-				"authorization-webhook",
-				clientcmdv1.Cluster{
-					Server:                   fmt.Sprintf("https://%s/webhooks/auth/nodeagent", resourcemanagerconstants.ServiceName),
-					CertificateAuthorityData: caSecret.Data[secretsutils.DataKeyCertificateBundle],
+		if err := b.Shoot.Components.ControlPlane.KubeAPIServer.AppendAuthorizationWebhook(
+			kubeapiserver.AuthorizationWebhook{
+				Name:       "node-agent-authorizer",
+				Kubeconfig: kubeconfig,
+				WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+
+					AuthorizedTTL:                            metav1.Duration{Duration: 0},
+					UnauthorizedTTL:                          metav1.Duration{Duration: 0},
+					Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
+					FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
+					SubjectAccessReviewVersion:               "v1",
+					MatchConditionSubjectAccessReviewVersion: "v1",
+					MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
+						// Only intercept request node-agents
+						Expression: fmt.Sprintf("'%s' in request.groups", v1beta1constants.NodeAgentsGroup),
+					}},
 				},
-				clientcmdv1.AuthInfo{},
-			))
-			if err != nil {
-				return fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
-			}
-
-			b.Shoot.Components.ControlPlane.KubeAPIServer.AppendAuthorizationWebhook(
-				kubeapiserver.AuthorizationWebhook{
-					Name:       "node-agent-authorizer",
-					Kubeconfig: kubeconfig,
-					WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
-						AuthorizedTTL:                            metav1.Duration{Duration: 0},
-						UnauthorizedTTL:                          metav1.Duration{Duration: 0},
-						Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
-						FailurePolicy:                            apiserverv1beta1.FailurePolicyDeny,
-						SubjectAccessReviewVersion:               "v1",
-						MatchConditionSubjectAccessReviewVersion: "v1",
-						MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
-							// Only intercept request node-agents
-							Expression: fmt.Sprintf("'%s' in request.groups", v1beta1constants.NodeAgentsGroup),
-						}},
-					},
-				})
+			}); err != nil {
+			return fmt.Errorf("failed appending node-agent-authorizer webhook config to kube-apiserver: %w", err)
 		}
 	}
 
@@ -308,7 +304,7 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 }
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
-func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
+func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context, enableNodeAgentAuthorizer bool) error {
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy(ctx); err != nil {
 		return err
 	}
@@ -320,7 +316,7 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 			return err
 		}
 	}
-	if err := b.DeployKubeAPIServer(ctx); err != nil {
+	if err := b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer); err != nil {
 		return err
 	}
 	if err := kubernetes.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1); err != nil {
