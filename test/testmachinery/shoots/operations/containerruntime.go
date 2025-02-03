@@ -95,10 +95,6 @@ var _ = Describe("Shoot container runtime testing", func() {
 		containerdServiceCommand := []string{"systemctl", "is-active", "containerd"}
 		executeCommand(ctx, f, rootPodExecutor, containerdServiceCommand, "active")
 
-		// check that config.toml is configured
-		checkConfigurationCommand := []string{"sh", "-c", "cat /etc/systemd/system/containerd.service.d/11-exec_config.conf | grep 'usr/bin/containerd --config=/etc/containerd/config.toml' | echo $?"}
-		executeCommand(ctx, f, rootPodExecutor, checkConfigurationCommand, "0")
-
 		// check that config.toml exists
 		checkConfigCommand := []string{"sh", "-c", "[ -f /etc/containerd/config.toml ] && echo 'found' || echo 'Not found'"}
 		executeCommand(ctx, f, rootPodExecutor, checkConfigCommand, "found")
