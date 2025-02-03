@@ -414,12 +414,18 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 			continue
 		}
 
-		idxPath := fldPath.Child("workers").Index(i)
+		var (
+			idxPath              = fldPath.Child("workers").Index(i)
+			oldStrategyIsInPlace = helper.IsUpdateStrategyInPlace(oldWorker.UpdateStrategy)
+			newStrategyIsInPlace = helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy)
+		)
 
-		if isUpdateStrategyChanged(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy,
-				fmt.Sprintf("updateStrategy cannot be changed from %q to %q",
-					stringPtrOrEmpty(oldWorker.UpdateStrategy), stringPtrOrEmpty(newWorker.UpdateStrategy))))
+		if oldStrategyIsInPlace && !newStrategyIsInPlace {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "updateStrategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"))
+		}
+
+		if !oldStrategyIsInPlace && newStrategyIsInPlace {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "updateStrategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"))
 		}
 
 		if ptr.Equal(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) && helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy) {
@@ -442,26 +448,6 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 	}
 
 	return allErrs
-}
-
-func isUpdateStrategyChanged(oldStrategy, newStrategy *core.MachineUpdateStrategy) bool {
-	if oldStrategy == nil || newStrategy == nil {
-		return oldStrategy != newStrategy
-	}
-
-	if (*oldStrategy == core.AutoInPlaceUpdate && *newStrategy == core.ManualInPlaceUpdate) ||
-		(*oldStrategy == core.ManualInPlaceUpdate && *newStrategy == core.AutoInPlaceUpdate) {
-		return false
-	}
-
-	return *oldStrategy != *newStrategy
-}
-
-func stringPtrOrEmpty(ptr *core.MachineUpdateStrategy) core.MachineUpdateStrategy {
-	if ptr == nil {
-		return ""
-	}
-	return *ptr
 }
 
 // ValidateShootStatusUpdate validates the status field of a Shoot object.
