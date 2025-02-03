@@ -4746,7 +4746,7 @@ var _ = Describe("validator", func() {
 						Expect(err).ToNot(HaveOccurred())
 					})
 
-					It("should forbid updating to a higher machine image for an existing worker pool with in-place update stategy if the image does not support in-place update", func() {
+					It("should forbid updating to a higher machine image for an existing worker pool with in-place update strategy if the image does not support in-place update", func() {
 						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
 							gardencorev1beta1.MachineImage{
 								Name: "constraint-image-name",
@@ -4823,7 +4823,7 @@ var _ = Describe("validator", func() {
 						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be inplace updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.4"))))
 					})
 
-					It("should forbid updating to a higher machine image for an existing worker pool with in-place update stategy if MinVersionForUpdate is higher than current version", func() {
+					It("should forbid updating to a higher machine image for an existing worker pool with in-place update strategy if MinVersionForUpdate is higher than current version", func() {
 						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
 							gardencorev1beta1.MachineImage{
 								Name: "constraint-image-name",
@@ -4902,7 +4902,7 @@ var _ = Describe("validator", func() {
 						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be inplace updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s %s:%s", "constraint-image-name", "1.2.3", "constraint-image-name", "1.2.4"))))
 					})
 
-					It("should allow updating to a higher machine image for an existing worker pool with in-place update stategy if MinVersionForUpdate is less or equal current version", func() {
+					It("should allow updating to a higher machine image for an existing worker pool with in-place update strategy if MinVersionForUpdate is less or equal current version", func() {
 						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages,
 							gardencorev1beta1.MachineImage{
 								Name: "constraint-image-name",

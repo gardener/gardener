@@ -173,7 +173,7 @@ spec:
       versions:
         - version: 1443.8.0
           expirationDate: "2025-02-28T23:59:59Z"
-          `inPlaceUpdateConfig`:
+          inPlaceUpdateConfig:
             supported: true # true/false
             minVersionForUpdate: 1312.3.0
         - version: 1443.7.0 # if minVersionForInPlaceUpdate is not specified, in-place update cannot be performed on this version

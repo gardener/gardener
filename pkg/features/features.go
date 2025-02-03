@@ -69,7 +69,7 @@ const (
 	// alpha: v1.112.0
 	CredentialsRotationWithoutWorkersRollout featuregate.Feature = "CredentialsRotationWithoutWorkersRollout"
 
-	// InPlaceNodeUpdates enables setting the update strategy of worker pools to `AutoInPlaceUpdate` or `ManualInPlaceUpdate` in Shoot API.
+	// InPlaceNodeUpdates enables setting the update strategy of worker pools to `AutoInPlaceUpdate` or `ManualInPlaceUpdate` in the Shoot API.
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.112.0
 	InPlaceNodeUpdates featuregate.Feature = "InPlaceNodeUpdates"
