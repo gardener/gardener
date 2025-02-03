@@ -16,6 +16,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -100,6 +101,11 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		o.Shoot.Networks = networks
 	}
 
+	nodeAgentAuthorizerWebhookReady, err := botanist.NodeAgentAuthorizerWebhookReady(ctx)
+	if err != nil {
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+	}
+
 	var (
 		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
@@ -139,8 +145,10 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD),
 		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
-			Name:         "Scaling Kubernetes API Server up and waiting until ready",
-			Fn:           botanist.WakeUpKubeAPIServer,
+			Name: "Scaling Kubernetes API Server up and waiting until ready",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.WakeUpKubeAPIServer(ctx, nodeAgentAuthorizerWebhookReady && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
+			}),
 			SkipIf:       !wakeupRequired,
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, initializeSecretsManagement),
 		})
@@ -158,16 +166,28 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		// TODO(oliver-goetz): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
+		//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
+		//  1.30+ clusters. This is similar to kube-apiserver deployment in gardener-operator.
+		//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
+		wakeUpKubeAPIServerWithNodeAgentAuthorizer = g.Add(flow.Task{
+			Name: "Scaling Kubernetes API Server with node-agent-authorizer up and waiting until ready",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.WakeUpKubeAPIServer(ctx, true)
+			}),
+			SkipIf:       !wakeupRequired || nodeAgentAuthorizerWebhookReady || !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer),
+			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
+		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
 			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
 			Fn:           botanist.KeepObjectsForManagedResources,
 			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
+			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp, wakeUpKubeAPIServerWithNodeAgentAuthorizer),
 		})
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting all Managed Resources from the Shoot's namespace",
 			Fn:           botanist.DeleteManagedResources,
-			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
+			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp, wakeUpKubeAPIServerWithNodeAgentAuthorizer),
 		})
 		waitForManagedResourcesDeletion = g.Add(flow.Task{
 			Name:         "Waiting until ManagedResources are deleted",
