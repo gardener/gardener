@@ -60,7 +60,7 @@ type Interface interface {
 	// AppendAuthorizationWebhook appends an AuthorizationWebhook to AuthorizationWebhooks in the Values of the deployer.
 	// TODO(oliver-goetz): Consider removing this method when we support Kubernetes version with structured authorization only.
 	//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
-	AppendAuthorizationWebhook(AuthorizationWebhook)
+	AppendAuthorizationWebhook(AuthorizationWebhook) error
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
 	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
@@ -547,8 +547,16 @@ func (k *kubeAPIServer) GetAutoscalingReplicas() *int32 {
 	return k.values.Autoscaling.Replicas
 }
 
-func (k *kubeAPIServer) AppendAuthorizationWebhook(webhook AuthorizationWebhook) {
+func (k *kubeAPIServer) AppendAuthorizationWebhook(webhook AuthorizationWebhook) error {
+	for _, existingWebhook := range k.values.AuthorizationWebhooks {
+		if existingWebhook.Name == webhook.Name {
+			return fmt.Errorf("authorization webhook with name %q already exists", webhook.Name)
+		}
+	}
+
 	k.values.AuthorizationWebhooks = append(k.values.AuthorizationWebhooks, webhook)
+
+	return nil
 }
 
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {

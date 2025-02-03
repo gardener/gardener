@@ -313,7 +313,9 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
-			Fn:   flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.DeployKubeAPIServer(ctx, nodeAgentAuthorizerWebhookReady && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
+			}).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
 			Dependencies: flow.NewTaskIDs(
 				initializeSecretsManagement,
 				deployETCD,
@@ -356,8 +358,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		//  1.30+ clusters. This is similar to kube-apiserver deployment in gardener-operator.
 		//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
 		deployKubeAPIServerWithNodeAgentAuthorizer = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server with node-agent-authorizer",
-			Fn:           flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
+			Name: "Deploying Kubernetes API server with node-agent-authorizer",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.DeployKubeAPIServer(ctx, true)
+			}).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
 			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || nodeAgentAuthorizerWebhookReady,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
