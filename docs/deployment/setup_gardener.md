@@ -19,8 +19,8 @@ The API server is exposed through an Istio `Gateway` and a DNS record pointing t
 
 Once the `Garden` reports readiness, basic building blocks like `CloudProfile`s, `ControllerDeployment`s, and `ControllerRegistration`s, as well as `Secret`s granting access to DNS management for the internal domain and external default domain, are deployed to the virtual Garden cluster.
 
-To be able to host any `Shoot`s, at least one `Seed` is required. The very first `Seed` is created via a `Gardenlet` resource (more precisely `gardenlets.seedmanagement.gardener.cloud`) deployed to the virtual Garden cluster. The actual `gardenlet` pods run on the runtime cluster or another Kubernetes cluster not managed by Gardener. Typically, this is referred to as an __unmanaged__ Seed and is considered part of the Gardener infrastructure.
-In this setup, the very first `Seed` will be reserved for one or several "infrastructure" `Shoot`s. Those will be turned into `Seed`s again through a `ManagedSeed` resource. These __Gardener-managed__ Seeds will then host control planes of any users' `Shoot` clusters.
+To be able to host any `Shoot`s, at least one `Seed` is required. The very first `Seed` is created via a `Gardenlet` resource (more precisely `gardenlets.seedmanagement.gardener.cloud`) deployed to the virtual Garden cluster. The actual `gardenlet` Pods run on the runtime cluster or another Kubernetes cluster not managed by Gardener. Typically, this is referred to as an __unmanaged__ Seed and is considered part of the Gardener infrastructure.
+In this setup, the very first `Seed` will be reserved for one or several "infrastructure" `Shoot`s. Those will be turned into `Seed`s again through a `ManagedSeed` resource. These __Gardener-managed__ `Seed`s will then host control planes of any users' `Shoot` clusters.
 
 ![Gardener Setup](./content/gardener-setup.png)
 
@@ -73,14 +73,14 @@ It is recommended for any productive installation of Gardener.
 
 ### Infrastructure
 
-For each infrastructure supported by Gardener a so-called `provider-extension` exists. It implements the required interfaces. For this example, the [openstack extension](https://github.com/gardener/gardener-extension-provider-openstack) will be used.
+For each infrastructure supported by Gardener a so-called __provider-extension__ exists. It implements the required interfaces. For this example, the [OpenStack extension](https://github.com/gardener/gardener-extension-provider-openstack) will be used.
 
-Access to the respective infrastructure is required and needs to be handed over to Gardener in the provider-specific format (e.g., Openstack application credentials).
+Access to the respective infrastructure is required and needs to be handed over to Gardener in the provider-specific format (e.g., OpenStack application credentials).
 
 Reference documentation:
 
 - [Gardener extensibility](../README.md#extensions)
-- [Provider openstack](https://github.com/gardener/gardener-extension-provider-openstack/tree/master/docs)
+- [Provider OpenStack](https://github.com/gardener/gardener-extension-provider-openstack/tree/master/docs)
 
 ## Configure and deploy components
 
@@ -108,7 +108,7 @@ To get familiar with the available options, check the [Garden example](../../exa
 While most operations are carried out in the realm of the runtime cluster, two external services are required. To automate both the creation of `DNSRecord`s and a `BackupBucket`, a provider-extension needs to be deployed to the runtime cluster as well.
 To facilitate the extension's deployment, the API group `operator.gardener.cloud/v1alpha1` contains an `Extension` resources, which is reconciled by the Gardener Operator. Such an `Extension` resource specifies how to install it into the runtime cluster, as well as the virtual Garden cluster. More details can be found in the [Extensions section](#extensions).
 
-The below example shows how an `Extension` is used to deploy the `provider-extension` for Openstack. Please note, it advertises to support `kind: BackupBucket` and `kind: DNSrecord`.
+The below example shows how an `Extension` is used to deploy the provider-extension for OpenStack. Please note, it advertises to support resources of `kind: BackupBucket` and `type: openstack` as well as `kind: DNSrecord` and `type: openstack-designate`.
 
 ```yaml
 apiVersion: operator.gardener.cloud/v1alpha1
@@ -166,7 +166,7 @@ spec:
     type: openstack-designate
 ```
 
-To make use of the automated DNS management, the `Garden` resource has to contain a primary provider. Here is an example for an Openstack-based setup, where the actual credentials are stored in the referenced `Secret`:
+To make use of the automated DNS management, the `Garden` resource has to contain a primary provider. Here is an example for an OpenStack-based setup, where the actual credentials are stored in the referenced `Secret`:
 
 ```yaml
 dns:
@@ -210,18 +210,18 @@ Gardener is provider-agnostic and relies on a growing set of extensions. An exte
 
 There are a few extensions considered essential to any Gardener installation:
 
-- at least one [infrastructure provider](../../extensions/README.md#infrastructure-provider) (AKA provider-extension)
+- at least one [infrastructure provider](../../extensions/README.md#infrastructure-provider) (commonly referred to as provider-extension)
 - at least one [operating system extension](../../extensions/README.md#operating-system) - [Garden Linux](https://github.com/gardener/gardener-extension-os-gardenlinux) is recommended
 - at least one [network plugin (CNI)](../../extensions/README.md#network-plugin)
 - Shoot services
 
-An extension often consists of two components - a controller implementing the Gardener's extension contract and an admission controller. The latter is deployed to the runtime cluster and prevents misconfiguration of `Shoots`.
+An extension often consists of two components - a controller implementing the Gardener's extension contract and an admission controller. The latter is deployed to the runtime cluster and prevents misconfiguration of `Shoot`s.
 
 #### Choices
 
 For this example, the following choices are made:
 - [Garden Linux OS extension](https://github.com/gardener/gardener-extension-os-gardenlinux)
-- [Provider Openstack](https://github.com/gardener/gardener-extension-provider-openstack)
+- [Provider OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
 - [Calico](https://github.com/gardener/gardener-extension-networking-calico)
 - [DNS service](https://github.com/gardener/gardener-extension-shoot-dns-service)
 - [Cert service](https://github.com/gardener/gardener-extension-shoot-cert-service)
@@ -234,16 +234,16 @@ Reference documentation:
 
 #### How to install an extension
 
-In order to make an extension known to a Gardener landscape, two resources have to be applied to the virtual Garden cluster - firstly, a `ControllerDeployment` and secondly, a matching `ControllerRegistration`. With both in place, Gardener-managed `ControllerInstallations` take care of the actual deployment of the extension to the target environment.
+In order to make an extension known to a Gardener landscape, two resources have to be applied to the virtual Garden cluster - firstly, a `ControllerDeployment` and secondly, a matching `ControllerRegistration`. With both in place, Gardener-managed `ControllerInstallation`s take care of the actual deployment of the extension to the target environment.
 
 Check the [controller registration documentation](../extensions/controllerregistration.md) for more details.
 
 Now, the classical way of installing `ControllerDeployment` and `ControllerRegistration` is to prepare the resources and apply them to the virtual Garden cluster. The `ControllerDeployment` references an OCI repository containing the extension's helm chart.
 
-For example, to deploy the [provider Openstack](https://github.com/gardener/gardener-extension-provider-openstack) extension, the [example file](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/controller-registration.yaml) can be used.
+For example, to deploy the [provider OpenStack](https://github.com/gardener/gardener-extension-provider-openstack) extension, the [example file](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/controller-registration.yaml) can be used.
 
 To simplify this procedure, extensions can be registered through `Extension` resources in the runtime cluster. The Gardener Operator will take care of deploying the required resources to the virtual Garden cluster.
-In addition, this approach allows the extensions and their admission controllers to be deployed to the runtime cluster as well. There, they can provide additional functionality like managing `DNSRecord`s or `BackupBuckets`.
+In addition, this approach allows the extensions and their admission controllers to be deployed to the runtime cluster as well. There, they can provide additional functionality like managing `DNSRecord`s or `BackupBucket`s.
 More details can be found in the [Extension Resource documentation](../concepts/operator.md#extension-resource).
 
 ![extensions](./content/extensions.png)
@@ -325,7 +325,7 @@ Reference documentation:
 
 - [`CloudProfile`s](../concepts/apiserver.md#cloudprofiles)
 - [`CloudProfile` example](../../example/30-cloudprofile.yaml)
-- [Openstack `CloudProfile` example](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/docs/operations/operations.md)
+- [OpenStack `CloudProfile` example](https://github.com/gardener/gardener-extension-provider-openstack/blob/master/docs/operations/operations.md)
 - [Garden Linux release notes example](https://github.com/gardenlinux/gardenlinux/releases/tag/1592.3)
 - [Image vector](../deployment/image_vector.md)
 - [Image vector container defaults](../../imagevector/containers.yaml)
@@ -343,15 +343,15 @@ Reference documentation:
 ### Gardenlet
 
 Before the first `Shoot` can be created in a new Gardener landscape, at least one `Seed` is required. Typically, the very first `Seed` is created by deploying a properly configured `gardenlet` to an existing Kubernetes cluster. In this example, the `gardenlet` will be deployed to the runtime cluster - effectively turning it into a `Seed` as well. 
-Thus, the runtime cluster serves two purposes now - it hosts the virtual Garden cluster and control planes. It is possible, and strongly recommended for larger installations, to deploy a `gardenlet` to another cluster. This separates the virtual Garden cluster from the first `Seed` with the control planes hosted there.
+Thus, the runtime cluster serves two purposes now - it hosts the virtual Garden cluster and control planes. It is possible, and strongly recommended for larger installations, to deploy a `gardenlet` to another Kubernetes cluster. This separates the virtual Garden cluster from the first `Seed` with the control planes hosted there.
 
-For the `Seed` to function properly, a `provider-extension` matching the target infrastructure is required. Alongside, valid infrastructure credentials have to be provided. A `Secret` with the credentials needs to be created in the virtual Garden cluster and linked in the `gardenlet`'s configuration. If configured (`spec.backup`), the `Seed` will get a dedicated `BackupBucket` to store `etcd` backups.
+A `Seed` requires a provider-extension matching the target infrastructure to manage `DNSRecord`s for the `Seed`'s ingress domain and if configured, the `BackupBucket`. A `Secret` with the credentials to interact with the infrastructure needs to be created in the virtual Garden cluster and linked in the `gardenlet`'s configuration.
 
 The easiest way to deploy a `gardenlet` is to create a `Gardenlet` resource in the virtual Garden cluster. Make sure to configure the CIDR blocks properly to avoid conflicts or overlaps with the runtime cluster.
 
 ![gardenlet](./content/gardenlet.png)
 
-A common pattern is to protect this very first `Seed`, in a sense that no control planes of user `Shoot` clusters will be scheduled to it. Instead, this `Seed` should host control planes of Gardener-managed `Seed` clusters exclusively. These in turn host the control planes of user `Shoots`.
+A common pattern is to protect this very first `Seed`, in a sense that no control planes of user `Shoot` clusters will be scheduled to it. Instead, this `Seed` should host control planes of Gardener-managed `Seed` clusters exclusively. These in turn host the control planes of user `Shoot`s.
 This pattern allows to scale out the capacity of a Gardener landscape, as creating new seeds is simple and fast. More details can be found in the [Shoot & Managed Seed section](#shoot--managed-seed).
 
 To achieve this protection, the `gardenlet` resource should contain the following configuration:
@@ -409,6 +409,6 @@ A single Gardener landscape can support multiple infrastructures for `Shoots`. T
 
 Due to the vast amount of configuration options it is highly recommended to spend some time to derive a meaningful setup initially.
 
-In this example, the runtime cluster serves two purposes - it hosts the virtual Garden cluster and runs a `gardenlet` which registers the runtime cluster itself as a seed with the virtual Garden cluster. This first seed is reserved to host the control planes of "infrastructure" `Shoots` only. Those `Shoots` will be turned into seeds using the `ManagedSeed` resource and allow for proper scaling.
+In this example, the runtime cluster serves two purposes - it hosts the virtual Garden cluster and runs a `gardenlet` which registers the runtime cluster itself as a seed with the virtual Garden cluster. This first seed is reserved to host the control planes of "infrastructure" `Shoot`s only. Those `Shoot`s will be turned into seeds using the `ManagedSeed` resource and allow for proper scaling.
 
 To get started with Gardener, visit our [landing page](https://gardener.cloud) and try the [demo environment](https://demo.gardener.cloud/).
