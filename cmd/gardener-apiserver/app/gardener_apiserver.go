@@ -396,13 +396,15 @@ func (o *Options) Run(ctx context.Context) error {
 			p.WorkloadIdentityIssuerURL = &o.ExtraOptions.WorkloadIdentityTokenIssuer
 		}
 
-		marshelledInfo, err := yaml.Marshal(p)
+		marshalledInfo, err := yaml.Marshal(p)
 		if err != nil {
 			return err
 		}
 
-		configMapName := "gardener-info"
-		gardenerAPIServerKey := "gardenerAPIServer"
+		const (
+			configMapName        = "gardener-info"
+			gardenerAPIServerKey = "gardenerAPIServer"
+		)
 
 		configMap, err := kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Get(ctx, configMapName, metav1.GetOptions{})
 		if err != nil {
@@ -416,14 +418,14 @@ func (o *Options) Run(ctx context.Context) error {
 					Name:      configMapName,
 				},
 				Data: map[string]string{
-					gardenerAPIServerKey: string(marshelledInfo),
+					gardenerAPIServerKey: string(marshalledInfo),
 				},
 			}
 			_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Create(ctx, &configMap, metav1.CreateOptions{})
 			return err
 		}
 
-		configMap.Data[gardenerAPIServerKey] = string(marshelledInfo)
+		configMap.Data[gardenerAPIServerKey] = string(marshalledInfo)
 		_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Update(ctx, configMap, metav1.UpdateOptions{})
 		return err
 	}); err != nil {
@@ -435,7 +437,7 @@ func (o *Options) Run(ctx context.Context) error {
 
 type publicInfo struct {
 	Version                   string  `json:"version" yaml:"version"`
-	WorkloadIdentityIssuerURL *string `json:"workloadIdentityIssuerURL,omitempty" yaml:"workloadIdentityIssuerURL,omitempty"`
+	WorkloadIdentityIssuerURL *string `json:"workloadIdentityIssuerURL,omitempty" yaml:"workloadIdentityIssuerURL,omitempty"` // TODO(vpnachev): Switch from omitempty(*string) to omitzero(string) once Gardener is build with go 1.24, ref: https://tip.golang.org/doc/go1.24
 	FeatureGates              string  `json:"featureGates" yaml:"featureGates"`
 }
 
