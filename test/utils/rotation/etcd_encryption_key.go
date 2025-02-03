@@ -76,7 +76,7 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 					Keys: []apiserverconfigv1.Key{{
 						// old key
 						Name:   string(v.secretsBefore[v.EncryptionKey][0].Data["key"]),
-						Secret: getEncodedETCDEncryptionKeyFromSecret(v.secretsBefore[v.EncryptionKey][0]),
+						Secret: getBase64EncodedETCDEncryptionKeyFromSecret(v.secretsBefore[v.EncryptionKey][0]),
 					}},
 				},
 			},
@@ -133,11 +133,11 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 					Keys: []apiserverconfigv1.Key{{
 						// new key
 						Name:   string(v.secretsPrepared[v.EncryptionKey][1].Data["key"]),
-						Secret: getEncodedETCDEncryptionKeyFromSecret(v.secretsPrepared[v.EncryptionKey][1]),
+						Secret: getBase64EncodedETCDEncryptionKeyFromSecret(v.secretsPrepared[v.EncryptionKey][1]),
 					}, {
 						// old key
 						Name:   string(v.secretsPrepared[v.EncryptionKey][0].Data["key"]),
-						Secret: getEncodedETCDEncryptionKeyFromSecret(v.secretsPrepared[v.EncryptionKey][0]),
+						Secret: getBase64EncodedETCDEncryptionKeyFromSecret(v.secretsPrepared[v.EncryptionKey][0]),
 					}},
 				},
 			},
@@ -193,7 +193,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 					Keys: []apiserverconfigv1.Key{{
 						// new key
 						Name:   string(v.secretsPrepared[v.EncryptionKey][1].Data["key"]),
-						Secret: getEncodedETCDEncryptionKeyFromSecret(v.secretsPrepared[v.EncryptionKey][1]),
+						Secret: getBase64EncodedETCDEncryptionKeyFromSecret(v.secretsPrepared[v.EncryptionKey][1]),
 					}},
 				},
 			},
@@ -204,7 +204,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 	}).Should(Succeed(), "etcd encryption config should only have new key")
 }
 
-func getEncodedETCDEncryptionKeyFromSecret(secret corev1.Secret) string {
+func getBase64EncodedETCDEncryptionKeyFromSecret(secret corev1.Secret) string {
 	var key string
 	if encoding := secret.Data["encoding"]; string(encoding) == "none" {
 		key = utils.EncodeBase64(secret.Data["secret"])

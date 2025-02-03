@@ -104,7 +104,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		configMapNameAdmissionConfigs  = "kube-apiserver-admission-config-e38ff146"
 		secretNameAdmissionKubeconfigs = "kube-apiserver-admission-kubeconfigs-e3b0c442"
-		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-e9fa6fda"
+		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-b2b49c90"
 		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
 		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
 
@@ -1088,7 +1088,7 @@ resources:
 - providers:
   - aescbc:
       keys:
-      - name: key-62135596800-0ebe2f
+      - name: key-62135596800
         secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
   - identity: {}
   resources:
@@ -1171,7 +1171,7 @@ resources:
 
 					if encryptWithCurrentKey {
 						etcdEncryptionConfiguration += `
-      - name: key-62135596800-0ebe2f
+      - name: key-62135596800
         secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
       - name: ` + oldKeyName + `
         secret: ` + oldKeySecret
@@ -1179,7 +1179,7 @@ resources:
 						etcdEncryptionConfiguration += `
       - name: ` + oldKeyName + `
         secret: ` + oldKeySecret + `
-      - name: key-62135596800-0ebe2f
+      - name: key-62135596800
         secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=`
 					}
 
@@ -2397,7 +2397,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-						"reference.resources.gardener.cloud/secret-0fe90827":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
@@ -2586,7 +2586,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-						"reference.resources.gardener.cloud/secret-0fe90827":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,

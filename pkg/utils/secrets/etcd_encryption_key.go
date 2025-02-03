@@ -6,8 +6,6 @@ package secrets
 
 import (
 	"fmt"
-
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (
@@ -16,7 +14,14 @@ const (
 	// DataKeyEncryptionSecret is the key in a secret data holding the secret.
 	DataKeyEncryptionSecret = "secret"
 	// DataKeyEncryptionSecretEncoding is the key in a secret data that defines if the secret is already base64 encoded or not.
-	// Possible values are "base64" and "none".
+	// The only possible value is "none". For backwards-compatibility, a missing encoding field is interpreted as "base64" encoding.
+	//
+	// kube-apiserver's EncryptionConfiguration expects the key secret to be base64 encoded.
+	// Previously, a 32-byte key was generated and it was set in the EncryptionConfiguration without being base64 encoded.
+	// This resulted in 24-byte key to used by kube-apiserver after decoding the 32-byte key (that was expected to be base64 encoded but it was not).
+	// To fix this, new etcd encryption keys are generated with encoding=none. When encoding=none, the key set in the EncryptionConfiguration is base64 encoded.
+	// In this way, we make sure to use the same generated 32-byte key.
+	// For more information, see https://github.com/gardener/gardener/pull/11150.
 	DataKeyEncryptionSecretEncoding = "encoding"
 )
 
@@ -46,7 +51,7 @@ func (s *ETCDEncryptionKeySecretConfig) Generate() (DataInterface, error) {
 	}
 
 	return &ETCDEncryptionKey{
-		KeyName: fmt.Sprintf("key%d-%s", Clock.Now().Unix(), utils.ComputeSHA256Hex(key)[:6]),
+		KeyName: fmt.Sprintf("key%d", Clock.Now().Unix()),
 		Secret:  key,
 	}, nil
 }
