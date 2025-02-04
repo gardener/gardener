@@ -1193,14 +1193,14 @@ func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileRefer
 func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if threshold := autoScaler.EvictAfterOOMThreshold; threshold != nil && threshold.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("evictAfterOOMThreshold"), *threshold, "can not be negative"))
+	if autoScaler.EvictAfterOOMThreshold != nil {
+		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.EvictAfterOOMThreshold, fldPath.Child("evictAfterOOMThreshold"))...)
 	}
-	if interval := autoScaler.UpdaterInterval; interval != nil && interval.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("updaterInterval"), *interval, "can not be negative"))
+	if autoScaler.UpdaterInterval != nil {
+		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.UpdaterInterval, fldPath.Child("updaterInterval"))...)
 	}
-	if interval := autoScaler.RecommenderInterval; interval != nil && interval.Duration < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("recommenderInterval"), *interval, "can not be negative"))
+	if autoScaler.RecommenderInterval != nil {
+		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.RecommenderInterval, fldPath.Child("recommenderInterval"))...)
 	}
 	if percentile := autoScaler.TargetCPUPercentile; percentile != nil {
 		allErrs = append(allErrs, validatePercentile(*percentile, fldPath.Child("targetCPUPercentile"))...)
@@ -1219,6 +1219,18 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	}
 	if percentile := autoScaler.RecommendationUpperBoundMemoryPercentile; percentile != nil {
 		allErrs = append(allErrs, validatePercentile(*percentile, fldPath.Child("recommendationUpperBoundMemoryPercentile"))...)
+	}
+	if autoScaler.CPUHistogramDecayHalfLife != nil {
+		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.CPUHistogramDecayHalfLife, fldPath.Child("cpuHistogramDecayHalfLife"))...)
+	}
+	if autoScaler.MemoryHistogramDecayHalfLife != nil {
+		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.MemoryHistogramDecayHalfLife, fldPath.Child("memoryHistogramDecayHalfLife"))...)
+	}
+	if autoScaler.MemoryAggregationInterval != nil {
+		allErrs = append(allErrs, ValidatePositiveDuration(autoScaler.MemoryAggregationInterval, fldPath.Child("memoryAggregationInterval"))...)
+	}
+	if count := autoScaler.MemoryAggregationIntervalCount; count != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*count, fldPath.Child("memoryAggregationIntervalCount"))...)
 	}
 
 	return allErrs

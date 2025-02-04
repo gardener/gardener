@@ -63,6 +63,8 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (vpa.Interface, error) {
 		valuesRecommender.RecommendationLowerBoundMemoryPercentile = vpaConfig.RecommendationLowerBoundMemoryPercentile
 		valuesRecommender.RecommendationUpperBoundMemoryPercentile = vpaConfig.RecommendationUpperBoundMemoryPercentile
 		valuesRecommender.MemoryHistogramDecayHalfLife = vpaConfig.MemoryHistogramDecayHalfLife
+		valuesRecommender.MemoryAggregationInterval = vpaConfig.MemoryAggregationInterval
+		valuesRecommender.MemoryAggregationIntervalCount = vpaConfig.MemoryAggregationIntervalCount
 
 		valuesUpdater.EvictAfterOOMThreshold = vpaConfig.EvictAfterOOMThreshold
 		valuesUpdater.EvictionRateBurst = vpaConfig.EvictionRateBurst

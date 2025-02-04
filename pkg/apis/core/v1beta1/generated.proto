@@ -3347,6 +3347,18 @@ message VerticalPodAutoscaler {
   // (default: 24h)
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration memoryHistogramDecayHalfLife = 16;
+
+  // MemoryAggregationInterval is the length of a single interval, for which the peak memory usage is computed.
+  // (default: 24h)
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration memoryAggregationInterval = 17;
+
+  // MemoryAggregationIntervalCount is the number of consecutive memory-aggregation-intervals which make up the
+  // MemoryAggregationWindowLength which in turn is the period for memory usage aggregation by VPA. In other words,
+  // `MemoryAggregationWindowLength = memory-aggregation-interval * memory-aggregation-interval-count`.
+  // (default: 8)
+  // +optional
+  optional int64 memoryAggregationIntervalCount = 18;
 }
 
 // Volume contains information about the volume type, size, and encryption.

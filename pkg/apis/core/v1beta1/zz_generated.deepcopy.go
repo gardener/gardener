@@ -5638,6 +5638,16 @@ func (in *VerticalPodAutoscaler) DeepCopyInto(out *VerticalPodAutoscaler) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.MemoryAggregationInterval != nil {
+		in, out := &in.MemoryAggregationInterval, &out.MemoryAggregationInterval
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.MemoryAggregationIntervalCount != nil {
+		in, out := &in.MemoryAggregationIntervalCount, &out.MemoryAggregationIntervalCount
+		*out = new(int64)
+		**out = **in
+	}
 	return
 }
 
