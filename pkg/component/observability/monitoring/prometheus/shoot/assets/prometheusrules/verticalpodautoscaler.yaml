@@ -8,9 +8,15 @@ spec:
     rules:
     - alert: VerticalPodAutoscalerCappedRecommendation
       expr: |2-
-          {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
-        >
-          {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}
+          count_over_time(
+            (
+                {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
+              >
+                {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}
+            )[5m:]
+          )
+        ==
+          5
       labels:
         severity: warning
         type: shoot
