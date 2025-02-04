@@ -328,13 +328,13 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       !cleanupShootResources || (!kubeControllerManagerDeploymentFound && !controlPlaneDeploymentNeeded),
+			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilControlPlaneReady, initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Scaling up Kubernetes controller manager",
 			Fn:           botanist.ScaleKubeControllerManagerToOne,
-			SkipIf:       !cleanupShootResources || (!kubeControllerManagerDeploymentFound && !controlPlaneDeploymentNeeded),
+			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
 		})
 		deleteAlertmanager = g.Add(flow.Task{
