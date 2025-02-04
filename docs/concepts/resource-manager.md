@@ -254,6 +254,13 @@ A decent compression algorithm helps to reduce the footprint of such `Secret`s a
 We found [Brotli](https://github.com/google/brotli) to be a suitable candidate for most use cases (see comparison table [here](https://github.com/gardener/gardener/pull/9868)).
 When the `gardener-resource-manager` detects a data key with the known suffix `.br`, it automatically un-compresses the data first before processing the contained manifest.
 
+To decompress a ManagedResource Secret use:
+```
+kubectl -n <namespace> get secret <managed-resource-secret> -o jsonpath='{.data.data\.yaml\.br}' | base64 -d | brotli -d
+```
+
+On macOS, the brotli binary can be installed via homebrew using the [brotli formula](https://formulae.brew.sh/formula/brotli).
+
 ### [`health` Controller](../../pkg/resourcemanager/controller/health)
 
 This controller processes `ManagedResource`s that were reconciled by the main [ManagedResource Controller](#managedResource-controller) at least once.
