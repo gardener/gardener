@@ -1222,6 +1222,7 @@ build:
             - pkg/gardenlet/controller/tokenrequestor/workloadidentity
             - pkg/gardenlet/controller/vpaevictionrequirements
             - pkg/gardenlet/features
+            - pkg/gardenlet/metrics
             - pkg/gardenlet/operation
             - pkg/gardenlet/operation/botanist
             - pkg/gardenlet/operation/botanist/matchers
