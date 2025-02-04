@@ -64,7 +64,7 @@ See our documentation in the `/docs` repository, please [find the index here](do
 
 ## Setting up your own Gardener landscape
 
-Bootstrapping and maintaining a Gardener landscape has never been easier. Check out our [Gardener landscape setup guide](./docs/deployment/setup_gardener.md) to learn about the operator and other key concepts.
+Bootstrapping and maintaining a Gardener landscape has never been easier. Check out our [Gardener landscape setup guide](docs/deployment/setup_gardener.md) to learn about the operator and other key concepts.
 
 ## Feedback and Support
 
