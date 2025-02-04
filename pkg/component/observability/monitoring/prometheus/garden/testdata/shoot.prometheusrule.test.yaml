@@ -3,7 +3,7 @@ rule_files:
 
 tests:
 
-  - name: ShootVerticalPodAutoscalerCappedRecommendation
+  - name: ShootVerticalPodAutoscalerCappedRecommendationCount
     interval: 1m
     input_series:
       - series: ALERTS{alertname             = "VerticalPodAutoscalerCappedRecommendation",
@@ -49,7 +49,7 @@ tests:
     external_labels:
       landscape: landscape-unit-tests
     alert_rule_test:
-    - alertname: ShootVerticalPodAutoscalerCappedRecommendation
+    - alertname: ShootVerticalPodAutoscalerCappedRecommendationCount
       eval_time: 0m # test the alert fires immediately
       exp_alerts:
         - exp_labels:
@@ -59,4 +59,7 @@ tests:
             description: >-
               There are 2 shoots in landscape-unit-tests with a VPA that shows an uncapped
               target recommendation larger than the regular target recommendation. Query
-              for this alert in the garden Prometheus for more details.
+              in the garden Prometheus for more details:
+
+
+              ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="shoot"}
