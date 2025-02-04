@@ -67,6 +67,12 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.112.0
 	CredentialsRotationWithoutWorkersRollout featuregate.Feature = "CredentialsRotationWithoutWorkersRollout"
+
+	// IstioTLSTermination enables TLS termination for the Istio Ingress Gateway instead of TLS termination at the kube-apiserver.
+	// It allows load-balancing of requests to the kube-apiserver on request level instead of connection level.
+	// owner: @oliver-goetz
+	// alpha: v1.112
+	IstioTLSTermination featuregate.Feature = "IstioTLSTermination"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -102,6 +108,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	NewVPN:                                   {Default: false, PreRelease: featuregate.Alpha},
 	NodeAgentAuthorizer:                      {Default: false, PreRelease: featuregate.Alpha},
 	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
+	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

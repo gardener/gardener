@@ -19,7 +19,7 @@ The following tables are a summary of the feature gates that you can set on diff
 ## Feature Gates for Alpha or Beta Features
 
 | Feature                                  | Default | Stage   | Since   | Until   |
-|------------------------------------------|---------|---------|---------|---------|
+|------------------------------------------| ------- | ------- |---------| ------- |
 | DefaultSeccompProfile                    | `false` | `Alpha` | `1.54`  |         |
 | UseNamespacedCloudProfile                | `false` | `Alpha` | `1.92`  |         |
 | ShootCredentialsBinding                  | `false` | `Alpha` | `1.98`  | `1.106` |
@@ -28,6 +28,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | NewVPN                                   | `false` | `Alpha` | `1.104` |         |
 | NodeAgentAuthorizer                      | `false` | `Alpha` | `1.109` |         |
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` |         |
+| IstioTLSTermination                      | `false` | `Alpha` | `1.112` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
@@ -227,3 +228,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | NewVPN                                   | `gardenlet`                        | Enables usage of the new implementation of the VPN (go rewrite) using an IPv6 transfer network.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | NodeAgentAuthorizer                      | `gardenlet`, `gardener-node-agent` | Enables authorization of gardener-node-agent to `kube-apiserver` of shoot clusters using an authorization webhook. It restricts the permissions of each gardener-node-agent instance to the objects belonging to its own node only.                                                                                                                                                                                                                                                                                                                      |
 | CredentialsRotationWithoutWorkersRollout | `gardener-apiserver`               | CredentialsRotationWithoutWorkersRollout enables starting the credentials rotation without immediately causing a rolling update of all worker nodes. Instead, the rolling update can be triggered manually by the user at a later point in time of their convenience. This should only be enabled when all deployed provider extensions vendor at least `gardener/gardener@v1.111+`.                                                                                                                                                                     |
+| IstioTLSTermination                      | `gardenlet`, `gardener-operator`   | Enables TLS termination for the Istio Ingress Gateway instead of TLS termination at the kube-apiserver. It allows load-balancing of requests to the kube-apiserver on request level instead of connection level.                                                                                                                                                                                                                                                                                                                                         |

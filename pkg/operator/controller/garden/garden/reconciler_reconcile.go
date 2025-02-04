@@ -306,11 +306,6 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.kubeAPIServerService).Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server service SNI",
-			Fn:           c.kubeAPIServerSNI.Deploy,
-			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
-		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API Server",
 			Fn:           r.deployKubeAPIServerFunc(garden, c.kubeAPIServer),
@@ -320,6 +315,11 @@ func (r *Reconciler) reconcile(
 			Name:         "Waiting until Kubernetes API server rolled out",
 			Fn:           c.kubeAPIServer.Wait,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server service SNI",
+			Fn:           c.kubeAPIServerSNI.Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name: "Deploying Kubernetes Controller Manager",
