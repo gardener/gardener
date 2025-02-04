@@ -1,4 +1,4 @@
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: etcd
@@ -11,7 +11,7 @@ manifests:
 deploy:
   kubectl: {}
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: controlplane
@@ -19,18 +19,6 @@ requires:
   - configs:
       - etcd
 build:
-  insecureRegistries:
-    - garden.local.gardener.cloud:5001
-  tagPolicy:
-    customTemplate:
-      template: "{{.version}}-{{.sha}}"
-      components:
-        - name: version
-          envTemplate:
-            template: "{{.GARDENER_VERSION}}"
-        - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
   artifacts:
     - image: local-skaffold/gardener-apiserver
       ko:
@@ -520,8 +508,39 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/gardener-admission-controller
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: '{{.version}}-{{.sha}}'
+      components:
+        - name: version
+          envTemplate:
+            template: '{{.GARDENER_VERSION}}'
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
 deploy:
   helm:
+    releases:
+      - name: gardener-controlplane
+        chartPath: charts/gardener/controlplane
+        valuesFiles:
+          - example/gardener-local/controlplane/values.yaml
+        namespace: garden
+        setValueTemplates:
+          global.admission.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_admission_controller}}'
+          global.admission.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_admission_controller}}@{{.IMAGE_DIGEST_local_skaffold_gardener_admission_controller}}'
+          global.apiserver.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_apiserver}}'
+          global.apiserver.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_apiserver}}@{{.IMAGE_DIGEST_local_skaffold_gardener_apiserver}}'
+          global.controller.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_controller_manager}}'
+          global.controller.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_controller_manager}}@{{.IMAGE_DIGEST_local_skaffold_gardener_controller_manager}}'
+          global.scheduler.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_scheduler}}'
+          global.scheduler.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_scheduler}}@{{.IMAGE_DIGEST_local_skaffold_gardener_scheduler}}'
+        setFiles:
+          global.apiserver.workloadIdentity.token.signing.key: example/gardener-local/controlplane/workload-identity-signing-key
+        createNamespace: true
+        wait: true
     hooks:
       before:
         - host:
@@ -547,25 +566,6 @@ deploy:
               - apply
               - -f
               - example/gardener-local/controlplane/service-account-issuer-secret.yaml
-    releases:
-      - name: gardener-controlplane
-        chartPath: charts/gardener/controlplane
-        valuesFiles:
-          - example/gardener-local/controlplane/values.yaml
-        namespace: garden
-        setValueTemplates:
-          global.admission.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_admission_controller}}'
-          global.admission.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_admission_controller}}@{{.IMAGE_DIGEST_local_skaffold_gardener_admission_controller}}'
-          global.apiserver.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_apiserver}}'
-          global.apiserver.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_apiserver}}@{{.IMAGE_DIGEST_local_skaffold_gardener_apiserver}}'
-          global.controller.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_controller_manager}}'
-          global.controller.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_controller_manager}}@{{.IMAGE_DIGEST_local_skaffold_gardener_controller_manager}}'
-          global.scheduler.image.repository: '{{.IMAGE_REPO_local_skaffold_gardener_scheduler}}'
-          global.scheduler.image.tag: '{{.IMAGE_TAG_local_skaffold_gardener_scheduler}}@{{.IMAGE_DIGEST_local_skaffold_gardener_scheduler}}'
-        setFiles:
-          global.apiserver.workloadIdentity.token.signing.key: example/gardener-local/controlplane/workload-identity-signing-key
-        createNamespace: true
-        wait: true
 profiles:
   - name: extensions
     patches:
@@ -601,34 +601,23 @@ profiles:
       - op: add
         path: /deploy/helm/releases/0/setValues
         value:
-          global.apiserver.replicaCount: 1
+          global.admission.config.server.healthProbes.enable: false
+          global.admission.replicaCount: 1
           global.apiserver.livenessProbe.enable: false
           global.apiserver.readinessProbe.enable: false
-          global.admission.replicaCount: 1
-          global.admission.config.server.healthProbes.enable: false
-          global.controller.replicaCount: 1
+          global.apiserver.replicaCount: 1
           global.controller.config.leaderElection.leaderElect: false
           global.controller.config.server.healthProbes.enable: false
-          global.scheduler.replicaCount: 1
+          global.controller.replicaCount: 1
           global.scheduler.config.leaderElection.leaderElect: false
           global.scheduler.config.server.healthProbes.enable: false
+          global.scheduler.replicaCount: 1
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: provider-local
 build:
-  insecureRegistries:
-    - garden.local.gardener.cloud:5001
-  tagPolicy:
-    customTemplate:
-      template: "{{.version}}-{{.sha}}"
-      components:
-        - name: version
-          envTemplate:
-            template: "{{.GARDENER_VERSION}}"
-        - name: sha
-          inputDigest: {}
   artifacts:
     - image: local-skaffold/gardener-extension-provider-local
       ko:
@@ -828,22 +817,25 @@ build:
               - hack/generate-kustomize-patch-controllerdeployment-provider-local.sh
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
+        buildCommand: |
+          ./hack/push-helm.sh
         dependencies:
           paths:
             - charts/gardener/provider-local
-        buildCommand: |
-          ./hack/push-helm.sh
       requires:
         - image: local-skaffold/gardener-extension-provider-local
           alias: IMG
-resourceSelector:
-  allow:
-    # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
-    - groupKind: ControllerDeployment.core.gardener.cloud
-      image:
-        - ".helm.ociRepository.ref"
-    - groupKind: CloudProfile.core.gardener.cloud
-      image: [".*"]
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: '{{.version}}-{{.sha}}'
+      components:
+        - name: version
+          envTemplate:
+            template: '{{.GARDENER_VERSION}}'
+        - name: sha
+          inputDigest: {}
 manifests:
   rawYaml:
     - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
@@ -863,6 +855,15 @@ deploy:
       apply:
         - --server-side
         - --force-conflicts
+resourceSelector:
+  # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
+  allow:
+    - groupKind: ControllerDeployment.core.gardener.cloud
+      image:
+        - .helm.ociRepository.ref
+    - groupKind: CloudProfile.core.gardener.cloud
+      image:
+        - .*
 profiles:
   - name: ipv6
     activation:
@@ -893,7 +894,7 @@ profiles:
           - example/provider-local/garden/skaffold
           - example/provider-local/seed-kind-ha-multi-zone/skaffold
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: kind2-env
@@ -908,7 +909,7 @@ profiles:
     deploy:
       kubectl: {}
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: extensions-env
@@ -923,7 +924,7 @@ profiles:
     deploy:
       kubectl: {}
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: kind2-ha-single-zone-env
@@ -936,23 +937,11 @@ profiles:
     deploy:
       kubectl: {}
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: gardenlet
 build:
-  insecureRegistries:
-    - garden.local.gardener.cloud:5001
-  tagPolicy:
-    customTemplate:
-      template: "{{.version}}-{{.sha}}"
-      components:
-        - name: version
-          envTemplate:
-            template: "{{.GARDENER_VERSION}}"
-        - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
   artifacts:
     - image: local-skaffold/gardenlet
       ko:
@@ -1307,11 +1296,11 @@ build:
               - gardenlet
     - image: local-skaffold/gardenlet/chart
       custom:
+        buildCommand: |
+          ./hack/push-helm.sh ./charts/gardener/gardenlet .image.ref
         dependencies:
           paths:
             - charts/gardener/gardenlet
-        buildCommand: |
-          ./hack/push-helm.sh ./charts/gardener/gardenlet .image.ref
       requires:
         - image: local-skaffold/gardenlet
           alias: IMG
@@ -1547,6 +1536,18 @@ build:
               - hack/generate-kustomize-patch-gardenlet.sh
               - image
               - gardener-node-agent
+  insecureRegistries:
+    - garden.local.gardener.cloud:5001
+  tagPolicy:
+    customTemplate:
+      template: '{{.version}}-{{.sha}}'
+      components:
+        - name: version
+          envTemplate:
+            template: '{{.GARDENER_VERSION}}'
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
 deploy:
   helm:
     releases:
@@ -1661,9 +1662,9 @@ profiles:
       - op: add
         path: /deploy/helm/releases/0/setValues
         value:
-          replicaCount: 1
           config.leaderElection.leaderElect: false
           config.server.healthProbes.enable: false
+          replicaCount: 1
   - name: operator
     patches:
       - op: remove
@@ -1685,29 +1686,19 @@ profiles:
     patches:
       - op: replace
         path: /build/tagPolicy/customTemplate/template
-        value: "{{.version}}-{{.timestamp}}"
+        value: '{{.version}}-{{.timestamp}}'
       - op: replace
         path: /build/tagPolicy/customTemplate/components/1
         value:
-          name: timestamp
           dateTime:
             format: "20060102150405"
+          name: timestamp
 ---
-apiVersion: skaffold/v4beta7
+apiVersion: skaffold/v4beta12
 kind: Config
 metadata:
   name: admission-local
 build:
-  tagPolicy:
-    customTemplate:
-      template: "{{.version}}-{{.sha}}"
-      components:
-        - name: version
-          envTemplate:
-            template: "{{.GARDENER_VERSION}}"
-        - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
   artifacts:
     - image: local-skaffold/gardener-extension-admission-local
       ko:
@@ -1811,6 +1802,16 @@ build:
         dependencies:
           paths:
             - charts/gardener/admission-local/charts/application
+  tagPolicy:
+    customTemplate:
+      template: '{{.version}}-{{.sha}}'
+      components:
+        - name: version
+          envTemplate:
+            template: '{{.GARDENER_VERSION}}'
+        - name: sha
+          gitCommit:
+            variant: AbbrevCommitSha
 deploy:
   helm:
     releases:
@@ -1837,8 +1838,8 @@ profiles:
       - op: add
         path: /deploy/helm/releases/1/setValues
         value:
-          replicaCount: 1
+          highAvailability.enable: false
+          leaderElection.enable: false
           livenessProbe.enable: false
           readinessProbe.enable: false
-          leaderElection.enable: false
-          highAvailability.enable: false
+          replicaCount: 1
