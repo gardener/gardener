@@ -52,15 +52,19 @@ Continuous conformance test results of the latest stable Gardener release are up
 
 Get an overview of the test results at [testgrid](https://testgrid.k8s.io/conformance-gardener).
 
+## Quickstart with the demo environment
+
+Check out our [Gardener demo environment](https://demo.gardener.cloud)!
+
+It is a preconfigured playground which includes lots of tutorials and examples to get you started with Gardener.
+
 ## Start using or developing the Gardener locally
 
 See our documentation in the `/docs` repository, please [find the index here](docs/README.md).
 
-## Setting up your own Gardener landscape in the Cloud
+## Setting up your own Gardener landscape
 
-The quickest way to test drive Gardener is to install it virtually onto an existing Kubernetes cluster, just like you would install any other Kubernetes-ready application. You can do this with our [Gardener Helm Chart](https://github.com/gardener/gardener/tree/master/charts/gardener).
-
-Alternatively you can use our [garden setup](https://github.com/gardener/garden-setup) project to create a fully configured Gardener landscape which also includes our [Gardener Dashboard](https://github.com/gardener/dashboard).
+Bootstrapping and maintaining a Gardener landscape has never been easier. Check out our [Gardener landscape setup guide](docs/deployment/setup_gardener.md) to learn about the operator and other key concepts.
 
 ## Feedback and Support
 
