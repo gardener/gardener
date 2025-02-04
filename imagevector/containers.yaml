@@ -84,8 +84,8 @@ images:
       network_exposure: 'public'
       authentication_enforced: true
       user_interaction: 'end-user'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'low'
+      confidentiality_requirement: 'high'
+      integrity_requirement: 'high'
       availability_requirement: 'low'
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
@@ -98,8 +98,8 @@ images:
       network_exposure: 'public'
       authentication_enforced: true
       user_interaction: 'end-user'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'low'
+      confidentiality_requirement: 'high'
+      integrity_requirement: 'high'
       availability_requirement: 'low'
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
@@ -112,8 +112,8 @@ images:
       network_exposure: 'public'
       authentication_enforced: true
       user_interaction: 'end-user'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'low'
+      confidentiality_requirement: 'high'
+      integrity_requirement: 'high'
       availability_requirement: 'low'
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
