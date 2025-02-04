@@ -53,6 +53,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.4.0
 	gonum.org/v1/gonum v0.15.0
 	google.golang.org/protobuf v1.36.1
+	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.4
 	istio.io/api v1.24.2
@@ -83,8 +84,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.3
 	sigs.k8s.io/yaml v1.4.0
 )
-
-require gopkg.in/yaml.v2 v2.4.0
 
 require (
 	dario.cat/mergo v1.0.1 // indirect

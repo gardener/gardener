@@ -685,6 +685,8 @@ func (c *clusterAutoscaler) generatePriorityExpanderConfigMap() (*corev1.ConfigM
 		priority := ptr.Deref(machineDeployment.Priority, priorityDefaults.forDeployment(machineDeployment.Name))
 		priorities[priority] = append(priorities[priority], fmt.Sprintf("%s\\.%s", c.namespace, machineDeployment.Name))
 	}
+	// `gopkg.in/yaml.v2` is needed here for marshaling, as the cluster-autoscaler uses it for unmarshalling.
+	// yaml Marshalers from `sigs.k8s.io/yaml` e.g. produce yaml that is not unmarshallable for `gopkg.in/yaml.v2`.
 	priorityConfig, err := yaml2.Marshal(priorities)
 	if err != nil {
 		return nil, err
