@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/install"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
 )
 
@@ -79,6 +80,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			By("Create Shoot")
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
+
+			inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
 				By("Verify Bootstrapping of Nodes with node-critical components")
