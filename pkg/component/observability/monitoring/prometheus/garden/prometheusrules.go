@@ -222,18 +222,24 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
 		{
 			Alert: "VerticalPodAutoscalerCappedRecommendation",
 			Expr: intstr.FromString(`
-count(
-  count by (verticalpodautoscaler) (
-      {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
-    >
-      {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}
+  count_over_time(
+    (
+        {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
+      >
+        {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}
+    )[5m:]
   )
-)`),
+==
+  5`),
 			Annotations: map[string]string{
 				"summary": "A VPA recommendation in the garden cluster is capped.",
-				"description": "There are {{ .Value }} VPAs in the garden cluster from {{ $externalLabels.landscape }} " +
-					"that show an uncapped target recommendation larger than the regular target recommendation. " +
-					"Query for this alert in the garden Prometheus for more details.",
+				"description": "The following VPA in the garden cluster shows a " +
+					"{{ if eq .Labels.unit \"core\" -}} CPU {{- else if eq .Labels.unit \"byte\" -}} memory {{- end }} " +
+					"uncapped target recommendation larger than the regular target recommendation:\n" +
+					"- landscape = {{ $externalLabels.landscape }}\n" +
+					"- namespace = {{ $labels.namespace }}\n" +
+					"- vpa = {{ $labels.verticalpodautoscaler }}\n" +
+					"- container = {{ $labels.container }}",
 			},
 		},
 	}
