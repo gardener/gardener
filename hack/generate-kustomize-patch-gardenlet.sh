@@ -5,17 +5,6 @@
 set -e
 set -o pipefail
 
-# TODO(marc1404): Remove when https://github.com/gardener/gardener/issues/11075 is resolved.
-# Start temp debugging
-error_handler() {
-    echo "An error occurred on line $1."
-    echo "$SKAFFOLD_IMAGE"
-    echo "$@"
-}
-
-trap 'error_handler $LINENO $@' ERR
-# End temp debugging
-
 dir="$(dirname $0)/../example/gardener-local/gardenlet/operator"
 type="${1:-image}"
 ref="$SKAFFOLD_IMAGE"
@@ -56,6 +45,7 @@ spec:
 EOF
   fi
 
+  cat "$patch_file" # TODO(marc1404): Remove when https://github.com/gardener/gardener/issues/11075 is resolved.
   images="$(yq e '.spec.deployment.imageVectorOverwrite' "$patch_file" | yq -o json)"
 
   images="$(echo "$images" | jq -r \
