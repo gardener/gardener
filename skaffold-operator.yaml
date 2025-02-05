@@ -482,6 +482,7 @@ build:
             - pkg/apis/settings/validation
             - pkg/apiserver
             - pkg/apiserver/admission/initializer
+            - pkg/apiserver/controllers/publicinfo
             - pkg/apiserver/features
             - pkg/apiserver/openapi
             - pkg/apiserver/registry/core/backupbucket
