@@ -137,7 +137,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					}
 				}).Should(Succeed())
 
-				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
 			By("Update Shoot")
@@ -149,7 +149,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			}, nil, nil)
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
 			By("Add skip readiness annotation")

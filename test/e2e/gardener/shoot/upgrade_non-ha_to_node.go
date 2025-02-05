@@ -34,7 +34,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 			f.Verify()
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
 			By("Upgrade Shoot (non-HA to HA with failure tolerance type 'node')")
@@ -43,7 +43,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 			highavailability.UpgradeAndVerify(ctx, f.ShootFramework, gardencorev1beta1.FailureToleranceTypeNode)
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
 			By("Delete Shoot")
