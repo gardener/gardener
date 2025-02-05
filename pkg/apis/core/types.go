@@ -53,3 +53,6 @@ type AccessRestrictionWithOptions struct {
 	// +optional
 	Options map[string]string
 }
+
+// Capabilities is a series of features that a machine image or type supports.
+type Capabilities map[string]string

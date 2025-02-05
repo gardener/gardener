@@ -421,6 +421,13 @@ message CloudProfileSpec {
   // Bastion contains the machine and image properties
   // +optional
   optional Bastion bastion = 10;
+
+  // CapabilitiesDefinition contains the definition of all possible capabilities of the CloudProfile.
+  // Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+  // The order values for a given capability is relevant. To the left is the most important value.
+  // During maintenance upgrades the image that enables most important capabilities will be selected.
+  // +optional
+  map<string, string> capabilitiesDefinition = 11;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -1767,6 +1774,11 @@ message MachineImageVersion {
   // - '< 1.26' - supports only kubelet versions less than 1.26
   // +optional
   optional string kubeletVersionConstraint = 4;
+
+  // CapabilitiesSet contains the set of capabilities of a MachineImage version. There is exactly one capabilities entry
+  // per resource of a version the infrastructure provider serves.
+  // +optional
+  repeated .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON capabilitySets = 5;
 }
 
 // MachineType contains certain properties of a machine type.
@@ -1794,6 +1806,10 @@ message MachineType {
   // Architecture is the CPU architecture of this machine type.
   // +optional
   optional string architecture = 7;
+
+  // Capabilities contains the capabilities of the machine type.
+  // +optional
+  map<string, string> capabilities = 8;
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.

@@ -2625,6 +2625,7 @@ func autoConvert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(in *CloudProf
 	out.Type = in.Type
 	out.VolumeTypes = *(*[]core.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Bastion = (*core.Bastion)(unsafe.Pointer(in.Bastion))
+	out.CapabilitiesDefinition = *(*core.Capabilities)(unsafe.Pointer(&in.CapabilitiesDefinition))
 	return nil
 }
 
@@ -2646,6 +2647,7 @@ func autoConvert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *core.Clou
 	out.Type = in.Type
 	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Bastion = (*Bastion)(unsafe.Pointer(in.Bastion))
+	out.CapabilitiesDefinition = *(*Capabilities)(unsafe.Pointer(&in.CapabilitiesDefinition))
 	return nil
 }
 
@@ -4502,6 +4504,7 @@ func autoConvert_v1beta1_MachineImageVersion_To_core_MachineImageVersion(in *Mac
 	out.CRI = *(*[]core.CRI)(unsafe.Pointer(&in.CRI))
 	out.Architectures = *(*[]string)(unsafe.Pointer(&in.Architectures))
 	out.KubeletVersionConstraint = (*string)(unsafe.Pointer(in.KubeletVersionConstraint))
+	out.CapabilitiesSet = *(*[]apiextensionsv1.JSON)(unsafe.Pointer(&in.CapabilitiesSet))
 	return nil
 }
 
@@ -4517,6 +4520,7 @@ func autoConvert_core_MachineImageVersion_To_v1beta1_MachineImageVersion(in *cor
 	out.CRI = *(*[]CRI)(unsafe.Pointer(&in.CRI))
 	out.Architectures = *(*[]string)(unsafe.Pointer(&in.Architectures))
 	out.KubeletVersionConstraint = (*string)(unsafe.Pointer(in.KubeletVersionConstraint))
+	out.CapabilitiesSet = *(*[]apiextensionsv1.JSON)(unsafe.Pointer(&in.CapabilitiesSet))
 	return nil
 }
 
@@ -4533,6 +4537,7 @@ func autoConvert_v1beta1_MachineType_To_core_MachineType(in *MachineType, out *c
 	out.Storage = (*core.MachineTypeStorage)(unsafe.Pointer(in.Storage))
 	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
 	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
+	out.Capabilities = *(*core.Capabilities)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
 
@@ -4549,6 +4554,7 @@ func autoConvert_core_MachineType_To_v1beta1_MachineType(in *core.MachineType, o
 	out.Storage = (*MachineTypeStorage)(unsafe.Pointer(in.Storage))
 	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
 	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
+	out.Capabilities = *(*Capabilities)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
 
