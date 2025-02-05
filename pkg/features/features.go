@@ -68,6 +68,13 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.112.0
 	CredentialsRotationWithoutWorkersRollout featuregate.Feature = "CredentialsRotationWithoutWorkersRollout"
+
+	// CloudProfileCapabilities enables the usage of capabilities in the CloudProfile. Capabilities are used to create a relation between
+	// machineTypes and machineImages. It allows to validate worker groups of a shoot ensuring the selected image and machine combination
+	// will boot up successfully. Capabilities are also used to determine valid upgrade paths during automated maintenance operation.
+	// owner: @roncossek
+	// alpha: v1.113.0
+	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -103,6 +110,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	NewVPN:                                   {Default: false, PreRelease: featuregate.Alpha},
 	NodeAgentAuthorizer:                      {Default: false, PreRelease: featuregate.Alpha},
 	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha, LockToDefault: true},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
