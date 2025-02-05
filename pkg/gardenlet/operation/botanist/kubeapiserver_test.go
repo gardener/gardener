@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -559,6 +560,58 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(botanist.DeployKubeAPIServer(ctx, false)).To(Succeed())
 
 			Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: projectNamespace, Name: shootName + ".kubeconfig"}, &corev1.Secret{})).To(BeNotFoundError())
+		})
+
+		It("should append the node-agent-authorizer webhook configuration if it is enabled", func() {
+			expectedKubeconfig := []byte(`apiVersion: v1
+clusters:
+- cluster:
+    server: https://gardener-resource-manager/webhooks/auth/nodeagent
+  name: authorization-webhook
+contexts:
+- context:
+    cluster: authorization-webhook
+    user: authorization-webhook
+  name: authorization-webhook
+current-context: authorization-webhook
+kind: Config
+preferences: {}
+users:
+- name: authorization-webhook
+  user: {}
+`)
+
+			expectedAuthorizationWebhook := kubeapiserver.AuthorizationWebhook{
+				Name:       "node-agent-authorizer",
+				Kubeconfig: expectedKubeconfig,
+				WebhookConfiguration: apiserverv1beta1.WebhookConfiguration{
+					AuthorizedTTL:                            metav1.Duration{Duration: 0},
+					UnauthorizedTTL:                          metav1.Duration{Duration: 0},
+					Timeout:                                  metav1.Duration{Duration: 10 * time.Second},
+					FailurePolicy:                            "Deny",
+					SubjectAccessReviewVersion:               "v1",
+					MatchConditionSubjectAccessReviewVersion: "v1",
+					MatchConditions: []apiserverv1beta1.WebhookMatchCondition{{
+						Expression: "'gardener.cloud:node-agents' in request.groups",
+					}},
+				},
+			}
+
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+			kubeAPIServer.EXPECT().SetNodeNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetPodNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
+			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().AppendAuthorizationWebhook(expectedAuthorizationWebhook)
+			kubeAPIServer.EXPECT().Deploy(ctx)
+
+			Expect(botanist.DeployKubeAPIServer(ctx, true)).To(Succeed())
 		})
 	})
 
