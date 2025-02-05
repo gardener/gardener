@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
@@ -218,6 +219,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
 
+			if !v1beta1helper.IsWorkerless(f.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+			}
+
 			// isolated test for ssh key rotation (does not trigger node rolling update)
 			if !v1beta1helper.IsWorkerless(f.Shoot) && !withoutWorkersRollout {
 				testCredentialRotation(parentCtx, rotationutils.Verifiers{&rotation.SSHKeypairVerifier{ShootCreationFramework: f}}, f, v1beta1constants.ShootOperationRotateSSHKeypair, "")
@@ -287,6 +292,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				testCredentialRotation(parentCtx, v, f, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete)
 			} else {
 				testCredentialRotationWithoutWorkersRollout(parentCtx, v, f)
+			}
+
+			if !v1beta1helper.IsWorkerless(f.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
 			}
 
 			By("Delete Shoot")

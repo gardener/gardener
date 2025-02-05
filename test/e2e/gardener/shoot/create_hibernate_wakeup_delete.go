@@ -81,7 +81,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
 
-			inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+			if !v1beta1helper.IsWorkerless(f.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+			}
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
 				By("Verify Bootstrapping of Nodes with node-critical components")
@@ -100,6 +102,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 			defer cancel()
 			Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
+
+			if !v1beta1helper.IsWorkerless(f.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+			}
 
 			By("Delete Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
