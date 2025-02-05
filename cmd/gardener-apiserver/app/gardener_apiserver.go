@@ -51,6 +51,7 @@ import (
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	"github.com/gardener/gardener/pkg/apiserver/controllers/publicinfo"
 	"github.com/gardener/gardener/pkg/apiserver/openapi"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -382,11 +383,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-public-info", func(_ genericapiserver.PostStartHookContext) error {
-		if err := createNamespaces(gardencorev1beta1.GardenerSystemPublicNamespace); err != nil {
-			return err
-		}
-
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-public-info", func(pctx genericapiserver.PostStartHookContext) error {
 		p := publicInfo{
 			Version:      version.Get().String(),
 			FeatureGates: fmt.Sprint(features.DefaultFeatureGate),
@@ -401,33 +398,12 @@ func (o *Options) Run(ctx context.Context) error {
 			return err
 		}
 
-		const (
-			configMapName        = "gardener-info"
-			gardenerAPIServerKey = "gardenerAPIServer"
-		)
-
-		configMap, err := kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Get(ctx, configMapName, metav1.GetOptions{})
+		controllerManager, err := publicinfo.NewController(kubeClient, marshalledInfo)
 		if err != nil {
-			if client.IgnoreNotFound(err) != nil {
-				return err
-			}
-
-			configMap := corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: gardencorev1beta1.GardenerSystemPublicNamespace,
-					Name:      configMapName,
-				},
-				Data: map[string]string{
-					gardenerAPIServerKey: string(marshalledInfo),
-				},
-			}
-			_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Create(ctx, &configMap, metav1.CreateOptions{})
 			return err
 		}
-
-		configMap.Data[gardenerAPIServerKey] = string(marshalledInfo)
-		_, err = kubeClient.CoreV1().ConfigMaps(gardencorev1beta1.GardenerSystemPublicNamespace).Update(ctx, configMap, metav1.UpdateOptions{})
-		return err
+		controllerManager.Start(pctx.Context, log)
+		return nil
 	}); err != nil {
 		return err
 	}
