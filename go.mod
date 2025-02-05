@@ -53,6 +53,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.4.0
 	gonum.org/v1/gonum v0.15.0
 	google.golang.org/protobuf v1.36.1
+	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.16.4
 	istio.io/api v1.24.2
@@ -254,7 +255,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/gengo/v2 v2.0.0-20240826214909-a7b603a56eb7 // indirect
 	k8s.io/klog v1.0.0 // indirect
