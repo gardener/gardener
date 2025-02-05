@@ -443,5 +443,16 @@ The following dependencies have been updated:\n\
 {{/each}}\n\
 ```",
     },
+    {
+      // Prevent unwanted updates of `gopkg.in/yaml.v2` to stay on v2.x.x.
+      // The dependency has to be kept in sync with the cluster-autoscaler.
+      // For context see:
+      // - https://github.com/gardener/gardener/pull/11273
+      // - https://github.com/gardener/autoscaler/blob/edd7d34dfba73f68e6f4d2516bb3212e92732040/cluster-autoscaler/go.mod#L43
+      matchPackageNames: [
+        'gopkg.in/yaml.v2'
+      ],
+      allowedVersions: "^v2\..+",
+    },
   ],
 }
