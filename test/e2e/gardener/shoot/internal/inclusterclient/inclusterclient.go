@@ -53,8 +53,7 @@ func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.Sh
 	ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
 	defer cancel()
 
-	objects := getObjects(f.Shoot.Spec.Kubernetes.Version)
-	prepareObjects(ctx, f.ShootClient.Client(), objects...)
+	defer prepareObjects(ctx, f.ShootClient.Client(), f.Shoot.Spec.Kubernetes.Version)()
 
 	By("Verify in-cluster access to API server via direct path")
 	// this pod connects to the API server directly, i.e., uses the KUBERNETES_SERVICE_HOST env var injected by gardener
@@ -122,21 +121,13 @@ func getInClusterAPIServerAddress(ctx context.Context, c client.Client) string {
 	return fmt.Sprintf("https://%s:%d", clusterIP, port)
 }
 
-func prepareObjects(ctx context.Context, c client.Client, objects ...client.Object) {
+func prepareObjects(ctx context.Context, c client.Client, kubernetesVersion string) func() {
+	objects := getObjects(kubernetesVersion)
+
 	By("Create test objects for verifying in-cluster access to API server")
 	for _, obj := range objects {
 		Expect(client.IgnoreAlreadyExists(c.Create(ctx, obj))).To(Succeed(), "should create %T %q", obj, client.ObjectKeyFromObject(obj))
 	}
-
-	DeferCleanup(func() {
-		By("Cleaning up test objects for verifying in-cluster access to API server")
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		for _, obj := range objects {
-			Expect(client.IgnoreNotFound(c.Delete(cleanupCtx, obj))).To(Succeed(), "should delete %T %q", obj, client.ObjectKeyFromObject(obj))
-		}
-	})
 
 	By("Wait for test pods to be ready")
 	for _, obj := range objects {
@@ -149,6 +140,16 @@ func prepareObjects(ctx context.Context, c client.Client, objects ...client.Obje
 			g.Expect(c.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
 			g.Expect(pod.Status.Phase).To(Equal(corev1.PodRunning))
 		}).WithContext(ctx).WithTimeout(time.Minute).Should(Succeed(), "%T %q should get ready", obj, client.ObjectKeyFromObject(obj))
+	}
+
+	return func() {
+		By("Cleaning up test objects for verifying in-cluster access to API server")
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+
+		for _, obj := range objects {
+			Expect(client.IgnoreNotFound(c.Delete(cleanupCtx, obj))).To(Succeed(), "should delete %T %q", obj, client.ObjectKeyFromObject(obj))
+		}
 	}
 }
 
