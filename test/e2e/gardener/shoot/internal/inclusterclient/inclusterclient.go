@@ -127,7 +127,9 @@ func prepareObjects(ctx context.Context, c client.Client, kubernetesVersion stri
 
 	By("Create test objects for verifying in-cluster access to API server")
 	for _, obj := range objects {
-		Expect(client.IgnoreAlreadyExists(c.Create(ctx, obj))).To(Succeed(), "should create %T %q", obj, client.ObjectKeyFromObject(obj))
+		Eventually(func() error {
+			return client.IgnoreAlreadyExists(c.Create(ctx, obj))
+		}).Should(Succeed(), "should create %T %q", obj, client.ObjectKeyFromObject(obj))
 	}
 
 	By("Wait for test pods to be ready")
@@ -149,25 +151,35 @@ func prepareObjects(ctx context.Context, c client.Client, kubernetesVersion stri
 		defer cancel()
 
 		for _, obj := range objects {
-			Expect(client.IgnoreNotFound(c.Delete(cleanupCtx, obj))).To(Succeed(), "should delete %T %q", obj, client.ObjectKeyFromObject(obj))
+			Eventually(func() error {
+				return client.IgnoreNotFound(c.Delete(cleanupCtx, obj))
+			}).Should(Succeed(), "should delete %T %q", obj, client.ObjectKeyFromObject(obj))
 		}
 	}
 }
 
 func execute(ctx context.Context, clientSet kubernetes.Interface, podName string, command ...string) *Buffer {
 	GinkgoHelper()
-	stdOutBuffer := NewBuffer()
+	var stdOutBuffer *Buffer
 
-	Expect(clientSet.PodExecutor().ExecuteWithStreams(
-		ctx,
-		namespace,
-		podName,
-		containerName,
-		nil,
-		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter)),
-		gexec.NewPrefixedWriter("[err] ", GinkgoWriter),
-		command...,
-	)).To(Succeed())
+	// Retry the command execution to reduce flakiness.
+	// Initialize a fresh output buffer on every try for asserting only the results of the last (hopefully successful)
+	// command execution.
+	// Both stdOut and stdErr will be forwarded to the ginkgo output on every try to ensure test failures can be debugged.
+	Eventually(func() error {
+		stdOutBuffer = NewBuffer()
+
+		return clientSet.PodExecutor().ExecuteWithStreams(
+			ctx,
+			namespace,
+			podName,
+			containerName,
+			nil,
+			io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter)),
+			gexec.NewPrefixedWriter("[err] ", GinkgoWriter),
+			command...,
+		)
+	}).Should(Succeed())
 
 	return stdOutBuffer
 }
