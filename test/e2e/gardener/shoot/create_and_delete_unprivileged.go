@@ -60,7 +60,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			MatchError(ContainSubstring("pods %q is forbidden: violates PodSecurity %q", "nginx", "restricted:latest")),
 		))
 
-		inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+		inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)

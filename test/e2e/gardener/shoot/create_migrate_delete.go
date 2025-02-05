@@ -36,7 +36,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			f.Verify()
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) && !v1beta1helper.HibernationIsEnabled(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
 			By("Migrate Shoot")
@@ -48,7 +48,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			Expect(t.VerifyMigration(ctx)).To(Succeed())
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) && !v1beta1helper.HibernationIsEnabled(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
 			By("Delete Shoot")

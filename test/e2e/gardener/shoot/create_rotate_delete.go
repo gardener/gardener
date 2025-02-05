@@ -220,7 +220,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			f.Verify()
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
 			// isolated test for ssh key rotation (does not trigger node rolling update)
@@ -295,7 +295,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			}
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
 			By("Delete Shoot")
