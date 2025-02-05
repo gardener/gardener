@@ -1162,17 +1162,9 @@ func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time
 
 func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1beta1.LastOperationType, duration time.Duration) {
 	var (
-		workerless = "false"
-		hibernated = "false"
+		workerless = utils.IifString(v1beta1helper.IsWorkerless(shoot), "true", "false")
+		hibernated = utils.IifString(v1beta1helper.HibernationIsEnabled(shoot), "true", "false")
 	)
-
-	if v1beta1helper.IsWorkerless(shoot) {
-		workerless = "true"
-	}
-
-	if v1beta1helper.HibernationIsEnabled(shoot) {
-		hibernated = "true"
-	}
 
 	gardenletmetrics.ShootOperationDurationSeconds.
 		WithLabelValues(string(operationType), workerless, hibernated).
