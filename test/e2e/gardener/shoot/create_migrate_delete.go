@@ -14,7 +14,9 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	. "github.com/gardener/gardener/test/framework"
 )
 
@@ -33,6 +35,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
 
+			if !v1beta1helper.IsWorkerless(f.Shoot) && !v1beta1helper.HibernationIsEnabled(f.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+			}
+
 			By("Migrate Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 			defer cancel()
@@ -40,6 +46,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			Expect(err).ToNot(HaveOccurred())
 			Expect(t.MigrateShoot(ctx)).To(Succeed())
 			Expect(t.VerifyMigration(ctx)).To(Succeed())
+
+			if !v1beta1helper.IsWorkerless(f.Shoot) && !v1beta1helper.HibernationIsEnabled(f.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(ctx, f.ShootFramework)
+			}
 
 			By("Delete Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
