@@ -426,24 +426,22 @@
       enabled: true,
     },
     {
-      // Add PR footer with release notes for docker releases.
-      matchDatasources: [
-        'docker',
-      ],
+      // Add PR footer with release notes.
       matchFileNames: [
         'imagevector/**',
       ],
-      prFooter: '**Release note**:\n```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`.\n```',
-    },
-    {
-      // Add PR footer with release notes link for github-releases.
-      matchDatasources: [
-        'github-releases',
+      matchUpdateTypes: [
+        'major',
+        'minor',
+        'patch',
       ],
-      matchFileNames: [
-        'imagevector/**',
-      ],
-      prFooter: '**Release note**:\n```other dependency\nThe `{{depName}}` image has been updated to `{{newVersion}}`. [Release Notes](https://github.com/{{depName}}/releases/tag/{{newVersion}})\n```',
+      prFooter: "**Release note**:\n\
+```other dependency\n\
+The following dependencies have been updated:\n\
+{{#each upgrades as |upgrade|}}\n\
+- `{{upgrade.depName}}` from `{{upgrade.currentVersion}}` to `{{upgrade.newVersion}}`. {{#if (equals upgrade.datasource 'github-releases')}}[Release Notes](https://github.com/{{upgrade.depName}}/releases/tag/{{upgrade.newVersion}}){{/if}}\n\
+{{/each}}\n\
+```",
     },
   ],
 }
