@@ -45,10 +45,15 @@ var labels = map[string]string{"e2e-test": "in-cluster-client"}
 
 // VerifyInClusterAccessToAPIServer verifies access to the shoot API server from in-cluster clients.
 // It verifies the following paths:
-// - direct path using the KUBERNETES_SERVICE_HOST env var injected by gardener
-// - via the API server proxy's clusterIP
-// - via the API server proxy's hostname kubernetes.default.svc.cluster.local
-// For this, it deploys pods with the hyperkube image that contains the kubectl binary serving as a test client.
+// - direct path: connecting to the API server's internal domain (injected by gardener into the KUBERNETES_SERVICE_HOST env var)
+// - via the API server proxy: connecting to the kubernetes service's clusterIP
+// - via the API server proxy: connecting to the kubernetes service's hostname (kubernetes.default.svc.cluster.local)
+// For this, it deploys three pods with the hyperkube image that contains the kubectl binary serving as a test client.
+// Apart from testing the actual connection, the test also verifies gardener's injection of the KUBERNETES_SERVICE_HOST
+// env var:
+// - one pod uses the injected env var
+// - one pod disables injection and relies on the default service link env vars
+// - one pod explicitly overwrites the env var
 // See docs/usage/networking/shoot_kubernetes_service_host_injection.md and docs/proposals/08-shoot-apiserver-via-sni.md
 func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.ShootFramework) {
 	ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
@@ -56,17 +61,17 @@ func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.Sh
 
 	defer prepareObjects(ctx, f.ShootClient.Client(), f.Shoot.Spec.Kubernetes.Version)()
 
-	By("Verify in-cluster access to API server via direct path")
+	By("Verify access via direct path")
 	// this pod connects to the API server directly, i.e., uses the KUBERNETES_SERVICE_HOST env var injected by gardener
 	verifyAccessFromPod(ctx, f, podNameDirect, getInternalAPIServerAddress(f.Shoot))
 
-	By("Verify in-cluster access to API server via API server proxy IP")
+	By("Verify access via API server proxy via the kubernetes service's clusterIP")
 	// this pod connects via the API server proxy using the KUBERNETES_SERVICE_HOST env var injected by kubelet, i.e.,
 	// via the clusterIP of kubernetes.default.svc.cluster.local
 	verifyAccessFromPod(ctx, f, podNameAPIServerProxyIP, getInClusterAPIServerAddress(ctx, f.ShootClient.Client()))
 
-	By("Verify in-cluster access to API server via API server proxy hostname")
-	// this pod connects via the API server proxy hostname, i.e., via kubernetes.default.svc.cluster.local
+	By("Verify access via API server proxy via the kubernetes service's hostname")
+	// this pod connects via the API server proxy via the kubernetes.default.svc.cluster.local hostname
 	verifyAccessFromPod(ctx, f, podNameAPIServerProxyHostname, "https://kubernetes.default.svc.cluster.local:443")
 }
 
