@@ -6,9 +6,10 @@ package inclusterclient
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"maps"
+	"net"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -118,7 +119,7 @@ func getInClusterAPIServerAddress(ctx context.Context, c client.Client) string {
 	}
 	Expect(port).NotTo(BeZero())
 
-	return fmt.Sprintf("https://%s:%d", clusterIP, port)
+	return "https://" + net.JoinHostPort(clusterIP, strconv.FormatInt(int64(port), 10))
 }
 
 func prepareObjects(ctx context.Context, c client.Client, kubernetesVersion string) func() {
