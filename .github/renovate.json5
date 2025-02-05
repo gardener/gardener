@@ -427,6 +427,9 @@
     },
     {
       // Add PR footer with release notes.
+      matchFileNames: [
+        'imagevector/**',
+      ],
       matchUpdateTypes: [
         'major',
         'minor',
