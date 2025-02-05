@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -191,6 +192,19 @@ func getObjects(kubernetesVersion string) []client.Object {
 					Name:  "TERM",
 					Value: "dumb",
 				}},
+				// allow running this pod on the "unprivileged" shoot
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
+					Capabilities: &corev1.Capabilities{
+						Drop: []corev1.Capability{"ALL"},
+					},
+					RunAsUser:    ptr.To[int64](65532),
+					RunAsGroup:   ptr.To[int64](65532),
+					RunAsNonRoot: ptr.To(true),
+					SeccompProfile: &corev1.SeccompProfile{
+						Type: corev1.SeccompProfileTypeRuntimeDefault,
+					},
+				},
 			}},
 			ServiceAccountName: name,
 		},
