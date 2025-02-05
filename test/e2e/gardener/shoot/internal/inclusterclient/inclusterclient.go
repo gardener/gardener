@@ -46,7 +46,7 @@ var labels = map[string]string{"e2e-test": "in-cluster-client"}
 // It verifies the following paths:
 // - direct path using the KUBERNETES_SERVICE_HOST env var injected by gardener
 // - via the API server proxy's clusterIP
-// - via the API server proxy's hostname kubernetes.default.svc
+// - via the API server proxy's hostname kubernetes.default.svc.cluster.local
 // For this, it deploys pods with the hyperkube image that contains the kubectl binary serving as a test client.
 // See docs/usage/networking/shoot_kubernetes_service_host_injection.md and docs/proposals/08-shoot-apiserver-via-sni.md
 func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.ShootFramework) {
@@ -62,11 +62,11 @@ func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.Sh
 
 	By("Verify in-cluster access to API server via API server proxy IP")
 	// this pod connects via the API server proxy using the KUBERNETES_SERVICE_HOST env var injected by kubelet, i.e.,
-	// via the clusterIP of kubernetes.default.svc
+	// via the clusterIP of kubernetes.default.svc.cluster.local
 	verifyAccessFromPod(ctx, f, podNameAPIServerProxyIP, getInClusterAPIServerAddress(ctx, f.ShootClient.Client()))
 
 	By("Verify in-cluster access to API server via API server proxy hostname")
-	// this pod connects via the API server proxy hostname, i.e., via kubernetes.default.svc
+	// this pod connects via the API server proxy hostname, i.e., via kubernetes.default.svc.cluster.local
 	verifyAccessFromPod(ctx, f, podNameAPIServerProxyHostname, "https://kubernetes.default.svc.cluster.local:443")
 }
 
@@ -154,7 +154,7 @@ func prepareObjects(ctx context.Context, c client.Client, objects ...client.Obje
 
 func execute(ctx context.Context, clientSet kubernetes.Interface, podName string, command ...string) *Buffer {
 	GinkgoHelper()
-	var stdOutBuffer, stdErrBuffer = NewBuffer(), NewBuffer()
+	stdOutBuffer := NewBuffer()
 
 	Expect(clientSet.PodExecutor().ExecuteWithStreams(
 		ctx,
@@ -163,7 +163,7 @@ func execute(ctx context.Context, clientSet kubernetes.Interface, podName string
 		containerName,
 		nil,
 		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter)),
-		io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter)),
+		gexec.NewPrefixedWriter("[err] ", GinkgoWriter),
 		command...,
 	)).To(Succeed())
 
@@ -220,12 +220,10 @@ func getObjects(kubernetesVersion string) []client.Object {
 	podAPIServerProxyHostname := podDirect.DeepCopy()
 	podAPIServerProxyHostname.Name = podNameAPIServerProxyHostname
 	// manually set the KUBERNETES_SERVICE_HOST env var, gardener does not overwrite it if present
-	container := podAPIServerProxyHostname.Spec.Containers[0]
-	container.Env = append(container.Env, corev1.EnvVar{
+	podAPIServerProxyHostname.Spec.Containers[0].Env = append(podAPIServerProxyHostname.Spec.Containers[0].Env, corev1.EnvVar{
 		Name:  "KUBERNETES_SERVICE_HOST",
 		Value: "kubernetes.default.svc.cluster.local",
 	})
-	podAPIServerProxyHostname.Spec.Containers[0] = container
 	objects = append(objects, podAPIServerProxyHostname)
 
 	return objects
