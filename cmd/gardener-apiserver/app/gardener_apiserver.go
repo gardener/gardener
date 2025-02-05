@@ -398,8 +398,7 @@ func (o *Options) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		controllerManager.Start(pctx.Context, log)
-		return nil
+		return controllerManager.Start(pctx.Context, log)
 	}); err != nil {
 		return err
 	}

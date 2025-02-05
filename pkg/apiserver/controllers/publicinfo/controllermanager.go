@@ -105,7 +105,7 @@ func (c *Controller) Start(ctx context.Context, log logr.Logger) error {
 				c.queue.Add(key)
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(_, newObj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(newObj)
 			if err == nil {
 				c.queue.Add(key)
@@ -197,7 +197,6 @@ func (c *Controller) processNextWorkItem(ctx context.Context, log logr.Logger) b
 		c.queue.AddAfter(key, time.Minute)
 	}
 	return true
-
 }
 
 func (c *Controller) reconcileConfigMap(ctx context.Context, key string, log logr.Logger) (error, bool) {
