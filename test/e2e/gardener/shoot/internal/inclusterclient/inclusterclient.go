@@ -80,9 +80,9 @@ func verifyAccessFromPod(ctx context.Context, f *framework.ShootFramework, podNa
 
 	By("Verify a typical API request works")
 	Eventually(
-		execute(ctx, f.ShootClient, podName, "/kubectl", "get", "pod", podName),
+		execute(ctx, f.ShootClient, podName, "/kubectl", "get", "service", "kubernetes"),
 	).Should(Say(
-		podName,
+		`NAME.+\nkubernetes.+\n`,
 	))
 }
 
@@ -255,7 +255,7 @@ func getRBACObjects() []client.Object {
 	}
 	objects = append(objects, serviceAccount)
 
-	// permissions used by the test command: kubectl get pod *
+	// permissions used by the test command: kubectl get service kubernetes
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -264,7 +264,7 @@ func getRBACObjects() []client.Object {
 		},
 		Rules: []rbacv1.PolicyRule{{
 			APIGroups: []string{""},
-			Resources: []string{"pods"},
+			Resources: []string{"services"},
 			Verbs:     []string{"get"},
 		}},
 	}
