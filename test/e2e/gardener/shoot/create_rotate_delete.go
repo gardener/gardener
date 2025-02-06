@@ -294,6 +294,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				testCredentialRotationWithoutWorkersRollout(parentCtx, v, f)
 			}
 
+			By("Renew shoot client after credentials rotation")
+			Expect(f.ShootFramework.AddShoot(parentCtx, f.Shoot.Name, f.Shoot.Namespace)).To(Succeed())
+
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
 				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
