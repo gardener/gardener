@@ -617,7 +617,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Namespace: metav1.NamespaceSystem,
 			},
 			Data: map[string]string{
-				"priorities": "0:\n- shoot--foo--bar\\.pool1\n- shoot--foo--bar\\.pool3\n- shoot--foo--bar\\.irregular-machine-deployment-name\n40:\n- shoot--foo--bar\\.pool2\n50:\n- shoot--foo--bar\\.pool4\n",
+				"priorities": "0:\n- pool1\n- pool3\n- irregular-machine-deployment-name\n40:\n- pool2\n50:\n- pool4\n",
 			},
 		}
 
