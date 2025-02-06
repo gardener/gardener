@@ -816,7 +816,7 @@ func untilInTest(_ context.Context, _ time.Duration, _ retry.Func) error {
 	return nil
 }
 
-func waitUntilHealthyInTest(_ context.Context, _ client.Client, _, _ string) error {
+func waitUntilHealthyInTest(_ context.Context, _ client.Reader, _, _ string) error {
 	return nil
 }
 
