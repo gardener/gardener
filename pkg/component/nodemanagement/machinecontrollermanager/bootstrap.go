@@ -49,13 +49,22 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{machinev1alpha1.GroupName},
-					Resources: []string{"*"},
-					Verbs:     []string{"*"},
+					Resources: []string{
+						"machineclasses",
+						"machineclasses/status",
+						"machinedeployments",
+						"machinedeployments/status",
+						"machines",
+						"machines/status",
+						"machinesets",
+						"machinesets/status",
+					},
+					Verbs: []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
 				},
 				{
 					APIGroups: []string{coordinationv1.GroupName},

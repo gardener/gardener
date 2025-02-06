@@ -50,9 +50,23 @@ rules:
 - apiGroups:
   - machine.sapcloud.io
   resources:
-  - '*'
+  - machineclasses
+  - machineclasses/status
+  - machinedeployments
+  - machinedeployments/status
+  - machines
+  - machines/status
+  - machinesets
+  - machinesets/status
   verbs:
-  - '*'
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+  - delete
+  - deletecollection
 - apiGroups:
   - ""
   resources:
@@ -62,7 +76,14 @@ rules:
   - events
   - pods
   verbs:
-  - '*'
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+  - delete
+  - deletecollection
 - apiGroups:
   - coordination.k8s.io
   resources:
