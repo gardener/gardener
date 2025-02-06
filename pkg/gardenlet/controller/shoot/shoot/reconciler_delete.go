@@ -20,6 +20,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -141,6 +142,11 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		o.Shoot.Networks = networks
 	}
 
+	nodeAgentAuthorizerWebhookReady, err := botanist.NodeAgentAuthorizerWebhookReady(ctx)
+	if err != nil {
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+	}
+
 	var (
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
@@ -247,8 +253,10 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
-			Name:   "Deploying Kubernetes API server",
-			Fn:     flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name: "Deploying Kubernetes API server",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.DeployKubeAPIServer(ctx, nodeAgentAuthorizerWebhookReady && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf: !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(
 				initializeSecretsManagement,
@@ -291,17 +299,35 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		// TODO(oliver-goetz): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
+		//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
+		//  1.30+ clusters. This is similar to kube-apiserver deployment in gardener-operator.
+		//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
+		deployKubeAPIServerWithNodeAgentAuthorizer = g.Add(flow.Task{
+			Name: "Deploying Kubernetes API server with node-agent-authorizer",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.DeployKubeAPIServer(ctx, true)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || !cleanupShootResources || nodeAgentAuthorizerWebhookReady,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes API server with node-agent-authorizer rolled out",
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || !cleanupShootResources || nodeAgentAuthorizerWebhookReady,
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerWithNodeAgentAuthorizer),
+		})
 		deployGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying Gardener shoot access resources",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.GardenerAccess.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilGardenerResourceManagerReady, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane exposure components",
 			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf:       botanist.Shoot.IsWorkerless || useDNS || !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerIsReady, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
 		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
 			Name: "Waiting until Shoot control plane exposure has been reconciled",
