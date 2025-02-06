@@ -9,6 +9,7 @@ import (
 	"io"
 	"maps"
 	"net"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -80,7 +81,7 @@ func verifyAccessFromPod(ctx context.Context, f *framework.ShootFramework, podNa
 	Eventually(
 		execute(ctx, f.ShootClient, podName, "/kubectl", "cluster-info"),
 	).Should(Say(
-		"Kubernetes control plane is running at %s", expectedAddress,
+		"Kubernetes control plane is running at %s", regexp.QuoteMeta(expectedAddress),
 	))
 
 	By("Verify a typical API request works")
