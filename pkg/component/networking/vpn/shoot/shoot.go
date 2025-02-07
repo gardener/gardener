@@ -612,6 +612,7 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 			Limits: v.getResourceLimits(),
 		},
 		SecurityContext: &corev1.SecurityContext{
+			Privileged:               ptr.To(false),
 			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
@@ -637,6 +638,7 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 			},
 		},
 		SecurityContext: &corev1.SecurityContext{
+			Privileged:               ptr.To(false),
 			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},

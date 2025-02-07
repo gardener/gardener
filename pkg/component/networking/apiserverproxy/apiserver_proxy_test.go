@@ -714,6 +714,7 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
 								Capabilities: &corev1.Capabilities{
 									Add: []corev1.Capability{"NET_ADMIN"},
 								},
