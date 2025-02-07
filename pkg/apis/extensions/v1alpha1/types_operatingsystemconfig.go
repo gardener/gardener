@@ -85,9 +85,9 @@ type OperatingSystemConfigSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Files []File `json:"files,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
-	// OSVersion is the version of the operating system.
+	// OperatingSystemVersion is the version of the operating system.
 	// +optional
-	OSVersion *string `json:"osVersion,omitempty"`
+	OperatingSystemVersion *string `json:"osVersion,omitempty"`
 	// KubeletVersion is the version of the Kubelet.
 	// +optional
 	KubeletVersion *string `json:"kubeletVersion,omitempty"`
@@ -215,9 +215,9 @@ type OperatingSystemConfigStatus struct {
 	// After Gardener v1.112, this will be only set for OperatingSystemConfigs with purpose 'provision'.
 	// +optional
 	CloudConfig *CloudConfig `json:"cloudConfig,omitempty"`
-	// InPlaceUpdateConfig contains the configuration for in-place updates.
+	// InPlaceUpdates contains the configuration for in-place updates.
 	// +optional
-	InPlaceUpdateConfig *InPlaceUpdateConfig `json:"inPlaceUpdateConfig,omitempty"`
+	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty"`
 }
 
 // CloudConfig contains the generated output for the given operating system
@@ -366,8 +366,8 @@ const (
 	B64FileCodecID FileCodecID = "b64"
 )
 
-// InPlaceUpdateConfig is a structure containing configuration for in-place updates.
-type InPlaceUpdateConfig struct {
+// InPlaceUpdates is a structure containing configuration for in-place updates.
+type InPlaceUpdates struct {
 	// OSUpdateCommand defines the command responsible for performing machine image updates.
 	// +optional
 	OSUpdateCommand *string `json:"osUpdateCommand,omitempty"`

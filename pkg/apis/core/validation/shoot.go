@@ -421,28 +421,28 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 		)
 
 		if oldStrategyIsInPlace && !newStrategyIsInPlace {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "updateStrategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"))
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"))
 		}
 
 		if !oldStrategyIsInPlace && newStrategyIsInPlace {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "updateStrategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"))
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "update strategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"))
 		}
 
 		if ptr.Equal(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) && helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy) {
 			if oldWorker.Machine.Type != newWorker.Machine.Type {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), newWorker.Machine.Type, "machine type cannot be changed if updateStrategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), newWorker.Machine.Type, "machine type cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
 			}
 
 			if oldWorker.Machine.Image != nil && newWorker.Machine.Image != nil && oldWorker.Machine.Image.Name != newWorker.Machine.Image.Name {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image", "name"), newWorker.Machine.Image.Name, "machine image name cannot be changed if updateStrategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image", "name"), newWorker.Machine.Image.Name, "machine image name cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
 			}
 
 			if oldWorker.CRI != nil && newWorker.CRI != nil && oldWorker.CRI.Name != newWorker.CRI.Name {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("cri", "name"), newWorker.CRI.Name, "CRI name cannot be changed if updateStrategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("cri", "name"), newWorker.CRI.Name, "CRI name cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
 			}
 
 			if !apiequality.Semantic.DeepEqual(oldWorker.Volume, newWorker.Volume) {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("volume"), newWorker.Volume, "volume cannot be changed if updateStrategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("volume"), newWorker.Volume, "volume cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
 			}
 		}
 	}
@@ -714,14 +714,16 @@ func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bo
 }
 
 func validateNodeLocalDNSUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs                = field.ErrorList{}
+		oldNodeLocalDNSEnabled = oldSpec.SystemComponents != nil && oldSpec.SystemComponents.NodeLocalDNS != nil && oldSpec.SystemComponents.NodeLocalDNS.Enabled
+		newNodeLocalDNSEnabled = newSpec.SystemComponents != nil && newSpec.SystemComponents.NodeLocalDNS != nil && newSpec.SystemComponents.NodeLocalDNS.Enabled
+	)
 
-	if oldSpec.SystemComponents != nil && oldSpec.SystemComponents.NodeLocalDNS != nil &&
-		newSpec.SystemComponents != nil && newSpec.SystemComponents.NodeLocalDNS != nil &&
-		oldSpec.SystemComponents.NodeLocalDNS.Enabled != newSpec.SystemComponents.NodeLocalDNS.Enabled {
+	if oldNodeLocalDNSEnabled != newNodeLocalDNSEnabled {
 		for _, worker := range oldSpec.Provider.Workers {
 			if helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("systemComponents", "nodeLocalDNS"), "node-local-dns setting can not be changed if shoot has worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"))
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("systemComponents", "nodeLocalDNS"), "node-local-dns setting can not be changed if shoot has at least one worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"))
 				break
 			}
 		}

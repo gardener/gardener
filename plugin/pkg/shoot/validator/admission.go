@@ -762,6 +762,7 @@ func (c *validationContext) ensureMachineImages() field.ErrorList {
 	if c.shoot.DeletionTimestamp == nil {
 		for idx, worker := range c.shoot.Spec.Provider.Workers {
 			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
+
 			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, fldPath)
 			if err != nil {
 				allErrs = append(allErrs, err)
@@ -1143,7 +1144,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				}
 				if isUpdateStrategyInPlace && !inPlaceUpdateSupported {
 					if a.GetOperation() == admission.Update && !isNewWorkerPool {
-						detail += "cannot be inplace updated from the current version, "
+						detail += "cannot be in-place updated from the current version, "
 					} else {
 						detail += "does not support in-place updates, "
 					}
@@ -1819,7 +1820,7 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 		}
 
 		// if InPlace update is true, only consider versions that support in-place updates
-		if isUpdateStrategyInPlace && (version.InPlaceUpdateConfig == nil || !version.InPlaceUpdateConfig.Supported) {
+		if isUpdateStrategyInPlace && (version.InPlaceUpdates == nil || !version.InPlaceUpdates.Supported) {
 			continue
 		}
 
@@ -1886,18 +1887,18 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 					machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
 				}
 
-				if isUpdateStrategyInPlace && machineVersion.InPlaceUpdateConfig != nil {
+				if isUpdateStrategyInPlace && machineVersion.InPlaceUpdates != nil {
 					switch {
 					case a.GetOperation() == admission.Create || isNewWorkerPool:
-						if machineVersion.InPlaceUpdateConfig.Supported {
+						if machineVersion.InPlaceUpdates.Supported {
 							machineImageVersionsWithInPlaceUpdateSupport.Insert(machineImageVersion)
 						}
 					case a.GetOperation() == admission.Update && !isNewWorkerPool && machine.Image != nil && machine.Image.Name == machineImage.Name:
-						if machineVersion.InPlaceUpdateConfig.Supported && machineVersion.InPlaceUpdateConfig.MinVersionForUpdate != nil {
+						if machineVersion.InPlaceUpdates.Supported && machineVersion.InPlaceUpdates.MinVersionForUpdate != nil {
 							// This checks if the MinVersionForInPlaceUpdate (the minimum version which can be in-place updated to the current version)
 							// is less than or equal to the old machine's version. If the condition is true, the version is considered valid
 							// for performing the in-place update on the machine.
-							if validVersion, _ := versionutils.CompareVersions(*machineVersion.InPlaceUpdateConfig.MinVersionForUpdate, "<=", oldMachine.Image.Version); validVersion {
+							if validVersion, _ := versionutils.CompareVersions(*machineVersion.InPlaceUpdates.MinVersionForUpdate, "<=", oldMachine.Image.Version); validVersion {
 								machineImageVersionsWithInPlaceUpdateSupport.Insert(machineImageVersion)
 							}
 						}

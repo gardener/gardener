@@ -5403,9 +5403,23 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.systemComponents.nodeLocalDNS"),
-					"Detail": Equal("node-local-dns setting can not be changed if shoot has worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"),
+					"Detail": Equal("node-local-dns setting can not be changed if shoot has at least one worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"),
 				}))))
 
+				shoot.Spec.SystemComponents = &core.SystemComponents{
+					NodeLocalDNS: &core.NodeLocalDNS{
+						Enabled: true,
+					},
+				}
+
+				newShoot = prepareShootForUpdate(shoot)
+				newShoot.Spec.SystemComponents.NodeLocalDNS = nil
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.systemComponents.nodeLocalDNS"),
+					"Detail": Equal("node-local-dns setting can not be changed if shoot has at least one worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"),
+				}))))
 			})
 
 			It("should allow toggling the node-local-dns if none of the worker pool has updateStrategy AutoInPlaceUpdate/ManualInPlaceUpdate", func() {
@@ -5426,7 +5440,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Describe("#ValidateProviderUpdate", func() {
 			Context("worker pool updateStrategy", func() {
-				It("should forbid changing the updateStrategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate", func() {
+				It("should forbid changing the update strategy from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate", func() {
 					newShoot := prepareShootForUpdate(shoot)
 
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
@@ -5434,7 +5448,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("updateStrategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("update strategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"),
 					}))))
 
 					newShoot = prepareShootForUpdate(shoot)
@@ -5444,11 +5458,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("updateStrategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("update strategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"),
 					}))))
 				})
 
-				It("should forbid changing the updateStrategy from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate", func() {
+				It("should forbid changing the update strategy from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate", func() {
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
 
@@ -5457,7 +5471,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("updateStrategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"),
+						"Detail": Equal("update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"),
 					}))))
 
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
@@ -5468,11 +5482,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
-						"Detail": Equal("updateStrategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"),
+						"Detail": Equal("update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"),
 					}))))
 				})
 
-				It("should allow changing the updateStrategy from AutoInPlaceUpdate to ManualInPlaceUpdate", func() {
+				It("should allow changing the update strategy from AutoInPlaceUpdate to ManualInPlaceUpdate", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
@@ -5482,7 +5496,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
 
-				It("should allow changing the updateStrategy from ManualInPlaceUpdate to AutoInPlaceUpdate", func() {
+				It("should allow changing the update strategy from ManualInPlaceUpdate to AutoInPlaceUpdate", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
 					newShoot := prepareShootForUpdate(shoot)
@@ -5493,7 +5507,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
-			Context("worker pool updateStrategy is either AutoInplaceUpdate or ManualInPlaceUpdate", func() {
+			Context("worker pool update strategy is either AutoInplaceUpdate or ManualInPlaceUpdate", func() {
 				It("should forbid changing the machine type", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
@@ -5504,7 +5518,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].machine.type"),
-						"Detail": Equal("machine type cannot be changed if updateStrategy is AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("machine type cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"),
 					}))))
 				})
 
@@ -5518,7 +5532,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].machine.image.name"),
-						"Detail": Equal("machine image name cannot be changed if updateStrategy is AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("machine image name cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"),
 					}))))
 				})
 
@@ -5533,7 +5547,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].cri.name"),
-						"Detail": Equal("CRI name cannot be changed if updateStrategy is AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("CRI name cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"),
 					}))))
 				})
 
@@ -5548,7 +5562,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.provider.workers[0].volume"),
-						"Detail": Equal("volume cannot be changed if updateStrategy is AutoInPlaceUpdate/ManualInPlaceUpdate"),
+						"Detail": Equal("volume cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"),
 					}))))
 				})
 			})

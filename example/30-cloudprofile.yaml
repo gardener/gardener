@@ -46,7 +46,7 @@ spec:
     #   containerRuntimes:
     #   - type: gvisor
     # kubeletVersionConstraint: "< 1.26" # optional
-    # inPlaceUpdateConfig: # optional
+    # inPlaceUpdates: # optional
     #   supported: true 
     #   minVersionForUpdate: 820.3.0 # optional
   - name: ubuntu

@@ -3892,7 +3892,7 @@ var _ = Describe("validator", func() {
 											Version: latestNonExpiredVersion,
 										},
 										Architectures: []string{"amd64", "arm64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported: false,
 										},
 									},
@@ -3901,7 +3901,7 @@ var _ = Describe("validator", func() {
 											Version: nonExpiredVersion1,
 										},
 										Architectures: []string{"amd64", "arm64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported: true,
 										},
 									},
@@ -3946,7 +3946,7 @@ var _ = Describe("validator", func() {
 											Version: nonExpiredVersion1,
 										},
 										Architectures: []string{"amd64", "arm64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported: true,
 										},
 									},
@@ -3955,7 +3955,7 @@ var _ = Describe("validator", func() {
 											Version: nonExpiredVersion2,
 										},
 										Architectures: []string{"amd64", "arm64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported: true,
 										},
 									},
@@ -4757,7 +4757,7 @@ var _ = Describe("validator", func() {
 											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
 										},
 										Architectures: []string{"amd64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported: false,
 										},
 									},
@@ -4767,7 +4767,7 @@ var _ = Describe("validator", func() {
 											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
 										},
 										Architectures: []string{"amd64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported:           true,
 											MinVersionForUpdate: ptr.To("1.2.3"),
 										},
@@ -4777,7 +4777,7 @@ var _ = Describe("validator", func() {
 											Version: "1.2.3",
 										},
 										Architectures: []string{"amd64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported: true,
 										},
 									},
@@ -4820,7 +4820,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be inplace updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.4"))))
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be in-place updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.4"))))
 					})
 
 					It("should forbid updating to a higher machine image for an existing worker pool with in-place update strategy if MinVersionForUpdate is higher than current version", func() {
@@ -4834,7 +4834,7 @@ var _ = Describe("validator", func() {
 											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
 										},
 										Architectures: []string{"amd64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported:           true,
 											MinVersionForUpdate: ptr.To("1.2.4"),
 										},
@@ -4845,7 +4845,7 @@ var _ = Describe("validator", func() {
 											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
 										},
 										Architectures: []string{"amd64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported:           true,
 											MinVersionForUpdate: ptr.To("1.2.2"),
 										},
@@ -4855,7 +4855,7 @@ var _ = Describe("validator", func() {
 											Version: "1.2.3",
 										},
 										Architectures: []string{"amd64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported:           true,
 											MinVersionForUpdate: ptr.To("1.2.2"),
 										},
@@ -4899,7 +4899,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be inplace updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s %s:%s", "constraint-image-name", "1.2.3", "constraint-image-name", "1.2.4"))))
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be in-place updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s %s:%s", "constraint-image-name", "1.2.3", "constraint-image-name", "1.2.4"))))
 					})
 
 					It("should allow updating to a higher machine image for an existing worker pool with in-place update strategy if MinVersionForUpdate is less or equal current version", func() {
@@ -4913,7 +4913,7 @@ var _ = Describe("validator", func() {
 											ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
 										},
 										Architectures: []string{"amd64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported:           true,
 											MinVersionForUpdate: ptr.To("1.2.3"),
 										},
@@ -4923,7 +4923,7 @@ var _ = Describe("validator", func() {
 											Version: "1.2.3",
 										},
 										Architectures: []string{"amd64"},
-										InPlaceUpdateConfig: &gardencorev1beta1.InPlaceUpdateConfig{
+										InPlaceUpdates: &gardencorev1beta1.InPlaceUpdates{
 											Supported:           true,
 											MinVersionForUpdate: ptr.To("1.2.3"),
 										},

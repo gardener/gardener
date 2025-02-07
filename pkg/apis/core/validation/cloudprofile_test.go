@@ -575,7 +575,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 									},
 									CRI:           []core.CRI{{Name: "containerd"}},
 									Architectures: []string{"amd64"},
-									InPlaceUpdateConfig: &core.InPlaceUpdateConfig{
+									InPlaceUpdates: &core.InPlaceUpdates{
 										MinVersionForUpdate: ptr.To("a.b.c"),
 									},
 								},
