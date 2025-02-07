@@ -22,7 +22,7 @@ spec:
           route_config:
             virtual_hosts:
             - domains:
-              - api.*
+              - "*"
               name: reversed-vpn
               routes:
               - match:
@@ -37,6 +37,10 @@ spec:
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
+              # need to have two catch-all rules here
+              # one for CONNECT requests as they don't have a path in HTTP 1.1
+              #   see: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch -> connect_matcher
+              # the other is for all non-CONNECT requests
               - match:
                   connect_matcher: {}
                 direct_response:
@@ -44,26 +48,6 @@ spec:
               # Redirect requests to the https port to make probing more painful/cost intensive
               - match:
                   prefix: "/"
-                  headers:
-                    - name: ":method"
-                      string_match:
-                        exact: CONNECT
-                      invert_match: true
-                redirect:
-                  https_redirect: true
-                  port_redirect: 443
-            # Redirect all other requests to the https port to make probing more painful/cost intensive
-            - domains:
-              - "*"
-              name: all
-              routes:
-              - match:
-                  prefix: "/"
-                  headers:
-                  - name: ":method"
-                    string_match:
-                      exact: CONNECT
-                    invert_match: true
                 redirect:
                   https_redirect: true
                   port_redirect: 443
