@@ -120,7 +120,8 @@ helm:
 ```
 
 If needed, a pull secret can be referenced in the `ControllerDeployment.helm.ociRepository.pullSecretRef` field.
-The pull secret must be available in the `garden` namespace of the cluster where the `ControllerDeployment` is created and must contain the data key `.dockerconfigjson` with the base64-encoded Docker configuration JSON.  It should be of type `kubernetes.io/dockerconfigjson`.
+The pull secret must be available in the `garden` namespace of the cluster where the `ControllerDeployment` is created and must contain the data key `.dockerconfigjson` with the base64-encoded Docker configuration JSON.
+It should be of type `kubernetes.io/dockerconfigjson`.
 
 ```yaml
 helm:
