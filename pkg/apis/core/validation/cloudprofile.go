@@ -6,6 +6,8 @@ package validation
 
 import (
 	"fmt"
+	"github.com/gardener/gardener/pkg/features"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
@@ -57,9 +59,27 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must provide a provider type"))
 	}
 
+	// capabilitiesDefinition is used in the validate-functions for machineTypes and machineImages
+	//   nil: the architecture field is required --> capabilities forbidden
+	//	 defined: the architecture field is forbidden --> capabilities required
+	if utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileCapabilities) {
+		// if the feature is enabled, the capabilitiesDefinition will be evaluated if set
+		// both capabilities or current architecture cloudProfiles are valid, only mixed usage is not allowed
+		errList := ValidateCapabilitiesDefinition(spec.CapabilitiesDefinition, fldPath.Child("capabilitiesDefinition"))
+		if errList != nil {
+			allErrs = append(allErrs, errList...)
+		}
+	} else {
+		// if the feature is disabled, the capabilitiesDefinition must not be set
+		if IsDefined(&spec.CapabilitiesDefinition) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilitiesDefinition"), spec.CapabilitiesDefinition, "must not be defined as Capabilities Feature is disabled."))
+		}
+	}
+
+	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, &spec.CapabilitiesDefinition, fldPath.Child("machineImages"))...)
+	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, &spec.CapabilitiesDefinition, fldPath.Child("machineTypes"))...)
+
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
-	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
-	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	allErrs = append(allErrs, validateCloudProfileRegions(spec.Regions, fldPath.Child("regions"))...)
 	allErrs = append(allErrs, validateCloudProfileBastion(spec, fldPath.Child("bastion"))...)
@@ -135,26 +155,26 @@ func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVe
 	return allErrs
 }
 
-func validateCloudProfileMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) field.ErrorList {
+func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineTypes) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine type"))
 	}
-	allErrs = append(allErrs, validateMachineTypes(machineTypes, fldPath)...)
+	allErrs = append(allErrs, validateMachineTypes(machineTypes, capabilitiesDefinition, fldPath)...)
 
 	return allErrs
 }
 
 // ValidateCloudProfileMachineImages validates the machine images of a CloudProfile object.
-func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
 	}
 
-	allErrs = append(allErrs, ValidateMachineImages(machineImages, fldPath)...)
+	allErrs = append(allErrs, ValidateMachineImages(machineImages, capabilitiesDefinition, fldPath)...)
 
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)
@@ -168,8 +188,10 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, fldPat
 			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 			allErrs = append(allErrs, validateSupportedVersionsConfiguration(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
 
-			if len(machineVersion.Architectures) == 0 {
-				allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
+			if !IsDefined(capabilitiesDefinition) {
+				if len(machineVersion.Architectures) == 0 {
+					allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
+				}
 			}
 		}
 	}
