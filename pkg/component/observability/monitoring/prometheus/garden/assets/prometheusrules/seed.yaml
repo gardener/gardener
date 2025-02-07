@@ -352,4 +352,4 @@ spec:
           Seed Kube API server Latency
         description: >-
           The seed cluster {{$labels.name}} in {{$externalLabels.landscape}}
-          Kube API server has latency issues. 
+          Kube API server has latency issues.
