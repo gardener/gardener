@@ -8,6 +8,9 @@ spec:
     helm:
       ociRepository:
         repository: europe-docker.pkg.dev/gardener-project/releases/charts/gardener/gardenlet
+      # tag: latest
+      # pullSecretRef:
+      #   name: <pull-secret-name> # located in garden namespace
   # image: # here you can overwrite the gardenlet image itself (typically not needed since the OCI URL above implicitly defines the image/version)
   #   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/gardenlet
   #   tag: latest
