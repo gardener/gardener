@@ -39,6 +39,7 @@ import (
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot/helper"
+	gardenletmetrics "github.com/gardener/gardener/pkg/gardenlet/metrics"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
@@ -147,6 +148,8 @@ func (r *Reconciler) reconcileShoot(ctx context.Context, log logr.Logger, shoot 
 		updateErr := r.patchShootStatusOperationError(ctx, shoot, syncErr.Error(), operationType, shoot.Status.LastErrors...)
 		return reconcile.Result{}, errorsutils.WithSuppressed(syncErr, updateErr)
 	}
+
+	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.CreationTimestamp.UTC()))
 
 	// determine when the next shoot reconciliation is supposed to happen
 	result = helper.CalculateControllerInfos(shoot, r.Clock, *r.Config.Controllers.Shoot).RequeueAfter
@@ -477,7 +480,9 @@ func (r *Reconciler) deleteClusterResourceFromSeed(ctx context.Context, shoot *g
 }
 
 func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot) error {
-	if err := r.patchShootStatusOperationSuccess(ctx, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
+	operationType := gardencorev1beta1.LastOperationTypeDelete
+
+	if err := r.patchShootStatusOperationSuccess(ctx, shoot, "", nil, operationType); err != nil {
 		return err
 	}
 
@@ -487,6 +492,8 @@ func (r *Reconciler) removeFinalizerFromShoot(ctx context.Context, log logr.Logg
 			return fmt.Errorf("failed to remove finalizer: %w", err)
 		}
 	}
+
+	reportMetrics(shoot, operationType, r.Clock.Now().UTC().Sub(shoot.DeletionTimestamp.Time))
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
@@ -1151,4 +1158,15 @@ func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time
 	v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ObservabilityRotation) {
 		rotation.LastInitiationTime = now
 	})
+}
+
+func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1beta1.LastOperationType, duration time.Duration) {
+	var (
+		workerless = utils.IifString(v1beta1helper.IsWorkerless(shoot), "true", "false")
+		hibernated = utils.IifString(v1beta1helper.HibernationIsEnabled(shoot), "true", "false")
+	)
+
+	gardenletmetrics.ShootOperationDurationSeconds.
+		WithLabelValues(string(operationType), workerless, hibernated).
+		Observe(float64(duration.Seconds()))
 }
