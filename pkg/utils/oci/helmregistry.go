@@ -14,8 +14,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	gcrv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 const (
@@ -32,13 +35,16 @@ type Interface interface {
 
 // HelmRegistry can pull OCI Helm Charts.
 type HelmRegistry struct {
-	cache cacher
+	cache  cacher
+	client client.Client
 }
 
 // NewHelmRegistry creates a new HelmRegistry.
-func NewHelmRegistry() (*HelmRegistry, error) {
+// The client is used to get pull secrets if needed.
+func NewHelmRegistry(c client.Client) (*HelmRegistry, error) {
 	return &HelmRegistry{
-		cache: defaultCache,
+		cache:  defaultCache,
+		client: c,
 	}, nil
 }
 
@@ -50,6 +56,18 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 	}
 	remoteOpts := []remote.Option{
 		remote.WithContext(ctx),
+	}
+
+	if oci.PullSecretRef != nil {
+		secret := &corev1.Secret{}
+		key := client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: oci.PullSecretRef.Name}
+		if err := r.client.Get(ctx, key, secret); err != nil {
+			return nil, fmt.Errorf("failed to get pull secret %s: %w", key, err)
+		}
+		if secret.Data == nil || secret.Data[corev1.DockerConfigJsonKey] == nil {
+			return nil, fmt.Errorf("pull secret %s is missing the data key %s", key, corev1.DockerConfigJsonKey)
+		}
+		remoteOpts = append(remoteOpts, remote.WithAuthFromKeychain(&keychain{pullSecret: string(secret.Data[corev1.DockerConfigJsonKey])}))
 	}
 
 	key, err := cacheKeyFromRef(ref, remoteOpts...)
