@@ -211,6 +211,21 @@ string
 The value should be in the format &lsquo;sha256:<HASH>&rsquo;.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>pullSecretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PullSecretRef is a reference to a secret containing the pull secret.
+The secret must be of type <code>kubernetes.io/dockerconfigjson</code> and must be located in the <code>garden</code> namespace.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>

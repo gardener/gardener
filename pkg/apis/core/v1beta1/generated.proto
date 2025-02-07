@@ -2120,6 +2120,11 @@ message OCIRepository {
   // Digest of the image to pull, takes precedence over tag.
   // +optional
   optional string digest = 4;
+
+  // PullSecretRef is a reference to a secret containing the pull secret.
+  // The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+  // +optional
+  optional .k8s.io.api.core.v1.LocalObjectReference pullSecretRef = 5;
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.

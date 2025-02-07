@@ -9159,6 +9159,21 @@ string
 <p>Digest of the image to pull, takes precedence over tag.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>pullSecretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PullSecretRef is a reference to a secret containing the pull secret.
+The secret must be of type <code>kubernetes.io/dockerconfigjson</code> and must be located in the <code>garden</code> namespace.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.OIDCConfig">OIDCConfig

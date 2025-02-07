@@ -5120,6 +5120,7 @@ func autoConvert_v1beta1_OCIRepository_To_core_OCIRepository(in *OCIRepository, 
 	out.Repository = (*string)(unsafe.Pointer(in.Repository))
 	out.Tag = (*string)(unsafe.Pointer(in.Tag))
 	out.Digest = (*string)(unsafe.Pointer(in.Digest))
+	out.PullSecretRef = (*v1.LocalObjectReference)(unsafe.Pointer(in.PullSecretRef))
 	return nil
 }
 
@@ -5133,6 +5134,7 @@ func autoConvert_core_OCIRepository_To_v1beta1_OCIRepository(in *core.OCIReposit
 	out.Repository = (*string)(unsafe.Pointer(in.Repository))
 	out.Tag = (*string)(unsafe.Pointer(in.Tag))
 	out.Digest = (*string)(unsafe.Pointer(in.Digest))
+	out.PullSecretRef = (*v1.LocalObjectReference)(unsafe.Pointer(in.PullSecretRef))
 	return nil
 }
 

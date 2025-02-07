@@ -84,6 +84,22 @@ spec:
                                       Digest of the image to pull, takes precedence over tag.
                                       The value should be in the format 'sha256:<HASH>'.
                                     type: string
+                                  pullSecretRef:
+                                    description: |-
+                                      PullSecretRef is a reference to a secret containing the pull secret.
+                                      The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+                                    properties:
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                    type: object
+                                    x-kubernetes-map-type: atomic
                                   ref:
                                     description: Ref is the full artifact Ref and
                                       takes precedence over all other fields.
@@ -120,6 +136,22 @@ spec:
                                       Digest of the image to pull, takes precedence over tag.
                                       The value should be in the format 'sha256:<HASH>'.
                                     type: string
+                                  pullSecretRef:
+                                    description: |-
+                                      PullSecretRef is a reference to a secret containing the pull secret.
+                                      The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+                                    properties:
+                                      name:
+                                        default: ""
+                                        description: |-
+                                          Name of the referent.
+                                          This field is effectively required, but due to backwards compatibility is
+                                          allowed to be empty. Instances of this type with an empty value here are
+                                          almost certainly wrong.
+                                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                        type: string
+                                    type: object
+                                    x-kubernetes-map-type: atomic
                                   ref:
                                     description: Ref is the full artifact Ref and
                                       takes precedence over all other fields.
@@ -151,6 +183,22 @@ spec:
                                   Digest of the image to pull, takes precedence over tag.
                                   The value should be in the format 'sha256:<HASH>'.
                                 type: string
+                              pullSecretRef:
+                                description: |-
+                                  PullSecretRef is a reference to a secret containing the pull secret.
+                                  The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+                                properties:
+                                  name:
+                                    default: ""
+                                    description: |-
+                                      Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    type: string
+                                type: object
+                                x-kubernetes-map-type: atomic
                               ref:
                                 description: Ref is the full artifact Ref and takes
                                   precedence over all other fields.
