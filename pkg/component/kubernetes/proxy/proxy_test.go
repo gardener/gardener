@@ -605,14 +605,14 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 											SuccessThreshold:    1,
 											FailureThreshold:    2,
 										},
-										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
-										},
 										Resources: corev1.ResourceRequirements{
 											Requests: map[corev1.ResourceName]resource.Quantity{
 												corev1.ResourceCPU:    resource.MustParse("20m"),
 												corev1.ResourceMemory: resource.MustParse("64Mi"),
 											},
+										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
 										},
 										VolumeMounts: []corev1.VolumeMount{
 											{MountPath: "/var/lib/kube-proxy-kubeconfig", Name: "kubeconfig"},

@@ -471,14 +471,6 @@ import custom/*.server
 									ContainerPort: portMetrics,
 								},
 							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								Capabilities: &corev1.Capabilities{
-									Add:  []corev1.Capability{"NET_BIND_SERVICE"}, // TODO(marc1404): When updating coredns to v1.13.x check if the NET_BIND_SERVICE capability can be removed.
-									Drop: []corev1.Capability{"all"},
-								},
-								ReadOnlyRootFilesystem: ptr.To(true),
-							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
@@ -514,6 +506,14 @@ import custom/*.server
 								Limits: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("1500Mi"),
 								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+								Capabilities: &corev1.Capabilities{
+									Add:  []corev1.Capability{"NET_BIND_SERVICE"}, // TODO(marc1404): When updating coredns to v1.13.x check if the NET_BIND_SERVICE capability can be removed.
+									Drop: []corev1.Capability{"all"},
+								},
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -654,13 +654,6 @@ import custom/*.server
 								"--logtostderr=true",
 								"--v=2",
 							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-								Capabilities: &corev1.Capabilities{
-									Drop: []corev1.Capability{"all"},
-								},
-								ReadOnlyRootFilesystem: ptr.To(true),
-							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("20m"),
@@ -669,6 +662,13 @@ import custom/*.server
 								Limits: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("70Mi"),
 								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{"all"},
+								},
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 						}},
 					},

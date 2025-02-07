@@ -306,13 +306,6 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									"--daemon=false",
 									"--interface=lo",
 								},
-								SecurityContext: &corev1.SecurityContext{
-									Capabilities: &corev1.Capabilities{
-										Add: []corev1.Capability{
-											"NET_ADMIN",
-										},
-									},
-								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("20m"),
@@ -320,6 +313,14 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									},
 									Limits: corev1.ResourceList{
 										corev1.ResourceMemory: resource.MustParse("200Mi"),
+									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+									Capabilities: &corev1.Capabilities{
+										Add: []corev1.Capability{
+											"NET_ADMIN",
+										},
 									},
 								},
 							},
@@ -333,14 +334,6 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									fmt.Sprintf("--ip-address=%s", a.values.advertiseIPAddress),
 									"--interface=lo",
 								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									Capabilities: &corev1.Capabilities{
-										Add: []corev1.Capability{
-											"NET_ADMIN",
-										},
-									},
-								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("5m"),
@@ -348,6 +341,14 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									},
 									Limits: corev1.ResourceList{
 										corev1.ResourceMemory: resource.MustParse("90Mi"),
+									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+									Capabilities: &corev1.Capabilities{
+										Add: []corev1.Capability{
+											"NET_ADMIN",
+										},
 									},
 								},
 							},
@@ -363,15 +364,6 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									"-c",
 									fmt.Sprintf("%s/%s", volumeMountPathConfig, dataKeyConfig),
 								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-									Capabilities: &corev1.Capabilities{
-										Add: []corev1.Capability{
-											"NET_BIND_SERVICE",
-										},
-									},
-									RunAsUser: ptr.To[int64](0),
-								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("5m"),
@@ -380,6 +372,15 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 									Limits: corev1.ResourceList{
 										corev1.ResourceMemory: resource.MustParse("1Gi"),
 									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+									Capabilities: &corev1.Capabilities{
+										Add: []corev1.Capability{
+											"NET_BIND_SERVICE",
+										},
+									},
+									RunAsUser: ptr.To[int64](0),
 								},
 								ReadinessProbe: &corev1.Probe{
 									ProbeHandler: corev1.ProbeHandler{

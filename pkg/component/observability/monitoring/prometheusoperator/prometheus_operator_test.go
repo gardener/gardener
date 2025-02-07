@@ -170,15 +170,15 @@ var _ = Describe("PrometheusOperator", func() {
 										corev1.ResourceMemory: resource.MustParse("100Mi"),
 									},
 								},
-								Ports: []corev1.ContainerPort{{
-									Name:          "http",
-									ContainerPort: 8080,
-								}},
 								SecurityContext: &corev1.SecurityContext{
 									AllowPrivilegeEscalation: ptr.To(false),
 									Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
 									ReadOnlyRootFilesystem:   ptr.To(true),
 								},
+								Ports: []corev1.ContainerPort{{
+									Name:          "http",
+									ContainerPort: 8080,
+								}},
 							},
 						},
 					},

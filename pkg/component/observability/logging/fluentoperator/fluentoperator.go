@@ -224,14 +224,14 @@ func (f *fluentOperator) Deploy(ctx context.Context) error {
 										},
 									},
 								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("20m"),
 										corev1.ResourceMemory: resource.MustParse("50Mi"),
 									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{

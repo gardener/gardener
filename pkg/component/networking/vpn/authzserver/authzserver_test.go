@@ -126,14 +126,14 @@ var _ = Describe("ExtAuthzServer", func() {
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("100m"),
 										corev1.ResourceMemory: resource.MustParse("100Mi"),
 									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 								},
 							},
 						},

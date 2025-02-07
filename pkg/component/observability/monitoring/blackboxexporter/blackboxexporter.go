@@ -249,15 +249,15 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 										corev1.ResourceMemory: resource.MustParse("15M"),
 									},
 								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+								},
 								Ports: []corev1.ContainerPort{
 									{
 										Name:          "probe",
 										ContainerPort: port,
 										Protocol:      corev1.ProtocolTCP,
 									},
-								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{

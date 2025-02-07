@@ -573,9 +573,6 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 								{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
 								{Name: "PL_PATHS_CONFIG", Value: volumeMountPathConfig + "/" + dataKeyConfig},
 							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
-							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      volumeNameDataSources,
@@ -604,6 +601,9 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 									corev1.ResourceMemory: resource.MustParse("45Mi"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 						},
 						{
 							Name:            "dashboard-refresher",
@@ -615,9 +615,6 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 								"sidecar.py",
 								"--req-username-file=" + volumeMountPathAdminUser + "/" + secretsutils.DataKeyUserName,
 								"--req-password-file=" + volumeMountPathAdminUser + "/" + secretsutils.DataKeyPassword,
-							},
-							SecurityContext: &corev1.SecurityContext{
-								AllowPrivilegeEscalation: ptr.To(false),
 							},
 							Env: []corev1.EnvVar{
 								{Name: "LOG_LEVEL", Value: "INFO"},
@@ -645,6 +642,9 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 									corev1.ResourceCPU:    resource.MustParse("5m"),
 									corev1.ResourceMemory: resource.MustParse("85M"),
 								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
 							},
 						},
 					},

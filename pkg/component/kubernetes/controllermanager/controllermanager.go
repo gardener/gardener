@@ -328,9 +328,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Image:           k.values.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command:         command,
-						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
-						},
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
@@ -357,6 +354,9 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								corev1.ResourceCPU:    resource.MustParse("5m"),
 								corev1.ResourceMemory: resource.MustParse("30M"),
 							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{

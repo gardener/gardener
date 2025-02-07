@@ -41,9 +41,6 @@ func ProviderSidecarContainer(namespace, providerName, image string) corev1.Cont
 			"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 			"--v=3",
 		},
-		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
-		},
 		LivenessProbe: &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
@@ -63,6 +60,9 @@ func ProviderSidecarContainer(namespace, providerName, image string) corev1.Cont
 			ContainerPort: portProviderMetrics,
 			Protocol:      corev1.ProtocolTCP,
 		}},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+		},
 		VolumeMounts: []corev1.VolumeMount{{
 			Name:      "kubeconfig",
 			MountPath: gardenerutils.VolumeMountPathGenericKubeconfig,

@@ -518,9 +518,6 @@ var _ = Describe("KubeStateMetrics", func() {
 									ContainerPort: 8080,
 									Protocol:      corev1.ProtocolTCP,
 								}},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-								},
 								LivenessProbe: &corev1.Probe{
 									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
@@ -549,6 +546,9 @@ var _ = Describe("KubeStateMetrics", func() {
 										corev1.ResourceCPU:    resource.MustParse("10m"),
 										corev1.ResourceMemory: resource.MustParse("32Mi"),
 									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 								},
 								VolumeMounts: volumeMounts,
 							}},

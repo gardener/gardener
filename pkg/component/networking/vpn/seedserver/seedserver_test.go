@@ -108,15 +108,6 @@ var _ = Describe("VpnSeedServer", func() {
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
-							SecurityContext: &corev1.SecurityContext{
-								Capabilities: &corev1.Capabilities{
-									Add: []corev1.Capability{
-										"NET_ADMIN",
-										"NET_RAW",
-									},
-								},
-								AllowPrivilegeEscalation: ptr.To(false),
-							},
 							Env: []corev1.EnvVar{
 								{
 									Name:  "IP_FAMILIES",
@@ -177,6 +168,15 @@ var _ = Describe("VpnSeedServer", func() {
 								Limits: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								Capabilities: &corev1.Capabilities{
+									Add: []corev1.Capability{
+										"NET_ADMIN",
+										"NET_RAW",
+									},
+								},
+								AllowPrivilegeEscalation: ptr.To(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -358,14 +358,6 @@ var _ = Describe("VpnSeedServer", func() {
 					Name:            "envoy-proxy",
 					Image:           apiServerProxyImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					SecurityContext: &corev1.SecurityContext{
-						Capabilities: &corev1.Capabilities{
-							Drop: []corev1.Capability{
-								"all",
-							},
-						},
-						AllowPrivilegeEscalation: ptr.To(false),
-					},
 					Command: []string{
 						"envoy",
 						"--concurrency",
@@ -394,6 +386,14 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 						Limits: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("850M"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{
+								"all",
+							},
 						},
 					},
 					VolumeMounts: []corev1.VolumeMount{

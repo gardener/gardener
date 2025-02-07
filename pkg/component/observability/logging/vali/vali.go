@@ -750,11 +750,6 @@ wait
 						corev1.ResourceMemory: resource.MustParse("30Mi"),
 					},
 				},
-				Ports: []corev1.ContainerPort{{
-					Name:          kubeRBACProxyName,
-					ContainerPort: kubeRBACProxyPort,
-					Protocol:      corev1.ProtocolTCP,
-				}},
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: ptr.To(false),
 					RunAsUser:                ptr.To[int64](65532),
@@ -762,6 +757,11 @@ wait
 					RunAsNonRoot:             ptr.To(true),
 					ReadOnlyRootFilesystem:   ptr.To(true),
 				},
+				Ports: []corev1.ContainerPort{{
+					Name:          kubeRBACProxyName,
+					ContainerPort: kubeRBACProxyPort,
+					Protocol:      corev1.ProtocolTCP,
+				}},
 			})
 		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(statefulSet, genericTokenKubeconfigSecretName, "shoot-access-"+kubeRBACProxyName, kubeRBACProxyName))
 	}

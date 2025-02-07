@@ -365,9 +365,6 @@ var _ = Describe("KubeControllerManager", func() {
 										controllerWorkers,
 										controllerSyncPeriods,
 									),
-									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
-									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
@@ -394,6 +391,9 @@ var _ = Describe("KubeControllerManager", func() {
 											corev1.ResourceCPU:    resource.MustParse("5m"),
 											corev1.ResourceMemory: resource.MustParse("30M"),
 										},
+									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{

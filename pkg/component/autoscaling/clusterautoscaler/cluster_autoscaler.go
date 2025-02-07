@@ -208,9 +208,6 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 						Image:           c.image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command:         c.computeCommand(workersHavePriorityConfigured),
-						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
-						},
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          portNameMetrics,
@@ -233,6 +230,9 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 								corev1.ResourceCPU:    resource.MustParse("5m"),
 								corev1.ResourceMemory: resource.MustParse("30M"),
 							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
 						},
 					},
 				},

@@ -515,19 +515,19 @@ var _ = Describe("VPNShoot", func() {
 					Image:           image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Env:             env,
-					SecurityContext: &corev1.SecurityContext{
-						Privileged:               ptr.To(false),
-						AllowPrivilegeEscalation: ptr.To(false),
-						Capabilities: &corev1.Capabilities{
-							Add: []corev1.Capability{"NET_ADMIN"},
-						},
-					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("100m"),
 							corev1.ResourceMemory: resource.MustParse("100Mi"),
 						},
 						Limits: limits,
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged:               ptr.To(false),
+						AllowPrivilegeEscalation: ptr.To(false),
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{"NET_ADMIN"},
+						},
 					},
 					VolumeMounts: volumeMounts,
 				}

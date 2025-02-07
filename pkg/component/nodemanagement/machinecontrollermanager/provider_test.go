@@ -41,9 +41,6 @@ var _ = Describe("Provider", func() {
 				"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--v=3",
 			},
-			SecurityContext: &corev1.SecurityContext{
-				AllowPrivilegeEscalation: ptr.To(false),
-			},
 			LivenessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
@@ -63,6 +60,9 @@ var _ = Describe("Provider", func() {
 				ContainerPort: 10259,
 				Protocol:      corev1.ProtocolTCP,
 			}},
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
+			},
 			VolumeMounts: []corev1.VolumeMount{{
 				Name:      "kubeconfig",
 				MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",

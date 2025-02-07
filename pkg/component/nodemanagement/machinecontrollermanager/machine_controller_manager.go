@@ -220,9 +220,6 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
 						"--v=3",
 					},
-					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
-					},
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
@@ -247,7 +244,11 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 							corev1.ResourceCPU:    resource.MustParse("5m"),
 							corev1.ResourceMemory: resource.MustParse("20M"),
 						},
-					}},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+					},
+				},
 				},
 				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,
 				ServiceAccountName:            serviceAccount.Name,

@@ -421,6 +421,12 @@ status:
 												corev1.ResourceMemory: resource.MustParse("25Mi"),
 											},
 										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
+											Capabilities: &corev1.Capabilities{
+												Add: []corev1.Capability{"NET_ADMIN"},
+											},
+										},
 										Args: []string{
 											"-localip",
 											containerArg(values),
@@ -430,12 +436,6 @@ status:
 											"kube-dns-upstream",
 											"-health-port",
 											"8099",
-										},
-										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
-											Capabilities: &corev1.Capabilities{
-												Add: []corev1.Capability{"NET_ADMIN"},
-											},
 										},
 										Ports: []corev1.ContainerPort{
 											{

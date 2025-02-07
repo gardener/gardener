@@ -314,9 +314,6 @@ metadata:
 											{Name: "PL_SNAPSHOTS_EXTERNAL_ENABLED", Value: "false"},
 											{Name: "PL_PATHS_CONFIG", Value: "/usr/local/etc/plutono/plutono.ini"},
 										},
-										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
-										},
 										VolumeMounts: []corev1.VolumeMount{
 											{
 												Name:      "datasources",
@@ -347,6 +344,9 @@ metadata:
 												corev1.ResourceMemory: resource.MustParse("45Mi"),
 											},
 										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
+										},
 									},
 									{
 										Name:            "dashboard-refresher",
@@ -358,9 +358,6 @@ metadata:
 											"sidecar.py",
 											"--req-username-file=/etc/dashboard-refresher/plutono-admin/username",
 											"--req-password-file=/etc/dashboard-refresher/plutono-admin/password",
-										},
-										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
 										},
 										Env: []corev1.EnvVar{
 											{Name: "LOG_LEVEL", Value: "INFO"},
@@ -388,6 +385,9 @@ metadata:
 												corev1.ResourceCPU:    resource.MustParse("5m"),
 												corev1.ResourceMemory: resource.MustParse("85M"),
 											},
+										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
 										},
 									},
 								},

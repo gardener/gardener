@@ -1355,6 +1355,13 @@ wait
 						corev1.ResourceMemory: resource.MustParse("30Mi"),
 					},
 				},
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
+					RunAsUser:                ptr.To[int64](65532),
+					RunAsGroup:               ptr.To[int64](65534),
+					RunAsNonRoot:             ptr.To(true),
+					ReadOnlyRootFilesystem:   ptr.To(true),
+				},
 				Ports: []corev1.ContainerPort{
 					{
 						Name:          "kube-rbac-proxy",
@@ -1368,13 +1375,6 @@ wait
 						MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
 						ReadOnly:  true,
 					},
-				},
-				SecurityContext: &corev1.SecurityContext{
-					AllowPrivilegeEscalation: ptr.To(false),
-					RunAsUser:                ptr.To[int64](65532),
-					RunAsGroup:               ptr.To[int64](65534),
-					RunAsNonRoot:             ptr.To(true),
-					ReadOnlyRootFilesystem:   ptr.To(true),
 				},
 			},
 		}...)

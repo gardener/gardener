@@ -298,6 +298,10 @@ var _ = Describe("Kubernetes Dashboard", func() {
 											corev1.ResourceMemory: resource.MustParse("50Mi"),
 										},
 									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
+										ReadOnlyRootFilesystem:   ptr.To(true),
+									},
 									LivenessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
@@ -318,10 +322,6 @@ var _ = Describe("Kubernetes Dashboard", func() {
 											Name:      "tmp-volume",
 											MountPath: "/tmp",
 										},
-									},
-									SecurityContext: &corev1.SecurityContext{
-										AllowPrivilegeEscalation: ptr.To(false),
-										ReadOnlyRootFilesystem:   ptr.To(true),
 									},
 								},
 							},

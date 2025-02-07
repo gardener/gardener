@@ -274,9 +274,6 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 						"--leader-elect=true",
 						fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
 					},
-					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
-					},
 					LivenessProbe: newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
 						{
@@ -293,6 +290,9 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 							corev1.ResourceCPU:    resource.MustParse(cpuRequest),
 							corev1.ResourceMemory: resource.MustParse(memoryRequest),
 						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
 					},
 				}},
 			},

@@ -372,9 +372,6 @@ var _ = Describe("VPA", func() {
 									"--leader-elect=true",
 									fmt.Sprintf("--leader-elect-resource-namespace=%s", leaderElectionNamespace),
 								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-								},
 								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
 									{
@@ -391,6 +388,9 @@ var _ = Describe("VPA", func() {
 										corev1.ResourceCPU:    resource.MustParse("10m"),
 										corev1.ResourceMemory: resource.MustParse("15Mi"),
 									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 								},
 							}},
 						},
@@ -746,9 +746,6 @@ var _ = Describe("VPA", func() {
 									"--leader-elect=true",
 									fmt.Sprintf("--leader-elect-resource-namespace=%s", leaderElectionNamespace),
 								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-								},
 								LivenessProbe: livenessProbeVpa,
 								Ports: []corev1.ContainerPort{
 									{
@@ -765,6 +762,9 @@ var _ = Describe("VPA", func() {
 										corev1.ResourceCPU:    resource.MustParse(cpuRequest),
 										corev1.ResourceMemory: resource.MustParse(memoryRequest),
 									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 								},
 							}},
 						},
@@ -1035,15 +1035,15 @@ var _ = Describe("VPA", func() {
 									"--port=10250",
 									"--register-webhook=false",
 								},
-								SecurityContext: &corev1.SecurityContext{
-									AllowPrivilegeEscalation: ptr.To(false),
-								},
 								LivenessProbe: livenessProbeVpa,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("10m"),
 										corev1.ResourceMemory: resource.MustParse("30Mi"),
 									},
+								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 								},
 								Ports: []corev1.ContainerPort{
 									{
