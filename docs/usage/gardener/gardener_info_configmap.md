@@ -17,7 +17,6 @@ metadata:
   namespace: gardener-system-public
 data:
   gardenerAPIServer: |                                                      # key name of the gardener-apiserver section
-    featureGates: ShootForceDeletion=true,UseNamespacedCloudProfile=true    # list of the configured feature gates
     version: v1.111.0                                                       # version of the gardener-apiserver
     workloadIdentityIssuerURL: https://issuer.gardener.cloud.local          # the URL of the authority that issues workload identity tokens
 ```

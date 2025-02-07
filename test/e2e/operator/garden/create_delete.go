@@ -142,7 +142,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				kubernetes.WithClientOptions(client.Options{Scheme: operatorclient.VirtualScheme}),
 			)
 			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(virtualClusterClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed()) // This
+			g.Expect(virtualClusterClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 		}).Should(Succeed())
 
 		By("Verify Gardener APIs availability")
@@ -160,17 +160,16 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			g.Expect(controllerRegistrationList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})))
 			controllerDeploymentList := &gardencorev1.ControllerDeploymentList{}
 			g.Expect(virtualClusterClient.Client().List(ctx, controllerDeploymentList)).To(Succeed())
-			g.Expect(
-				controllerDeploymentList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})))
+			g.Expect(controllerDeploymentList.Items).To(ContainElement(MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("provider-local")})})))
 		}).Should(Succeed())
 
 		By("Verify 'gardener-system-public' namespace and 'gardener-info' configmap exist")
 		Eventually(func(g Gomega) {
 			namespace := &corev1.Namespace{}
-			g.Expect(virtualClusterClient.Client().Get(ctx, client.ObjectKey{Name: gardencorev1beta1.GardenerSystemPublicNamespace}, namespace, &client.GetOptions{})).To(Succeed())
+			g.Expect(virtualClusterClient.Client().Get(ctx, client.ObjectKey{Name: gardencorev1beta1.GardenerSystemPublicNamespace}, namespace)).To(Succeed())
 
 			configMap := &corev1.ConfigMap{}
-			g.Expect(virtualClusterClient.Client().Get(ctx, client.ObjectKey{Namespace: gardencorev1beta1.GardenerSystemPublicNamespace, Name: "gardener-info"}, configMap, &client.GetOptions{})).To(Succeed())
+			g.Expect(virtualClusterClient.Client().Get(ctx, client.ObjectKey{Namespace: gardencorev1beta1.GardenerSystemPublicNamespace, Name: "gardener-info"}, configMap)).To(Succeed())
 			g.Expect(configMap.Data).To(HaveKey("gardenerAPIServer"))
 		}).Should(Succeed())
 	})

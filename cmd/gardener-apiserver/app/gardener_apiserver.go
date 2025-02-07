@@ -51,7 +51,7 @@ import (
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	"github.com/gardener/gardener/pkg/apiserver/controllers/publicinfo"
+	"github.com/gardener/gardener/pkg/apiserver/controller/publicinfo"
 	"github.com/gardener/gardener/pkg/apiserver/openapi"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -381,8 +381,7 @@ func (o *Options) Run(ctx context.Context) error {
 
 	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-public-info", func(pctx genericapiserver.PostStartHookContext) error {
 		p := publicInfo{
-			Version:      version.Get().String(),
-			FeatureGates: fmt.Sprint(features.DefaultFeatureGate),
+			Version: version.Get().String(),
 		}
 
 		if len(o.ExtraOptions.WorkloadIdentityTokenIssuer) != 0 {
@@ -409,7 +408,6 @@ func (o *Options) Run(ctx context.Context) error {
 type publicInfo struct {
 	Version                   string  `json:"version" yaml:"version"`
 	WorkloadIdentityIssuerURL *string `json:"workloadIdentityIssuerURL,omitempty" yaml:"workloadIdentityIssuerURL,omitempty"` // TODO(vpnachev): Switch from omitempty(*string) to omitzero(string) once Gardener is build with go 1.24, ref: https://tip.golang.org/doc/go1.24
-	FeatureGates              string  `json:"featureGates" yaml:"featureGates"`
 }
 
 // ApplyTo applies the options to the given config.
