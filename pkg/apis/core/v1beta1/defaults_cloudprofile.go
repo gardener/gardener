@@ -5,6 +5,9 @@
 package v1beta1
 
 import (
+	"github.com/gardener/gardener/pkg/features"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -27,16 +30,27 @@ func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
 			},
 		}
 	}
-
-	if len(obj.Architectures) == 0 {
-		obj.Architectures = []string{v1beta1constants.ArchitectureAMD64}
+	if utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileCapabilities) {
+		if len(obj.CapabilitiesSet) == 0 {
+			obj.CapabilitiesSet = []v1.JSON{{Raw: []byte(`{"architecture":"` + v1beta1constants.ArchitectureAMD64 + `"}`)}}
+		}
+	} else {
+		if len(obj.Architectures) == 0 {
+			obj.Architectures = []string{v1beta1constants.ArchitectureAMD64}
+		}
 	}
 }
 
 // SetDefaults_MachineType sets default values for MachineType objects.
 func SetDefaults_MachineType(obj *MachineType) {
-	if obj.Architecture == nil {
-		obj.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+	if utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileCapabilities) {
+		if len(obj.Capabilities) == 0 {
+			obj.Capabilities = map[string]string{"architecture": v1beta1constants.ArchitectureAMD64}
+		}
+	} else {
+		if obj.Architecture == nil {
+			obj.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+		}
 	}
 
 	if obj.Usable == nil {
