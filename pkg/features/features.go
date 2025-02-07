@@ -116,7 +116,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	NodeAgentAuthorizer:                      {Default: false, PreRelease: featuregate.Alpha},
 	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
-	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha, LockToDefault: true},
+	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

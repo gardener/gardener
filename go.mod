@@ -85,6 +85,8 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
+require github.com/bsm/gomega v1.26.0
+
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
