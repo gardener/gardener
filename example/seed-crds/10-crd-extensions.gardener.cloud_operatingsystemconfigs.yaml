@@ -296,7 +296,8 @@ spec:
                 description: KubeletVersion is the version of the Kubelet.
                 type: string
               osVersion:
-                description: OSVersion is the version of the operating system.
+                description: OperatingSystemVersion is the version of the operating
+                  system.
                 type: string
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
@@ -561,8 +562,8 @@ spec:
                   - name
                   type: object
                 type: array
-              inPlaceUpdateConfig:
-                description: InPlaceUpdateConfig contains the configuration for in-place
+              inPlaceUpdates:
+                description: InPlaceUpdates contains the configuration for in-place
                   updates.
                 properties:
                   osUpdateCommand:

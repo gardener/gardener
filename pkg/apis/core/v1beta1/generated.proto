@@ -1097,12 +1097,13 @@ message HorizontalPodAutoscalerConfig {
   optional double tolerance = 6;
 }
 
-// InPlaceUpdateConfig contains the configuration for in-place updates for a machine image version.
-message InPlaceUpdateConfig {
+// InPlaceUpdates contains the configuration for in-place updates for a machine image version.
+message InPlaceUpdates {
   // Supported indicates whether in-place updates are supported for this machine image version.
   optional bool supported = 1;
 
   // MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
+  // +optional
   optional string minVersionForUpdate = 2;
 }
 
@@ -1777,8 +1778,9 @@ message MachineImageVersion {
   // +optional
   optional string kubeletVersionConstraint = 4;
 
-  // InPlaceUpdateConfig contains the configuration for in-place updates for this machine image version.
-  optional InPlaceUpdateConfig inPlaceUpdateConfig = 5;
+  // InPlaceUpdates contains the configuration for in-place updates for this machine image version.
+  // +optional
+  optional InPlaceUpdates inPlaceUpdates = 5;
 }
 
 // MachineType contains certain properties of a machine type.

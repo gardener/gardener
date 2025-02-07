@@ -1464,7 +1464,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>OSVersion is the version of the operating system.</p>
+<p>OperatingSystemVersion is the version of the operating system.</p>
 </td>
 </tr>
 <tr>
@@ -3533,14 +3533,14 @@ string
 <p>
 <p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
 </p>
-<h3 id="extensions.gardener.cloud/v1alpha1.InPlaceUpdateConfig">InPlaceUpdateConfig
+<h3 id="extensions.gardener.cloud/v1alpha1.InPlaceUpdates">InPlaceUpdates
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
 </p>
 <p>
-<p>InPlaceUpdateConfig is a structure containing configuration for in-place updates.</p>
+<p>InPlaceUpdates is a structure containing configuration for in-place updates.</p>
 </p>
 <table>
 <thead>
@@ -4138,7 +4138,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>OSVersion is the version of the operating system.</p>
+<p>OperatingSystemVersion is the version of the operating system.</p>
 </td>
 </tr>
 <tr>
@@ -4260,16 +4260,16 @@ After Gardener v1.112, this will be only set for OperatingSystemConfigs with pur
 </tr>
 <tr>
 <td>
-<code>inPlaceUpdateConfig</code></br>
+<code>inPlaceUpdates</code></br>
 <em>
-<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdateConfig">
-InPlaceUpdateConfig
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">
+InPlaceUpdates
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>InPlaceUpdateConfig contains the configuration for in-place updates.</p>
+<p>InPlaceUpdates contains the configuration for in-place updates.</p>
 </td>
 </tr>
 </tbody>

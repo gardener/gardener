@@ -5783,14 +5783,14 @@ float64
 <p>
 <p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
 </p>
-<h3 id="core.gardener.cloud/v1beta1.InPlaceUpdateConfig">InPlaceUpdateConfig
+<h3 id="core.gardener.cloud/v1beta1.InPlaceUpdates">InPlaceUpdates
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
 </p>
 <p>
-<p>InPlaceUpdateConfig contains the configuration for in-place updates for a machine image version.</p>
+<p>InPlaceUpdates contains the configuration for in-place updates for a machine image version.</p>
 </p>
 <table>
 <thead>
@@ -5819,6 +5819,7 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.</p>
 </td>
 </tr>
@@ -7951,15 +7952,16 @@ Examples:
 </tr>
 <tr>
 <td>
-<code>inPlaceUpdateConfig</code></br>
+<code>inPlaceUpdates</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.InPlaceUpdateConfig">
-InPlaceUpdateConfig
+<a href="#core.gardener.cloud/v1beta1.InPlaceUpdates">
+InPlaceUpdates
 </a>
 </em>
 </td>
 <td>
-<p>InPlaceUpdateConfig contains the configuration for in-place updates for this machine image version.</p>
+<em>(Optional)</em>
+<p>InPlaceUpdates contains the configuration for in-place updates for this machine image version.</p>
 </td>
 </tr>
 </tbody>

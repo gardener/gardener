@@ -103,7 +103,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                        schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability":                           schema_pkg_apis_core_v1beta1_HighAvailability(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig":              schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdateConfig":                        schema_pkg_apis_core_v1beta1_InPlaceUpdateConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates":                             schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress":                                    schema_pkg_apis_core_v1beta1_Ingress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController":                          schema_pkg_apis_core_v1beta1_IngressController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InternalSecret":                             schema_pkg_apis_core_v1beta1_InternalSecret(ref),
@@ -4027,11 +4027,11 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_InPlaceUpdateConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "InPlaceUpdateConfig contains the configuration for in-place updates for a machine image version.",
+				Description: "InPlaceUpdates contains the configuration for in-place updates for a machine image version.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"supported": {
@@ -5464,10 +5464,10 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
-					"inPlaceUpdateConfig": {
+					"inPlaceUpdates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "InPlaceUpdateConfig contains the configuration for in-place updates for this machine image version.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdateConfig"),
+							Description: "InPlaceUpdates contains the configuration for in-place updates for this machine image version.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates"),
 						},
 					},
 				},
@@ -5475,7 +5475,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdateConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
