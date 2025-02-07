@@ -27,11 +27,20 @@ spec:
               routes:
               - match:
                   connect_matcher: {}
+                  headers:
+                    - name: Reversed-VPN
+                      string_match:
+                        safe_regex:
+                          regex: '^outbound\|1194\|\|vpn-seed-server(-[0-4])?\..*\.svc\.cluster\.local$'
                 route:
                   cluster_header: Reversed-VPN
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
+              - match:
+                  connect_matcher: {}
+                direct_response:
+                  status: 403
               # Redirect requests to the https port to make probing more painful/cost intensive
               - match:
                   prefix: "/"
@@ -43,12 +52,6 @@ spec:
                 redirect:
                   https_redirect: true
                   port_redirect: 443
-                typed_per_filter_config:
-                  # No need to bother the external authorization server with the request
-                  # as it will most likely reject it anyway.
-                  envoy.filters.http.ext_authz:
-                    '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-                    disabled: true
             # Redirect all other requests to the https port to make probing more painful/cost intensive
             - domains:
               - "*"
@@ -64,34 +67,6 @@ spec:
                 redirect:
                   https_redirect: true
                   port_redirect: 443
-                typed_per_filter_config:
-                  # No need to bother the external authorization server with the request
-                  # as it will most likely reject it anyway.
-                  envoy.filters.http.ext_authz:
-                    '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-                    disabled: true
-  - applyTo: HTTP_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        portNumber: 8132
-        filterChain:
-          filter:
-            name: "envoy.filters.network.http_connection_manager"
-            subFilter:
-              name: "envoy.filters.http.router"
-    patch:
-      operation: INSERT_BEFORE
-      filterClass: AUTHZ # This filter will run *after* the Istio authz filter.
-      value:
-        name: envoy.filters.http.ext_authz
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-          transport_api_version: V3
-          grpc_service:
-            envoy_grpc:
-              cluster_name: outbound|9001||reversed-vpn-auth-server.garden.svc.cluster.local
-            timeout: 0.250s
   workloadSelector:
     labels:
       app: istio-ingressgateway
