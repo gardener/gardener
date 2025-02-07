@@ -15,6 +15,7 @@ import (
 	gcrv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -59,13 +60,12 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 	}
 
 	if oci.PullSecretRef != nil {
-		secret := &corev1.Secret{}
-		key := client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: oci.PullSecretRef.Name}
-		if err := r.client.Get(ctx, key, secret); err != nil {
-			return nil, fmt.Errorf("failed to get pull secret %s: %w", key, err)
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: oci.PullSecretRef.Name}}
+		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return nil, fmt.Errorf("failed to get pull secret %s: %w", client.ObjectKeyFromObject(secret), err)
 		}
 		if secret.Data == nil || secret.Data[corev1.DockerConfigJsonKey] == nil {
-			return nil, fmt.Errorf("pull secret %s is missing the data key %s", key, corev1.DockerConfigJsonKey)
+			return nil, fmt.Errorf("pull secret %s is missing the data key %s", client.ObjectKeyFromObject(secret), corev1.DockerConfigJsonKey)
 		}
 		remoteOpts = append(remoteOpts, remote.WithAuthFromKeychain(&keychain{pullSecret: string(secret.Data[corev1.DockerConfigJsonKey])}))
 	}
