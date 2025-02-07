@@ -357,8 +357,6 @@ spec:
           requests:
             cpu: 200m
             memory: 256Mi
-        securityContext:
-          allowPrivilegeEscalation: false
         volumeMounts:
         - mountPath: /etc/dependency-watchdog/config
           name: config

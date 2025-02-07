@@ -406,9 +406,6 @@ func (b *bootstrapper) getDeployment(serviceAccountName string, configMapName st
 							ContainerPort: 9643,
 							Protocol:      corev1.ProtocolTCP,
 						}},
-						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: ptr.To(false),
-						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("200m"),

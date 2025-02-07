@@ -176,7 +176,6 @@ var _ = Describe("VpnSeedServer", func() {
 										"NET_RAW",
 									},
 								},
-								AllowPrivilegeEscalation: ptr.To(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -389,7 +388,6 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{
 								"all",
