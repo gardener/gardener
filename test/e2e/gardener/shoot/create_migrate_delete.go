@@ -36,6 +36,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			f.Verify()
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) && !v1beta1helper.HibernationIsEnabled(f.Shoot) {
+				// We can only verify in-cluster access to the API server before the migration in local e2e tests.
+				// After the migration, the shoot API server's hostname still points to the source seed, because
+				// the /etc/hosts entry is never updated. Hence, we talk to the API server for starting in-cluster
+				// clients. That's also why the ShootMigrationTest is configured to skip all interactions with the
+				// shoot API server for local e2e tests.
 				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
@@ -46,10 +51,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			Expect(err).ToNot(HaveOccurred())
 			Expect(t.MigrateShoot(ctx)).To(Succeed())
 			Expect(t.VerifyMigration(ctx)).To(Succeed())
-
-			if !v1beta1helper.IsWorkerless(f.Shoot) && !v1beta1helper.HibernationIsEnabled(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
-			}
 
 			By("Delete Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
