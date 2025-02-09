@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- https://github.com/kyverno/kyverno/releases/download/v1.13.3/install.yaml
+- https://github.com/kyverno/kyverno/releases/download/v1.13.4/install.yaml
 - kyverno-poddisruptionbudget.yaml
 - kyverno-rbac.yaml
 
