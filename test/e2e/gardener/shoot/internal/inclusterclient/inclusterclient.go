@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,7 +58,7 @@ var labels = map[string]string{"e2e-test": "in-cluster-client"}
 // - one pod explicitly overwrites the env var
 // See docs/usage/networking/shoot_kubernetes_service_host_injection.md and docs/proposals/08-shoot-apiserver-via-sni.md
 func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.ShootFramework) {
-	ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
+	ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
 	defer cancel()
 
 	defer prepareObjects(ctx, f.ShootClient.Client(), f.Shoot.Spec.Kubernetes.Version)()
@@ -78,16 +79,12 @@ func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.Sh
 
 func verifyAccessFromPod(ctx context.Context, f *framework.ShootFramework, podName, expectedAddress string) {
 	By("Verify we are using the expected path")
-	Eventually(
-		execute(ctx, f.ShootClient, podName, "/kubectl", "cluster-info"),
-	).Should(Say(
+	executeKubectl(ctx, f.ShootClient, podName, []string{"/kubectl", "cluster-info"}, Say(
 		"Kubernetes control plane is running at %s", regexp.QuoteMeta(expectedAddress),
 	))
 
 	By("Verify a typical API request works")
-	Eventually(
-		execute(ctx, f.ShootClient, podName, "/kubectl", "get", "service", "kubernetes"),
-	).Should(Say(
+	executeKubectl(ctx, f.ShootClient, podName, []string{"/kubectl", "get", "service", "kubernetes"}, Say(
 		`NAME.+\nkubernetes.+\n`,
 	))
 }
@@ -135,7 +132,7 @@ func prepareObjects(ctx context.Context, c client.Client, kubernetesVersion stri
 	for _, obj := range objects {
 		Eventually(func() error {
 			return client.IgnoreAlreadyExists(c.Create(ctx, obj))
-		}).Should(Succeed(), "should create %T %q", obj, client.ObjectKeyFromObject(obj))
+		}).WithContext(ctx).Should(Succeed(), "should create %T %q", obj, client.ObjectKeyFromObject(obj))
 	}
 
 	By("Wait for test pods to be ready")
@@ -159,35 +156,37 @@ func prepareObjects(ctx context.Context, c client.Client, kubernetesVersion stri
 		for _, obj := range objects {
 			Eventually(func() error {
 				return client.IgnoreNotFound(c.Delete(cleanupCtx, obj))
-			}).Should(Succeed(), "should delete %T %q", obj, client.ObjectKeyFromObject(obj))
+			}).WithContext(cleanupCtx).Should(Succeed(), "should delete %T %q", obj, client.ObjectKeyFromObject(obj))
 		}
 	}
 }
 
-func execute(ctx context.Context, clientSet kubernetes.Interface, podName string, command ...string) *Buffer {
+func executeKubectl(ctx context.Context, clientSet kubernetes.Interface, podName string, command []string, matcher gomegatypes.GomegaMatcher) {
 	GinkgoHelper()
-	var stdOutBuffer *Buffer
 
-	// Retry the command execution to reduce flakiness.
-	// Initialize a fresh output buffer on every try for asserting only the results of the last (hopefully successful)
-	// command execution.
-	// Both stdOut and stdErr will be forwarded to the ginkgo output on every try to ensure test failures can be debugged.
-	Eventually(func() error {
-		stdOutBuffer = NewBuffer()
+	// Retry the command execution with a short timeout to reduce flakiness. We better timeout quickly and succeed on the
+	// next try than being stuck in on try.
+	Eventually(func(g Gomega, ctx context.Context) {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
 
-		return clientSet.PodExecutor().ExecuteWithStreams(
-			ctx,
+		stdOutBuffer := NewBuffer()
+
+		g.Expect(clientSet.PodExecutor().ExecuteWithStreams(
+			timeoutCtx,
 			namespace,
 			podName,
 			containerName,
 			nil,
+			// forward both stdout and stderr to the ginkgo output to ensure test failures can be debugged
 			io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter)),
 			gexec.NewPrefixedWriter("[err] ", GinkgoWriter),
 			command...,
-		)
-	}).Should(Succeed())
+		)).To(Succeed())
 
-	return stdOutBuffer
+		// we don't need Eventually here, because the buffer is already closed
+		g.Expect(stdOutBuffer).To(matcher)
+	}).WithContext(ctx).WithTimeout(time.Minute).Should(Succeed())
 }
 
 func getObjects(kubernetesVersion string) []client.Object {
