@@ -341,6 +341,10 @@ const (
 	// taking over responsibilities for a target cluster (e.g., GRM in a garden runtime cluster, being responsible for
 	// the virtual garden cluster, or GRM in a seed cluster, being responsible for a shoot cluster).
 	ForTarget ResponsibilityMode = "target"
+	// ForSourceAndTarget is a deployment mode for a gardener-resource-manager deployed in a source cluster,
+	// taking over responsibilities for both the source and a target cluster (e.g., GRM in an autonomous shoot cluster
+	// where the control plane is running in the cluster itself).
+	ForSourceAndTarget ResponsibilityMode = "both"
 )
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
@@ -618,6 +622,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			}, r.values.NetworkPolicyAdditionalNamespaceSelectors...),
 			IngressControllerSelector: r.values.NetworkPolicyControllerIngressControllerSelector,
 		}
+	}
+
+	if r.values.ResponsibilityMode == ForSource || r.values.ResponsibilityMode == ForSourceAndTarget {
 		config.Webhooks.CRDDeletionProtection.Enabled = true
 		config.Webhooks.ExtensionValidation.Enabled = true
 	}
@@ -656,7 +663,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		config.Controllers.NodeAgentReconciliationDelay.MaxDelay = r.values.NodeAgentReconciliationMaxDelay
 	}
 
-	if r.values.ResponsibilityMode == ForTarget {
+	if r.values.ResponsibilityMode == ForTarget || r.values.ResponsibilityMode == ForSourceAndTarget {
 		config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
 			Enabled: true,
 			NodeSelector: map[string]string{
@@ -827,14 +834,8 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 
 	if r.values.BootstrapControlPlaneNode {
 		tolerations = append(tolerations,
-			corev1.Toleration{
-				Operator: corev1.TolerationOpExists,
-				Effect:   corev1.TaintEffectNoSchedule,
-			},
-			corev1.Toleration{
-				Operator: corev1.TolerationOpExists,
-				Effect:   corev1.TaintEffectNoExecute,
-			},
+			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
+			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
 		)
 		// If 'BootstrapControlPlaneNode', there is typically no CoreDNS running yet, i.e, we cannot rely on the
 		// standard 'kubernetes.default.svc' DNS name but have to explicitly set it to '127.0.0.1'.
@@ -1334,7 +1335,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetKubernetesServiceHostMutatingWebhook(nil, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.ResponsibilityMode == ForTarget {
+	if r.values.ResponsibilityMode == ForTarget || r.values.ResponsibilityMode == ForSourceAndTarget {
 		webhooks = append(webhooks, GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
@@ -1359,8 +1360,8 @@ func (r *resourceManager) getValidatingWebhookConfigurationWebhooks(
 	)
 }
 
-// GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component for reuse
-// between the component and integration tests.
+// GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component
+// for reuse between the component and integration tests.
 func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail

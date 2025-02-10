@@ -90,6 +90,7 @@ func NewRuntimeGardenerResourceManager(
 		PriorityClassName:                   priorityClassName,
 		Replicas:                            ptr.To[int32](2),
 		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
+		ResponsibilityMode:                  resourcemanager.ForSource,
 		SecretNameServerCA:                  secretNameServerCA,
 		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
 		RuntimeKubernetesVersion:            runtimeVersion,
