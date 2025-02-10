@@ -130,7 +130,6 @@ build:
             - pkg/component/networking/istio/charts/istio/istio-istiod
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns/constants
-            - pkg/component/networking/vpn/authzserver
             - pkg/component/networking/vpn/seedserver
             - pkg/component/observability/logging
             - pkg/component/observability/logging/fluentbit

@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// TODO(Wieneo): Remove component after https://github.com/gardener/gardener/pull/11328 has been released
+
 package authzserver
 
 import (
