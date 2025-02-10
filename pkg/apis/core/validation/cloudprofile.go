@@ -6,8 +6,6 @@ package validation
 
 import (
 	"fmt"
-	"github.com/gardener/gardener/pkg/features"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
@@ -15,10 +13,12 @@ import (
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -72,7 +72,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	} else {
 		// if the feature is disabled, the capabilitiesDefinition must not be set
 		if IsDefined(&spec.CapabilitiesDefinition) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilitiesDefinition"), spec.CapabilitiesDefinition, "must not be defined as Capabilities Feature is disabled."))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilitiesDefinition"), spec.CapabilitiesDefinition, "must not be defined as the CloudProfile Capabilities Feature is disabled."))
 		}
 	}
 
