@@ -1622,7 +1622,25 @@ type Worker struct {
 	// Priority (or weight) is the importance by which this worker group will be scaled by cluster autoscaling.
 	// +optional
 	Priority *int32 `json:"priority,omitempty" protobuf:"varint,22,opt,name=priority"`
+	// UpdateStrategy specifies the machine update strategy for the worker pool.
+	// +optional
+	UpdateStrategy *MachineUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,23,opt,name=updateStrategy,casttype=MachineUpdateStrategy"`
 }
+
+// MachineUpdateStrategy specifies the machine update strategy for the worker pool.
+type MachineUpdateStrategy string
+
+const (
+	// AutoRollingUpdate represents a machine update strategy where nodes are replaced during the update process.
+	// This approach involves draining the existing node, deleting it, and creating a new node to replace it.
+	AutoRollingUpdate MachineUpdateStrategy = "AutoRollingUpdate"
+	// AutoInPlaceUpdate represents a machine update strategy where updates are applied directly to the existing nodes without replacing them.
+	// In this approach, nodes are selected automatically by the machine-controller-manager.
+	AutoInPlaceUpdate MachineUpdateStrategy = "AutoInPlaceUpdate"
+	// ManualInPlaceUpdate represents a machine update strategy where updates are applied directly to the existing nodes without replacing them.
+	// In this approach, nodes are selected manually by the user.
+	ManualInPlaceUpdate MachineUpdateStrategy = "ManualInPlaceUpdate"
+)
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
 type ClusterAutoscalerOptions struct {

@@ -103,6 +103,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                        schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability":                           schema_pkg_apis_core_v1beta1_HighAvailability(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig":              schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates":                             schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress":                                    schema_pkg_apis_core_v1beta1_Ingress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController":                          schema_pkg_apis_core_v1beta1_IngressController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InternalSecret":                             schema_pkg_apis_core_v1beta1_InternalSecret(ref),
@@ -4026,6 +4027,35 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "InPlaceUpdates contains the configuration for in-place updates for a machine image version.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"supported": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Supported indicates whether in-place updates are supported for this machine image version.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"minVersionForUpdate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"supported"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_Ingress(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5434,12 +5464,18 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
+					"inPlaceUpdates": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InPlaceUpdates contains the configuration for in-place updates for this machine image version.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates"),
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -10002,6 +10038,13 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 							Description: "Priority (or weight) is the importance by which this worker group will be scaled by cluster autoscaling.",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"updateStrategy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdateStrategy specifies the machine update strategy for the worker pool.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

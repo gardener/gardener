@@ -5783,6 +5783,48 @@ float64
 <p>
 <p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.InPlaceUpdates">InPlaceUpdates
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
+</p>
+<p>
+<p>InPlaceUpdates contains the configuration for in-place updates for a machine image version.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>supported</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Supported indicates whether in-place updates are supported for this machine image version.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>minVersionForUpdate</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Ingress">Ingress
 </h3>
 <p>
@@ -7908,6 +7950,20 @@ Examples:
 - &lsquo;&lt; 1.26&rsquo; - supports only kubelet versions less than 1.26</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>inPlaceUpdates</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.InPlaceUpdates">
+InPlaceUpdates
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InPlaceUpdates contains the configuration for in-place updates for this machine image version.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MachineType">MachineType
@@ -8088,6 +8144,15 @@ This overrides any other common minimum size configuration from <code>spec.volum
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.MachineUpdateStrategy">MachineUpdateStrategy
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
+</p>
+<p>
+<p>MachineUpdateStrategy specifies the machine update strategy for the worker pool.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.Maintenance">Maintenance
 </h3>
 <p>
@@ -13996,6 +14061,20 @@ int32
 <td>
 <em>(Optional)</em>
 <p>Priority (or weight) is the importance by which this worker group will be scaled by cluster autoscaling.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MachineUpdateStrategy">
+MachineUpdateStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateStrategy specifies the machine update strategy for the worker pool.</p>
 </td>
 </tr>
 </tbody>

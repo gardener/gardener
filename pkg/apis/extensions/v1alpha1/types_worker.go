@@ -155,6 +155,9 @@ type WorkerPool struct {
 	// KubernetesVersion is the kubernetes version in this worker pool
 	// +optional
 	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
+	// KubeletConfig contains the kubelet configuration for the worker pool.
+	// +optional
+	KubeletConfig *gardencorev1beta1.KubeletConfig `json:"kubeletConfig,omitempty"`
 	// NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup from zero
 	// +optional
 	NodeTemplate *NodeTemplate `json:"nodeTemplate,omitempty"`
@@ -167,6 +170,9 @@ type WorkerPool struct {
 	// Priority (or weight) is the importance by which this worker pool will be scaled by cluster autoscaling.
 	// +optional
 	Priority *int32 `json:"priority,omitempty"`
+	// UpdateStrategy specifies the machine update strategy for the worker pool.
+	// +optional
+	UpdateStrategy *gardencorev1beta1.MachineUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.

@@ -1097,6 +1097,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	for i, worker := range c.shoot.Spec.Provider.Workers {
 		var oldWorker = core.Worker{Machine: core.Machine{Image: &core.ShootMachineImage{}}}
 		isNewWorkerPool := true
+		isUpdateStrategyInPlace := helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
 		for _, ow := range c.oldShoot.Spec.Provider.Workers {
 			if ow.Name == worker.Name {
 				oldWorker = ow
@@ -1130,16 +1131,23 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes)))
 			}
 
-			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, worker.Machine, oldWorker.Machine)
+			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine)
 			if !isMachineImagePresentInCloudprofile {
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageVersions)))
-			} else if !architectureSupported || !activeMachineImageVersion {
+			} else if !architectureSupported || !activeMachineImageVersion || (isUpdateStrategyInPlace && !inPlaceUpdateSupported) {
 				detail := fmt.Sprintf("machine image version '%s:%s' ", worker.Machine.Image.Name, worker.Machine.Image.Version)
 				if !architectureSupported {
 					detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
 				}
 				if !activeMachineImageVersion {
 					detail += "is expired, "
+				}
+				if isUpdateStrategyInPlace && !inPlaceUpdateSupported {
+					if a.GetOperation() == admission.Update && !isNewWorkerPool {
+						detail += "cannot be in-place updated from the current version, "
+					} else {
+						detail += "does not support in-place updates, "
+					}
 				}
 				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("%ssupported machine image versions are: %+v", detail, validMachineImageVersions)))
 			} else {
@@ -1729,7 +1737,7 @@ func validateZone(constraints []gardencorev1beta1.Region, region, zone string) (
 }
 
 // getDefaultMachineImage determines the latest non-preview machine image version from the first machine image in the CloudProfile and considers that as the default image
-func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, image *core.ShootMachineImage, arch *string, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, image *core.ShootMachineImage, arch *string, isUpdateStrategyInPlace bool, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	var imageReference string
 	if image != nil {
 		imageReference = fmt.Sprintf("%s@%s", image.Name, image.Version)
@@ -1810,6 +1818,12 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 		if !slices.Contains(version.Architectures, *arch) {
 			continue
 		}
+
+		// if InPlace update is true, only consider versions that support in-place updates
+		if isUpdateStrategyInPlace && (version.InPlaceUpdates == nil || !version.InPlaceUpdates.Supported) {
+			continue
+		}
+
 		// CloudProfile cannot contain invalid semVer machine image version
 		parsedVersion := semver.MustParse(version.Version)
 		if machineImageVersionMajor != nil && parsedVersion.Major() != *machineImageVersionMajor ||
@@ -1838,15 +1852,16 @@ func parseSemanticVersionPart(part string) (*uint64, error) {
 	return ptr.To(v), nil
 }
 
-func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool bool, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
+func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool, isUpdateStrategyInPlace bool, machine, oldMachine core.Machine) (bool, bool, bool, bool, []string) {
 	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
-		return true, true, true, nil
+		return true, true, true, true, nil
 	}
 
 	var (
 		machineImageVersionsInCloudProfile            = sets.New[string]()
 		activeMachineImageVersions                    = sets.New[string]()
 		machineImageVersionsWithSupportedArchitecture = sets.New[string]()
+		machineImageVersionsWithInPlaceUpdateSupport  = sets.New[string]()
 	)
 
 	for _, machineImage := range constraints {
@@ -1871,22 +1886,46 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 				if slices.Contains(machineVersion.Architectures, *machine.Architecture) {
 					machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
 				}
+
+				if isUpdateStrategyInPlace && machineVersion.InPlaceUpdates != nil {
+					switch {
+					case a.GetOperation() == admission.Create || isNewWorkerPool:
+						if machineVersion.InPlaceUpdates.Supported {
+							machineImageVersionsWithInPlaceUpdateSupport.Insert(machineImageVersion)
+						}
+					case a.GetOperation() == admission.Update && !isNewWorkerPool && machine.Image != nil && machine.Image.Name == machineImage.Name:
+						if machineVersion.InPlaceUpdates.Supported && machineVersion.InPlaceUpdates.MinVersionForUpdate != nil {
+							// This checks if the MinVersionForInPlaceUpdate (the minimum version which can be in-place updated to the current version)
+							// is less than or equal to the old machine's version. If the condition is true, the version is considered valid
+							// for performing the in-place update on the machine.
+							if validVersion, _ := versionutils.CompareVersions(*machineVersion.InPlaceUpdates.MinVersionForUpdate, "<=", oldMachine.Image.Version); validVersion {
+								machineImageVersionsWithInPlaceUpdateSupport.Insert(machineImageVersion)
+							}
+						}
+					}
+				}
+
 				machineImageVersionsInCloudProfile.Insert(machineImageVersion)
 			}
 		}
 	}
 
 	// valid machine image versions are all versions that can be used by this worker pool
-	validMachineImageVersions := sets.List(activeMachineImageVersions.Intersection(machineImageVersionsWithSupportedArchitecture))
+	validMachineImageVersions := activeMachineImageVersions.Intersection(machineImageVersionsWithSupportedArchitecture)
+	if isUpdateStrategyInPlace {
+		validMachineImageVersions = validMachineImageVersions.Intersection(machineImageVersionsWithInPlaceUpdateSupport)
+	}
+
 	if machine.Image == nil || len(machine.Image.Version) == 0 {
-		return false, false, false, validMachineImageVersions
+		return false, false, false, false, sets.List(validMachineImageVersions)
 	}
 
 	shootMachineImageVersion := fmt.Sprintf("%s:%s", machine.Image.Name, machine.Image.Version)
 	return machineImageVersionsInCloudProfile.Has(shootMachineImageVersion),
 		machineImageVersionsWithSupportedArchitecture.Has(shootMachineImageVersion),
 		activeMachineImageVersions.Has(shootMachineImageVersion),
-		validMachineImageVersions
+		machineImageVersionsWithInPlaceUpdateSupport.Has(shootMachineImageVersion),
+		sets.List(validMachineImageVersions)
 }
 
 func validateContainerRuntimeConstraints(constraints []gardencorev1beta1.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
@@ -2010,7 +2049,7 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []g
 		}
 	}
 
-	return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, fldPath)
+	return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {

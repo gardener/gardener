@@ -122,6 +122,7 @@ var (
 		gardencorev1beta1.GardenerName,
 		v1beta1constants.ReferenceProtectionFinalizerName,
 	)
+	availableUpdateStrategies = sets.New(core.AutoRollingUpdate, core.AutoInPlaceUpdate, core.ManualInPlaceUpdate)
 
 	// asymmetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
 	availableOIDCSigningAlgs = sets.New(
@@ -186,6 +187,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, ValidateShootHAConfigUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, ValidateForceDeletion(newShoot, oldShoot)...)
+	allErrs = append(allErrs, validateNodeLocalDNSUpdate(&newShoot.Spec, &oldShoot.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }
@@ -367,8 +369,8 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 			newKubernetesVersion = *newWorker.Kubernetes.Version
 		}
 
-		// worker kubernetes versions must not be downgraded and but can skip minor versions
-		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, true, idxPath.Child("kubernetes", "version"))...)
+		// worker Kubernetes versions must not be downgraded; minor version skips are allowed, except for AutoInPlaceUpdate and ManualInPlaceUpdate.
+		allErrs = append(allErrs, ValidateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, !helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy), idxPath.Child("kubernetes", "version"))...)
 	}
 
 	allErrs = append(allErrs, validateNetworkingUpdate(newSpec.Networking, oldSpec.Networking, fldPath.Child("networking"))...)
@@ -396,7 +398,56 @@ func validateWorkerUpdate(newHasWorkers, oldHasWorkers bool, fldPath *field.Path
 
 // ValidateProviderUpdate validates the specification of a Provider object.
 func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
-	return apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))...)
+
+	for i, newWorker := range newProvider.Workers {
+		var oldWorker core.Worker
+
+		oldWorkerIndex := slices.IndexFunc(oldProvider.Workers, func(ow core.Worker) bool {
+			oldWorker = ow
+			return ow.Name == newWorker.Name
+		})
+
+		if oldWorkerIndex == -1 {
+			continue
+		}
+
+		var (
+			idxPath              = fldPath.Child("workers").Index(i)
+			oldStrategyIsInPlace = helper.IsUpdateStrategyInPlace(oldWorker.UpdateStrategy)
+			newStrategyIsInPlace = helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy)
+		)
+
+		if oldStrategyIsInPlace && !newStrategyIsInPlace {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"))
+		}
+
+		if !oldStrategyIsInPlace && newStrategyIsInPlace {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "update strategy cannot be changed from AutoRollingUpdate to AutoInPlaceUpdate/ManualInPlaceUpdate"))
+		}
+
+		if ptr.Equal(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) && helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy) {
+			if oldWorker.Machine.Type != newWorker.Machine.Type {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), newWorker.Machine.Type, "machine type cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
+			}
+
+			if oldWorker.Machine.Image != nil && newWorker.Machine.Image != nil && oldWorker.Machine.Image.Name != newWorker.Machine.Image.Name {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image", "name"), newWorker.Machine.Image.Name, "machine image name cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
+			}
+
+			if oldWorker.CRI != nil && newWorker.CRI != nil && oldWorker.CRI.Name != newWorker.CRI.Name {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("cri", "name"), newWorker.CRI.Name, "CRI name cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
+			}
+
+			if !apiequality.Semantic.DeepEqual(oldWorker.Volume, newWorker.Volume) {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("volume"), newWorker.Volume, "volume cannot be changed if update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate"))
+			}
+		}
+	}
+
+	return allErrs
 }
 
 // ValidateShootStatusUpdate validates the status field of a Shoot object.
@@ -656,6 +707,25 @@ func ValidateKubernetesVersionUpdate(new, old string, skipMinorVersionAllowed bo
 		}
 		if skippingMinorVersion {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version upgrade cannot skip a minor version"))
+		}
+	}
+
+	return allErrs
+}
+
+func validateNodeLocalDNSUpdate(newSpec, oldSpec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs                = field.ErrorList{}
+		oldNodeLocalDNSEnabled = oldSpec.SystemComponents != nil && oldSpec.SystemComponents.NodeLocalDNS != nil && oldSpec.SystemComponents.NodeLocalDNS.Enabled
+		newNodeLocalDNSEnabled = newSpec.SystemComponents != nil && newSpec.SystemComponents.NodeLocalDNS != nil && newSpec.SystemComponents.NodeLocalDNS.Enabled
+	)
+
+	if oldNodeLocalDNSEnabled != newNodeLocalDNSEnabled {
+		for _, worker := range oldSpec.Provider.Workers {
+			if helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("systemComponents", "nodeLocalDNS"), "node-local-dns setting can not be changed if shoot has at least one worker pool with update strategy AutoInPlaceUpdate/ManualInPlaceUpdate"))
+				break
+			}
 		}
 	}
 
@@ -1806,6 +1876,16 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 
 	if worker.ClusterAutoscaler != nil {
 		allErrs = append(allErrs, ValidateClusterAutoscalerOptions(worker.ClusterAutoscaler, fldPath.Child("autoscaler"))...)
+	}
+
+	if worker.UpdateStrategy != nil {
+		if !availableUpdateStrategies.Has(*worker.UpdateStrategy) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, sets.List(availableUpdateStrategies)))
+		}
+
+		if !features.DefaultFeatureGate.Enabled(features.InPlaceNodeUpdates) && helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, "can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."))
+		}
 	}
 
 	return allErrs

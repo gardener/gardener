@@ -1455,6 +1455,56 @@ This field is immutable.</p>
 <p>Files is a list of files that should get written to the host&rsquo;s file system.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>osVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OperatingSystemVersion is the version of the operating system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletVersion is the version of the Kubelet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRotation</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">
+CredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletConfigHash</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfigHash is the hash calculated on the fields relevant to in-place update of the Kubelet configuration.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -1998,6 +2048,39 @@ Kubernetes core/v1.LoadBalancerIngress
 <td>
 <em>(Optional)</em>
 <p>Ingress is the external IP and/or hostname of the bastion host.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.CARotation">CARotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">CredentialsRotation</a>)
+</p>
+<p>
+<p>CARotation contains information about the certificate authority credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
 </td>
 </tr>
 </tbody>
@@ -2576,6 +2659,53 @@ DefaultStatus
 (Members of <code>DefaultStatus</code> are embedded into this type.)
 </p>
 <p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.CredentialsRotation">CredentialsRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+</p>
+<p>
+<p>CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>certificateAuthorities</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CARotation">
+CARotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CertificateAuthorities contains information about the certificate authority credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serviceAccountKey</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.ServiceAccountKeyRotation">
+ServiceAccountKeyRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServiceAccountKey contains information about the service account key credential rotation.</p>
 </td>
 </tr>
 </tbody>
@@ -3403,6 +3533,39 @@ string
 <p>
 <p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
 </p>
+<h3 id="extensions.gardener.cloud/v1alpha1.InPlaceUpdates">InPlaceUpdates
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
+</p>
+<p>
+<p>InPlaceUpdates is a structure containing configuration for in-place updates.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>osUpdate</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.OSUpdate">
+OSUpdate
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OSUpdate defines the configuration for the operating system update.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.InfrastructureSpec">InfrastructureSpec
 </h3>
 <p>
@@ -3851,6 +4014,49 @@ Kubernetes core/v1.ResourceList
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.OSUpdate">OSUpdate
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">InPlaceUpdates</a>)
+</p>
+<p>
+<p>OSUpdate contains the configuration for the operating system update.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>command</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Command defines the command responsible for performing machine image updates.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>args</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Args provides a mechanism to pass additional arguments or flags to the Command.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.Object">Object
 </h3>
 <p>
@@ -3956,6 +4162,56 @@ This field is immutable.</p>
 <p>Files is a list of files that should get written to the host&rsquo;s file system.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>osVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OperatingSystemVersion is the version of the operating system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletVersion is the version of the Kubelet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRotation</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">
+CredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletConfigHash</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfigHash is the hash calculated on the fields relevant to in-place update of the Kubelet configuration.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus
@@ -4033,6 +4289,20 @@ CloudConfig
 <p>CloudConfig is a structure for containing the generated output for the given operating system
 config spec. It contains a reference to a secret as the result may contain confidential data.
 After Gardener v1.112, this will be only set for OperatingSystemConfigs with purpose &lsquo;provision&rsquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>inPlaceUpdates</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">
+InPlaceUpdates
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InPlaceUpdates contains the configuration for in-place updates.</p>
 </td>
 </tr>
 </tbody>
@@ -4244,6 +4514,39 @@ capable of performing. Defaults to
 </td>
 <td>
 <p>CACerts are paths to public key certificates used for TLS.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.ServiceAccountKeyRotation">ServiceAccountKeyRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">CredentialsRotation</a>)
+</p>
+<p>
+<p>ServiceAccountKeyRotation contains information about the service account key credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the service account key credential rotation was initiated.</p>
 </td>
 </tr>
 </tbody>
@@ -4689,6 +4992,20 @@ string
 </tr>
 <tr>
 <td>
+<code>kubeletConfig</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.KubeletConfig">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfig contains the kubelet configuration for the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>nodeTemplate</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.NodeTemplate">
@@ -4737,6 +5054,20 @@ int32
 <td>
 <em>(Optional)</em>
 <p>Priority (or weight) is the importance by which this worker pool will be scaled by cluster autoscaling.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.MachineUpdateStrategy">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineUpdateStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateStrategy specifies the machine update strategy for the worker pool.</p>
 </td>
 </tr>
 </tbody>

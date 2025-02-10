@@ -173,7 +173,7 @@ spec:
       versions:
         - version: 1443.8.0
           expirationDate: "2025-02-28T23:59:59Z"
-          `inPlaceUpdateConfig`:
+          inPlaceUpdateConfig:
             supported: true # true/false
             minVersionForUpdate: 1312.3.0
         - version: 1443.7.0 # if minVersionForInPlaceUpdate is not specified, in-place update cannot be performed on this version
@@ -259,16 +259,16 @@ spec:
 
 #### `OperatingSystemConfig` API
 
-New fields `osVersion`, `kubeletVersion`, and `credentialsRotation` are introduced in the `OperatingSystemConfig` spec and `inPlaceUpdateConfig` in the `OperatingSystemConfig` status.
+New fields `osVersion`, `kubeletVersion`, and `credentialsRotation` are introduced in the `OperatingSystemConfig` spec and `inPlaceUpdates` in the `OperatingSystemConfig` status.
 
 - `osVersion` specifies the machine image version.
 - `kubeletVersion` specifies the version of the kubelet.
 - `credentialsRotation` contains two subfields:
   - `certificateAuthorities` contains `lastInitiationTime` which records the timestamp of the most recent Certificate Authority (CA) rotation initiation.
   - `serviceAccountKey` contains `lastInitiationTime` which records the timestamp of the most recent `ServiceAccount` signing key rotation initiation.
-- The inPlaceUpdateConfig field includes two subfields:
-  - `osUpdateCommand` specifies the command responsible for performing machine image updates. The command can invoke either an inbuilt utility/tool or a custom script.
-  - `osUpdateCommandArgs` provides a mechanism to pass additional arguments or flags to the update script, like the target version or the OCI registry from which the updated machine image should be pulled, offering flexibility tailored to the needs of different OS extensions.
+- The inPlaceUpdates field has following subfields:
+  - `osUpdate.command` specifies the command responsible for performing machine image updates. The command can invoke either an inbuilt utility/tool or a custom script.
+  - `osUpdate.args` provides a mechanism to pass additional arguments or flags to the update script, like the target version or the OCI registry from which the updated machine image should be pulled, offering flexibility tailored to the needs of different OS extensions.
 
 ```yaml
 apiVersion: extensions.gardener.cloud/v1alpha1
@@ -290,13 +290,14 @@ spec:
   files:
     - ...
 status:
-  inPlaceUpdateConfig:
-    osUpdateCommand: /opt/gardener/bin/inplace-update.sh
-    osUpdateCommandArgs:
-      - --version
-      - 1631.0
-      - --repo
-      - <someOCIregistry>
+  inPlaceUpdates:
+    osUpdate:
+      - command: /opt/gardener/bin/inplace-update.sh
+      - args:
+        - --version
+        - 1631.0
+        - --repo
+        - <someOCIregistry>
 ```
 
 #### Gardener Node Agent
@@ -305,7 +306,7 @@ The `gardener-node-agent` will function as the component responsible for carryin
 
 Currently, when a dependency in the Operating System Configuration (OSC) changes, `gardener-node-agent` detects the differences between the current OSC and the last applied OSC and updates any modified units on the node. When the in-place update strategy is configured, if changes are detected that cannot be applied immediately (ie; if the change contains any of the update triggers listed in the [Goals](#goals)), `gardener-node-agent` will pause the update and wait for the `node.machine.sapcloud.io/ready-to-update` label to appear on the node before proceeding with the update.
 
-For machine image updates, `gardener-node-agent` executes the command present in the `inPlaceUpdateConfig.osUpdateCommand` field within the OperatingSystemConfig status.
+For machine image updates, `gardener-node-agent` executes the command present in the `inPlaceUpdates.osUpdate` field within the OperatingSystemConfig status.
 
 For Kubelet minor version or configuration updates, `gardener-node-agent` will apply the changed files and restart the `kubelet` unit and there are no additional steps involved.
 
@@ -369,7 +370,7 @@ Currently, the [`dependency-watchdog`](https://github.com/gardener/dependency-wa
 
 #### OS extensions
 
-The OS extensions are responsible for populating the `inPlaceUpdateConfig` field within the `OperatingSystemConfig` status. This configuration specifies the command to be executed by the `gardener-node-agent` to perform the update. The command could be invoking an inbuilt utility/tool or a custom script.
+The OS extensions are responsible for populating the `inPlaceUpdates` field within the `OperatingSystemConfig` status. This configuration specifies the command to be executed by the `gardener-node-agent` to perform the update. The command could be invoking an inbuilt utility/tool or a custom script.
 
 ### Worker pool hash calculations
 

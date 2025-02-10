@@ -253,3 +253,11 @@ func FindWorkerByName(workers []core.Worker, name string) *core.Worker {
 	}
 	return nil
 }
+
+// IsUpdateStrategyInPlace returns true if the given machine update strategy is either AutoInPlaceUpdate or ManualInPlaceUpdate.
+func IsUpdateStrategyInPlace(updateStrategy *core.MachineUpdateStrategy) bool {
+	if updateStrategy == nil {
+		return false
+	}
+	return *updateStrategy == core.AutoInPlaceUpdate || *updateStrategy == core.ManualInPlaceUpdate
+}

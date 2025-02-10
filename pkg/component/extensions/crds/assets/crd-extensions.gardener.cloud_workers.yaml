@@ -140,6 +140,343 @@ spec:
                         - size
                         type: object
                       type: array
+                    kubeletConfig:
+                      description: KubeletConfig contains the kubelet configuration
+                        for the worker pool.
+                      properties:
+                        containerLogMaxFiles:
+                          description: Maximum number of container log files that
+                            can be present for a container.
+                          format: int32
+                          type: integer
+                        containerLogMaxSize:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: |-
+                            A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
+                            Default: 100Mi
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        cpuCFSQuota:
+                          description: CPUCFSQuota allows you to disable/enable CPU
+                            throttling for Pods.
+                          type: boolean
+                        cpuManagerPolicy:
+                          description: 'CPUManagerPolicy allows to set alternative
+                            CPU management policies (default: none).'
+                          type: string
+                        evictionHard:
+                          description: |-
+                            EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction.
+                            Default:
+                              memory.available:   "100Mi/1Gi/5%"
+                              nodefs.available:   "5%"
+                              nodefs.inodesFree:  "5%"
+                              imagefs.available:  "5%"
+                              imagefs.inodesFree: "5%"
+                          properties:
+                            imageFSAvailable:
+                              description: ImageFSAvailable is the threshold for the
+                                free disk space in the imagefs filesystem (docker
+                                images and container writable layers).
+                              type: string
+                            imageFSInodesFree:
+                              description: ImageFSInodesFree is the threshold for
+                                the available inodes in the imagefs filesystem.
+                              type: string
+                            memoryAvailable:
+                              description: MemoryAvailable is the threshold for the
+                                free memory on the host server.
+                              type: string
+                            nodeFSAvailable:
+                              description: NodeFSAvailable is the threshold for the
+                                free disk space in the nodefs filesystem (docker volumes,
+                                logs, etc).
+                              type: string
+                            nodeFSInodesFree:
+                              description: NodeFSInodesFree is the threshold for the
+                                available inodes in the nodefs filesystem.
+                              type: string
+                          type: object
+                        evictionMaxPodGracePeriod:
+                          description: |-
+                            EvictionMaxPodGracePeriod describes the maximum allowed grace period (in seconds) to use when terminating pods in response to a soft eviction threshold being met.
+                            Default: 90
+                          format: int32
+                          type: integer
+                        evictionMinimumReclaim:
+                          description: |-
+                            EvictionMinimumReclaim configures the amount of resources below the configured eviction threshold that the kubelet attempts to reclaim whenever the kubelet observes resource pressure.
+                            Default: 0 for each resource
+                          properties:
+                            imageFSAvailable:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: ImageFSAvailable is the threshold for the
+                                disk space reclaim in the imagefs filesystem (docker
+                                images and container writable layers).
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            imageFSInodesFree:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: ImageFSInodesFree is the threshold for
+                                the inodes reclaim in the imagefs filesystem.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            memoryAvailable:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: MemoryAvailable is the threshold for the
+                                memory reclaim on the host server.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            nodeFSAvailable:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: NodeFSAvailable is the threshold for the
+                                disk space reclaim in the nodefs filesystem (docker
+                                volumes, logs, etc).
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            nodeFSInodesFree:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: NodeFSInodesFree is the threshold for the
+                                inodes reclaim in the nodefs filesystem.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                          type: object
+                        evictionPressureTransitionPeriod:
+                          description: |-
+                            EvictionPressureTransitionPeriod is the duration for which the kubelet has to wait before transitioning out of an eviction pressure condition.
+                            Default: 4m0s
+                          type: string
+                        evictionSoft:
+                          description: |-
+                            EvictionSoft describes a set of eviction thresholds (e.g. memory.available<1.5Gi) that if met over a corresponding grace period would trigger a Pod eviction.
+                            Default:
+                              memory.available:   "200Mi/1.5Gi/10%"
+                              nodefs.available:   "10%"
+                              nodefs.inodesFree:  "10%"
+                              imagefs.available:  "10%"
+                              imagefs.inodesFree: "10%"
+                          properties:
+                            imageFSAvailable:
+                              description: ImageFSAvailable is the threshold for the
+                                free disk space in the imagefs filesystem (docker
+                                images and container writable layers).
+                              type: string
+                            imageFSInodesFree:
+                              description: ImageFSInodesFree is the threshold for
+                                the available inodes in the imagefs filesystem.
+                              type: string
+                            memoryAvailable:
+                              description: MemoryAvailable is the threshold for the
+                                free memory on the host server.
+                              type: string
+                            nodeFSAvailable:
+                              description: NodeFSAvailable is the threshold for the
+                                free disk space in the nodefs filesystem (docker volumes,
+                                logs, etc).
+                              type: string
+                            nodeFSInodesFree:
+                              description: NodeFSInodesFree is the threshold for the
+                                available inodes in the nodefs filesystem.
+                              type: string
+                          type: object
+                        evictionSoftGracePeriod:
+                          description: |-
+                            EvictionSoftGracePeriod describes a set of eviction grace periods (e.g. memory.available=1m30s) that correspond to how long a soft eviction threshold must hold before triggering a Pod eviction.
+                            Default:
+                              memory.available:   1m30s
+                              nodefs.available:   1m30s
+                              nodefs.inodesFree:  1m30s
+                              imagefs.available:  1m30s
+                              imagefs.inodesFree: 1m30s
+                          properties:
+                            imageFSAvailable:
+                              description: ImageFSAvailable is the grace period for
+                                the ImageFSAvailable eviction threshold.
+                              type: string
+                            imageFSInodesFree:
+                              description: ImageFSInodesFree is the grace period for
+                                the ImageFSInodesFree eviction threshold.
+                              type: string
+                            memoryAvailable:
+                              description: MemoryAvailable is the grace period for
+                                the MemoryAvailable eviction threshold.
+                              type: string
+                            nodeFSAvailable:
+                              description: NodeFSAvailable is the grace period for
+                                the NodeFSAvailable eviction threshold.
+                              type: string
+                            nodeFSInodesFree:
+                              description: NodeFSInodesFree is the grace period for
+                                the NodeFSInodesFree eviction threshold.
+                              type: string
+                          type: object
+                        failSwapOn:
+                          description: FailSwapOn makes the Kubelet fail to start
+                            if swap is enabled on the node. (default true).
+                          type: boolean
+                        featureGates:
+                          additionalProperties:
+                            type: boolean
+                          description: FeatureGates contains information about enabled
+                            feature gates.
+                          type: object
+                        imageGCHighThresholdPercent:
+                          description: |-
+                            ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
+                            Default: 50
+                          format: int32
+                          type: integer
+                        imageGCLowThresholdPercent:
+                          description: |-
+                            ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.
+                            Default: 40
+                          format: int32
+                          type: integer
+                        kubeReserved:
+                          description: |-
+                            KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
+                            When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+                            Default: cpu=80m,memory=1Gi,pid=20k
+                          properties:
+                            cpu:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: CPU is the reserved cpu.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            ephemeralStorage:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: EphemeralStorage is the reserved ephemeral-storage.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            memory:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: Memory is the reserved memory.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            pid:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: PID is the reserved process-ids.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                          type: object
+                        maxPods:
+                          description: |-
+                            MaxPods is the maximum number of Pods that are allowed by the Kubelet.
+                            Default: 110
+                          format: int32
+                          type: integer
+                        memorySwap:
+                          description: MemorySwap configures swap memory available
+                            to container workloads.
+                          properties:
+                            swapBehavior:
+                              description: |-
+                                SwapBehavior configures swap memory available to container workloads. May be one of {"LimitedSwap", "UnlimitedSwap"}
+                                defaults to: LimitedSwap
+                              type: string
+                          type: object
+                        podPidsLimit:
+                          description: PodPIDsLimit is the maximum number of process
+                            IDs per pod allowed by the kubelet.
+                          format: int64
+                          type: integer
+                        protectKernelDefaults:
+                          description: |-
+                            ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
+                            Defaults to true for Kubernetes v1.26 or later.
+                          type: boolean
+                        registryBurst:
+                          description: |-
+                            RegistryBurst is the maximum size of bursty pulls, temporarily allows pulls to burst to this number,
+                            while still not exceeding registryPullQPS. The value must not be a negative number.
+                            Only used if registryPullQPS is greater than 0.
+                            Default: 10
+                          format: int32
+                          type: integer
+                        registryPullQPS:
+                          description: |-
+                            RegistryPullQPS is the limit of registry pulls per second. The value must not be a negative number.
+                            Setting it to 0 means no limit.
+                            Default: 5
+                          format: int32
+                          type: integer
+                        seccompDefault:
+                          description: |-
+                            SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
+                            This requires the corresponding SeccompDefault feature gate to be enabled as well.
+                            This field is only available for Kubernetes v1.25 or later.
+                          type: boolean
+                        serializeImagePulls:
+                          description: |-
+                            SerializeImagePulls describes whether the images are pulled one at a time.
+                            Default: true
+                          type: boolean
+                        streamingConnectionIdleTimeout:
+                          description: |-
+                            StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
+                            This field cannot be set lower than "30s" or greater than "4h".
+                            Default:
+                             "4h" for Kubernetes < v1.26.
+                             "5m" for Kubernetes >= v1.26.
+                          type: string
+                        systemReserved:
+                          description: |-
+                            SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
+                            When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+
+                            Deprecated: Separately configuring resource reservations for system processes is deprecated in Gardener and will be forbidden starting from Kubernetes 1.31.
+                            Please merge existing resource reservations into the kubeReserved field.
+                          properties:
+                            cpu:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: CPU is the reserved cpu.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            ephemeralStorage:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: EphemeralStorage is the reserved ephemeral-storage.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            memory:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: Memory is the reserved memory.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            pid:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: PID is the reserved process-ids.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                          type: object
+                      type: object
                     kubeletDataVolumeName:
                       description: KubeletDataVolumeName contains the name of a dataVolume
                         that should be used for storing kubelet state.
@@ -294,6 +631,10 @@ spec:
                         - key
                         type: object
                       type: array
+                    updateStrategy:
+                      description: UpdateStrategy specifies the machine update strategy
+                        for the worker pool.
+                      type: string
                     userDataSecretRef:
                       description: |-
                         UserDataSecretRef references a Secret and a data key containing the data that is sent to the provider's APIs when

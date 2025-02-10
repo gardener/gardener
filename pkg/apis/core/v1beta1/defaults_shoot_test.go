@@ -776,6 +776,7 @@ var _ = Describe("Shoot defaulting", func() {
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
 				Expect(worker.SystemComponents.Allow).To(BeTrue())
+				Expect(worker.UpdateStrategy).To(PointTo(Equal(AutoRollingUpdate)))
 			}
 		})
 
@@ -785,6 +786,7 @@ var _ = Describe("Shoot defaulting", func() {
 					MaxSurge:         &maxSurge,
 					MaxUnavailable:   &maxUnavailable,
 					SystemComponents: &WorkerSystemComponents{Allow: false},
+					UpdateStrategy:   ptr.To(ManualInPlaceUpdate),
 				},
 			}
 
@@ -795,6 +797,7 @@ var _ = Describe("Shoot defaulting", func() {
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(2))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.SystemComponents.Allow).To(BeFalse())
+				Expect(worker.UpdateStrategy).To(PointTo(Equal(ManualInPlaceUpdate)))
 			}
 		})
 	})
