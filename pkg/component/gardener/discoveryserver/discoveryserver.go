@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -46,8 +45,6 @@ const (
 type Values struct {
 	// Image defines the container image of gardener-discovery-server.
 	Image string
-	// RuntimeVersion is the Kubernetes version of the runtime cluster.
-	RuntimeVersion *semver.Version
 	// Domain will be used by the discovery server to serve metadata on.
 	Domain string
 	// TLSSecretName is the name of the secret that will be used by the discovery server to handle TLS.

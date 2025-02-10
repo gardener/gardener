@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -80,8 +79,6 @@ type Values struct {
 	ClusterType component.ClusterType
 	// TargetNamespace is the namespace in which the resources should be deployed
 	TargetNamespace string
-	// KubernetesVersion is the Kubernetes version of the cluster.
-	KubernetesVersion *semver.Version
 	// ImageController is the container image used for nginx-ingress controller.
 	ImageController string
 	// ImageDefaultBackend is the container image used for default ingress backend.
@@ -638,10 +635,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Selector: &metav1.LabelSelector{
 					MatchLabels: n.getLabels(LabelValueController, false),
 				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
-
-		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, n.values.KubernetesVersion)
 
 		destinationHost := kubernetesutils.FQDNForService(serviceController.Name, serviceController.Namespace)
 		destinationRule = &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: controllerName, Namespace: n.values.TargetNamespace}}

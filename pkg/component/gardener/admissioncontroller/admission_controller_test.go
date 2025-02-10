@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -96,7 +95,6 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			// These are typical configuration values set for the admission controller and serves as the base for the following tests.
 			testValues = Values{
-				RuntimeVersion: semver.MustParse("v1.27.0"),
 				ResourceAdmissionConfiguration: &admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration{
 					Limits: []admissioncontrollerconfigv1alpha1.ResourceLimit{
 						{
@@ -130,7 +128,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 		Context("with common values", func() {
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
 			})
 		})
 
@@ -141,30 +139,18 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
 			})
 		})
 
-		Context("when Kubernetes version is < 1.26", func() {
-			BeforeEach(func() {
-				testValues.RuntimeVersion = semver.MustParse("1.25.0")
-			})
-
-			It("should successfully deploy", func() {
-				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, false)
-			})
-		})
-
-		Context("when TopologyAwareRouting is enabled for Kubernetes versions <= 1.26", func() {
+		Context("when TopologyAwareRouting is enabled", func() {
 			BeforeEach(func() {
 				testValues.TopologyAwareRoutingEnabled = true
-				testValues.RuntimeVersion = semver.MustParse("v1.26.5")
 			})
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
 			})
 		})
 
@@ -175,7 +161,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "6d282905", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "6d282905", testValues)
 			})
 		})
 
@@ -186,7 +172,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 
 			It("should successfully deploy", func() {
 				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues, true)
+				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
 			})
 		})
 	})
@@ -416,7 +402,7 @@ func verifyResourcesGone(ctx context.Context, fakeClient client.Client, namespac
 	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-access-gardener-admission-controller"}, &corev1.Secret{})).To(BeNotFoundError())
 }
 
-func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf func(...client.Object) types.GomegaMatcher, fakeSecretManager secretsmanager.Interface, namespace, configMapChecksum string, testValues Values, k8sGreaterEqual126 bool) {
+func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf func(...client.Object) types.GomegaMatcher, fakeSecretManager secretsmanager.Interface, namespace, configMapChecksum string, testValues Values) {
 	By("Check Gardener Access Secret")
 	accessSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -457,7 +443,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf
 		deployment(namespace, "gardener-admission-controller-"+configMapChecksum, serverCert.Name, testValues),
 		service(namespace, testValues),
 		vpa(namespace),
-		podDisruptionBudget(namespace, k8sGreaterEqual126),
+		podDisruptionBudget(namespace),
 		serviceMonitor(namespace),
 	))
 
@@ -741,37 +727,25 @@ func service(namespace string, testValues Values) *corev1.Service {
 
 	if testValues.TopologyAwareRoutingEnabled {
 		metav1.SetMetaDataLabel(&svc.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
-		if testValues.RuntimeVersion.LessThan(semver.MustParse("v1.27")) {
-			metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "service.kubernetes.io/topology-aware-hints", "auto")
-		} else {
-			metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
-		}
+		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
 	}
 
 	return svc
 }
 
-func podDisruptionBudget(namespace string, k8sGreaterEqual126 bool) *policyv1.PodDisruptionBudget {
-	var (
-		unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-		pdb                                    = &policyv1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      DeploymentName,
-				Namespace: namespace,
-				Labels:    GetLabels(),
-			},
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-				Selector:       &metav1.LabelSelector{MatchLabels: GetLabels()},
-			},
-		}
-	)
-
-	if k8sGreaterEqual126 {
-		pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+func podDisruptionBudget(namespace string) *policyv1.PodDisruptionBudget {
+	return &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      DeploymentName,
+			Namespace: namespace,
+			Labels:    GetLabels(),
+		},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   &metav1.LabelSelector{MatchLabels: GetLabels()},
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+		},
 	}
-
-	return pdb
 }
 
 func serviceMonitor(namespace string) *monitoringv1.ServiceMonitor {

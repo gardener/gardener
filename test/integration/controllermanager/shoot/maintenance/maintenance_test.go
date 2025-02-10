@@ -27,7 +27,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	var (
 		cloudProfile *gardencorev1beta1.CloudProfile
 		shoot        *gardencorev1beta1.Shoot
-		shoot126     *gardencorev1beta1.Shoot
 		shoot127     *gardencorev1beta1.Shoot
 		shoot129     *gardencorev1beta1.Shoot
 		shoot130     *gardencorev1beta1.Shoot
@@ -84,13 +83,13 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				Kubernetes: gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{
 						{
-							Version: "1.25.1",
-						},
-						{
-							Version: "1.26.0",
-						},
-						{
 							Version: "1.27.0",
+						},
+						{
+							Version: "1.28.0",
+						},
+						{
+							Version: "1.29.0",
 						},
 						{
 							Version: "1.30.0",
@@ -349,7 +348,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.25.1",
+					Version: "1.31.1",
 				},
 				Networking: &gardencorev1beta1.Networking{
 					Type: ptr.To("foo-networking"),
@@ -367,7 +366,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			},
 		}
 
-		shoot126 = shoot.DeepCopy()
 		shoot127 = shoot.DeepCopy()
 		shoot129 = shoot.DeepCopy()
 		shoot130 = shoot.DeepCopy()
@@ -470,7 +468,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			It("should set the maintenance operation annotation if it's valid", func() {
 				By("Prepare shoot")
 				patch := client.MergeFrom(shoot.DeepCopy())
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-kubeconfig-credentials")
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-ssh-keypair")
 				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
 				By("Trigger maintenance")
@@ -481,7 +479,7 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				By("Ensure proper operation annotation handling")
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				Expect(shoot.Generation).To(Equal(oldGeneration + 1))
-				Expect(shoot.Annotations["gardener.cloud/operation"]).To(Equal("rotate-kubeconfig-credentials"))
+				Expect(shoot.Annotations["gardener.cloud/operation"]).To(Equal("rotate-ssh-keypair"))
 				Expect(shoot.Annotations["maintenance.gardener.cloud/operation"]).To(BeEmpty())
 			})
 
@@ -1006,38 +1004,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 					g.Expect(shoot.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
 					return shoot.Spec.Kubernetes.Version
 				}).Should(Equal(testKubernetesVersionHighestPatchLowMinor.Version))
-			})
-
-			It("Kubernetes version should be updated: force update minor version(>= v1.27) and set spec.kubernetes.enableStaticTokenKubeconfig to false", func() {
-				shoot126.Spec.Kubernetes.Version = "1.26.0"
-				shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
-
-				By("Create k8s v1.26 Shoot")
-				Expect(testClient.Create(ctx, shoot126)).To(Succeed())
-				log.Info("Created shoot with k8s v1.26 for test", "shoot", client.ObjectKeyFromObject(shoot))
-
-				DeferCleanup(func() {
-					By("Delete Shoot with k8s v1.26")
-					Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot126))).To(Succeed())
-				})
-
-				By("Expire Shoot's kubernetes version in the CloudProfile")
-				Expect(patchCloudProfileForKubernetesVersionMaintenance(ctx, testClient, *shoot126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast, &deprecatedClassification)).To(Succeed())
-
-				By("Wait until manager has observed the CloudProfile update")
-				waitKubernetesVersionToBeExpiredInCloudProfile(*shoot126.Spec.CloudProfileName, "1.26.0", &expirationDateInThePast)
-
-				Expect(kubernetesutils.SetAnnotationAndUpdate(ctx, testClient, shoot126, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
-
-				Eventually(func(g Gomega) string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot126), shoot126)).To(Succeed())
-					g.Expect(shoot126.Status.LastMaintenance).NotTo(BeNil())
-					g.Expect(shoot126.Status.LastMaintenance.Description).To(ContainSubstring("Control Plane: Updated Kubernetes version from \"1.26.0\" to \"1.27.0\". Reason: Kubernetes version expired - force update required, .spec.kubernetes.enableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27+"))
-					g.Expect(shoot126.Status.LastMaintenance.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-					g.Expect(shoot126.Status.LastMaintenance.TriggeredTime).To(Equal(metav1.Time{Time: fakeClock.Now()}))
-					g.Expect(shoot126.Spec.Kubernetes.EnableStaticTokenKubeconfig).To(Equal(ptr.To(false)))
-					return shoot126.Spec.Kubernetes.Version
-				}).Should(Equal("1.27.0"))
 			})
 
 			It("Kubernetes version should be updated: force update minor version(>= v1.31) and set spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication to nil", func() {

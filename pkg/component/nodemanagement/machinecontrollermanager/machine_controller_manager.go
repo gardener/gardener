@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -89,8 +88,6 @@ type Values struct {
 	Image string
 	// Replicas is the number of replicas for the deployment.
 	Replicas int32
-	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
-	RuntimeKubernetesVersion *semver.Version
 
 	namespaceUID types.UID
 }
@@ -265,11 +262,10 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = utils.MergeStringMaps(podDisruptionBudget.Labels, getLabels())
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-			Selector:       deployment.Spec.Selector,
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   deployment.Spec.Selector,
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}
-
-		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, m.values.RuntimeKubernetesVersion)
 
 		return nil
 	}); err != nil {

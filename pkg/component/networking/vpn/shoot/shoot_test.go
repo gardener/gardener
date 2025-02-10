@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -77,8 +76,7 @@ var _ = Describe("VPNShoot", func() {
 				Header:      reversedVPNHeader,
 				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
-			KubernetesVersion: semver.MustParse("1.25.0"),
-			SeedPodNetwork:    "10.1.0.0/16",
+			SeedPodNetwork: "10.1.0.0/16",
 		}
 
 		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
@@ -381,30 +379,23 @@ var _ = Describe("VPNShoot", func() {
 				},
 			}
 
-			pdbFor = func(k8sGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
-				pdb := &policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "vpn-shoot",
-						Namespace: "kube-system",
-						Labels: map[string]string{
+			pdb = &policyv1.PodDisruptionBudget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpn-shoot",
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"app": "vpn-shoot",
+					},
+				},
+				Spec: policyv1.PodDisruptionBudgetSpec{
+					MaxUnavailable: &intstr.IntOrString{IntVal: 1},
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
 							"app": "vpn-shoot",
 						},
 					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						MaxUnavailable: &intstr.IntOrString{IntVal: 1},
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"app": "vpn-shoot",
-							},
-						},
-					},
-				}
-
-				if k8sGreaterEquals126 {
-					pdb.Spec.UnhealthyPodEvictionPolicy = ptr.To(policyv1.AlwaysAllow)
-				}
-
-				return pdb
+					UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				},
 			}
 
 			containerFor = func(clients int, index *int, vpaEnabled, disableNewVPN, highAvailable bool) *corev1.Container {
@@ -1012,20 +1003,8 @@ var _ = Describe("VPNShoot", func() {
 					))
 				})
 
-				Context("kubernetes versions < 1.26", func() {
-					It("should successfully deploy all resources", func() {
-						Expect(managedResource).To(contain(pdbFor(false)))
-					})
-				})
-
-				Context("kubernetes versions >= 1.26", func() {
-					BeforeEach(func() {
-						values.KubernetesVersion = semver.MustParse("1.26.0")
-					})
-
-					It("should successfully deploy all resources", func() {
-						Expect(managedResource).To(contain(pdbFor(true)))
-					})
+				It("should successfully deploy all resources", func() {
+					Expect(managedResource).To(contain(pdb))
 				})
 
 				Context("w/ VPA update mode set to off", func() {

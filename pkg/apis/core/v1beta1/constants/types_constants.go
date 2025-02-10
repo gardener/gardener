@@ -370,9 +370,6 @@ const (
 	// OperationRotateCredentialsComplete is a constant for an annotation indicating that the rotation of the
 	// credentials shall be completed.
 	OperationRotateCredentialsComplete = "rotate-credentials-complete" // #nosec G101 -- No credential.
-	// ShootOperationRotateKubeconfigCredentials is a constant for an annotation on a Shoot indicating that the
-	// credentialscontained in the kubeconfig that is handed out to the user shall be rotated.
-	ShootOperationRotateKubeconfigCredentials = "rotate-kubeconfig-credentials" // #nosec G101 -- No credential.
 	// ShootOperationRotateSSHKeypair is a constant for an annotation on a Shoot indicating that the SSH keypair for the
 	// shoot nodes shall be rotated.
 	ShootOperationRotateSSHKeypair = "rotate-ssh-keypair"

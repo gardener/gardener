@@ -58,7 +58,6 @@ type serviceValues struct {
 	annotationsFunc             func() map[string]string
 	namePrefix                  string
 	topologyAwareRoutingEnabled bool
-	runtimeKubernetesVersion    *semver.Version
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -98,7 +97,6 @@ func NewService(
 		internalValues.annotationsFunc = values.AnnotationsFunc
 		internalValues.namePrefix = values.NamePrefix
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
-		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
 	}
 
 	return &service{
@@ -153,7 +151,7 @@ func (s *service) Deploy(ctx context.Context) error {
 		}
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, namespaceSelectors...))
-		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
+		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled)
 
 		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
 		obj.Spec.Type = corev1.ServiceTypeClusterIP

@@ -7,7 +7,6 @@ package blackboxexporter_test
 import (
 	"context"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	blackboxexporterconfig "github.com/prometheus/blackbox_exporter/config"
@@ -57,8 +56,8 @@ var _ = Describe("BlackboxExporter", func() {
 		configMapName      = "blackbox-exporter-config-eb6ac772"
 		serviceAccountYAML string
 		configMapYAML      string
+		pdbYAML            string
 		deploymentYAMLFor  func(clusterType component.ClusterType, isGardenCluster bool) string
-		pdbYAMLFor         func(k8sGreaterEquals126 bool) string
 		serviceYAMLFor     func(clusterType component.ClusterType, isGardenCluster bool) string
 		vpaYAML            string
 	)
@@ -73,7 +72,6 @@ var _ = Describe("BlackboxExporter", func() {
 		values.ClusterType = component.ClusterTypeShoot
 		values.Image = image
 		values.VPAEnabled = false
-		values.KubernetesVersion = semver.MustParse("1.25.5")
 		values.Config = config
 		values.PodLabels = podLabels
 		values.PriorityClassName = priorityClassName
@@ -127,8 +125,7 @@ metadata:
   namespace: ` + resourcesNamespace + `
 `
 
-		pdbYAMLFor = func(k8sGreaterEquals126 bool) string {
-			out := `apiVersion: policy/v1
+		pdbYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -142,19 +139,13 @@ spec:
   selector:
     matchLabels:
       app: blackbox-exporter
-`
-			if k8sGreaterEquals126 {
-				out += `  unhealthyPodEvictionPolicy: AlwaysAllow
-`
-			}
-			out += `status:
+  unhealthyPodEvictionPolicy: AlwaysAllow
+status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
-			return out
-		}
 
 		deploymentYAMLFor = func(clusterType component.ClusterType, isGardenCluster bool) string {
 			out := `apiVersion: apps/v1
@@ -382,28 +373,15 @@ status: {}
 				expectedManifests = []string{
 					serviceAccountYAML,
 					configMapYAML,
+					pdbYAML,
 					deploymentYAMLFor(values.ClusterType, values.IsGardenCluster),
 					serviceYAMLFor(values.ClusterType, values.IsGardenCluster),
 				}
 			})
 
 			Context("w/o vpa enabled", func() {
-				Context("kubernetes versions < 1.26", func() {
-					It("should successfully deploy the resources", func() {
-						expectedManifests = append(expectedManifests, pdbYAMLFor(false))
-						Expect(manifests).To(ContainElements(expectedManifests))
-					})
-				})
-
-				Context("kubernetes versions >= 1.26", func() {
-					BeforeEach(func() {
-						values.KubernetesVersion = semver.MustParse("1.26")
-					})
-
-					It("should successfully deploy the resources", func() {
-						expectedManifests = append(expectedManifests, pdbYAMLFor(true))
-						Expect(manifests).To(ContainElements(expectedManifests))
-					})
+				It("should successfully deploy the resources", func() {
+					Expect(manifests).To(ContainElements(expectedManifests))
 				})
 			})
 
@@ -413,7 +391,7 @@ status: {}
 				})
 
 				It("should successfully deploy the resources", func() {
-					expectedManifests = append(expectedManifests, pdbYAMLFor(false), vpaYAML)
+					expectedManifests = append(expectedManifests, vpaYAML)
 					Expect(manifests).To(ContainElements(expectedManifests))
 				})
 			})
@@ -486,6 +464,7 @@ status: {}
 				expectedManifests = []string{
 					serviceAccountYAML,
 					configMapYAML,
+					pdbYAML,
 					deploymentYAMLFor(values.ClusterType, values.IsGardenCluster),
 					serviceYAMLFor(values.ClusterType, values.IsGardenCluster),
 				}
@@ -497,22 +476,8 @@ status: {}
 				})
 
 				Context("w/o vpa enabled", func() {
-					Context("kubernetes versions < 1.26", func() {
-						It("should successfully deploy the resources", func() {
-							expectedManifests = append(expectedManifests, pdbYAMLFor(false))
-							Expect(manifests).To(ContainElements(expectedManifests))
-						})
-					})
-
-					Context("kubernetes versions >= 1.26", func() {
-						BeforeEach(func() {
-							values.KubernetesVersion = semver.MustParse("1.26")
-						})
-
-						It("should successfully deploy the resources", func() {
-							expectedManifests = append(expectedManifests, pdbYAMLFor(true))
-							Expect(manifests).To(ContainElements(expectedManifests))
-						})
+					It("should successfully deploy the resources", func() {
+						Expect(manifests).To(ContainElements(expectedManifests))
 					})
 				})
 
@@ -522,7 +487,7 @@ status: {}
 					})
 
 					It("should successfully deploy the resources", func() {
-						expectedManifests = append(expectedManifests, pdbYAMLFor(false), vpaYAML)
+						expectedManifests = append(expectedManifests, vpaYAML)
 						Expect(manifests).To(ContainElements(expectedManifests))
 					})
 				})
@@ -537,7 +502,6 @@ status: {}
 				})
 
 				It("should successfully deploy all resources", func() {
-					expectedManifests = append(expectedManifests, pdbYAMLFor(false))
 					Expect(manifests).To(ContainElements(expectedManifests))
 				})
 			})

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -52,12 +51,11 @@ var _ = Describe("VpnSeedServer", func() {
 		sm            secretsmanager.Interface
 		vpnSeedServer Interface
 
-		ctx                      = context.TODO()
-		namespace                = "shoot--foo--bar"
-		vpnSeedServerImage       = "some-image:some-tag"
-		apiServerProxyImage      = "some-image2:some-tag2"
-		values                   = Values{}
-		runtimeKubernetesVersion *semver.Version
+		ctx                 = context.TODO()
+		namespace           = "shoot--foo--bar"
+		vpnSeedServerImage  = "some-image:some-tag"
+		apiServerProxyImage = "some-image2:some-tag2"
+		values              = Values{}
 
 		istioNamespace     = "istio-foo"
 		istioNamespaceFunc = func() string { return istioNamespace }
@@ -548,33 +546,25 @@ var _ = Describe("VpnSeedServer", func() {
 			return destRule
 		}
 
-		maxUnavailable                 = intstr.FromInt32(1)
-		expectedPodDisruptionBudgetFor = func(k8sGreaterEqual126 bool) *policyv1.PodDisruptionBudget {
-			pdb := &policyv1.PodDisruptionBudget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "vpn-seed-server",
-					Namespace: namespace,
-					Labels: map[string]string{
+		maxUnavailable              = intstr.FromInt32(1)
+		expectedPodDisruptionBudget = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpn-seed-server",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app": "vpn-seed-server",
+				},
+				ResourceVersion: "1",
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &maxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
 						"app": "vpn-seed-server",
 					},
-					ResourceVersion: "1",
 				},
-				Spec: policyv1.PodDisruptionBudgetSpec{
-					MaxUnavailable: &maxUnavailable,
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app": "vpn-seed-server",
-						},
-					},
-				},
-			}
-
-			if k8sGreaterEqual126 {
-				unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
-				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-			}
-
-			return pdb
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
 		}
 
 		expectedService = &corev1.Service{
@@ -787,8 +777,6 @@ var _ = Describe("VpnSeedServer", func() {
 	)
 
 	BeforeEach(func() {
-		runtimeKubernetesVersion = semver.MustParse("1.25.0")
-
 		values = Values{
 			ImageAPIServerProxy: apiServerProxyImage,
 			ImageVPNSeedServer:  vpnSeedServerImage,
@@ -815,7 +803,6 @@ var _ = Describe("VpnSeedServer", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-vpn", Namespace: namespace}})).To(Succeed())
 
-		values.RuntimeKubernetesVersion = runtimeKubernetesVersion
 		vpnSeedServer = New(c, namespace, sm, istioNamespaceFunc, values)
 		vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 	})
@@ -877,8 +864,7 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(actualDestinationRule).To(BeComparableTo(expectedDestinationRule, comptest.CmpOptsForDestinationRule()))
 
 				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-				expectedPDB := expectedPodDisruptionBudgetFor(false)
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPodDisruptionBudget.Namespace, Name: expectedPodDisruptionBudget.Name}, actualPodDisruptionBudget)).To(BeNotFoundError())
 
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.StatefulSet{})).To(BeNotFoundError())
 				for i := 0; i < 2; i++ {
@@ -953,7 +939,7 @@ var _ = Describe("VpnSeedServer", func() {
 				values.HighAvailabilityNumberOfShootClients = 2
 			})
 
-			JustBeforeEach(func() {
+			It("should successfully deploy all resources", func() {
 				deployment := deployment(values.Network.NodeCIDRs)
 				deployment.ResourceVersion = ""
 				Expect(c.Create(ctx, deployment)).To(Succeed())
@@ -994,6 +980,10 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
 				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
 
+				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPodDisruptionBudget.Namespace, Name: expectedPodDisruptionBudget.Name}, actualPodDisruptionBudget)).To(Succeed())
+				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
+
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				updateMode := vpaUpdateMode
 				if values.VPAUpdateDisabled {
@@ -1016,28 +1006,6 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule()), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
-			})
-
-			Context("Kubernetes versions < 1.26", func() {
-				It("should successfully deploy all resources", func() {
-					actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-					expectedPDB := expectedPodDisruptionBudgetFor(false)
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(Succeed())
-					Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPDB))
-				})
-			})
-
-			Context("Kubernetes versions >= 1.26", func() {
-				BeforeEach(func() {
-					runtimeKubernetesVersion = semver.MustParse("1.26.0")
-				})
-
-				It("should successfully deploy all resources", func() {
-					actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-					expectedPDB := expectedPodDisruptionBudgetFor(true)
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(Succeed())
-					Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPDB))
-				})
 			})
 		})
 
@@ -1092,6 +1060,10 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
 				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
 
+				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPodDisruptionBudget.Namespace, Name: expectedPodDisruptionBudget.Name}, actualPodDisruptionBudget)).To(Succeed())
+				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
+
 				actualStatefulSet := &appsv1.StatefulSet{}
 				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs, true)
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
@@ -1102,30 +1074,12 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
 			})
 
-			Context("Kubernetes versions < 1.26", func() {
-				It("should successfully deploy all resources", func() {
-					actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-					expectedPDB := expectedPodDisruptionBudgetFor(false)
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(Succeed())
-					Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPDB))
-				})
-			})
-
-			Context("Kubernetes versions >= 1.26", func() {
-				BeforeEach(func() {
-					runtimeKubernetesVersion = semver.MustParse("1.26.0")
-				})
-
+			Context("With VPA update mode set to on", func() {
 				It("should successfully deploy all resources", func() {
 					actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 					expectedVpa := expectedVPAFor(values.HighAvailabilityEnabled, &vpaUpdateMode)
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
 					Expect(actualVpa).To(DeepEqual(expectedVpa))
-
-					actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-					expectedPDB := expectedPodDisruptionBudgetFor(true)
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPDB.Namespace, Name: expectedPDB.Name}, actualPodDisruptionBudget)).To(Succeed())
-					Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPDB))
 				})
 			})
 
@@ -1201,7 +1155,7 @@ var _ = Describe("VpnSeedServer", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(scrapeConfig(values.HighAvailabilityEnabled)), &monitoringv1alpha1.ScrapeConfig{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedVPAFor(values.HighAvailabilityEnabled, &vpaUpdateMode)), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: istioNamespace, Name: namespace + "-vpn"}, &networkingv1alpha3.EnvoyFilter{})).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedPodDisruptionBudgetFor(false)), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedPodDisruptionBudget), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 		})
 
 		It("should successfully destroy all resources", func() {

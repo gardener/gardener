@@ -9,8 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (t *terminal) podDisruptionBudget() *policyv1.PodDisruptionBudget {
@@ -21,12 +19,11 @@ func (t *terminal) podDisruptionBudget() *policyv1.PodDisruptionBudget {
 			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},
 	}
-
-	kubernetesutils.SetAlwaysAllowEviction(pdb, t.values.RuntimeVersion)
 
 	return pdb
 }
