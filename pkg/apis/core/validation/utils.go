@@ -521,29 +521,29 @@ func validateCapabilitiesDefinition(definition ParsedCapabilities, path *field.P
 // Generic Capabilities Functions:: Begin
 
 // ParseCapabilitiesSet parses the value string of each capability in the capabilities set
-func ParseCapabilitiesSet(capabilitySets []core.Capabilities) []ParsedCapabilities {
-	parsedImageCapabilitySets := make([]ParsedCapabilities, len(capabilitySets))
-	for j, capabilitySet := range capabilitySets {
-		parsedImageCapabilitySets[j] = ParseCapabilityValues(capabilitySet)
+func ParseCapabilitiesSet(capabilitiesSet []core.Capabilities) []ParsedCapabilities {
+	parsedImageCapabilitiesSet := make([]ParsedCapabilities, len(capabilitiesSet))
+	for j, capabilitySet := range capabilitiesSet {
+		parsedImageCapabilitiesSet[j] = ParseCapabilityValues(capabilitySet)
 	}
-	return parsedImageCapabilitySets
+	return parsedImageCapabilitiesSet
 }
 
 // UnmarshalCapabilitiesSet unmarshal the raw JSON capabilities set into a list of capabilities
-func UnmarshalCapabilitiesSet(rawCapabilitySets []apiextensionsv1.JSON, path *field.Path) ([]core.Capabilities, field.ErrorList) {
+func UnmarshalCapabilitiesSet(rawCapabilitiesSet []apiextensionsv1.JSON, path *field.Path) ([]core.Capabilities, field.ErrorList) {
 	var allErrs field.ErrorList
-	capabilitySets := make([]core.Capabilities, len(rawCapabilitySets))
-	for i, rawCapabilitySet := range rawCapabilitySets {
+	capabilitiesSet := make([]core.Capabilities, len(rawCapabilitiesSet))
+	for i, rawCapabilitySet := range rawCapabilitiesSet {
 		capabilities := core.Capabilities{}
 		err := json.Unmarshal(rawCapabilitySet.Raw, &capabilities)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(path.Index(i), rawCapabilitySet, "must be a valid capabilities definition: "+err.Error()))
 		}
-		capabilitySets[i] = capabilities
+		capabilitiesSet[i] = capabilities
 	}
 
 	// TODO (Roncossek): Validate that the capabilities are not empty and correctly unmarshalled
-	return capabilitySets, allErrs
+	return capabilitiesSet, allErrs
 }
 
 // MarshalCapabilitiesSets marshals the capabilities sets into a list of raw JSON capabilities
