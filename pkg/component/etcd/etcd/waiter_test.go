@@ -83,7 +83,8 @@ var _ = Describe("#Wait", func() {
 			&retry.UntilTimeout, waiter.UntilTimeout,
 		)
 
-		etcd = New(log, c, c, testNamespace, sm, Values{
+		etcd = New(log, c, testNamespace, sm, Values{
+			Replicas:        ptr.To[int32](3),
 			Role:            testRole,
 			Class:           ClassNormal,
 			StorageCapacity: "20Gi",
@@ -107,7 +108,9 @@ var _ = Describe("#Wait", func() {
 					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				},
 			},
-			Spec: druidv1alpha1.EtcdSpec{},
+			Spec: druidv1alpha1.EtcdSpec{
+				Replicas: 3,
+			},
 		}
 	})
 
@@ -128,6 +131,12 @@ var _ = Describe("#Wait", func() {
 		delete(expected.Annotations, v1beta1constants.GardenerOperation)
 		expected.Status.LastErrors = []druidv1alpha1.LastError{}
 		expected.Status.ObservedGeneration = ptr.To[int64](expected.Generation)
+		expected.Status.Conditions = []druidv1alpha1.Condition{
+			{
+				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidv1alpha1.ConditionTrue,
+			},
+		}
 		expected.Status.Ready = ptr.To(false)
 
 		Expect(c.Create(ctx, expected)).To(Succeed(), "creating etcd succeeds")
@@ -151,6 +160,12 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 		}
+		expected.Status.Conditions = []druidv1alpha1.Condition{
+			{
+				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidv1alpha1.ConditionTrue,
+			},
+		}
 		expected.Status.Ready = ptr.To(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
@@ -158,7 +173,39 @@ var _ = Describe("#Wait", func() {
 		Expect(etcd.Wait(ctx)).NotTo(Succeed(), "etcd indicates error")
 	})
 
-	It("should return error if statefulset is progressing", func() {
+	It("should return no error if etcd replicas set to 0", func() {
+		defer test.WithVars(
+			&TimeNow, mockNow.Do,
+		)()
+		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+		By("Deploy")
+		etcd.SetReplicas(ptr.To[int32](0))
+		Expect(etcd.Deploy(ctx)).To(Succeed())
+
+		By("Patch object")
+		patch := client.MergeFrom(expected.DeepCopy())
+		expected.Status.ObservedGeneration = ptr.To[int64](0)
+		expected.Status.LastErrors = nil
+		// remove operation annotation, add up-to-date timestamp annotation
+		expected.ObjectMeta.Annotations = map[string]string{
+			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+		}
+		// assume that condition checks and readiness are false, to show that these don't matter when replicas is 0
+		expected.Status.Conditions = []druidv1alpha1.Condition{
+			{
+				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidv1alpha1.ConditionUnknown,
+			},
+		}
+		expected.Status.Ready = ptr.To(false)
+		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
+
+		By("Wait")
+		Expect(etcd.Wait(ctx)).To(Succeed(), "etcd is ready")
+	})
+
+	It("should return error if AllMembersUpdated condition is not set", func() {
 		defer test.WithVars(
 			&TimeNow, mockNow.Do,
 		)()
@@ -168,16 +215,7 @@ var _ = Describe("#Wait", func() {
 		// Deploy should fill internal state with the added timestamp annotation
 		Expect(etcd.Deploy(ctx)).To(Succeed())
 
-		sts := &appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: testNamespace,
-			},
-		}
-		Expect(c.Create(ctx, sts)).To(Succeed())
-
 		By("Patch object")
-		delete(expected.Annotations, v1beta1constants.GardenerTimestamp)
 		patch := client.MergeFrom(expected.DeepCopy())
 		expected.Status.ObservedGeneration = ptr.To[int64](0)
 		expected.Status.LastErrors = nil
@@ -185,12 +223,73 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Etcd = &druidv1alpha1.CrossVersionObjectReference{Name: name}
 		expected.Status.Ready = ptr.To(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("Wait")
-		Expect(etcd.Wait(ctx)).NotTo(Succeed(), "etcd indicates error")
+		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("condition AllMembersUpdated is not present")))
+	})
+
+	It("should return error if AllMembersUpdated condition is set but not true", func() {
+		defer test.WithVars(
+			&TimeNow, mockNow.Do,
+		)()
+		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+		By("Deploy")
+		// Deploy should fill internal state with the added timestamp annotation
+		Expect(etcd.Deploy(ctx)).To(Succeed())
+
+		By("Patch object")
+		patch := client.MergeFrom(expected.DeepCopy())
+		expected.Status.ObservedGeneration = ptr.To[int64](0)
+		expected.Status.LastErrors = nil
+		// remove operation annotation, add up-to-date timestamp annotation
+		expected.ObjectMeta.Annotations = map[string]string{
+			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+		}
+		expected.Status.Conditions = []druidv1alpha1.Condition{
+			{
+				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidv1alpha1.ConditionFalse,
+			},
+		}
+		expected.Status.Ready = ptr.To(true)
+		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
+
+		By("Wait")
+		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("condition AllMembersUpdated is False")))
+	})
+
+	It("should return error if it's not ready", func() {
+		defer test.WithVars(
+			&TimeNow, mockNow.Do,
+		)()
+		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+		By("Deploy")
+		// Deploy should fill internal state with the added timestamp annotation
+		Expect(etcd.Deploy(ctx)).To(Succeed())
+
+		By("Patch object")
+		patch := client.MergeFrom(expected.DeepCopy())
+		expected.Status.ObservedGeneration = ptr.To[int64](0)
+		expected.Status.LastErrors = nil
+		// remove operation annotation, add up-to-date timestamp annotation
+		expected.ObjectMeta.Annotations = map[string]string{
+			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
+		}
+		expected.Status.Conditions = []druidv1alpha1.Condition{
+			{
+				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidv1alpha1.ConditionTrue,
+			},
+		}
+		expected.Status.Ready = ptr.To(false)
+		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
+
+		By("Wait")
+		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("is not ready yet")))
 	})
 
 	It("should return no error when is ready", func() {
@@ -203,20 +302,6 @@ var _ = Describe("#Wait", func() {
 		// Deploy should fill internal state with the added timestamp annotation
 		Expect(etcd.Deploy(ctx)).To(Succeed())
 
-		sts := &appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: testNamespace,
-			},
-			Spec: appsv1.StatefulSetSpec{
-				Replicas: ptr.To[int32](3),
-			},
-			Status: appsv1.StatefulSetStatus{
-				UpdatedReplicas: 3,
-			},
-		}
-		Expect(c.Create(ctx, sts)).To(Succeed())
-
 		By("Patch object")
 		delete(expected.Annotations, v1beta1constants.GardenerTimestamp)
 		patch := client.MergeFrom(expected.DeepCopy())
@@ -226,7 +311,12 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Etcd = &druidv1alpha1.CrossVersionObjectReference{Name: name}
+		expected.Status.Conditions = []druidv1alpha1.Condition{
+			{
+				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidv1alpha1.ConditionTrue,
+			},
+		}
 		expected.Status.Ready = ptr.To(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
@@ -241,7 +331,9 @@ var _ = Describe("#CheckEtcdObject", func() {
 	)
 
 	BeforeEach(func() {
-		obj = &druidv1alpha1.Etcd{}
+		obj = &druidv1alpha1.Etcd{
+			Spec: druidv1alpha1.EtcdSpec{Replicas: 3},
+		}
 	})
 
 	It("should return error for non-etcd object", func() {
@@ -278,15 +370,39 @@ var _ = Describe("#CheckEtcdObject", func() {
 		Expect(CheckEtcdObject(obj)).To(MatchError("gardener operation \"reconcile\" is not yet picked up by etcd-druid"))
 	})
 
+	It("should not return error if replicas is set to 0, even if AllMembersUpdated condition and readiness are not true ", func() {
+		obj.SetGeneration(1)
+		obj.Spec.Replicas = 0
+		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionFalse}}
+		obj.Status.Ready = ptr.To(false)
+		Expect(CheckEtcdObject(obj)).To(Succeed())
+	})
+
+	It("should return error if condition AllMembersUpdated is not present", func() {
+		obj.SetGeneration(1)
+		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		Expect(CheckEtcdObject(obj)).To(MatchError("condition AllMembersUpdated is not present"))
+	})
+
+	It("should return error if condition AllMembersUpdated is not true", func() {
+		obj.SetGeneration(1)
+		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionFalse}}
+		Expect(CheckEtcdObject(obj)).To(MatchError(ContainSubstring("condition AllMembersUpdated is False")))
+	})
+
 	It("should return error if status.ready==nil", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue}}
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
 	It("should return error if status.ready==false", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue}}
 		obj.Status.Ready = ptr.To(false)
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
@@ -294,6 +410,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 	It("should not return error if object is ready", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
+		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue}}
 		obj.Status.Ready = ptr.To(true)
 		obj.Status.Replicas = 3
 		Expect(CheckEtcdObject(obj)).To(Succeed())

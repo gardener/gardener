@@ -406,6 +406,13 @@ spec:
                         description: Labels specify the labels that should be added
                           to the client service
                         type: object
+                      trafficDistribution:
+                        description: |-
+                          TrafficDistribution defines the traffic distribution preference that should be added to the client service.
+                          More info: https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution
+                        enum:
+                        - PreferClose
+                        type: string
                     type: object
                   clientUrlTls:
                     description: ClientUrlTLS contains the ca, server TLS and client
@@ -1836,12 +1843,6 @@ spec:
           status:
             description: EtcdStatus defines the observed state of Etcd.
             properties:
-              clusterSize:
-                description: |-
-                  Cluster size is the current size of the etcd cluster.
-                  Deprecated: this field will not be populated with any value and will be removed in the future.
-                format: int32
-                type: integer
               conditions:
                 description: Conditions represents the latest available observations
                   of an etcd's current state.
@@ -1951,11 +1952,6 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
-              lastError:
-                description: |-
-                  LastError represents the last occurred error.
-                  Deprecated: Use LastErrors instead.
-                type: string
               lastErrors:
                 description: LastErrors captures errors that occurred during the last
                   operation.
@@ -2068,17 +2064,6 @@ spec:
                 type: integer
               replicas:
                 description: Replicas is the replica count of the etcd cluster.
-                format: int32
-                type: integer
-              serviceName:
-                description: |-
-                  ServiceName is the name of the etcd service.
-                  Deprecated: this field will be removed in the future.
-                type: string
-              updatedReplicas:
-                description: |-
-                  UpdatedReplicas is the count of updated replicas in the etcd cluster.
-                  Deprecated: this field will be removed in the future.
                 format: int32
                 type: integer
             type: object

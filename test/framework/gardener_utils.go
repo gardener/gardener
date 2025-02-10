@@ -345,15 +345,14 @@ func (f *GardenerFramework) HibernateShoot(ctx context.Context, shoot *gardencor
 		return nil
 	}
 
-	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+	if err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		patch := client.MergeFrom(shoot.DeepCopy())
 		setHibernation(shoot, true)
 		if err := f.GardenClient.Client().Patch(ctx, shoot, patch); err != nil {
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
-	})
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 
@@ -361,9 +360,14 @@ func (f *GardenerFramework) HibernateShoot(ctx context.Context, shoot *gardencor
 		return err
 	}
 
-	// Verify no running pods after hibernation
-	if err := f.VerifyNoRunningPods(ctx, shoot); err != nil {
-		return fmt.Errorf("failed to verify no running pods after hibernation: %v", err)
+	if err := retry.UntilTimeout(ctx, 10*time.Second, 2*time.Minute, func(ctx context.Context) (done bool, err error) {
+		// Verify no running pods after hibernation
+		if err := f.VerifyNoRunningPods(ctx, shoot); err != nil {
+			return retry.MinorError(fmt.Errorf("failed to verify no running pods after hibernation: %v", err))
+		}
+		return retry.Ok()
+	}); err != nil {
+		return err
 	}
 
 	log.Info("Shoot was hibernated successfully")

@@ -44,7 +44,6 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 	e := NewEtcd(
 		b.Logger,
 		b.SeedClientSet.Client(),
-		b.SeedClientSet.APIReader(),
 		b.Shoot.SeedNamespace,
 		b.SecretsManager,
 		etcd.Values{
