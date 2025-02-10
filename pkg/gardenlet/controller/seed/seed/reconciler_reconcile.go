@@ -333,9 +333,10 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:           c.dwdProber.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
+		// TODO(Wieneo): Remove this after Gardener v1.117 was released
 		_ = g.Add(flow.Task{
-			Name:         "Deploying VPN authorization server",
-			Fn:           c.vpnAuthzServer.Deploy,
+			Name:         "Destroy VPN authorization server",
+			Fn:           component.OpDestroyAndWait(c.vpnAuthzServer).Destroy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		_ = g.Add(flow.Task{

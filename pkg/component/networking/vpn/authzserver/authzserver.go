@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// TODO(Wieneo): Remove component after Gardener v1.117 was released
+
 package authzserver
 
 import (
