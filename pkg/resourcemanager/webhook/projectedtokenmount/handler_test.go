@@ -144,7 +144,7 @@ var _ = Describe("Handler", func() {
 						Name: "kube-api-access-gardener",
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](420),
+								DefaultMode: ptr.To[int32](416),
 								Sources: []corev1.VolumeProjection{
 									{
 										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
@@ -192,6 +192,11 @@ var _ = Describe("Handler", func() {
 						Name:      "kube-api-access-gardener",
 						ReadOnly:  true,
 						MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+					}))
+					Expect(pod.Spec.SecurityContext).To(Equal(&corev1.PodSecurityContext{
+						RunAsUser:  ptr.To[int64](65532),
+						RunAsGroup: ptr.To[int64](65532),
+						FSGroup:    ptr.To[int64](65532),
 					}))
 				})
 
