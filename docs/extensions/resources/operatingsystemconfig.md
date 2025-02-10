@@ -250,6 +250,34 @@ After the machine has been bootstrapped, the token secret in the shoot cluster g
 
 The token is used to bootstrap [Gardener Node Agent](../../concepts/node-agent.md) and `kubelet`.
 
+### In-Place OS Updates
+
+Gardener enables in-place OS updates for worker nodes, allowing OS updates without replacing the node. This feature executes a predefined command on the node to perform the update.
+
+For an OS to support in-place updates, it must meet the following prerequisites:
+- The machine image or operating system must support in-place updates with a tool or utility to initiate the process.
+- The update mechanism should ensure reliability by:
+  - Booting into the updated version if successful.
+  - Reverting to the previous version in case of failure.
+- The update tool may also provide configuration options, including:
+  - Retry Configuration: The ability to define the number of retries for the update.
+  - Registry Configuration: The option to specify the registry from which the OS image is pulled.
+
+An OS supporting in-place updates must define the update configuration in `.status.inPlaceUpdates` as follows:
+
+```yaml
+status:
+  inPlaceUpdates:
+    osUpdate:
+      command: /update-me
+      args:
+        - foo
+        - bar
+```
+
+- `command`: Specifies the path to the OS update utility or script to be executed on the node.
+- `args`: Provides optional flags or arguments to customize the update behavior.
+
 ## CRI Support
 
 Gardener supports specifying a Container Runtime Interface (CRI) configuration in the `OperatingSystemConfig` resource. If the `.spec.cri` section exists, then the `name` property is mandatory. The only supported value for `cri.name` at the moment is: `containerd`.
