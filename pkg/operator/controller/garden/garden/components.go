@@ -352,47 +352,33 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
-	return sharedcomponent.NewRuntimeGardenerResourceManager(
-		r.RuntimeClientSet.Client(),
-		r.GardenNamespace,
-		r.RuntimeVersion,
-		secretsManager,
-		r.Config.LogLevel, r.Config.LogFormat,
-		operatorv1alpha1.SecretNameCARuntime,
-		v1beta1constants.PriorityClassNameGardenSystemCritical,
-		defaultNotReadyTolerationSeconds,
-		defaultUnreachableTolerationSeconds,
-		features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
-		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
-		r.Config.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
-		garden.Spec.RuntimeCluster.Provider.Zones,
-		map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
-	)
+	return sharedcomponent.NewRuntimeGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
+		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
+		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
+		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
+		EndpointSliceHintsEnabled:                 helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
+		LogLevel:                                  r.Config.LogLevel,
+		LogFormat:                                 r.Config.LogFormat,
+		ManagedResourceLabels:                     map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
+		NetworkPolicyAdditionalNamespaceSelectors: r.Config.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
+		PriorityClassName:                         v1beta1constants.PriorityClassNameGardenSystemCritical,
+		RuntimeKubernetesVersion:                  r.RuntimeVersion,
+		SecretNameServerCA:                        operatorv1alpha1.SecretNameCARuntime,
+		Zones:                                     garden.Spec.RuntimeCluster.Provider.Zones,
+	})
 }
 
 func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secretsmanager.Interface) (resourcemanager.Interface, error) {
-	return sharedcomponent.NewTargetGardenerResourceManager(
-		r.RuntimeClientSet.Client(),
-		r.GardenNamespace,
-		secretsManager,
-		nil,
-		nil,
-		nil,
-		r.RuntimeVersion,
-		r.Config.LogLevel, r.Config.LogFormat,
-		namePrefix,
-		false,
-		v1beta1constants.PriorityClassNameGardenSystem400,
-		nil,
-		operatorv1alpha1.SecretNameCARuntime,
-		nil,
-		false,
-		nil,
-		true,
-		[]string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemPublicNamespace},
-		nil,
-		false,
-	)
+	return sharedcomponent.NewTargetGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
+		IsWorkerless:             true,
+		LogLevel:                 r.Config.LogLevel,
+		LogFormat:                r.Config.LogFormat,
+		NamePrefix:               namePrefix,
+		PriorityClassName:        v1beta1constants.PriorityClassNameGardenSystem400,
+		RuntimeKubernetesVersion: r.RuntimeVersion,
+		SecretNameServerCA:       operatorv1alpha1.SecretNameCARuntime,
+		TargetNamespaces:         []string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemPublicNamespace},
+	})
 }
 
 func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {

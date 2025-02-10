@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -27,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/mock"
 	. "github.com/gardener/gardener/pkg/component/shared"
+	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -35,15 +37,69 @@ import (
 
 var _ = Describe("ResourceManager", func() {
 	var (
-		ctrl *gomock.Controller
+		ctx       = context.TODO()
+		namespace = "fake-ns"
+		sm        secretsmanager.Interface
+		ctrl      *gomock.Controller
 	)
 
-	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-	})
+	Describe("#New*GardenerResourceManager", func() {
+		var fakeClient client.Client
 
-	AfterEach(func() {
-		ctrl.Finish()
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().Build()
+			sm = fakesecretsmanager.New(fakeClient, namespace)
+		})
+
+		It("should apply the defaults for new runtime resource managers", func() {
+			resourceManager, err := NewRuntimeGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
+				ClusterIdentity: ptr.To("foo"),
+				ConcurrentSyncs: ptr.To(21),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
+				ClusterIdentity:                      ptr.To("foo"),
+				ConcurrentSyncs:                      ptr.To(21),
+				HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
+				Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
+				MaxConcurrentNetworkPolicyWorkers:    ptr.To(20),
+				MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
+				NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
+					Namespace: "garden",
+					PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
+						"app":       "nginx-ingress",
+						"component": "controller",
+					}},
+				},
+				PodTopologySpreadConstraintsEnabled: true,
+				Replicas:                            ptr.To[int32](2),
+				ResourceClass:                       ptr.To("seed"),
+				ResponsibilityMode:                  resourcemanager.ForSource,
+				SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
+			}))
+		})
+
+		It("should apply the defaults for new target resource managers", func() {
+			resourceManager, err := NewTargetGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
+				ClusterIdentity:                      ptr.To("foo"),
+				MaxConcurrentTokenInvalidatorWorkers: ptr.To(6),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
+				AlwaysUpdate:                         ptr.To(true),
+				ClusterIdentity:                      ptr.To("foo"),
+				ConcurrentSyncs:                      ptr.To(20),
+				HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
+				Image:                                "europe-docker.pkg.dev/gardener-project/releases/gardener/resource-manager:v0.0.0-master+$Format:%H$",
+				MaxConcurrentCSRApproverWorkers:      ptr.To(5),
+				MaxConcurrentHealthWorkers:           ptr.To(10),
+				MaxConcurrentTokenInvalidatorWorkers: ptr.To(6),
+				MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
+				ResponsibilityMode:                   resourcemanager.ForTarget,
+				SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
+				WatchedNamespace:                     &namespace,
+			}))
+		})
 	})
 
 	Describe("#DeployGardenerResourceManager", func() {
@@ -51,13 +107,10 @@ var _ = Describe("ResourceManager", func() {
 			resourceManager *mockresourcemanager.MockInterface
 			secrets         resourcemanager.Secrets
 
-			ctx       = context.TODO()
-			fakeErr   = errors.New("fake err")
-			namespace = "fake-ns"
+			fakeErr = errors.New("fake err")
 
 			c             *mockclient.MockClient
 			k8sSeedClient kubernetes.Interface
-			sm            secretsmanager.Interface
 
 			setReplicas         func(ctx context.Context) (int32, error)
 			getAPIServerAddress func() string
@@ -68,6 +121,7 @@ var _ = Describe("ResourceManager", func() {
 		)
 
 		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
 			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
 
 			c = mockclient.NewMockClient(ctrl)
@@ -105,6 +159,10 @@ var _ = Describe("ResourceManager", func() {
 					Namespace: namespace,
 				},
 			}
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
 		})
 
 		Context("w/o bootstrapping", func() {
