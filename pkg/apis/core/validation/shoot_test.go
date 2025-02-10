@@ -177,6 +177,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 						Domain: &domain,
 					},
+					ETCD: &core.ETCD{
+						Main: &core.ETCDConfig{
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"cpu": resource.MustParse("2"),
+								},
+							},
+						},
+						Events: &core.ETCDConfig{
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"cpu": resource.MustParse("1"),
+								},
+							},
+						},
+					},
 					Kubernetes: core.Kubernetes{
 						Version: "1.26.2",
 						KubeAPIServer: &core.KubeAPIServerConfig{
@@ -206,6 +222,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 									ConfigMapRef: &corev1.ObjectReference{
 										Name: "audit-policy-config",
 									},
+								},
+							},
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"cpu":    resource.MustParse("20m"),
+									"memory": resource.MustParse("200M"),
 								},
 							},
 						},
@@ -7151,6 +7173,72 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 	})
 
+	Describe("#ValidateControlPlaneAutoscaling", func() {
+		It("should succeed for valid resources", func() {
+			autoscaling := &core.ControlPlaneAutoscaling{
+				MinAllowed: map[corev1.ResourceName]resource.Quantity{
+					"cpu":    {},
+					"memory": {},
+				},
+			}
+
+			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, nil)).To(BeEmpty())
+		})
+
+		It("should fail for unsupported resources", func() {
+			autoscaling := &core.ControlPlaneAutoscaling{
+				MinAllowed: map[corev1.ResourceName]resource.Quantity{
+					"storage": {},
+				},
+			}
+
+			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, field.NewPath("autoscaling"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("autoscaling.storage"),
+				})),
+			))
+		})
+
+		When("minimum required values are configured", func() {
+			var minRequired corev1.ResourceList
+
+			BeforeEach(func() {
+				minRequired = corev1.ResourceList{
+					"cpu":    resource.MustParse("10m"),
+					"memory": resource.MustParse("50Mi"),
+				}
+			})
+
+			It("should succeed if value match", func() {
+				autoscaling := &core.ControlPlaneAutoscaling{
+					MinAllowed: map[corev1.ResourceName]resource.Quantity{
+						"cpu":    resource.MustParse("10m"),
+						"memory": resource.MustParse("50Mi"),
+					},
+				}
+
+				Expect(ValidateControlPlaneAutoscaling(autoscaling, minRequired, nil)).To(BeEmpty())
+			})
+
+			It("should fail for values falling below", func() {
+				autoscaling := &core.ControlPlaneAutoscaling{
+					MinAllowed: map[corev1.ResourceName]resource.Quantity{
+						"cpu":    resource.MustParse("9m"),
+						"memory": resource.MustParse("50Mi"),
+					},
+				}
+
+				Expect(ValidateControlPlaneAutoscaling(autoscaling, minRequired, field.NewPath("autoscaling"))).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("autoscaling.cpu"),
+						"BadValue": Equal(resource.MustParse("9m")),
+					})),
+				))
+			})
+		})
+	})
 })
 
 func prepareShootForUpdate(shoot *core.Shoot) *core.Shoot {

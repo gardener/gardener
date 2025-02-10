@@ -20,6 +20,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,7 +56,7 @@ var _ = Describe("Etcd", func() {
 		sm               secretsmanager.Interface
 		botanist         *Botanist
 
-		ctx                   = context.TODO()
+		ctx                   = context.Background()
 		fakeErr               = errors.New("fake err")
 		namespace             = "shoot--foo--bar"
 		role                  = "test"
@@ -64,6 +65,8 @@ var _ = Describe("Etcd", func() {
 			Begin: "123456+0000",
 			End:   "162543+0000",
 		}
+
+		validator *newEtcdValidator
 	)
 
 	BeforeEach(func() {
@@ -102,6 +105,21 @@ var _ = Describe("Etcd", func() {
 					},
 				},
 			})
+
+			validator = &newEtcdValidator{
+				expectedClient:                  Equal(c),
+				expectedReader:                  Equal(reader),
+				expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
+				expectedNamespace:               Equal(namespace),
+				expectedSecretsManager:          Equal(sm),
+				expectedRole:                    Equal(role),
+				expectedClass:                   Equal(class),
+				expectedReplicas:                PointTo(Equal(int32(1))),
+				expectedStorageCapacity:         Equal("10Gi"),
+				expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
+				expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
+				expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
+			}
 		})
 
 		Context("no ManagedSeed", func() {
@@ -118,20 +136,7 @@ var _ = Describe("Etcd", func() {
 					It(fmt.Sprintf("should successfully create an etcd interface: class = %q, purpose = %q", class, purpose), func() {
 						botanist.Shoot.Purpose = purpose
 
-						validator := &newEtcdValidator{
-							expectedClient:                  Equal(c),
-							expectedReader:                  Equal(reader),
-							expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
-							expectedNamespace:               Equal(namespace),
-							expectedSecretsManager:          Equal(sm),
-							expectedRole:                    Equal(role),
-							expectedClass:                   Equal(class),
-							expectedReplicas:                PointTo(Equal(int32(1))),
-							expectedStorageCapacity:         Equal("10Gi"),
-							expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
-							expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
-							expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
-						}
+						validator.expectedClass = Equal(class)
 
 						oldNewEtcd := NewEtcd
 						defer func() { NewEtcd = oldNewEtcd }()
@@ -148,23 +153,10 @@ var _ = Describe("Etcd", func() {
 		Context("with ManagedSeed", func() {
 			BeforeEach(func() {
 				botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
+				validator.expectedDefragmentationSchedule = Equal(ptr.To("34 12 * * *"))
 			})
 
 			It("should successfully create an etcd interface (normal class)", func() {
-				validator := &newEtcdValidator{
-					expectedClient:                  Equal(c),
-					expectedReader:                  Equal(reader),
-					expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
-					expectedNamespace:               Equal(namespace),
-					expectedSecretsManager:          Equal(sm),
-					expectedRole:                    Equal(role),
-					expectedClass:                   Equal(class),
-					expectedReplicas:                PointTo(Equal(int32(1))),
-					expectedStorageCapacity:         Equal("10Gi"),
-					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
-					expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
-					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
-				}
 
 				oldNewEtcd := NewEtcd
 				defer func() { NewEtcd = oldNewEtcd }()
@@ -178,26 +170,62 @@ var _ = Describe("Etcd", func() {
 			It("should successfully create an etcd interface (important class)", func() {
 				class := etcd.ClassImportant
 
-				validator := &newEtcdValidator{
-					expectedClient:                  Equal(c),
-					expectedReader:                  Equal(reader),
-					expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
-					expectedNamespace:               Equal(namespace),
-					expectedSecretsManager:          Equal(sm),
-					expectedRole:                    Equal(role),
-					expectedClass:                   Equal(class),
-					expectedReplicas:                PointTo(Equal(int32(1))),
-					expectedStorageCapacity:         Equal("10Gi"),
-					expectedDefragmentationSchedule: Equal(ptr.To("34 12 * * *")),
-					expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
-					expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
-				}
-
 				oldNewEtcd := NewEtcd
 				defer func() { NewEtcd = oldNewEtcd }()
 				NewEtcd = validator.NewEtcd
 
 				etcd, err := botanist.DefaultEtcd(role, class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("with minAllowed configuration", func() {
+			var (
+				minAllowedETCDMain   corev1.ResourceList
+				minAllowedETCDEvents corev1.ResourceList
+			)
+
+			BeforeEach(func() {
+				minAllowedETCDMain = corev1.ResourceList{"cpu": resource.MustParse("500m"), "memory": resource.MustParse("1Gi")}
+				minAllowedETCDEvents = corev1.ResourceList{"cpu": resource.MustParse("100m")}
+
+				botanist.Shoot.GetInfo().Spec.ETCD = &gardencorev1beta1.ETCD{
+					Main: &gardencorev1beta1.ETCDConfig{
+						Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+							MinAllowed: minAllowedETCDMain,
+						},
+					},
+					Events: &gardencorev1beta1.ETCDConfig{
+						Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+							MinAllowed: minAllowedETCDEvents,
+						},
+					},
+				}
+			})
+
+			It("should successfully create an etcd-main interface", func() {
+				validator.expectedRole = Equal("main")
+				validator.expectedAutoscalingConfiguration = Equal(etcd.AutoscalingConfig{MinAllowed: minAllowedETCDMain})
+
+				oldNewEtcd := NewEtcd
+				defer func() { NewEtcd = oldNewEtcd }()
+				NewEtcd = validator.NewEtcd
+
+				etcd, err := botanist.DefaultEtcd("main", class)
+				Expect(etcd).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should successfully create an etcd-events interface", func() {
+				validator.expectedRole = Equal("events")
+				validator.expectedAutoscalingConfiguration = Equal(etcd.AutoscalingConfig{MinAllowed: minAllowedETCDEvents})
+
+				oldNewEtcd := NewEtcd
+				defer func() { NewEtcd = oldNewEtcd }()
+				NewEtcd = validator.NewEtcd
+
+				etcd, err := botanist.DefaultEtcd("events", class)
 				Expect(etcd).NotTo(BeNil())
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -502,18 +530,19 @@ var _ = Describe("Etcd", func() {
 type newEtcdValidator struct {
 	etcd.Interface
 
-	expectedClient                  gomegatypes.GomegaMatcher
-	expectedReader                  gomegatypes.GomegaMatcher
-	expectedLogger                  gomegatypes.GomegaMatcher
-	expectedNamespace               gomegatypes.GomegaMatcher
-	expectedSecretsManager          gomegatypes.GomegaMatcher
-	expectedRole                    gomegatypes.GomegaMatcher
-	expectedClass                   gomegatypes.GomegaMatcher
-	expectedReplicas                gomegatypes.GomegaMatcher
-	expectedStorageCapacity         gomegatypes.GomegaMatcher
-	expectedDefragmentationSchedule gomegatypes.GomegaMatcher
-	expectedHighAvailabilityEnabled gomegatypes.GomegaMatcher
-	expectedMaintenanceTimeWindow   gomegatypes.GomegaMatcher
+	expectedClient                   gomegatypes.GomegaMatcher
+	expectedReader                   gomegatypes.GomegaMatcher
+	expectedLogger                   gomegatypes.GomegaMatcher
+	expectedNamespace                gomegatypes.GomegaMatcher
+	expectedSecretsManager           gomegatypes.GomegaMatcher
+	expectedRole                     gomegatypes.GomegaMatcher
+	expectedClass                    gomegatypes.GomegaMatcher
+	expectedReplicas                 gomegatypes.GomegaMatcher
+	expectedStorageCapacity          gomegatypes.GomegaMatcher
+	expectedDefragmentationSchedule  gomegatypes.GomegaMatcher
+	expectedHighAvailabilityEnabled  gomegatypes.GomegaMatcher
+	expectedMaintenanceTimeWindow    gomegatypes.GomegaMatcher
+	expectedAutoscalingConfiguration gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
@@ -535,6 +564,12 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(values.StorageCapacity).To(v.expectedStorageCapacity)
 	Expect(values.DefragmentationSchedule).To(v.expectedDefragmentationSchedule)
 	Expect(values.HighAvailabilityEnabled).To(v.expectedHighAvailabilityEnabled)
+
+	if v.expectedAutoscalingConfiguration != nil {
+		Expect(values.Autoscaling).To(v.expectedAutoscalingConfiguration)
+	} else {
+		Expect(values.Autoscaling).To(Equal(etcd.AutoscalingConfig{}))
+	}
 
 	return v
 }

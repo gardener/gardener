@@ -82,14 +82,9 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		// The HA webhook sets at least 2 replicas to components of type "server" (w/o HA or with w/ HA).
 		// Ref https://github.com/gardener/gardener/blob/master/docs/development/high-availability-of-components.md#control-plane-components.
 		// That's why minReplicas is set to 2.
-		minReplicas        int32 = 2
-		maxReplicas        int32 = 6
-		apiServerResources       = corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("250m"),
-				corev1.ResourceMemory: resource.MustParse("500Mi"),
-			},
-		}
+		minReplicas int32 = 2
+		maxReplicas int32 = 6
+		minAllowed        = v1beta1helper.GetMinAllowedForKubeAPIServer(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
 	)
 
 	if v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
@@ -108,10 +103,18 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 	}
 
 	return apiserver.AutoscalingConfig{
-		APIServerResources: apiServerResources,
-		MinReplicas:        minReplicas,
-		MaxReplicas:        maxReplicas,
-		ScaleDownDisabled:  scaleDownDisabled,
+		APIServerResources: corev1.ResourceRequirements{
+			Requests: kubernetesutils.MaximumResourcesFromResourceList(
+				corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("250m"),
+					corev1.ResourceMemory: resource.MustParse("500Mi"),
+				},
+				minAllowed,
+			)},
+		MinReplicas:       minReplicas,
+		MaxReplicas:       maxReplicas,
+		ScaleDownDisabled: scaleDownDisabled,
+		MinAllowed:        minAllowed,
 	}
 }
 
