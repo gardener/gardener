@@ -173,7 +173,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy kube-apiserver service",
 			Fn:   component.OpDestroyAndWait(c.kubeAPIServerService).Destroy,
 		})
-		// TODO(Wieneo): Remove this after Gardener version without deployed authzserver was released
+		// TODO(Wieneo): Remove this after Gardener v1.117 was released
 		destroyVPNAuthzServer = g.Add(flow.Task{
 			Name: "Destroy VPN authorization server",
 			Fn:   component.OpDestroyAndWait(c.vpnAuthzServer).Destroy,
