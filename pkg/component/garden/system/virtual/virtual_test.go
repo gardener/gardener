@@ -46,6 +46,7 @@ var _ = Describe("Virtual", func() {
 		managedResourceSecret *corev1.Secret
 
 		namespaceGarden                                   *corev1.Namespace
+		namespaceGardenerPublic                           *corev1.Namespace
 		clusterRoleSeedBootstrapper                       *rbacv1.ClusterRole
 		clusterRoleBindingSeedBootstrapper                *rbacv1.ClusterRoleBinding
 		clusterRoleSeeds                                  *rbacv1.ClusterRole
@@ -96,6 +97,11 @@ var _ = Describe("Virtual", func() {
 				Name:        "garden",
 				Labels:      map[string]string{"app": "gardener"},
 				Annotations: map[string]string{"resources.gardener.cloud/keep-object": "true"},
+			},
+		}
+		namespaceGardenerPublic = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener-system-public"
 			},
 		}
 		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{
@@ -694,6 +700,7 @@ var _ = Describe("Virtual", func() {
 		It("should successfully deploy the resources when seed authorizer is disabled", func() {
 			Expect(managedResource).To(consistOf(
 				namespaceGarden,
+				namespaceGardenerPublic,
 				clusterRoleSeedBootstrapper,
 				clusterRoleBindingSeedBootstrapper,
 				clusterRoleSeeds,

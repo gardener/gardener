@@ -102,6 +102,11 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
 			},
 		}
+		namespaceGardenerSystemPublic = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: gardencorev1beta1.GardenerSystemPublicNamespace,
+			},
+		}
 		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:system:seed-bootstrapper",
@@ -643,6 +648,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 
 	if err := registry.Add(
 		namespaceGarden,
+		namespaceGardenerSystemPublic,
 		clusterRoleSeedBootstrapper,
 		clusterRoleBindingSeedBootstrapper,
 		clusterRoleGardenerAdmin,

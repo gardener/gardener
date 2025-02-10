@@ -1142,12 +1142,6 @@ func reconcileGardenerInfoConfigMap(ctx context.Context, log logr.Logger, virtua
 		gardenerAPIServerDataKey = "gardenerAPIServer"
 	)
 
-	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: gardencorev1beta1.GardenerSystemPublicNamespace}}
-	log.Info("Creating or updating namespace", "namespace", namespace)
-	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, virtualGardenClient, namespace, func() error { return nil }); err != nil {
-		return err
-	}
-
 	var gardenerAPIServerVersion string
 	if ver := getGardenerAPIServerVersion(log, secretsManager); ver != nil {
 		gardenerAPIServerVersion = *ver
