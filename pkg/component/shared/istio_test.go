@@ -96,7 +96,6 @@ func checkIstio(istioDeploy istio.Interface, testValues istioTestValues) {
 	}
 
 	if testValues.vpnEnabled {
-		networkPolicyLabels["networking.resources.gardener.cloud/to-garden-reversed-vpn-auth-server-tcp-9001"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-tcp-1194"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-0-tcp-1194"] = "allowed"
 		networkPolicyLabels["networking.resources.gardener.cloud/to-all-shoots-vpn-seed-server-1-tcp-1194"] = "allowed"
