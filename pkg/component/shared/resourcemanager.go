@@ -152,7 +152,7 @@ func NewTargetGardenerResourceManager(
 		SecretNameServerCA:                   secretNameServerCA,
 		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
 		SystemComponentTolerations:           systemComponentsToleration,
-		TargetDiffersFromSourceCluster:       true,
+		ResponsibilityMode:                   resourcemanager.ForTarget,
 		TargetNamespaces:                     targetNamespaces,
 		RuntimeKubernetesVersion:             kubernetesVersion,
 		WatchedNamespace:                     &namespaceName,

@@ -328,7 +328,7 @@ var _ = Describe("ResourceManager", func() {
 				{Key: "b"},
 				{Key: "c"},
 			},
-			TargetDiffersFromSourceCluster:      true,
+			ResponsibilityMode:                  ForTarget,
 			TargetDisableCache:                  &targetDisableCache,
 			WatchedNamespace:                    &watchedNamespace,
 			SchedulingProfile:                   &binPackingSchedulingProfile,
@@ -2047,7 +2047,7 @@ subjects:
 		Context("target cluster != source cluster, watched namespace is nil", func() {
 			BeforeEach(func() {
 				clusterRole.Rules = allowManagedResources
-				cfg.TargetDiffersFromSourceCluster = true
+				cfg.ResponsibilityMode = ForTarget
 				cfg.TargetNamespaces = targetNamespaces
 				cfg.WatchedNamespace = nil
 				configMap = configMapFor(nil, ptr.To(gardenerutils.PathGenericKubeconfig), false)
@@ -2163,7 +2163,7 @@ subjects:
 		Context("target cluster != source cluster, workerless shoot", func() {
 			JustBeforeEach(func() {
 				clusterRole.Rules = allowManagedResources
-				cfg.TargetDiffersFromSourceCluster = true
+				cfg.ResponsibilityMode = ForTarget
 				cfg.TargetNamespaces = targetNamespaces
 				cfg.WatchedNamespace = nil
 				cfg.IsWorkerless = true
@@ -2276,7 +2276,7 @@ subjects:
 				cfg.DefaultSeccompProfileEnabled = true
 				cfg.EndpointSliceHintsEnabled = true
 				cfg.SchedulingProfile = nil
-				cfg.TargetDiffersFromSourceCluster = false
+				cfg.ResponsibilityMode = ForSource
 				resourceManager = New(c, deployNamespace, sm, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -2540,7 +2540,7 @@ subjects:
 
 		Context("target equals source cluster", func() {
 			BeforeEach(func() {
-				cfg.TargetDiffersFromSourceCluster = false
+				cfg.ResponsibilityMode = ForSource
 				cfg.WatchedNamespace = nil
 				resourceManager = New(c, deployNamespace, sm, cfg)
 			})
