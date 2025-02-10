@@ -47,27 +47,20 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 			Name:      extensions.HeartBeatResourceName,
 			Namespace: r.namespace,
 		},
+		Spec: coordinationv1.LeaseSpec{
+			HolderIdentity:       &r.extensionName,
+			LeaseDurationSeconds: &r.renewIntervalSeconds,
+			RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
+		},
 	}
 
 	if err := r.client.Get(ctx, client.ObjectKeyFromObject(lease), lease); err != nil {
 		if apierrors.IsNotFound(err) {
-			lease.Spec = coordinationv1.LeaseSpec{
-				HolderIdentity:       &r.extensionName,
-				LeaseDurationSeconds: &r.renewIntervalSeconds,
-				RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
-			}
 			log.V(1).Info("Creating heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
 			return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Create(ctx, lease)
 		}
 		return reconcile.Result{}, err
 	}
-
-	lease.Spec = coordinationv1.LeaseSpec{
-		HolderIdentity:       &r.extensionName,
-		LeaseDurationSeconds: &r.renewIntervalSeconds,
-		RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
-	}
-
 	log.V(1).Info("Renewing heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
 	return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Update(ctx, lease)
 }
