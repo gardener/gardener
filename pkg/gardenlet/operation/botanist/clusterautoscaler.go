@@ -63,11 +63,11 @@ func (b *Botanist) ScaleClusterAutoscalerToZero(ctx context.Context) error {
 }
 
 // CalculateMaxNodesTotal returns the maximum number of nodes the shoot can have based on the shoot networks and
-// operator-configured limits in the CloudProfile. It returns 0 if there is no limitation.
+// the limit configured in the CloudProfile. It returns 0 if there is no limitation.
 func (b *Botanist) CalculateMaxNodesTotal(shoot *gardencorev1beta1.Shoot) (int64, error) {
 	maxNetworks, err := b.CalculateMaxNodesForShootNetworks(shoot)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to calculate max nodes for shoot networks: %w", err)
 	}
 
 	var maxLimit int64

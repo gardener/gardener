@@ -5921,9 +5921,9 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 					Expect(err).To(MatchError(And(
 						ContainSubstring("spec.provider.workers[0].maximum"),
-						ContainSubstring("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", limit),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
 						ContainSubstring("spec.provider.workers[1].maximum"),
-						ContainSubstring("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", limit),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
 						Not(ContainSubstring("total minimum node count")),
 					)))
 				})
@@ -5956,9 +5956,9 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 					Expect(err).To(MatchError(And(
 						ContainSubstring("spec.provider.workers[0].maximum"),
-						ContainSubstring("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", limit),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
 						ContainSubstring("spec.provider.workers[1].maximum"),
-						ContainSubstring("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", limit),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
 						ContainSubstring("spec.provider.workers"),
 						ContainSubstring("total minimum node count"),
 					)))
