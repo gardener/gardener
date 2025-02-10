@@ -231,8 +231,8 @@ func (r *Reconciler) instantiateComponents(
 	c.virtualGardenGardenerAccess = r.newGardenerAccess(garden, secretsManager)
 
 	// gardener control plane components
-	discoveryServerDomain := "discovery." + primaryIngressDomain.Name
-	workloadIdentityTokenIssuer := "https://" + discoveryServerDomain + "/garden/workload-identity/issuer"
+	discoveryServerDomain := discoveryServerDomain(garden)
+	workloadIdentityTokenIssuer := workloadIdentityTokenIssuerURL(garden)
 	c.gardenerAPIServer, err = r.newGardenerAPIServer(ctx, garden, secretsManager, workloadIdentityTokenIssuer)
 	if err != nil {
 		return
@@ -1426,4 +1426,12 @@ func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden 
 	}
 
 	return extension.New(log, r.RuntimeClientSet.Client(), values, extension.DefaultInterval, extension.DefaultSevereThreshold, extension.DefaultTimeout), nil
+}
+
+func discoveryServerDomain(garden *operatorv1alpha1.Garden) string {
+	return "discovery." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
+}
+
+func workloadIdentityTokenIssuerURL(garden *operatorv1alpha1.Garden) string {
+	return "https://" + discoveryServerDomain(garden) + "/garden/workload-identity/issuer"
 }
