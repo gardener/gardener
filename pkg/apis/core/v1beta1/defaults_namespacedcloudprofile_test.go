@@ -8,14 +8,20 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 var _ = Describe("NamespacedCloudProfile defaulting", func() {
 	var obj *NamespacedCloudProfile
 
 	BeforeEach(func() {
+		// TODO (Roncossek): Where does this feature gate has to be registered for the plugin?
+		utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
+			features.CloudProfileCapabilities,
+		)))
 		obj = &NamespacedCloudProfile{
 			Spec: NamespacedCloudProfileSpec{
 				MachineImages: []MachineImage{{
