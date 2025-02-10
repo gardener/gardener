@@ -1,0 +1,23 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: example-extension
+spec:
+  deployment:
+    extension:
+      runtimeClusterValues: {}
+  resources:
+  - kind: BackupBucket
+    type: example
+  - kind: BackupEntry
+    type: example
+  - kind: Bastion
+    type: example
+  - kind: ControlPlane
+    type: example
+  - kind: DNSRecord
+    type: example
+  - kind: Infrastructure
+    type: example
+  - kind: Worker
+    type: example
