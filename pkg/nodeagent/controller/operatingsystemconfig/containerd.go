@@ -58,7 +58,7 @@ func (r *Reconciler) ReconcileContainerdConfig(ctx context.Context, log logr.Log
 	return nil
 }
 
-// ReconcileContainerdRegistries configures desired registries for containerd and cleans up abandoned ones.
+// ReconcileContainerdRegistries configures changed registries for containerd and cleans up abandoned ones.
 // Registries without readiness probes are added synchronously and related errors are returned immediately.
 // Registries with configured readiness probes are added asynchronously and must be waited for by invoking the returned function.
 func (r *Reconciler) ReconcileContainerdRegistries(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges) (func() error, error) {
@@ -295,7 +295,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 		registriesWithReadiness    []extensionsv1alpha1.RegistryConfig
 	)
 
-	for _, registryConfig := range changes.Containerd.Registries.Desired {
+	for _, registryConfig := range changes.Containerd.Registries.Changed {
 		if ptr.Deref(registryConfig.ReadinessProbe, false) {
 			registriesWithReadiness = append(registriesWithReadiness, registryConfig)
 		} else {
@@ -310,7 +310,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 			errChan <- err
 			return errChan
 		}
-		if err := changes.completedContainerdRegistriesDesired(registryConfig.Upstream); err != nil {
+		if err := changes.completedContainerdRegistriesChanged(registryConfig.Upstream); err != nil {
 			errChan <- err
 			return errChan
 		}
@@ -322,7 +322,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 			if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS); err != nil {
 				return err
 			}
-			return changes.completedContainerdRegistriesDesired(registryConfig.Upstream)
+			return changes.completedContainerdRegistriesChanged(registryConfig.Upstream)
 		})
 	}
 
@@ -354,16 +354,10 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		return fmt.Errorf("unable to ensure registry config base directory: %w", err)
 	}
 
-	hostsTomlFilePath := path.Join(baseDir, "hosts.toml")
-	exists, err := fs.Exists(hostsTomlFilePath)
-	if err != nil {
-		return fmt.Errorf("unable to check if registry config file exists: %w", err)
-	}
-
-	// Check if registry endpoints are reachable if the config is new.
+	// Check if registry endpoints are reachable if the config is new or changed.
 	// This is especially required when registries run within the cluster and during bootstrap,
 	// the Kubernetes deployments are not ready yet.
-	if !exists && ptr.Deref(registryConfig.ReadinessProbe, false) {
+	if ptr.Deref(registryConfig.ReadinessProbe, false) {
 		log.Info("Probing endpoints for image registry", "upstream", registryConfig.Upstream)
 		if err := retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 			for _, registryHost := range registryConfig.Hosts {
@@ -405,6 +399,7 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		log.Info("Probing endpoints for image registry succeeded", "upstream", registryConfig.Upstream)
 	}
 
+	hostsTomlFilePath := path.Join(baseDir, "hosts.toml")
 	f, err := fs.OpenFile(hostsTomlFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("unable to open hosts.toml: %w", err)
