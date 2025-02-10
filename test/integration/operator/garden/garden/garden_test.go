@@ -180,8 +180,8 @@ var _ = Describe("Garden controller tests", func() {
 				},
 				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 					Networking: operatorv1alpha1.RuntimeNetworking{
-						Pods:     "10.1.0.0/16",
-						Services: "10.2.0.0/16",
+						Pods:     []string{"10.1.0.0/16"},
+						Services: []string{"10.2.0.0/16"},
 					},
 					Ingress: operatorv1alpha1.Ingress{
 						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.runtime-garden.local.gardener.cloud"}},
@@ -223,7 +223,7 @@ var _ = Describe("Garden controller tests", func() {
 						},
 					},
 					Networking: operatorv1alpha1.Networking{
-						Services: "100.64.0.0/13",
+						Services: []string{"100.64.0.0/13"},
 					},
 				},
 			},
