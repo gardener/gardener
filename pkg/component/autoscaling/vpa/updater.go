@@ -211,6 +211,9 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 							corev1.ResourceMemory: resource.MustParse("15Mi"),
 						},
 					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+					},
 				}},
 			},
 		},

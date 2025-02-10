@@ -340,6 +340,9 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 									corev1.ResourceMemory: resource.MustParse("1Gi"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      volumeMountNameServer,
 								MountPath: volumeMountPathServer,

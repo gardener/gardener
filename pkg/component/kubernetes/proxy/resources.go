@@ -262,6 +262,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 									fmt.Sprintf("%s/%s", volumeMountPathConntrackFixScript, dataKeyConntrackFixScript),
 								},
 								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
 									Capabilities: &corev1.Capabilities{
 										Add: []corev1.Capability{"NET_ADMIN"},
 									},
@@ -545,15 +546,16 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string,
 			fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyConfig),
 			"--v=2",
 		},
-		SecurityContext: &corev1.SecurityContext{
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{"NET_ADMIN", "SYS_RESOURCE"},
-			},
-		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN", "SYS_RESOURCE"},
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{

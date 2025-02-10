@@ -415,6 +415,9 @@ var _ = Describe("EventLogger", func() {
 											corev1.ResourceMemory: resource.MustParse("50Mi"),
 										},
 									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
+									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",

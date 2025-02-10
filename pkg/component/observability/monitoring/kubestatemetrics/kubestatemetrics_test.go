@@ -547,6 +547,9 @@ var _ = Describe("KubeStateMetrics", func() {
 										corev1.ResourceMemory: resource.MustParse("32Mi"),
 									},
 								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+								},
 								VolumeMounts: volumeMounts,
 							}},
 							AutomountServiceAccountToken: automountServiceAccountToken,

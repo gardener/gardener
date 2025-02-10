@@ -276,6 +276,9 @@ var _ = Describe("KubeScheduler", func() {
 											corev1.ResourceMemory: resource.MustParse("30M"),
 										},
 									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
+									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											Name:      "client-ca",

@@ -3177,6 +3177,7 @@ kind: AuthorizationConfiguration
 						Protocol:      corev1.ProtocolTCP,
 					}))
 					Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(apiServerResources))
+					Expect(deployment.Spec.Template.Spec.Containers[0].SecurityContext).To(Equal(&corev1.SecurityContext{AllowPrivilegeEscalation: ptr.To(false)}))
 					Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ConsistOf(
 						corev1.VolumeMount{
 							Name:      "audit-policy-config",

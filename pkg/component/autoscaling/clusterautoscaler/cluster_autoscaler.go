@@ -231,6 +231,9 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 								corev1.ResourceMemory: resource.MustParse("30M"),
 							},
 						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
+						},
 					},
 				},
 				PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,

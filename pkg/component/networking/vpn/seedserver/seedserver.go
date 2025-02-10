@@ -314,14 +314,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 							Protocol:      corev1.ProtocolTCP,
 						},
 					},
-					SecurityContext: &corev1.SecurityContext{
-						Capabilities: &corev1.Capabilities{
-							Add: []corev1.Capability{
-								"NET_ADMIN",
-								"NET_RAW",
-							},
-						},
-					},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "IP_FAMILIES",
@@ -381,6 +373,15 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						},
 						Limits: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("100Mi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+						Capabilities: &corev1.Capabilities{
+							Add: []corev1.Capability{
+								"NET_ADMIN",
+								"NET_RAW",
+							},
 						},
 					},
 					VolumeMounts: []corev1.VolumeMount{
@@ -466,13 +467,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			Name:            envoyProxyContainerName,
 			Image:           v.values.ImageAPIServerProxy,
 			ImagePullPolicy: corev1.PullIfNotPresent,
-			SecurityContext: &corev1.SecurityContext{
-				Capabilities: &corev1.Capabilities{
-					Drop: []corev1.Capability{
-						"all",
-					},
-				},
-			},
 			Command: []string{
 				"envoy",
 				"--concurrency",
@@ -501,6 +495,14 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				},
 				Limits: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("850M"),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
+				Capabilities: &corev1.Capabilities{
+					Drop: []corev1.Capability{
+						"all",
+					},
 				},
 			},
 			VolumeMounts: []corev1.VolumeMount{
@@ -581,13 +583,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					Protocol:      corev1.ProtocolTCP,
 				},
 			},
-			SecurityContext: &corev1.SecurityContext{
-				Capabilities: &corev1.Capabilities{
-					Drop: []corev1.Capability{
-						"all",
-					},
-				},
-			},
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
@@ -609,6 +604,14 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				},
 				Limits: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("20Mi"),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
+				Capabilities: &corev1.Capabilities{
+					Drop: []corev1.Capability{
+						"all",
+					},
 				},
 			},
 			VolumeMounts: []corev1.VolumeMount{

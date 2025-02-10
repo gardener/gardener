@@ -611,6 +611,9 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 												corev1.ResourceMemory: resource.MustParse("64Mi"),
 											},
 										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
+										},
 										VolumeMounts: []corev1.VolumeMount{
 											{MountPath: "/var/lib/kube-proxy-kubeconfig", Name: "kubeconfig"},
 											{MountPath: "/var/lib/kube-proxy-config", Name: "kube-proxy-config"},
@@ -625,6 +628,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Name:            "conntrack-fix",
 										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
 											Capabilities: &corev1.Capabilities{
 												Add: []corev1.Capability{"NET_ADMIN"},
 											},
@@ -763,6 +767,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 
 				if k8sGreaterEqual129 {
 					ds.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{"NET_ADMIN", "SYS_RESOURCE"},
 						},

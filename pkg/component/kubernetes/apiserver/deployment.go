@@ -229,6 +229,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Protocol:      corev1.ProtocolTCP,
 						}},
 						Resources: k.values.Autoscaling.APIServerResources,
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
+						},
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{

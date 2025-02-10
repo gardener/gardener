@@ -299,6 +299,9 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 							corev1.ResourceMemory: resource.MustParse(memoryRequest),
 						},
 					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+					},
 				}},
 			},
 		},

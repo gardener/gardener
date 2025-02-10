@@ -368,6 +368,8 @@ spec:
           requests:
             cpu: 50m
             memory: 50Mi
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - mountPath: /host
           name: host

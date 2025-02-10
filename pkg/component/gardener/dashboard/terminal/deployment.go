@@ -81,6 +81,9 @@ func (t *terminal) deployment(
 								corev1.ResourceMemory: resource.MustParse("50Mi"),
 							},
 						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
+						},
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          portNameAdmission,
@@ -121,7 +124,6 @@ func (t *terminal) deployment(
 							SuccessThreshold:    1,
 							PeriodSeconds:       10,
 						},
-						SecurityContext: &corev1.SecurityContext{AllowPrivilegeEscalation: ptr.To(false)},
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      volumeNameConfig,

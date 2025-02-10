@@ -202,6 +202,8 @@ spec:
         resources:
           requests:
             memory: 15M
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - mountPath: /etc/blackbox_exporter
           name: blackbox-exporter-config`

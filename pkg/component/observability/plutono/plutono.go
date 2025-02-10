@@ -601,6 +601,9 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 									corev1.ResourceMemory: resource.MustParse("45Mi"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 						},
 						{
 							Name:            "dashboard-refresher",
@@ -639,6 +642,9 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 									corev1.ResourceCPU:    resource.MustParse("5m"),
 									corev1.ResourceMemory: resource.MustParse("85M"),
 								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
 							},
 						},
 					},

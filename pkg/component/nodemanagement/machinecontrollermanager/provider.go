@@ -60,6 +60,9 @@ func ProviderSidecarContainer(namespace, providerName, image string) corev1.Cont
 			ContainerPort: portProviderMetrics,
 			Protocol:      corev1.ProtocolTCP,
 		}},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+		},
 		VolumeMounts: []corev1.VolumeMount{{
 			Name:      "kubeconfig",
 			MountPath: gardenerutils.VolumeMountPathGenericKubeconfig,

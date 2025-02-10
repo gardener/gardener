@@ -413,6 +413,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 											corev1.ResourceMemory: resource.MustParse("30M"),
 										},
 									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
+									},
 								},
 							},
 							PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane300,

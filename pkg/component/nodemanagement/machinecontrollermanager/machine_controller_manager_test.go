@@ -241,6 +241,9 @@ var _ = Describe("MachineControllerManager", func() {
 									corev1.ResourceMemory: resource.MustParse("20M"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 						}},
 						PriorityClassName:             "gardener-system-300",
 						ServiceAccountName:            "machine-controller-manager",

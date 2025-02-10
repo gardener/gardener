@@ -266,6 +266,9 @@ func (k *kubeStateMetrics) deployment(
 						corev1.ResourceMemory: resource.MustParse("32Mi"),
 					},
 				},
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: ptr.To(false),
+				},
 				VolumeMounts: []corev1.VolumeMount{{
 					Name:      customResourceStateConfigMapName,
 					MountPath: customResourceStateConfigMountDir,

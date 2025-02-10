@@ -604,18 +604,19 @@ func (v *vpnShoot) container(secrets []vpnSecret, index *int) *corev1.Container 
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Env:             v.getEnvVars(index),
-		SecurityContext: &corev1.SecurityContext{
-			Privileged: ptr.To(false),
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{"NET_ADMIN"},
-			},
-		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("100m"),
 				corev1.ResourceMemory: resource.MustParse("100Mi"),
 			},
 			Limits: v.getResourceLimits(),
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged:               ptr.To(false),
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN"},
+			},
 		},
 		VolumeMounts: v.getVolumeMounts(secrets),
 	}
@@ -627,12 +628,6 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/tunnel-controller"},
-		SecurityContext: &corev1.SecurityContext{
-			Privileged: ptr.To(false),
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{"NET_ADMIN"},
-			},
-		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -640,6 +635,13 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 			},
 			Limits: corev1.ResourceList{
 				corev1.ResourceMemory: resource.MustParse("20Mi"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged:               ptr.To(false),
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN"},
 			},
 		},
 	}

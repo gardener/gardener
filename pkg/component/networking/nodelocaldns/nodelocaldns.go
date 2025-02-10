@@ -373,6 +373,12 @@ ip6.arpa:53 {
 										corev1.ResourceMemory: resource.MustParse("200Mi"),
 									},
 								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+									Capabilities: &corev1.Capabilities{
+										Add: []corev1.Capability{"NET_ADMIN"},
+									},
+								},
 								Args: []string{
 									"-localip",
 									n.containerArg(),
@@ -382,11 +388,6 @@ ip6.arpa:53 {
 									serviceName,
 									"-health-port",
 									strconv.Itoa(livenessProbePort),
-								},
-								SecurityContext: &corev1.SecurityContext{
-									Capabilities: &corev1.Capabilities{
-										Add: []corev1.Capability{"NET_ADMIN"},
-									},
 								},
 								Ports: []corev1.ContainerPort{
 									{

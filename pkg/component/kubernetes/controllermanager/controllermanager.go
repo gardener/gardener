@@ -355,6 +355,9 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								corev1.ResourceMemory: resource.MustParse("30M"),
 							},
 						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
+						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      volumeNameCA,

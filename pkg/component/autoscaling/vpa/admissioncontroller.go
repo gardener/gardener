@@ -220,6 +220,9 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 							corev1.ResourceMemory: resource.MustParse("30Mi"),
 						},
 					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+					},
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          metricsPortName,

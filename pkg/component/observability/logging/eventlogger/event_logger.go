@@ -263,6 +263,9 @@ func (l *eventLogger) reconcileDeployment(ctx context.Context) error {
 									corev1.ResourceMemory: resource.MustParse("50Mi"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 						},
 					},
 				},
