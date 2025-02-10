@@ -94,6 +94,7 @@ This document provides a checklist for them that you can walk through.
    Consequently, please define proper [RBAC roles](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) for it.
    This might include a combination of `ClusterRole`s and `Role`s.
    Please do not provide elevated privileges due to laziness (e.g., because there is already a `ClusterRole` that can be extended vs. creating a `Role` only when access to a single namespace is needed).
+   Please avoid using wildcards `*` where possible.
 
 4. **Use [`NetworkPolicy`s](https://kubernetes.io/docs/concepts/services-networking/network-policies/) to restrict network traffic**
 

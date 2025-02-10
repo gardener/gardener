@@ -59,7 +59,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Rules: []rbacv1.PolicyRule{
 					{
 						APIGroups: []string{"machine.sapcloud.io"},
-						Resources: []string{"*"},
+						Resources: []string{"machineclasses", "machinedeployments", "machines", "machinesets"},
 						Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
 					},
 					{

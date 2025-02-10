@@ -44,12 +44,12 @@ func (p *prometheusOperator) clusterRole() *rbacv1.ClusterRole {
 					"probes",
 					"prometheusrules",
 				},
-				Verbs: []string{rbacv1.VerbAll},
+				Verbs: []string{"create", "get", "list", "watch", "patch", "update", "delete", "deletecollection"},
 			},
 			{
 				APIGroups: []string{appsv1.GroupName},
 				Resources: []string{"statefulsets"},
-				Verbs:     []string{rbacv1.VerbAll},
+				Verbs:     []string{"create", "get", "list", "watch", "patch", "update", "delete", "deletecollection"},
 			},
 			{
 				APIGroups: []string{corev1.GroupName},
@@ -57,7 +57,7 @@ func (p *prometheusOperator) clusterRole() *rbacv1.ClusterRole {
 					"configmaps",
 					"secrets",
 				},
-				Verbs: []string{rbacv1.VerbAll},
+				Verbs: []string{"create", "get", "list", "watch", "patch", "update", "delete", "deletecollection"},
 			},
 			{
 				APIGroups: []string{corev1.GroupName},

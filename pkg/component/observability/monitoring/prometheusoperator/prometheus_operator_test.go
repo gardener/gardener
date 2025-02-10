@@ -241,12 +241,12 @@ var _ = Describe("PrometheusOperator", func() {
 						"probes",
 						"prometheusrules",
 					},
-					Verbs: []string{"*"},
+					Verbs: []string{"create", "get", "list", "watch", "patch", "update", "delete", "deletecollection"},
 				},
 				{
 					APIGroups: []string{"apps"},
 					Resources: []string{"statefulsets"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "get", "list", "watch", "patch", "update", "delete", "deletecollection"},
 				},
 				{
 					APIGroups: []string{""},
@@ -254,7 +254,7 @@ var _ = Describe("PrometheusOperator", func() {
 						"configmaps",
 						"secrets",
 					},
-					Verbs: []string{"*"},
+					Verbs: []string{"create", "get", "list", "watch", "patch", "update", "delete", "deletecollection"},
 				},
 				{
 					APIGroups: []string{""},
