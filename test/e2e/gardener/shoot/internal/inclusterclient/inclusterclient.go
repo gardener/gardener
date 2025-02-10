@@ -30,6 +30,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/test/framework"
 )
 
@@ -136,17 +137,17 @@ func prepareObjects(ctx context.Context, c client.Client, kubernetesVersion stri
 	}
 
 	By("Wait for test pods to be ready")
-	for _, obj := range objects {
-		pod, ok := obj.(*corev1.Pod)
-		if !ok {
-			continue
-		}
+	Eventually(func(g Gomega) {
+		for _, obj := range objects {
+			pod, ok := obj.(*corev1.Pod)
+			if !ok {
+				continue
+			}
 
-		Eventually(func(g Gomega) {
 			g.Expect(c.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-			g.Expect(pod.Status.Phase).To(Equal(corev1.PodRunning))
-		}).WithContext(ctx).WithTimeout(time.Minute).Should(Succeed(), "%T %q should get ready", obj, client.ObjectKeyFromObject(obj))
-	}
+			g.Expect(health.IsPodReady(pod)).To(BeTrue(), "%T %q should get ready", obj, client.ObjectKeyFromObject(obj))
+		}
+	}).WithContext(ctx).WithTimeout(time.Minute).Should(Succeed())
 
 	return func() {
 		By("Cleaning up test objects for verifying in-cluster access to API server")
