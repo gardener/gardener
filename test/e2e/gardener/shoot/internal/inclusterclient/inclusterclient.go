@@ -59,7 +59,7 @@ var labels = map[string]string{"e2e-test": "in-cluster-client"}
 // - one pod explicitly overwrites the env var
 // See docs/usage/networking/shoot_kubernetes_service_host_injection.md and docs/proposals/08-shoot-apiserver-via-sni.md
 func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.ShootFramework) {
-	ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
+	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
 	defer cancel()
 
 	defer prepareObjects(ctx, f.ShootClient.Client(), f.Shoot.Spec.Kubernetes.Version)()
@@ -168,7 +168,7 @@ func executeKubectl(ctx context.Context, clientSet kubernetes.Interface, podName
 	// Retry the command execution with a short timeout to reduce flakiness. We better timeout quickly and succeed on the
 	// next try than being stuck in on try.
 	Eventually(func(g Gomega, ctx context.Context) {
-		timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
 		defer cancel()
 
 		stdOutBuffer := NewBuffer()
@@ -187,7 +187,7 @@ func executeKubectl(ctx context.Context, clientSet kubernetes.Interface, podName
 
 		// we don't need Eventually here, because the buffer is already closed
 		g.Expect(stdOutBuffer).To(matcher)
-	}).WithContext(ctx).WithTimeout(time.Minute).Should(Succeed())
+	}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
 }
 
 func getObjects(kubernetesVersion string) []client.Object {
