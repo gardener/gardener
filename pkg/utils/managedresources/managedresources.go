@@ -298,16 +298,16 @@ func deleteWithSecretNamePrefix(ctx context.Context, client client.Client, names
 var IntervalWait = 2 * time.Second
 
 // WaitUntilHealthy waits until the given managed resource is healthy.
-func WaitUntilHealthy(ctx context.Context, client client.Client, namespace, name string) error {
-	return waitUntilHealthy(ctx, client, namespace, name, false)
+func WaitUntilHealthy(ctx context.Context, reader client.Reader, namespace, name string) error {
+	return waitUntilHealthy(ctx, reader, namespace, name, false)
 }
 
 // WaitUntilHealthyAndNotProgressing waits until the given managed resource is healthy and not progressing.
-func WaitUntilHealthyAndNotProgressing(ctx context.Context, client client.Client, namespace, name string) error {
-	return waitUntilHealthy(ctx, client, namespace, name, true)
+func WaitUntilHealthyAndNotProgressing(ctx context.Context, reader client.Reader, namespace, name string) error {
+	return waitUntilHealthy(ctx, reader, namespace, name, true)
 }
 
-func waitUntilHealthy(ctx context.Context, c client.Client, namespace, name string, andNotProgressing bool) error {
+func waitUntilHealthy(ctx context.Context, reader client.Reader, namespace, name string, andNotProgressing bool) error {
 	obj := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -316,7 +316,7 @@ func waitUntilHealthy(ctx context.Context, c client.Client, namespace, name stri
 	}
 
 	return retry.Until(ctx, IntervalWait, func(ctx context.Context) (done bool, err error) {
-		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
+		if err := reader.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
 			return retry.SevereError(err)
 		}
 
