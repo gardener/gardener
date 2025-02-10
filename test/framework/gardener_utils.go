@@ -363,8 +363,7 @@ func (f *GardenerFramework) HibernateShoot(ctx context.Context, shoot *gardencor
 	if err := retry.UntilTimeout(ctx, 10*time.Second, 2*time.Minute, func(ctx context.Context) (done bool, err error) {
 		// Verify no running pods after hibernation
 		if err := f.VerifyNoRunningPods(ctx, shoot); err != nil {
-			//return fmt.Errorf("failed to verify no running pods after hibernation: %v", err)
-			return retry.MinorError(err)
+			return retry.MinorError(fmt.Errorf("failed to verify no running pods after hibernation: %v", err))
 		}
 		return retry.Ok()
 	}); err != nil {
