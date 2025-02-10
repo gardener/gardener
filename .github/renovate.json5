@@ -298,7 +298,7 @@
       matchPackageNames: [
         'gopkg.in/yaml.v2'
       ],
-      allowedVersions: "^v2\..+",
+      allowedVersions: "^v2\\..+",
     },
     {
       // Only patch level updates for golang-test image. Minor and major versions are updated manually.
