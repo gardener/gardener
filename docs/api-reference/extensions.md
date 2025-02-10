@@ -3552,26 +3552,16 @@ string
 <tbody>
 <tr>
 <td>
-<code>osUpdateCommand</code></br>
+<code>osUpdate</code></br>
 <em>
-string
+<a href="#extensions.gardener.cloud/v1alpha1.OSUpdate">
+OSUpdate
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>OSUpdateCommand defines the command responsible for performing machine image updates.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>osUpdateCommandArgs</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>OSUpdateCommandArgs provides a mechanism to pass additional arguments or flags to the OSUpdateCommand.</p>
+<p>OSUpdate defines the configuration for the operating system update.</p>
 </td>
 </tr>
 </tbody>
@@ -4020,6 +4010,49 @@ Kubernetes core/v1.ResourceList
 </td>
 <td>
 <p>Capacity represents the expected Node capacity.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.OSUpdate">OSUpdate
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">InPlaceUpdates</a>)
+</p>
+<p>
+<p>OSUpdate contains the configuration for the operating system update.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>command</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Command defines the command responsible for performing machine image updates.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>args</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Args provides a mechanism to pass additional arguments or flags to the Command.</p>
 </td>
 </tr>
 </tbody>

@@ -566,16 +566,21 @@ spec:
                 description: InPlaceUpdates contains the configuration for in-place
                   updates.
                 properties:
-                  osUpdateCommand:
-                    description: OSUpdateCommand defines the command responsible for
-                      performing machine image updates.
-                    type: string
-                  osUpdateCommandArgs:
-                    description: OSUpdateCommandArgs provides a mechanism to pass
-                      additional arguments or flags to the OSUpdateCommand.
-                    items:
-                      type: string
-                    type: array
+                  osUpdate:
+                    description: OSUpdate defines the configuration for the operating
+                      system update.
+                    properties:
+                      args:
+                        description: Args provides a mechanism to pass additional
+                          arguments or flags to the Command.
+                        items:
+                          type: string
+                        type: array
+                      command:
+                        description: Command defines the command responsible for performing
+                          machine image updates.
+                        type: string
+                    type: object
                 type: object
               lastError:
                 description: LastError holds information about the last occurred error

@@ -368,12 +368,19 @@ const (
 
 // InPlaceUpdates is a structure containing configuration for in-place updates.
 type InPlaceUpdates struct {
-	// OSUpdateCommand defines the command responsible for performing machine image updates.
+	// OSUpdate defines the configuration for the operating system update.
 	// +optional
-	OSUpdateCommand *string `json:"osUpdateCommand,omitempty"`
-	// OSUpdateCommandArgs provides a mechanism to pass additional arguments or flags to the OSUpdateCommand.
+	OSUpdate *OSUpdate `json:"osUpdate,omitempty"`
+}
+
+// OSUpdate contains the configuration for the operating system update.
+type OSUpdate struct {
+	// Command defines the command responsible for performing machine image updates.
 	// +optional
-	OSUpdateCommandArgs []string `json:"osUpdateCommandArgs,omitempty"`
+	Command *string `json:"command,omitempty"`
+	// Args provides a mechanism to pass additional arguments or flags to the Command.
+	// +optional
+	Args []string `json:"args,omitempty"`
 }
 
 // CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.
