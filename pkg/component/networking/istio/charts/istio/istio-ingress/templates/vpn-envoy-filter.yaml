@@ -44,8 +44,9 @@ spec:
               # the other is for all non-CONNECT requests
               - match:
                   connect_matcher: {}
-                direct_response:
-                  status: 403
+                redirect:
+                  https_redirect: true
+                  port_redirect: 443
               # Redirect requests to the https port to make probing more painful/cost intensive
               - match:
                   prefix: "/"
