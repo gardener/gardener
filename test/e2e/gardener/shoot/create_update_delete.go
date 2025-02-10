@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -117,11 +118,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						}
 					}
 				}).Should(Succeed())
-			}
 
-			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				// For workerless shoots, the status.networking section is not reported. Skip its verification accordingly.
 				By("Verify reported CIDRs")
+				// For workerless shoots, the status.networking section is not reported. Skip its verification accordingly.
 				Eventually(func(g Gomega) {
 					g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
 
@@ -137,6 +136,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 						g.Expect(networking.Pods).To(ConsistOf(*pods))
 					}
 				}).Should(Succeed())
+
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 			}
 
 			By("Update Shoot")
@@ -146,6 +147,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				GardenerFramework: f.GardenerFramework,
 				Shoot:             f.Shoot,
 			}, nil, nil)
+
+			if !v1beta1helper.IsWorkerless(f.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
+			}
 
 			By("Add skip readiness annotation")
 			ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)

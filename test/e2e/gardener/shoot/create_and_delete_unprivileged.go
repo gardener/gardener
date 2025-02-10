@@ -17,6 +17,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -58,6 +59,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			BeForbiddenError(),
 			MatchError(ContainSubstring("pods %q is forbidden: violates PodSecurity %q", "nginx", "restricted:latest")),
 		))
+
+		inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
