@@ -93,3 +93,5 @@ spec:
 #   -----BEGIN CERTIFICATE-----
 #   ...
 #   -----END CERTIFICATE-----
+  # limits: # optional
+  #   maxNodesTotal: 1000

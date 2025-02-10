@@ -44,6 +44,7 @@ func ValidateCloudProfileUpdate(newProfile, oldProfile *core.CloudProfile) field
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProfile.ObjectMeta, &oldProfile.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateCloudProfile(newProfile)...)
+	allErrs = append(allErrs, ValidateCloudProfileSpecUpdate(&newProfile.Spec, &oldProfile.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }
@@ -62,6 +63,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	allErrs = append(allErrs, validateCloudProfileRegions(spec.Regions, fldPath.Child("regions"))...)
 	allErrs = append(allErrs, validateCloudProfileBastion(spec, fldPath.Child("bastion"))...)
+	allErrs = append(allErrs, validateCloudProfileLimits(spec.Limits, fldPath.Child("limits"))...)
 	if spec.SeedSelector != nil {
 		allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&spec.SeedSelector.LabelSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("seedSelector"))...)
 	}
@@ -72,6 +74,15 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("caBundle"), *(spec.CABundle), "caBundle is not a valid PEM-encoded certificate"))
 		}
 	}
+
+	return allErrs
+}
+
+// ValidateCloudProfileSpecUpdate validates a CloudProfileSpec before an update.
+func ValidateCloudProfileSpecUpdate(newSpec, oldSpec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateCloudProfileLimitsUpdate(newSpec.Limits, oldSpec.Limits, fldPath.Child("limits"))...)
 
 	return allErrs
 }
@@ -342,4 +353,38 @@ func checkImageSupport(bastionImageName string, imageVersions []core.MachineImag
 
 	return field.ErrorList{field.Invalid(fldPath, bastionImageName,
 		fmt.Sprintf("no image with classification supported and arch %q found", ptr.Deref(machineArch, "<nil>")))}
+}
+
+func validateCloudProfileLimits(limits *core.Limits, fldPath *field.Path) field.ErrorList {
+	if limits == nil {
+		return nil
+	}
+
+	var allErrs field.ErrorList
+
+	if maxNodesTotal := limits.MaxNodesTotal; maxNodesTotal != nil && *maxNodesTotal <= 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNodesTotal"), *maxNodesTotal, "maxNodesTotal must be greater than 0"))
+	}
+
+	return allErrs
+}
+
+func validateCloudProfileLimitsUpdate(newLimits, oldLimits *core.Limits, fldPath *field.Path) field.ErrorList {
+	if newLimits == nil || oldLimits == nil {
+		// adding and removing limits is allowed
+		return nil
+	}
+
+	var allErrs field.ErrorList
+
+	var (
+		newMaxNodesTotal = newLimits.MaxNodesTotal
+		oldMaxNodesTotal = oldLimits.MaxNodesTotal
+	)
+	if newMaxNodesTotal != nil && oldMaxNodesTotal != nil && *newMaxNodesTotal < *oldMaxNodesTotal {
+		// adding, removing, and increasing maxNodesTotal is allowed, but not decreasing
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNodesTotal"), *newMaxNodesTotal, "maxNodesTotal cannot be decreased"))
+	}
+
+	return allErrs
 }
