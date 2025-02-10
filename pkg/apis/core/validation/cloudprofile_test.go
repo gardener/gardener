@@ -6,16 +6,14 @@ package validation_test
 
 import (
 	"fmt"
-	"github.com/bsm/gomega/types"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils/test"
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"time"
 
+	"github.com/bsm/gomega/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -23,6 +21,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var (
@@ -1415,7 +1415,10 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
 				})),
-			}),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.machineTypes[0].architecture"),
+				}))}),
 		}
 	)
 

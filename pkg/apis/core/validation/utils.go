@@ -6,8 +6,6 @@ package validation
 
 import (
 	"fmt"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/util/json"
 	"regexp"
 	"slices"
 	"strconv"
@@ -16,11 +14,14 @@ import (
 	"github.com/Masterminds/semver/v3"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -303,8 +304,7 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilitiesDefinitio
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
 
 		if IsDefined(capabilitiesDefinition) {
-			allErrs = append(allErrs, ValidateMachineTypeCapabilities(machineType, *capabilitiesDefinition, archPath)...)
-
+			allErrs = append(allErrs, ValidateMachineTypeCapabilities(machineType, *capabilitiesDefinition, idxPath)...)
 		} else {
 			allErrs = append(allErrs, validateMachineTypeArchitecture(machineType.Architecture, archPath)...)
 			if machineType.Capabilities != nil {
@@ -417,6 +417,7 @@ func IsDefined(capabilitiesDefinition *core.Capabilities) bool {
 	return valid
 }
 
+// ValidateCapabilitiesDefinition validates the capabilitiesDefinition of a cloudProfile, ensures that the architecture is set and that no capability is empty
 func ValidateCapabilitiesDefinition(capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
 	var errList field.ErrorList
 
@@ -437,26 +438,23 @@ func validateMachineImageVersionCapabilities(machineImageVersion core.MachineIma
 	capabilitiesSet, unmarshalErrorList := UnmarshalCapabilitiesSet(machineImageVersion.CapabilitiesSet, path)
 	if unmarshalErrorList != nil {
 		errList = append(errList, unmarshalErrorList...)
-
 	} else {
-
 		parsedCapabilitiesSet := ParseCapabilitiesSet(capabilitiesSet)
 		for _, parsedCapabilities := range parsedCapabilitiesSet {
 			errList = append(errList, validateCapabilitiesAgainstDefinition(parsedCapabilities.toCapabilityMap(), *capabilitiesDefinition, path.Child("capabilitiesSet"))...)
 		}
-
 	}
 	return errList
 }
 
+// ValidateMachineTypeCapabilities validates the capabilities of a machineType, ensures that the architecture is not set and that no capability is empty
 func ValidateMachineTypeCapabilities(machineType core.MachineType, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
 	errList := field.ErrorList{}
+	errList = append(errList, validateCapabilitiesAgainstDefinition(machineType.Capabilities, capabilitiesDefinition, path)...)
 
-	if machineType.Architecture != nil {
+	if len(ptr.Deref(machineType.Architecture, "")) > 0 {
 		errList = append(errList, field.Invalid(path.Child("architecture"), machineType.Architecture, "must not be set when capabilities are used and capabilitiesDefinition is set"))
 	}
-
-	errList = validateCapabilitiesAgainstDefinition(machineType.Capabilities, capabilitiesDefinition, path)
 
 	return errList
 }
@@ -516,6 +514,7 @@ func validateCapabilitiesDefinition(definition ParsedCapabilities, path *field.P
 
 // Generic Capabilities Functions:: Begin
 
+// ParseCapabilitiesSet parses the value string of each capability in the capabilities set
 func ParseCapabilitiesSet(capabilitySets []core.Capabilities) []ParsedCapabilities {
 	parsedImageCapabilitySets := make([]ParsedCapabilities, len(capabilitySets))
 	for j, capabilitySet := range capabilitySets {
@@ -524,6 +523,7 @@ func ParseCapabilitiesSet(capabilitySets []core.Capabilities) []ParsedCapabiliti
 	return parsedImageCapabilitySets
 }
 
+// UnmarshalCapabilitiesSet unmarshal the raw JSON capabilities set into a list of capabilities
 func UnmarshalCapabilitiesSet(rawCapabilitySets []apiextensionsv1.JSON, path *field.Path) ([]core.Capabilities, field.ErrorList) {
 	var allErrs field.ErrorList
 	capabilitySets := make([]core.Capabilities, len(rawCapabilitySets))
@@ -540,6 +540,7 @@ func UnmarshalCapabilitiesSet(rawCapabilitySets []apiextensionsv1.JSON, path *fi
 	return capabilitySets, allErrs
 }
 
+// MarshalCapabilitiesSets marshals the capabilities sets into a list of raw JSON capabilities
 func MarshalCapabilitiesSets(capabilitiesSets []core.Capabilities, path *field.Path) ([]apiextensionsv1.JSON, field.ErrorList) {
 	var allErrs field.ErrorList
 	returnJSONs := make([]apiextensionsv1.JSON, len(capabilitiesSets))
@@ -563,6 +564,7 @@ func GetCapabilitiesIntersection(capabilities ParsedCapabilities, otherCapabilit
 	return intersection
 }
 
+// HasEmptyCapabilityValue checks if any capability value is empty
 func HasEmptyCapabilityValue(capabilities ParsedCapabilities) bool {
 	for _, capabilityValues := range capabilities {
 		if len(capabilityValues) == 0 {
@@ -572,12 +574,12 @@ func HasEmptyCapabilityValue(capabilities ParsedCapabilities) bool {
 	return false
 }
 
+// ParseCapabilityValues parses the capabilities values string into a map of capability name and capability values
 func ParseCapabilityValues(capabilities core.Capabilities) ParsedCapabilities {
 	parsedCapabilities := make(ParsedCapabilities)
 	for capabilityName, capabilityValuesString := range capabilities {
 		capabilityValues := splitAndSanitize(capabilityValuesString)
 		parsedCapabilities[capabilityName] = CreateCapabilityValueSet(capabilityValues)
-
 	}
 	return parsedCapabilities
 }
@@ -587,7 +589,6 @@ func ParseCapabilityValues(capabilities core.Capabilities) ParsedCapabilities {
 func splitAndSanitize(valueString string) []string {
 	values := strings.Split(valueString, ",")
 	for i := 0; i < len(values); i++ {
-
 		// strip leading and trailing whitespaces, single quotes & double quotes
 		values[i] = strings.Trim(values[i], "' \"")
 
@@ -602,7 +603,8 @@ func splitAndSanitize(valueString string) []string {
 // ParsedCapabilities is the internal runtime representation of Capabilities
 type ParsedCapabilities map[string]CapabilityValueSet
 
-func (c ParsedCapabilities) Copy() ParsedCapabilities {
+// DeepCopy creates a deep copy of the ParsedCapabilities
+func (c ParsedCapabilities) DeepCopy() ParsedCapabilities {
 	capabilities := make(ParsedCapabilities)
 	for capabilityName, capabilityValueSet := range c {
 		capabilities[capabilityName] = CreateCapabilityValueSet(capabilityValueSet.Values())
@@ -621,6 +623,7 @@ func (c ParsedCapabilities) toCapabilityMap() core.Capabilities {
 // CapabilityValueSet is a set of capability values
 type CapabilityValueSet map[string]bool
 
+// CreateCapabilityValueSet creates a new CapabilityValueSet from a list of values
 func CreateCapabilityValueSet(values []string) CapabilityValueSet {
 	capabilityValueSet := make(CapabilityValueSet)
 	for _, value := range values {
@@ -629,12 +632,14 @@ func CreateCapabilityValueSet(values []string) CapabilityValueSet {
 	return capabilityValueSet
 }
 
+// Add adds values to the CapabilityValueSet
 func (c CapabilityValueSet) Add(values ...string) {
 	for _, value := range values {
 		c[value] = true
 	}
 }
 
+// Contains checks if the CapabilityValueSet contains all values
 func (c CapabilityValueSet) Contains(values ...string) bool {
 	for _, value := range values {
 		if !c[value] {
@@ -644,10 +649,12 @@ func (c CapabilityValueSet) Contains(values ...string) bool {
 	return true
 }
 
+// Remove removes values from the CapabilityValueSet
 func (c CapabilityValueSet) Remove(value string) {
 	delete(c, value)
 }
 
+// Values returns the values of the CapabilityValueSet as a slice
 func (c CapabilityValueSet) Values() []string {
 	values := make([]string, 0, len(c))
 	for value := range c {
@@ -655,6 +662,8 @@ func (c CapabilityValueSet) Values() []string {
 	}
 	return values
 }
+
+// Intersection creates the intersection of two CapabilityValueSets
 func (c CapabilityValueSet) Intersection(other CapabilityValueSet) CapabilityValueSet {
 	intersection := make(CapabilityValueSet)
 	for value := range c {
@@ -665,6 +674,7 @@ func (c CapabilityValueSet) Intersection(other CapabilityValueSet) CapabilityVal
 	return intersection
 }
 
+// IsSubsetOf checks if the CapabilityValueSet is a subset of another CapabilityValueSet
 func (c CapabilityValueSet) IsSubsetOf(other CapabilityValueSet) bool {
 	for value := range c {
 		if !other.Contains(value) {

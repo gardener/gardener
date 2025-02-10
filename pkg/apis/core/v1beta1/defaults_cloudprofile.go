@@ -5,12 +5,12 @@
 package v1beta1
 
 import (
-	"github.com/gardener/gardener/pkg/features"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 // SetDefaults_MachineImage sets default values for MachineImage objects.
