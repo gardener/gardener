@@ -23,7 +23,7 @@ If this limit is set, Gardener ensures that
 The maximum node count of a shoot cluster can be lower than the configured limit, if the cluster's networking configurations don't allow it (see [this doc page](../networking/shoot_networking.md)).
 
 Gardener operators must ensure that no existing shoot cluster exceeds the limit when adding it.
-Because Gardener itself cannot verify that all shoot clusters would comply with a given limit, it does not allow decreasing the limit, which could be disruptive for existing shoots.
+Because Gardener API server itself cannot verify that all shoot clusters would comply with a given limit set in an API request, it does not allow decreasing the limit, which could be disruptive for existing shoots.
 Increasing and removing the limits is allowed.
 
 Note that the node count limit during runtime is applied by the cluster-autoscaler only.
@@ -31,4 +31,4 @@ E.g., performing a rolling update can cause shoots to exceed `maxNodesTotal` by 
 Also, when a shoot owner adds another worker pool to a cluster that has already reached the maximum node count via cluster autoscaling, Gardener would initially deploy the new worker pool with the minimum number of nodes.
 This would cause the shoot to temporarily exceed the configured limit until cluster-autoscaler scales the cluster down again.
 In other words, `CloudProfile.spec.limits.maxNodesTotal` doesn't enforce a hard limit, but rather ensures that shoot clusters stay within a reasonable size that the Gardener operator can and wants to support.
-Shoot owners should keep the operator-configured limit in mind when configuring the initial node count of new worker pools.
+Shoot owners should keep the limit configured in the `CloudProfile` in mind when configuring the initial node count of new worker pools.

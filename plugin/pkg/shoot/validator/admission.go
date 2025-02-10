@@ -2161,12 +2161,12 @@ func validateMaxNodesTotal(workers []core.Worker, maxNodesTotal int32) field.Err
 	for i, worker := range workers {
 		totalMinimum += worker.Minimum
 		if worker.Maximum > maxNodesTotal {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), fmt.Sprintf("the maximum node count of a worker pool must not exceed the operator-configured limit of %d", maxNodesTotal)))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), fmt.Sprintf("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", maxNodesTotal)))
 		}
 	}
 
 	if totalMinimum > maxNodesTotal {
-		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("the total minimum node count of all worker pools must not exceed the operator-configured limit of %d", maxNodesTotal)))
+		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("the total minimum node count of all worker pools must not exceed the limit of %d configured in the CloudProfile", maxNodesTotal)))
 	}
 
 	return allErrs
