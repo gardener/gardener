@@ -140,7 +140,7 @@ type MachineImageVersion struct {
 	// CapabilitiesSet contains the set of capabilities of a MachineImage version. There is exactly one capabilities entry
 	// per resource of a version the infrastructure provider serves.
 	// +optional
-	CapabilitiesSet []apiextensionsv1.JSON `json:"capabilitySets,omitempty" protobuf:"bytes,5,rep,name=capabilitySets"`
+	CapabilitiesSet []apiextensionsv1.JSON `json:"capabilitiesSet,omitempty" protobuf:"bytes,5,rep,name=capabilitiesSet"`
 }
 
 // ExpirableVersion contains a version and an expiration date.

@@ -234,9 +234,9 @@ Then the image with `gen2` will be preferred.
 Other edge cases will be deterministic solved as well to ensure a consistent behavior.
 
 In addition to the default capabilities, the `spec.machineTypes` is extended with the `capabilities` structure described above.
-The image versions in `spec.machineImages.versions` will be extended with `capabilitySets` - an array of capabilities structures, one entry for each image reference of an image version in the cloud provider.
+The image versions in `spec.machineImages.versions` will be extended with `capabilitiesSet` - an array of capabilities structures, one entry for each image reference of an image version in the cloud provider.
 
-The architecture is also added to the capabilitySets. This is required as the architecture is a capability itself. 
+The architecture is also added to the capabilitiesSet. This is required as the architecture is a capability itself. 
 
 > [!NOTE]
 > To avoid duplication and remove the possibility of inconsistencies the existing `architecture` field in `machineImages.versions` and `machineTypes` will be marked as deprecated. `architecture` will become the only mandatory capability and will take precedence over the deprecated field if both are present.
@@ -257,7 +257,7 @@ spec:
         #   version: 1592.2.0-gen2
 
         - architectures: [amd64, arm64] # <-- marked as deprecated
-          capabilitySets:
+          capabilitiesSet:
             - architecture: [arm64] # <-- architecture must be added to the capabilities to ensure compatibility
               hypervisorType: ["gen2"]
               network: ["accelerated", "standard"] # <-- not required as its the default
@@ -269,7 +269,7 @@ spec:
           version: 1592.2.0
 
         - classification: supported
-          version: 1592.1.0 # <-- if no capabilitySets are defined the default capabilities are assigned as only combination
+          version: 1592.1.0 # <-- if no capabilitiesSet are defined the default capabilities are assigned as only combination
 
   machineTypes:
     - architecture: amd64 # <-- marked as deprecated
@@ -322,7 +322,7 @@ The selection of the actual image reference is still done by the provider extens
             version: 1592.2.0
 ```
 
-All capability combination provided in the `spec.machineImages.versions.capabilitySets` must have an matching entry in the `spec.providerConfig.machineImages.versions.capabilities` to ensure that the provider extension can select the correct image reference.
+All capability combination provided in the `spec.machineImages.versions.capabilitiesSet` must have an matching entry in the `spec.providerConfig.machineImages.versions.capabilities` to ensure that the provider extension can select the correct image reference.
 Each provider extension must validate its part of the cloud profile to ensure that the capability combinations are correctly defined.
 
 ## Matching Algorithm

@@ -7954,7 +7954,7 @@ Examples:
 </tr>
 <tr>
 <td>
-<code>capabilitySets</code></br>
+<code>capabilitiesSet</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#json-v1-apiextensions-k8s-io">
 []Kubernetes apiextensions/v1.JSON
