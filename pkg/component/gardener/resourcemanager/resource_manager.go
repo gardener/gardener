@@ -238,6 +238,10 @@ type resourceManager struct {
 type Values struct {
 	// AlwaysUpdate if set to false then a resource will only be updated if its desired state differs from the actual state. otherwise, an update request will be always sent
 	AlwaysUpdate *bool
+	// BootstrapControlPlaneNode controls whether the pods are used to bootstrap a control plane node. If set to true,
+	// they are deployed to the host network. In addition, all taints are tolerated to make sure they can get deployed
+	// to nodes even when they are not ready yet.
+	BootstrapControlPlaneNode bool
 	// ClusterIdentity is the identity of the managing cluster.
 	ClusterIdentity *string
 	// ConcurrentSyncs are the number of worker threads for concurrent reconciliation of resources
@@ -553,7 +557,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				Enabled: r.values.EndpointSliceHintsEnabled,
 			},
 			HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
-				Enabled:                             true,
+				Enabled:                             !r.values.BootstrapControlPlaneNode,
 				DefaultNotReadyTolerationSeconds:    r.values.DefaultNotReadyToleration,
 				DefaultUnreachableTolerationSeconds: r.values.DefaultUnreachableToleration,
 			},
@@ -785,7 +789,11 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		return err
 	}
 
-	var tolerations []corev1.Toleration
+	var (
+		tolerations []corev1.Toleration
+		env         []corev1.EnvVar
+	)
+
 	if r.values.DefaultNotReadyToleration != nil {
 		tolerations = append(tolerations, corev1.Toleration{
 			Key:               corev1.TaintNodeNotReady,
@@ -801,6 +809,22 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 			Effect:            corev1.TaintEffectNoExecute,
 			TolerationSeconds: r.values.DefaultUnreachableToleration,
 		})
+	}
+
+	if r.values.BootstrapControlPlaneNode {
+		tolerations = append(tolerations,
+			corev1.Toleration{
+				Operator: corev1.TolerationOpExists,
+				Effect:   corev1.TaintEffectNoSchedule,
+			},
+			corev1.Toleration{
+				Operator: corev1.TolerationOpExists,
+				Effect:   corev1.TaintEffectNoExecute,
+			},
+		)
+		// If 'BootstrapControlPlaneNode', there is typically no CoreDNS running yet, i.e, we cannot rely on the
+		// standard 'kubernetes.default.svc' DNS name but have to explicitly set it to '127.0.0.1'.
+		env = append(env, corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "127.0.0.1"})
 	}
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
@@ -824,6 +848,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 					},
 				},
 				ServiceAccountName: r.values.NamePrefix + serviceAccountName,
+				HostNetwork:        r.values.BootstrapControlPlaneNode,
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
@@ -842,6 +867,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},
+						Env: env,
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("5m"),
@@ -1275,7 +1301,10 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	webhooks := []admissionregistrationv1.MutatingWebhook{
 		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		r.getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
-		GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn),
+	}
+
+	if !r.values.BootstrapControlPlaneNode {
+		webhooks = append(webhooks, GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
