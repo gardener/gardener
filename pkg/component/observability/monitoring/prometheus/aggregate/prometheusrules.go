@@ -80,9 +80,15 @@ func CentralPrometheusRules(seedIsGarden bool) []*monitoringv1.PrometheusRule {
 		rules = append(rules, monitoringv1.Rule{
 			Alert: "VerticalPodAutoscalerCappedRecommendation",
 			Expr: intstr.FromString(`
-    {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
->
-    {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}`),
+  count_over_time(
+    (
+        {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_.+"}
+      >
+        {__name__=~"kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_.+"}
+    )[5m:]
+  )
+==
+  5`),
 			Labels: map[string]string{
 				"severity":   "warning",
 				"type":       "seed",

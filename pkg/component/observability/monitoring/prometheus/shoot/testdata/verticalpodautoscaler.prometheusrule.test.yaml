@@ -9,26 +9,26 @@ tests:
                                                                                                                         namespace             = "namespace-test",
                                                                                                                         container             = "container-test",
                                                                                                                         unit                  = "core"}
-    values: "2"
+    values: 2x4
   - series: kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{verticalpodautoscaler = "vpa-test",
                                                                                                                 namespace             = "namespace-test",
                                                                                                                 container             = "container-test",
                                                                                                                 unit                  = "core"}
-    values: "1"
+    values: 1x4
   - series: kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_memory{verticalpodautoscaler = "vpa-test",
                                                                                                                            namespace             = "namespace-test",
                                                                                                                            container             = "container-test",
                                                                                                                            unit                  = "byte"}
-    values: "2"
+    values: 2x4
   - series: kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory{verticalpodautoscaler = "vpa-test",
                                                                                                                    namespace             = "namespace-test",
                                                                                                                    container             = "container-test",
                                                                                                                    unit                  = "byte"}
-    values: "1"
+    values: 1x4
   external_labels:
     cluster: cluster-test
   alert_rule_test:
-  - eval_time: 0m # test the alert fires immediately
+  - eval_time: 4m
     alertname: VerticalPodAutoscalerCappedRecommendation
     exp_alerts:
     - exp_labels:
@@ -63,3 +63,24 @@ tests:
           - namespace = namespace-test
           - vpa = vpa-test
           - container = container-test
+
+# test for the race condition when prometheus scrapes the VPA metric between the instant when the kube-state-metrics updated the gauge value for the
+# new uncapped target recommendation but not the regular target recommendation
+- name: VerticalPodAutoscalerCappedRecommendation:PrometheusScrapeRaceCondition
+  interval: 1m
+  input_series:
+  - series: kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_uncappedtarget_cpu{verticalpodautoscaler = "vpa-test",
+                                                                                                                        namespace             = "namespace-test",
+                                                                                                                        container             = "container-test",
+                                                                                                                        unit                  = "core"}
+    values: 1 1 1 2 2
+  - series: kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{verticalpodautoscaler = "vpa-test",
+                                                                                                                namespace             = "namespace-test",
+                                                                                                                container             = "container-test",
+                                                                                                                unit                  = "core"}
+    values: 1 1 1 1 2
+  external_labels:
+    cluster: cluster-test
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: VerticalPodAutoscalerCappedRecommendation
