@@ -379,6 +379,13 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		)
 	}
 
+	if versionutils.ConstraintK8sGreaterEqual132.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"kube-apiserver-serving-clustertrustbundle-publisher",
+			"volumeattributesclass-protection-controller",
+		)
+	}
+
 	return append(kubeControllerManagerServiceAccountNames, "default")
 }
 

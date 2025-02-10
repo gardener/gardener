@@ -359,9 +359,14 @@ EOF
     done
 fi
 
-# workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+# workarounds for KinD issues
 for node in $nodes; do
+  # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
   docker exec "$node" sh -c "sysctl fs.inotify.max_user_instances=8192"
+
+  # TODO(marc1404): Remove once kindest/node uses runc >= v1.2.4
+  # workaround issue with runc v1.2.3 provided by kindest/node:v1.32.0 by installing runc v1.2.4 manually (https://github.com/opencontainers/runc/pull/4555)
+  docker exec -i "$node" sh -c "bash -" < "$(dirname "$0")/../pkg/provider-local/node/patch-runc.sh"
 done
 
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
