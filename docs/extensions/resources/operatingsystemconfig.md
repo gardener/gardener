@@ -156,7 +156,7 @@ status:
 
 ### `reconcile` Purpose
 
-The `reconcile` purpose contains the "original" `OperatingSystemConfig` (which is later stored in `Secret`s in the shoot's `kube-system` namespace (see step 1)).
+The `reconcile` purpose contains the "original" `OperatingSystemConfig` (which is later stored in `Secret`s in the shoot's `kube-system` namespace (see step 1)). This is downloaded and applies late (see step 5).
 
 The OS controller does not need to translate anything here, but it has the option to provide additional systemd units or files via the `.status` field:
 
@@ -187,81 +187,6 @@ status:
 The `gardener-node-agent` will merge `.spec.units` and `.status.extensionUnits` as well as `.spec.files` and `.status.extensionFiles` when applying.
 
 You can find an example implementation [here](../../../pkg/provider-local/controller/operatingsystemconfig/actuator.go).
-
-### Bootstrap Tokens
-
-`gardenlet` adds a file with the content `<<BOOTSTRAP_TOKEN>>` to the `OperatingSystemConfig` with purpose `provision` and sets `transmitUnencoded=true`.
-This instructs the responsible OS extension to pass this file (with its content in clear-text) to the corresponding `Worker` resource.
-
-`machine-controller-manager` makes sure that:
-
-- a bootstrap token gets created per machine
-- the `<<BOOTSTRAP_TOKEN>>` string in the user data of the machine gets replaced by the generated token
-
-After the machine has been bootstrapped, the token secret in the shoot cluster gets deleted again.
-
-The token is used to bootstrap [Gardener Node Agent](../../concepts/node-agent.md) and `kubelet`.
-
-## What needs to be implemented to support a new operating system?
-
-As part of the shoot flow Gardener will create a special CRD in the seed cluster that needs to be reconciled by an extension controller, for example:
-
-```yaml
----
-apiVersion: extensions.gardener.cloud/v1alpha1
-kind: OperatingSystemConfig
-metadata:
-  name: pool-01-original
-  namespace: default
-spec:
-  type: <my-operating-system>
-  purpose: reconcile
-  units:
-  - name: docker.service
-    dropIns:
-    - name: 10-docker-opts.conf
-      content: |
-        [Service]
-        Environment="DOCKER_OPTS=--log-opt max-size=60m --log-opt max-file=3"
-  - name: docker-monitor.service
-    command: start
-    enable: true
-    content: |
-      [Unit]
-      Description=Containerd-monitor daemon
-      After=kubelet.service
-      [Install]
-      WantedBy=multi-user.target
-      [Service]
-      Restart=always
-      EnvironmentFile=/etc/environment
-      ExecStart=/opt/bin/health-monitor docker
-  files:
-  - path: /var/lib/kubelet/ca.crt
-    permissions: 0644
-    encoding: b64
-    content:
-      secretRef:
-        name: default-token-5dtjz
-        dataKey: token
-  - path: /etc/sysctl.d/99-k8s-general.conf
-    permissions: 0644
-    content:
-      inline:
-        data: |
-          # A higher vm.max_map_count is great for elasticsearch, mongo, or other mmap users
-          # See https://github.com/kubernetes/kops/issues/1340
-          vm.max_map_count = 135217728
-```
-
-In order to support a new operating system, you need to write a controller that watches all `OperatingSystemConfig`s with `.spec.type=<my-operating-system>`.
-For those it shall generate a configuration blob that fits to your operating system.
-For example, a CoreOS controller might generate a [CoreOS cloud-config](https://coreos.com/os/docs/latest/cloud-config.html) or [Ignition](https://coreos.com/ignition/docs/latest/what-is-ignition.html), SLES might generate [cloud-init](https://cloudinit.readthedocs.io/en/latest/), and others might simply generate a bash script translating the `.spec.units` into `systemd` units, and `.spec.files` into real files on the disk.
-
-`OperatingSystemConfig`s can have two purposes which can be used (or ignored) by the extension controllers: either `provision` or `reconcile`.
-
-- The `provision` purpose is used by Gardener for the user-data that it later passes to the machine-controller-manager (and then to the provider's API) when creating new VMs. It contains the `gardener-node-init` unit.
-- The `reconcile` purpose contains the "original" user-data (that is then stored in `Secret`s in the shoot's `kube-system` namespace (see step 1)). This is downloaded and applies late (see step 5).
 
 As described above, the "original" user-data must be re-applicable to allow in-place updates.
 The way how this is done is specific to the generated operating system config (e.g., for CoreOS cloud-init the command is `/usr/bin/coreos-cloudinit --from-file=<path>`, whereas SLES would run `cloud-init --file <path> single -n write_files --frequency=once`).
@@ -310,6 +235,20 @@ status:
 ```
 
 Once the `.status` indicates that the extension controller finished reconciling Gardener will continue with the next step of the shoot reconciliation flow.
+
+### Bootstrap Tokens
+
+`gardenlet` adds a file with the content `<<BOOTSTRAP_TOKEN>>` to the `OperatingSystemConfig` with purpose `provision` and sets `transmitUnencoded=true`.
+This instructs the responsible OS extension to pass this file (with its content in clear-text) to the corresponding `Worker` resource.
+
+`machine-controller-manager` makes sure that:
+
+- a bootstrap token gets created per machine
+- the `<<BOOTSTRAP_TOKEN>>` string in the user data of the machine gets replaced by the generated token
+
+After the machine has been bootstrapped, the token secret in the shoot cluster gets deleted again.
+
+The token is used to bootstrap [Gardener Node Agent](../../concepts/node-agent.md) and `kubelet`.
 
 ## CRI Support
 
