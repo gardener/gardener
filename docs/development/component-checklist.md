@@ -106,7 +106,7 @@ This document provides a checklist for them that you can walk through.
 
 6. **Do not allow privilege escalation for containers** ([example](https://github.com/gardener/gardener/blob/84e7b436cc5d58efdefd768b8556abec0e3083b6/pkg/component/networking/coredns/coredns.go#L658))
 
-   Explicitly set `securityContext.allowPrivilegeEscalation=false`, in cases when possible. There is an [issue in Kubernetes](https://github.com/kubernetes/kubernetes/issues/118822) about this configuration being `true` by default. 
+   Explicitly set `securityContext.allowPrivilegeEscalation=false`, in cases when possible. There is an [issue in Kubernetes](https://github.com/kubernetes/kubernetes/issues/118822) about this configuration being `true` by default.
 
 7. **Do not run containers as root** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/Dockerfile#L12))
 

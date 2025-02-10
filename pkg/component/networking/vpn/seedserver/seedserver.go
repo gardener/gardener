@@ -376,6 +376,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
 						Capabilities: &corev1.Capabilities{
 							Add: []corev1.Capability{
 								"NET_ADMIN",
@@ -497,6 +498,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
 				Capabilities: &corev1.Capabilities{
 					Drop: []corev1.Capability{
 						"all",
@@ -605,6 +607,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
 				Capabilities: &corev1.Capabilities{
 					Drop: []corev1.Capability{
 						"all",

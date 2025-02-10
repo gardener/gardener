@@ -170,6 +170,7 @@ var _ = Describe("VpnSeedServer", func() {
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
 								Capabilities: &corev1.Capabilities{
 									Add: []corev1.Capability{
 										"NET_ADMIN",
@@ -304,6 +305,7 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{
 								"all",
@@ -388,6 +390,7 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
 						Capabilities: &corev1.Capabilities{
 							Drop: []corev1.Capability{
 								"all",
