@@ -5,6 +5,7 @@
 package secrets
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
 	"io"
 	"strings"
@@ -21,6 +22,9 @@ var (
 	FakeGenerateRandomString = func(n int) (string, error) {
 		return strings.Repeat("_", n), nil
 	}
+
+	// Read is an alias for crypto/rand.Read. Exposed for testing.
+	Read = rand.Read
 
 	// GenerateKey is an alias for rsa.GenerateKey. Exposed for testing.
 	GenerateKey = rsa.GenerateKey

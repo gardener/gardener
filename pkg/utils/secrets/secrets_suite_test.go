@@ -5,6 +5,7 @@
 package secrets_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -23,5 +24,9 @@ func TestSecrets(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&GenerateRandomString, FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&Read, func(b []byte) (int, error) {
+		copy(b, []byte(strings.Repeat("_", len(b))))
+		return len(b), nil
+	}))
 	DeferCleanup(test.WithVar(&Clock, testclock.NewFakeClock(time.Time{})))
 })

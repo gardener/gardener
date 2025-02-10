@@ -60,6 +60,10 @@ import (
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
 	DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
+	DeferCleanup(test.WithVar(&secretsutils.Read, func(b []byte) (int, error) {
+		copy(b, []byte(strings.Repeat("_", len(b))))
+		return len(b), nil
+	}))
 	DeferCleanup(test.WithVar(&secretsutils.GenerateVPNKey, secretsutils.FakeGenerateVPNKey))
 	DeferCleanup(test.WithVar(&secretsutils.Clock, testclock.NewFakeClock(time.Time{})))
 })
@@ -100,7 +104,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		configMapNameAdmissionConfigs  = "kube-apiserver-admission-config-e38ff146"
 		secretNameAdmissionKubeconfigs = "kube-apiserver-admission-kubeconfigs-e3b0c442"
-		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-97e14df3"
+		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-b2b49c90"
 		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
 		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
 
@@ -1085,7 +1089,7 @@ resources:
   - aescbc:
       keys:
       - name: key-62135596800
-        secret: ________________________________
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
   - identity: {}
   resources:
   - secrets
@@ -1168,7 +1172,7 @@ resources:
 					if encryptWithCurrentKey {
 						etcdEncryptionConfiguration += `
       - name: key-62135596800
-        secret: ________________________________
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
       - name: ` + oldKeyName + `
         secret: ` + oldKeySecret
 					} else {
@@ -1176,7 +1180,7 @@ resources:
       - name: ` + oldKeyName + `
         secret: ` + oldKeySecret + `
       - name: key-62135596800
-        secret: ________________________________`
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=`
 					}
 
 					etcdEncryptionConfiguration += `
@@ -2393,7 +2397,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-						"reference.resources.gardener.cloud/secret-a61a895c":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
@@ -2582,7 +2586,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-						"reference.resources.gardener.cloud/secret-a61a895c":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
 						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
