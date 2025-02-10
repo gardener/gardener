@@ -116,6 +116,20 @@ var _ = Describe("Project Validation Tests", func() {
 					"Field": Equal("metadata.namespace"),
 				}))),
 			),
+			Entry("should forbid Project with namespace gardener-system-shoot-issuer",
+				metav1.ObjectMeta{Name: "project-1", Namespace: "gardener-system-shoot-issuer"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("metadata.namespace"),
+				}))),
+			),
+			Entry("should forbid Project with namespace gardener-system-public",
+				metav1.ObjectMeta{Name: "project-1", Namespace: "gardener-system-public"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("metadata.namespace"),
+				}))),
+			),
 			Entry("should forbid Project with name containing two consecutive hyphens",
 				metav1.ObjectMeta{Name: "in--valid"},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{

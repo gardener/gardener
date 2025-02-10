@@ -12,6 +12,14 @@ const (
 	// GardenerSeedLeaseNamespace is the namespace in which Gardenlet will report Seeds'
 	// status using Lease resources for each Seed
 	GardenerSeedLeaseNamespace = "gardener-system-seed-lease"
+	// GardenerShootIssuerNamespace is the namespace in which Gardenlet
+	// will sync service account issuer discovery documents
+	// of Shoot clusters which require managed issuer
+	GardenerShootIssuerNamespace = "gardener-system-shoot-issuer"
+	// GardenerSystemPublicNamespace is the namespace which will contain a resources
+	// describing gardener installation itself. The resources in this namespace
+	// may be visible to all authenticated users.
+	GardenerSystemPublicNamespace = "gardener-system-public"
 )
 
 // Object is a core object resource.

@@ -52,6 +52,7 @@ type ProjectSpec struct {
 	Members []ProjectMember
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// A nil value means that Gardener will determine the name of the namespace.
+	// If set, its value must be prefixed with `garden-`.
 	// This field is immutable.
 	Namespace *string
 	// Tolerations contains the default tolerations and a list for allowed taints on seed clusters.

@@ -389,7 +389,7 @@ func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secr
 		false,
 		nil,
 		true,
-		[]string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem, gardencorev1beta1.GardenerShootIssuerNamespace},
+		[]string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemPublicNamespace},
 		nil,
 		false,
 	)

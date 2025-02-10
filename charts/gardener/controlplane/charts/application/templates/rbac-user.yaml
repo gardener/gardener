@@ -358,6 +358,49 @@ subjects:
   kind: Group
   name: system:authenticated
 
+# Role with role binding allowing all authenticated users to read the gardener-system-public/gardener-info configmap
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gardener.cloud:system:read-gardener-info-configmap
+  namespace: gardener-system-public
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - gardener-info
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gardener.cloud:system:read-gardener-info-configmap
+  namespace: gardener-system-public
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gardener.cloud:system:read-gardener-info-configmap
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:authenticated
+
 # Cluster role for allowing creation of projects.
 # IMPORTANT: You need to define a corresponding ClusterRoleBinding binding specific users/
 #            groups/serviceaccounts to this ClusterRole on your own.

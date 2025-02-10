@@ -88,7 +88,7 @@ It prevents creating `Project`s with a non-empty `.spec.namespace` if the value 
 _(enabled by default)_
 
 This admission controller enables [object count ResourceQuotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/#object-count-quota) for Gardener resources, e.g. `Shoots`, `SecretBindings`, `Projects`, etc.
-> :warning: In addition to this admission plugin, the [ResourceQuota controller](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/admission_control_resource_quota.md#resource-quota-controller) must be enabled for the Kube-Controller-Manager of your Garden cluster. 
+> :warning: In addition to this admission plugin, the [ResourceQuota controller](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/admission_control_resource_quota.md#resource-quota-controller) must be enabled for the Kube-Controller-Manager of your Garden cluster.
 
 ## `ResourceReferenceManager`
 
@@ -165,7 +165,7 @@ Operators can provide an optional label selector via the `selector` field to lim
 _(disabled by default)_
 
 This admission controller reacts on `CREATE` operations for `Shoot`s.
-If enabled, it will enable the managed `VerticalPodAutoscaler` components (for more information, see [Vertical Pod Auto-Scaling](../usage/autoscaling/shoot_autoscaling.md#vertical-pod-auto-scaling)) 
+If enabled, it will enable the managed `VerticalPodAutoscaler` components (for more information, see [Vertical Pod Auto-Scaling](../usage/autoscaling/shoot_autoscaling.md#vertical-pod-auto-scaling))
 by setting `spec.kubernetes.verticalPodAutoscaler.enabled=true` for newly created Shoots.
 Already existing Shoots and new Shoots that explicitly disable VPA (`spec.kubernetes.verticalPodAutoscaler.enabled=false`)
 will not be affected by this admission plugin.

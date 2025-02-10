@@ -16,6 +16,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -106,7 +107,7 @@ func ToSelectableFields(project *core.Project) fields.Set {
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
 	projectSpecificFieldsSet := make(fields.Set, 2)
-	projectSpecificFieldsSet[core.ProjectNamespace] = getNamespace(project)
+	projectSpecificFieldsSet[core.ProjectNamespace] = ptr.Deref(project.Spec.Namespace, "")
 	return generic.AddObjectMetaFieldsSet(projectSpecificFieldsSet, &project.ObjectMeta, false)
 }
 
@@ -135,12 +136,5 @@ func NamespaceTriggerFunc(obj runtime.Object) string {
 	if !ok {
 		return ""
 	}
-	return getNamespace(project)
-}
-
-func getNamespace(project *core.Project) string {
-	if project.Spec.Namespace == nil {
-		return ""
-	}
-	return *project.Spec.Namespace
+	return ptr.Deref(project.Spec.Namespace, "")
 }

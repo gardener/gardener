@@ -26,6 +26,10 @@
 
 ## Usage
 
+### Gardener
+
+* [Gardener Info `ConfigMap`](usage/gardener/gardener_info_configmap.md)
+
 ### Project
 
 * [Projects](usage/project/projects.md)

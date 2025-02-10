@@ -37,6 +37,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -50,6 +51,7 @@ import (
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	"github.com/gardener/gardener/pkg/apiserver/controller/publicinfo"
 	"github.com/gardener/gardener/pkg/apiserver/openapi"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -279,7 +281,6 @@ func (o *Options) Run(ctx context.Context) error {
 	klog.SetLogger(log)
 
 	log.Info("Starting gardener-apiserver", "version", version.Get())
-	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	// Create clientset for the native Kubernetes API group
 	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups
@@ -307,6 +308,9 @@ func (o *Options) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// flags are now applied and the feature gates can be logged.
+	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	if err := server.GenericAPIServer.AddPostStartHook("start-gardener-apiserver-informers", func(context genericapiserver.PostStartHookContext) error {
 		o.CoreInformerFactory.Start(context.StopCh)
@@ -375,7 +379,35 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-public-info", func(pctx genericapiserver.PostStartHookContext) error {
+		p := publicInfo{
+			Version: version.Get().String(),
+		}
+
+		if len(o.ExtraOptions.WorkloadIdentityTokenIssuer) != 0 {
+			p.WorkloadIdentityIssuerURL = &o.ExtraOptions.WorkloadIdentityTokenIssuer
+		}
+
+		marshalledInfo, err := yaml.Marshal(p)
+		if err != nil {
+			return err
+		}
+
+		controllerManager, err := publicinfo.NewController(kubeClient, marshalledInfo)
+		if err != nil {
+			return err
+		}
+		return controllerManager.Start(pctx.Context, log)
+	}); err != nil {
+		return err
+	}
+
 	return server.GenericAPIServer.PrepareRun().Run(ctx.Done())
+}
+
+type publicInfo struct {
+	Version                   string  `json:"version" yaml:"version"`
+	WorkloadIdentityIssuerURL *string `json:"workloadIdentityIssuerURL,omitempty" yaml:"workloadIdentityIssuerURL,omitempty"` // TODO(vpnachev): Switch from omitempty(*string) to omitzero(string) once Gardener is build with go 1.24, ref: https://tip.golang.org/doc/go1.24
 }
 
 // ApplyTo applies the options to the given config.
