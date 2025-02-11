@@ -1740,9 +1740,7 @@ var _ = Describe("VPA", func() {
 			})
 
 			Context("Different ServiceMonitor labels", func() {
-
 				Context("should always attach `prometheus=shoot` to `admission-controller`", func() {
-
 					BeforeEach(func() {
 						serviceMonitorAdmissionController.TypeMeta = metav1.TypeMeta{}
 						serviceMonitorAdmissionController.ResourceVersion = "1"
@@ -1784,11 +1782,11 @@ var _ = Describe("VPA", func() {
 				})
 
 				Context("should always attach `prometheus=shoot` to `recommender`", func() {
-					var serviceMonitor = &monitoringv1.ServiceMonitor{}
+					var serviceMonitorExpected = &monitoringv1.ServiceMonitor{}
 
 					BeforeEach(func() {
-						serviceMonitor = serviceMonitorRecommenderFor(component.ClusterTypeShoot)
-						serviceMonitor.ResourceVersion = "1"
+						serviceMonitorExpected = serviceMonitorRecommenderFor(component.ClusterTypeShoot)
+						serviceMonitorExpected.ResourceVersion = "1"
 
 					})
 					It("when IsGardenCluster=true", func() {
@@ -1796,14 +1794,14 @@ var _ = Describe("VPA", func() {
 						vpa = vpaFor(component.ClusterTypeShoot, isGardenCluster)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 
-						serviceMonitor := &monitoringv1.ServiceMonitor{}
-						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitor)).To(Succeed())
+						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitorActual)).To(Succeed())
 
 						By("verify Prometheus label")
-						Expect(serviceMonitor.Labels).To(Equal(serviceMonitor.ObjectMeta.Labels))
+						Expect(serviceMonitorActual.Labels).To(Equal(serviceMonitorExpected.ObjectMeta.Labels))
 
 						By("verify object")
-						Expect(serviceMonitor).To(Equal(serviceMonitor))
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
 
 					It("when IsGardenCluster=false", func() {
@@ -1811,14 +1809,14 @@ var _ = Describe("VPA", func() {
 						vpa = vpaFor(component.ClusterTypeShoot, isGardenCluster)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 
-						serviceMonitor := &monitoringv1.ServiceMonitor{}
-						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitor)).To(Succeed())
+						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitorActual)).To(Succeed())
 
 						By("verify Prometheus label")
-						Expect(serviceMonitor.Labels).To(Equal(serviceMonitor.ObjectMeta.Labels))
+						Expect(serviceMonitorActual.Labels).To(Equal(serviceMonitorExpected.ObjectMeta.Labels))
 
 						By("verify object")
-						Expect(serviceMonitor).To(Equal(serviceMonitor))
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
 				})
 
