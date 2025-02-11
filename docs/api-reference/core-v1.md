@@ -223,7 +223,8 @@ Kubernetes core/v1.LocalObjectReference
 <td>
 <em>(Optional)</em>
 <p>PullSecretRef is a reference to a secret containing the pull secret.
-The secret must be of type <code>kubernetes.io/dockerconfigjson</code> and must be located in the <code>garden</code> namespace.</p>
+The secret must be of type <code>kubernetes.io/dockerconfigjson</code> and must be located in the <code>garden</code> namespace.
+For usage in the gardenlet, the secret must have the label <code>gardener.cloud/role=helm-pull-secret</code>.</p>
 </td>
 </tr>
 </tbody>

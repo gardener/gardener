@@ -285,6 +285,8 @@ const (
 	GardenRoleExposureClassHandler = "exposureclass-handler"
 	// GardenRoleShootServiceAccountIssuer is the value of the GardenRole key indicating type 'shoot-service-account-issuer'.
 	GardenRoleShootServiceAccountIssuer = "shoot-service-account-issuer"
+	// GardenRoleHelmPullSecret is the value of the GardenRole key indicating type 'helm-pull-secret'.
+	GardenRoleHelmPullSecret = "helm-pull-secret"
 
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`

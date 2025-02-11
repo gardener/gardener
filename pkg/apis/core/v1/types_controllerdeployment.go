@@ -72,6 +72,7 @@ type OCIRepository struct {
 	Digest *string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
 	// PullSecretRef is a reference to a secret containing the pull secret.
 	// The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+	// For usage in the gardenlet, the secret must have the label `gardener.cloud/role=helm-pull-secret`.
 	// +optional
 	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty" protobuf:"bytes,5,opt,name=pullSecretRef"`
 }
