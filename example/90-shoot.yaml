@@ -151,12 +151,14 @@ spec:
 # etcd:
 #   main:
 #     autoscaling:
-#       cpu: "2"
-#       memory: 6Gi
+#       minAllowed:
+#         cpu: "2"
+#         memory: 6Gi
 #   events:
 #     autoscaling:
-#       cpu: "1"
-#       memory: 3Gi
+#       minAllowed:
+#         cpu: "1"
+#         memory: 3Gi
   kubernetes:
   # version: 1.27.3
   # enableStaticTokenKubeconfig: true
@@ -232,8 +234,9 @@ spec:
   #     - configmaps
   #     - customresource.fancyoperator.io # requires Kubernetes version >= 1.26
   #   autoscaling:
-  #     cpu: "1"
-  #     memory: 3Gi
+  #     minAllowed:
+  #       cpu: "1"
+  #       memory: 3Gi
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s
