@@ -302,7 +302,7 @@ func applyDefaults(userValues *resourcemanager.Values, defaultValues resourceman
 		userField := vUser.Field(i)
 		defaultField := vDefault.Field(i)
 
-		if reflect.DeepEqual(userField.Interface(), reflect.Zero(userField.Type()).Interface()) {
+		if userField.IsZero() {
 			userField.Set(defaultField)
 		}
 	}

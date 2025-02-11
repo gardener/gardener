@@ -83,6 +83,7 @@ var _ = Describe("ResourceManager", func() {
 			resourceManager, err := NewTargetGardenerResourceManager(fakeClient, namespace, sm, resourcemanager.Values{
 				ClusterIdentity:                      ptr.To("foo"),
 				MaxConcurrentTokenInvalidatorWorkers: ptr.To(6),
+				TargetNamespaces:                     []string{},
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues()).To(Equal(resourcemanager.Values{
@@ -97,6 +98,7 @@ var _ = Describe("ResourceManager", func() {
 				MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
 				ResponsibilityMode:                   resourcemanager.ForTarget,
 				SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
+				TargetNamespaces:                     []string{},
 				WatchedNamespace:                     &namespace,
 			}))
 		})
