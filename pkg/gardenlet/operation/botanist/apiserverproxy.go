@@ -40,6 +40,7 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 		SidecarImage:        sidecarImage.String(),
 		ProxySeedServerHost: b.outOfClusterAPIServerFQDN(),
 		DNSLookupFamily:     dnsLookupFamily,
+		SeedNamespace:       b.Shoot.SeedNamespace,
 	}
 
 	return apiserverproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.SecretsManager, values), nil
