@@ -9,7 +9,7 @@ require (
 	github.com/andybalholm/brotli v1.1.1
 	github.com/containerd/containerd v1.7.25
 	github.com/coreos/go-systemd/v22 v22.5.0
-	github.com/distribution/distribution/v3 v3.0.0-rc.2
+	github.com/distribution/distribution/v3 v3.0.0-rc.3
 	github.com/fluent/fluent-operator/v2 v2.9.0
 	github.com/gardener/cert-management v0.17.4
 	github.com/gardener/dependency-watchdog v1.3.0
