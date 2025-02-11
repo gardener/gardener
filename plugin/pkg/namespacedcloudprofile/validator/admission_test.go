@@ -14,13 +14,13 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/ptr"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	apiserverfeatures "github.com/gardener/gardener/pkg/apiserver/features"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -30,6 +30,8 @@ import (
 var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enabled bool) {
 
 	var _ = Describe("Admission", func() {
+		apiserverfeatures.RegisterFeatureGates()
+
 		Describe("#Validate", func() {
 			var (
 				ctx                 context.Context
@@ -53,10 +55,6 @@ var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enab
 			)
 
 			BeforeEach(func() {
-				// TODO (Roncossek): Where does this feature gate has to be registered for the plugin?
-				utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
-					features.CloudProfileCapabilities,
-				)))
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, enabled))
 
 				ctx = context.TODO()
