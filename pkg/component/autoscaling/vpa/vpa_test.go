@@ -1441,7 +1441,6 @@ var _ = Describe("VPA", func() {
 						}
 						Expect(managedResource).To(contain(serviceMonitorRecommender))
 					})
-
 				})
 
 				Context("when used with non-Garden cluster", func() {
@@ -1459,9 +1458,7 @@ var _ = Describe("VPA", func() {
 						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeSeed)
 						Expect(managedResource).To(contain(serviceMonitorRecommender))
 					})
-
 				})
-
 			})
 
 			Context("Different Kubernetes versions", func() {
@@ -1789,6 +1786,7 @@ var _ = Describe("VPA", func() {
 						serviceMonitorExpected.ResourceVersion = "1"
 
 					})
+
 					It("when IsGardenCluster=true", func() {
 						isGardenCluster := true
 						vpa = vpaFor(component.ClusterTypeShoot, isGardenCluster)
@@ -1819,7 +1817,6 @@ var _ = Describe("VPA", func() {
 						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
 				})
-
 			})
 
 			Context("Different Kubernetes versions", func() {
