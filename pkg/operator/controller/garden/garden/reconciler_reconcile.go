@@ -1165,7 +1165,7 @@ func reconcileGardenerInfoConfigMap(ctx context.Context, log logr.Logger, virtua
 	}
 
 	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardencorev1beta1.GardenerSystemPublicNamespace, Name: configMapName}}
-	log.Info("Creating gardener-info ConfigMap", "configMap", configMap)
+	log.Info("Reconciling gardener-info ConfigMap", "configMap", configMap)
 	_, err = controllerutils.CreateOrGetAndMergePatch(ctx, virtualGardenClient, configMap, func() error {
 		if configMap.Data == nil {
 			configMap.Data = make(map[string]string)
