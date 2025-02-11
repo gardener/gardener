@@ -935,6 +935,8 @@ type KubeAPIServerConfig struct {
 // ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
 type ControlPlaneAutoscaling struct {
 	// MinAllowed configures the minimum allowed resource requests.
+	// Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+	// Default values are not applied to this field.
 	// +optional
 	MinAllowed corev1.ResourceList `json:"minAllowed,omitempty" protobuf:"bytes,1,rep,name=minAllowed,casttype=ResourceList,castkey=ResourceName"`
 }

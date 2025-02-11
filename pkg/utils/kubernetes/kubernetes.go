@@ -701,13 +701,10 @@ func (c *ComparableTolerations) Transform(toleration corev1.Toleration) corev1.T
 func MaximumResourcesFromResourceList(list1, list2 corev1.ResourceList) corev1.ResourceList {
 	resources := maps.Clone(list1)
 
-	for res, quan := range list2 {
-		if quanExiting, ok := resources[res]; ok {
-			if quanExiting.Cmp(quan) > 0 {
-				continue
-			}
+	for resource, quantity := range list2 {
+		if v, ok := resources[resource]; !ok || v.Cmp(quantity) <= 0 {
+			resources[resource] = quantity
 		}
-		resources[res] = quan
 	}
 
 	return resources

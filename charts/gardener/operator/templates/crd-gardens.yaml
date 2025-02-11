@@ -366,8 +366,10 @@ spec:
                                   - type: string
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
-                                description: MinAllowed configures the minimum allowed
-                                  resource requests.
+                                description: |-
+                                  MinAllowed configures the minimum allowed resource requests.
+                                  Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+                                  Default values are not applied to this field.
                                 type: object
                             type: object
                           storage:
@@ -401,8 +403,10 @@ spec:
                                   - type: string
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
-                                description: MinAllowed configures the minimum allowed
-                                  resource requests.
+                                description: |-
+                                  MinAllowed configures the minimum allowed resource requests.
+                                  Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+                                  Default values are not applied to this field.
                                 type: object
                             type: object
                           backup:
@@ -1386,8 +1390,10 @@ spec:
                                   - type: string
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
-                                description: MinAllowed configures the minimum allowed
-                                  resource requests.
+                                description: |-
+                                  MinAllowed configures the minimum allowed resource requests.
+                                  Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+                                  Default values are not applied to this field.
                                 type: object
                             type: object
                           defaultNotReadyTolerationSeconds:

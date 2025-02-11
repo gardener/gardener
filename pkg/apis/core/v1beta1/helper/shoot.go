@@ -669,39 +669,25 @@ func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStra
 
 // GetMinAllowedForKubeAPIServer returns the minAllowed configuration values for Kube API Server if configured or nil otherwise.
 func GetMinAllowedForKubeAPIServer(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) corev1.ResourceList {
-	return copyMinAllowed(func() corev1.ResourceList {
-		if apiServerConfig != nil && apiServerConfig.Autoscaling != nil {
-			return apiServerConfig.Autoscaling.MinAllowed
-		}
-		return nil
-	})
+	if apiServerConfig != nil && apiServerConfig.Autoscaling != nil {
+		return maps.Clone(apiServerConfig.Autoscaling.MinAllowed)
+	}
+	return nil
 }
 
 // GetMinAllowedForETCDMain returns the minAllowed configuration values for etcd main if configured or nil otherwise.
 func GetMinAllowedForETCDMain(etcd *gardencorev1beta1.ETCD) corev1.ResourceList {
-	return copyMinAllowed(func() corev1.ResourceList {
-		if etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
-			return etcd.Main.Autoscaling.MinAllowed
-		}
-		return nil
-	})
+	if etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
+		return maps.Clone(etcd.Main.Autoscaling.MinAllowed)
+	}
+	return nil
 }
 
 // GetMinAllowedForETCDEvents returns the minAllowed configuration values for etcd events if configured or nil otherwise.
 func GetMinAllowedForETCDEvents(etcd *gardencorev1beta1.ETCD) corev1.ResourceList {
-	return copyMinAllowed(func() corev1.ResourceList {
-		if etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
-			return etcd.Events.Autoscaling.MinAllowed
-		}
-		return nil
-	})
-}
-
-func copyMinAllowed(getMinAllowed func() corev1.ResourceList) corev1.ResourceList {
-	if minAllowed := getMinAllowed(); minAllowed != nil {
-		minAllowedCopy := make(corev1.ResourceList)
-		maps.Copy(minAllowedCopy, minAllowed)
-		return minAllowedCopy
+	if etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
+		return maps.Clone(etcd.Events.Autoscaling.MinAllowed)
 	}
+
 	return nil
 }
