@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -116,7 +117,8 @@ func (r *Reconciler) deployGardenlet(
 		return fmt.Errorf("failed preparing gardenlet chart values: %w", err)
 	}
 
-	archive, err := r.HelmRegistry.Pull(ctx, &gardenlet.Spec.Deployment.Helm.OCIRepository)
+	subCtx := context.WithValue(ctx, oci.ContextKeyPullSecretNamespace, gardenerutils.ComputeGardenNamespace(seed.Name))
+	archive, err := r.HelmRegistry.Pull(subCtx, &gardenlet.Spec.Deployment.Helm.OCIRepository)
 	if err != nil {
 		return fmt.Errorf("failed pulling Helm chart from OCI repository: %w", err)
 	}

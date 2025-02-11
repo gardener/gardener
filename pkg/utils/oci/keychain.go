@@ -21,15 +21,17 @@ type keychain struct {
 	pullSecret string
 }
 
-var _ authn.Keychain = &keychain{}
-var _ authn.ContextKeychain = &keychain{}
+var (
+	_ authn.Keychain        = &keychain{}
+	_ authn.ContextKeychain = &keychain{}
+)
 
-// ResolveContext implements ContextKeychain.
+// Resolve implements Keychain.
 func (k *keychain) Resolve(target authn.Resource) (authn.Authenticator, error) {
 	return k.ResolveContext(context.Background(), target)
 }
 
-// Resolve implements Keychain.
+// ResolveContext implements ContextKeychain.
 func (k *keychain) ResolveContext(_ context.Context, target authn.Resource) (authn.Authenticator, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
