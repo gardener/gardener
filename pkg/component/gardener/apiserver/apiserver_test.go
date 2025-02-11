@@ -352,7 +352,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
 					"reference.resources.gardener.cloud/secret-389fbba5":    "etcd-client",
 					"reference.resources.gardener.cloud/secret-867d23cd":    "generic-token-kubeconfig",
-					"reference.resources.gardener.cloud/secret-02452d55":    "gardener-apiserver-etcd-encryption-configuration-944a649a",
+					"reference.resources.gardener.cloud/secret-3af026bf":    "gardener-apiserver-etcd-encryption-configuration-fe8711ae",
 					"reference.resources.gardener.cloud/secret-3696832b":    "gardener-apiserver",
 					"reference.resources.gardener.cloud/secret-e01f5645":    "ca-etcd",
 					"reference.resources.gardener.cloud/secret-14294f8f":    "gardener-apiserver-workload-identity-signing-key-f70e59e4",
@@ -392,7 +392,7 @@ var _ = Describe("GardenerAPIServer", func() {
 							"reference.resources.gardener.cloud/secret-47fc132b":    "gardener-apiserver-admission-kubeconfigs-e3b0c442",
 							"reference.resources.gardener.cloud/secret-389fbba5":    "etcd-client",
 							"reference.resources.gardener.cloud/secret-867d23cd":    "generic-token-kubeconfig",
-							"reference.resources.gardener.cloud/secret-02452d55":    "gardener-apiserver-etcd-encryption-configuration-944a649a",
+							"reference.resources.gardener.cloud/secret-3af026bf":    "gardener-apiserver-etcd-encryption-configuration-fe8711ae",
 							"reference.resources.gardener.cloud/secret-3696832b":    "gardener-apiserver",
 							"reference.resources.gardener.cloud/secret-e01f5645":    "ca-etcd",
 							"reference.resources.gardener.cloud/secret-14294f8f":    "gardener-apiserver-workload-identity-signing-key-f70e59e4",
@@ -583,7 +583,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								Name: "etcd-encryption-secret",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName:  "gardener-apiserver-etcd-encryption-configuration-944a649a",
+										SecretName:  "gardener-apiserver-etcd-encryption-configuration-fe8711ae",
 										DefaultMode: ptr.To[int32](0640),
 									},
 								},
@@ -789,7 +789,7 @@ resources:
   - aescbc:
       keys:
       - name: key-62135596800
-        secret: ________________________________
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
   - identity: {}
   resources:
   - shootstates.core.gardener.cloud
@@ -871,7 +871,7 @@ resources:
 							if encryptWithCurrentKey {
 								etcdEncryptionConfiguration += `
       - name: key-62135596800
-        secret: ________________________________
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=
       - name: ` + oldKeyName + `
         secret: ` + oldKeySecret
 							} else {
@@ -879,7 +879,7 @@ resources:
       - name: ` + oldKeyName + `
         secret: ` + oldKeySecret + `
       - name: key-62135596800
-        secret: ________________________________`
+        secret: X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX18=`
 							}
 
 							etcdEncryptionConfiguration += `

@@ -167,9 +167,16 @@ func etcdEncryptionAESKeys(keySecretCurrent, keySecretOld *corev1.Secret, encryp
 }
 
 func aesKeyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
+	var key string
+	if v, ok := data[secretsutils.DataKeyEncryptionSecretEncoding]; ok && string(v) == "none" {
+		// key is not encoded, so we need to encode it before passing it to the kube-apiserver
+		key = utils.EncodeBase64(data[secretsutils.DataKeyEncryptionSecret])
+	} else {
+		key = string(data[secretsutils.DataKeyEncryptionSecret])
+	}
 	return apiserverconfigv1.Key{
 		Name:   string(data[secretsutils.DataKeyEncryptionKeyName]),
-		Secret: string(data[secretsutils.DataKeyEncryptionSecret]),
+		Secret: key,
 	}
 }
 

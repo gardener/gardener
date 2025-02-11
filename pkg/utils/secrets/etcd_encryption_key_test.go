@@ -41,9 +41,8 @@ var _ = Describe("Etcd Encryption Key Secrets", func() {
 				etcdEncryptionKey, ok := obj.(*ETCDEncryptionKey)
 				Expect(ok).To(BeTrue())
 
-				Expect(etcdEncryptionKey.Name).To(Equal(name))
-				Expect(etcdEncryptionKey.Key).To(Equal("key-62135596800"))
-				Expect(etcdEncryptionKey.Secret).To(Equal("_________________"))
+				Expect(etcdEncryptionKey.KeyName).To(Equal("key-62135596800"))
+				Expect(etcdEncryptionKey.Secret).To(Equal([]byte("_________________")))
 			})
 		})
 
@@ -56,8 +55,9 @@ var _ = Describe("Etcd Encryption Key Secrets", func() {
 				Expect(ok).To(BeTrue())
 
 				Expect(etcdEncryptionKey.SecretData()).To(Equal(map[string][]byte{
-					"key":    []byte("key-62135596800"),
-					"secret": []byte("_________________"),
+					"key":      []byte("key-62135596800"),
+					"secret":   []byte("_________________"),
+					"encoding": []byte("none"),
 				}))
 			})
 		})
