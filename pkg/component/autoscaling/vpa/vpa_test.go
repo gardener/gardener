@@ -1405,27 +1405,19 @@ var _ = Describe("VPA", func() {
 	Describe("#Deploy", func() {
 		Context("cluster type seed", func() {
 			BeforeEach(func() {
-				vpa = New(c, namespace, sm, Values{
-					ClusterType:              component.ClusterTypeSeed,
-					Enabled:                  true,
-					SecretNameServerCA:       secretNameCA,
-					RuntimeKubernetesVersion: runtimeKubernetesVersion,
-					AdmissionController:      valuesAdmissionController,
-					Recommender:              valuesRecommender,
-					Updater:                  valuesUpdater,
-				})
+				vpa = vpaFor(component.ClusterTypeSeed, false)
 				managedResourceName = "vpa"
 			})
 
-			Context("Different ServiceMonitor labels", func() {
-				Context("when used with Garden cluster", func() {
+			Context("when deploying ServiceMonitors", func() {
+				Context("in a garden cluster", func() {
 					BeforeEach(func() {
 						isGardenCluster := true
 						vpa = vpaFor(component.ClusterTypeSeed, isGardenCluster)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 
-					It("should label `admission-controller` with `prometheus=garden`", func() {
+					It("should label vpa-admission-controller ServiceMonitor with `prometheus=garden`", func() {
 						serviceMonitorAdmissionController.ObjectMeta.Name = "garden-vpa-admission-controller"
 						serviceMonitorAdmissionController.ObjectMeta.Labels = map[string]string{
 							"prometheus": "garden",
@@ -1433,7 +1425,7 @@ var _ = Describe("VPA", func() {
 						Expect(managedResource).To(contain(serviceMonitorAdmissionController))
 					})
 
-					It("should label `recommender` with `prometheus=garden`", func() {
+					It("should label vpa-recommender ServiceMonitor with `prometheus=garden`", func() {
 						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeSeed)
 						serviceMonitorRecommender.ObjectMeta.Name = "garden-vpa-recommender"
 						serviceMonitorRecommender.ObjectMeta.Labels = map[string]string{
@@ -1443,18 +1435,16 @@ var _ = Describe("VPA", func() {
 					})
 				})
 
-				Context("when used with non-Garden cluster", func() {
+				Context("when not deployed in a garden cluster", func() {
 					BeforeEach(func() {
-						isGardenCluster := false
-						vpa = vpaFor(component.ClusterTypeSeed, isGardenCluster)
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 
-					It("should label `admission-controller` with `prometheus=seed`", func() {
+					It("should label vpa-admission-controller ServiceMonitor with `prometheus=seed`", func() {
 						Expect(managedResource).To(contain(serviceMonitorAdmissionController))
 					})
 
-					It("should label `recommender` with `prometheus=seed`", func() {
+					It("should label vpa-recommender ServiceMonitor with `prometheus=seed`", func() {
 						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeSeed)
 						Expect(managedResource).To(contain(serviceMonitorRecommender))
 					})
