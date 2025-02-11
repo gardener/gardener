@@ -27,7 +27,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("MetricsServer", func() {
@@ -333,7 +332,8 @@ spec:
 			serverSecret.Data["ca.key"] = data["ca.key"]
 
 			ExpectWithOffset(1, kubernetesutils.MakeUnique(serverSecret)).To(Succeed())
-			serverSecretYAML := testruntime.Serialize(serverSecret, kubernetes.ShootScheme)
+			serverSecretYAML, err := kubernetesutils.Serialize(serverSecret, kubernetes.ShootScheme)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 			return serverSecret.Name, serverSecretYAML
 		}

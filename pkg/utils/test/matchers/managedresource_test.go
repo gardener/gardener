@@ -21,8 +21,8 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	testruntime "github.com/gardener/gardener/pkg/utils/test/runtime"
 )
 
 var _ = Describe("ManagedResource Object Matcher", func() {
@@ -108,13 +108,20 @@ var _ = Describe("ManagedResource Object Matcher", func() {
 	})
 
 	setupManagedResource := func() {
+		configMapYAML, err := kubernetesutils.Serialize(configMap, fakeClient.Scheme())
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+		deploymentYAML, err := kubernetesutils.Serialize(deployment, fakeClient.Scheme())
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+		secretYAML, err := kubernetesutils.Serialize(secret, fakeClient.Scheme())
+		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
 		managedResourceSecret1.Data = map[string][]byte{
-			fmt.Sprintf("configmap__%s__%s.yaml", configMap.Namespace, configMap.Name): []byte(testruntime.Serialize(configMap, fakeClient.Scheme())),
+			fmt.Sprintf("configmap__%s__%s.yaml", configMap.Namespace, configMap.Name): []byte(configMapYAML),
 		}
 
 		managedResourceSecret2.Data = map[string][]byte{
-			fmt.Sprintf("deployment__%s__%s.yaml", deployment.Namespace, deployment.Name): []byte(testruntime.Serialize(deployment, fakeClient.Scheme())),
-			fmt.Sprintf("secret__%s__%s.yaml", secret.Namespace, secret.Name):             []byte(testruntime.Serialize(secret, fakeClient.Scheme())),
+			fmt.Sprintf("deployment__%s__%s.yaml", deployment.Namespace, deployment.Name): []byte(deploymentYAML),
+			fmt.Sprintf("secret__%s__%s.yaml", secret.Namespace, secret.Name):             []byte(secretYAML),
 		}
 
 		managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{
