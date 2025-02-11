@@ -5,6 +5,7 @@
 package v1beta1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -81,6 +82,12 @@ type CloudProfileSpec struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 	// +optional
 	Limits *Limits `json:"limits,omitempty" protobuf:"bytes,11,opt,name=limits"`
+	// CapabilitiesDefinition contains the definition of all possible capabilities of the CloudProfile.
+	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+	// The order values for a given capability is relevant. To the left is the most important value.
+	// During maintenance upgrades the image that enables most important capabilities will be selected.
+	// +optional
+	CapabilitiesDefinition Capabilities `json:"capabilitiesDefinition,omitempty" protobuf:"bytes,11,opt,name=capabilitiesDefinition"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -137,6 +144,10 @@ type MachineImageVersion struct {
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	// +optional
 	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty" protobuf:"bytes,5,opt,name=inPlaceUpdates"`
+	// CapabilitiesSet contains the set of capabilities of a MachineImage version. There is exactly one capabilities entry
+	// per resource of a version the infrastructure provider serves.
+	// +optional
+	CapabilitiesSet []apiextensionsv1.JSON `json:"capabilitySets,omitempty" protobuf:"bytes,6,rep,name=capabilitySets"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -170,6 +181,9 @@ type MachineType struct {
 	// Architecture is the CPU architecture of this machine type.
 	// +optional
 	Architecture *string `json:"architecture,omitempty" protobuf:"bytes,7,opt,name=architecture"`
+	// Capabilities contains the capabilities of the machine type.
+	// +optional
+	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,8,opt,name=capabilities"`
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
