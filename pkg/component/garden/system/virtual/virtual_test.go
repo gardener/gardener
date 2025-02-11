@@ -101,7 +101,7 @@ var _ = Describe("Virtual", func() {
 		}
 		namespaceGardenerPublic = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener-system-public"
+				Name: "gardener-system-public",
 			},
 		}
 		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{

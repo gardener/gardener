@@ -270,14 +270,19 @@ var _ = Describe("Garden controller tests", func() {
 		// trigger another reconciliation to enable the SeedAuthorizer feature. Since gardener-resource-manager does not
 		// run in this test to create them, let's create them manually here to prevent the controller from looping
 		// endlessly. We create them before the Garden resource to prevent that the test runs into a timeout.
+		// The gardener-system-public namespace is also expected to be created by gardener-resource-manager, we create
+		// the namespace to prevent controller failing to deploy the gardener-info configmap due to non-existing namespace.
 		By("Create gardener-{apiserver,admission-controller} deployments to prevent infinite reconciliation loops")
 		gardenerAPIServerDeployment := newDeployment("gardener-apiserver", testNamespace.Name)
 		gardenerAdmissionControllerDeployment := newDeployment("gardener-admission-controller", testNamespace.Name)
+		gardenerSystemPublicNamespace := corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "gardener-system-public"}}
 		Expect(testClient.Create(ctx, gardenerAPIServerDeployment)).To(Succeed())
 		Expect(testClient.Create(ctx, gardenerAdmissionControllerDeployment)).To(Succeed())
+		Expect(testClient.Create(ctx, &gardenerSystemPublicNamespace)).To(Succeed())
 		DeferCleanup(func() {
 			Expect(testClient.Delete(ctx, gardenerAPIServerDeployment)).To(Or(Succeed(), BeNotFoundError()))
 			Expect(testClient.Delete(ctx, gardenerAdmissionControllerDeployment)).To(Or(Succeed(), BeNotFoundError()))
+			Expect(testClient.Delete(ctx, &gardenerSystemPublicNamespace)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
 		By("Create Extension", func() {
