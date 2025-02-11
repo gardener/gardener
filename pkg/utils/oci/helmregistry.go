@@ -25,12 +25,18 @@ import (
 const (
 	mediaTypeHelm = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
 
-	localRegistry        = "localhost:5001"
 	inKubernetesRegistry = "garden.local.gardener.cloud:5001"
 )
 
+type pullSecretNamespace struct{}
+
+// ContextKeyPullSecretNamespace is the key to use to pass the pull secret namespace in the context.
+var ContextKeyPullSecretNamespace = pullSecretNamespace{}
+
 // Interface represents an OCI compatible registry.
 type Interface interface {
+	// Pull from the repository and return the Helm chart.
+	// The context can be used to pass the pull secret namespace with the key ContextKeyPullSecretNamespace.
 	Pull(ctx context.Context, oci *gardencorev1.OCIRepository) ([]byte, error)
 }
 
@@ -60,7 +66,15 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 	}
 
 	if oci.PullSecretRef != nil {
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: oci.PullSecretRef.Name}}
+		namespace := v1beta1constants.GardenNamespace
+		if v := ctx.Value(ContextKeyPullSecretNamespace); v != nil {
+			s, ok := v.(string)
+			if !ok {
+				return nil, errors.New("pull secret namespace must be a string")
+			}
+			namespace = s
+		}
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: oci.PullSecretRef.Name}}
 		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 			return nil, fmt.Errorf("failed to get pull secret %s: %w", client.ObjectKeyFromObject(secret), err)
 		}

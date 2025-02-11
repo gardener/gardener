@@ -76,6 +76,7 @@ spec:
                                     description: |-
                                       PullSecretRef is a reference to a secret containing the pull secret.
                                       The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+                                      For usage in the gardenlet, the secret must have the label `gardener.cloud/role=helm-pull-secret`.
                                     properties:
                                       name:
                                         default: ""
@@ -128,6 +129,7 @@ spec:
                                     description: |-
                                       PullSecretRef is a reference to a secret containing the pull secret.
                                       The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+                                      For usage in the gardenlet, the secret must have the label `gardener.cloud/role=helm-pull-secret`.
                                     properties:
                                       name:
                                         default: ""
@@ -175,6 +177,7 @@ spec:
                                 description: |-
                                   PullSecretRef is a reference to a secret containing the pull secret.
                                   The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+                                  For usage in the gardenlet, the secret must have the label `gardener.cloud/role=helm-pull-secret`.
                                 properties:
                                   name:
                                     default: ""
