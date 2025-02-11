@@ -96,11 +96,10 @@ func validateRuntimeClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldRuntimeCluster.Ingress.Domains[0].Name, newRuntimeCluster.Ingress.Domains[0].Name, fldPath.Child("ingress", "domains").Index(0))...)
 	}
 
-	type network struct {
+	for _, n := range []struct {
 		new, old []string
 		name     string
-	}
-	for _, n := range []network{
+	}{
 		{newRuntimeCluster.Networking.Nodes, oldRuntimeCluster.Networking.Nodes, "nodes"},
 		{newRuntimeCluster.Networking.Pods, oldRuntimeCluster.Networking.Pods, "pods"},
 		{newRuntimeCluster.Networking.Services, oldRuntimeCluster.Networking.Services, "services"},
@@ -178,38 +177,9 @@ func validateDNS(dns *operatorv1alpha1.DNSManagement, fldPath *field.Path) field
 func validateRuntimeCluster(dns *operatorv1alpha1.DNSManagement, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	for i, nodes := range runtimeCluster.Networking.Nodes {
-		if _, _, err := net.ParseCIDR(nodes); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes").Index(i), nodes, "cannot parse node network cidr of runtime cluster: "+err.Error()))
-		}
-		for _, services := range runtimeCluster.Networking.Services {
-			if cidrvalidation.NetworksIntersect(nodes, services) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes").Index(i), nodes, "node network of runtime cluster intersects with service network of runtime cluster"))
-			}
-		}
-		for _, pods := range runtimeCluster.Networking.Pods {
-			if cidrvalidation.NetworksIntersect(nodes, pods) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes").Index(i), nodes, "node network of runtime cluster intersects with pod network of runtime cluster"))
-			}
-		}
-	}
-	for i, pods := range runtimeCluster.Networking.Pods {
-		if _, _, err := net.ParseCIDR(pods); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "pods").Index(i), pods, "cannot parse pod network cidr of runtime cluster: "+err.Error()))
-		}
-		for _, services := range runtimeCluster.Networking.Services {
-			if cidrvalidation.NetworksIntersect(pods, services) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "pods").Index(i), services, "pod network of runtime cluster intersects with service network of runtime cluster"))
-			}
-		}
-	}
-	for i, services := range runtimeCluster.Networking.Services {
-		if _, _, err := net.ParseCIDR(services); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services").Index(i), services, "cannot parse service network cidr of runtime cluster: "+err.Error()))
-		}
-	}
-
 	allErrs = validateDomains(dns, runtimeCluster.Ingress.Domains, fldPath.Child("ingress", "domains"), allErrs)
+
+	allErrs = append(allErrs, validateRuntimeClusterNetworking(runtimeCluster.Networking, fldPath.Child("networking"))...)
 
 	return allErrs
 }
@@ -229,6 +199,53 @@ func validateDomains(dns *operatorv1alpha1.DNSManagement, domains []operatorv1al
 				}
 			} else {
 				allErrs = append(allErrs, field.Required(path.Index(i).Child("provider"), "provider name must be set if `.spec.dns` is set"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateRuntimeClusterNetworking(runtimeNetworking operatorv1alpha1.RuntimeNetworking, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, nodes := range runtimeNetworking.Nodes {
+		if _, _, err := net.ParseCIDR(nodes); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes").Index(i), nodes, "cannot parse node network cidr of runtime cluster: "+err.Error()))
+		}
+	}
+	for i, pods := range runtimeNetworking.Pods {
+		if _, _, err := net.ParseCIDR(pods); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("pods").Index(i), pods, "cannot parse pod network cidr of runtime cluster: "+err.Error()))
+		}
+	}
+	for i, services := range runtimeNetworking.Services {
+		if _, _, err := net.ParseCIDR(services); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("services").Index(i), services, "cannot parse service network cidr of runtime cluster: "+err.Error()))
+		}
+	}
+
+	// In case any IP ranges are incorrect, there is no benefit in checking for intersections.
+	if len(allErrs) > 0 {
+		return allErrs
+	}
+
+	for i, nodes := range runtimeNetworking.Nodes {
+		for _, services := range runtimeNetworking.Services {
+			if cidrvalidation.NetworksIntersect(nodes, services) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes").Index(i), nodes, "node network of runtime cluster intersects with service network of runtime cluster"))
+			}
+		}
+		for _, pods := range runtimeNetworking.Pods {
+			if cidrvalidation.NetworksIntersect(nodes, pods) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes").Index(i), nodes, "node network of runtime cluster intersects with pod network of runtime cluster"))
+			}
+		}
+	}
+	for i, pods := range runtimeNetworking.Pods {
+		for _, services := range runtimeNetworking.Services {
+			if cidrvalidation.NetworksIntersect(pods, services) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("pods").Index(i), services, "pod network of runtime cluster intersects with service network of runtime cluster"))
 			}
 		}
 	}
