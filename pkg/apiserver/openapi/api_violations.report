@@ -30,6 +30,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImage,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,Architectures
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CRI
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CapabilitiesSet
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,MachineImages
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,MachineTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,VolumeTypes
@@ -93,6 +94,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/sett
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,DataVolume,VolumeSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeletConfig,PodPIDsLimit
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CapabilitiesSet
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineTypeStorage,StorageSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ResourceWatchCacheSize,CacheSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,IsHibernated
