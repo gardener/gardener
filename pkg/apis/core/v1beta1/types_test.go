@@ -42,3 +42,22 @@ var _ = Describe("#IsIPv6SingleStack", func() {
 		Expect(IsIPv6SingleStack([]IPFamily{IPFamilyIPv6})).To(BeTrue())
 	})
 })
+
+var _ = Describe("#Unmarshal CapabilitiesValues", func() {
+	It("should sanitize capability values on UnmarshalJSON", func() {
+		var capabilities2 = Capabilities{}
+
+		values1 := CapabilityValues{}
+		_ = values1.UnmarshalJSON([]byte(`"amd64,arm64,amd32,  asap   ,   I look weird"`))
+		values2 := CapabilityValues{}
+		_ = values2.UnmarshalJSON([]byte(`"gen1,gen4"`))
+
+		capabilities2["architecture"] = values1
+		capabilities2["hypervisorType"] = values2
+
+		architectureValues := capabilities2["architecture"]
+		Expect(architectureValues.Values).To(ConsistOf("amd64", "arm64", "amd32", "asap", "I look weird"))
+		hypervisorValues := capabilities2["hypervisorType"]
+		Expect(hypervisorValues.Values).To(ConsistOf("gen1", "gen4"))
+	})
+})

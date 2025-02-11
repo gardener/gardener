@@ -57,6 +57,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType":                         schema_pkg_apis_core_v1beta1_BastionMachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation":                                 schema_pkg_apis_core_v1beta1_CARotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI":                                        schema_pkg_apis_core_v1beta1_CRI(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues":                           schema_pkg_apis_core_v1beta1_CapabilityValues(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile":                               schema_pkg_apis_core_v1beta1_CloudProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileList":                           schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference":                      schema_pkg_apis_core_v1beta1_CloudProfileReference(ref),
@@ -1967,6 +1968,34 @@ func schema_pkg_apis_core_v1beta1_CRI(ref common.ReferenceCallback) common.OpenA
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_CapabilityValues(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CapabilityValues is a list of values for a capability.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"Values": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"Values"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_CloudProfile(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2224,12 +2253,26 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits"),
 						},
 					},
+					"capabilitiesDefinition": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CapabilitiesDefinition contains the definition of all possible capabilities in the CloudProfile. Only capabilities and values defined here can be used to describe MachineImages and MachineTypes. The order of values for a given capability is relevant. The most important value is listed first. During maintenance upgrades, the image that enables the most important capabilities will be selected.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"kubernetes", "machineImages", "machineTypes", "regions", "type"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -5613,12 +5656,25 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates"),
 						},
 					},
+					"capabilitiesSet": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CapabilitiesSet is an array of capabilities. Each entry represents a combination of capabilities that is provided by the machine image version.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -5675,12 +5731,26 @@ func schema_pkg_apis_core_v1beta1_MachineType(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"capabilities": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Capabilities contains the capabilities of the machine type.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"cpu", "gpu", "memory", "name"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 

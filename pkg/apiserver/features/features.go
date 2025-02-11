@@ -18,5 +18,6 @@ func RegisterFeatureGates() {
 		features.ShootCredentialsBinding,
 		features.CredentialsRotationWithoutWorkersRollout,
 		features.InPlaceNodeUpdates,
+		features.CloudProfileCapabilities,
 	)))
 }

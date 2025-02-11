@@ -5,6 +5,7 @@
 package core
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -60,4 +61,53 @@ type AccessRestrictionWithOptions struct {
 	// Options is a map of additional options for the access restriction.
 	// +optional
 	Options map[string]string
+}
+
+// CapabilityName is the name of a capability.
+type CapabilityName string
+
+// CapabilityValues is a list of values for a capability.
+type CapabilityValues struct {
+	Values []string
+}
+
+// Capabilities of a machine type or machine image.
+type Capabilities map[CapabilityName]CapabilityValues
+
+// CapabilitiesSet is a set of multiple capabilities.
+type CapabilitiesSet []apiextensionsv1.JSON
+
+// Contains checks if the CapabilityValues contains all values
+func (c *CapabilityValues) Contains(values ...string) bool {
+	for _, value := range values {
+		if !contains(c.Values, value) {
+			return false
+		}
+	}
+	return true
+}
+
+// contains checks if an array contains a specific element
+func contains(arr []string, target string) bool {
+	for _, element := range arr {
+		if element == target {
+			return true
+		}
+	}
+	return false
+}
+
+// IsSubsetOf checks if the CapabilityValues is a subset of another CapabilityValues
+func (c *CapabilityValues) IsSubsetOf(other CapabilityValues) bool {
+	for _, value := range c.Values {
+		if !other.Contains(value) {
+			return false
+		}
+	}
+	return true
+}
+
+// HasEntries checks if a Capability is defined.
+func (capabilities Capabilities) HasEntries() bool {
+	return len(capabilities) != 0
 }

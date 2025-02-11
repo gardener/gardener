@@ -7,17 +7,22 @@ package validation
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
+	utilcore "github.com/gardener/gardener/pkg/utils/validation/gardener/core"
 )
 
 var (
@@ -57,9 +62,27 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must provide a provider type"))
 	}
 
+	// capabilitiesDefinition is used in the validate-functions for machineTypes and machineImages
+	//   nil: the architecture field is required --> capabilities forbidden
+	//   defined: the architecture field is forbidden --> capabilities required
+	if utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileCapabilities) {
+		// If the feature gate is enabled and capabilitiesDefinition is set, it will be evaluated.
+		// The capabilities and architecture fields cannot be set at the same time.
+		errList := ValidateCapabilitiesDefinition(spec.CapabilitiesDefinition, fldPath.Child("capabilitiesDefinition"))
+		if errList != nil {
+			allErrs = append(allErrs, errList...)
+		}
+	} else {
+		// If the feature gate is disabled, the capabilitiesDefinition must not be set.
+		if spec.CapabilitiesDefinition.HasEntries() {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("capabilitiesDefinition"), "must not be defined as the CloudProfile Capabilities Feature is disabled."))
+		}
+	}
+
+	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, spec.CapabilitiesDefinition, fldPath.Child("machineImages"))...)
+	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, spec.CapabilitiesDefinition, fldPath.Child("machineTypes"))...)
+
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
-	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
-	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	allErrs = append(allErrs, validateCloudProfileRegions(spec.Regions, fldPath.Child("regions"))...)
 	allErrs = append(allErrs, validateCloudProfileBastion(spec, fldPath.Child("bastion"))...)
@@ -135,19 +158,20 @@ func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVe
 	return allErrs
 }
 
-func validateCloudProfileMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) field.ErrorList {
+func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineTypes) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine type"))
 	}
 	allErrs = append(allErrs, validateMachineTypes(machineTypes, fldPath)...)
+	allErrs = append(allErrs, validateMachineTypesCapabilities(machineTypes, capabilitiesDefinition, fldPath)...)
 
 	return allErrs
 }
 
 // ValidateCloudProfileMachineImages validates the machine images of a CloudProfile object.
-func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {
@@ -155,7 +179,7 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, fldPat
 	}
 
 	allErrs = append(allErrs, ValidateMachineImages(machineImages, fldPath, false)...)
-
+	allErrs = append(allErrs, ValidateMachineImageCapabilities(machineImages, capabilitiesDefinition, fldPath)...)
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)
 
@@ -168,7 +192,7 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, fldPat
 			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 			allErrs = append(allErrs, validateSupportedVersionsConfiguration(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
 
-			if len(machineVersion.Architectures) == 0 {
+			if !capabilitiesDefinition.HasEntries() && len(machineVersion.Architectures) == 0 {
 				allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
 			}
 		}
@@ -387,4 +411,137 @@ func validateCloudProfileLimitsUpdate(newLimits, oldLimits *core.Limits, fldPath
 	}
 
 	return allErrs
+}
+
+// ValidateCapabilitiesDefinition validates the capabilitiesDefinition of a cloudProfile, ensures that the architecture is set and that no capability is empty
+func ValidateCapabilitiesDefinition(capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
+	var errList field.ErrorList
+
+	// during the transition period to capabilities, capabilitiesDefinition is optional thus the empty definition is allowed
+	// this check must be removed after capabilitiesDefinition is required
+	if !capabilitiesDefinition.HasEntries() {
+		return errList
+	}
+
+	// architecture is a required capability
+	val, ok := capabilitiesDefinition[v1beta1constants.ArchitectureKey]
+	if ok {
+		errList = append(errList, validateMachineImageVersionArchitecture(val.Values, path.Child(v1beta1constants.ArchitectureKey))...)
+	} else {
+		errList = append(errList, field.Required(path.Child(v1beta1constants.ArchitectureKey),
+			"allowed architectures are: "+strings.Join(v1beta1constants.ValidArchitectures, ", ")))
+	}
+
+	// No empty capabilities allowed
+	for capabilityName, capabilityValues := range capabilitiesDefinition {
+		if len(capabilityName) == 0 {
+			errList = append(errList, field.Invalid(path, "", "empty capability name is not allowed"))
+		}
+		if len(capabilityValues.Values) == 0 {
+			errList = append(errList, field.Required(path.Child(string(capabilityName)), "must not be empty"))
+		} else {
+			for _, capabilityValue := range capabilityValues.Values {
+				if len(capabilityValue) == 0 {
+					errList = append(errList, field.Invalid(path.Child(string(capabilityName)), capabilityValues, "must not contain empty capability values"))
+				}
+			}
+		}
+	}
+	return errList
+}
+
+// ValidateMachineImageCapabilities validates the given list of machine images for valid capabilities and architecture values.
+func ValidateMachineImageCapabilities(machineImages []core.MachineImage, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, image := range machineImages {
+		idxPath := fldPath.Index(i)
+		for index, machineVersion := range image.Versions {
+			versionsPath := idxPath.Child("versions").Index(index)
+			if capabilitiesDefinition.HasEntries() {
+				allErrs = append(allErrs, validateMachineImageVersionCapabilities(machineVersion, capabilitiesDefinition, versionsPath)...)
+			} else {
+				allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child(v1beta1constants.ArchitectureKey))...)
+				if len(machineVersion.CapabilitiesSet) > 0 {
+					allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilitiesSet"), "must not provide CapabilitiesSet when no capabilitiesDefinition is defined"))
+				}
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineImageVersionCapabilities(machineImageVersion core.MachineImageVersion, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
+	errList := field.ErrorList{}
+
+	if machineImageVersion.Architectures != nil {
+		errList = append(errList, field.Forbidden(path.Child("architectures"), "must not be set when capabilities are defined"))
+	}
+
+	capabilitiesSet, unmarshalErrorList := utilcore.UnmarshalCapabilitiesSet(machineImageVersion.CapabilitiesSet, path)
+	if unmarshalErrorList != nil {
+		return append(errList, unmarshalErrorList...)
+	}
+
+	if len(capabilitiesDefinition[v1beta1constants.ArchitectureKey].Values) > 1 && len(capabilitiesSet) == 0 {
+		errList = append(errList, field.Required(path.Child("capabilitiesSet"), "must be provided when multiple architectures are supported in the cloud profile"))
+	}
+
+	for i, capabilities := range capabilitiesSet {
+		errList = append(errList, utilcore.ValidateCapabilitiesAgainstDefinition(capabilities, capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
+		errList = append(errList, validateArchitectureCapability(capabilities, capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
+	}
+
+	return errList
+}
+
+// validateMachineTypesCapabilities validates the given list of machine types for valid capabilities and architecture values.
+func validateMachineTypesCapabilities(machineTypes []core.MachineType, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, machineType := range machineTypes {
+		idxPath := fldPath.Index(i)
+		archPath := idxPath.Child(v1beta1constants.ArchitectureKey)
+
+		if capabilitiesDefinition.HasEntries() {
+			allErrs = append(allErrs, ValidateMachineTypeCapabilities(machineType, capabilitiesDefinition, idxPath)...)
+		} else {
+			allErrs = append(allErrs, validateMachineTypeArchitecture(machineType.Architecture, archPath)...)
+			if machineType.Capabilities != nil {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("capabilities"), "must not provide capabilities when no capabilitiesDefinition is defined"))
+			}
+		}
+	}
+	return allErrs
+}
+
+// ValidateMachineTypeCapabilities validates the capabilities of a machineType, ensures that the architecture is not set and that no capability is empty
+func ValidateMachineTypeCapabilities(machineType core.MachineType, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
+	errList := field.ErrorList{}
+
+	errList = append(errList, utilcore.ValidateCapabilitiesAgainstDefinition(machineType.Capabilities, capabilitiesDefinition, path.Child("capabilities"))...)
+	errList = append(errList, validateArchitectureCapability(machineType.Capabilities, capabilitiesDefinition, path.Child("capabilities"))...)
+
+	if len(ptr.Deref(machineType.Architecture, "")) > 0 {
+		errList = append(errList, field.Forbidden(path.Child(v1beta1constants.ArchitectureKey), "must not be set when capabilities are defined"))
+	}
+
+	return errList
+}
+
+func validateArchitectureCapability(capabilities core.Capabilities, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
+	errList := field.ErrorList{}
+
+	// if there are multiple values for architecture, the architecture capability must be set and must contain exactly one value
+	allowedArchitectures := capabilitiesDefinition[v1beta1constants.ArchitectureKey].Values
+
+	if len(allowedArchitectures) > 1 {
+		if value, ok := capabilities[v1beta1constants.ArchitectureKey]; !ok {
+			errList = append(errList, field.Required(path.Child(v1beta1constants.ArchitectureKey), fmt.Sprintf("multiple architectures are supported in the cloud profile. So it must be defined and contain exactly one of: %+v", allowedArchitectures)))
+		} else if len(value.Values) != 1 {
+			errList = append(errList, field.Invalid(path.Child(v1beta1constants.ArchitectureKey), value.Values, fmt.Sprintf("must contain exactly one of: %+v", allowedArchitectures)))
+		}
+	}
+	return errList
 }

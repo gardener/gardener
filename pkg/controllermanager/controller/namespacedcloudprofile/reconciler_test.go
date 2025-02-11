@@ -550,12 +550,50 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					Name:         "test-type",
 					Storage:      nil,
 					Usable:       nil,
-					Architecture: nil,
+					Architecture: ptr.To("amd64"),
 				},
 			}
 		})
 
 		It("should successfully add types specified only in NamespacedCloudProfile", func() {
+			cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{}
+			namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
+				{
+					CPU:          resource.MustParse("1"),
+					GPU:          resource.MustParse("5"),
+					Memory:       resource.MustParse("3Gi"),
+					Name:         "test-type-namespaced",
+					Architecture: ptr.To("amd64"),
+				},
+			}
+
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
+				namespacedCloudProfile.DeepCopyInto(obj)
+				return nil
+			})
+
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
+
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+				cloudProfile.DeepCopyInto(obj)
+				return nil
+			})
+
+			gomock.InOrder(
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}]}}}`))
+
+					return nil
+				}),
+			)
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should successfully default machineType Architecture in NamespacedCloudProfile", func() {
 			cloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{}
 			namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
 				{
@@ -581,7 +619,13 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[{"cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}]}}}`))
+					Expect(patch.Data(o)).To(BeEquivalentTo(
+						// Added Spec.machineTypes[].architecture,
+						`{"spec":{"machineTypes":[{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}]},` +
+							// Added Status.cloudProfileSpec.machineTypes[].architecture,
+							`"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[` +
+							`{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}]}}}`,
+					))
 					return nil
 				}),
 			)
@@ -594,10 +638,11 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 		It("should successfully add types specified in CloudProfile and NamespacedCloudProfile", func() {
 			namespacedCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{
 				{
-					CPU:    resource.MustParse("1"),
-					GPU:    resource.MustParse("5"),
-					Memory: resource.MustParse("3Gi"),
-					Name:   "test-type-namespaced",
+					CPU:          resource.MustParse("1"),
+					GPU:          resource.MustParse("5"),
+					Memory:       resource.MustParse("3Gi"),
+					Name:         "test-type-namespaced",
+					Architecture: ptr.To("amd64"),
 				},
 			}
 
@@ -619,8 +664,8 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					// Order of machine type array in patch is not guaranteed
 					Expect(patch.Data(o)).To(And(
 						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[`),
-						ContainSubstring(`{"cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}`),
-						ContainSubstring(`{"cpu":"2","gpu":"7","memory":"10Gi","name":"test-type"}`),
+						ContainSubstring(`{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}`),
+						ContainSubstring(`{"architecture":"amd64","cpu":"2","gpu":"7","memory":"10Gi","name":"test-type"}`),
 					))
 					return nil
 				}),

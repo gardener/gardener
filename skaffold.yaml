@@ -191,6 +191,7 @@ build:
             - pkg/utils/validation/apigroups
             - pkg/utils/validation/cidr
             - pkg/utils/validation/features
+            - pkg/utils/validation/gardener/core
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
@@ -248,8 +249,12 @@ build:
             - cmd/gardener-controller-manager/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
+            - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1295,6 +1300,7 @@ build:
             - pkg/utils/validation/apigroups
             - pkg/utils/validation/cidr
             - pkg/utils/validation/features
+            - pkg/utils/validation/gardener/core
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version

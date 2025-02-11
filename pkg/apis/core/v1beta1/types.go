@@ -4,6 +4,13 @@
 
 package v1beta1
 
+import (
+	"encoding/json"
+	"strings"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+)
+
 const (
 	// GardenerSeedLeaseNamespace is the namespace in which Gardenlet will report Seeds'
 	// status using Lease resources for each Seed
@@ -51,4 +58,43 @@ type AccessRestrictionWithOptions struct {
 	// Options is a map of additional options for the access restriction.
 	// +optional
 	Options map[string]string `json:"options,omitempty" protobuf:"bytes,2,rep,name=options"`
+}
+
+// CapabilityName is the name of a capability.
+type CapabilityName string
+
+// CapabilityValues is a list of values for a capability.
+type CapabilityValues struct {
+	Values []string `protobuf:"bytes,1,rep,name=values"`
+}
+
+// Capabilities of a machine type or machine image.
+type Capabilities map[CapabilityName]CapabilityValues
+
+// CapabilitiesSet is a set of multiple capabilities.
+type CapabilitiesSet []apiextensionsv1.JSON
+
+// UnmarshalJSON unmarshals the CapabilityValues object from JSON.
+func (c *CapabilityValues) UnmarshalJSON(bytes []byte) error {
+	var str string
+	if err := json.Unmarshal(bytes, &str); err != nil {
+		return err
+	}
+	rawValues := strings.Split(str, ",")
+
+	for _, value := range rawValues {
+		c.Values = append(c.Values, strings.TrimSpace(value))
+	}
+
+	return nil
+}
+
+// MarshalJSON marshals the CapabilityValues object to JSON.
+func (c CapabilityValues) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + strings.Join(c.Values, ",") + `"`), nil
+}
+
+// HasEntries checks if a Capability is defined.
+func (capabilities Capabilities) HasEntries() bool {
+	return len(capabilities) != 0
 }

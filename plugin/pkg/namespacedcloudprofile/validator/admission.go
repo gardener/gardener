@@ -139,7 +139,6 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 		namespacedCloudProfile:    namespacedCloudProfile,
 		oldNamespacedCloudProfile: oldNamespacedCloudProfile,
 	}
-
 	if err := validationContext.validateMachineTypes(a); err != nil {
 		return err
 	}
@@ -167,6 +166,11 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 		return nil
 	}
 
+	capabilitiesDefinition := &gardencore.Capabilities{}
+	if err := api.Scheme.Convert(&c.parentCloudProfile.Spec.CapabilitiesDefinition, capabilitiesDefinition, nil); err != nil {
+		return field.InternalError(field.NewPath("spec", "capabilitiesDefinition"), err)
+	}
+
 	for _, machineType := range c.namespacedCloudProfile.Spec.MachineTypes {
 		for _, parentMachineType := range c.parentCloudProfile.Spec.MachineTypes {
 			if parentMachineType.Name != machineType.Name {
@@ -179,8 +183,17 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 			}
 			return apierrors.NewBadRequest(fmt.Sprintf("NamespacedCloudProfile attempts to overwrite parent CloudProfile with machineType: %+v", machineType))
 		}
+		if capabilitiesDefinition.HasEntries() {
+			errorList := validation.ValidateMachineTypeCapabilities(machineType, *capabilitiesDefinition, field.NewPath("spec", "machineTypes"))
+			if len(errorList) != 0 {
+				return apierrors.NewBadRequest(fmt.Sprintf("Parent CloudProfile defines CapabilitiesDefinition. NamespacedCloudProfile machineTypes must define capabilities according to its definition: %+v", machineType))
+			}
+		} else {
+			if machineType.Capabilities.HasEntries() {
+				return apierrors.NewBadRequest(fmt.Sprintf("Parent CloudProfile does not define CapabilitiesDefinition. NamespacedCloudProfile machineTypes must not define capabilities: %+v", machineType))
+			}
+		}
 	}
-
 	return nil
 }
 
@@ -222,12 +235,16 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 
 func (c *validationContext) validateMachineImageOverrides(attr admission.Attributes) error {
 	var (
-		allErrs      = field.ErrorList{}
-		now          = ptr.To(metav1.Now())
-		parentImages = util.NewV1beta1ImagesContext(c.parentCloudProfile.Spec.MachineImages)
-
+		allErrs                            = field.ErrorList{}
+		now                                = ptr.To(metav1.Now())
+		parentImages                       = util.NewV1beta1ImagesContext(c.parentCloudProfile.Spec.MachineImages)
+		capabilitiesDefinition             = &gardencore.Capabilities{}
 		oldVersionsSpec, oldVersionsMerged *util.ImagesContext[gardencore.MachineImage, gardencore.MachineImageVersion]
 	)
+
+	if err := api.Scheme.Convert(&c.parentCloudProfile.Spec.CapabilitiesDefinition, capabilitiesDefinition, nil); err != nil {
+		return field.InternalError(field.NewPath("spec", "capabilitiesDefinition"), err)
+	}
 
 	if attr.GetOperation() == admission.Update {
 		oldVersionsSpec = util.NewCoreImagesContext(c.oldNamespacedCloudProfile.Spec.MachineImages)
@@ -295,7 +312,7 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 		} else {
 			// There is no entry for this image in the parent CloudProfile yet.
 			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, imageIndexPath, false)...)
-			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, imageIndexPath)...)
+			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, *capabilitiesDefinition, imageIndexPath)...)
 		}
 	}
 	return allErrs.ToAggregate()
@@ -316,19 +333,25 @@ func validateNamespacedCloudProfileExtendedMachineImages(machineVersion gardenco
 	if len(ptr.Deref(machineVersion.KubeletVersionConstraint, "")) > 0 {
 		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("kubeletVersionConstraint"), "must not provide a kubelet version constraint to an extended machine image in NamespacedCloudProfile"))
 	}
+	if len(machineVersion.CapabilitiesSet) > 0 {
+		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilitiesSet"), "must not provide a capabilitiesSet to an extended machine image in NamespacedCloudProfile"))
+	}
 
 	return allErrs
 }
 
 func (c *validationContext) validateSimulatedCloudProfileStatusMergeResult(_ admission.Attributes) error {
 	namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
+
 	if err := api.Scheme.Convert(c.namespacedCloudProfile, namespacedCloudProfile, nil); err != nil {
 		return err
 	}
+
 	errs := ValidateSimulatedNamespacedCloudProfileStatus(c.parentCloudProfile, namespacedCloudProfile)
 	if len(errs) > 0 {
 		return fmt.Errorf("error while validating merged NamespacedCloudProfile: %+v", errs)
 	}
+
 	return nil
 }
 
@@ -349,5 +372,19 @@ func ValidateSimulatedNamespacedCloudProfileStatus(originalParentCloudProfile *g
 			Detail:   "could not convert NamespacedCloudProfile from type core.gardener.cloud/v1beta1 to the internal core type",
 		}}
 	}
-	return validation.ValidateNamespacedCloudProfileStatus(&coreNamespacedCloudProfile.Status.CloudProfileSpec, field.NewPath("status.cloudProfileSpec"))
+
+	coreCapabilities := &gardencore.Capabilities{}
+	if err := api.Scheme.Convert(&parentCloudProfile.Spec.CapabilitiesDefinition, coreCapabilities, nil); err != nil {
+		return field.ErrorList{{
+			Type:     field.ErrorTypeInternal,
+			Field:    "",
+			BadValue: nil,
+			Detail:   "could not convert Capabilities from type core.gardener.cloud/v1beta1 to the internal core type",
+		}}
+	}
+
+	return validation.ValidateNamespacedCloudProfileStatus(
+		&coreNamespacedCloudProfile.Status.CloudProfileSpec,
+		*coreCapabilities,
+		field.NewPath("status.cloudProfileSpec"))
 }

@@ -81,6 +81,12 @@ type CloudProfileSpec struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 	// +optional
 	Limits *Limits `json:"limits,omitempty" protobuf:"bytes,11,opt,name=limits"`
+	// CapabilitiesDefinition contains the definition of all possible capabilities in the CloudProfile.
+	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+	// The order of values for a given capability is relevant. The most important value is listed first.
+	// During maintenance upgrades, the image that enables the most important capabilities will be selected.
+	// +optional
+	CapabilitiesDefinition Capabilities `json:"capabilitiesDefinition,omitempty" protobuf:"bytes,12,opt,name=capabilitiesDefinition,casttype=Capabilities,castkey=CapabilityName"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -137,6 +143,10 @@ type MachineImageVersion struct {
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	// +optional
 	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty" protobuf:"bytes,5,opt,name=inPlaceUpdates"`
+	// CapabilitiesSet is an array of capabilities. Each entry represents a combination of capabilities that is provided by
+	// the machine image version.
+	// +optional
+	CapabilitiesSet CapabilitiesSet `json:"capabilitiesSet,omitempty" protobuf:"bytes,6,rep,name=capabilitiesSet"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -170,6 +180,9 @@ type MachineType struct {
 	// Architecture is the CPU architecture of this machine type.
 	// +optional
 	Architecture *string `json:"architecture,omitempty" protobuf:"bytes,7,opt,name=architecture"`
+	// Capabilities contains the capabilities of the machine type.
+	// +optional
+	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,8,rep,name=capabilities,casttype=Capabilities,castkey=CapabilityName"`
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
