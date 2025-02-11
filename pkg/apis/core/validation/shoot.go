@@ -2817,13 +2817,13 @@ func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, 
 	if autoscaling != nil {
 		allowedResources := sets.New[corev1.ResourceName](corev1.ResourceCPU, corev1.ResourceMemory)
 
-		for res, quan := range autoscaling.MinAllowed {
-			if !allowedResources.Has(res) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child(string(res)), res, allowedResources.UnsortedList()))
+		for resource, quantity := range autoscaling.MinAllowed {
+			if !allowedResources.Has(resource) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child(string(resource)), resource, allowedResources.UnsortedList()))
 			}
 
-			if minValue, ok := minRequired[res]; ok && quan.Cmp(minValue) < 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child(string(res)), quan, fmt.Sprintf("value must be bigger than >= %s", minValue.String())))
+			if minValue, ok := minRequired[resource]; ok && quantity.Cmp(minValue) < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child(string(resource)), quantity, fmt.Sprintf("value must be bigger than >= %s", minValue.String())))
 			}
 		}
 	}

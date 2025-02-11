@@ -568,6 +568,8 @@ message ControlPlane {
 // ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
 message ControlPlaneAutoscaling {
   // MinAllowed configures the minimum allowed resource requests.
+  // Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+  // Default values are not applied to this field.
   // +optional
   map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> minAllowed = 1;
 }
