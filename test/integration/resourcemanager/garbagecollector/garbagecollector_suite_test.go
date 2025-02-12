@@ -61,6 +61,8 @@ var _ = BeforeSuite(func() {
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
 				filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+				filepath.Join("..", "..", "..", "..", "pkg", "component", "observability", "monitoring", "prometheusoperator", "templates", "crd-monitoring.coreos.com_prometheuses.yaml"),
+				filepath.Join("..", "..", "..", "..", "pkg", "component", "observability", "logging", "fluentoperator", "assets", "crd-fluentbit.fluent.io_clusterfilters.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,

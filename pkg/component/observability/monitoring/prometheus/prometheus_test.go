@@ -1220,6 +1220,9 @@ query_range:
 							},
 						}}
 
+						// A reference for the garbage collector of the GRM gets injected for the
+						Expect(references.InjectAnnotations(prometheusObj)).To(Succeed())
+
 						prometheusRule.Namespace = namespace
 						metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)
 						metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", name)
