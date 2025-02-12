@@ -71,7 +71,8 @@ func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.Sh
 	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
 	defer cancel()
 
-	defer prepareObjects(ctx, f.ShootClient.Client(), f.Shoot.Spec.Kubernetes.Version)()
+	cleanupObjects := prepareObjects(ctx, f.ShootClient.Client(), f.Shoot.Spec.Kubernetes.Version)
+	defer cleanupObjects()
 
 	By("Verify access via direct path")
 	// this pod connects to the API server directly, i.e., uses the KUBERNETES_SERVICE_HOST env var injected by gardener
