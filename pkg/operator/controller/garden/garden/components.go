@@ -73,6 +73,7 @@ import (
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/x509certificateexporter"
 	"github.com/gardener/gardener/pkg/component/observability/plutono"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
@@ -135,6 +136,7 @@ type components struct {
 	prometheusGarden              prometheus.Interface
 	prometheusLongTerm            prometheus.Interface
 	blackboxExporter              component.DeployWaiter
+	x509CertificateExporter       component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -308,6 +310,11 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.blackboxExporter, err = r.newBlackboxExporter(garden, secretsManager, wildcardCertSecretName)
+	if err != nil {
+		return
+	}
+
+	c.x509CertificateExporter, err = r.newx509CertificateExporter(garden)
 	if err != nil {
 		return
 	}
@@ -1426,4 +1433,16 @@ func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden 
 	}
 
 	return extension.New(log, r.RuntimeClientSet.Client(), values, extension.DefaultInterval, extension.DefaultSevereThreshold, extension.DefaultTimeout), nil
+}
+
+func (r *Reconciler) newx509CertificateExporter(garden *operatorv1alpha1.Garden) (component.DeployWaiter, error) {
+	return sharedcomponent.NewX509CertificateExporter(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		r.RuntimeVersion,
+		v1beta1constants.PriorityClassNameGardenSystem100,
+		x509certificateexporter.SuffixRuntime,
+		"garden",
+		garden.Spec.RuntimeCluster.WorkerGroups,
+	)
 }
