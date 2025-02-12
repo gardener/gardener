@@ -2140,7 +2140,7 @@ func (c *validationContext) validateManagedServiceAccountIssuer(
 func (c *validationContext) validateLimits(a admission.Attributes) field.ErrorList {
 	var allErrs field.ErrorList
 
-	if a.GetOperation() == admission.Delete || c.cloudProfileSpec.Limits == nil {
+	if a.GetOperation() == admission.Delete || c.shoot.DeletionTimestamp != nil || c.cloudProfileSpec.Limits == nil {
 		return nil
 	}
 

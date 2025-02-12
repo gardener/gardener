@@ -6211,13 +6211,21 @@ var _ = Describe("validator", func() {
 				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 			})
 
+			It("should allow updating shoots with deletionTimestamp independent of limits", func() {
+				shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+				attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+
 			It("should allow deleting shoots independent of limits", func() {
 				attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
 
 				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 			})
 
-			Context("maxPodsTotal", func() {
+			Context("maxNodesTotal", func() {
 				const limit int32 = 3
 
 				BeforeEach(func() {
@@ -6289,6 +6297,15 @@ var _ = Describe("validator", func() {
 						ContainSubstring("spec.provider.workers"),
 						ContainSubstring("total minimum node count"),
 					)))
+				})
+
+				It("should allow updating shoots with deletionTimestamp over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit + 1
+					shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+					attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, userInfo)
+
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
 				})
 
 				It("should allow deleting shoots over the limit", func() {
