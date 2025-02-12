@@ -126,27 +126,31 @@ func ConvertSeedExternal(obj runtime.Object) (*gardencorev1beta1.Seed, error) {
 // ConvertSeedTemplate converts the given external SeedTemplate version to an internal version.
 func ConvertSeedTemplate(obj *gardencorev1beta1.SeedTemplate) (*core.SeedTemplate, error) {
 	seed, err := ConvertSeed(&gardencorev1beta1.Seed{
-		Spec: obj.Spec,
+		ObjectMeta: obj.ObjectMeta,
+		Spec:       obj.Spec,
 	})
 	if err != nil {
 		return nil, errors.New("could not convert SeedTemplate to internal version")
 	}
 
 	return &core.SeedTemplate{
-		Spec: seed.Spec,
+		ObjectMeta: seed.ObjectMeta,
+		Spec:       seed.Spec,
 	}, nil
 }
 
 // ConvertSeedTemplateExternal converts the given internal SeedTemplate version to an external version.
 func ConvertSeedTemplateExternal(obj *core.SeedTemplate) (*gardencorev1beta1.SeedTemplate, error) {
 	seed, err := ConvertSeedExternal(&core.Seed{
-		Spec: obj.Spec,
+		ObjectMeta: obj.ObjectMeta,
+		Spec:       obj.Spec,
 	})
 	if err != nil {
 		return nil, errors.New("could not convert SeedTemplate to external version")
 	}
 
 	return &gardencorev1beta1.SeedTemplate{
-		Spec: seed.Spec,
+		ObjectMeta: seed.ObjectMeta,
+		Spec:       seed.Spec,
 	}, nil
 }
