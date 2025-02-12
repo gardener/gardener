@@ -102,6 +102,11 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
 			},
 		}
+		namespaceGardenerSystemPublic = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: gardencorev1beta1.GardenerSystemPublicNamespace,
+			},
+		}
 		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:system:seed-bootstrapper",
@@ -611,10 +616,39 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				Name:     user.AllAuthenticated,
 			}},
 		}
+		roleReadGardenerInfoConfigMap = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:read-gardener-info-configmap",
+				Namespace: gardencorev1beta1.GardenerSystemPublicNamespace,
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups:     []string{corev1.GroupName},
+				Resources:     []string{"configmaps"},
+				ResourceNames: []string{"gardener-info"},
+				Verbs:         []string{"get", "list", "watch"},
+			}},
+		}
+		roleBindingReadGardenerInfoConfigMap = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      roleReadGardenerInfoConfigMap.Name,
+				Namespace: gardencorev1beta1.GardenerSystemPublicNamespace,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     roleReadGardenerInfoConfigMap.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Group",
+				Name:     user.AllAuthenticated,
+			}},
+		}
 	)
 
 	if err := registry.Add(
 		namespaceGarden,
+		namespaceGardenerSystemPublic,
 		clusterRoleSeedBootstrapper,
 		clusterRoleBindingSeedBootstrapper,
 		clusterRoleGardenerAdmin,
@@ -635,6 +669,8 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		clusterRoleProjectViewerAggregated,
 		roleReadClusterIdentityConfigMap,
 		roleBindingReadClusterIdentityConfigMap,
+		roleReadGardenerInfoConfigMap,
+		roleBindingReadGardenerInfoConfigMap,
 	); err != nil {
 		return nil, err
 	}

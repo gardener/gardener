@@ -20,15 +20,21 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/component-base/version"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -415,6 +421,13 @@ func (r *Reconciler) reconcile(
 			}).
 				RetryUntilTimeout(time.Second, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService, deployVirtualGardenGardenerAccess, renewVirtualClusterAccess),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploy gardener-info ConfigMap",
+			Fn: func(ctx context.Context) error {
+				return reconcileGardenerInfoConfigMap(ctx, log, virtualClusterClient, secretsManager, workloadIdentityTokenIssuerURL(garden))
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerAPIServerReady, initializeVirtualClusterClient),
 		})
 		deployExtensionResources = g.Add(flow.Task{
 			Name:         "Deploying extension resources",
@@ -1121,4 +1134,86 @@ func getDNSProvider(dns operatorv1alpha1.DNSManagement, providerName *string) *o
 		}
 	}
 	return nil
+}
+
+func reconcileGardenerInfoConfigMap(ctx context.Context, log logr.Logger, virtualGardenClient client.Client, secretsManager secretsmanager.Interface, workloadIdentityIssuerURL string) error {
+	const (
+		configMapName            = "gardener-info"
+		gardenerAPIServerDataKey = "gardenerAPIServer"
+	)
+
+	var gardenerAPIServerVersion string
+	if ver := getGardenerAPIServerVersion(log, secretsManager); ver != nil {
+		gardenerAPIServerVersion = *ver
+		log.Info("Successfully retrieved actual Gardener API Server version", "version", gardenerAPIServerVersion)
+	} else {
+		gardenerAPIServerVersion = version.Get().GitVersion
+		log.Info("Failed to retrieve actual Gardener API Server version, will use the version of the Gardener Operator", "version", gardenerAPIServerVersion)
+	}
+
+	gardenerInfo := struct {
+		Version                   string `json:"version" yaml:"version"`
+		WorkloadIdentityIssuerURL string `json:"workloadIdentityIssuerURL" yaml:"workloadIdentityIssuerURL"`
+	}{
+		Version:                   gardenerAPIServerVersion,
+		WorkloadIdentityIssuerURL: workloadIdentityIssuerURL,
+	}
+
+	marshalled, err := yaml.Marshal(gardenerInfo)
+	if err != nil {
+		return err
+	}
+
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: gardencorev1beta1.GardenerSystemPublicNamespace, Name: configMapName}}
+	log.Info("Reconciling gardener-info ConfigMap", "configMap", configMap)
+	_, err = controllerutils.CreateOrGetAndMergePatch(ctx, virtualGardenClient, configMap, func() error {
+		if configMap.Data == nil {
+			configMap.Data = make(map[string]string)
+		}
+		configMap.Data[gardenerAPIServerDataKey] = string(marshalled)
+		return nil
+	})
+	return err
+}
+
+func getGardenerAPIServerVersion(log logr.Logger, secretsManager secretsmanager.Interface) *string {
+	caGardener, ok := secretsManager.Get(operatorv1alpha1.SecretNameCAGardener, secretsmanager.Bundle)
+	if !ok {
+		return nil
+	}
+	caBundle, ok := caGardener.Data[secretsutils.DataKeyCertificateBundle]
+	if !ok {
+		return nil
+	}
+
+	rawKubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(gardenerapiserver.DeploymentName,
+		clientcmdv1.Cluster{
+			Server:                   gardenerapiserver.DeploymentName + "." + v1beta1constants.GardenNamespace + ".svc",
+			CertificateAuthorityData: caBundle,
+		},
+		clientcmdv1.AuthInfo{},
+	))
+	if err != nil {
+		log.Error(err, "Failed to encode kubeconfig")
+		return nil
+	}
+
+	restConfig, err := clientcmd.RESTConfigFromKubeConfig(rawKubeconfig)
+	if err != nil {
+		log.Error(err, "Failed to create restConfig")
+		return nil
+	}
+
+	c, err := kubernetesclientset.NewForConfig(restConfig)
+	if err != nil {
+		log.Error(err, "Failed to create client for gardener-apiserver service")
+		return nil
+	}
+
+	v, err := c.Discovery().ServerVersion()
+	if err != nil {
+		log.Error(err, "Failed to get Gardener API Server version")
+		return nil
+	}
+	return &v.GitVersion
 }

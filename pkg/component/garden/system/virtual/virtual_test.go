@@ -46,6 +46,7 @@ var _ = Describe("Virtual", func() {
 		managedResourceSecret *corev1.Secret
 
 		namespaceGarden                                   *corev1.Namespace
+		namespaceGardenerPublic                           *corev1.Namespace
 		clusterRoleSeedBootstrapper                       *rbacv1.ClusterRole
 		clusterRoleBindingSeedBootstrapper                *rbacv1.ClusterRoleBinding
 		clusterRoleSeeds                                  *rbacv1.ClusterRole
@@ -68,6 +69,8 @@ var _ = Describe("Virtual", func() {
 		clusterRoleProjectViewerAggregated                *rbacv1.ClusterRole
 		roleReadClusterIdentityConfigMap                  *rbacv1.Role
 		roleBindingReadClusterIdentityConfigMap           *rbacv1.RoleBinding
+		roleReadGardenerInfoConfigMap                     *rbacv1.Role
+		roleBindingReadGardenerInfoConfigMap              *rbacv1.RoleBinding
 	)
 
 	BeforeEach(func() {
@@ -94,6 +97,11 @@ var _ = Describe("Virtual", func() {
 				Name:        "garden",
 				Labels:      map[string]string{"app": "gardener"},
 				Annotations: map[string]string{"resources.gardener.cloud/keep-object": "true"},
+			},
+		}
+		namespaceGardenerPublic = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener-system-public",
 			},
 		}
 		clusterRoleSeedBootstrapper = &rbacv1.ClusterRole{
@@ -626,6 +634,34 @@ var _ = Describe("Virtual", func() {
 				Name:     "system:authenticated",
 			}},
 		}
+		roleReadGardenerInfoConfigMap = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:read-gardener-info-configmap",
+				Namespace: "gardener-system-public",
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups:     []string{""},
+				Resources:     []string{"configmaps"},
+				ResourceNames: []string{"gardener-info"},
+				Verbs:         []string{"get", "list", "watch"},
+			}},
+		}
+		roleBindingReadGardenerInfoConfigMap = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:read-gardener-info-configmap",
+				Namespace: "gardener-system-public",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "gardener.cloud:system:read-gardener-info-configmap",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     "system:authenticated",
+			}},
+		}
 	})
 
 	Describe("#Deploy", func() {
@@ -664,6 +700,7 @@ var _ = Describe("Virtual", func() {
 		It("should successfully deploy the resources when seed authorizer is disabled", func() {
 			Expect(managedResource).To(consistOf(
 				namespaceGarden,
+				namespaceGardenerPublic,
 				clusterRoleSeedBootstrapper,
 				clusterRoleBindingSeedBootstrapper,
 				clusterRoleSeeds,
@@ -686,6 +723,8 @@ var _ = Describe("Virtual", func() {
 				clusterRoleProjectViewer,
 				roleReadClusterIdentityConfigMap,
 				roleBindingReadClusterIdentityConfigMap,
+				roleReadGardenerInfoConfigMap,
+				roleBindingReadGardenerInfoConfigMap,
 			))
 		})
 
