@@ -42,15 +42,13 @@ for version in "${versions[@]}"; do
   for dir in $kcm_dir; do
     cat "${out_dir}/kubernetes-${version}/$dir/"*.go |\
       sed -rn "s/.*[Client|Config]OrDie\(\"(.*)\"\).*/\1/p" |\
-      grep -vE "informers|discovery" |\
-      sort |\
-      uniq >> "${out_dir}/k8s-controllers-${version}.txt"
+      grep -vE "informers|discovery" >> "${out_dir}/k8s-controllers-${version}.txt.tmp"
   done
 
   cat "${out_dir}/kubernetes-${version}/$ccm_dir/controllermanager.go" |\
-    sed -rn "s/.*ClientName: \"(.*)\",.*/\1/p" |\
-    sort |\
-    uniq >> "${out_dir}/k8s-controllers-${version}.txt"
+    sed -rn "s/.*ClientName: \"(.*)\",.*/\1/p" >> "${out_dir}/k8s-controllers-${version}.txt.tmp"
+
+  sort "${out_dir}/k8s-controllers-${version}.txt.tmp" | uniq > "${out_dir}/k8s-controllers-${version}.txt"
 done
 
 echo

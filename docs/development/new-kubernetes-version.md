@@ -51,16 +51,27 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
 
 ### Adapting Gardener
 
+<!-- // TODO(marc1404): Reference `compare-k8s-feature-gates.sh` script once it has been fixed (https://github.com/gardener/gardener/issues/11198). -->
+
 - Allow instantiation of a Kubernetes client for the new minor version and update the `README.md`:
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/63bdae022f1cb1c9cbd1cd49b557545dca2ec32a) example commit.
   - The list of supported versions is meanwhile maintained [here](../../pkg/utils/validation/kubernetesversion/version.go) in the `SupportedVersions` variable.
 - Maintain the Kubernetes feature gates used for validation of `Shoot` resources:
   - The feature gates are maintained in [this](../../pkg/utils/validation/features/featuregates.go) file.
-  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.26 v1.27`).
-  - It will present 3 lists of feature gates: those added and those removed in `<new-version>` compared to `<old-version>` and feature gates that got locked to default in `<new-version>`.
-  - Add all added feature gates to the map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
-  - For any removed feature gates, add `<new-version>` as `RemovedInVersion` to the already existing feature gate in the map.
-  - For feature gates locked to default, add `<new-version>` as `LockedToDefaultInVersion` to the already existing feature gate in the map.
+  - To maintain this list for new Kubernetes versions follow this guide:
+    - **Alpha & Beta Feature Gates:**
+      - Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-alpha-or-beta-features
+      - Search the page for the new Kubernetes version, e.g. "1.32".
+      - Add new alpha feature gates that have been added "Since" the new Kubernetes version.
+      - Change the `Default` for Beta feature gates that have been promoted "Since" the new Kubernetes version.
+    - **Graduated & Deprecated Feature Gates:**
+      - Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#feature-gates-for-graduated-or-deprecated-features
+      - Search the page for the new Kubernetes version, e.g. "1.32".
+      - Change `LockedToDefaultInVersion` for GA and Deprecated feature gates that have been graduated/deprecated "Since" the new Kubernetes version.
+    - **Removed Feature Gates:**
+      - Open: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates-removed/#feature-gates-that-are-removed
+      - Search the page for the **current** Kubernetes version, e.g. if the new version is "1.32", search for "1.31".
+      - Set `RemovedInVersion` to the **new** Kubernetes version for feature gates that have been removed after the **current** Kubernetes version according to the "To" column. 
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/97923b0604300ff805def8eae981ed388d5e4a83) example commit.
 - Maintain the Kubernetes `kube-apiserver` admission plugins used for validation of `Shoot` resources:
   - The admission plugins are maintained in [this](../../pkg/utils/validation/admissionplugins/admissionplugins.go) file.

@@ -48,6 +48,7 @@ declare -A path_map=(
   ["garbage-collector-controller"]="pkg/controller/garbagecollector/garbagecollector.go"
   ["horizontal-pod-autoscaler-controller"]="pkg/controller/podautoscaler/horizontal.go"
   ["job-controller"]="pkg/controller/job/job_controller.go"
+  ["kube-apiserver-serving-clustertrustbundle-publisher-controller"]="pkg/controller/certificates/clustertrustbundlepublisher/publisher.go"
   ["legacy-serviceaccount-token-cleaner-controller"]="pkg/controller/serviceaccount/legacy_serviceaccount_token_cleaner.go"
   ["namespace-controller"]="pkg/controller/namespace/namespace_controller.go"
   ["node-ipam-controller"]="pkg/controller/nodeipam/node_ipam_controller.go"
@@ -63,6 +64,7 @@ declare -A path_map=(
   ["resourcequota-controller"]="pkg/controller/resourcequota/resource_quota_controller.go"
   ["root-ca-certificate-publisher-controller"]="pkg/controller/certificates/rootcacertpublisher/publisher.go"
   ["node-route-controller"]="staging/src/k8s.io/cloud-provider/controllers/route/route_controller.go"
+  ["selinux-warning-controller"]="pkg/controller/volume/selinuxwarning/selinux_warning_controller.go"
   ["service-lb-controller"]="staging/src/k8s.io/cloud-provider/controllers/service/controller.go"
   ["service-cidr-controller"]="pkg/controller/servicecidrs/servicecidrs_controller.go"
   ["serviceaccount-controller"]="pkg/controller/serviceaccount/serviceaccounts_controller.go"
@@ -75,6 +77,7 @@ declare -A path_map=(
   ["ttl-controller"]="pkg/controller/ttl/ttl_controller.go"
   ["ttl-after-finished-controller"]="pkg/controller/ttlafterfinished/ttlafterfinished_controller.go"
   ["validatingadmissionpolicy-status-controller"]="pkg/controller/validatingadmissionpolicystatus/controller.go"
+  ["volumeattributesclass-protection-controller"]="pkg/controller/volume/vacprotection/vac_protection_controller.go"
 )
 
 for version in "${versions[@]}"; do
