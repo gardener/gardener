@@ -235,12 +235,18 @@ var _ = Describe("Helper", func() {
 	Describe("#ConvertSeedTemplate", func() {
 		It("should convert the external SeedTemplate version to an internal one", func() {
 			Expect(ConvertSeedTemplate(&gardencorev1beta1.SeedTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"foo": "bar"},
+				},
 				Spec: gardencorev1beta1.SeedSpec{
 					Provider: gardencorev1beta1.SeedProvider{
 						Type: "local",
 					},
 				},
 			})).To(Equal(&core.SeedTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"foo": "bar"},
+				},
 				Spec: core.SeedSpec{
 					Provider: core.SeedProvider{
 						Type: "local",
@@ -253,12 +259,18 @@ var _ = Describe("Helper", func() {
 	Describe("#ConvertSeedTemplateExternal", func() {
 		It("should convert the internal SeedTemplate version to an external one", func() {
 			Expect(ConvertSeedTemplateExternal(&core.SeedTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"foo": "bar"},
+				},
 				Spec: core.SeedSpec{
 					Provider: core.SeedProvider{
 						Type: "local",
 					},
 				},
 			})).To(Equal(&gardencorev1beta1.SeedTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"foo": "bar"},
+				},
 				Spec: gardencorev1beta1.SeedSpec{
 					Provider: gardencorev1beta1.SeedProvider{
 						Type: "local",
