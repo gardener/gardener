@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -143,6 +144,16 @@ func InjectAnnotations(obj runtime.Object, additional ...string) error {
 
 	case *resourcesv1alpha1.ManagedResource:
 		referenceAnnotations := computeAnnotationsFromLocalObjRefs(o.Spec.SecretRefs, KindSecret, additional...)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+	case *monitoringv1.Prometheus:
+		var references []corev1.LocalObjectReference
+		for _, remoteWrite := range o.Spec.RemoteWrite {
+			if basicAuth := remoteWrite.BasicAuth; basicAuth != nil {
+				references = append(references, basicAuth.Username.LocalObjectReference)
+				references = append(references, basicAuth.Password.LocalObjectReference)
+			}
+		}
+		referenceAnnotations := computeAnnotationsFromLocalObjRefs(references, KindSecret, additional...)
 		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
 
 	default:
