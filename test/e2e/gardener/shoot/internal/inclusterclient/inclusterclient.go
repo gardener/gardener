@@ -59,6 +59,15 @@ var labels = map[string]string{"e2e-test": "in-cluster-client"}
 // - one pod explicitly overwrites the env var
 // See docs/usage/networking/shoot_kubernetes_service_host_injection.md and docs/proposals/08-shoot-apiserver-via-sni.md
 func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.ShootFramework) {
+	if gardencorev1beta1.IsIPv6SingleStack(f.Shoot.Spec.Networking.IPFamilies) && len(f.Shoot.Spec.Provider.Workers) > 1 {
+		// On local IPv6 single-stack clusters, the in-cluster DNS resolution can fail if it requires cross-node pod-to-pod
+		// communication, see https://github.com/gardener/gardener/pull/11287#discussion_r1950320268 and
+		// https://github.com/gardener/gardener/pull/11148#issuecomment-2653202171.
+		// Until that is fixed, we skip checking in-cluster access for IPv6 single-stack clusters with multiple worker
+		// pools.
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
 	defer cancel()
 
