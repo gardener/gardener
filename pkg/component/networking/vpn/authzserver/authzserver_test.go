@@ -128,7 +128,6 @@ var _ = Describe("ExtAuthzServer", func() {
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("100m"),
 										corev1.ResourceMemory: resource.MustParse("100Mi"),
 									},
 								},
@@ -242,6 +241,7 @@ var _ = Describe("ExtAuthzServer", func() {
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
+							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 						},
 					},
 				},
