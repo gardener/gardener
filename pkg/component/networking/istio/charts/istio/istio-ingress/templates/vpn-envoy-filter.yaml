@@ -23,76 +23,36 @@ spec:
           route_config:
             virtual_hosts:
             - domains:
-              - api.*
+              - "*"
               name: reversed-vpn
               routes:
               - match:
                   connect_matcher: {}
+                  headers:
+                    - name: Reversed-VPN
+                      string_match:
+                        safe_regex:
+                          regex: '^outbound\|1194\|\|vpn-seed-server(-[0-4])?\..*\.svc\.cluster\.local$'
                 route:
                   cluster_header: Reversed-VPN
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
+              # need to have two catch-all rules here
+              # one for CONNECT requests as they don't have a path in HTTP 1.1
+              #   see: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch -> connect_matcher
+              # the other is for all non-CONNECT requests
+              - match:
+                  connect_matcher: {}
+                redirect:
+                  https_redirect: true
+                  port_redirect: 443
               # Redirect requests to the https port to make probing more painful/cost intensive
               - match:
                   prefix: "/"
-                  headers:
-                    - name: ":method"
-                      string_match:
-                        exact: CONNECT
-                      invert_match: true
                 redirect:
                   https_redirect: true
                   port_redirect: 443
-                typed_per_filter_config:
-                  # No need to bother the external authorization server with the request
-                  # as it will most likely reject it anyway.
-                  envoy.filters.http.ext_authz:
-                    '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-                    disabled: true
-            # Redirect all other requests to the https port to make probing more painful/cost intensive
-            - domains:
-              - "*"
-              name: all
-              routes:
-              - match:
-                  prefix: "/"
-                  headers:
-                  - name: ":method"
-                    string_match:
-                      exact: CONNECT
-                    invert_match: true
-                redirect:
-                  https_redirect: true
-                  port_redirect: 443
-                typed_per_filter_config:
-                  # No need to bother the external authorization server with the request
-                  # as it will most likely reject it anyway.
-                  envoy.filters.http.ext_authz:
-                    '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-                    disabled: true
-  - applyTo: HTTP_FILTER
-    match:
-      context: GATEWAY
-      listener:
-        portNumber: 8132
-        filterChain:
-          filter:
-            name: "envoy.filters.network.http_connection_manager"
-            subFilter:
-              name: "envoy.filters.http.router"
-    patch:
-      operation: INSERT_BEFORE
-      filterClass: AUTHZ # This filter will run *after* the Istio authz filter.
-      value:
-        name: envoy.filters.http.ext_authz
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-          transport_api_version: V3
-          grpc_service:
-            envoy_grpc:
-              cluster_name: outbound|9001||reversed-vpn-auth-server.garden.svc.cluster.local
-            timeout: 0.250s
   workloadSelector:
     labels:
 {{ .Values.labels | toYaml | indent 6 }}
