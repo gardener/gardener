@@ -38,8 +38,7 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 	pod.Name = objectMeta.Name
 	pod.Namespace = objectMeta.Namespace
 
-	translateConfig(&pod.Spec)
-	translateContainers(pod.Spec.Containers)
+	translateSpec(&pod.Spec)
 
 	filesFromVolumes, err := translateVolumes(ctx, c, pod)
 	if err != nil {
@@ -53,34 +52,20 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 
 	return append([]extensionsv1alpha1.File{{
 		Path:        filepath.Join("/", "etc", "kubernetes", "manifests", pod.Name+".yaml"),
-		Permissions: ptr.To[uint32](0644),
+		Permissions: ptr.To[uint32](0600),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: staticPodYAML}},
 	}}, filesFromVolumes...), nil
 }
 
-func translateConfig(spec *corev1.PodSpec) {
+func translateSpec(spec *corev1.PodSpec) {
 	spec.HostNetwork = true
 	spec.PriorityClassName = "system-node-critical"
-}
-
-func translateContainers(containers []corev1.Container) {
-	for i, container := range containers {
-		if container.LivenessProbe != nil && container.LivenessProbe.HTTPGet != nil {
-			containers[i].LivenessProbe.HTTPGet.Host = "127.0.0.1"
-		}
-		if container.ReadinessProbe != nil && container.ReadinessProbe.HTTPGet != nil {
-			containers[i].ReadinessProbe.HTTPGet.Host = "127.0.0.1"
-		}
-		if container.StartupProbe != nil && container.StartupProbe.HTTPGet != nil {
-			containers[i].StartupProbe.HTTPGet.Host = "127.0.0.1"
-		}
-	}
 }
 
 func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]extensionsv1alpha1.File, error) {
 	var (
 		files               []extensionsv1alpha1.File
-		addFileWithHostPath = func(hostPath, fileName, content string, permissions *int32, desiredItems []corev1.KeyToPath) {
+		addFileWithHostPath = func(hostPath, fileName, content string, desiredItems []corev1.KeyToPath) {
 			path := filepath.Join(hostPath, fileName)
 			if len(desiredItems) == 0 || slices.ContainsFunc(desiredItems, func(item corev1.KeyToPath) bool {
 				path = filepath.Join(hostPath, item.Path)
@@ -88,10 +73,12 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]
 			}) {
 				files = append(files, extensionsv1alpha1.File{
 					Path:        path,
-					Permissions: ptr.To[uint32](uint32(ptr.Deref(permissions, 0644))), // #nosec G115 -- permissions cannot be negative
+					Permissions: ptr.To[uint32](0600),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{
 						// replace 'server' in generic token kubeconfig to point to 'localhost' for static pods
-						Data: regexp.MustCompile(`(?m)^(\s*)server: .*$`).ReplaceAllString(content, "${1}server: https://127.0.0.1"),
+						// TODO(rfranzke): Revisit this and explore whether we can avoid this by already generating the
+						//  generic token kubeconfig with the correct server URL.
+						Data: regexp.MustCompile(`(?m)^(\s*)server: .*$`).ReplaceAllString(content, "${1}server: https://localhost"),
 					}},
 				})
 			}
@@ -107,8 +94,8 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]
 			if err := c.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
 				return nil, fmt.Errorf("failed reading ConfigMap %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(configMap), volume.Name, client.ObjectKeyFromObject(pod), err)
 			}
-			for k, v := range configMap.Data {
-				addFileWithHostPath(hostPath, k, v, nil, nil)
+			for fileName, content := range configMap.Data {
+				addFileWithHostPath(hostPath, fileName, content, nil)
 			}
 			pod.Spec.Volumes[i].VolumeSource = corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: hostPath}}
 
@@ -118,7 +105,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]
 				return nil, fmt.Errorf("failed reading Secret %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(secret), volume.Name, client.ObjectKeyFromObject(pod), err)
 			}
 			for fileName, content := range secret.Data {
-				addFileWithHostPath(hostPath, fileName, string(content), nil, nil)
+				addFileWithHostPath(hostPath, fileName, string(content), nil)
 			}
 			pod.Spec.Volumes[i].VolumeSource = corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: hostPath}}
 
@@ -131,7 +118,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]
 						return nil, fmt.Errorf("failed reading ConfigMap %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(configMap), volume.Name, client.ObjectKeyFromObject(pod), err)
 					}
 					for fileName, content := range configMap.Data {
-						addFileWithHostPath(hostPath, fileName, content, volume.Projected.DefaultMode, source.ConfigMap.Items)
+						addFileWithHostPath(hostPath, fileName, content, source.ConfigMap.Items)
 					}
 
 				case source.Secret != nil:
@@ -140,7 +127,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]
 						return nil, fmt.Errorf("failed reading Secret %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(secret), volume.Name, client.ObjectKeyFromObject(pod), err)
 					}
 					for fileName, content := range secret.Data {
-						addFileWithHostPath(hostPath, fileName, string(content), volume.Projected.DefaultMode, source.Secret.Items)
+						addFileWithHostPath(hostPath, fileName, string(content), source.Secret.Items)
 					}
 				}
 			}

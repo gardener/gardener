@@ -54,13 +54,13 @@ var _ = Describe("StaticPod", func() {
 				}
 			})
 
-			It("should successfully translate a pod w/o containers and volumes", func() {
+			It("should successfully translate a pod w/o volumes", func() {
 				files, err := Translate(ctx, fakeClient, deployment)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        filepath.Join("/", "etc", "kubernetes", "manifests", deployment.Name+".yaml"),
-					Permissions: ptr.To[uint32](0644),
+					Permissions: ptr.To[uint32](0600),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `apiVersion: v1
 kind: Pod
 metadata:
@@ -73,55 +73,6 @@ metadata:
   namespace: bar
 spec:
   containers: null
-  hostNetwork: true
-  priorityClassName: system-node-critical
-status: {}
-`}},
-				}))
-			})
-
-			It("should successfully translate a pod w/o volumes", func() {
-				deployment.Spec.Template.Spec.Containers = []corev1.Container{{
-					Name:           "some-container",
-					Image:          "some-image",
-					LivenessProbe:  &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Host: "a-host-that-will-be-replaced"}}},
-					ReadinessProbe: &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Host: "a-host-that-will-be-replaced"}}},
-					StartupProbe:   &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Host: "a-host-that-will-be-replaced"}}},
-				}}
-
-				files, err := Translate(ctx, fakeClient, deployment)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(files).To(HaveExactElements(extensionsv1alpha1.File{
-					Path:        filepath.Join("/", "etc", "kubernetes", "manifests", deployment.Name+".yaml"),
-					Permissions: ptr.To[uint32](0644),
-					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    bar: baz
-  creationTimestamp: null
-  labels:
-    baz: foo
-  name: foo
-  namespace: bar
-spec:
-  containers:
-  - image: some-image
-    livenessProbe:
-      httpGet:
-        host: 127.0.0.1
-        port: 0
-    name: some-container
-    readinessProbe:
-      httpGet:
-        host: 127.0.0.1
-        port: 0
-    resources: {}
-    startupProbe:
-      httpGet:
-        host: 127.0.0.1
-        port: 0
   hostNetwork: true
   priorityClassName: system-node-critical
 status: {}
@@ -218,7 +169,7 @@ kind: Config
 				Expect(files).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        filepath.Join("/", "etc", "kubernetes", "manifests", deployment.Name+".yaml"),
-						Permissions: ptr.To[uint32](0644),
+						Permissions: ptr.To[uint32](0600),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `apiVersion: v1
 kind: Pod
 metadata:
@@ -249,48 +200,48 @@ status: {}
 					},
 					extensionsv1alpha1.File{
 						Path:        filepath.Join("/", "etc", "kubernetes", deployment.Name, deployment.Spec.Template.Spec.Volumes[0].Name, "cm1file1.txt"),
-						Permissions: ptr.To[uint32](0644),
+						Permissions: ptr.To[uint32](0600),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: configMap1.Data["cm1file1.txt"]}},
 					},
 					extensionsv1alpha1.File{
 						Path:        filepath.Join("/", "etc", "kubernetes", deployment.Name, deployment.Spec.Template.Spec.Volumes[0].Name, "cm1file2.txt"),
-						Permissions: ptr.To[uint32](0644),
+						Permissions: ptr.To[uint32](0600),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: configMap1.Data["cm1file2.txt"]}},
 					},
 					extensionsv1alpha1.File{
 						Path:        filepath.Join("/", "etc", "kubernetes", deployment.Name, deployment.Spec.Template.Spec.Volumes[1].Name, "secret1file1.txt"),
-						Permissions: ptr.To[uint32](0644),
+						Permissions: ptr.To[uint32](0600),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(secret1.Data["secret1file1.txt"])}},
 					},
 					extensionsv1alpha1.File{
 						Path:        filepath.Join("/", "etc", "kubernetes", deployment.Name, deployment.Spec.Template.Spec.Volumes[1].Name, "secret1file2.txt"),
-						Permissions: ptr.To[uint32](0644),
+						Permissions: ptr.To[uint32](0600),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(secret1.Data["secret1file2.txt"])}},
 					},
 					extensionsv1alpha1.File{
 						Path:        filepath.Join("/", "etc", "kubernetes", deployment.Name, deployment.Spec.Template.Spec.Volumes[2].Name, "cm2file1.txt"),
-						Permissions: ptr.To[uint32](0666),
+						Permissions: ptr.To[uint32](0600),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: configMap2.Data["cm2file1.txt"]}},
 					},
 					extensionsv1alpha1.File{
 						Path:        filepath.Join("/", "etc", "kubernetes", deployment.Name, deployment.Spec.Template.Spec.Volumes[2].Name, "cm2file2.txt"),
-						Permissions: ptr.To[uint32](0666),
+						Permissions: ptr.To[uint32](0600),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `apiVersion: v1
 clusters:
 - cluster:
-    server: https://127.0.0.1
+    server: https://localhost
   name: test
 kind: Config
 `}},
 					},
 					extensionsv1alpha1.File{
 						Path:        filepath.Join("/", "etc", "kubernetes", deployment.Name, deployment.Spec.Template.Spec.Volumes[2].Name, "secret2file1.txt"),
-						Permissions: ptr.To[uint32](0666),
+						Permissions: ptr.To[uint32](0600),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(secret2.Data["secret2file1.txt"])}},
 					},
 					extensionsv1alpha1.File{
 						Path:        filepath.Join("/", "etc", "kubernetes", deployment.Name, deployment.Spec.Template.Spec.Volumes[2].Name, "secret2file2.txt"),
-						Permissions: ptr.To[uint32](0666),
+						Permissions: ptr.To[uint32](0600),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(secret2.Data["secret2file2.txt"])}},
 					},
 				))
