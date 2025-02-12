@@ -2528,7 +2528,7 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(ContainSubstring("services is required spec.networking.services")))
+					Expect(err).To(MatchError(ContainSubstring("services is required, spec.networking.services")))
 				})
 
 				It("should reject because shoot services network is nil (workerless Shoot)", func() {
@@ -2545,7 +2545,7 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(HaveOccurred())
-					Expect(err).To(MatchError(ContainSubstring("services is required spec.networking.services")))
+					Expect(err).To(MatchError(ContainSubstring("services is required, spec.networking.services")))
 
 				})
 
@@ -3614,7 +3614,7 @@ var _ = Describe("validator", func() {
 
 					Expect(err).To(BeForbiddenError())
 					Expect(err).To(MatchError(
-						ContainSubstring("shoots.core.gardener.cloud \"shoot\" is forbidden: [spec.provider.workers[0].machine.architecture: Unsupported value: \"foo\": supported values: \"amd64\", \"arm64\"]"),
+						ContainSubstring("shoots.core.gardener.cloud \"shoot\" is forbidden: spec.provider.workers[0].machine.architecture: Unsupported value: \"foo\": supported values: \"amd64\", \"arm64\""),
 					))
 				})
 
@@ -3838,7 +3838,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, supported machine image versions are: [%s]", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
 					})
 
 					It("should reject due to a machine image version with non-supported architecture and expired version", func() {
@@ -3873,7 +3873,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, is expired, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", validMachineImageName, expiredVersion), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, is expired, supported machine image versions are: [%s]", fmt.Sprintf("%s:%s", validMachineImageName, expiredVersion), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
 					})
 
 					It("should reject due to a machine image version with no support for inplace updates when the workerpool update strategy is an in-place update strategy", func() {
@@ -3919,7 +3919,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support in-place updates, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", validMachineImageName, latestNonExpiredVersion), fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1))))
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support in-place updates, supported machine image versions are: [%s]", fmt.Sprintf("%s:%s", validMachineImageName, latestNonExpiredVersion), fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1))))
 					})
 
 					It("should reject due to a machine image version with non-supported architecture, expired version and no support for inplace updates when the workerpool update strategy is an in-place update strategy", func() {
@@ -3967,7 +3967,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, is expired, does not support in-place updates, supported machine image versions are: [%s %s]]", fmt.Sprintf("%s:%s", validMachineImageName, expiredVersion), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1), fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' does not support CPU architecture %q, is expired, does not support in-place updates, supported machine image versions are: [%s %s]", fmt.Sprintf("%s:%s", validMachineImageName, expiredVersion), "amd64", fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion1), fmt.Sprintf("%s:%s", validMachineImageName, nonExpiredVersion2))))
 					})
 
 					It("should reject due to a machine image that does not match the kubeletVersionConstraint when the control plane K8s version does not match", func() {
@@ -4820,7 +4820,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be in-place updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.4"))))
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be in-place updated from the current version, supported machine image versions are: [%s]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.4"))))
 					})
 
 					It("should forbid updating to a higher machine image for an existing worker pool with in-place update strategy if MinVersionForUpdate is higher than current version", func() {
@@ -4899,7 +4899,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be in-place updated from the current version, supported machine image versions are: [%s]]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s %s:%s", "constraint-image-name", "1.2.3", "constraint-image-name", "1.2.4"))))
+						Expect(err).To(MatchError(ContainSubstring("machine image version '%s' cannot be in-place updated from the current version, supported machine image versions are: [%s]", fmt.Sprintf("%s:%s", "constraint-image-name", "1.2.5"), fmt.Sprintf("%s:%s %s:%s", "constraint-image-name", "1.2.3", "constraint-image-name", "1.2.4"))))
 					})
 
 					It("should allow updating to a higher machine image for an existing worker pool with in-place update strategy if MinVersionForUpdate is less or equal current version", func() {
@@ -5217,7 +5217,7 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(ContainSubstring("Unsupported value: %q: supported values: %q, %q]", "not-present-in-cloudprofile", "machine-type-1", "machine-type-2")))
+					Expect(err).To(MatchError(ContainSubstring("Unsupported value: %q: supported values: %q, %q", "not-present-in-cloudprofile", "machine-type-1", "machine-type-2")))
 				})
 
 				It("should reject if the machine is unavailable in atleast one zone", func() {
@@ -6187,6 +6187,134 @@ var _ = Describe("validator", func() {
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 
 				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+		})
+
+		Context("limits enforcement", func() {
+			BeforeEach(func() {
+				cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{}
+			})
+
+			JustBeforeEach(func() {
+				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+			})
+
+			It("should allow shoots if there are no limits", func() {
+				cloudProfile.Spec.Limits = nil
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow updating shoots with deletionTimestamp independent of limits", func() {
+				shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+				attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+
+			It("should allow deleting shoots independent of limits", func() {
+				attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+				Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+			})
+
+			Context("maxNodesTotal", func() {
+				const limit int32 = 3
+
+				BeforeEach(func() {
+					cloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(limit)
+				})
+
+				It("should allow shoots within the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit - 1
+					shoot.Spec.Provider.Workers[0].Maximum = limit
+					worker2 := shoot.Spec.Provider.Workers[0].DeepCopy()
+					worker2.Minimum = 1
+					worker2.Maximum = limit
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *worker2)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				})
+
+				It("should forbid shoots with individual maximum over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = 1
+					shoot.Spec.Provider.Workers[0].Maximum = limit + 1
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *shoot.Spec.Provider.Workers[0].DeepCopy())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(ctx, attrs, nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(And(
+						ContainSubstring("spec.provider.workers[0].maximum"),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
+						ContainSubstring("spec.provider.workers[1].maximum"),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
+						Not(ContainSubstring("total minimum node count")),
+					)))
+				})
+
+				It("should forbid shoots with total minimum over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit
+					worker2 := shoot.Spec.Provider.Workers[0].DeepCopy()
+					worker2.Minimum = 1
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *worker2)
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(ctx, attrs, nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(And(
+						ContainSubstring("spec.provider.workers"),
+						ContainSubstring("total minimum node count"),
+						Not(ContainSubstring("maximum node count of a worker pool")),
+					)))
+				})
+
+				It("should forbid shoots with individual maximum and total minimum over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit
+					shoot.Spec.Provider.Workers[0].Maximum = limit + 1
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, *shoot.Spec.Provider.Workers[0].DeepCopy())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+
+					err := admissionHandler.Admit(ctx, attrs, nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(And(
+						ContainSubstring("spec.provider.workers[0].maximum"),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
+						ContainSubstring("spec.provider.workers[1].maximum"),
+						ContainSubstring("the maximum node count of a worker pool must not exceed the limit of %d configured in the CloudProfile", limit),
+						ContainSubstring("spec.provider.workers"),
+						ContainSubstring("total minimum node count"),
+					)))
+				})
+
+				It("should allow updating shoots with deletionTimestamp over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit + 1
+					shoot.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+					attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, userInfo)
+
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				})
+
+				It("should allow deleting shoots over the limit", func() {
+					shoot.Spec.Provider.Workers[0].Minimum = limit + 1
+
+					attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, userInfo)
+
+					Expect(admissionHandler.Admit(ctx, attrs, nil)).To(Succeed())
+				})
 			})
 		})
 	})

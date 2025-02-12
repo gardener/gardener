@@ -10,7 +10,6 @@ import (
 	"math"
 	"math/big"
 
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -36,7 +35,6 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 		b.Shoot.GetReplicas(1),
 		b.Shoot.GetInfo().Spec.Kubernetes.ClusterAutoscaler,
 		b.Shoot.GetInfo().Spec.Provider.Workers,
-		0,
 		b.Seed.KubernetesVersion,
 	), nil
 }
@@ -47,11 +45,11 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.Components.Extensions.Worker.MachineDeployments())
 
-		maxNodesTotal, err := b.CalculateMaxNodesForShoot(b.Shoot.GetInfo())
+		maxNodesTotal, err := b.CalculateMaxNodesTotal(b.Shoot.GetInfo())
 		if err != nil {
 			return err
 		}
-		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMaxNodesTotal(ptr.Deref(maxNodesTotal, 0))
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMaxNodesTotal(maxNodesTotal)
 
 		return b.Shoot.Components.ControlPlane.ClusterAutoscaler.Deploy(ctx)
 	}
@@ -64,36 +62,45 @@ func (b *Botanist) ScaleClusterAutoscalerToZero(ctx context.Context) error {
 	return client.IgnoreNotFound(kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameClusterAutoscaler}, 0))
 }
 
-// CalculateMaxNodesForShoot returns the maximum number of nodes the shoot supports. Function returns nil if there is no limitation.
-func (b *Botanist) CalculateMaxNodesForShoot(shoot *gardencorev1beta1.Shoot) (*int64, error) {
+// CalculateMaxNodesTotal returns the maximum number of nodes the shoot can have based on the shoot networks and
+// the limit configured in the CloudProfile. It returns 0 if there is no limitation.
+func (b *Botanist) CalculateMaxNodesTotal(shoot *gardencorev1beta1.Shoot) (int64, error) {
+	maxNetworks, err := b.CalculateMaxNodesForShootNetworks(shoot)
+	if err != nil {
+		return 0, fmt.Errorf("failed to calculate max nodes for shoot networks: %w", err)
+	}
+
+	var maxLimit int64
+	if limits := b.Shoot.CloudProfile.Spec.Limits; limits != nil && limits.MaxNodesTotal != nil {
+		maxLimit = int64(*limits.MaxNodesTotal)
+	}
+
+	return MinGreaterThanZero(maxNetworks, maxLimit), nil
+}
+
+// CalculateMaxNodesForShootNetworks returns the maximum number of nodes the shoot networks supports or 0 if there is no limitation.
+func (b *Botanist) CalculateMaxNodesForShootNetworks(shoot *gardencorev1beta1.Shoot) (int64, error) {
 	if shoot.Spec.Networking == nil || len(b.Shoot.Networks.Pods) == 0 {
-		return nil, nil
+		return 0, nil
 	}
 	maxNodesForPodsNetwork, err := b.calculateMaxNodesForPodsNetwork(shoot)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	maxNodesForNodesNetwork, err := b.calculateMaxNodesForNodesNetwork()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	if maxNodesForPodsNetwork == nil {
-		return maxNodesForNodesNetwork, nil
-	}
-	if maxNodesForNodesNetwork == nil {
-		return maxNodesForPodsNetwork, nil
-	}
-
-	return ptr.To(min(*maxNodesForPodsNetwork, *maxNodesForNodesNetwork)), nil
+	return MinGreaterThanZero(maxNodesForPodsNetwork, maxNodesForNodesNetwork), nil
 }
 
-func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoot) (*int64, error) {
+func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoot) (int64, error) {
 	resultPerIPFamily := map[gardencorev1beta1.IPFamily]int64{}
 	for _, podNetwork := range b.Shoot.Networks.Pods {
 		podCIDRMaskSize, _ := podNetwork.Mask.Size()
 		if podCIDRMaskSize == 0 {
-			return nil, fmt.Errorf("pod CIDR is not in its canonical form")
+			return 0, fmt.Errorf("pod CIDR is not in its canonical form")
 		}
 		// Calculate how many subnets with nodeCIDRMaskSize can be allocated out of the pod network (with podCIDRMaskSize).
 		// This indicates how many Nodes we can host at max from a networking perspective.
@@ -125,19 +132,19 @@ func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoo
 	for _, value := range resultPerIPFamily {
 		result = min(result, value)
 	}
-	return &result, nil
+	return result, nil
 }
 
-func (b *Botanist) calculateMaxNodesForNodesNetwork() (*int64, error) {
+func (b *Botanist) calculateMaxNodesForNodesNetwork() (int64, error) {
 	if len(b.Shoot.Networks.Nodes) == 0 {
-		return nil, nil
+		return 0, nil
 	}
 
 	resultPerIPFamily := map[gardencorev1beta1.IPFamily]int64{}
 	for _, nodeNetwork := range b.Shoot.Networks.Nodes {
 		nodeCIDRMaskSize, _ := nodeNetwork.Mask.Size()
 		if nodeCIDRMaskSize == 0 {
-			return nil, fmt.Errorf("node CIDR is not in its canonical form")
+			return 0, fmt.Errorf("node CIDR is not in its canonical form")
 		}
 		ipCIDRMaskSize := int64(128)
 		if nodeNetwork.IP.To4() != nil {
@@ -168,5 +175,18 @@ func (b *Botanist) calculateMaxNodesForNodesNetwork() (*int64, error) {
 	for _, value := range resultPerIPFamily {
 		result = min(result, value)
 	}
-	return &result, nil
+	return result, nil
+}
+
+// MinGreaterThanZero returns the minimum of the given two integers that is greater than 0. If both integers are less
+// than or equal to 0, it returns 0.
+// I.e., it works like the min builtin function but any value less than or equal to 0 is ignored.
+func MinGreaterThanZero[T int | int8 | int16 | int32 | int64](a, b T) T {
+	if a <= 0 || b <= 0 {
+		// if one of both is <= 0, return the other one
+		// if bother are <=, return 0
+		return max(a, b, 0)
+	}
+
+	return min(a, b)
 }

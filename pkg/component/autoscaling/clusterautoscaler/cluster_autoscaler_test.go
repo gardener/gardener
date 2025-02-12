@@ -649,7 +649,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, workerConfig, 1337, nil)
+		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, workerConfig, nil)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -676,9 +676,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 				}
 
 				if runtimeVersionGreaterEquals126 {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, 0, semver.MustParse("1.26.1"))
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.26.1"))
 				} else {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, 0, semver.MustParse("1.25.0"))
+					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.25.0"))
 				}
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)

@@ -49,7 +49,10 @@ var _ = Describe("ClusterAutoscaler", func() {
 		botanist.Seed = &seedpkg.Seed{
 			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
-		botanist.Shoot = &shootpkg.Shoot{Networks: &shootpkg.Networks{}}
+		botanist.Shoot = &shootpkg.Shoot{
+			Networks:     &shootpkg.Networks{},
+			CloudProfile: &gardencorev1beta1.CloudProfile{},
+		}
 		botanist.SeedClientSet = kubernetesClient
 	})
 
@@ -89,14 +92,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 					UID: namespaceUID,
 				},
 			}
-			botanist.Shoot = &shootpkg.Shoot{
-				Components: &shootpkg.Components{
-					ControlPlane: &shootpkg.ControlPlane{
-						ClusterAutoscaler: clusterAutoscaler,
-					},
-					Extensions: &shootpkg.Extensions{
-						Worker: worker,
-					},
+			botanist.Shoot.Components = &shootpkg.Components{
+				ControlPlane: &shootpkg.ControlPlane{
+					ClusterAutoscaler: clusterAutoscaler,
+				},
+				Extensions: &shootpkg.Extensions{
+					Worker: worker,
 				},
 			}
 		})
@@ -172,8 +173,70 @@ var _ = Describe("ClusterAutoscaler", func() {
 		})
 	})
 
-	DescribeTable("#CalculateMaxNodesForShoot",
-		func(shoot *gardencorev1beta1.Shoot, expectedResult *int64) {
+	Describe("#CalculateMaxNodesTotal", func() {
+		var (
+			shoot *gardencorev1beta1.Shoot
+
+			maxNetworks int32
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeControllerManager: &gardencorev1beta1.KubeControllerManagerConfig{
+						NodeCIDRMaskSize: ptr.To[int32](24),
+					},
+				},
+				Networking: &gardencorev1beta1.Networking{
+					Pods: ptr.To("100.64.0.0/12"),
+				},
+			}}
+			_, pods, err := net.ParseCIDR(*shoot.Spec.Networking.Pods)
+			Expect(err).NotTo(HaveOccurred())
+			botanist.Shoot.Networks.Pods = append(botanist.Shoot.Networks.Pods, *pods)
+			// -> shoot networks allow the following number of nodes:
+			maxNetworks = 4096
+
+			botanist.Shoot.CloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+				MaxNodesTotal: ptr.To[int32](100),
+			}
+		})
+
+		It("should return 0 if there are no limits", func() {
+			shoot.Spec.Networking = nil
+			botanist.Shoot.CloudProfile.Spec.Limits = nil
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(0))
+		})
+
+		It("should return 0 if maxNodesTotal is not limited", func() {
+			shoot.Spec.Networking = nil
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = nil
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(0))
+		})
+
+		It("should return the network limit if maxNodesTotal is not limited", func() {
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = nil
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(maxNetworks))
+		})
+
+		It("should return the CloudProfile limit if network is not limited", func() {
+			shoot.Spec.Networking = nil
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
+		})
+
+		It("should return the CloudProfile limit if it is lower than the network limit", func() {
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To[int32](maxNetworks - 10)
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
+		})
+
+		It("should return the network limit if it is lower than the CloudProfile limit", func() {
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To[int32](maxNetworks + 10)
+			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(maxNetworks))
+		})
+	})
+
+	DescribeTable("#CalculateMaxNodesForShootNetworks",
+		func(shoot *gardencorev1beta1.Shoot, expectedResult int) {
 			if shoot.Spec.Networking != nil {
 				if shoot.Spec.Networking.Pods != nil {
 					_, pods, err := net.ParseCIDR(*shoot.Spec.Networking.Pods)
@@ -198,9 +261,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 					botanist.Shoot.Networks.Nodes = append(botanist.Shoot.Networks.Nodes, *nodes)
 				}
 			}
-			maxNode, err := botanist.CalculateMaxNodesForShoot(shoot)
+			maxNodes, err := botanist.CalculateMaxNodesForShootNetworks(shoot)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(maxNode).To(Equal(expectedResult))
+			Expect(maxNodes).To(BeEquivalentTo(expectedResult))
 		},
 
 		Entry(
@@ -212,7 +275,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			}},
-			nil,
+			0,
 		),
 		Entry(
 			"Pods network only",
@@ -226,7 +289,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Pods: ptr.To("100.64.0.0/12"),
 				},
 			}},
-			ptr.To[int64](4096),
+			4096,
 		),
 		Entry(
 			"Default Pods network",
@@ -241,7 +304,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Nodes: ptr.To("10.250.0.0/16"),
 				},
 			}},
-			ptr.To[int64](8192),
+			8192,
 		),
 		Entry(
 			"Pods network is restriction",
@@ -256,7 +319,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Nodes: ptr.To("10.250.0.0/16"),
 				},
 			}},
-			ptr.To[int64](4096),
+			4096,
 		),
 		Entry(
 			"Nodes network is restriction",
@@ -271,7 +334,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Nodes: ptr.To("10.250.0.0/20"),
 				},
 			}},
-			ptr.To[int64](4094),
+			4094,
 		),
 		Entry(
 			"IPv6",
@@ -287,7 +350,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6},
 				},
 			}},
-			ptr.To[int64](65536),
+			65536,
 		),
 		Entry(
 			"Multiple pods network only",
@@ -308,7 +371,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](4098),
+			4098,
 		),
 		Entry(
 			"Pods network is restriction (with multiple networks)",
@@ -331,7 +394,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](12288),
+			12288,
 		),
 		Entry(
 			"Nodes network is restriction (with multiple networks)",
@@ -354,7 +417,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](8188),
+			8188,
 		),
 		Entry(
 			"Dual-stack - IPv4 nodes network is restriction",
@@ -376,7 +439,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](4094),
+			4094,
 		),
 		Entry(
 			"Dual-stack - IPv4 pods network is restriction",
@@ -398,7 +461,33 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 				},
 			},
-			ptr.To[int64](4096),
+			4096,
 		),
 	)
+
+	Describe("#MinGreaterThanZero", func() {
+		It("should return 0 if no value is greater than 0", func() {
+			Expect(MinGreaterThanZero(-1, -1)).To(BeEquivalentTo(0))
+			Expect(MinGreaterThanZero(-1, 0)).To(BeEquivalentTo(0))
+			Expect(MinGreaterThanZero(0, -1)).To(BeEquivalentTo(0))
+			Expect(MinGreaterThanZero(0, 0)).To(BeEquivalentTo(0))
+		})
+
+		It("should return the larger value if the other value is not greater than 0", func() {
+			Expect(MinGreaterThanZero(0, 1)).To(BeEquivalentTo(1))
+			Expect(MinGreaterThanZero(-1, 1)).To(BeEquivalentTo(1))
+			Expect(MinGreaterThanZero(1, 0)).To(BeEquivalentTo(1))
+			Expect(MinGreaterThanZero(1, -1)).To(BeEquivalentTo(1))
+		})
+
+		It("should return the smaller value if both values are greater than 0", func() {
+			Expect(MinGreaterThanZero(1, 2)).To(BeEquivalentTo(1))
+			Expect(MinGreaterThanZero(2, 1)).To(BeEquivalentTo(1))
+		})
+
+		It("should return the value if both are equal", func() {
+			Expect(MinGreaterThanZero(0, 0)).To(BeEquivalentTo(0))
+			Expect(MinGreaterThanZero(1, 1)).To(BeEquivalentTo(1))
+		})
+	})
 })
