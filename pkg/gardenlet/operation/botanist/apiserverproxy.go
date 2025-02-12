@@ -6,9 +6,11 @@ package botanist
 
 import (
 	"context"
+	clock "k8s.io/utils/clock"
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -54,5 +56,15 @@ func (b *Botanist) DeployAPIServerProxy(ctx context.Context) error {
 
 	b.Shoot.Components.SystemComponents.APIServerProxy.SetAdvertiseIPAddress(b.APIServerClusterIP)
 
-	return b.Shoot.Components.SystemComponents.APIServerProxy.Deploy(ctx)
+	if err := b.Shoot.Components.SystemComponents.APIServerProxy.Deploy(ctx); err != nil {
+		return err
+	}
+
+	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+		c := clock.RealClock{}
+		condition := v1beta1helper.GetOrInitConditionWithClock(c, shoot.Status.Constraints, gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy)
+		condition = v1beta1helper.UpdatedConditionWithClock(c, condition, gardencorev1beta1.ConditionTrue, "ApiserverProxyUsesHTTPProxy", "apiserver-proxy uses HTTP proxy method")
+		shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
+		return nil
+	})
 }
