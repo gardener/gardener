@@ -357,7 +357,6 @@ var _ = Describe("VPA", func() {
 								Name:            "updater",
 								Image:           imageUpdater,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Command:         []string{"./updater"},
 								Args: []string{
 									"--min-replicas=1",
 									fmt.Sprintf("--eviction-tolerance=%s", flagEvictionToleranceValue),
@@ -411,7 +410,7 @@ var _ = Describe("VPA", func() {
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
 				obj.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
-				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
+				obj.Spec.Template.Spec.Containers[0].Args = append(obj.Spec.Template.Spec.Containers[0].Args, "--kubeconfig="+pathGenericKubeconfig)
 
 				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretUpdater.Name)).To(Succeed())
 			}
@@ -726,7 +725,6 @@ var _ = Describe("VPA", func() {
 								Name:            "recommender",
 								Image:           imageRecommender,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Command:         []string{"./recommender"},
 								Args: []string{
 									"--v=3",
 									"--stderrthreshold=info",
@@ -781,7 +779,7 @@ var _ = Describe("VPA", func() {
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
 				obj.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
-				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
+				obj.Spec.Template.Spec.Containers[0].Args = append(obj.Spec.Template.Spec.Containers[0].Args, "--kubeconfig="+pathGenericKubeconfig)
 
 				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretRecommender.Name)).To(Succeed())
 			}
@@ -1026,7 +1024,6 @@ var _ = Describe("VPA", func() {
 								Name:            "admission-controller",
 								Image:           imageAdmissionController,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Command:         []string{"./admission-controller"},
 								Args: []string{
 									"--v=2",
 									"--stderrthreshold=info",
@@ -1121,7 +1118,7 @@ var _ = Describe("VPA", func() {
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
 				obj.Spec.Template.Spec.AutomountServiceAccountToken = ptr.To(false)
-				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
+				obj.Spec.Template.Spec.Containers[0].Args = append(obj.Spec.Template.Spec.Containers[0].Args, "--kubeconfig="+pathGenericKubeconfig)
 
 				Expect(gardenerutils.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretAdmissionController.Name)).To(Succeed())
 			}

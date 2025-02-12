@@ -200,20 +200,8 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 					Name:            "admission-controller",
 					Image:           v.values.AdmissionController.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         v.computeAdmissionControllerCommands(),
-					Args: []string{
-						"--v=2",
-						"--stderrthreshold=info",
-						"--kube-api-qps=100",
-						"--kube-api-burst=120",
-						fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificateBundle),
-						fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificate),
-						fmt.Sprintf("--tls-private-key=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyPrivateKey),
-						"--address=:8944",
-						fmt.Sprintf("--port=%d", vpaconstants.AdmissionControllerPort),
-						"--register-webhook=false",
-					},
-					LivenessProbe: newDefaultLivenessProbe(),
+					Args:            v.computeAdmissionControllerArgs(),
+					LivenessProbe:   newDefaultLivenessProbe(),
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -315,8 +303,19 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 	}
 }
 
-func (v *vpa) computeAdmissionControllerCommands() []string {
-	out := []string{"./admission-controller"}
+func (v *vpa) computeAdmissionControllerArgs() []string {
+	out := []string{
+		"--v=2",
+		"--stderrthreshold=info",
+		"--kube-api-qps=100",
+		"--kube-api-burst=120",
+		fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificateBundle),
+		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificate),
+		fmt.Sprintf("--tls-private-key=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyPrivateKey),
+		"--address=:8944",
+		fmt.Sprintf("--port=%d", vpaconstants.AdmissionControllerPort),
+		"--register-webhook=false",
+	}
 
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
