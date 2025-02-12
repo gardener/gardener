@@ -15,7 +15,7 @@ import (
 const (
 	customResourceStateConfigMountDir      = "/config"
 	customResourceStateConfigMountFile     = "custom-resource-state.yaml"
-	customResourceStateConfigMapNamePrefix = "custom-resource-state-config"
+	customResourceStateConfigMapNamePrefix = "kube-state-metrics-custom-resource-state"
 )
 
 func newCustomResourceStateMetricNameForVPA(path, valuePath []string) string {
