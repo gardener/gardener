@@ -258,31 +258,8 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 					Name:            "recommender",
 					Image:           v.values.Recommender.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         v.computeRecommenderCommands(),
-					Args: []string{
-						"--v=3",
-						"--stderrthreshold=info",
-						"--pod-recommendation-min-cpu-millicores=5",
-						"--pod-recommendation-min-memory-mb=10",
-						fmt.Sprintf("--recommendation-margin-fraction=%f", ptr.Deref(v.values.Recommender.RecommendationMarginFraction, gardencorev1beta1.DefaultRecommendationMarginFraction)),
-						fmt.Sprintf("--recommender-interval=%s", ptr.Deref(v.values.Recommender.Interval, gardencorev1beta1.DefaultRecommenderInterval).Duration),
-						"--kube-api-qps=100",
-						"--kube-api-burst=120",
-						"--memory-saver=true",
-						fmt.Sprintf("--target-cpu-percentile=%f", ptr.Deref(v.values.Recommender.TargetCPUPercentile, gardencorev1beta1.DefaultTargetCPUPercentile)),
-						fmt.Sprintf("--recommendation-lower-bound-cpu-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundCPUPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundCPUPercentile)),
-						fmt.Sprintf("--recommendation-upper-bound-cpu-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundCPUPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundCPUPercentile)),
-						fmt.Sprintf("--cpu-histogram-decay-half-life=%s", ptr.Deref(v.values.Recommender.CPUHistogramDecayHalfLife, gardencorev1beta1.DefaultCPUHistogramDecayHalfLife).Duration),
-						fmt.Sprintf("--target-memory-percentile=%f", ptr.Deref(v.values.Recommender.TargetMemoryPercentile, gardencorev1beta1.DefaultTargetMemoryPercentile)),
-						fmt.Sprintf("--recommendation-lower-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundMemoryPercentile)),
-						fmt.Sprintf("--recommendation-upper-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundMemoryPercentile)),
-						fmt.Sprintf("--memory-histogram-decay-half-life=%s", ptr.Deref(v.values.Recommender.MemoryHistogramDecayHalfLife, gardencorev1beta1.DefaultMemoryHistogramDecayHalfLife).Duration),
-						fmt.Sprintf("--memory-aggregation-interval=%s", ptr.Deref(v.values.Recommender.MemoryAggregationInterval, gardencorev1beta1.DefaultMemoryAggregationInterval).Duration),
-						fmt.Sprintf("--memory-aggregation-interval-count=%d", ptr.Deref(v.values.Recommender.MemoryAggregationIntervalCount, gardencorev1beta1.DefaultMemoryAggregationIntervalCount)),
-						"--leader-elect=true",
-						fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
-					},
-					LivenessProbe: newDefaultLivenessProbe(),
+					Args:            v.computeRecommenderArgs(),
+					LivenessProbe:   newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          serverPortName,
@@ -341,12 +318,35 @@ func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscale
 	}
 }
 
-func (v *vpa) computeRecommenderCommands() []string {
-	out := []string{"./recommender"}
+func (v *vpa) computeRecommenderArgs() []string {
+	out := []string{
+		"--v=3",
+		"--stderrthreshold=info",
+		"--pod-recommendation-min-cpu-millicores=5",
+		"--pod-recommendation-min-memory-mb=10",
+		fmt.Sprintf("--recommendation-margin-fraction=%f", ptr.Deref(v.values.Recommender.RecommendationMarginFraction, gardencorev1beta1.DefaultRecommendationMarginFraction)),
+		fmt.Sprintf("--recommender-interval=%s", ptr.Deref(v.values.Recommender.Interval, gardencorev1beta1.DefaultRecommenderInterval).Duration),
+		"--kube-api-qps=100",
+		"--kube-api-burst=120",
+		"--memory-saver=true",
+		fmt.Sprintf("--target-cpu-percentile=%f", ptr.Deref(v.values.Recommender.TargetCPUPercentile, gardencorev1beta1.DefaultTargetCPUPercentile)),
+		fmt.Sprintf("--recommendation-lower-bound-cpu-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundCPUPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundCPUPercentile)),
+		fmt.Sprintf("--recommendation-upper-bound-cpu-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundCPUPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundCPUPercentile)),
+		fmt.Sprintf("--cpu-histogram-decay-half-life=%s", ptr.Deref(v.values.Recommender.CPUHistogramDecayHalfLife, gardencorev1beta1.DefaultCPUHistogramDecayHalfLife).Duration),
+		fmt.Sprintf("--target-memory-percentile=%f", ptr.Deref(v.values.Recommender.TargetMemoryPercentile, gardencorev1beta1.DefaultTargetMemoryPercentile)),
+		fmt.Sprintf("--recommendation-lower-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationLowerBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationLowerBoundMemoryPercentile)),
+		fmt.Sprintf("--recommendation-upper-bound-memory-percentile=%f", ptr.Deref(v.values.Recommender.RecommendationUpperBoundMemoryPercentile, gardencorev1beta1.DefaultRecommendationUpperBoundMemoryPercentile)),
+		fmt.Sprintf("--memory-histogram-decay-half-life=%s", ptr.Deref(v.values.Recommender.MemoryHistogramDecayHalfLife, gardencorev1beta1.DefaultMemoryHistogramDecayHalfLife).Duration),
+		fmt.Sprintf("--memory-aggregation-interval=%s", ptr.Deref(v.values.Recommender.MemoryAggregationInterval, gardencorev1beta1.DefaultMemoryAggregationInterval).Duration),
+		fmt.Sprintf("--memory-aggregation-interval-count=%d", ptr.Deref(v.values.Recommender.MemoryAggregationIntervalCount, gardencorev1beta1.DefaultMemoryAggregationIntervalCount)),
+		"--leader-elect=true",
+		fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
+	}
 
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
 	}
+
 	return out
 }
 

@@ -179,22 +179,8 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 					Name:            "updater",
 					Image:           v.values.Updater.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         v.computeUpdaterCommands(),
-					Args: []string{
-						"--min-replicas=1",
-						fmt.Sprintf("--eviction-tolerance=%f", ptr.Deref(v.values.Updater.EvictionTolerance, gardencorev1beta1.DefaultEvictionTolerance)),
-						fmt.Sprintf("--eviction-rate-burst=%d", ptr.Deref(v.values.Updater.EvictionRateBurst, gardencorev1beta1.DefaultEvictionRateBurst)),
-						fmt.Sprintf("--eviction-rate-limit=%f", ptr.Deref(v.values.Updater.EvictionRateLimit, gardencorev1beta1.DefaultEvictionRateLimit)),
-						fmt.Sprintf("--evict-after-oom-threshold=%s", ptr.Deref(v.values.Updater.EvictAfterOOMThreshold, gardencorev1beta1.DefaultEvictAfterOOMThreshold).Duration),
-						fmt.Sprintf("--updater-interval=%s", ptr.Deref(v.values.Updater.Interval, gardencorev1beta1.DefaultUpdaterInterval).Duration),
-						"--stderrthreshold=info",
-						"--v=2",
-						"--kube-api-qps=100",
-						"--kube-api-burst=120",
-						"--leader-elect=true",
-						fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
-					},
-					LivenessProbe: newDefaultLivenessProbe(),
+					Args:            v.computeUpdaterArgs(),
+					LivenessProbe:   newDefaultLivenessProbe(),
 					Ports: []corev1.ContainerPort{
 						{
 							Name:          serverPortName,
@@ -253,11 +239,25 @@ func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, d
 	}
 }
 
-func (v *vpa) computeUpdaterCommands() []string {
-	out := []string{"./updater"}
+func (v *vpa) computeUpdaterArgs() []string {
+	out := []string{
+		"--min-replicas=1",
+		fmt.Sprintf("--eviction-tolerance=%f", ptr.Deref(v.values.Updater.EvictionTolerance, gardencorev1beta1.DefaultEvictionTolerance)),
+		fmt.Sprintf("--eviction-rate-burst=%d", ptr.Deref(v.values.Updater.EvictionRateBurst, gardencorev1beta1.DefaultEvictionRateBurst)),
+		fmt.Sprintf("--eviction-rate-limit=%f", ptr.Deref(v.values.Updater.EvictionRateLimit, gardencorev1beta1.DefaultEvictionRateLimit)),
+		fmt.Sprintf("--evict-after-oom-threshold=%s", ptr.Deref(v.values.Updater.EvictAfterOOMThreshold, gardencorev1beta1.DefaultEvictAfterOOMThreshold).Duration),
+		fmt.Sprintf("--updater-interval=%s", ptr.Deref(v.values.Updater.Interval, gardencorev1beta1.DefaultUpdaterInterval).Duration),
+		"--stderrthreshold=info",
+		"--v=2",
+		"--kube-api-qps=100",
+		"--kube-api-burst=120",
+		"--leader-elect=true",
+		fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
+	}
 
 	if v.values.ClusterType == component.ClusterTypeShoot {
 		out = append(out, "--kubeconfig="+gardenerutils.PathGenericKubeconfig)
 	}
+
 	return out
 }
