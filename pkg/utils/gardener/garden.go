@@ -371,7 +371,7 @@ func IsServedByKubeAPIServer(resource string) bool {
 
 // ComputeRequiredExtensionsForGarden computes the extension kind/type combinations that are required for the
 // garden reconciliation flow.
-func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden, extensions []operatorv1alpha1.Extension) sets.Set[string] {
+func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden) sets.Set[string] {
 	requiredExtensions := sets.New[string]()
 
 	if helper.GetETCDMainBackup(garden) != nil {

@@ -72,9 +72,8 @@ var _ = BeforeSuite(func() {
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{
 					filepath.Join("..", "..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_dnsrecords.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_extensions.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -125,6 +124,9 @@ var _ = BeforeSuite(func() {
 				&operatorv1alpha1.Extension{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 				},
+				&operatorv1alpha1.Garden{}: {
+					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
+				},
 			},
 		},
 	})
@@ -133,7 +135,7 @@ var _ = BeforeSuite(func() {
 	mgrClient = mgr.GetClient()
 
 	By("Register controller")
-	DeferCleanup(test.WithVar(&requiredruntime.RequeueExtensionKindNotCalculated, 10*time.Millisecond))
+	DeferCleanup(test.WithVar(&requiredruntime.RequeueDurationWhenGardenIsBeingDeleted, 10*time.Millisecond))
 
 	Expect((&requiredruntime.Reconciler{
 		Config: operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
