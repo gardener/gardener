@@ -105,6 +105,8 @@ case $TYPE in
       e2e-upg-ha-wl.local
       e2e-upg-hib.local
       e2e-upg-hib-wl.local
+      e2e-auth-one-wl.local
+      e2e-auth-two-wl.local
     )
 
     ingress_names=(

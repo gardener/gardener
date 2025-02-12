@@ -139,7 +139,7 @@ func (f *GardenerFramework) createShootResource(ctx context.Context, shoot *gard
 }
 
 // CreateShoot Creates a shoot from a shoot Object and waits until it is successfully reconciled
-func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, waitForCreation bool) error {
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
@@ -157,10 +157,11 @@ func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1
 		return err
 	}
 
-	// Then we wait for the shoot to be created
-	err = f.WaitForShootToBeCreated(ctx, shoot)
-	if err != nil {
-		return err
+	if waitForCreation {
+		err = f.WaitForShootToBeCreated(ctx, shoot)
+		if err != nil {
+			return err
+		}
 	}
 
 	log.Info("Shoot was created")
