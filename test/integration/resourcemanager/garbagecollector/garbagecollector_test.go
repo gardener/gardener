@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,7 @@ var _ = Describe("Garbage collector tests", func() {
 
 	BeforeEach(func() {
 		resourceName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-		garbageCollectableObjects = make([]client.Object, 0, 16)
+		garbageCollectableObjects = make([]client.Object, 0, 18)
 
 		for i := 0; i < cap(garbageCollectableObjects)/2; i++ {
 			garbageCollectableObjects = append(garbageCollectableObjects,
@@ -62,12 +63,37 @@ var _ = Describe("Garbage collector tests", func() {
 
 	It("should only garbage collect unreferenced resources", func() {
 		referencingResources := []client.Object{
-			&appsv1.Deployment{
+			&monitoringv1.Prometheus{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
 						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret0",
+						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap8",
+					},
+				},
+				Spec: monitoringv1.PrometheusSpec{
+					CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+						RemoteWrite: []monitoringv1.RemoteWriteSpec{
+							{
+								URL: "example.com",
+								BasicAuth: &monitoringv1.BasicAuth{
+									Username: corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{Name: resourceName + "-secret0"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+
+			&appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      resourceName,
+					Namespace: testNamespace.Name,
+					Annotations: map[string]string{
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret1",
 						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap7",
 					},
 				},
@@ -82,7 +108,7 @@ var _ = Describe("Garbage collector tests", func() {
 					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret1",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret2",
 						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap6",
 					},
 				},
@@ -97,7 +123,7 @@ var _ = Describe("Garbage collector tests", func() {
 					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret2",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret3",
 						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap5",
 					},
 				},
@@ -112,7 +138,7 @@ var _ = Describe("Garbage collector tests", func() {
 					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret3",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret4",
 						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap4",
 					},
 				},
@@ -126,7 +152,7 @@ var _ = Describe("Garbage collector tests", func() {
 					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret4",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret5",
 						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap3",
 					},
 				},
@@ -145,7 +171,7 @@ var _ = Describe("Garbage collector tests", func() {
 					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret5",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret6",
 						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap2",
 					},
 				},
@@ -157,12 +183,12 @@ var _ = Describe("Garbage collector tests", func() {
 					Name:      resourceName,
 					Namespace: testNamespace.Name,
 					Annotations: map[string]string{
-						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret6",
+						"reference.resources.gardener.cloud/secret-foo":    resourceName + "-secret7",
 						"reference.resources.gardener.cloud/configmap-foo": resourceName + "-configmap1",
 					},
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					SecretRefs: []corev1.LocalObjectReference{{Name: resourceName + "-secret6"}},
+					SecretRefs: []corev1.LocalObjectReference{{Name: resourceName + "-secret7"}},
 				},
 			},
 		}
@@ -188,8 +214,9 @@ var _ = Describe("Garbage collector tests", func() {
 				withName(resourceName+"-secret4"),
 				withName(resourceName+"-secret5"),
 				withName(resourceName+"-secret6"),
+				withName(resourceName+"-secret7"),
 			),
-			Not(ContainElement(withName(resourceName+"-secret7"))),
+			Not(ContainElement(withName(resourceName+"-secret8"))),
 		))
 
 		Eventually(func(g Gomega) []corev1.ConfigMap {
@@ -206,6 +233,7 @@ var _ = Describe("Garbage collector tests", func() {
 				withName(resourceName+"-configmap5"),
 				withName(resourceName+"-configmap6"),
 				withName(resourceName+"-configmap7"),
+				withName(resourceName+"-configmap8"),
 			),
 		))
 	})

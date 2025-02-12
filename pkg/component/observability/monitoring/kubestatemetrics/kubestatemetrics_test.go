@@ -487,7 +487,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				})
 			}
 
-			return &appsv1.Deployment{
+			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -557,6 +557,9 @@ var _ = Describe("KubeStateMetrics", func() {
 					},
 				},
 			}
+
+			Expect(references.InjectAnnotations(deployment)).To(Succeed())
+			return deployment
 		}
 
 		scrapeConfigCacheFor = func(nameSuffix string) *monitoringv1alpha1.ScrapeConfig {
@@ -943,7 +946,7 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				customResourceStateConfigMap = &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "custom-resource-state-config",
+						Name:      "kube-state-metrics-custom-resource-state",
 						Namespace: namespace,
 					},
 					Data: map[string]string{
@@ -1040,7 +1043,7 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				customResourceStateConfigMap = &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "custom-resource-state-config",
+						Name:      "kube-state-metrics-custom-resource-state",
 						Namespace: namespace,
 					},
 					Data: map[string]string{
@@ -1132,7 +1135,7 @@ var _ = Describe("KubeStateMetrics", func() {
 
 				customResourceStateConfigMap = &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "custom-resource-state-config",
+						Name:      "kube-state-metrics-custom-resource-state",
 						Namespace: namespace,
 					},
 					Data: map[string]string{
