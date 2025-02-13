@@ -7,6 +7,7 @@ package operation
 import (
 	"context"
 	"fmt"
+	clockpkg "k8s.io/utils/clock"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
@@ -38,6 +39,9 @@ import (
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
 	return &Builder{
+		clockFunc: func() clockpkg.Clock {
+			return clockpkg.RealClock{}
+		},
 		configFunc: func() (*gardenletconfigv1alpha1.GardenletConfiguration, error) {
 			return nil, fmt.Errorf("config is required but not set")
 		},
@@ -168,6 +172,12 @@ func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *ga
 	return b
 }
 
+// WithClock sets the clockFunc attribute at the Builder.
+func (b *Builder) WithClock(clock clockpkg.Clock) *Builder {
+	b.clockFunc = func() clockpkg.Clock { return clock }
+	return b
+}
+
 // Build initializes a new Operation object.
 func (b *Builder) Build(
 	ctx context.Context,
@@ -179,6 +189,7 @@ func (b *Builder) Build(
 	error,
 ) {
 	operation := &Operation{
+		Clock:          b.clockFunc(),
 		GardenClient:   gardenClient,
 		SeedClientSet:  seedClientSet,
 		ShootClientMap: shootClientMap,
