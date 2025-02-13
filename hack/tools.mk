@@ -53,7 +53,7 @@ TYPOS                      := $(TOOLS_BIN_DIR)/typos
 
 # default tool versions
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-GOLANGCI_LINT_VERSION ?= v1.63.4
+GOLANGCI_LINT_VERSION ?= v1.64.4
 # renovate: datasource=github-releases depName=securego/gosec
 GOSEC_VERSION ?= v2.22.0
 # renovate: datasource=github-releases depName=joelanford/go-apidiff

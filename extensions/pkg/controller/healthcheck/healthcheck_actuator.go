@@ -114,7 +114,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 
 			if preCheckFunc != nil {
 				obj := a.getExtensionObjFunc()
-				if err := a.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: request.Name}, obj); err != nil {
+				if err := a.seedClient.Get(ctx, request, obj); err != nil {
 					channel <- channelResult{
 						healthCheckResult: &SingleCheckResult{
 							Status: gardencorev1beta1.ConditionFalse,
