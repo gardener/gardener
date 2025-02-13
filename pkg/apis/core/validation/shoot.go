@@ -2198,6 +2198,10 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), worker.Name))
 		}
 		workerNames.Insert(worker.Name)
+
+		if worker.ControlPlane != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("controlPlane"), "setting controlPlane is not allowed in worker configuration currently"))
+		}
 	}
 
 	return allErrs

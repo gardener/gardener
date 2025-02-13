@@ -145,6 +145,7 @@ spec:
     # sysctls: # optional, allows to specify kernel settings to override defaults
     #   net.ipv4.tcp_wmem: "4096 131072 16777216"
     #   net.ipv4.tcp_rmem: "4096 131072 16777216"
+    # controlPlane: {} # mark the shoot as "autonomous shoot cluster", see GEP-28
   # workersSettings:
   #   sshAccess:
   #     enabled: false
