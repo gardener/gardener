@@ -1481,4 +1481,33 @@ var _ = Describe("Helper", func() {
 			Expect(LastInitiationTimeForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersRollout{{Name: poolName, LastInitiationTime: poolLastInitiationTime}}, globalLastInitiationTime)).To(Equal(poolLastInitiationTime))
 		})
 	})
+
+	Describe("#IsShootAutonomous", func() {
+		It("should return true", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}}}}}
+			Expect(IsShootAutonomous(shoot)).To(BeTrue())
+		})
+
+		It("should return false", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			Expect(IsShootAutonomous(shoot)).To(BeFalse())
+		})
+	})
+
+	Describe("#ControlPlaneNamespaceForShoot", func() {
+		It("should return kube-system", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec:   gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}}}},
+				Status: gardencorev1beta1.ShootStatus{TechnicalID: "shoot--foo--bar"},
+			}
+			Expect(ControlPlaneNamespaceForShoot(shoot)).To(Equal("kube-system"))
+		})
+
+		It("should return the technical ID", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{TechnicalID: "shoot--foo--bar"},
+			}
+			Expect(ControlPlaneNamespaceForShoot(shoot)).To(Equal("shoot--foo--bar"))
+		})
+	})
 })
