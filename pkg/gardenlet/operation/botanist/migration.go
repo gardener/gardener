@@ -154,7 +154,7 @@ func (b *Botanist) ShallowDeleteMachineResources(ctx context.Context) error {
 		log := b.Logger.WithValues("kind", v.objectKind)
 		log.Info("Shallow deleting all objects of kind")
 
-		if err := b.SeedClientSet.Client().List(ctx, v.objectList, append(v.listOptions, client.InNamespace(b.Shoot.SeedNamespace))...); err != nil {
+		if err := b.SeedClientSet.Client().List(ctx, v.objectList, append(v.listOptions, client.InNamespace(b.Shoot.ControlPlaneNamespace))...); err != nil {
 			return err
 		}
 

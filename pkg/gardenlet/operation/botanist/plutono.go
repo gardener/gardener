@@ -19,7 +19,7 @@ import (
 func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 	return shared.NewPlutono(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		component.ClusterTypeShoot,
 		b.Shoot.GetReplicas(1),

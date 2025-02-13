@@ -89,7 +89,7 @@ var _ = Describe("Etcd", func() {
 			botanist.SeedClientSet = kubernetesClient
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
-				SeedNamespace: namespace,
+				ControlPlaneNamespace: namespace,
 			}
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -230,7 +230,7 @@ var _ = Describe("Etcd", func() {
 						EtcdEvents: etcdEvents,
 					},
 				},
-				SeedNamespace:         namespace,
+				ControlPlaneNamespace: namespace,
 				BackupEntryName:       namespace + "--" + string(shootUID),
 				InternalClusterDomain: "internal.example.com",
 			}

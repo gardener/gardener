@@ -34,9 +34,9 @@ var _ = Describe("Monitoring", func() {
 		fakeSeedClient    client.Client
 		fakeSecretManager secretsmanager.Interface
 
-		botanist      *Botanist
-		alertManager  *mockalertmanager.MockInterface
-		seedNamespace = "shoot--foo--bar"
+		botanist              *Botanist
+		alertManager          *mockalertmanager.MockInterface
+		controlPlaneNamespace = "shoot--foo--bar"
 
 		ingressAuthSecret     *corev1.Secret
 		ingressWildcardSecret *corev1.Secret
@@ -46,7 +46,7 @@ var _ = Describe("Monitoring", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSecretManager = fakesecretsmanager.New(fakeSeedClient, seedNamespace)
+		fakeSecretManager = fakesecretsmanager.New(fakeSeedClient, controlPlaneNamespace)
 
 		alertManager = mockalertmanager.NewMockInterface(ctrl)
 
@@ -55,8 +55,8 @@ var _ = Describe("Monitoring", func() {
 				SecretsManager: fakeSecretManager,
 				SeedClientSet:  kubernetesfake.NewClientSetBuilder().WithClient(fakeSeedClient).Build(),
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace: seedNamespace,
-					Purpose:       gardencorev1beta1.ShootPurposeProduction,
+					ControlPlaneNamespace: controlPlaneNamespace,
+					Purpose:               gardencorev1beta1.ShootPurposeProduction,
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{
 							Alertmanager: alertManager,
@@ -68,7 +68,7 @@ var _ = Describe("Monitoring", func() {
 			},
 		}
 
-		ingressAuthSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: seedNamespace}}
+		ingressAuthSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: controlPlaneNamespace}}
 		ingressWildcardSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "wildcard"}}
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")

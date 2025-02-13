@@ -43,7 +43,7 @@ var _ = Describe("Botanist", func() {
 
 		botanist.SeedClientSet = k8sSeedClient
 		botanist.Shoot = &shootpkg.Shoot{
-			SeedNamespace: namespace.Name,
+			ControlPlaneNamespace: namespace.Name,
 		}
 
 		resourceManagerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: namespace.Name}}

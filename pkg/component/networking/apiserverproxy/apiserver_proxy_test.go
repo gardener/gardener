@@ -51,11 +51,10 @@ var _ = Describe("APIServerProxy", func() {
 		advertiseIPAddress string
 
 		managedResourceName = "shoot-core-apiserver-proxy"
-		namespace           = "some-namespace"
+		namespace           = "shoot--internal--internal"
 		image               = "some-image:some-tag"
 		sidecarImage        = "sidecar-image:some-tag"
 		proxySeedServerHost = "api.internal.local."
-		seedNamespace       = "shoot--internal--internal"
 
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -191,7 +190,6 @@ var _ = Describe("APIServerProxy", func() {
 			SidecarImage:        sidecarImage,
 			ProxySeedServerHost: proxySeedServerHost,
 			DNSLookupFamily:     "V4_ONLY",
-			SeedNamespace:       seedNamespace,
 		}
 	})
 

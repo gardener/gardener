@@ -59,14 +59,14 @@ var _ = Describe("Gardener upgrade Tests for", func() {
 			})
 
 			It("deploying zero-downtime validator job to ensure no downtime while after upgrading gardener", func() {
-				shootSeedNamespace := f.Shoot.Status.TechnicalID
+				controlPlaneNamespace := f.Shoot.Status.TechnicalID
 				job, err = highavailability.DeployZeroDownTimeValidatorJob(
 					ctx,
-					f.ShootFramework.SeedClient.Client(), "update", shootSeedNamespace,
+					f.ShootFramework.SeedClient.Client(), "update", controlPlaneNamespace,
 					shootupdatesuite.GetKubeAPIServerAuthToken(
 						ctx,
 						f.ShootFramework.SeedClient,
-						shootSeedNamespace,
+						controlPlaneNamespace,
 					),
 				)
 				Expect(err).NotTo(HaveOccurred())

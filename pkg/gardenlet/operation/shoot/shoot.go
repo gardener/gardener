@@ -225,7 +225,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
-	shoot.SeedNamespace = gardenerutils.ComputeTechnicalID(b.projectName, shootObject)
+	shoot.ControlPlaneNamespace = gardenerutils.ComputeTechnicalID(b.projectName, shootObject)
 	shoot.InternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
 	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
 	shoot.IgnoreAlerts = v1beta1helper.ShootIgnoresAlerts(shootObject)
@@ -493,7 +493,7 @@ func (s *Shoot) GetReplicas(wokenUp int32) int32 {
 func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) string {
 	url := v1beta1constants.DeploymentNameKubeAPIServer
 	if !runsInShootNamespace {
-		url = fmt.Sprintf("%s.%s.svc", url, s.SeedNamespace)
+		url = fmt.Sprintf("%s.%s.svc", url, s.ControlPlaneNamespace)
 	}
 	return url
 }

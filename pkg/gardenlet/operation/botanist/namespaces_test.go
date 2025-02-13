@@ -91,7 +91,7 @@ var _ = Describe("Namespaces", func() {
 			GardenClient:  gardenClient,
 			SeedClientSet: seedClientSet,
 			Seed:          &seed.Seed{},
-			Shoot:         &shoot.Shoot{SeedNamespace: namespace},
+			Shoot:         &shoot.Shoot{ControlPlaneNamespace: namespace},
 			Garden:        &garden.Garden{},
 		}}
 

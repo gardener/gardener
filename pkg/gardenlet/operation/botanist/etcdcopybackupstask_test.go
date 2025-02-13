@@ -65,8 +65,8 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		botanist.SeedClientSet = kubernetesClient
 		botanist.Seed = &seedpkg.Seed{}
 		botanist.Shoot = &shootpkg.Shoot{
-			SeedNamespace:   namespace,
-			BackupEntryName: backupEntryName,
+			ControlPlaneNamespace: namespace,
+			BackupEntryName:       backupEntryName,
 		}
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -98,7 +98,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 				expectedLogger: BeAssignableToTypeOf(logr.Logger{}),
 				expectedValues: Equal(&etcdcopybackupstask.Values{
 					Name:      botanist.Shoot.GetInfo().Name,
-					Namespace: botanist.Shoot.SeedNamespace,
+					Namespace: botanist.Shoot.ControlPlaneNamespace,
 					WaitForFinalSnapshot: &druidv1alpha1.WaitForFinalSnapshotSpec{
 						Enabled: true,
 						Timeout: &metav1.Duration{Duration: etcdcopybackupstask.DefaultTimeout},

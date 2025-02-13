@@ -22,7 +22,7 @@ func (b *Botanist) DefaultNetwork() network.Interface {
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&network.Values{
-			Namespace:      b.Shoot.SeedNamespace,
+			Namespace:      b.Shoot.ControlPlaneNamespace,
 			Name:           b.Shoot.GetInfo().Name,
 			Type:           *b.Shoot.GetInfo().Spec.Networking.Type,
 			IPFamilies:     ipFamilies,

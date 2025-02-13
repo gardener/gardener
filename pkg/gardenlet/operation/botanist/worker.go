@@ -32,7 +32,7 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&worker.Values{
-			Namespace:           b.Shoot.SeedNamespace,
+			Namespace:           b.Shoot.ControlPlaneNamespace,
 			Name:                b.Shoot.GetInfo().Name,
 			Type:                b.Shoot.GetInfo().Spec.Provider.Type,
 			Region:              b.Shoot.GetInfo().Spec.Region,
@@ -190,7 +190,7 @@ func (b *Botanist) WaitUntilOperatingSystemConfigUpdatedForAllWorkerPools(ctx co
 	timeoutCtx, cancel := context.WithTimeout(ctx, GetTimeoutWaitOperatingSystemConfigUpdated(b.Shoot))
 	defer cancel()
 
-	if err := managedresources.WaitUntilHealthy(timeoutCtx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, GardenerNodeAgentManagedResourceName); err != nil {
+	if err := managedresources.WaitUntilHealthy(timeoutCtx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, GardenerNodeAgentManagedResourceName); err != nil {
 		return fmt.Errorf("the operating system configs for the worker nodes were not populated yet: %w", err)
 	}
 

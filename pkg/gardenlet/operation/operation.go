@@ -332,7 +332,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	// use API reader here to make sure, we're not reading from a stale cache, when checking if we should initialize a shoot client (e.g. from within the care controller)
-	if err := o.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, deployment); err != nil {
+	if err := o.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -399,7 +399,7 @@ func (o *Operation) ShootVersion() string {
 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
-	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
+	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.ControlPlaneNamespace}}))
 }
 
 // IsShootMonitoringEnabled returns true if shoot monitoring is enabled and shoot is not of purpose testing.

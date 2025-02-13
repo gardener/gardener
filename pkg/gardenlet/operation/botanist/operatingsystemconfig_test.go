@@ -267,7 +267,7 @@ var _ = Describe("operatingsystemconfig", func() {
 		)
 
 		JustBeforeEach(func() {
-			botanist.Shoot.SeedNamespace = namespace
+			botanist.Shoot.ControlPlaneNamespace = namespace
 			botanist.Shoot.KubernetesVersion = semver.MustParse(kubernetesVersion)
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{

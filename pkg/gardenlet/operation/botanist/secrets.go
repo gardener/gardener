@@ -125,7 +125,7 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 		fns = append(fns, func(ctx context.Context) error {
 			objectMeta := metav1.ObjectMeta{
 				Name:      entry.Name,
-				Namespace: b.Shoot.SeedNamespace,
+				Namespace: b.Shoot.ControlPlaneNamespace,
 				Labels:    entry.Labels,
 			}
 
@@ -252,12 +252,12 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 }
 
 func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
-	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, b.SecretsManager, b.Shoot.SeedNamespace, b.Shoot.ComputeInClusterAPIServerAddress(true))
+	genericTokenKubeconfigSecret, err := tokenrequest.GenerateGenericTokenKubeconfig(ctx, b.SecretsManager, b.Shoot.ControlPlaneNamespace, b.Shoot.ComputeInClusterAPIServerAddress(true))
 	if err != nil {
 		return err
 	}
 
-	cluster := &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.SeedNamespace}}
+	cluster := &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.ControlPlaneNamespace}}
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), cluster, func() error {
 		metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName, genericTokenKubeconfigSecret.Name)
 		return nil
@@ -458,7 +458,7 @@ func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) erro
 	certSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      wildcardCert.GetName(),
-			Namespace: b.Shoot.SeedNamespace,
+			Namespace: b.Shoot.ControlPlaneNamespace,
 		},
 	}
 
@@ -489,7 +489,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 
 		secret, err := workloadidentity.NewSecret(
 			v1beta1constants.SecretNameCloudProvider,
-			b.Shoot.SeedNamespace,
+			b.Shoot.ControlPlaneNamespace,
 			workloadidentity.For(credentials.Name, credentials.Namespace, credentials.Spec.TargetSystem.Type),
 			workloadidentity.WithProviderConfig(credentials.Spec.TargetSystem.ProviderConfig),
 			workloadidentity.WithContextObject(shootMeta),
@@ -503,7 +503,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: b.Shoot.SeedNamespace,
+				Namespace: b.Shoot.ControlPlaneNamespace,
 			},
 		}
 		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.SeedClientSet.Client(), secret, func() error {

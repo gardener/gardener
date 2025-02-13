@@ -33,13 +33,13 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 		// Shoot is being created or restored with .spec.hibernation.enabled=true or
 		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=true,
 		// so keep the replicas which are already available.
-		return kubernetesutils.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deploymentName)
+		return kubernetesutils.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, deploymentName)
 	}
 	if controlledByDependencyWatchdog && !isCreateOrRestoreOperation && !b.Shoot.HibernationEnabled && !b.Shoot.GetInfo().Status.IsHibernated {
 		// The replicas of the component are controlled by dependency-watchdog and
 		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=false,
 		// so keep the replicas which are already available.
-		return kubernetesutils.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deploymentName)
+		return kubernetesutils.CurrentReplicaCountForDeployment(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, deploymentName)
 	}
 
 	// If kube-apiserver is set to 0 replicas then we also want to return 0 here
@@ -105,12 +105,12 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		v1beta1constants.DeploymentNameKubeAPIServer,
 	}
 	for _, deployment := range deployments {
-		if err := kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: deployment}, 0); client.IgnoreNotFound(err) != nil {
+		if err := kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: deployment}, 0); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
 
-	if err := waitUntilNoPodsExistAnymore(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, deployments); err != nil {
+	if err := waitUntilNoPodsExistAnymore(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, deployments); err != nil {
 		return err
 	}
 
@@ -139,7 +139,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
 	values := &extensionscontrolplane.Values{
 		Name:      b.Shoot.GetInfo().Name,
-		Namespace: b.Shoot.SeedNamespace,
+		Namespace: b.Shoot.ControlPlaneNamespace,
 		Purpose:   purpose,
 	}
 
@@ -193,7 +193,7 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 	return b.SeedClientSet.Client().DeleteAllOf(
 		ctx,
 		&corev1.Pod{},
-		client.InNamespace(b.Shoot.SeedNamespace),
+		client.InNamespace(b.Shoot.ControlPlaneNamespace),
 		client.MatchingLabels{v1beta1constants.LabelPodMaintenanceRestart: "true"},
 	)
 }
