@@ -9,6 +9,7 @@ echo "> Checking if license header is present in all required files"
 
 missing_license_header_files="$(addlicense \
   -check \
+  -ignore ".git/**" \
   -ignore ".idea/**" \
   -ignore ".vscode/**" \
   -ignore "dev/**" \
