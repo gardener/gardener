@@ -42,7 +42,7 @@ func (b *Botanist) DefaultNginxIngress() (component.DeployWaiter, error) {
 
 	return sharedcomponent.NewNginxIngress(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		metav1.NamespaceSystem,
 		b.Shoot.KubernetesVersion,
 		configData,
@@ -91,7 +91,7 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:              b.Shoot.GetInfo().Name + "-ingress",
 		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		Namespace:         b.Shoot.SeedNamespace,
+		Namespace:         b.Shoot.ControlPlaneNamespace,
 		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordIngress) || b.IsRestorePhase(),
 		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),

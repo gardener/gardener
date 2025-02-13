@@ -73,9 +73,10 @@ type Shoot struct {
 	CloudProfile  *gardencorev1beta1.CloudProfile
 	ExposureClass *gardencorev1beta1.ExposureClass
 
-	SeedNamespace     string
-	KubernetesVersion *semver.Version
-	GardenerVersion   *semver.Version
+	// ControlPlaneNamespace is the namespace in which the control plane components run.
+	ControlPlaneNamespace string
+	KubernetesVersion     *semver.Version
+	GardenerVersion       *semver.Version
 
 	InternalClusterDomain string
 	ExternalClusterDomain *string

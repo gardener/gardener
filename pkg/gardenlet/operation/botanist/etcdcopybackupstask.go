@@ -28,7 +28,7 @@ func (b *Botanist) DefaultEtcdCopyBackupsTask() etcdcopybackupstask.Interface {
 		b.SeedClientSet.Client(),
 		&etcdcopybackupstask.Values{
 			Name:      b.Shoot.GetInfo().Name,
-			Namespace: b.Shoot.SeedNamespace,
+			Namespace: b.Shoot.ControlPlaneNamespace,
 			WaitForFinalSnapshot: &druidv1alpha1.WaitForFinalSnapshotSpec{
 				Enabled: true,
 				Timeout: &metav1.Duration{Duration: etcdcopybackupstask.DefaultTimeout},
@@ -56,11 +56,11 @@ func (b *Botanist) DeployEtcdCopyBackupsTask(ctx context.Context) error {
 	}
 	sourceSecretName := fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, v1beta1constants.BackupSecretName)
 	sourceSecret := &corev1.Secret{}
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: sourceSecretName}, sourceSecret); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: sourceSecretName}, sourceSecret); err != nil {
 		return err
 	}
 	secret := &corev1.Secret{}
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.BackupSecretName}, secret); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.BackupSecretName}, secret); err != nil {
 		return err
 	}
 

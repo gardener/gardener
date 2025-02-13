@@ -38,7 +38,7 @@ import (
 func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: b.Shoot.SeedNamespace,
+			Name: b.Shoot.ControlPlaneNamespace,
 		},
 	}
 
@@ -201,7 +201,7 @@ func ExtractZonesFromNodeSelectorTerm(term corev1.NodeSelectorTerm) []string {
 func (b *Botanist) DeleteSeedNamespace(ctx context.Context) error {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: b.Shoot.SeedNamespace,
+			Name: b.Shoot.ControlPlaneNamespace,
 		},
 	}
 
@@ -216,20 +216,20 @@ func (b *Botanist) DeleteSeedNamespace(ctx context.Context) error {
 // WaitUntilSeedNamespaceDeleted waits until the namespace of the Shoot cluster within the Seed cluster is deleted.
 func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 900*time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.SeedNamespace}, &corev1.Namespace{}); err != nil {
+		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.ControlPlaneNamespace}, &corev1.Namespace{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
 			}
 			return retry.SevereError(err)
 		}
-		b.Logger.Info("Waiting until the namespace has been cleaned up and deleted in the Seed cluster", "namespaceName", b.Shoot.SeedNamespace)
-		return retry.MinorError(fmt.Errorf("namespace %q is not yet cleaned up", b.Shoot.SeedNamespace))
+		b.Logger.Info("Waiting until the namespace has been cleaned up and deleted in the Seed cluster", "namespaceName", b.Shoot.ControlPlaneNamespace)
+		return retry.MinorError(fmt.Errorf("namespace %q is not yet cleaned up", b.Shoot.ControlPlaneNamespace))
 	})
 }
 
 // DefaultShootNamespaces returns a deployer for the shoot namespaces.
 func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
-	return namespaces.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo().Spec.Provider.Workers)
+	return namespaces.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo().Spec.Provider.Workers)
 }
 
 // getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.

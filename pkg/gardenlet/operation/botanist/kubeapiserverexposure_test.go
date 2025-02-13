@@ -61,7 +61,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			Operation: &operation.Operation{
 				SeedClientSet: fakeClientSet,
 				Shoot: &shoot.Shoot{
-					SeedNamespace: namespace,
+					ControlPlaneNamespace: namespace,
 				},
 				Garden: &garden.Garden{},
 				Logger: logr.Discard(),

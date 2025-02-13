@@ -17,7 +17,7 @@ import (
 func (b *Botanist) DefaultDependencyWatchdogAccess() component.Deployer {
 	return dependencywatchdog.NewAccess(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		dependencywatchdog.AccessValues{
 			ServerInCluster: b.Shoot.ComputeInClusterAPIServerAddress(false),

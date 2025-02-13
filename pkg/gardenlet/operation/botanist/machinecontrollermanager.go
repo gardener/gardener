@@ -26,7 +26,7 @@ func (b *Botanist) DefaultMachineControllerManager(ctx context.Context) (machine
 	}
 
 	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
-	if err := b.SeedClientSet.Client().List(ctx, machineDeploymentList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, machineDeploymentList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
 		return nil, err
 	}
 
@@ -58,7 +58,7 @@ func (b *Botanist) DefaultMachineControllerManager(ctx context.Context) (machine
 
 	return machinecontrollermanager.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		machinecontrollermanager.Values{
 			Image:                    image.String(),
@@ -76,7 +76,7 @@ func (b *Botanist) DeployMachineControllerManager(ctx context.Context) error {
 
 // ScaleMachineControllerManagerToZero scales machine-controller-manager replicas to zero.
 func (b *Botanist) ScaleMachineControllerManagerToZero(ctx context.Context) error {
-	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameMachineControllerManager}, 0)
+	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameMachineControllerManager}, 0)
 }
 
 func machineDeploymentWithPositiveReplicaCountExist(existingMachineDeployments *machinev1alpha1.MachineDeploymentList) bool {

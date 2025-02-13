@@ -34,7 +34,7 @@ func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
 
 	return metricsserver.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		values,
 	), nil

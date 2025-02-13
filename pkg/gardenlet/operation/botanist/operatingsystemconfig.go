@@ -62,7 +62,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		b.SeedClientSet.Client(),
 		b.SecretsManager,
 		&operatingsystemconfig.Values{
-			Namespace:         b.Shoot.SeedNamespace,
+			Namespace:         b.Shoot.ControlPlaneNamespace,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			OriginalValues: operatingsystemconfig.OriginalValues{
@@ -176,7 +176,7 @@ const GardenerNodeAgentManagedResourceName = "shoot-gardener-node-agent"
 // - A secret containing some shared RBAC resources for downloading the OSC secrets + bootstrapping the node.
 func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context) error {
 	var (
-		managedResource                  = managedresources.NewForShoot(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, GardenerNodeAgentManagedResourceName, managedresources.LabelValueGardener, false)
+		managedResource                  = managedresources.NewForShoot(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, GardenerNodeAgentManagedResourceName, managedresources.LabelValueGardener, false)
 		managedResourceSecretsCount      = len(b.Shoot.GetInfo().Spec.Provider.Workers) + 1
 		managedResourceSecretLabels      = map[string]string{SecretLabelKeyManagedResource: GardenerNodeAgentManagedResourceName}
 		managedResourceSecretNamesWanted = sets.New[string]()
@@ -216,7 +216,7 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 			keyValues                                        = data
 			managedResourceSecretName, managedResourceSecret = managedresources.NewSecret(
 				b.SeedClientSet.Client(),
-				b.Shoot.SeedNamespace,
+				b.Shoot.ControlPlaneNamespace,
 				secretName,
 				keyValues,
 				true,
@@ -243,7 +243,7 @@ func (b *Botanist) DeployManagedResourceForGardenerNodeAgent(ctx context.Context
 
 	// Cleanup no longer required Secrets for the ManagedResource (e.g., those for removed worker pools).
 	secretList := &corev1.SecretList{}
-	if err := b.SeedClientSet.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels(managedResourceSecretLabels)); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, secretList, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels(managedResourceSecretLabels)); err != nil {
 		return err
 	}
 

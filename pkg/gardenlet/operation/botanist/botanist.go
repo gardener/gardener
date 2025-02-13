@@ -38,7 +38,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		b.Logger.WithName("secretsmanager"),
 		clock.RealClock{},
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		v1beta1constants.SecretManagerIdentityGardenlet,
 		secretsmanager.Config{
 			CASecretAutoRotation: false,
@@ -225,7 +225,7 @@ func (b *Botanist) IsGardenerResourceManagerReady(ctx context.Context) (bool, er
 	// Hence, we have to deploy kube-apiserver a second time - this time with the NodeAgentAuthorizer feature getting enabled.
 	// From then on, all subsequent reconciliations can always enable it and only one deployment is needed.
 	resourceManagerDeployment := &appsv1.Deployment{}
-	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: b.Shoot.SeedNamespace}, resourceManagerDeployment); err != nil {
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: b.Shoot.ControlPlaneNamespace}, resourceManagerDeployment); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, err
 		}

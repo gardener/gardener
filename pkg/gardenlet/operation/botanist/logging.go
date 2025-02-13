@@ -82,7 +82,7 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 
 	return eventlogger.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		eventlogger.Values{
 			Image:    imageEventLogger.String(),
@@ -95,7 +95,7 @@ func (b *Botanist) DefaultEventLogger() (component.Deployer, error) {
 func (b *Botanist) DefaultVali() (vali.Interface, error) {
 	return shared.NewVali(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		component.ClusterTypeShoot,
 		b.Shoot.GetReplicas(1),

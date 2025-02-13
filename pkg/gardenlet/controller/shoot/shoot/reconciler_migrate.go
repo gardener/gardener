@@ -61,7 +61,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		}),
 		errorsutils.ToExecute("Retrieve kube-apiserver deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeAPIServer := &appsv1.Deployment{}
-			if err := botanist.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, deploymentKubeAPIServer); err != nil {
+			if err := botanist.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, deploymentKubeAPIServer); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
@@ -260,7 +260,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 		waitUntilMachineResourcesDeleted = g.Add(flow.Task{
 			Name: "Waiting until machine resources have been deleted",
 			Fn: func(ctx context.Context) error {
-				return gardenerutils.WaitUntilMachineResourcesDeleted(ctx, botanist.Logger, botanist.SeedClientSet.Client(), botanist.Shoot.SeedNamespace)
+				return gardenerutils.WaitUntilMachineResourcesDeleted(ctx, botanist.Logger, botanist.SeedClientSet.Client(), botanist.Shoot.ControlPlaneNamespace)
 			},
 			Dependencies: flow.NewTaskIDs(deleteMachineResources),
 		})

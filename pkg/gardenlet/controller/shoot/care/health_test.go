@@ -47,8 +47,8 @@ var _ = Describe("health check", func() {
 
 		condition gardencorev1beta1.Condition
 
-		seedNamespace     = "shoot--foo--bar"
-		kubernetesVersion = semver.MustParse("1.27.3")
+		controlPlaneNamespace = "shoot--foo--bar"
+		kubernetesVersion     = semver.MustParse("1.27.3")
 
 		shoot = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
@@ -273,7 +273,7 @@ var _ = Describe("health check", func() {
 				})
 
 				Expect(fakeClient.Create(ctx, &machinev1alpha1.MachineDeployment{
-					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: seedNamespace},
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(len(nodes))},
 				})).To(Succeed())
 
@@ -293,8 +293,8 @@ var _ = Describe("health check", func() {
 				})
 
 				shootObj := &shootpkg.Shoot{
-					SeedNamespace:     seedNamespace,
-					KubernetesVersion: k8sversion,
+					ControlPlaneNamespace: controlPlaneNamespace,
+					KubernetesVersion:     k8sversion,
 				}
 				shootObj.SetInfo(&gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
@@ -430,13 +430,13 @@ var _ = Describe("health check", func() {
 		)
 
 		BeforeEach(func() {
-			deploymentCA = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
-			deploymentKCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
-			deploymentMCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: seedNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
+			deploymentCA = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: controlPlaneNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
+			deploymentKCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: controlPlaneNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
+			deploymentMCM = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: controlPlaneNamespace}, Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}}
 		})
 
 		It("should report an error because a required relevant deployment does not exist", func() {
-			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
+			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, controlPlaneNamespace)
 			Expect(err).To(BeNotFoundError())
 			Expect(scaledDownDeploymentNames).To(BeEmpty())
 		})
@@ -446,7 +446,7 @@ var _ = Describe("health check", func() {
 			Expect(fakeClient.Create(ctx, deploymentKCM)).To(Succeed())
 			Expect(fakeClient.Create(ctx, deploymentMCM)).To(Succeed())
 
-			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
+			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, controlPlaneNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(scaledDownDeploymentNames).To(BeEmpty())
 		})
@@ -459,7 +459,7 @@ var _ = Describe("health check", func() {
 			Expect(fakeClient.Create(ctx, deploymentKCM)).To(Succeed())
 			Expect(fakeClient.Create(ctx, deploymentMCM)).To(Succeed())
 
-			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, seedNamespace)
+			scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, fakeClient, controlPlaneNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(scaledDownDeploymentNames).To(HaveExactElements(deploymentKCM.Name, deploymentMCM.Name))
 		})

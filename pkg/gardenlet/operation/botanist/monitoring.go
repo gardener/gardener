@@ -32,7 +32,7 @@ func (b *Botanist) DefaultAlertmanager() (alertmanager.Interface, error) {
 		emailReceivers = monitoring.Alerting.EmailReceivers
 	}
 
-	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, alertmanager.Values{
+	return sharedcomponent.NewAlertmanager(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, alertmanager.Values{
 		Name:               "shoot",
 		ClusterType:        component.ClusterTypeShoot,
 		PriorityClassName:  v1beta1constants.PriorityClassNameShootControlPlane100,
@@ -68,7 +68,7 @@ func (b *Botanist) DeployAlertManager(ctx context.Context) error {
 // DefaultPrometheus creates a new prometheus deployer.
 func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 	externalLabels := map[string]string{
-		"cluster":       b.Shoot.SeedNamespace,
+		"cluster":       b.Shoot.ControlPlaneNamespace,
 		"project":       b.Garden.Project.Name,
 		"shoot_name":    b.Shoot.GetInfo().Name,
 		"name":          b.Shoot.GetInfo().Name,
@@ -140,7 +140,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		}
 	}
 
-	return sharedcomponent.NewPrometheus(b.Logger, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values)
+	return sharedcomponent.NewPrometheus(b.Logger, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, values)
 }
 
 // DeployPrometheus reconciles the shoot Prometheus.
@@ -149,7 +149,7 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 		return b.Shoot.Components.ControlPlane.Prometheus.Destroy(ctx)
 	}
 
-	if err := gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.SeedNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
+	if err := gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.ControlPlaneNamespace).Reconcile(ctx, b.SeedClientSet.Client()); err != nil {
 		return fmt.Errorf("failed reconciling access secret for prometheus: %w", err)
 	}
 
@@ -166,7 +166,7 @@ func (b *Botanist) DeployPrometheus(ctx context.Context) error {
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
-	b.Shoot.Components.ControlPlane.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.SeedNamespace, caSecret.Name, b.Shoot.IsWorkerless))
+	b.Shoot.Components.ControlPlane.Prometheus.SetCentralScrapeConfigs(shootprometheus.CentralScrapeConfigs(b.Shoot.ControlPlaneNamespace, caSecret.Name, b.Shoot.IsWorkerless))
 
 	return b.Shoot.Components.ControlPlane.Prometheus.Deploy(ctx)
 }
@@ -177,5 +177,5 @@ func (b *Botanist) DestroyPrometheus(ctx context.Context) error {
 		return err
 	}
 
-	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.SeedNamespace).Secret)
+	return kubernetesutils.DeleteObject(ctx, b.SeedClientSet.Client(), gardenerutils.NewShootAccessSecret(shootprometheus.AccessSecretName, b.Shoot.ControlPlaneNamespace).Secret)
 }

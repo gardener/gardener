@@ -19,7 +19,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		Namespace:         b.Shoot.SeedNamespace,
+		Namespace:         b.Shoot.ControlPlaneNamespace,
 		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.IsRestorePhase(),
 		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
@@ -49,7 +49,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:                         b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
 		SecretName:                   DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-		Namespace:                    b.Shoot.SeedNamespace,
+		Namespace:                    b.Shoot.ControlPlaneNamespace,
 		TTL:                          b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		ReconcileOnlyOnChangeOrError: b.Shoot.GetInfo().DeletionTimestamp != nil,
 		AnnotateOperation: b.Shoot.GetInfo().DeletionTimestamp != nil ||

@@ -60,9 +60,9 @@ const (
 
 var _ = Describe("dnsrecord", func() {
 	var (
-		shootName     string
-		seedNamespace string
-		ctrl          *gomock.Controller
+		shootName             string
+		controlPlaneNamespace string
+		ctrl                  *gomock.Controller
 
 		scheme *runtime.Scheme
 		c      client.Client
@@ -82,7 +82,7 @@ var _ = Describe("dnsrecord", func() {
 
 	BeforeEach(func() {
 		shootName = "foo"
-		seedNamespace = "shoot--foo--bar"
+		controlPlaneNamespace = "shoot--foo--bar"
 		ctrl = gomock.NewController(GinkgoT())
 
 		scheme = runtime.NewScheme()
@@ -107,7 +107,7 @@ var _ = Describe("dnsrecord", func() {
 					},
 				},
 				Shoot: &shoot.Shoot{
-					SeedNamespace:         seedNamespace,
+					ControlPlaneNamespace: controlPlaneNamespace,
 					ExternalClusterDomain: ptr.To(externalDomain),
 					ExternalDomain: &gardenerutils.Domain{
 						Domain:   externalDomain,
@@ -181,7 +181,7 @@ var _ = Describe("dnsrecord", func() {
 			Expect(actual).To(DeepEqual(&dnsrecord.Values{
 				Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-				Namespace:  seedNamespace,
+				Namespace:  controlPlaneNamespace,
 				TTL:        ptr.To(ttl),
 				Type:       externalProvider,
 				Zone:       ptr.To(externalZone),
@@ -229,12 +229,12 @@ var _ = Describe("dnsrecord", func() {
 			Expect(r.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: seedNamespace}, dnsRecord)
+			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: controlPlaneNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            shootName + "-" + v1beta1constants.DNSRecordExternalName,
-					Namespace:       seedNamespace,
+					Namespace:       controlPlaneNamespace,
 					ResourceVersion: "1",
 					Annotations: map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
@@ -247,7 +247,7 @@ var _ = Describe("dnsrecord", func() {
 					},
 					SecretRef: corev1.SecretReference{
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
-						Namespace: seedNamespace,
+						Namespace: controlPlaneNamespace,
 					},
 					Zone:       ptr.To(externalZone),
 					Name:       "api." + externalDomain,
@@ -258,12 +258,12 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: seedNamespace}, secret)
+			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: controlPlaneNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
-					Namespace:       seedNamespace,
+					Namespace:       controlPlaneNamespace,
 					ResourceVersion: "1",
 				},
 				Type: corev1.SecretTypeOpaque,
@@ -284,7 +284,7 @@ var _ = Describe("dnsrecord", func() {
 			Expect(actual).To(DeepEqual(&dnsrecord.Values{
 				Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
 				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-				Namespace:  seedNamespace,
+				Namespace:  controlPlaneNamespace,
 				TTL:        ptr.To(ttl),
 				Type:       internalProvider,
 				Zone:       ptr.To(internalZone),
@@ -337,12 +337,12 @@ var _ = Describe("dnsrecord", func() {
 			Expect(r.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: seedNamespace}, dnsRecord)
+			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: controlPlaneNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            shootName + "-" + v1beta1constants.DNSRecordInternalName,
-					Namespace:       seedNamespace,
+					Namespace:       controlPlaneNamespace,
 					ResourceVersion: "1",
 					Annotations: map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
@@ -355,7 +355,7 @@ var _ = Describe("dnsrecord", func() {
 					},
 					SecretRef: corev1.SecretReference{
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName,
-						Namespace: seedNamespace,
+						Namespace: controlPlaneNamespace,
 					},
 					Zone:       ptr.To(internalZone),
 					Name:       "api." + internalDomain,
@@ -366,12 +366,12 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: seedNamespace}, secret)
+			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: controlPlaneNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordInternalName,
-					Namespace:       seedNamespace,
+					Namespace:       controlPlaneNamespace,
 					ResourceVersion: "1",
 				},
 				Type: corev1.SecretTypeOpaque,

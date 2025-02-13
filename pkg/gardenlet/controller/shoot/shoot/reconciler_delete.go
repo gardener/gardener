@@ -81,7 +81,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// to delete anymore.
 		errors.ToExecute("Retrieve kube-apiserver deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeAPIServer := &appsv1.Deployment{}
-			if err := botanist.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, deploymentKubeAPIServer); err != nil {
+			if err := botanist.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, deploymentKubeAPIServer); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
@@ -99,7 +99,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// cleaned up.
 		errors.ToExecute("Retrieve the kube-controller-manager deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeControllerManager := &appsv1.Deployment{}
-			if err := botanist.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeControllerManager}, deploymentKubeControllerManager); err != nil {
+			if err := botanist.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeControllerManager}, deploymentKubeControllerManager); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}

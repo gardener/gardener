@@ -24,7 +24,7 @@ func (b *Botanist) DefaultInfrastructure() infrastructure.Interface {
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&infrastructure.Values{
-			Namespace:         b.Shoot.SeedNamespace,
+			Namespace:         b.Shoot.ControlPlaneNamespace,
 			Name:              b.Shoot.GetInfo().Name,
 			Type:              b.Shoot.GetInfo().Spec.Provider.Type,
 			ProviderConfig:    b.Shoot.GetInfo().Spec.Provider.InfrastructureConfig,
@@ -94,7 +94,7 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 		return err
 	}
 
-	if err := extensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
+	if err := extensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
 		return err
 	}
 

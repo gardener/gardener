@@ -191,15 +191,15 @@ var _ = Describe("shoot", func() {
 		})
 
 		Describe("#ComputeInClusterAPIServerAddress", func() {
-			seedNamespace := "foo"
-			s := &Shoot{SeedNamespace: seedNamespace}
+			controlPlaneNamespace := "foo"
+			s := &Shoot{ControlPlaneNamespace: controlPlaneNamespace}
 
 			It("should return <service-name>", func() {
 				Expect(s.ComputeInClusterAPIServerAddress(true)).To(Equal(v1beta1constants.DeploymentNameKubeAPIServer))
 			})
 
 			It("should return <service-name>.<namespace>.svc", func() {
-				Expect(s.ComputeInClusterAPIServerAddress(false)).To(Equal(v1beta1constants.DeploymentNameKubeAPIServer + "." + seedNamespace + ".svc"))
+				Expect(s.ComputeInClusterAPIServerAddress(false)).To(Equal(v1beta1constants.DeploymentNameKubeAPIServer + "." + controlPlaneNamespace + ".svc"))
 			})
 		})
 

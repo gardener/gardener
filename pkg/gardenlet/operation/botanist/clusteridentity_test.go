@@ -31,11 +31,11 @@ import (
 
 var _ = Describe("ClusterIdentity", func() {
 	const (
-		shootName             = "shootName"
-		shootNamespace        = "shootNamespace"
-		shootSeedNamespace    = "shootSeedNamespace"
-		shootUID              = "shootUID"
-		gardenClusterIdentity = "garden-cluster-identity"
+		shootName                  = "shootName"
+		shootNamespace             = "shootNamespace"
+		shootControlPlaneNamespace = "shootControlPlaneNamespace"
+		shootUID                   = "shootUID"
+		gardenClusterIdentity      = "garden-cluster-identity"
 	)
 
 	var (
@@ -53,7 +53,7 @@ var _ = Describe("ClusterIdentity", func() {
 
 		botanist *Botanist
 
-		expectedShootClusterIdentity = fmt.Sprintf("%s-%s-%s", shootSeedNamespace, shootUID, gardenClusterIdentity)
+		expectedShootClusterIdentity = fmt.Sprintf("%s-%s-%s", shootControlPlaneNamespace, shootUID, gardenClusterIdentity)
 	)
 
 	BeforeEach(func() {
@@ -79,7 +79,7 @@ var _ = Describe("ClusterIdentity", func() {
 
 		cluster := &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: shootSeedNamespace,
+				Name: shootControlPlaneNamespace,
 			},
 			Spec: extensionsv1alpha1.ClusterSpec{
 				Shoot: runtime.RawExtension{Object: shoot},
@@ -95,7 +95,7 @@ var _ = Describe("ClusterIdentity", func() {
 				GardenClient:  gardenClient,
 				SeedClientSet: seedClientSet,
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace: shootSeedNamespace,
+					ControlPlaneNamespace: shootControlPlaneNamespace,
 					Components: &shootpkg.Components{
 						SystemComponents: &shootpkg.SystemComponents{
 							ClusterIdentity: clusterIdentity,

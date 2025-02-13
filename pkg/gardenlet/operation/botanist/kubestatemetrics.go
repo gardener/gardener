@@ -23,7 +23,7 @@ func (b *Botanist) DefaultKubeStateMetrics() (component.DeployWaiter, error) {
 
 	return kubestatemetrics.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		kubestatemetrics.Values{
 			ClusterType:       component.ClusterTypeShoot,

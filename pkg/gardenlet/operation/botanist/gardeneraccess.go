@@ -14,7 +14,7 @@ import (
 func (b *Botanist) DefaultGardenerAccess() component.Deployer {
 	return gardeneraccess.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		gardeneraccess.Values{
 			ServerInCluster:    b.Shoot.ComputeInClusterAPIServerAddress(false),
