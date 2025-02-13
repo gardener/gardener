@@ -27,7 +27,7 @@ import (
 
 var _ = Describe("APIServerProxy", func() {
 	var (
-		ctx   = context.TODO()
+		ctx   = context.Background()
 		shoot *gardencorev1beta1.Shoot
 
 		botanist *Botanist
