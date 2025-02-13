@@ -675,3 +675,19 @@ func LastInitiationTimeForWorkerPool(name string, pendingWorkersRollout []garden
 	}
 	return globalLastInitiationTime
 }
+
+// IsShootAutonomous returns true if the shoot has a worker pool dedicated for running the control plane components.
+func IsShootAutonomous(shoot *gardencorev1beta1.Shoot) bool {
+	return slices.ContainsFunc(shoot.Spec.Provider.Workers, func(worker gardencorev1beta1.Worker) bool {
+		return worker.ControlPlane != nil
+	})
+}
+
+// ControlPlaneNamespaceForShoot returns the control plane namespace for the shoot. If it is an autonomous shoot,
+// kube-system is returned. Otherwise, it is the technical ID of the shoot.
+func ControlPlaneNamespaceForShoot(shoot *gardencorev1beta1.Shoot) string {
+	if IsShootAutonomous(shoot) {
+		return metav1.NamespaceSystem
+	}
+	return shoot.Status.TechnicalID
+}
