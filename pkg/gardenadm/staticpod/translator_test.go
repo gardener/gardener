@@ -18,6 +18,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenadm/staticpod"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var _ = Describe("Translator", func() {
@@ -57,7 +58,7 @@ var _ = Describe("Translator", func() {
 				Expect(Translate(ctx, fakeClient, deployment)).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
 					Permissions: ptr.To[uint32](0600),
-					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `apiVersion: v1
+					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
   annotations:
@@ -72,7 +73,7 @@ spec:
   hostNetwork: true
   priorityClassName: system-node-critical
 status: {}
-`}},
+`))}},
 				}))
 			})
 
@@ -111,11 +112,11 @@ status: {}
 			It("should successfully translate a pod w/ volumes", func() {
 				var (
 					configMap1 = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "cm1", Namespace: "kube-system"},
+						ObjectMeta: metav1.ObjectMeta{Name: "cm1", Namespace: deployment.Namespace},
 						Data:       map[string]string{"cm1file1.txt": "some-content", "cm1file2.txt": "more-content"},
 					}
 					configMap2 = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "cm2", Namespace: "kube-system"},
+						ObjectMeta: metav1.ObjectMeta{Name: "cm2", Namespace: deployment.Namespace},
 						Data: map[string]string{"cm2file1.txt": "even-more-content", "cm2file2.txt": `apiVersion: v1
 clusters:
 - cluster:
@@ -125,11 +126,11 @@ kind: Config
 `},
 					}
 					secret1 = &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{Name: "secret1", Namespace: "kube-system"},
+						ObjectMeta: metav1.ObjectMeta{Name: "secret1", Namespace: deployment.Namespace},
 						Data:       map[string][]byte{"secret1file1.txt": []byte("very-secret"), "secret1file2.txt": []byte("super-secret")},
 					}
 					secret2 = &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{Name: "secret2", Namespace: "kube-system"},
+						ObjectMeta: metav1.ObjectMeta{Name: "secret2", Namespace: deployment.Namespace},
 						Data:       map[string][]byte{"secret2file1.txt": []byte("highly-secret"), "secret2file2.txt": []byte("please-dont-detect")},
 					}
 				)
@@ -158,7 +159,7 @@ kind: Config
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
 						Permissions: ptr.To[uint32](0600),
-						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `apiVersion: v1
+						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
   annotations:
@@ -174,58 +175,57 @@ spec:
   priorityClassName: system-node-critical
   volumes:
   - hostPath:
-      path: /etc/kubernetes/foo/v1
+      path: /etc/kubernetes/manifests/foo/v1
     name: v1
   - hostPath:
-      path: /etc/kubernetes/foo/v2
+      path: /etc/kubernetes/manifests/foo/v2
     name: v2
   - hostPath:
-      path: /etc/kubernetes/foo/v3
+      path: /etc/kubernetes/manifests/foo/v3
     name: v3
 status: {}
-`,
-						}},
+`))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file1.txt",
+						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file1.txt",
 						Permissions: ptr.To[uint32](0600),
-						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: configMap1.Data["cm1file1.txt"]}},
+						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file2.txt",
+						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file2.txt",
 						Permissions: ptr.To[uint32](0600),
-						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: configMap1.Data["cm1file2.txt"]}},
+						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file2.txt"]))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file1.txt",
+						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file1.txt",
 						Permissions: ptr.To[uint32](0600),
-						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(secret1.Data["secret1file1.txt"])}},
+						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file1.txt"])}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file2.txt",
+						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file2.txt",
 						Permissions: ptr.To[uint32](0600),
-						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(secret1.Data["secret1file2.txt"])}},
+						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file2.txt"])}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file1.txt",
+						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file1.txt",
 						Permissions: ptr.To[uint32](0600),
-						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: configMap2.Data["cm2file1.txt"]}},
+						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap2.Data["cm2file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file2.txt",
+						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file2.txt",
 						Permissions: ptr.To[uint32](0600),
-						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: `apiVersion: v1
+						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 clusters:
 - cluster:
     server: https://foo.local.gardener.cloud
   name: test
 kind: Config
-`}},
+`))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/mystery.txt",
+						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/mystery.txt",
 						Permissions: ptr.To[uint32](0600),
-						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: string(secret2.Data["secret2file2.txt"])}},
+						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret2.Data["secret2file2.txt"])}},
 					},
 				))
 			})

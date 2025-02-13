@@ -17,8 +17,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
+
+var filePathKubernetesManifests = filepath.Join(string(filepath.Separator), "etc", "kubernetes", "manifests")
 
 // Translate translates the given object into a list of files containing static pod manifests as well as ConfigMaps and
 // Secrets that can be injected into an OperatingSystemConfig.
@@ -39,7 +42,7 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 
 	translateSpec(&pod.Spec)
 
-	filesFromVolumes, err := translateVolumes(ctx, c, pod)
+	filesFromVolumes, err := translateVolumes(ctx, c, pod, objectMeta.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed translating volumes for static pod %s: %w", client.ObjectKeyFromObject(pod), err)
 	}
@@ -50,9 +53,9 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 	}
 
 	return append([]extensionsv1alpha1.File{{
-		Path:        filepath.Join(string(filepath.Separator), "etc", "kubernetes", "manifests", pod.Name+".yaml"),
+		Path:        filepath.Join(filePathKubernetesManifests, pod.Name+".yaml"),
 		Permissions: ptr.To[uint32](0600),
-		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: staticPodYAML}},
+		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(staticPodYAML))}},
 	}}, filesFromVolumes...), nil
 }
 
@@ -61,51 +64,50 @@ func translateSpec(spec *corev1.PodSpec) {
 	spec.PriorityClassName = "system-node-critical"
 }
 
-func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]extensionsv1alpha1.File, error) {
+func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sourceNamespace string) ([]extensionsv1alpha1.File, error) {
 	var (
 		files               []extensionsv1alpha1.File
-		addFileWithHostPath = func(hostPath, fileName, content string, desiredItems []corev1.KeyToPath) {
+		addFileWithHostPath = func(hostPath, fileName string, content []byte, desiredItems []corev1.KeyToPath) {
+			file := extensionsv1alpha1.File{
+				Permissions: ptr.To[uint32](0600),
+				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(content)}},
+			}
+
 			if len(desiredItems) == 0 {
-				files = append(files, extensionsv1alpha1.File{
-					Path:        filepath.Join(hostPath, fileName),
-					Permissions: ptr.To[uint32](0600),
-					Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: content}},
-				})
+				file.Path = filepath.Join(hostPath, fileName)
+				files = append(files, file)
 			}
 
 			if idx := slices.IndexFunc(desiredItems, func(item corev1.KeyToPath) bool {
 				return fileName == item.Key
 			}); idx != -1 {
-				files = append(files, extensionsv1alpha1.File{
-					Path:        filepath.Join(hostPath, desiredItems[idx].Path),
-					Permissions: ptr.To[uint32](0600),
-					Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: content}},
-				})
+				file.Path = filepath.Join(hostPath, desiredItems[idx].Path)
+				files = append(files, file)
 			}
 		}
 	)
 
 	for i, volume := range pod.Spec.Volumes {
-		hostPath := filepath.Join(string(filepath.Separator), "etc", "kubernetes", pod.Name, volume.Name)
+		hostPath := filepath.Join(filePathKubernetesManifests, pod.Name, volume.Name)
 
 		switch {
 		case volume.ConfigMap != nil:
-			configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: volume.ConfigMap.Name, Namespace: pod.Namespace}}
+			configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: volume.ConfigMap.Name, Namespace: sourceNamespace}}
 			if err := c.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
 				return nil, fmt.Errorf("failed reading ConfigMap %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(configMap), volume.Name, client.ObjectKeyFromObject(pod), err)
 			}
 			for fileName, content := range configMap.Data {
-				addFileWithHostPath(hostPath, fileName, content, volume.ConfigMap.Items)
+				addFileWithHostPath(hostPath, fileName, []byte(content), volume.ConfigMap.Items)
 			}
 			pod.Spec.Volumes[i].VolumeSource = corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: hostPath}}
 
 		case volume.Secret != nil:
-			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: volume.Secret.SecretName, Namespace: pod.Namespace}}
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: volume.Secret.SecretName, Namespace: sourceNamespace}}
 			if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 				return nil, fmt.Errorf("failed reading Secret %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(secret), volume.Name, client.ObjectKeyFromObject(pod), err)
 			}
 			for fileName, content := range secret.Data {
-				addFileWithHostPath(hostPath, fileName, string(content), volume.Secret.Items)
+				addFileWithHostPath(hostPath, fileName, content, volume.Secret.Items)
 			}
 			pod.Spec.Volumes[i].VolumeSource = corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: hostPath}}
 
@@ -113,21 +115,21 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]
 			for _, source := range volume.Projected.Sources {
 				switch {
 				case source.ConfigMap != nil:
-					configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: source.ConfigMap.Name, Namespace: pod.Namespace}}
+					configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: source.ConfigMap.Name, Namespace: sourceNamespace}}
 					if err := c.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
 						return nil, fmt.Errorf("failed reading ConfigMap %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(configMap), volume.Name, client.ObjectKeyFromObject(pod), err)
 					}
 					for fileName, content := range configMap.Data {
-						addFileWithHostPath(hostPath, fileName, content, source.ConfigMap.Items)
+						addFileWithHostPath(hostPath, fileName, []byte(content), source.ConfigMap.Items)
 					}
 
 				case source.Secret != nil:
-					secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: source.Secret.Name, Namespace: pod.Namespace}}
+					secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: source.Secret.Name, Namespace: sourceNamespace}}
 					if err := c.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 						return nil, fmt.Errorf("failed reading Secret %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(secret), volume.Name, client.ObjectKeyFromObject(pod), err)
 					}
 					for fileName, content := range secret.Data {
-						addFileWithHostPath(hostPath, fileName, string(content), source.Secret.Items)
+						addFileWithHostPath(hostPath, fileName, content, source.Secret.Items)
 					}
 				}
 			}
