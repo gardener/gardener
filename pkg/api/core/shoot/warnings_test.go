@@ -289,5 +289,21 @@ var _ = Describe("Warnings", func() {
 			}
 			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeControllerManager.podEvictionTimeout field. The field does not have effect since Kubernetes 1.13. Instead, use the spec.kubernetes.kubeAPIServer.(defaultNotReadyTolerationSeconds/defaultUnreachableTolerationSeconds) fields.")))
 		})
+
+		Context("shoot.gardener.cloud/managed-seed-api-server annotation", func() {
+			It("should not return a warning when the annotation is set but namespace is not garden", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/managed-seed-api-server", "apiServer.replicas=3,apiServer.autoscaler.maxReplicas=6,apiServer.autoscaler.minReplicas=3")
+				shoot.Namespace = "garden-dev"
+
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).NotTo(ContainElement(ContainSubstring("shoot.gardener.cloud/managed-seed-api-server")))
+			})
+
+			It("should return a warning when the annotation is set and namespace is garden", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/managed-seed-api-server", "apiServer.replicas=3,apiServer.autoscaler.maxReplicas=6,apiServer.autoscaler.minReplicas=3")
+				shoot.Namespace = "garden"
+
+				Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("annotation 'shoot.gardener.cloud/managed-seed-api-server' is deprecated, instead consider enabling high availability for the ManagedSeed's Shoot control plane")))
+			})
+		})
 	})
 })

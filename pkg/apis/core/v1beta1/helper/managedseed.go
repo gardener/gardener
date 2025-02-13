@@ -54,6 +54,10 @@ func getFlagsAndSettings(annotation string) (map[string]struct{}, map[string]str
 }
 
 // ReadManagedSeedAPIServer reads the managed seed API server settings from the corresponding annotation.
+//
+// Deprecated: The "shoot.gardener.cloud/managed-seed-api-server" annotation is deprecated and will be removed in a future release.
+// Instead, consider enabling high availability for the ManagedSeed's Shoot control plane.
+// TODO(ialidzhikov): Remove the support for the annotation in v1.119.
 func ReadManagedSeedAPIServer(shoot *gardencorev1beta1.Shoot) (*ManagedSeedAPIServer, error) {
 	if shoot.Namespace != v1beta1constants.GardenNamespace || shoot.Annotations == nil {
 		return nil, nil
