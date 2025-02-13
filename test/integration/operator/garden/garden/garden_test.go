@@ -555,6 +555,7 @@ spec:
 
 				patch := client.MergeFrom(etcd.DeepCopy())
 				etcd.Status.ObservedGeneration = &etcd.Generation
+				etcd.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue, LastUpdateTime: metav1.Now(), LastTransitionTime: metav1.Now()}}
 				etcd.Status.Ready = ptr.To(true)
 				g.Expect(testClient.Status().Patch(ctx, etcd, patch)).To(Succeed(), "for "+etcd.Name)
 			}

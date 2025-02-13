@@ -10,13 +10,11 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -31,7 +29,7 @@ var (
 )
 
 func (e *etcd) Wait(ctx context.Context) error {
-	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
+	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		e.client,
 		e.log,
@@ -42,35 +40,7 @@ func (e *etcd) Wait(ctx context.Context) error {
 		DefaultSevereThreshold,
 		DefaultTimeout,
 		nil,
-	); err != nil {
-		return err
-	}
-
-	// This is a band-aid for https://github.com/gardener/etcd-druid/issues/985
-	// and can be removed as soon as the issue is fixed in Etcd-Druid.
-	return e.checkStatefulSetIsNotProgressing(ctx)
-}
-
-func (e *etcd) checkStatefulSetIsNotProgressing(ctx context.Context) error {
-	etcd := druidv1alpha1.Etcd{}
-	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), &etcd); err != nil {
-		return err
-	}
-
-	if etcd.Status.Etcd == nil || len(etcd.Status.Etcd.Name) == 0 {
-		e.log.Info("Skip checking etcd StatefulSet as name is not given in etcd resource")
-		return nil
-	}
-
-	etcdSts := &appsv1.StatefulSet{}
-	if err := e.apiReader.Get(ctx, client.ObjectKey{Namespace: e.namespace, Name: etcd.Status.Etcd.Name}, etcdSts); err != nil {
-		return err
-	}
-
-	if processing, message := health.IsStatefulSetProgressing(etcdSts); processing {
-		return fmt.Errorf("etcd stateful set %q is progressing: %s", etcdSts.Name, message)
-	}
-	return nil
+	)
 }
 
 func (e *etcd) WaitCleanup(_ context.Context) error { return nil }
@@ -101,6 +71,29 @@ func CheckEtcdObject(obj client.Object) error {
 
 	if op, ok := e.Annotations[v1beta1constants.GardenerOperation]; ok {
 		return fmt.Errorf("gardener operation %q is not yet picked up by etcd-druid", op)
+	}
+
+	// If etcd replicas are set to 0, then we can skip readiness and updation checks,
+	// because druid does not perform condition checks on hibernated etcd clusters,
+	// and readiness no longer makes sense for hibernated etcd clusters.
+	if e.Spec.Replicas == 0 {
+		return nil
+	}
+
+	// condition `AllMembersUpdated` denotes whether an etcd cluster rollout has been completed,
+	// so the Waiter can wait for operations such etcd CA rotation to be completed.
+	conditionAllMembersUpdatedExists := false
+	for _, cond := range e.Status.Conditions {
+		if cond.Type == druidv1alpha1.ConditionTypeAllMembersUpdated {
+			conditionAllMembersUpdatedExists = true
+			if cond.Status != druidv1alpha1.ConditionTrue {
+				return fmt.Errorf("condition %s is %s: %s", cond.Type, cond.Status, cond.Message)
+			}
+			break
+		}
+	}
+	if !conditionAllMembersUpdatedExists {
+		return fmt.Errorf("condition %s is not present", druidv1alpha1.ConditionTypeAllMembersUpdated)
 	}
 
 	if !ptr.Deref(e.Status.Ready, false) {

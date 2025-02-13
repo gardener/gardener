@@ -533,10 +533,11 @@ func updateETCDStatusToHealthy(name string) {
 	ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)).To(Succeed())
 
 	etcd.Status.ObservedGeneration = &etcd.Generation
-	etcd.Status.Ready = ptr.To(true)
 	etcd.Status.Conditions = []druidv1alpha1.Condition{
 		{Type: druidv1alpha1.ConditionTypeBackupReady, Status: druidv1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+		{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 	}
+	etcd.Status.Ready = ptr.To(true)
 	ExpectWithOffset(1, testClient.Status().Update(ctx, etcd)).To(Succeed())
 }
 

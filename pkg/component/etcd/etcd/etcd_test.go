@@ -152,6 +152,13 @@ var _ = Describe("Etcd", func() {
 				resourcesContainerBackupRestore = existingResourcesContainerBackupRestore
 			}
 
+			resourcesContainerCompactionJob := &corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("600m"),
+					corev1.ResourceMemory: resource.MustParse("3Gi"),
+				},
+			}
+
 			clientService := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -247,6 +254,7 @@ var _ = Describe("Etcd", func() {
 						},
 						Port:                    ptr.To[int32](8080),
 						Resources:               resourcesContainerBackupRestore,
+						CompactionResources:     resourcesContainerCompactionJob,
 						GarbageCollectionPolicy: &garbageCollectionPolicy,
 						GarbageCollectionPeriod: &garbageCollectionPeriod,
 						SnapshotCompression:     &compressionSpec,
@@ -674,7 +682,7 @@ var _ = Describe("Etcd", func() {
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
-		etcd = New(log, c, c, testNamespace, sm, Values{
+		etcd = New(log, c, testNamespace, sm, Values{
 			Role:                    testRole,
 			Class:                   class,
 			Replicas:                replicas,
@@ -760,7 +768,7 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(log, c, c, testNamespace, sm, Values{
+			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
 				Replicas:                nil,
@@ -831,7 +839,7 @@ var _ = Describe("Etcd", func() {
 				existingReplicas int32 = 245
 			)
 
-			etcd = New(log, c, c, testNamespace, sm, Values{
+			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
 				Replicas:                nil,
@@ -1083,7 +1091,7 @@ var _ = Describe("Etcd", func() {
 					evictionRequirement = v1beta1constants.EvictionRequirementNever
 				}
 
-				etcd = New(log, c, c, testNamespace, sm, Values{
+				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                    testRole,
 					Class:                   class,
 					Replicas:                replicas,
@@ -1565,7 +1573,7 @@ var _ = Describe("Etcd", func() {
 
 				replicas = ptr.To[int32](1)
 
-				etcd = New(log, c, c, testNamespace, sm, Values{
+				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                        testRole,
 					Class:                       class,
 					Replicas:                    replicas,
@@ -1626,7 +1634,7 @@ var _ = Describe("Etcd", func() {
 
 				replicas = ptr.To[int32](1)
 
-				etcd = New(log, c, c, testNamespace, sm, Values{
+				etcd = New(log, c, testNamespace, sm, Values{
 					Role:                        testRole,
 					Class:                       class,
 					Replicas:                    replicas,
@@ -1707,7 +1715,7 @@ var _ = Describe("Etcd", func() {
 		)
 
 		JustBeforeEach(func() {
-			etcd = New(log, c, c, testNamespace, sm, Values{
+			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
 				Replicas:                ptr.To[int32](1),
@@ -1960,7 +1968,7 @@ var _ = Describe("Etcd", func() {
 		var highAvailability bool
 
 		JustBeforeEach(func() {
-			etcd = New(log, c, c, testNamespace, sm, Values{
+			etcd = New(log, c, testNamespace, sm, Values{
 				Role:                    testRole,
 				Class:                   class,
 				Replicas:                replicas,
@@ -2011,6 +2019,12 @@ var _ = Describe("Etcd", func() {
 					Status: druidv1alpha1.EtcdStatus{
 						ObservedGeneration: ptr.To[int64](1),
 						Ready:              ptr.To(true),
+						Conditions: []druidv1alpha1.Condition{
+							{
+								Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
+								Status: druidv1alpha1.ConditionTrue,
+							},
+						},
 					},
 				}
 			}

@@ -116,8 +116,8 @@ func (h *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 				codes   []gardencorev1beta1.ErrorCode
 			)
 
-			if lastError := object.Status.LastError; lastError != nil {
-				message = fmt.Sprintf("%s (%s)", message, *lastError)
+			if len(object.Status.LastErrors) != 0 {
+				message = fmt.Sprintf("%s (%+v)", message, object.Status.LastErrors)
 			}
 
 			c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "EtcdUnhealthy", message, codes...)
