@@ -44,7 +44,6 @@ spec:
                     - name: X-Gardener-Destination
                       string_match:
                         safe_regex:
-                          # see https://regex101.com/r/m0ZAAj/1
                           regex: '^outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local$'
                 route:
                   cluster_header: X-Gardener-Destination
