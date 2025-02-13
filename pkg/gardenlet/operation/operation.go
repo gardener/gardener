@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -38,6 +39,9 @@ import (
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
 	return &Builder{
+		clockFunc: func() clock.Clock {
+			return clock.RealClock{}
+		},
 		configFunc: func() (*gardenletconfigv1alpha1.GardenletConfiguration, error) {
 			return nil, fmt.Errorf("config is required but not set")
 		},
@@ -168,6 +172,12 @@ func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *ga
 	return b
 }
 
+// WithClock sets the clockFunc attribute at the Builder.
+func (b *Builder) WithClock(c clock.Clock) *Builder {
+	b.clockFunc = func() clock.Clock { return c }
+	return b
+}
+
 // Build initializes a new Operation object.
 func (b *Builder) Build(
 	ctx context.Context,
@@ -179,6 +189,7 @@ func (b *Builder) Build(
 	error,
 ) {
 	operation := &Operation{
+		Clock:          b.clockFunc(),
 		GardenClient:   gardenClient,
 		SeedClientSet:  seedClientSet,
 		ShootClientMap: shootClientMap,

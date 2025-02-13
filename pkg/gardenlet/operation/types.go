@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -34,6 +35,7 @@ type Builder struct {
 	secretsFunc               func() (map[string]*corev1.Secret, error)
 	seedFunc                  func(context.Context) (*seed.Seed, error)
 	shootFunc                 func(context.Context, client.Reader, *garden.Garden, *seed.Seed, *corev1.Secret) (*shoot.Shoot, error)
+	clockFunc                 func() clock.Clock
 }
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
@@ -42,6 +44,7 @@ type Operation struct {
 	secretsMutex   sync.RWMutex
 	SecretsManager secretsmanager.Interface
 
+	Clock                 clock.Clock
 	Config                *gardenletconfigv1alpha1.GardenletConfiguration
 	Logger                logr.Logger
 	GardenerInfo          *gardencorev1beta1.Gardener

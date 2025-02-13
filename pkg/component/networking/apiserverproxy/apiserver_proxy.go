@@ -43,7 +43,7 @@ const (
 	name                = "apiserver-proxy"
 
 	adminPort           = 16910
-	proxySeedServerPort = 8443
+	proxySeedServerPort = 8132
 	portNameMetrics     = "metrics"
 
 	volumeNameConfig   = "proxy-config"
@@ -77,6 +77,8 @@ type Values struct {
 	DNSLookupFamily     string
 
 	advertiseIPAddress string
+
+	SeedNamespace string
 }
 
 // New creates a new instance of DeployWaiter for apiserver-proxy
@@ -207,6 +209,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 		"adminPort":           adminPort,
 		"proxySeedServerHost": a.values.ProxySeedServerHost,
 		"proxySeedServerPort": proxySeedServerPort,
+		"seedNamespace":       a.values.SeedNamespace,
 	}); err != nil {
 		return nil, err
 	}

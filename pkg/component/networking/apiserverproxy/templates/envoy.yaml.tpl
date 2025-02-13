@@ -51,6 +51,13 @@ static_resources:
           "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
           stat_prefix: kube_apiserver
           cluster: kube_apiserver
+          tunneling_config:
+            # hostname is irrelevant as it will be dropped by envoy, we still need it for the configuration though
+            hostname: "{{ .proxySeedServerHost }}:443"
+            headers_to_add:
+            - header:
+                key: X-Gardener-Destination
+                value: "outbound|443||kube-apiserver.{{ .seedNamespace }}.svc.cluster.local"
           access_log:
           - name: envoy.access_loggers.stdout
             typed_config:
@@ -124,16 +131,6 @@ static_resources:
               socket_address:
                 address: {{ .proxySeedServerHost }}
                 port_value: {{ .proxySeedServerPort }}
-    transport_socket:
-      name: envoy.transport_sockets.upstream_proxy_protocol
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
-        config:
-          version: V2
-        transport_socket:
-          name: envoy.transport_sockets.raw_buffer
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.transport_sockets.raw_buffer.v3.RawBuffer
     upstream_connection_options:
       tcp_keepalive:
         keepalive_time: 7200

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component/networking/apiserverproxy"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -40,6 +41,7 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 		SidecarImage:        sidecarImage.String(),
 		ProxySeedServerHost: b.outOfClusterAPIServerFQDN(),
 		DNSLookupFamily:     dnsLookupFamily,
+		SeedNamespace:       b.Shoot.SeedNamespace,
 	}
 
 	return apiserverproxy.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.SecretsManager, values), nil
@@ -53,5 +55,14 @@ func (b *Botanist) DeployAPIServerProxy(ctx context.Context) error {
 
 	b.Shoot.Components.SystemComponents.APIServerProxy.SetAdvertiseIPAddress(b.APIServerClusterIP)
 
-	return b.Shoot.Components.SystemComponents.APIServerProxy.Deploy(ctx)
+	if err := b.Shoot.Components.SystemComponents.APIServerProxy.Deploy(ctx); err != nil {
+		return err
+	}
+
+	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+		condition := v1beta1helper.GetOrInitConditionWithClock(b.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy)
+		condition = v1beta1helper.UpdatedConditionWithClock(b.Clock, condition, gardencorev1beta1.ConditionTrue, "APIServerProxyUsesHTTPProxy", "The API server proxy was reconfigured to use the HTTP proxy method.")
+		shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
+		return nil
+	})
 }

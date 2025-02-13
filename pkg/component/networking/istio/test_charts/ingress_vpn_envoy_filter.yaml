@@ -37,6 +37,18 @@ spec:
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
+              - match:
+                  connect_matcher: {}
+                  headers:
+                    - name: X-Gardener-Destination
+                      string_match:
+                        safe_regex:
+                          regex: '^outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local$'
+                route:
+                  cluster_header: X-Gardener-Destination
+                  upgrade_configs:
+                  - connect_config: {}
+                    upgrade_type: CONNECT
               # need to have two catch-all rules here
               # one for CONNECT requests as they don't have a path in HTTP 1.1
               #   see: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-routematch -> connect_matcher
