@@ -2,13 +2,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package translator
+package staticpod
 
 import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"slices"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -36,7 +35,7 @@ func Translate(ctx context.Context, c client.Client, o client.Object) ([]extensi
 func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav1.ObjectMeta, podTemplate corev1.PodTemplateSpec) ([]extensionsv1alpha1.File, error) {
 	pod := &corev1.Pod{ObjectMeta: podTemplate.ObjectMeta, Spec: podTemplate.Spec}
 	pod.Name = objectMeta.Name
-	pod.Namespace = objectMeta.Namespace
+	pod.Namespace = metav1.NamespaceSystem
 
 	translateSpec(&pod.Spec)
 
@@ -51,7 +50,7 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 	}
 
 	return append([]extensionsv1alpha1.File{{
-		Path:        filepath.Join("/", "etc", "kubernetes", "manifests", pod.Name+".yaml"),
+		Path:        filepath.Join(string(filepath.Separator), "etc", "kubernetes", "manifests", pod.Name+".yaml"),
 		Permissions: ptr.To[uint32](0600),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: staticPodYAML}},
 	}}, filesFromVolumes...), nil
@@ -66,27 +65,28 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]
 	var (
 		files               []extensionsv1alpha1.File
 		addFileWithHostPath = func(hostPath, fileName, content string, desiredItems []corev1.KeyToPath) {
-			path := filepath.Join(hostPath, fileName)
-			if len(desiredItems) == 0 || slices.ContainsFunc(desiredItems, func(item corev1.KeyToPath) bool {
-				path = filepath.Join(hostPath, item.Path)
-				return fileName == item.Key
-			}) {
+			if len(desiredItems) == 0 {
 				files = append(files, extensionsv1alpha1.File{
-					Path:        path,
+					Path:        filepath.Join(hostPath, fileName),
 					Permissions: ptr.To[uint32](0600),
-					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{
-						// replace 'server' in generic token kubeconfig to point to 'localhost' for static pods
-						// TODO(rfranzke): Revisit this and explore whether we can avoid this by already generating the
-						//  generic token kubeconfig with the correct server URL.
-						Data: regexp.MustCompile(`(?m)^(\s*)server: .*$`).ReplaceAllString(content, "${1}server: https://localhost"),
-					}},
+					Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: content}},
+				})
+			}
+
+			if idx := slices.IndexFunc(desiredItems, func(item corev1.KeyToPath) bool {
+				return fileName == item.Key
+			}); idx != -1 {
+				files = append(files, extensionsv1alpha1.File{
+					Path:        filepath.Join(hostPath, desiredItems[idx].Path),
+					Permissions: ptr.To[uint32](0600),
+					Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Data: content}},
 				})
 			}
 		}
 	)
 
 	for i, volume := range pod.Spec.Volumes {
-		hostPath := filepath.Join("/", "etc", "kubernetes", pod.Name, volume.Name)
+		hostPath := filepath.Join(string(filepath.Separator), "etc", "kubernetes", pod.Name, volume.Name)
 
 		switch {
 		case volume.ConfigMap != nil:
@@ -95,7 +95,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]
 				return nil, fmt.Errorf("failed reading ConfigMap %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(configMap), volume.Name, client.ObjectKeyFromObject(pod), err)
 			}
 			for fileName, content := range configMap.Data {
-				addFileWithHostPath(hostPath, fileName, content, nil)
+				addFileWithHostPath(hostPath, fileName, content, volume.ConfigMap.Items)
 			}
 			pod.Spec.Volumes[i].VolumeSource = corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: hostPath}}
 
@@ -105,7 +105,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod) ([]
 				return nil, fmt.Errorf("failed reading Secret %s of volume %s for static pod %s: %w", client.ObjectKeyFromObject(secret), volume.Name, client.ObjectKeyFromObject(pod), err)
 			}
 			for fileName, content := range secret.Data {
-				addFileWithHostPath(hostPath, fileName, string(content), nil)
+				addFileWithHostPath(hostPath, fileName, string(content), volume.Secret.Items)
 			}
 			pod.Spec.Volumes[i].VolumeSource = corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: hostPath}}
 

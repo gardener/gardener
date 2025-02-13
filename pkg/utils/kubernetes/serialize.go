@@ -7,7 +7,6 @@ package kubernetes
 import (
 	"fmt"
 
-	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -37,7 +36,9 @@ func Serialize(obj client.Object, scheme *runtime.Scheme) (string, error) {
 	// Keep this in sync with pkg/utils/managedresources/registry.go
 	// See https://github.com/gardener/gardener/pull/8312
 	var anyObj any
-	Expect(forkedyaml.Unmarshal(serializationYAML, &anyObj)).To(Succeed())
+	if err := forkedyaml.Unmarshal(serializationYAML, &anyObj); err != nil {
+		return "", fmt.Errorf("failed unmarshalling the object: %w", err)
+	}
 
 	serBytes, err := forkedyaml.Marshal(anyObj)
 	if err != nil {

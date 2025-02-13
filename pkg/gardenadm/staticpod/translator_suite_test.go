@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package translator_test
+package staticpod_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestTranslator(t *testing.T) {
+func TestStaticPod(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenadm Translator Suite")
+	RunSpecs(t, "Gardenadm StaticPod Suite")
 }
