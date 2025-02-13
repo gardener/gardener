@@ -68,6 +68,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
@@ -216,9 +217,11 @@ func (r *Reconciler) reconcile(
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
 			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, deployIstioCRD),
 		})
-		deployNginxIngressController = g.Add(flow.Task{
-			Name:         "Deploying nginx-ingress controller",
-			Fn:           c.nginxIngressController.Deploy,
+		waitExtensionsReady = g.Add(flow.Task{
+			Name: "Waiting for Extensions to get ready",
+			Fn: func(ctx context.Context) error {
+				return r.waitUntilRequiredExtensionsReady(ctx, log, garden)
+			},
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployRuntimeSystemResources = g.Add(flow.Task{
@@ -226,20 +229,25 @@ func (r *Reconciler) reconcile(
 			Fn:           c.runtimeSystem.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployNginxIngressController = g.Add(flow.Task{
+			Name:         "Deploying nginx-ingress controller",
+			Fn:           c.nginxIngressController.Deploy,
+			Dependencies: flow.NewTaskIDs(waitExtensionsReady),
+		})
 		deployVPA = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
 			Fn:           c.verticalPodAutoscaler.Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(waitExtensionsReady),
 		})
 		deployEtcdDruid = g.Add(flow.Task{
 			Name:         "Deploying ETCD Druid",
 			Fn:           component.OpWait(c.etcdDruid).Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(waitExtensionsReady),
 		})
 		deployIstio = g.Add(flow.Task{
 			Name:         "Deploying Istio",
 			Fn:           component.OpWait(c.istio).Deploy,
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(waitExtensionsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
@@ -1219,4 +1227,26 @@ func getGardenerAPIServerVersion(log logr.Logger, secretsManager secretsmanager.
 		return nil
 	}
 	return &v.GitVersion
+}
+
+// IntervalWaitUntilExtensionReady is the interval used to check if required extensions are ready. Exposed for testing.
+var IntervalWaitUntilExtensionReady = 5 * time.Second
+
+// waitUntilRequiredExtensionsReady waits until all the extensions required for a garden reconciliation are ready.
+func (r *Reconciler) waitUntilRequiredExtensionsReady(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) error {
+	requiredExtensions := gardenerutils.ComputeRequiredExtensionsForGarden(garden)
+
+	return retry.UntilTimeout(ctx, IntervalWaitUntilExtensionReady, time.Minute, func(ctx context.Context) (done bool, err error) {
+		extensionList := &operatorv1alpha1.ExtensionList{}
+		if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
+			return retry.SevereError(err)
+		}
+
+		if err := gardenerutils.RequiredGardenExtensionsReady(ctx, log, r.RuntimeClientSet.Client(), r.GardenNamespace, requiredExtensions); err != nil {
+			log.Error(err, "Waiting until all the required extension controllers are ready")
+			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
+	})
 }
