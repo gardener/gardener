@@ -1321,6 +1321,30 @@ var _ = Describe("Validation Tests", func() {
 						"Field": Equal("spec.virtualCluster.networking.services[0]"),
 					}))))
 				})
+
+				It("should complain when service network of virtual cluster has too many entries", func() {
+					garden.Spec.VirtualCluster.Networking.Services = []string{"10.4.0.0/16", "10.5.0.0/16", "10.6.0.0/16"}
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.virtualCluster.networking.services"),
+					}))))
+				})
+
+				It("should complain when service network of virtual cluster has equal IP family", func() {
+					garden.Spec.VirtualCluster.Networking.Services = []string{"10.4.0.0/16", "10.5.0.0/16"}
+
+					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.virtualCluster.networking.services"),
+					}))))
+				})
+
+				It("should succeed when service network of virtual cluster has different IP families", func() {
+					garden.Spec.VirtualCluster.Networking.Services = []string{"10.4.0.0/16", "2001:db8::/32"}
+
+					Expect(ValidateGarden(garden)).To(BeEmpty())
+				})
 			})
 
 			Context("Gardener", func() {
@@ -2398,14 +2422,14 @@ var _ = Describe("Validation Tests", func() {
 			})
 
 			Context("networking", func() {
-				It("should allow adding service ranges", func() {
-					newGarden.Spec.VirtualCluster.Networking.Services = append(newGarden.Spec.VirtualCluster.Networking.Services, "fd00:1::/64", "fd00:2::/64")
+				It("should allow adding service range", func() {
+					newGarden.Spec.VirtualCluster.Networking.Services = append(newGarden.Spec.VirtualCluster.Networking.Services, "fd00:1::/64")
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(BeEmpty())
 				})
 
 				It("should deny removing service ranges", func() {
-					oldGarden.Spec.VirtualCluster.Networking.Services = append(oldGarden.Spec.VirtualCluster.Networking.Services, "fd00:1::/64", "fd00:2::/64")
+					oldGarden.Spec.VirtualCluster.Networking.Services = append(oldGarden.Spec.VirtualCluster.Networking.Services, "fd00:1::/64")
 
 					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),

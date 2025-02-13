@@ -315,6 +315,17 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 		}
 	}
 
+	// Kubernetes standard components only allow two ranges of different IP families being specified.
+	if len(virtualCluster.Networking.Services) > 2 {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("networking", "services"), fmt.Sprintf("at most two service ranges allowed: %s", virtualCluster.Networking.Services)))
+	} else if len(virtualCluster.Networking.Services) == 2 {
+		firstCIDR := cidrvalidation.NewCIDR(virtualCluster.Networking.Services[0], fldPath.Child("networking", "services").Index(0))
+		secondCIDR := cidrvalidation.NewCIDR(virtualCluster.Networking.Services[1], fldPath.Child("networking", "services").Index(1))
+		if firstCIDR.IsIPv4() && secondCIDR.IsIPv4() || firstCIDR.IsIPv6() && secondCIDR.IsIPv6() {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("networking", "services"), fmt.Sprintf("service ranges must be of different IP families: %s", virtualCluster.Networking.Services)))
+		}
+	}
+
 	return allErrs
 }
 
