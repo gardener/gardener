@@ -496,6 +496,11 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 					Resources: []string{"projects", "shoots"},
 					Verbs:     []string{"get", "watch", "list"},
 				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps", "namespaces"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{

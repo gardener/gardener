@@ -32,6 +32,11 @@ func (g *gardenerDiscoveryServer) clusterRole() *rbacv1.ClusterRole {
 				Resources: []string{"projects", "shoots"},
 				Verbs:     []string{"get", "watch", "list"},
 			},
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"configmaps", "namespaces"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
 		},
 	}
 }
