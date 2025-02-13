@@ -1957,6 +1957,9 @@ const (
 	// ShootAPIServerProxyUsesHTTPProxy is a constant for a constraint type indicating that the Shoot cluster uses
 	// the new HTTP proxy connection method for in-cluster API server traffic (See https://github.com/gardener/gardener/blob/master/docs/proposals/30-apiserver-proxy.md)
 	ShootAPIServerProxyUsesHTTPProxy ConditionType = "APIServerProxyUsesHTTPProxy"
+	// ShootManualInPlaceWorkersUpdated is a constant for a condition type indicating that the Shoot cluster does not have
+	// any worker pools with update strategy "ManualInPlaceUpdate" and pending update.
+	ShootManualInPlaceWorkersUpdated ConditionType = "ManualInPlaceWorkersUpdated"
 	// ShootReadyForMigration is a constant for a condition type indicating whether the Shoot can be migrated.
 	ShootReadyForMigration ConditionType = "ReadyForMigration"
 	// ShootDualStackNodesMigrationReady is a constant for a condition type indicating whether all nodes are migrated to dual-stack .

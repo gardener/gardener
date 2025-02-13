@@ -964,19 +964,14 @@ func PardonConditions(clock clock.Clock, conditions []gardencorev1beta1.Conditio
 }
 
 func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) bool {
-	return (isUnstableOperationType(lastOperation.Type) && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) ||
+	return (unstableLastOperationTypes.Has(lastOperation.Type) && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) ||
 		(lastOperation.State == gardencorev1beta1.LastOperationStateProcessing && lastErrors == nil)
 }
 
-var unstableOperationTypes = map[gardencorev1beta1.LastOperationType]struct{}{
-	gardencorev1beta1.LastOperationTypeCreate: {},
-	gardencorev1beta1.LastOperationTypeDelete: {},
-}
-
-func isUnstableOperationType(lastOperationType gardencorev1beta1.LastOperationType) bool {
-	_, ok := unstableOperationTypes[lastOperationType]
-	return ok
-}
+var unstableLastOperationTypes = sets.New(
+	gardencorev1beta1.LastOperationTypeCreate,
+	gardencorev1beta1.LastOperationTypeDelete,
+)
 
 // ShootConditions contains all shoot related conditions of the shoot status subresource.
 type ShootConditions struct {
