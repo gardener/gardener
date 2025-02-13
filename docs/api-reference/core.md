@@ -14141,8 +14141,32 @@ MachineUpdateStrategy
 <p>UpdateStrategy specifies the machine update strategy for the worker pool.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>controlPlane</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.WorkerControlPlane">
+WorkerControlPlane
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.
+This is only relevant for autonomous shoot clusters.</p>
+</td>
+</tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.WorkerControlPlane">WorkerControlPlane
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
+</p>
+<p>
+<p>WorkerControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.WorkerKubernetes">WorkerKubernetes
 </h3>
 <p>

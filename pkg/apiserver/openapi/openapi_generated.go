@@ -219,6 +219,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType":                                 schema_pkg_apis_core_v1beta1_VolumeType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes":                            schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker":                                     schema_pkg_apis_core_v1beta1_Worker(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerControlPlane":                         schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes":                           schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents":                     schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkersSettings":                            schema_pkg_apis_core_v1beta1_WorkersSettings(ref),
@@ -10074,12 +10075,29 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 							Format:      "",
 						},
 					},
+					"controlPlane": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool. This is only relevant for autonomous shoot clusters.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerControlPlane"),
+						},
+					},
 				},
 				Required: []string{"name", "machine", "maximum", "minimum"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscalerOptions", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkerControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.",
+				Type:        []string{"object"},
+			},
+		},
 	}
 }
 
