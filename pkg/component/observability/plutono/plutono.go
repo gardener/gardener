@@ -75,12 +75,15 @@ var (
 	gardenAndShootDashboards embed.FS
 	//go:embed dashboards/common
 	commonDashboards embed.FS
+	//go:embed dashboards/common/vpa
+	commonVpaDashboards embed.FS
 
 	gardenDashboardsPath         = filepath.Join("dashboards", "garden")
 	seedDashboardsPath           = filepath.Join("dashboards", "seed")
 	shootDashboardsPath          = filepath.Join("dashboards", "shoot")
 	gardenAndShootDashboardsPath = filepath.Join("dashboards", "garden-shoot")
 	commonDashboardsPath         = filepath.Join("dashboards", "common")
+	commonVpaDashboardsPath      = filepath.Join(commonDashboardsPath, "vpa")
 )
 
 // Interface contains functions for a Plutono Deployer
@@ -386,6 +389,9 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 
 	if p.values.IsGardenCluster {
 		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
+		if p.values.VPAEnabled {
+			requiredDashboards[commonVpaDashboardsPath] = commonVpaDashboards
+		}
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		requiredDashboards = map[string]embed.FS{seedDashboardsPath: seedDashboards, commonDashboardsPath: commonDashboards}
 		if !p.values.IncludeIstioDashboards {
