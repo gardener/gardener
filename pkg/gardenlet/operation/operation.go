@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -148,12 +147,12 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 // The credentials in the Shoot object are always set to `nil`.
 func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed, serviceAccountIssuerConfig *corev1.Secret) (*shootpkg.Shoot, error) {
-		shootNamespace := gardenerutils.ComputeTechnicalID(gardenObj.Project.Name, s)
+		controlPlaneNamespace := v1beta1helper.ControlPlaneNamespaceForShoot(s)
 
 		shoot, err := shootpkg.
 			NewBuilder().
-			WithShootObjectFromCluster(seedClientSet, shootNamespace).
-			WithCloudProfileObjectFromCluster(seedClientSet, shootNamespace).
+			WithShootObjectFromCluster(seedClientSet, controlPlaneNamespace).
+			WithCloudProfileObjectFromCluster(seedClientSet, controlPlaneNamespace).
 			WithoutShootCredentials().
 			WithSeedObject(seedObj.GetInfo()).
 			WithProjectName(gardenObj.Project.Name).
