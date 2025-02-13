@@ -7,7 +7,6 @@ package operation
 import (
 	"context"
 	"fmt"
-	clockpkg "k8s.io/utils/clock"
 	"regexp"
 
 	"github.com/Masterminds/semver/v3"
@@ -16,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clockpkg "k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
