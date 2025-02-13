@@ -38,6 +38,7 @@ v1.112  | Week 05-06 | January 27, 2025       | February 9, 2025   | [@tobschli]
 v1.113  | Week 07-08 | February 10, 2025      | February 23, 2025  | [@plkokanov](https://github.com/plkokanov)         |
 v1.114  | Week 09-10 | February 24, 2025      | March 9, 2025      | [@rfranzke](https://github.com/rfranzke)           |
 v1.115  | Week 11-12 | March 10, 2025         | March 23, 2025     | [@ialidzhikov](https://github.com/ialidzhikov)     |
+v1.116  | Week 13-14 | March 24, 2025         | April 6, 2025      | [@Kostov6](https://github.com/Kostov6)             |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
