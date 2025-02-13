@@ -15,6 +15,9 @@ spec:
     ipFamilies:
     - IPv6
     nodes: fd00:10:a::/64
+    providerConfig:
+      ipv6:
+        sourceNATEnabled: true
   provider:
     type: local
     workers:
