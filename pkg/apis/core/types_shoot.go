@@ -1247,7 +1247,13 @@ type Worker struct {
 	Priority *int32
 	// UpdateStrategy specifies the machine update strategy for the worker pool.
 	UpdateStrategy *MachineUpdateStrategy
+	// ControlPlane specifies that the shoot cluster control plane components should be scheduled in this worker pool.
+	// This is only relevant for autonomous shoot clusters.
+	ControlPlane *WorkerControlPlane
 }
+
+// WorkerControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.
+type WorkerControlPlane struct{}
 
 // MachineUpdateStrategy specifies the machine update strategy for the worker pool.
 type MachineUpdateStrategy string

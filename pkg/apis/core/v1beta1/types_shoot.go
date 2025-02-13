@@ -1625,7 +1625,14 @@ type Worker struct {
 	// UpdateStrategy specifies the machine update strategy for the worker pool.
 	// +optional
 	UpdateStrategy *MachineUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,23,opt,name=updateStrategy,casttype=MachineUpdateStrategy"`
+	// ControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.
+	// This is only relevant for autonomous shoot clusters.
+	// +optional
+	ControlPlane *WorkerControlPlane `json:"controlPlane,omitempty" protobuf:"bytes,24,opt,name=controlPlane"`
 }
+
+// WorkerControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.
+type WorkerControlPlane struct{}
 
 // MachineUpdateStrategy specifies the machine update strategy for the worker pool.
 type MachineUpdateStrategy string
