@@ -3535,6 +3535,15 @@ message Worker {
   // UpdateStrategy specifies the machine update strategy for the worker pool.
   // +optional
   optional string updateStrategy = 23;
+
+  // ControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.
+  // This is only relevant for autonomous shoot clusters.
+  // +optional
+  optional WorkerControlPlane controlPlane = 24;
+}
+
+// WorkerControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.
+message WorkerControlPlane {
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.
