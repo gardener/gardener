@@ -7,7 +7,6 @@ package clientmap_test
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -56,11 +55,6 @@ var _ = Describe("GardenClientMap", func() {
 			},
 		}
 
-		LookupHost = func(host string) ([]string, error) {
-			Expect(host).To(Equal("virtual-garden-kube-apiserver.garden.svc.cluster.local"))
-			return []string{"10.0.1.1"}, nil
-		}
-
 		key = keys.ForGarden(garden)
 
 		clientConnectionConfig = componentbaseconfigv1alpha1.ClientConnectionConfiguration{
@@ -88,55 +82,6 @@ var _ = Describe("GardenClientMap", func() {
 			cs, err := cm.GetClient(ctx, key)
 			Expect(cs).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey")))
-		})
-
-		It("should use external kubeconfig if LookupHost fails (out-of-cluster), failing because of unpopulated token", func() {
-			fakeErr := errors.New("fake")
-			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
-					return nil
-				})
-			LookupHost = func(_ string) ([]string, error) {
-				return nil, fakeErr
-			}
-
-			NewClientFromSecretObject = func(secret *corev1.Secret, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				Expect(secret.Namespace).To(Equal("garden"))
-				Expect(secret.Name).To(Equal("gardener"))
-				return nil, fakeErr
-			}
-
-			cs, err := cm.GetClient(ctx, key)
-			Expect(cs).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("token for virtual garden kubeconfig was not populated yet")))
-		})
-
-		It("should use external kubeconfig if LookupHost fails (out-of-cluster), failing because NewClientFromSecretObject fails", func() {
-			fakeErr := errors.New("fake")
-			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					(&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      key.Name,
-							Namespace: key.Namespace,
-						},
-						Data: dataWithPopulatedToken(),
-					}).DeepCopyInto(obj.(*corev1.Secret))
-					return nil
-				})
-			LookupHost = func(_ string) ([]string, error) {
-				return nil, fakeErr
-			}
-
-			NewClientFromSecretObject = func(secret *corev1.Secret, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				Expect(secret.Namespace).To(Equal("garden"))
-				Expect(secret.Name).To(Equal("gardener"))
-				return nil, fakeErr
-			}
-
-			cs, err := cm.GetClient(ctx, key)
-			Expect(cs).To(BeNil())
-			Expect(err).To(MatchError(fmt.Sprintf("error creating new ClientSet for key %q: fake", key.Key())))
 		})
 
 		It("should fail constructing a new ClientSet (in-cluster) because token is not populated", func() {
@@ -213,32 +158,6 @@ var _ = Describe("GardenClientMap", func() {
 		})
 	})
 
-	Describe("#GardenerSecretName", func() {
-		It("should return the internal secret name if lookup is successful", func() {
-			LookupHost = func(_ string) ([]string, error) {
-				return []string{"10.0.1.1"}, nil
-			}
-
-			Expect(GardenerSecretName(log, "garden")).To(Equal("gardener-internal"))
-		})
-
-		It("should return the external secret name if no address is returned", func() {
-			LookupHost = func(_ string) ([]string, error) {
-				return []string{}, nil
-			}
-
-			Expect(GardenerSecretName(log, "garden")).To(Equal("gardener"))
-		})
-
-		It("should return the external if lookup failed", func() {
-			LookupHost = func(_ string) ([]string, error) {
-				return []string{"10.0.1.1"}, errors.New("fake")
-			}
-
-			Expect(GardenerSecretName(log, "garden")).To(Equal("gardener"))
-		})
-	})
-
 	Describe("#CalculateClientSetHash", func() {
 		It("should fail if ClientSetKey type is unsupported", func() {
 			key = fakeKey{}
@@ -260,14 +179,14 @@ var _ = Describe("GardenClientMap", func() {
 		})
 
 		Context("correctly calculate hash", func() {
-			test := func(secretName string) {
+			It("when in-cluster", func() {
 				gomock.InOrder(
-					mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: secretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 							(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
 							return nil
 						}),
-					mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: secretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 							(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
 							return nil
@@ -283,17 +202,6 @@ var _ = Describe("GardenClientMap", func() {
 				hash, err = factory.CalculateClientSetHash(ctx, keys.ForGarden(garden))
 				Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
 				Expect(err).NotTo(HaveOccurred())
-			}
-
-			It("when in-cluster", func() {
-				test("gardener-internal")
-			})
-
-			It("when out-of-cluster", func() {
-				LookupHost = func(_ string) ([]string, error) {
-					return nil, nil
-				}
-				test("gardener")
 			})
 		})
 	})
