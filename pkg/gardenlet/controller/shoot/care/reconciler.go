@@ -73,8 +73,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req Request) (reconcile.Resu
 		return r.reconcileShoot(ctx, log, req.NamespacedName)
 	}
 
-	var shoots gardencorev1beta1.ShootList
-	if err := r.GardenClient.List(context.Background(), &shoots, client.MatchingFields{
+	shoots := &gardencorev1beta1.ShootList{}
+	if err := r.GardenClient.List(context.Background(), shoots, client.MatchingFields{
 		core.ShootStatusTechnicalID: req.Namespace,
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error looking up shoot by technical id: %w", err)
@@ -83,13 +83,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req Request) (reconcile.Resu
 	if len(shoots.Items) == 0 {
 		log.V(1).Info("No shoot found for managed resource, stop reconciling")
 		return reconcile.Result{}, nil
-	} else if len(shoots.Items) == 1 {
+	} else {
 		return r.reconcileShoot(ctx, log, types.NamespacedName{
 			Name:      shoots.Items[0].Name,
 			Namespace: shoots.Items[0].Namespace,
 		})
-	} else {
-		return reconcile.Result{}, fmt.Errorf("technicalID %v is not unique", req.Namespace)
 	}
 }
 
