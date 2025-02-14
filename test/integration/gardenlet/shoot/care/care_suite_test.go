@@ -239,6 +239,7 @@ var _ = BeforeSuite(func() {
 	By("Setup field indexes")
 	Expect(indexer.AddManagedSeedShootName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 	Expect(indexer.AddControllerInstallationSeedRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddShootStatusTechnicalID(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Create test clientset")
 	testClientSet, err = kubernetes.NewWithConfig(
