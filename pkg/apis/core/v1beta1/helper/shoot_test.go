@@ -1483,19 +1483,39 @@ var _ = Describe("Helper", func() {
 	})
 
 	Describe("#IsShootAutonomous", func() {
-		It("should return true", func() {
-			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}}}}}
+		It("should return true (single worker pool with control plane configuration)", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
+			}}}}
 			Expect(IsShootAutonomous(shoot)).To(BeTrue())
 		})
 
-		It("should return false", func() {
+		It("should return true (multiple worker pools, one with control plane configuration)", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+				{},
+				{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}},
+				{},
+			}}}}
+			Expect(IsShootAutonomous(shoot)).To(BeTrue())
+		})
+
+		It("should return false (no worker pools)", func() {
 			shoot := &gardencorev1beta1.Shoot{}
+			Expect(IsShootAutonomous(shoot)).To(BeFalse())
+		})
+
+		It("should return false (worker pools, but none with control plane configuration)", func() {
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+				{},
+				{},
+				{},
+			}}}}
 			Expect(IsShootAutonomous(shoot)).To(BeFalse())
 		})
 	})
 
 	Describe("#ControlPlaneNamespaceForShoot", func() {
-		It("should return kube-system", func() {
+		It("should return kube-system for autonomous shoots", func() {
 			shoot := &gardencorev1beta1.Shoot{
 				Spec:   gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{{ControlPlane: &gardencorev1beta1.WorkerControlPlane{}}}}},
 				Status: gardencorev1beta1.ShootStatus{TechnicalID: "shoot--foo--bar"},
@@ -1503,7 +1523,7 @@ var _ = Describe("Helper", func() {
 			Expect(ControlPlaneNamespaceForShoot(shoot)).To(Equal("kube-system"))
 		})
 
-		It("should return the technical ID", func() {
+		It("should return the technical ID for regular shoots", func() {
 			shoot := &gardencorev1beta1.Shoot{
 				Status: gardencorev1beta1.ShootStatus{TechnicalID: "shoot--foo--bar"},
 			}
