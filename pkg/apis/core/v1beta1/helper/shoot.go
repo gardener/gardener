@@ -675,3 +675,12 @@ func LastInitiationTimeForWorkerPool(name string, pendingWorkersRollout []garden
 	}
 	return globalLastInitiationTime
 }
+
+// IsUpdateStrategyInPlace returns true if the given machine update strategy is either AutoInPlaceUpdate or ManualInPlaceUpdate.
+func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStrategy) bool {
+	if updateStrategy == nil {
+		return false
+	}
+
+	return *updateStrategy == gardencorev1beta1.AutoInPlaceUpdate || *updateStrategy == gardencorev1beta1.ManualInPlaceUpdate
+}
