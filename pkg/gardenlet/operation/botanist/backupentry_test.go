@@ -74,8 +74,7 @@ var _ = Describe("BackupEntry", func() {
 	})
 
 	Describe("#DestroySourceBackupEntry", func() {
-		It("should set force-deletion annotation and destroy the SourceBackupEntry component", func() {
-			sourceBackupEntry.EXPECT().SetForceDeletionAnnotation(ctx)
+		It("should destroy the SourceBackupEntry component", func() {
 			sourceBackupEntry.EXPECT().Destroy(ctx)
 
 			Expect(botanist.DestroySourceBackupEntry(ctx)).To(Succeed())
