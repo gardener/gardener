@@ -35,7 +35,8 @@ To prevent such disruptive scale-down actions it is possible to disable scale do
 There is the following specific for when disabling scale-down for the Kubernetes API server component:
 - If the HPA resource exists and HPA's `spec.minReplicas` is not nil then the min replicas count is `max(spec.minReplicas, status.desiredReplicas)`. When scale-down is disabled, this allows operators to specify a custom value for HPA `spec.minReplicas` and this value not to be reverted by gardenlet. I.e, HPA _does_ scale down to min replicas but not below min replicas. HPA's max replicas count is 6.
 
-> Note: The `alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled` annotation is alpha and can be removed anytime without further notice. Only use it if you know what you do.
+> [!NOTE]
+> The `alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled` annotation is alpha and can be removed anytime without further notice. Only use it if you know what you do.
 
 ##  Virtual Kubernetes API Server and Gardener API Server
 
@@ -46,3 +47,15 @@ The virtual Kubernetes API server's autoscaling is same as the Shoot Kubernetes 
 The Gardener API server's autoscaling is the same as the Shoot Kubernetes API server's with the following differences:
 - The initial API server resource requests are `600m` and `512Mi`.
 - The min replicas count is 2 for a non-HA virtual cluster and 3 for an HA virtual cluster. The max replicas count is 6.
+
+## Configure `minAllowed` Resources for Control Plane Components
+
+It is possible to configure minimum allowed resources (`minAllowed`) for CPU and memory for etcd instances and the Kubernetes API server.
+This configuration is available for both Shoot clusters and the Garden cluster.
+
+A primary use-case for configuring `minAllowed` resources arises from the need to alleviate delays during consecutive scale-up activities.
+Typically, in longer-running clusters, resource usage patterns evolve gradually, and the control plane can scale vertically in an adequate manner.
+However, in the case of newly spun-up clusters requiring immediate heavy usage, setting a `minAllowed` threshold for CPU and memory ensures that the control plane components are provisioned with sufficient resources to handle abrupt load increases without substantial delay.
+
+> [!NOTE]
+> To use this feature effectively, users should thoroughly analyze their cluster usage patterns in advance to identify appropriate resource values.

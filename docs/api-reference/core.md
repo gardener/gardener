@@ -2115,20 +2115,6 @@ The credentials will be used to create the shoot in the respective account. The 
 <p>AccessRestrictions describe a list of access restrictions for this shoot cluster.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>etcd</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.ETCD">
-ETCD
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ETCD contains configuration for etcds of the shoot cluster.</p>
-</td>
-</tr>
 </table>
 </td>
 </tr>
@@ -5027,7 +5013,7 @@ Defaults to true.</p>
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
 </p>
 <p>
 <p>ETCD contains configuration for etcds of the shoot cluster.</p>
@@ -7437,6 +7423,20 @@ bool
 <p>EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
 Setting this field to true is not supported.</p>
 <p>Deprecated: This field is deprecated and will be removed in gardener v1.120</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>etcd</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ETCD">
+ETCD
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCD contains configuration for etcds of the shoot cluster.</p>
 </td>
 </tr>
 </tbody>
@@ -12610,20 +12610,6 @@ The credentials will be used to create the shoot in the respective account. The 
 <p>AccessRestrictions describe a list of access restrictions for this shoot cluster.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>etcd</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.ETCD">
-ETCD
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ETCD contains configuration for etcds of the shoot cluster.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootStateSpec">ShootStateSpec
@@ -13337,20 +13323,6 @@ The credentials will be used to create the shoot in the respective account. The 
 <td>
 <em>(Optional)</em>
 <p>AccessRestrictions describe a list of access restrictions for this shoot cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>etcd</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.ETCD">
-ETCD
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ETCD contains configuration for etcds of the shoot cluster.</p>
 </td>
 </tr>
 </table>

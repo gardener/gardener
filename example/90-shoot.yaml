@@ -149,20 +149,20 @@ spec:
   # workersSettings:
   #   sshAccess:
   #     enabled: false
-# etcd:
-#   main:
-#     autoscaling:
-#       minAllowed:
-#         cpu: "2"
-#         memory: 6Gi
-#   events:
-#     autoscaling:
-#       minAllowed:
-#         cpu: "1"
-#         memory: 3Gi
   kubernetes:
   # version: 1.27.3
   # enableStaticTokenKubeconfig: false # Deprecated, will be removed in gardener v1.120
+  # etcd:
+  #   main:
+  #     autoscaling:
+  #       minAllowed:
+  #         cpu: "2"
+  #         memory: 6Gi
+  #   events:
+  #     autoscaling:
+  #       minAllowed:
+  #         cpu: "1"
+  #         memory: 3Gi
   # kubeAPIServer:
   #   eventTTL: 1h
   #   featureGates:

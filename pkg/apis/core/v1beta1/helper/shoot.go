@@ -6,11 +6,11 @@ package helper
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 
 	"github.com/Masterminds/semver/v3"
-	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
