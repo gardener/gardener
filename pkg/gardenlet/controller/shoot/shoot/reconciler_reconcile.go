@@ -287,17 +287,11 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
-		destroySourceBackupEntry = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Destroying source backup entry",
 			Fn:           botanist.DestroySourceBackupEntry,
 			SkipIf:       !allowBackup || !botanist.IsRestorePhase(),
 			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Waiting until source backup entry has been deleted",
-			Fn:           botanist.Shoot.Components.SourceBackupEntry.WaitCleanup,
-			SkipIf:       !allowBackup || skipReadiness || !botanist.IsRestorePhase(),
-			Dependencies: flow.NewTaskIDs(destroySourceBackupEntry),
 		})
 		deployExtensionResourcesBeforeKAPI = g.Add(flow.Task{
 			Name:         "Deploying extension resources before kube-apiserver",

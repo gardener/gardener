@@ -84,9 +84,5 @@ func (b *Botanist) DeploySourceBackupEntry(ctx context.Context) error {
 
 // DestroySourceBackupEntry destroys the source BackupEntry.
 func (b *Botanist) DestroySourceBackupEntry(ctx context.Context) error {
-	if err := b.Shoot.Components.SourceBackupEntry.SetForceDeletionAnnotation(ctx); err != nil {
-		return err
-	}
-
 	return b.Shoot.Components.SourceBackupEntry.Destroy(ctx)
 }
