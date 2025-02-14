@@ -202,7 +202,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		replicas = e.computeReplicas(existingEtcd)
 
-		resourcesCompactionJob  = e.computeCompactionJobContainerResources()
 		garbageCollectionPolicy = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
 		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy       = druidv1alpha1.GzipCompression
@@ -214,6 +213,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		annotations         map[string]string
 		metrics             = druidv1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
+
+		minAllowed             = e.computeMinAllowedForETCDContainer()
+		resourcesEtcd          = e.computeETCDContainerResources(minAllowed)
+		resourcesBackupRestore = e.computeBackupRestoreContainerResources()
+		resourcesCompactionJob = e.computeCompactionJobContainerResources()
 	)
 
 	if e.values.Class == ClassImportant {
@@ -223,9 +227,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		metrics = druidv1alpha1.Extensive
 		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 	}
-
-	minAllowed := e.computeMinAllowedForETCDContainer()
-	resourcesEtcd, resourcesBackupRestore := e.computeContainerResources(minAllowed)
 
 	etcdCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
 	if !found {
@@ -971,7 +972,7 @@ func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
 	return minAllowed
 }
 
-func (e *etcd) computeContainerResources(minAllowedETCD corev1.ResourceList) (*corev1.ResourceRequirements, *corev1.ResourceRequirements) {
+func (e *etcd) computeETCDContainerResources(minAllowedETCD corev1.ResourceList) *corev1.ResourceRequirements {
 	resourcesETCD := kubernetesutils.MaximumResourcesFromResourceList(
 		corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("300m"),
@@ -980,6 +981,10 @@ func (e *etcd) computeContainerResources(minAllowedETCD corev1.ResourceList) (*c
 		minAllowedETCD,
 	)
 
+	return &corev1.ResourceRequirements{Requests: resourcesETCD}
+}
+
+func (e *etcd) computeBackupRestoreContainerResources() *corev1.ResourceRequirements {
 	resourcesBackupRestore := corev1.ResourceList{
 		corev1.ResourceCPU:    resource.MustParse("10m"),
 		corev1.ResourceMemory: resource.MustParse("40Mi"),
@@ -992,7 +997,7 @@ func (e *etcd) computeContainerResources(minAllowedETCD corev1.ResourceList) (*c
 		}
 	}
 
-	return &corev1.ResourceRequirements{Requests: resourcesETCD}, &corev1.ResourceRequirements{Requests: resourcesBackupRestore}
+	return &corev1.ResourceRequirements{Requests: resourcesBackupRestore}
 }
 
 func (e *etcd) computeCompactionJobContainerResources() *corev1.ResourceRequirements {
