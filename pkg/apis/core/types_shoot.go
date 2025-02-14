@@ -110,8 +110,6 @@ type ShootSpec struct {
 	CredentialsBindingName *string
 	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
 	AccessRestrictions []AccessRestrictionWithOptions
-	// ETCD contains configuration for etcds of the shoot cluster.
-	ETCD *ETCD
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -502,6 +500,8 @@ type Kubernetes struct {
 	//
 	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	EnableStaticTokenKubeconfig *bool
+	// ETCD contains configuration for etcds of the shoot cluster.
+	ETCD *ETCD
 }
 
 // ETCD contains configuration for etcds of the shoot cluster.

@@ -141,9 +141,6 @@ type ShootSpec struct {
 	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
 	// +optional
 	AccessRestrictions []AccessRestrictionWithOptions `json:"accessRestrictions,omitempty" protobuf:"bytes,24,rep,name=accessRestrictions"`
-	// ETCD contains configuration for etcds of the shoot cluster.
-	// +optional
-	ETCD *ETCD `json:"etcd,omitempty" protobuf:"bytes,25,opt,name=etcd"`
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -625,6 +622,9 @@ type Kubernetes struct {
 	//
 	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	EnableStaticTokenKubeconfig *bool `json:"enableStaticTokenKubeconfig,omitempty" protobuf:"varint,10,opt,name=enableStaticTokenKubeconfig"`
+	// ETCD contains configuration for etcds of the shoot cluster.
+	// +optional
+	ETCD *ETCD `json:"etcd,omitempty" protobuf:"bytes,11,opt,name=etcd"`
 }
 
 // ETCD contains configuration for etcds of the shoot cluster.
@@ -938,7 +938,7 @@ type ControlPlaneAutoscaling struct {
 	// Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
 	// Default values are not applied to this field.
 	// +optional
-	MinAllowed corev1.ResourceList `json:"minAllowed,omitempty" protobuf:"bytes,1,rep,name=minAllowed,casttype=ResourceList,castkey=ResourceName"`
+	MinAllowed corev1.ResourceList `json:"minAllowed,omitempty" protobuf:"bytes,1,rep,name=minAllowed,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs

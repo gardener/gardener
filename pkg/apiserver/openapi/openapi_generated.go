@@ -5077,11 +5077,17 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"etcd": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ETCD contains configuration for etcds of the shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"},
 	}
 }
 
@@ -9179,18 +9185,12 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 							},
 						},
 					},
-					"etcd": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ETCD contains configuration for etcds of the shoot cluster.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD"),
-						},
-					},
 				},
 				Required: []string{"kubernetes", "provider", "region"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestrictionWithOptions", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestrictionWithOptions", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
 	}
 }
 

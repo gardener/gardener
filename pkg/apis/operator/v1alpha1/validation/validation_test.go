@@ -1305,11 +1305,11 @@ var _ = Describe("Validation Tests", func() {
 					Expect(ValidateGarden(garden)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeNotSupported),
-							"Field": Equal("spec.virtualCluster.etcd.main.autoscaling.storage"),
+							"Field": Equal("spec.virtualCluster.etcd.main.autoscaling.minAllowed.storage"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeNotSupported),
-							"Field": Equal("spec.virtualCluster.etcd.events.autoscaling.storage"),
+							"Field": Equal("spec.virtualCluster.etcd.events.autoscaling.minAllowed.storage"),
 						})),
 					))
 				})

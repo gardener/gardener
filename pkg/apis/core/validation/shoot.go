@@ -234,7 +234,6 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
-	allErrs = append(allErrs, validateETCD(spec.ETCD, fldPath.Child("etcd"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, spec.Networking, workerless, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, workerless, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"), workerless)...)
@@ -878,6 +877,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), *kubernetes.EnableStaticTokenKubeconfig, "setting this field to true is not supported"))
 	}
 
+	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
@@ -908,11 +908,11 @@ func validateETCD(etcd *core.ETCD, fldPath *field.Path) field.ErrorList {
 
 	if etcd != nil {
 		if etcd.Main != nil {
-			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("main"))...)
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("main", "autoscaling"))...)
 		}
 
 		if etcd.Events != nil {
-			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}, fldPath.Child("events"))...)
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Events.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}, fldPath.Child("events", "autoscaling"))...)
 		}
 	}
 
@@ -2818,13 +2818,16 @@ func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, 
 		allowedResources := sets.New[corev1.ResourceName](corev1.ResourceCPU, corev1.ResourceMemory)
 
 		for resource, quantity := range autoscaling.MinAllowed {
+			resourcePath := fldPath.Child("minAllowed", resource.String())
 			if !allowedResources.Has(resource) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child(string(resource)), resource, allowedResources.UnsortedList()))
+				allErrs = append(allErrs, field.NotSupported(resourcePath, resource, allowedResources.UnsortedList()))
 			}
 
 			if minValue, ok := minRequired[resource]; ok && quantity.Cmp(minValue) < 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child(string(resource)), quantity, fmt.Sprintf("value must be bigger than >= %s", minValue.String())))
+				allErrs = append(allErrs, field.Invalid(resourcePath, quantity, fmt.Sprintf("value must be bigger than >= %s", minValue.String())))
 			}
+
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
 		}
 	}
 

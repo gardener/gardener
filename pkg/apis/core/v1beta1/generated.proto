@@ -1644,6 +1644,10 @@ message Kubernetes {
   //
   // Deprecated: This field is deprecated and will be removed in gardener v1.120
   optional bool enableStaticTokenKubeconfig = 10;
+
+  // ETCD contains configuration for etcds of the shoot cluster.
+  // +optional
+  optional ETCD etcd = 11;
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.
@@ -3148,10 +3152,6 @@ message ShootSpec {
   // AccessRestrictions describe a list of access restrictions for this shoot cluster.
   // +optional
   repeated AccessRestrictionWithOptions accessRestrictions = 24;
-
-  // ETCD contains configuration for etcds of the shoot cluster.
-  // +optional
-  optional ETCD etcd = 25;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.
