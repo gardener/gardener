@@ -12679,8 +12679,9 @@ string
 </em>
 </td>
 <td>
-<p>TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
-basically everything that is related to this particular Shoot. This field is immutable.</p>
+<p>TechnicalID is a unique technical ID for this Shoot. It is used for the infrastructure resources, and
+basically everything that is related to this particular Shoot. For regular shoot clusters, this is also the name
+of the namespace in the seed cluster running the shoot&rsquo;s control plane. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -14152,7 +14153,7 @@ WorkerControlPlane
 </td>
 <td>
 <em>(Optional)</em>
-<p>ControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.
+<p>ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
 This is only relevant for autonomous shoot clusters.</p>
 </td>
 </tr>
@@ -14165,7 +14166,7 @@ This is only relevant for autonomous shoot clusters.</p>
 <a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
-<p>WorkerControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.</p>
+<p>WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.</p>
 </p>
 <h3 id="core.gardener.cloud/v1beta1.WorkerKubernetes">WorkerKubernetes
 </h3>

@@ -52,7 +52,8 @@ type ShootClientSetFactory struct {
 	clientKeyToControlPlaneNamespace map[ShootClientSetKey]string
 }
 
-// CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the 'gardener' secret in the Shoot's Seed namespace.
+// CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the 'gardener' secret in the Shoot's control
+// plane namespace.
 func (f *ShootClientSetFactory) CalculateClientSetHash(ctx context.Context, k ClientSetKey) (string, error) {
 	_, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {

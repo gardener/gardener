@@ -9363,7 +9363,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					},
 					"technicalID": {
 						SchemaProps: spec.SchemaProps{
-							Description: "TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and basically everything that is related to this particular Shoot. This field is immutable.",
+							Description: "TechnicalID is a unique technical ID for this Shoot. It is used for the infrastructure resources, and basically everything that is related to this particular Shoot. For regular shoot clusters, this is also the name of the namespace in the seed cluster running the shoot's control plane. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -10077,7 +10077,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"controlPlane": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool. This is only relevant for autonomous shoot clusters.",
+							Description: "ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool. This is only relevant for autonomous shoot clusters.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerControlPlane"),
 						},
 					},
@@ -10094,7 +10094,7 @@ func schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref common.ReferenceCallbac
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "WorkerControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.",
+				Description: "WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.",
 				Type:        []string{"object"},
 			},
 		},
