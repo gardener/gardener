@@ -177,8 +177,9 @@ type ShootStatus struct {
 	// after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,9,opt,name=seedName"`
-	// TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
-	// basically everything that is related to this particular Shoot. This field is immutable.
+	// TechnicalID is a unique technical ID for this Shoot. It is used for the infrastructure resources, and
+	// basically everything that is related to this particular Shoot. For regular shoot clusters, this is also the name
+	// of the namespace in the seed cluster running the shoot's control plane. This field is immutable.
 	TechnicalID string `json:"technicalID" protobuf:"bytes,10,opt,name=technicalID"`
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 	// It is used to compute unique hashes. This field is immutable.
@@ -1625,13 +1626,13 @@ type Worker struct {
 	// UpdateStrategy specifies the machine update strategy for the worker pool.
 	// +optional
 	UpdateStrategy *MachineUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,23,opt,name=updateStrategy,casttype=MachineUpdateStrategy"`
-	// ControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.
+	// ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
 	// This is only relevant for autonomous shoot clusters.
 	// +optional
 	ControlPlane *WorkerControlPlane `json:"controlPlane,omitempty" protobuf:"bytes,24,opt,name=controlPlane"`
 }
 
-// WorkerControlPlane specifies that the shoot cluster control plane components should be scheduled to this worker pool.
+// WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
 type WorkerControlPlane struct{}
 
 // MachineUpdateStrategy specifies the machine update strategy for the worker pool.
