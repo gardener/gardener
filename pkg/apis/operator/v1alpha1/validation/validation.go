@@ -96,6 +96,22 @@ func validateRuntimeClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldRuntimeCluster.Ingress.Domains[0].Name, newRuntimeCluster.Ingress.Domains[0].Name, fldPath.Child("ingress", "domains").Index(0))...)
 	}
 
+	for _, n := range []struct {
+		new, old []string
+		name     string
+	}{
+		{newRuntimeCluster.Networking.Nodes, oldRuntimeCluster.Networking.Nodes, "nodes"},
+		{newRuntimeCluster.Networking.Pods, oldRuntimeCluster.Networking.Pods, "pods"},
+		{newRuntimeCluster.Networking.Services, oldRuntimeCluster.Networking.Services, "services"},
+	} {
+		if len(n.new) < len(n.old) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("networking", n.name), n.name+" cannot be removed"))
+		}
+		for i := min(len(n.new), len(n.old)) - 1; i >= 0; i-- {
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(n.new[i], n.old[i], fldPath.Child("networking", n.name).Index(i))...)
+		}
+	}
+
 	return allErrs
 }
 
@@ -132,6 +148,13 @@ func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden)
 	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, oldVirtualCluster.Kubernetes.Version, false, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateEncryptionConfigUpdate(oldGarden, newGarden)...)
 
+	if len(newVirtualCluster.Networking.Services) < len(oldVirtualCluster.Networking.Services) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("networking", "services"), "services cannot be removed"))
+	}
+	for i := min(len(newVirtualCluster.Networking.Services), len(oldVirtualCluster.Networking.Services)) - 1; i >= 0; i-- {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newVirtualCluster.Networking.Services[i], oldVirtualCluster.Networking.Services[i], fldPath.Child("networking", "services").Index(i))...)
+	}
+
 	return allErrs
 }
 
@@ -154,19 +177,9 @@ func validateDNS(dns *operatorv1alpha1.DNSManagement, fldPath *field.Path) field
 func validateRuntimeCluster(dns *operatorv1alpha1.DNSManagement, runtimeCluster operatorv1alpha1.RuntimeCluster, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Pods, runtimeCluster.Networking.Services) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), runtimeCluster.Networking.Services, "pod network of runtime cluster intersects with service network of runtime cluster"))
-	}
-	if runtimeCluster.Networking.Nodes != nil {
-		if cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, runtimeCluster.Networking.Pods) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes"), *runtimeCluster.Networking.Nodes, "node network of runtime cluster intersects with pod network of runtime cluster"))
-		}
-		if cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, runtimeCluster.Networking.Services) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "nodes"), *runtimeCluster.Networking.Nodes, "node network of runtime cluster intersects with service network of runtime cluster"))
-		}
-	}
-
 	allErrs = validateDomains(dns, runtimeCluster.Ingress.Domains, fldPath.Child("ingress", "domains"), allErrs)
+
+	allErrs = append(allErrs, validateRuntimeClusterNetworking(runtimeCluster.Networking, fldPath.Child("networking"))...)
 
 	return allErrs
 }
@@ -186,6 +199,53 @@ func validateDomains(dns *operatorv1alpha1.DNSManagement, domains []operatorv1al
 				}
 			} else {
 				allErrs = append(allErrs, field.Required(path.Index(i).Child("provider"), "provider name must be set if `.spec.dns` is set"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateRuntimeClusterNetworking(runtimeNetworking operatorv1alpha1.RuntimeNetworking, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, nodes := range runtimeNetworking.Nodes {
+		if _, _, err := net.ParseCIDR(nodes); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes").Index(i), nodes, "cannot parse node network cidr of runtime cluster: "+err.Error()))
+		}
+	}
+	for i, pods := range runtimeNetworking.Pods {
+		if _, _, err := net.ParseCIDR(pods); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("pods").Index(i), pods, "cannot parse pod network cidr of runtime cluster: "+err.Error()))
+		}
+	}
+	for i, services := range runtimeNetworking.Services {
+		if _, _, err := net.ParseCIDR(services); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("services").Index(i), services, "cannot parse service network cidr of runtime cluster: "+err.Error()))
+		}
+	}
+
+	// In case any IP ranges are incorrect, there is no benefit in checking for intersections.
+	if len(allErrs) > 0 {
+		return allErrs
+	}
+
+	for i, nodes := range runtimeNetworking.Nodes {
+		for _, services := range runtimeNetworking.Services {
+			if cidrvalidation.NetworksIntersect(nodes, services) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes").Index(i), nodes, "node network of runtime cluster intersects with service network of runtime cluster"))
+			}
+		}
+		for _, pods := range runtimeNetworking.Pods {
+			if cidrvalidation.NetworksIntersect(nodes, pods) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes").Index(i), nodes, "node network of runtime cluster intersects with pod network of runtime cluster"))
+			}
+		}
+	}
+	for i, pods := range runtimeNetworking.Pods {
+		for _, services := range runtimeNetworking.Services {
+			if cidrvalidation.NetworksIntersect(pods, services) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("pods").Index(i), services, "pod network of runtime cluster intersects with service network of runtime cluster"))
 			}
 		}
 	}
@@ -234,17 +294,36 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 
 	allErrs = append(allErrs, validateGardener(virtualCluster.Gardener, virtualCluster.Kubernetes, fldPath.Child("gardener"))...)
 
-	if _, _, err := net.ParseCIDR(virtualCluster.Networking.Services); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "cannot parse service network cidr: "+err.Error()))
+	for i, services := range virtualCluster.Networking.Services {
+		if _, _, err := net.ParseCIDR(services); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services").Index(i), services, "cannot parse service network cidr: "+err.Error()))
+		}
+		for _, runtimePods := range runtimeCluster.Networking.Pods {
+			if cidrvalidation.NetworksIntersect(runtimePods, services) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services").Index(i), services, "pod network of runtime cluster intersects with service network of virtual cluster"))
+			}
+		}
+		for _, runtimeServices := range runtimeCluster.Networking.Services {
+			if cidrvalidation.NetworksIntersect(runtimeServices, services) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services").Index(i), services, "service network of runtime cluster intersects with service network of virtual cluster"))
+			}
+		}
+		for _, runtimeNodes := range runtimeCluster.Networking.Nodes {
+			if cidrvalidation.NetworksIntersect(runtimeNodes, services) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services").Index(i), services, "node network of runtime cluster intersects with service network of virtual cluster"))
+			}
+		}
 	}
-	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Pods, virtualCluster.Networking.Services) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "pod network of runtime cluster intersects with service network of virtual cluster"))
-	}
-	if cidrvalidation.NetworksIntersect(runtimeCluster.Networking.Services, virtualCluster.Networking.Services) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "service network of runtime cluster intersects with service network of virtual cluster"))
-	}
-	if runtimeCluster.Networking.Nodes != nil && cidrvalidation.NetworksIntersect(*runtimeCluster.Networking.Nodes, virtualCluster.Networking.Services) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("networking", "services"), virtualCluster.Networking.Services, "node network of runtime cluster intersects with service network of virtual cluster"))
+
+	// Kubernetes standard components only allow two ranges of different IP families being specified.
+	if len(virtualCluster.Networking.Services) > 2 {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("networking", "services"), fmt.Sprintf("at most two service ranges allowed: %s", virtualCluster.Networking.Services)))
+	} else if len(virtualCluster.Networking.Services) == 2 {
+		firstCIDR := cidrvalidation.NewCIDR(virtualCluster.Networking.Services[0], fldPath.Child("networking", "services").Index(0))
+		secondCIDR := cidrvalidation.NewCIDR(virtualCluster.Networking.Services[1], fldPath.Child("networking", "services").Index(1))
+		if firstCIDR.IsIPv4() && secondCIDR.IsIPv4() || firstCIDR.IsIPv6() && secondCIDR.IsIPv6() {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("networking", "services"), fmt.Sprintf("service ranges must be of different IP families: %s", virtualCluster.Networking.Services)))
+		}
 	}
 
 	return allErrs

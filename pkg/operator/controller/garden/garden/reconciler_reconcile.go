@@ -332,11 +332,15 @@ func (r *Reconciler) reconcile(
 			Fn: func(ctx context.Context) error {
 				c.kubeControllerManager.SetReplicaCount(1)
 				c.kubeControllerManager.SetRuntimeConfig(c.kubeAPIServer.GetValues().RuntimeConfig)
-				_, services, err := net.ParseCIDR(garden.Spec.VirtualCluster.Networking.Services)
-				if err != nil {
-					return fmt.Errorf("cannot parse service network CIDR '%s': %w", garden.Spec.VirtualCluster.Networking.Services, err)
+				var services []net.IPNet
+				for _, svc := range garden.Spec.VirtualCluster.Networking.Services {
+					_, cidr, err := net.ParseCIDR(svc)
+					if err != nil {
+						return fmt.Errorf("cannot parse service network CIDR '%s': %w", svc, err)
+					}
+					services = append(services, *cidr)
 				}
-				c.kubeControllerManager.SetServiceNetworks([]net.IPNet{*services})
+				c.kubeControllerManager.SetServiceNetworks(services)
 				return component.OpWait(c.kubeControllerManager).Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
@@ -772,11 +776,13 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			}
 		}
 
-		_, cidr, err := net.ParseCIDR(garden.Spec.VirtualCluster.Networking.Services)
-		if err != nil {
-			return fmt.Errorf("failed to parse services CIDR '%s': %w", garden.Spec.VirtualCluster.Networking.Services, err)
+		for _, svc := range garden.Spec.VirtualCluster.Networking.Services {
+			_, cidr, err := net.ParseCIDR(svc)
+			if err != nil {
+				return fmt.Errorf("failed to parse services CIDR '%s': %w", svc, err)
+			}
+			services = append(services, *cidr)
 		}
-		services = []net.IPNet{*cidr}
 
 		domains := toDomainNames(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains))
 		externalHostname := domains[0]

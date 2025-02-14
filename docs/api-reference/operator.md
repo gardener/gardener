@@ -2562,11 +2562,11 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow
 <td>
 <code>services</code></br>
 <em>
-string
+[]string
 </em>
 </td>
 <td>
-<p>Services is the CIDR of the service network. This field is immutable.</p>
+<p>Services are the CIDRs of the service network. Elements can be appended to this list, but not removed.</p>
 </td>
 </tr>
 </tbody>
@@ -2902,34 +2902,34 @@ Volume
 <td>
 <code>nodes</code></br>
 <em>
-string
+[]string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Nodes is the CIDR of the node network. This field is immutable.</p>
+<p>Nodes are the CIDRs of the node network. Elements can be appended to this list, but not removed.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>pods</code></br>
 <em>
-string
+[]string
 </em>
 </td>
 <td>
-<p>Pods is the CIDR of the pod network. This field is immutable.</p>
+<p>Pods are the CIDRs of the pod network. Elements can be appended to this list, but not removed.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>services</code></br>
 <em>
-string
+[]string
 </em>
 </td>
 <td>
-<p>Services is the CIDR of the service network. This field is immutable.</p>
+<p>Services are the CIDRs of the service network. Elements can be appended to this list, but not removed.</p>
 </td>
 </tr>
 <tr>
