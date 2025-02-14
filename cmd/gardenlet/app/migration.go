@@ -30,9 +30,8 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 		return err
 	}
 
-	// TODO(Wieneo): Remove this when feature gate is removed
 	if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
-		if err := migrateRemoveAPIServerProxyLegacyPortFeatureGate(ctx, gardenClient, g.config.SeedConfig.Name); err != nil {
+		if err := verifyRemoveAPIServerProxyLegacyPortFeatureGate(ctx, gardenClient, g.config.SeedConfig.Name); err != nil {
 			return err
 		}
 	}
@@ -120,7 +119,7 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 }
 
 // TODO(Wieneo): Remove this function when feature gate RemoveAPIServerProxyLegacyPort is removed
-func migrateRemoveAPIServerProxyLegacyPortFeatureGate(ctx context.Context, gardenClient client.Client, seedName string) error {
+func verifyRemoveAPIServerProxyLegacyPortFeatureGate(ctx context.Context, gardenClient client.Client, seedName string) error {
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := gardenClient.List(ctx, shootList); err != nil {
 		return err
@@ -132,7 +131,7 @@ func migrateRemoveAPIServerProxyLegacyPortFeatureGate(ctx context.Context, garde
 		}
 
 		if cond := v1beta1helper.GetCondition(k.Status.Constraints, gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
-			return errors.New("all shoots on this seed need to have APIServerProxyUsesHTTPProxy constraint set to true")
+			return errors.New("the `proxy` port on the istio ingress gateway cannot be removed until all api server proxies in all shoots on this seed have been reconfigured to use the `tls-tunnel` port instead, i.e., the `RemoveAPIServerProxyLegacyPort` feature gate can only be enabled once all shoots have the `APIServerProxyUsesHTTPProxy` constraint with status `true`")
 		}
 	}
 

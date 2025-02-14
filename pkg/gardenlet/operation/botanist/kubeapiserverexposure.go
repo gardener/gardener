@@ -98,16 +98,17 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 					gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				},
+				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
+					APIServerClusterIP: b.APIServerClusterIP,
+				},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
 			}
 
-			if !features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
-				values.APIServerProxy = &kubeapiserverexposure.APIServerProxy{
-					APIServerClusterIP: b.APIServerClusterIP,
-				}
+			if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
+				values.APIServerProxy = nil
 			}
 
 			return values

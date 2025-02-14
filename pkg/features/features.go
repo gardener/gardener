@@ -83,7 +83,7 @@ const (
 	// apiserver-proxy configuration. They might want to do so if they activate the ACL extension, which is vulnerable to
 	// proxy protocol headers of untrusted clients on the apiserver-proxy port.
 	// owner: @Wieneo @timebertt
-	// alpha: v1.114.0
+	// alpha: v1.113.0
 	RemoveAPIServerProxyLegacyPort featuregate.Feature = "RemoveAPIServerProxyLegacyPort"
 )
 
