@@ -32,7 +32,7 @@ var _ = Describe("Helper", func() {
 		It("should return nil because the required condition could not be found", func() {
 			var (
 				conditionType core.ConditionType = "test-1"
-				conditions                       = []core.Condition{}
+				conditions    []core.Condition
 			)
 
 			cond := GetCondition(conditions, conditionType)

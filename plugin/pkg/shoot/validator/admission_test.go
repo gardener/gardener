@@ -69,11 +69,12 @@ var _ = Describe("validator", func() {
 			namespaceName = "garden-my-project"
 			projectName   = "my-project"
 			newSeedName   = "new-seed"
+			profileName   = "namespaced-profile"
 
 			unmanagedDNSProvider = core.DNSUnmanaged
 			baseDomain           = "example.com"
 
-			validMachineImageName     = "some-machineimage"
+			validMachineImageName     = "some-machine-image"
 			validMachineImageVersions = []gardencorev1beta1.MachineImageVersion{
 				{
 					ExpirableVersion: gardencorev1beta1.ExpirableVersion{
@@ -189,7 +190,7 @@ var _ = Describe("validator", func() {
 			}
 			namespacedCloudProfileBase = gardencorev1beta1.NamespacedCloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "namespacedprofile",
+					Name:      profileName,
 					Namespace: namespaceName,
 				},
 				Spec: gardencorev1beta1.NamespacedCloudProfileSpec{Parent: gardencorev1beta1.CloudProfileReference{
@@ -898,7 +899,7 @@ var _ = Describe("validator", func() {
 				It("should pass for a given NamespacedCloudProfile", func() {
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile",
+						Name: profileName,
 					}
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -914,7 +915,7 @@ var _ = Describe("validator", func() {
 					}
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile",
+						Name: profileName,
 					}
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -927,7 +928,7 @@ var _ = Describe("validator", func() {
 					oldShoot.Spec.CloudProfileName = ptr.To("profile")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile",
+						Name: profileName,
 					}
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -941,7 +942,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&anotherCloudProfile)).To(Succeed())
 
 					anotherNamespacedCloudProfile := *namespacedCloudProfileBase.DeepCopy()
-					anotherNamespacedCloudProfile.Name = "another-namespacedprofile"
+					anotherNamespacedCloudProfile.Name = "another-" + profileName
 					anotherNamespacedCloudProfile.Spec.Parent.Name = "another-root-profile"
 					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&anotherNamespacedCloudProfile)).To(Succeed())
 
@@ -952,12 +953,12 @@ var _ = Describe("validator", func() {
 					}
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "another-namespacedprofile",
+						Name: "another-namespaced-profile",
 					}
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(MatchError(ContainSubstring("cannot change from \"profile\" to \"another-namespacedprofile\" (root: \"another-root-profile\")")))
+					Expect(err).To(MatchError(ContainSubstring("cannot change from \"profile\" to \"another-namespaced-profile\" (root: \"another-root-profile\")")))
 				})
 
 				It("should fail validation on a change from a CloudProfileName to a NamespacedCloudProfile with forbidden parent", func() {
@@ -966,7 +967,7 @@ var _ = Describe("validator", func() {
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&anotherCloudProfile)).To(Succeed())
 
 					anotherNamespacedCloudProfile := *namespacedCloudProfileBase.DeepCopy()
-					anotherNamespacedCloudProfile.Name = "another-namespacedprofile"
+					anotherNamespacedCloudProfile.Name = "another-namespaced-profile"
 					anotherNamespacedCloudProfile.Spec.Parent.Name = "another-root-profile"
 					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(&anotherNamespacedCloudProfile)).To(Succeed())
 
@@ -974,19 +975,19 @@ var _ = Describe("validator", func() {
 					oldShoot.Spec.CloudProfileName = ptr.To("profile")
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "another-namespacedprofile",
+						Name: "another-namespaced-profile",
 					}
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(MatchError(ContainSubstring("cannot change from \"profile\" to \"another-namespacedprofile\" (root: \"another-root-profile\")")))
+					Expect(err).To(MatchError(ContainSubstring("cannot change from \"profile\" to \"another-namespaced-profile\" (root: \"another-root-profile\")")))
 				})
 
 				It("should pass validation on a change from a NamespacedCloudProfile to a CloudProfile", func() {
 					oldShoot := shoot.DeepCopy()
 					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile",
+						Name: profileName,
 					}
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "CloudProfile",
@@ -1000,17 +1001,17 @@ var _ = Describe("validator", func() {
 
 				It("should pass validation on a change from a NamespacedCloudProfile to another NamespacedCloudProfile with the same parent", func() {
 					anotherNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
-					anotherNamespacedCloudProfile.Name = "namespacedprofile-1"
+					anotherNamespacedCloudProfile.Name = profileName + "-1"
 					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(anotherNamespacedCloudProfile)).To(Succeed())
 
 					oldShoot := shoot.DeepCopy()
 					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile",
+						Name: profileName,
 					}
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile-1",
+						Name: profileName + "-1",
 					}
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
@@ -1020,23 +1021,23 @@ var _ = Describe("validator", func() {
 
 				It("should fail validation on a change from a NamespacedCloudProfile to another NamespacedCloudProfile with different parents", func() {
 					anotherNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
-					anotherNamespacedCloudProfile.Name = "namespacedprofile-unrelated"
+					anotherNamespacedCloudProfile.Name = "namespaced-profile-unrelated"
 					anotherNamespacedCloudProfile.Spec.Parent.Name = "unrelated-profile"
 					Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(anotherNamespacedCloudProfile)).To(Succeed())
 
 					oldShoot := shoot.DeepCopy()
 					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile",
+						Name: profileName,
 					}
 					shoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile-unrelated",
+						Name: profileName + "-unrelated",
 					}
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(MatchError(ContainSubstring("cannot change from \"namespacedprofile\" (root: \"profile\") to \"namespacedprofile-unrelated\" (root: \"unrelated-profile\")")))
+					Expect(err).To(MatchError(ContainSubstring("cannot change from \"namespaced-profile\" (root: \"profile\") to \"namespaced-profile-unrelated\" (root: \"unrelated-profile\")")))
 				})
 
 				It("should reject because the cloud profile changed to does not contain the Shoot's current machine type", func() {
@@ -1055,7 +1056,7 @@ var _ = Describe("validator", func() {
 					oldShoot := shoot.DeepCopy()
 					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile",
+						Name: profileName,
 					}
 
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
@@ -1085,7 +1086,7 @@ var _ = Describe("validator", func() {
 					oldShoot := shoot.DeepCopy()
 					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile",
+						Name: profileName,
 					}
 
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
@@ -1128,7 +1129,7 @@ var _ = Describe("validator", func() {
 					oldShoot := shoot.DeepCopy()
 					oldShoot.Spec.CloudProfile = &core.CloudProfileReference{
 						Kind: "NamespacedCloudProfile",
-						Name: "namespacedprofile",
+						Name: profileName,
 					}
 
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
@@ -3804,7 +3805,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(ctx, attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machineimage:1.1.1' is expired")))
+						Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machine-image:1.1.1' is expired")))
 					})
 
 					It("should reject due to a machine image version with non-supported architecture", func() {
@@ -4223,7 +4224,7 @@ var _ = Describe("validator", func() {
 							attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							err := admissionHandler.Admit(ctx, attrs, nil)
 
-							Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machineimage:%s' is expired", expiredVersion)))
+							Expect(err).To(MatchError(ContainSubstring("machine image version 'some-machine-image:%s' is expired", expiredVersion)))
 						})
 
 						It("should reject defaulting a machine image version for worker pool with inplace update strategy if there is no machine image available in the cloud profile supporting inplace update", func() {

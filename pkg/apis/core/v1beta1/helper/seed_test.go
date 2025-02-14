@@ -94,7 +94,7 @@ var _ = Describe("Helper", func() {
 			},
 			true,
 		),
-		Entry("taints with mixed key(+values), tolerations with key+values only (untolerated)",
+		Entry("taints with mixed key(+values), tolerations with key+values only (not tolerated)",
 			[]gardencorev1beta1.SeedTaint{
 				{Key: "foo"},
 				{Key: "bar", Value: ptr.To("baz")},

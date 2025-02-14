@@ -66,7 +66,7 @@ var _ = Describe("Condition", func() {
 		It("should return nil because the required condition could not be found", func() {
 			var (
 				conditionType gardencorev1beta1.ConditionType = "test-1"
-				conditions                                    = []gardencorev1beta1.Condition{}
+				conditions    []gardencorev1beta1.Condition
 			)
 
 			cond := GetCondition(conditions, conditionType)
@@ -395,7 +395,7 @@ var _ = Describe("Condition", func() {
 			}
 			conditions = []gardencorev1beta1.Condition{fooCondition}
 
-			newConditions = []gardencorev1beta1.Condition{}
+			newConditions []gardencorev1beta1.Condition
 		)
 
 		BeforeEach(func() {

@@ -21,6 +21,7 @@ import (
 )
 
 var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
+	var machineImageName = "some-machine-image"
 	Describe("#ValidateNamespacedCloudProfile", func() {
 		It("should forbid empty NamespacedCloudProfile resources", func() {
 			namespacedCloudProfile := &core.NamespacedCloudProfile{
@@ -117,7 +118,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 						},
 						MachineImages: []core.MachineImage{
 							{
-								Name: "some-machineimage",
+								Name: machineImageName,
 								Versions: []core.MachineImageVersion{
 									{
 										ExpirableVersion: core.ExpirableVersion{
@@ -266,7 +267,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 				It("should forbid duplicate names in list of machine images", func() {
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
-							Name: "some-machineimage",
+							Name: machineImageName,
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
@@ -276,7 +277,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 							},
 						},
 						{
-							Name: "some-machineimage",
+							Name: machineImageName,
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
@@ -297,7 +298,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 
 				It("should forbid machine images with no version", func() {
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{Name: "some-machineimage"},
+						{Name: machineImageName},
 					}
 
 					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
@@ -315,7 +316,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					validExpirationDate := &metav1.Time{Time: time.Now().AddDate(0, 1, 0)}
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
-							Name:           "some-machineimage",
+							Name:           machineImageName,
 							UpdateStrategy: ptr.To(core.UpdateStrategyPatch),
 							Versions: []core.MachineImageVersion{
 								{
@@ -339,7 +340,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					validExpirationDate := &metav1.Time{Time: time.Now().AddDate(0, 1, 0)}
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
-							Name: "some-machineimage",
+							Name: machineImageName,
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
@@ -359,7 +360,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 				It("should forbid nonSemVer machine image versions", func() {
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
-							Name: "some-machineimage",
+							Name: machineImageName,
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{
@@ -508,7 +509,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					},
 					MachineImages: []core.MachineImage{
 						{
-							Name: "some-machineimage",
+							Name: machineImageName,
 							Versions: []core.MachineImageVersion{
 								{
 									ExpirableVersion: core.ExpirableVersion{

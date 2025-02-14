@@ -22,7 +22,7 @@ var _ = Describe("Builder", func() {
 	const (
 		conditionType = gardencorev1beta1.ConditionType("Test")
 		// re-declared so the underlying constant is not changed
-		unknowStatus         = gardencorev1beta1.ConditionStatus("Unknown")
+		unknownStatus        = gardencorev1beta1.ConditionStatus("Unknown")
 		fooStatus            = gardencorev1beta1.ConditionStatus("Foo")
 		bazReason            = "Baz"
 		fubarMessage         = "FuBar"
@@ -84,7 +84,7 @@ var _ = Describe("Builder", func() {
 			It("should return correct result", func() {
 				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
-					Status:             unknowStatus,
+					Status:             unknownStatus,
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             initializedReason,
@@ -131,7 +131,7 @@ var _ = Describe("Builder", func() {
 
 				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
-					Status:             unknowStatus,
+					Status:             unknownStatus,
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             expectedReason,
@@ -201,7 +201,7 @@ var _ = Describe("Builder", func() {
 
 				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
-					Status:             unknowStatus,
+					Status:             unknownStatus,
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             initializedReason,
@@ -272,7 +272,7 @@ var _ = Describe("Builder", func() {
 			It("should return correct result", func() {
 				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
-					Status:             unknowStatus,
+					Status:             unknownStatus,
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             initializedReason,
@@ -375,7 +375,7 @@ var _ = Describe("Builder", func() {
 			It("should return correct result", func() {
 				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
-					Status:             gardencorev1beta1.ConditionStatus("SomeNewStatus"),
+					Status:             "SomeNewStatus",
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             "SomeNewReason",
