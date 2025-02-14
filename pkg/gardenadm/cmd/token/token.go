@@ -16,7 +16,7 @@ import (
 
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
-	opts := &Options{}
+	opts := &Options{Options: globalOpts}
 
 	cmd := &cobra.Command{
 		Use:   "token",

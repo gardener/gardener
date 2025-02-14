@@ -5,14 +5,10 @@
 package app
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
-	"k8s.io/klog/v2"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/bootstrap"
@@ -22,7 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/join"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/token"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/version"
-	"github.com/gardener/gardener/pkg/logger"
 )
 
 // Name is a const for the name of this component.
@@ -38,22 +33,13 @@ func NewCommand() *cobra.Command {
 		Use:   Name,
 		Short: Name + " bootstraps and manages autonomous shoot clusters in the Gardener project.",
 		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
-			if err := opts.Complete(); err != nil {
-				return err
-			}
-
 			if err := opts.Validate(); err != nil {
 				return err
 			}
 
-			var err error
-			opts.Log, err = logger.NewZapLogger(opts.LogLevel, opts.LogFormat, logzap.WriteTo(opts.IOStreams.Out))
-			if err != nil {
-				return fmt.Errorf("error instantiating zap logger: %w", err)
+			if err := opts.Complete(); err != nil {
+				return err
 			}
-
-			logf.SetLogger(opts.Log)
-			klog.SetLogger(opts.Log)
 
 			return nil
 		},

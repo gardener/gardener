@@ -14,14 +14,14 @@ import (
 )
 
 // NewCommand creates a new cobra.Command.
-func NewCommand(globalOpts *cmd.Options) *cobra.Command {
+func NewCommand(opts *cmd.Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the client version information",
 		Long:  "Print the client version information",
 
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Fprintf(globalOpts.IOStreams.Out, "gardenadm version %s\n", version.Get())
+			fmt.Fprintf(opts.IOStreams.Out, "gardenadm version %s\n", version.Get())
 		},
 	}
 

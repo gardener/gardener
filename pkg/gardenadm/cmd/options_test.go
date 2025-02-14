@@ -20,12 +20,6 @@ var _ = Describe("Options", func() {
 		options = &Options{}
 	})
 
-	Describe("#Complete", func() {
-		It("should return nil", func() {
-			Expect(options.Complete()).To(Succeed())
-		})
-	})
-
 	Describe("#Validate", func() {
 		It("should return nil", func() {
 			options.LogLevel, options.LogFormat = "info", "json"
@@ -40,6 +34,22 @@ var _ = Describe("Options", func() {
 		It("should return an error due to an invalid log format", func() {
 			options.LogLevel, options.LogFormat = "info", "foo"
 			Expect(options.Validate()).To(MatchError(ContainSubstring("log-format must be one of")))
+		})
+	})
+
+	Describe("#Complete", func() {
+		It("should succeed", func() {
+			Expect(options.Complete()).To(Succeed())
+		})
+
+		It("should fail when log level is unknown", func() {
+			options.LogLevel = "foo"
+			Expect(options.Complete()).To(MatchError(ContainSubstring("error instantiating zap logger: invalid log level")))
+		})
+
+		It("should fail when log format is unknown", func() {
+			options.LogFormat = "foo"
+			Expect(options.Complete()).To(MatchError(ContainSubstring("error instantiating zap logger: invalid log format")))
 		})
 	})
 })
