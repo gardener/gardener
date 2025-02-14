@@ -6,8 +6,8 @@ package token
 
 import (
 	"github.com/spf13/cobra"
-	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/token/create"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/token/delete"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/token/generate"
@@ -15,7 +15,7 @@ import (
 )
 
 // NewCommand creates a new cobra.Command.
-func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
+func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 	opts := &Options{}
 
 	cmd := &cobra.Command{
@@ -26,10 +26,10 @@ func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
 
 	opts.addFlags(cmd.Flags())
 
-	cmd.AddCommand(list.NewCommand(ioStreams))
-	cmd.AddCommand(generate.NewCommand(ioStreams))
-	cmd.AddCommand(create.NewCommand(ioStreams))
-	cmd.AddCommand(delete.NewCommand(ioStreams))
+	cmd.AddCommand(list.NewCommand(globalOpts))
+	cmd.AddCommand(generate.NewCommand(globalOpts))
+	cmd.AddCommand(create.NewCommand(globalOpts))
+	cmd.AddCommand(delete.NewCommand(globalOpts))
 
 	return cmd
 }

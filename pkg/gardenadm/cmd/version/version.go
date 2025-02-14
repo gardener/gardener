@@ -8,19 +8,20 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/component-base/version"
+
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
 
 // NewCommand creates a new cobra.Command.
-func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
+func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the client version information",
 		Long:  "Print the client version information",
 
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Fprintf(ioStreams.Out, "gardenadm version %s\n", version.Get())
+			fmt.Fprintf(globalOpts.IOStreams.Out, "gardenadm version %s\n", version.Get())
 		},
 	}
 

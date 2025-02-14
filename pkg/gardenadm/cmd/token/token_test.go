@@ -10,23 +10,25 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/token"
 )
 
 var _ = Describe("Token", func() {
 	var (
-		ioStreams genericiooptions.IOStreams
-		cmd       *cobra.Command
+		globalOpts *cmd.Options
+		command    *cobra.Command
 	)
 
 	BeforeEach(func() {
-		ioStreams, _, _, _ = genericiooptions.NewTestIOStreams()
-		cmd = NewCommand(ioStreams)
+		globalOpts = &cmd.Options{}
+		globalOpts.IOStreams, _, _, _ = genericiooptions.NewTestIOStreams()
+		command = NewCommand(globalOpts)
 	})
 
 	Describe("#RunE", func() {
 		It("should not have a Run function", func() {
-			Expect(cmd.RunE).To(BeNil())
+			Expect(command.RunE).To(BeNil())
 		})
 	})
 })

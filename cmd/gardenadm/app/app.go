@@ -5,11 +5,16 @@
 package app
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/klog/v2"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/connect"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/discover"
@@ -17,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/join"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/token"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd/version"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 // Name is a const for the name of this component.
@@ -24,16 +30,36 @@ const Name = "gardenadm"
 
 // NewCommand creates a new cobra.Command for running gardenadm.
 func NewCommand() *cobra.Command {
-	opts := &Options{
+	opts := &cmd.Options{
 		IOStreams: genericiooptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr},
 	}
 
 	cmd := &cobra.Command{
 		Use:   Name,
 		Short: Name + " bootstraps and manages autonomous shoot clusters in the Gardener project.",
+		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+			if err := opts.Complete(); err != nil {
+				return err
+			}
+
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+
+			var err error
+			opts.Log, err = logger.NewZapLogger(opts.LogLevel, opts.LogFormat, logzap.WriteTo(opts.IOStreams.Out))
+			if err != nil {
+				return fmt.Errorf("error instantiating zap logger: %w", err)
+			}
+
+			logf.SetLogger(opts.Log)
+			klog.SetLogger(opts.Log)
+
+			return nil
+		},
 	}
 
-	opts.addFlags(cmd.PersistentFlags())
+	opts.AddFlags(cmd.PersistentFlags())
 
 	prepareClusterBootstrapGroup(cmd, opts)
 	prepareGardenGroup(cmd, opts)
@@ -42,7 +68,7 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func prepareClusterBootstrapGroup(cmd *cobra.Command, opts *Options) {
+func prepareClusterBootstrapGroup(cmd *cobra.Command, opts *cmd.Options) {
 	group := &cobra.Group{
 		ID:    "cluster-bootstrap",
 		Title: "Autonomous Shoot Cluster Bootstrap Commands:",
@@ -50,17 +76,17 @@ func prepareClusterBootstrapGroup(cmd *cobra.Command, opts *Options) {
 	cmd.AddGroup(group)
 
 	for _, subcommand := range []*cobra.Command{
-		initcmd.NewCommand(opts.IOStreams),
-		join.NewCommand(opts.IOStreams),
-		bootstrap.NewCommand(opts.IOStreams),
-		token.NewCommand(opts.IOStreams),
+		initcmd.NewCommand(opts),
+		join.NewCommand(opts),
+		bootstrap.NewCommand(opts),
+		token.NewCommand(opts),
 	} {
 		subcommand.GroupID = group.ID
 		cmd.AddCommand(subcommand)
 	}
 }
 
-func prepareGardenGroup(cmd *cobra.Command, opts *Options) {
+func prepareGardenGroup(cmd *cobra.Command, opts *cmd.Options) {
 	group := &cobra.Group{
 		ID:    "garden",
 		Title: "Garden Cluster Interaction Commands:",
@@ -68,15 +94,15 @@ func prepareGardenGroup(cmd *cobra.Command, opts *Options) {
 	cmd.AddGroup(group)
 
 	for _, subcommand := range []*cobra.Command{
-		discover.NewCommand(opts.IOStreams),
-		connect.NewCommand(opts.IOStreams),
+		discover.NewCommand(opts),
+		connect.NewCommand(opts),
 	} {
 		subcommand.GroupID = group.ID
 		cmd.AddCommand(subcommand)
 	}
 }
 
-func prepareAdditionalGroup(cmd *cobra.Command, opts *Options) {
+func prepareAdditionalGroup(cmd *cobra.Command, opts *cmd.Options) {
 	group := &cobra.Group{
 		ID:    "additional",
 		Title: "Additional Commands:",
@@ -86,7 +112,7 @@ func prepareAdditionalGroup(cmd *cobra.Command, opts *Options) {
 	cmd.SetCompletionCommandGroupID(group.ID)
 
 	for _, subcommand := range []*cobra.Command{
-		version.NewCommand(opts.IOStreams),
+		version.NewCommand(opts),
 	} {
 		subcommand.GroupID = group.ID
 		cmd.AddCommand(subcommand)

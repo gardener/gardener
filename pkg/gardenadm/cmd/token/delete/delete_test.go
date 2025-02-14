@@ -13,24 +13,26 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/token/delete"
 )
 
 var _ = Describe("Delete", func() {
 	var (
-		ioStreams genericiooptions.IOStreams
-		out       *bytes.Buffer
-		cmd       *cobra.Command
+		globalOpts *cmd.Options
+		out        *bytes.Buffer
+		command    *cobra.Command
 	)
 
 	BeforeEach(func() {
-		ioStreams, _, out, _ = genericiooptions.NewTestIOStreams()
-		cmd = NewCommand(ioStreams)
+		globalOpts = &cmd.Options{}
+		globalOpts.IOStreams, _, out, _ = genericiooptions.NewTestIOStreams()
+		command = NewCommand(globalOpts)
 	})
 
 	Describe("#RunE", func() {
 		It("should return the expected output", func() {
-			Expect(cmd.RunE(cmd, []string{"some-token-id"})).To(Succeed())
+			Expect(command.RunE(command, []string{"some-token-id"})).To(Succeed())
 
 			output, err := io.ReadAll(out)
 			Expect(err).NotTo(HaveOccurred())
