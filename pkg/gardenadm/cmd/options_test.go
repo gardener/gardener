@@ -5,8 +5,12 @@
 package cmd_test
 
 import (
+	"bytes"
+	"io"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
@@ -39,7 +43,22 @@ var _ = Describe("Options", func() {
 
 	Describe("#Complete", func() {
 		It("should succeed", func() {
+			var stdErr *bytes.Buffer
+			options.IOStreams, _, _, stdErr = genericiooptions.NewTestIOStreams()
+
+			By("default logger does not log to stderr")
+			options.Log.Info("some example log message")
+			output, err := io.ReadAll(stdErr)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(output)).To(BeEmpty())
+
 			Expect(options.Complete()).To(Succeed())
+
+			By("completed logger logs to stderr")
+			options.Log.Info("some example log message")
+			output, err = io.ReadAll(stdErr)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(output)).To(ContainSubstring("some example log message"))
 		})
 
 		It("should fail when log level is unknown", func() {
