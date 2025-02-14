@@ -68,32 +68,6 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              credentialsRotation:
-                description: CredentialsRotation is a structure containing information
-                  about the last initiation time of the certificate authority and
-                  service account key rotation.
-                properties:
-                  certificateAuthorities:
-                    description: CertificateAuthorities contains information about
-                      the certificate authority credential rotation.
-                    properties:
-                      lastInitiationTime:
-                        description: LastInitiationTime is the most recent time when
-                          the certificate authority credential rotation was initiated.
-                        format: date-time
-                        type: string
-                    type: object
-                  serviceAccountKey:
-                    description: ServiceAccountKey contains information about the
-                      service account key credential rotation.
-                    properties:
-                      lastInitiationTime:
-                        description: LastInitiationTime is the most recent time when
-                          the service account key credential rotation was initiated.
-                        format: date-time
-                        type: string
-                    type: object
-                type: object
               criConfig:
                 description: CRI config is a structure contains configurations of
                   the CRI library
@@ -288,17 +262,155 @@ spec:
                   - path
                   type: object
                 type: array
-              kubeletConfigHash:
-                description: KubeletConfigHash is the hash calculated on the fields
-                  relevant to in-place update of the Kubelet configuration.
-                type: string
-              kubeletVersion:
-                description: KubeletVersion is the version of the Kubelet.
-                type: string
-              osVersion:
-                description: OperatingSystemVersion is the version of the operating
-                  system.
-                type: string
+              inPlaceUpdates:
+                description: InPlaceUpdates contains the configuration for in-place
+                  updates.
+                properties:
+                  credentialsRotation:
+                    description: CredentialsRotation is a structure containing information
+                      about the last initiation time of the certificate authority
+                      and service account key rotation.
+                    properties:
+                      certificateAuthorities:
+                        description: CertificateAuthorities contains information about
+                          the certificate authority credential rotation.
+                        properties:
+                          lastInitiationTime:
+                            description: LastInitiationTime is the most recent time
+                              when the certificate authority credential rotation was
+                              initiated.
+                            format: date-time
+                            type: string
+                        type: object
+                      serviceAccountKey:
+                        description: ServiceAccountKey contains information about
+                          the service account key credential rotation.
+                        properties:
+                          lastInitiationTime:
+                            description: LastInitiationTime is the most recent time
+                              when the service account key credential rotation was
+                              initiated.
+                            format: date-time
+                            type: string
+                        type: object
+                    type: object
+                  kubelet:
+                    description: Kubelet contains the configuration for the kubelet.
+                    properties:
+                      cpuManagerPolicy:
+                        description: 'CPUManagerPolicy allows to set alternative CPU
+                          management policies (default: none).'
+                        type: string
+                      evictionHard:
+                        description: EvictionHard describes a set of eviction thresholds
+                          (e.g. memory.available<1Gi) that if met would trigger a
+                          Pod eviction.
+                        properties:
+                          imageFSAvailable:
+                            description: ImageFSAvailable is the threshold for the
+                              free disk space in the imagefs filesystem (docker images
+                              and container writable layers).
+                            type: string
+                          imageFSInodesFree:
+                            description: ImageFSInodesFree is the threshold for the
+                              available inodes in the imagefs filesystem.
+                            type: string
+                          memoryAvailable:
+                            description: MemoryAvailable is the threshold for the
+                              free memory on the host server.
+                            type: string
+                          nodeFSAvailable:
+                            description: NodeFSAvailable is the threshold for the
+                              free disk space in the nodefs filesystem (docker volumes,
+                              logs, etc).
+                            type: string
+                          nodeFSInodesFree:
+                            description: NodeFSInodesFree is the threshold for the
+                              available inodes in the nodefs filesystem.
+                            type: string
+                        type: object
+                      kubeReserved:
+                        description: KubeReserved is the configuration for resources
+                          reserved for kubernetes node components (mainly kubelet
+                          and container runtime).
+                        properties:
+                          cpu:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: CPU is the reserved cpu.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          ephemeralStorage:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: EphemeralStorage is the reserved ephemeral-storage.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          memory:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: Memory is the reserved memory.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          pid:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: PID is the reserved process-ids.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        type: object
+                      systemReserved:
+                        description: SystemReserved is the configuration for resources
+                          reserved for system processes not managed by kubernetes
+                          (e.g. journald).
+                        properties:
+                          cpu:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: CPU is the reserved cpu.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          ephemeralStorage:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: EphemeralStorage is the reserved ephemeral-storage.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          memory:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: Memory is the reserved memory.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          pid:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: PID is the reserved process-ids.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        type: object
+                      version:
+                        description: Version is the version of the kubelet.
+                        type: string
+                    required:
+                    - version
+                    type: object
+                  operatingSystemVersion:
+                    description: OperatingSystemVersion is the version of the operating
+                      system.
+                    type: string
+                required:
+                - kubelet
+                - operatingSystemVersion
+                type: object
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
                 type: object
@@ -580,6 +692,8 @@ spec:
                         description: Command defines the command responsible for performing
                           machine image updates.
                         type: string
+                    required:
+                    - command
                     type: object
                 type: object
               lastError:
