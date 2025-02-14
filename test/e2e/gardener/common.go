@@ -8,6 +8,7 @@ import (
 	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -113,6 +114,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
 		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:a::/64")
+		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"ipv6":{"sourceNATEnabled":true}}`)}
 	}
 
 	return shoot
