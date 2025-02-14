@@ -1274,48 +1274,49 @@ var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enab
 				})
 
 				Context("limits validation", func() {
-				It("should allow unset limits", func() {
-					cloudProfile.Spec.Limits = nil
+					It("should allow unset limits", func() {
+						cloudProfile.Spec.Limits = nil
 
-					Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
+						Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
+					})
+
+					It("should allow empty limits", func() {
+						cloudProfile.Spec.Limits = &core.Limits{}
+
+						Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
+					})
+
+					It("should allow positive maxNodesTotal", func() {
+						cloudProfile.Spec.Limits = &core.Limits{
+							MaxNodesTotal: ptr.To[int32](100),
+						}
+
+						Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
+					})
+
+					It("should forbid zero maxNodesTotal", func() {
+						cloudProfile.Spec.Limits = &core.Limits{
+							MaxNodesTotal: ptr.To[int32](0),
+						}
+
+						Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.limits.maxNodesTotal"),
+						}))))
+					})
+
+					It("should forbid negative maxNodesTotal", func() {
+						cloudProfile.Spec.Limits = &core.Limits{
+							MaxNodesTotal: ptr.To[int32](-1),
+						}
+
+						Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeInvalid),
+							"Field": Equal("spec.limits.maxNodesTotal"),
+						}))))
+					})
 				})
-
-				It("should allow empty limits", func() {
-					cloudProfile.Spec.Limits = &core.Limits{}
-
-					Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
-				})
-
-				It("should allow positive maxNodesTotal", func() {
-					cloudProfile.Spec.Limits = &core.Limits{
-						MaxNodesTotal: ptr.To[int32](100),
-					}
-
-					Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
-				})
-
-				It("should forbid zero maxNodesTotal", func() {
-					cloudProfile.Spec.Limits = &core.Limits{
-						MaxNodesTotal: ptr.To[int32](0),
-					}
-
-					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.limits.maxNodesTotal"),
-					}))))
-				})
-
-				It("should forbid negative maxNodesTotal", func() {
-					cloudProfile.Spec.Limits = &core.Limits{
-						MaxNodesTotal: ptr.To[int32](-1),
-					}
-
-					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.limits.maxNodesTotal"),
-					}))))
-				})
-			})It("should forbid unsupported seed selectors", func() {
+				It("should forbid unsupported seed selectors", func() {
 					cloudProfile.Spec.SeedSelector.MatchLabels["foo"] = "no/slash/allowed"
 
 					errorList := ValidateCloudProfile(cloudProfile)
