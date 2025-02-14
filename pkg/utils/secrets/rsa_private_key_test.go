@@ -21,7 +21,7 @@ var _ = Describe("RSA Private Key Secrets", func() {
 
 		BeforeEach(func() {
 			rsaPrivateKeyConfig = &RSASecretConfig{
-				Bits: 16,
+				Bits: 3072,
 				Name: "rsa-secret",
 			}
 		})
@@ -57,7 +57,7 @@ var _ = Describe("RSA Private Key Secrets", func() {
 		)
 		BeforeEach(func() {
 			var err error
-			key, err = rsa.GenerateKey(rand.Reader, 16)
+			key, err = rsa.GenerateKey(rand.Reader, 3072)
 			Expect(err).NotTo(HaveOccurred())
 
 			rsaKeys = &RSAKeys{
