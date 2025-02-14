@@ -1,4 +1,8 @@
-package components
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+//
+// SPDX-License-Identifier: Apache-2.0
+
+package components_test
 
 import (
 	ginkgo "github.com/onsi/ginkgo/v2"
@@ -7,6 +11,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 )
 
 var _ = ginkgo.Describe("Kubelet", func() {
@@ -18,11 +23,11 @@ var _ = ginkgo.Describe("Kubelet", func() {
 		})
 
 		ginkgo.It("should return an empty string if the kubelet config is nil", func() {
-			Expect(CalculateDataStringForKubeletConfiguration(nil)).To(BeEmpty())
+			Expect(components.CalculateDataStringForKubeletConfiguration(nil)).To(BeEmpty())
 		})
 
 		ginkgo.It("should return an empty string if the kubelet config is empty", func() {
-			Expect(CalculateDataStringForKubeletConfiguration(kubeletConfig)).To(BeEmpty())
+			Expect(components.CalculateDataStringForKubeletConfiguration(kubeletConfig)).To(BeEmpty())
 		})
 
 		ginkgo.It("should return the correct data string for the kubelet config", func() {
@@ -49,7 +54,7 @@ var _ = ginkgo.Describe("Kubelet", func() {
 				},
 			}
 
-			Expect(CalculateDataStringForKubeletConfiguration(kubeletConfig)).To(ConsistOf(
+			Expect(components.CalculateDataStringForKubeletConfiguration(kubeletConfig)).To(ConsistOf(
 				"101m-2049Mi-16k-142Gi",
 				"200Mi-1k-200Mi-200Mi-1k",
 				"static",

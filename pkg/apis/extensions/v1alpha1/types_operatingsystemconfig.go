@@ -370,6 +370,7 @@ type InPlaceUpdates struct {
 	CredentialsRotation *CredentialsRotation `json:"credentialsRotation,omitempty"`
 }
 
+// KubeletConfig contains the configuration for the kubelet.
 type KubeletConfig struct {
 	// Version is the version of the kubelet.
 	Version string `json:"version"`
@@ -387,7 +388,7 @@ type KubeletConfig struct {
 	SystemReserved *gardencorev1beta1.KubeletConfigReserved `json:"systemReserved,omitempty"`
 }
 
-// InPlaceUpdates is a structure containing configuration for in-place updates.
+// InPlaceUpdatesStatus is a structure containing configuration for in-place updates.
 type InPlaceUpdatesStatus struct {
 	// OSUpdate defines the configuration for the operating system update.
 	// +optional

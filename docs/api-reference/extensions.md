@@ -3561,7 +3561,7 @@ CredentialsRotation
 <a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
 </p>
 <p>
-<p>InPlaceUpdates is a structure containing configuration for in-place updates.</p>
+<p>InPlaceUpdatesStatus is a structure containing configuration for in-place updates.</p>
 </p>
 <table>
 <thead>
@@ -3796,6 +3796,7 @@ InfrastructureStatusNetworking
 <a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">InPlaceUpdates</a>)
 </p>
 <p>
+<p>KubeletConfig contains the configuration for the kubelet.</p>
 </p>
 <table>
 <thead>
