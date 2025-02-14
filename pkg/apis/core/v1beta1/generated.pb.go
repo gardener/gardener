@@ -5537,6 +5537,7 @@ func init() {
 	proto.RegisterType((*CloudProfileList)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.CloudProfileList")
 	proto.RegisterType((*CloudProfileReference)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.CloudProfileReference")
 	proto.RegisterType((*CloudProfileSpec)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.CloudProfileSpec")
+	proto.RegisterMapType((Capabilities)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.CloudProfileSpec.CapabilitiesDefinitionEntry")
 	proto.RegisterType((*ClusterAutoscaler)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ClusterAutoscaler")
 	proto.RegisterType((*ClusterAutoscalerOptions)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.ClusterAutoscalerOptions")
 	proto.RegisterType((*Condition)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition")
@@ -5616,6 +5617,7 @@ func init() {
 	proto.RegisterType((*MachineImage)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MachineImage")
 	proto.RegisterType((*MachineImageVersion)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MachineImageVersion")
 	proto.RegisterType((*MachineType)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MachineType")
+	proto.RegisterMapType((Capabilities)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MachineType.CapabilitiesEntry")
 	proto.RegisterType((*MachineTypeStorage)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MachineTypeStorage")
 	proto.RegisterType((*Maintenance)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.Maintenance")
 	proto.RegisterType((*MaintenanceAutoUpdate)(nil), "github.com.gardener.gardener.pkg.apis.core.v1beta1.MaintenanceAutoUpdate")
@@ -7923,6 +7925,30 @@ func (m *CloudProfileSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.CapabilitiesDefinition) > 0 {
+		keysForCapabilitiesDefinition := make([]string, 0, len(m.CapabilitiesDefinition))
+		for k := range m.CapabilitiesDefinition {
+			keysForCapabilitiesDefinition = append(keysForCapabilitiesDefinition, string(k))
+		}
+		github_com_gogo_protobuf_sortkeys.Strings(keysForCapabilitiesDefinition)
+		for iNdEx := len(keysForCapabilitiesDefinition) - 1; iNdEx >= 0; iNdEx-- {
+			v := m.CapabilitiesDefinition[string(keysForCapabilitiesDefinition[iNdEx])]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintGenerated(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(keysForCapabilitiesDefinition[iNdEx])
+			copy(dAtA[i:], keysForCapabilitiesDefinition[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(keysForCapabilitiesDefinition[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintGenerated(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x62
+		}
+	}
 	if m.Limits != nil {
 		{
 			size, err := m.Limits.MarshalToSizedBuffer(dAtA[:i])
@@ -12307,6 +12333,20 @@ func (m *MachineImageVersion) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.CapabilitiesSet) > 0 {
+		for iNdEx := len(m.CapabilitiesSet) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.CapabilitiesSet[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x32
+		}
+	}
 	if m.InPlaceUpdates != nil {
 		{
 			size, err := m.InPlaceUpdates.MarshalToSizedBuffer(dAtA[:i])
@@ -12382,6 +12422,30 @@ func (m *MachineType) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.Capabilities) > 0 {
+		keysForCapabilities := make([]string, 0, len(m.Capabilities))
+		for k := range m.Capabilities {
+			keysForCapabilities = append(keysForCapabilities, string(k))
+		}
+		github_com_gogo_protobuf_sortkeys.Strings(keysForCapabilities)
+		for iNdEx := len(keysForCapabilities) - 1; iNdEx >= 0; iNdEx-- {
+			v := m.Capabilities[string(keysForCapabilities[iNdEx])]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintGenerated(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(keysForCapabilities[iNdEx])
+			copy(dAtA[i:], keysForCapabilities[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(keysForCapabilities[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintGenerated(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0x42
+		}
+	}
 	if m.Architecture != nil {
 		i -= len(*m.Architecture)
 		copy(dAtA[i:], *m.Architecture)
@@ -18698,6 +18762,14 @@ func (m *CloudProfileSpec) Size() (n int) {
 		l = m.Limits.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if len(m.CapabilitiesDefinition) > 0 {
+		for k, v := range m.CapabilitiesDefinition {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovGenerated(uint64(len(k))) + 1 + len(v) + sovGenerated(uint64(len(v)))
+			n += mapEntrySize + 1 + sovGenerated(uint64(mapEntrySize))
+		}
+	}
 	return n
 }
 
@@ -20318,6 +20390,12 @@ func (m *MachineImageVersion) Size() (n int) {
 		l = m.InPlaceUpdates.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if len(m.CapabilitiesSet) > 0 {
+		for _, e := range m.CapabilitiesSet {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -20345,6 +20423,14 @@ func (m *MachineType) Size() (n int) {
 	if m.Architecture != nil {
 		l = len(*m.Architecture)
 		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if len(m.Capabilities) > 0 {
+		for k, v := range m.Capabilities {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovGenerated(uint64(len(k))) + 1 + len(v) + sovGenerated(uint64(len(v)))
+			n += mapEntrySize + 1 + sovGenerated(uint64(mapEntrySize))
+		}
 	}
 	return n
 }
@@ -22873,6 +22959,16 @@ func (this *CloudProfileSpec) String() string {
 		repeatedStringForVolumeTypes += strings.Replace(strings.Replace(f.String(), "VolumeType", "VolumeType", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForVolumeTypes += "}"
+	keysForCapabilitiesDefinition := make([]string, 0, len(this.CapabilitiesDefinition))
+	for k := range this.CapabilitiesDefinition {
+		keysForCapabilitiesDefinition = append(keysForCapabilitiesDefinition, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForCapabilitiesDefinition)
+	mapStringForCapabilitiesDefinition := "Capabilities{"
+	for _, k := range keysForCapabilitiesDefinition {
+		mapStringForCapabilitiesDefinition += fmt.Sprintf("%v: %v,", k, this.CapabilitiesDefinition[k])
+	}
+	mapStringForCapabilitiesDefinition += "}"
 	s := strings.Join([]string{`&CloudProfileSpec{`,
 		`CABundle:` + valueToStringGenerated(this.CABundle) + `,`,
 		`Kubernetes:` + strings.Replace(strings.Replace(this.Kubernetes.String(), "KubernetesSettings", "KubernetesSettings", 1), `&`, ``, 1) + `,`,
@@ -22885,6 +22981,7 @@ func (this *CloudProfileSpec) String() string {
 		`VolumeTypes:` + repeatedStringForVolumeTypes + `,`,
 		`Bastion:` + strings.Replace(this.Bastion.String(), "Bastion", "Bastion", 1) + `,`,
 		`Limits:` + strings.Replace(this.Limits.String(), "Limits", "Limits", 1) + `,`,
+		`CapabilitiesDefinition:` + mapStringForCapabilitiesDefinition + `,`,
 		`}`,
 	}, "")
 	return s
@@ -23934,12 +24031,18 @@ func (this *MachineImageVersion) String() string {
 		repeatedStringForCRI += strings.Replace(strings.Replace(f.String(), "CRI", "CRI", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForCRI += "}"
+	repeatedStringForCapabilitiesSet := "[]JSON{"
+	for _, f := range this.CapabilitiesSet {
+		repeatedStringForCapabilitiesSet += fmt.Sprintf("%v", f) + ","
+	}
+	repeatedStringForCapabilitiesSet += "}"
 	s := strings.Join([]string{`&MachineImageVersion{`,
 		`ExpirableVersion:` + strings.Replace(strings.Replace(this.ExpirableVersion.String(), "ExpirableVersion", "ExpirableVersion", 1), `&`, ``, 1) + `,`,
 		`CRI:` + repeatedStringForCRI + `,`,
 		`Architectures:` + fmt.Sprintf("%v", this.Architectures) + `,`,
 		`KubeletVersionConstraint:` + valueToStringGenerated(this.KubeletVersionConstraint) + `,`,
 		`InPlaceUpdates:` + strings.Replace(this.InPlaceUpdates.String(), "InPlaceUpdates", "InPlaceUpdates", 1) + `,`,
+		`CapabilitiesSet:` + repeatedStringForCapabilitiesSet + `,`,
 		`}`,
 	}, "")
 	return s
@@ -23948,6 +24051,16 @@ func (this *MachineType) String() string {
 	if this == nil {
 		return "nil"
 	}
+	keysForCapabilities := make([]string, 0, len(this.Capabilities))
+	for k := range this.Capabilities {
+		keysForCapabilities = append(keysForCapabilities, k)
+	}
+	github_com_gogo_protobuf_sortkeys.Strings(keysForCapabilities)
+	mapStringForCapabilities := "Capabilities{"
+	for _, k := range keysForCapabilities {
+		mapStringForCapabilities += fmt.Sprintf("%v: %v,", k, this.Capabilities[k])
+	}
+	mapStringForCapabilities += "}"
 	s := strings.Join([]string{`&MachineType{`,
 		`CPU:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.CPU), "Quantity", "resource.Quantity", 1), `&`, ``, 1) + `,`,
 		`GPU:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.GPU), "Quantity", "resource.Quantity", 1), `&`, ``, 1) + `,`,
@@ -23956,6 +24069,7 @@ func (this *MachineType) String() string {
 		`Storage:` + strings.Replace(this.Storage.String(), "MachineTypeStorage", "MachineTypeStorage", 1) + `,`,
 		`Usable:` + valueToStringGenerated(this.Usable) + `,`,
 		`Architecture:` + valueToStringGenerated(this.Architecture) + `,`,
+		`Capabilities:` + mapStringForCapabilities + `,`,
 		`}`,
 	}, "")
 	return s
@@ -29651,6 +29765,133 @@ func (m *CloudProfileSpec) Unmarshal(dAtA []byte) error {
 			if err := m.Limits.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		case 12:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CapabilitiesDefinition", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.CapabilitiesDefinition == nil {
+				m.CapabilitiesDefinition = make(Capabilities)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowGenerated
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipGenerated(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.CapabilitiesDefinition[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -42306,6 +42547,40 @@ func (m *MachineImageVersion) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CapabilitiesSet", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.CapabilitiesSet = append(m.CapabilitiesSet, v12.JSON{})
+			if err := m.CapabilitiesSet[len(m.CapabilitiesSet)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
@@ -42576,6 +42851,133 @@ func (m *MachineType) Unmarshal(dAtA []byte) error {
 			}
 			s := string(dAtA[iNdEx:postIndex])
 			m.Architecture = &s
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Capabilities", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Capabilities == nil {
+				m.Capabilities = make(Capabilities)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowGenerated
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipGenerated(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Capabilities[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

@@ -470,6 +470,21 @@ Bastion
 </tr>
 <tr>
 <td>
+<code>limits</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Limits">
+Limits
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Limits configures operational limits for Shoot clusters using this CloudProfile.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>capabilitiesDefinition</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.Capabilities">
@@ -483,21 +498,6 @@ Capabilities
 Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 The order values for a given capability is relevant. To the left is the most important value.
 During maintenance upgrades the image that enables most important capabilities will be selected.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>limits</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.Limits">
-Limits
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Limits configures operational limits for Shoot clusters using this CloudProfile.
-See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
 </td>
 </tr>
 </table>
