@@ -6,7 +6,6 @@ package join
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -15,7 +14,7 @@ import (
 
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
-	opts := &Options{}
+	opts := &Options{Options: globalOpts}
 
 	cmd := &cobra.Command{
 		Use:   "join",
@@ -25,8 +24,8 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Example: `# Bootstrap a worker node and join it to the cluster
 gardenadm join`,
 
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := opts.Complete(); err != nil {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := opts.ParseArgs(args); err != nil {
 				return err
 			}
 
@@ -34,7 +33,11 @@ gardenadm join`,
 				return err
 			}
 
-			return run(cmd.Context(), globalOpts, opts)
+			if err := opts.Complete(); err != nil {
+				return err
+			}
+
+			return run(cmd.Context(), opts)
 		},
 	}
 
@@ -43,7 +46,7 @@ gardenadm join`,
 	return cmd
 }
 
-func run(_ context.Context, globalOpts *cmd.Options, _ *Options) error {
-	fmt.Fprintln(globalOpts.IOStreams.Out, "not implemented either")
+func run(_ context.Context, opts *Options) error {
+	opts.Log.Info("Not implemented either")
 	return nil
 }

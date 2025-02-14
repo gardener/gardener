@@ -6,7 +6,6 @@ package delete
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -15,7 +14,7 @@ import (
 
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
-	opts := &Options{}
+	opts := &Options{Options: globalOpts}
 
 	cmd := &cobra.Command{
 		Use:   "delete [token-id]",
@@ -29,7 +28,7 @@ gardenadm token delete foo123`,
 		Args: cobra.MaximumNArgs(1),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := opts.Complete(args); err != nil {
+			if err := opts.ParseArgs(args); err != nil {
 				return err
 			}
 
@@ -37,7 +36,11 @@ gardenadm token delete foo123`,
 				return err
 			}
 
-			return run(cmd.Context(), globalOpts, opts)
+			if err := opts.Complete(); err != nil {
+				return err
+			}
+
+			return run(cmd.Context(), opts)
 		},
 	}
 
@@ -46,7 +49,7 @@ gardenadm token delete foo123`,
 	return cmd
 }
 
-func run(_ context.Context, globalOpts *cmd.Options, _ *Options) error {
-	fmt.Fprintln(globalOpts.IOStreams.Out, "not implemented")
+func run(_ context.Context, opts *Options) error {
+	opts.Log.Info("Not implemented")
 	return nil
 }

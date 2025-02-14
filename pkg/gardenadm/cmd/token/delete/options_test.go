@@ -22,9 +22,9 @@ var _ = Describe("Options", func() {
 		options = &Options{}
 	})
 
-	Describe("#Complete", func() {
+	Describe("#ParseArgs", func() {
 		It("should use the first argument as token ID", func() {
-			Expect(options.Complete([]string{tokenID})).To(Succeed())
+			Expect(options.ParseArgs([]string{tokenID})).To(Succeed())
 			Expect(options.TokenID).To(Equal(tokenID))
 		})
 	})
@@ -38,6 +38,12 @@ var _ = Describe("Options", func() {
 
 		It("should fail because token ID is not set", func() {
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a token ID to delete")))
+		})
+	})
+
+	Describe("#Complete", func() {
+		It("should return nil", func() {
+			Expect(options.Complete()).To(Succeed())
 		})
 	})
 })

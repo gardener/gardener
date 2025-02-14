@@ -6,7 +6,6 @@ package list
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -15,7 +14,7 @@ import (
 
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
-	opts := &Options{}
+	opts := &Options{Options: globalOpts}
 
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -25,8 +24,8 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Example: `# List all bootstrap tokens on the server
 gardenadm token list`,
 
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := opts.Complete(); err != nil {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := opts.ParseArgs(args); err != nil {
 				return err
 			}
 
@@ -34,7 +33,11 @@ gardenadm token list`,
 				return err
 			}
 
-			return run(cmd.Context(), globalOpts, opts)
+			if err := opts.Complete(); err != nil {
+				return err
+			}
+
+			return run(cmd.Context(), opts)
 		},
 	}
 
@@ -43,7 +46,7 @@ gardenadm token list`,
 	return cmd
 }
 
-func run(_ context.Context, globalOpts *cmd.Options, _ *Options) error {
-	fmt.Fprintln(globalOpts.IOStreams.Out, "not implemented")
+func run(_ context.Context, opts *Options) error {
+	opts.Log.Info("Not implemented")
 	return nil
 }

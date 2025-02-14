@@ -12,21 +12,24 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/token/generate"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 var _ = Describe("Generate", func() {
 	var (
 		globalOpts *cmd.Options
-		out        *bytes.Buffer
+		stdErr     *bytes.Buffer
 		command    *cobra.Command
 	)
 
 	BeforeEach(func() {
 		globalOpts = &cmd.Options{}
-		globalOpts.IOStreams, _, out, _ = genericiooptions.NewTestIOStreams()
+		globalOpts.IOStreams, _, _, stdErr = genericiooptions.NewTestIOStreams()
+		globalOpts.Log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(stdErr))
 		command = NewCommand(globalOpts)
 	})
 
@@ -34,9 +37,9 @@ var _ = Describe("Generate", func() {
 		It("should return the expected output", func() {
 			Expect(command.RunE(command, nil)).To(Succeed())
 
-			output, err := io.ReadAll(out)
+			output, err := io.ReadAll(stdErr)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(Equal("not implemented\n"))
+			Expect(string(output)).To(ContainSubstring("Not implemented"))
 		})
 	})
 })
