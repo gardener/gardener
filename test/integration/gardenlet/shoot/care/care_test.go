@@ -516,7 +516,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 						g.Expect(testClient.Status().Patch(ctx, managedResource1, patch)).To(Succeed())
 					}).Should(Succeed())
 
-					// Use short timeout here to ensure a test failure if triggering by ManagedResource change doesn't work
+					// Eventually uses a default timeout that is shorter than the sync period. Thus this check will time out if triggering by ManagedResource change doesn't work.
 					Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 						return shoot.Status.Conditions
