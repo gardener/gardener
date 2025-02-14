@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
@@ -243,22 +244,19 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 		additionalNetworkPolicyNamespaceSelectors = config.AdditionalNamespaceSelectors
 	}
 
-	return sharedcomponent.NewRuntimeGardenerResourceManager(
-		r.SeedClientSet.Client(),
-		r.GardenNamespace,
-		r.SeedVersion,
-		secretsManager,
-		r.Config.LogLevel, r.Config.LogFormat,
-		v1beta1constants.SecretNameCASeed,
-		v1beta1constants.PriorityClassNameSeedSystemCritical,
-		defaultNotReadyTolerationSeconds,
-		defaultUnreachableTolerationSeconds,
-		features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
-		v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.Spec.Settings),
-		additionalNetworkPolicyNamespaceSelectors,
-		seed.Spec.Provider.Zones,
-		nil,
-	)
+	return sharedcomponent.NewRuntimeGardenerResourceManager(r.SeedClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
+		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
+		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
+		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
+		EndpointSliceHintsEnabled:                 v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.Spec.Settings),
+		LogLevel:                                  r.Config.LogLevel,
+		LogFormat:                                 r.Config.LogFormat,
+		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
+		PriorityClassName:                         v1beta1constants.PriorityClassNameSeedSystemCritical,
+		RuntimeKubernetesVersion:                  r.SeedVersion,
+		SecretNameServerCA:                        v1beta1constants.SecretNameCASeed,
+		Zones:                                     seed.Spec.Provider.Zones,
+	})
 }
 
 func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenCluster bool) (component.DeployWaiter, map[string]string, string, error) {

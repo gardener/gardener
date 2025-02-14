@@ -8,10 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,85 +41,8 @@ import (
 func NewRuntimeGardenerResourceManager(
 	c client.Client,
 	gardenNamespaceName string,
-	runtimeVersion *semver.Version,
 	secretsManager secretsmanager.Interface,
-	logLevel, logFormat string,
-	secretNameServerCA string,
-	priorityClassName string,
-	defaultNotReadyToleration *int64,
-	defaultUnreachableToleration *int64,
-	defaultSeccompProfileEnabled bool,
-	endpointSliceHintsEnabled bool,
-	additionalNetworkPolicyNamespaceSelectors []metav1.LabelSelector,
-	zones []string,
-	managedResourceLabels map[string]string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerResourceManager)
-	if err != nil {
-		return nil, err
-	}
-	image.WithOptionalTag(version.Get().GitVersion)
-
-	return resourcemanager.New(c, gardenNamespaceName, secretsManager, resourcemanager.Values{
-		ConcurrentSyncs:                           ptr.To(20),
-		DefaultSeccompProfileEnabled:              defaultSeccompProfileEnabled,
-		DefaultNotReadyToleration:                 defaultNotReadyToleration,
-		DefaultUnreachableToleration:              defaultUnreachableToleration,
-		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
-		MaxConcurrentNetworkPolicyWorkers:         ptr.To(20),
-		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
-		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
-			Namespace: v1beta1constants.GardenNamespace,
-			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
-				v1beta1constants.LabelApp:      nginxingress.LabelAppValue,
-				nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
-			}},
-		},
-		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
-		Image:                                image.String(),
-		LogLevel:                             logLevel,
-		LogFormat:                            logFormat,
-		ManagedResourceLabels:                managedResourceLabels,
-		MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
-		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
-		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
-		PodTopologySpreadConstraintsEnabled: true,
-		PriorityClassName:                   priorityClassName,
-		Replicas:                            ptr.To[int32](2),
-		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
-		SecretNameServerCA:                  secretNameServerCA,
-		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
-		RuntimeKubernetesVersion:            runtimeVersion,
-		Zones:                               zones,
-	}), nil
-}
-
-// NewTargetGardenerResourceManager instantiates a new `gardener-resource-manager` component
-// configured to reconcile object in a target (shoot) cluster.
-func NewTargetGardenerResourceManager(
-	c client.Client,
-	namespaceName string,
-	secretsManager secretsmanager.Interface,
-	clusterIdentity *string,
-	defaultNotReadyTolerationSeconds *int64,
-	defaultUnreachableTolerationSeconds *int64,
-	kubernetesVersion *semver.Version,
-	logLevel, logFormat string,
-	namePrefix string,
-	podTopologySpreadConstraintsEnabled bool,
-	priorityClassName string,
-	schedulingProfile *gardencorev1beta1.SchedulingProfile,
-	secretNameServerCA string,
-	systemComponentsToleration []corev1.Toleration,
-	topologyAwareRoutingEnabled bool,
-	kubernetesServiceHost *string,
-	isWorkerless bool,
-	targetNamespaces []string,
-	nodeAgentReconciliationMaxDelay *metav1.Duration,
-	nodeAgentAuthorizerEnabled bool,
+	values resourcemanager.Values,
 ) (
 	resourcemanager.Interface,
 	error,
@@ -130,44 +53,65 @@ func NewTargetGardenerResourceManager(
 	}
 	image.WithOptionalTag(version.Get().GitVersion)
 
-	cfg := resourcemanager.Values{
-		AlwaysUpdate:                         ptr.To(true),
-		ClusterIdentity:                      clusterIdentity,
+	defaultValues := resourcemanager.Values{
 		ConcurrentSyncs:                      ptr.To(20),
-		DefaultNotReadyToleration:            defaultNotReadyTolerationSeconds,
-		DefaultUnreachableToleration:         defaultUnreachableTolerationSeconds,
 		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
 		Image:                                image.String(),
-		KubernetesServiceHost:                kubernetesServiceHost,
-		LogLevel:                             logLevel,
-		LogFormat:                            logFormat,
+		MaxConcurrentNetworkPolicyWorkers:    ptr.To(20),
+		MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
+		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
+			Namespace: v1beta1constants.GardenNamespace,
+			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
+				v1beta1constants.LabelApp:      nginxingress.LabelAppValue,
+				nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
+			}},
+		},
+		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
+		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
+		PodTopologySpreadConstraintsEnabled: true,
+		Replicas:                            ptr.To[int32](2),
+		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
+		ResponsibilityMode:                  resourcemanager.ForSource,
+		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
+	}
+
+	applyDefaults(&values, defaultValues)
+	return resourcemanager.New(c, gardenNamespaceName, secretsManager, values), nil
+}
+
+// NewTargetGardenerResourceManager instantiates a new `gardener-resource-manager` component
+// configured to reconcile object in a target (shoot) cluster.
+func NewTargetGardenerResourceManager(
+	c client.Client,
+	namespaceName string,
+	secretsManager secretsmanager.Interface,
+	values resourcemanager.Values,
+) (
+	resourcemanager.Interface,
+	error,
+) {
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerResourceManager)
+	if err != nil {
+		return nil, err
+	}
+	image.WithOptionalTag(version.Get().GitVersion)
+
+	defaultValues := resourcemanager.Values{
+		AlwaysUpdate:                         ptr.To(true),
+		ConcurrentSyncs:                      ptr.To(20),
+		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
+		Image:                                image.String(),
+		MaxConcurrentCSRApproverWorkers:      ptr.To(5),
 		MaxConcurrentHealthWorkers:           ptr.To(10),
 		MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
 		MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
-		MaxConcurrentCSRApproverWorkers:      ptr.To(5),
-		NamePrefix:                           namePrefix,
-		PodTopologySpreadConstraintsEnabled:  podTopologySpreadConstraintsEnabled,
-		PriorityClassName:                    priorityClassName,
-		SchedulingProfile:                    schedulingProfile,
-		SecretNameServerCA:                   secretNameServerCA,
+		ResponsibilityMode:                   resourcemanager.ForTarget,
 		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
-		SystemComponentTolerations:           systemComponentsToleration,
-		TargetDiffersFromSourceCluster:       true,
-		TargetNamespaces:                     targetNamespaces,
-		RuntimeKubernetesVersion:             kubernetesVersion,
 		WatchedNamespace:                     &namespaceName,
-		TopologyAwareRoutingEnabled:          topologyAwareRoutingEnabled,
-		IsWorkerless:                         isWorkerless,
-		NodeAgentReconciliationMaxDelay:      nodeAgentReconciliationMaxDelay,
-		NodeAgentAuthorizerEnabled:           nodeAgentAuthorizerEnabled,
 	}
 
-	return resourcemanager.New(
-		c,
-		namespaceName,
-		secretsManager,
-		cfg,
-	), nil
+	applyDefaults(&values, defaultValues)
+	return resourcemanager.New(c, namespaceName, secretsManager, values), nil
 }
 
 var (
@@ -346,4 +290,20 @@ func waitUntilGardenerResourceManagerBootstrapped(ctx context.Context, c client.
 	}
 
 	return managedresources.WaitUntilHealthy(ctx, c, namespace, resourcemanager.ManagedResourceName)
+}
+
+func applyDefaults(userValues *resourcemanager.Values, defaultValues resourcemanager.Values) {
+	var (
+		vUser    = reflect.ValueOf(userValues).Elem()
+		vDefault = reflect.ValueOf(defaultValues)
+	)
+
+	for i := 0; i < vUser.NumField(); i++ {
+		userField := vUser.Field(i)
+		defaultField := vDefault.Field(i)
+
+		if userField.IsZero() {
+			userField.Set(defaultField)
+		}
+	}
 }

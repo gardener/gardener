@@ -238,6 +238,10 @@ type resourceManager struct {
 type Values struct {
 	// AlwaysUpdate if set to false then a resource will only be updated if its desired state differs from the actual state. otherwise, an update request will be always sent
 	AlwaysUpdate *bool
+	// BootstrapControlPlaneNode controls whether the pods are used to bootstrap a control plane node. If set to true,
+	// they are deployed to the host network. In addition, all taints are tolerated to make sure they can get deployed
+	// to nodes even when they are not ready yet.
+	BootstrapControlPlaneNode bool
 	// ClusterIdentity is the identity of the managing cluster.
 	ClusterIdentity *string
 	// ConcurrentSyncs are the number of worker threads for concurrent reconciliation of resources
@@ -280,14 +284,14 @@ type Values struct {
 	Replicas *int32
 	// ResourceClass is used to filter resource resources
 	ResourceClass *string
+	// ResponsibilityMode controls for which cluster the resource-manager deployment is responsible.
+	ResponsibilityMode ResponsibilityMode
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
 	// SyncPeriod configures the duration of how often existing resources should be synced
 	SyncPeriod *metav1.Duration
 	// SystemComponentTolerations are the tolerations required for shoot system components.
 	SystemComponentTolerations []corev1.Toleration
-	// TargetDiffersFromSourceCluster states whether the target cluster is a different one than the source cluster
-	TargetDiffersFromSourceCluster bool
 	// TargetDisableCache disables the cache for target cluster and always talk directly to the API server (defaults to false)
 	TargetDisableCache *bool
 	// TargetNamespaces is the list of namespaces for the target client connection configuration.
@@ -312,8 +316,9 @@ type Values struct {
 	FailureToleranceType *gardencorev1beta1.FailureToleranceType
 	// Zones is number of availability zones.
 	Zones []string
-	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the gardener-resource-manager service.
-	// This value is only applicable for the GRM that is deployed in the Shoot control plane (when TargetDiffersFromSourceCluster=true).
+	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the gardener-resource-manager
+	// service. This value is only applicable for the GRM that is deployed in the Shoot control plane (when
+	// ResponsibilityMode=ForTarget).
 	TopologyAwareRoutingEnabled bool
 	// IsWorkerless specifies whether the cluster has workers.
 	IsWorkerless bool
@@ -325,8 +330,25 @@ type Values struct {
 	NodeAgentAuthorizerEnabled bool
 }
 
+// ResponsibilityMode is a string alias.
+type ResponsibilityMode string
+
+const (
+	// ForSource is a deployment mode for a gardener-resource-manager deployed in a source cluster,
+	// taking over responsibilities for the source cluster only (e.g., GRM in a garden runtime or seed cluster).
+	ForSource ResponsibilityMode = "source"
+	// ForTarget is a deployment mode for a gardener-resource-manager deployed in a source cluster,
+	// taking over responsibilities for a target cluster (e.g., GRM in a garden runtime cluster, being responsible for
+	// the virtual garden cluster, or GRM in a seed cluster, being responsible for a shoot cluster).
+	ForTarget ResponsibilityMode = "target"
+	// ForSourceAndTarget is a deployment mode for a gardener-resource-manager deployed in a source cluster,
+	// taking over responsibilities for both the source and a target cluster (e.g., GRM in an autonomous shoot cluster
+	// where the control plane is running in the cluster itself).
+	ForSourceAndTarget ResponsibilityMode = "both"
+)
+
 func (r *resourceManager) Deploy(ctx context.Context) error {
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		r.secrets.shootAccess = r.newShootAccessSecret()
 		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
 			return err
@@ -352,7 +374,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		r.ensureServiceMonitor,
 	}
 
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		fns = append(fns, r.ensureShootResources)
 	} else {
 		fns = append(fns, r.ensureMutatingWebhookConfiguration)
@@ -372,7 +394,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		r.emptyServiceMonitor(),
 	}
 
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		if err := managedresources.DeleteForShoot(ctx, r.client, r.namespace, ManagedResourceName); err != nil {
 			return err
 		}
@@ -442,7 +464,7 @@ func (r *resourceManager) ensureCustomResourceDefinition(ctx context.Context) er
 }
 
 func (r *resourceManager) ensureRBAC(ctx context.Context) error {
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		if r.values.WatchedNamespace == nil {
 			if err := r.ensureClusterRole(ctx, allowManagedResources(r.values.NamePrefix)); err != nil {
 				return err
@@ -553,7 +575,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				Enabled: r.values.EndpointSliceHintsEnabled,
 			},
 			HighAvailabilityConfig: resourcemanagerconfigv1alpha1.HighAvailabilityConfigWebhookConfig{
-				Enabled:                             true,
+				Enabled:                             !r.values.BootstrapControlPlaneNode,
 				DefaultNotReadyTolerationSeconds:    r.values.DefaultNotReadyToleration,
 				DefaultUnreachableTolerationSeconds: r.values.DefaultUnreachableToleration,
 			},
@@ -579,7 +601,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		}
 	}
 
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		config.TargetClientConnection = &resourcemanagerconfigv1alpha1.ClientConnection{
 			ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 				Kubeconfig: gardenerutils.PathGenericKubeconfig,
@@ -600,6 +622,9 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			}, r.values.NetworkPolicyAdditionalNamespaceSelectors...),
 			IngressControllerSelector: r.values.NetworkPolicyControllerIngressControllerSelector,
 		}
+	}
+
+	if r.values.ResponsibilityMode == ForSource || r.values.ResponsibilityMode == ForSourceAndTarget {
 		config.Webhooks.CRDDeletionProtection.Enabled = true
 		config.Webhooks.ExtensionValidation.Enabled = true
 	}
@@ -638,7 +663,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		config.Controllers.NodeAgentReconciliationDelay.MaxDelay = r.values.NodeAgentReconciliationMaxDelay
 	}
 
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget || r.values.ResponsibilityMode == ForSourceAndTarget {
 		config.Webhooks.SystemComponentsConfig = resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
 			Enabled: true,
 			NodeSelector: map[string]string{
@@ -727,7 +752,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 			Protocol: ptr.To(corev1.ProtocolTCP),
 		}
 
-		if !r.values.TargetDiffersFromSourceCluster {
+		if r.values.ResponsibilityMode != ForTarget {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
 			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, resourcemanagerconstants.ServerPort))
 		} else {
@@ -738,7 +763,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 			}))
 		}
 
-		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.TargetDiffersFromSourceCluster
+		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.ResponsibilityMode == ForTarget
 		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled, r.values.RuntimeKubernetesVersion)
 
 		service.Spec.Selector = r.appLabel()
@@ -785,7 +810,11 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		return err
 	}
 
-	var tolerations []corev1.Toleration
+	var (
+		tolerations []corev1.Toleration
+		env         []corev1.EnvVar
+	)
+
 	if r.values.DefaultNotReadyToleration != nil {
 		tolerations = append(tolerations, corev1.Toleration{
 			Key:               corev1.TaintNodeNotReady,
@@ -801,6 +830,16 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 			Effect:            corev1.TaintEffectNoExecute,
 			TolerationSeconds: r.values.DefaultUnreachableToleration,
 		})
+	}
+
+	if r.values.BootstrapControlPlaneNode {
+		tolerations = append(tolerations,
+			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
+			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
+		)
+		// If 'BootstrapControlPlaneNode', there is typically no CoreDNS running yet, i.e, we cannot rely on the
+		// standard 'kubernetes.default.svc' DNS name but have to explicitly set it to '127.0.0.1'.
+		env = append(env, corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "127.0.0.1"})
 	}
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
@@ -824,6 +863,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 					},
 				},
 				ServiceAccountName: r.values.NamePrefix + serviceAccountName,
+				HostNetwork:        r.values.BootstrapControlPlaneNode,
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
@@ -842,6 +882,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},
+						Env: env,
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("5m"),
@@ -954,7 +995,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 			},
 		}
 
-		if r.values.TargetDiffersFromSourceCluster {
+		if r.values.ResponsibilityMode == ForTarget {
 			clusterCASecret, found := r.secretsManager.Get(v1beta1constants.SecretNameCACluster)
 			if !found {
 				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
@@ -1002,7 +1043,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
 
-		if r.values.TargetDiffersFromSourceCluster {
+		if r.values.ResponsibilityMode == ForTarget {
 			deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{
 				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
 			})
@@ -1120,7 +1161,7 @@ func (r *resourceManager) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudg
 }
 
 func (r *resourceManager) getPrometheusLabel() string {
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		return shoot.Label
 	}
 	return seed.Label
@@ -1176,7 +1217,7 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 
 func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistrationv1.MutatingWebhookConfiguration {
 	suffix := ""
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		suffix = "-shoot"
 	}
 	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: r.values.NamePrefix + v1beta1constants.DeploymentNameGardenerResourceManager + suffix, Namespace: r.namespace}}
@@ -1264,7 +1305,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		objectSelector    *metav1.LabelSelector
 	)
 
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		objectSelector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				resourcesv1alpha1.ManagedBy: resourcesv1alpha1.GardenerManager,
@@ -1275,7 +1316,10 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	webhooks := []admissionregistrationv1.MutatingWebhook{
 		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		r.getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
-		GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn),
+	}
+
+	if !r.values.BootstrapControlPlaneNode {
+		webhooks = append(webhooks, GetHighAvailabilityConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile == gardencorev1beta1.SchedulingProfileBinPacking {
@@ -1291,7 +1335,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetKubernetesServiceHostMutatingWebhook(nil, secretServerCA, buildClientConfigFn))
 	}
 
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget || r.values.ResponsibilityMode == ForSourceAndTarget {
 		webhooks = append(webhooks, GetSystemComponentsConfigMutatingWebhook(namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
@@ -1316,8 +1360,8 @@ func (r *resourceManager) getValidatingWebhookConfigurationWebhooks(
 	)
 }
 
-// GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component for reuse
-// between the component and integration tests.
+// GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component
+// for reuse between the component and integration tests.
 func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
@@ -1947,7 +1991,7 @@ func GetEndpointSliceHintsMutatingWebhook(
 
 func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector {
 	namespaceSelectorOperator := metav1.LabelSelectorOpIn
-	if !r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode != ForTarget {
 		namespaceSelectorOperator = metav1.LabelSelectorOpNotIn
 	}
 
@@ -1963,7 +2007,7 @@ func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector 
 func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: secretServerCA.Data[secrets.DataKeyCertificateBundle]}
 
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		clientConfig.URL = ptr.To(fmt.Sprintf("https://%s.%s:%d%s", r.values.NamePrefix+resourcemanagerconstants.ServiceName, r.namespace, serverServicePort, path))
 	} else {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
@@ -1977,7 +2021,7 @@ func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret
 }
 
 func (r *resourceManager) getLabels() map[string]string {
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		return utils.MergeStringMaps(r.appLabel(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
@@ -1988,7 +2032,7 @@ func (r *resourceManager) getLabels() map[string]string {
 
 func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
 	role := v1beta1constants.GardenRoleSeed
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		role = v1beta1constants.GardenRoleControlPlane
 	}
 
@@ -2003,7 +2047,7 @@ func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
 		v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 	}
 
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.ResponsibilityMode == ForTarget {
 		labels[gardenerutils.NetworkPolicyLabel(r.values.NamePrefix+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)] = v1beta1constants.LabelNetworkPolicyAllowed
 	}
 

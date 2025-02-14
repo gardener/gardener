@@ -36,28 +36,25 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
-	return shared.NewTargetGardenerResourceManager(
-		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
-		b.SecretsManager,
-		b.Seed.GetInfo().Status.ClusterIdentity,
-		defaultNotReadyTolerationSeconds,
-		defaultUnreachableTolerationSeconds,
-		version,
-		logger.InfoLevel, logger.FormatJSON,
-		"",
-		true,
-		v1beta1constants.PriorityClassNameShootControlPlane400,
-		v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
-		v1beta1constants.SecretNameCACluster,
-		gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
-		b.Shoot.TopologyAwareRoutingEnabled,
-		ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
-		b.Shoot.IsWorkerless,
-		[]string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
-		b.Shoot.OSCSyncJitterPeriod,
-		true,
-	)
+	return shared.NewTargetGardenerResourceManager(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.SecretsManager, resourcemanager.Values{
+		ClusterIdentity:                     b.Seed.GetInfo().Status.ClusterIdentity,
+		DefaultNotReadyToleration:           defaultNotReadyTolerationSeconds,
+		DefaultUnreachableToleration:        defaultUnreachableTolerationSeconds,
+		IsWorkerless:                        b.Shoot.IsWorkerless,
+		KubernetesServiceHost:               ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
+		LogLevel:                            logger.InfoLevel,
+		LogFormat:                           logger.FormatJSON,
+		NodeAgentReconciliationMaxDelay:     b.Shoot.OSCSyncJitterPeriod,
+		NodeAgentAuthorizerEnabled:          true,
+		PodTopologySpreadConstraintsEnabled: true,
+		PriorityClassName:                   v1beta1constants.PriorityClassNameShootControlPlane400,
+		RuntimeKubernetesVersion:            version,
+		SchedulingProfile:                   v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
+		SecretNameServerCA:                  v1beta1constants.SecretNameCACluster,
+		SystemComponentTolerations:          gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
+		TargetNamespaces:                    []string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
+		TopologyAwareRoutingEnabled:         b.Shoot.TopologyAwareRoutingEnabled,
+	})
 }
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager
