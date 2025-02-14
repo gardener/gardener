@@ -3148,7 +3148,7 @@ kind: AuthorizationConfiguration
 						"--requestheader-extra-headers-prefix=X-Remote-Extra-",
 						"--requestheader-group-headers=X-Remote-Group",
 						"--requestheader-username-headers=X-Remote-User",
-						"--runtime-config=apps/v1=false,autoscaling/v2=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+						"--runtime-config=apps/v1=false,autoscaling/v2=false,batch/v1=false,discovery.k8s.io/v1=false,policy/v1=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 						"--secure-port=443",
 						"--service-cluster-ip-range="+serviceNetworkCIDRs[0].String()+","+serviceNetworkCIDRs[1].String(),
 						"--service-account-issuer="+serviceAccountIssuer,
@@ -3871,7 +3871,7 @@ kind: AuthenticationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
-						"--runtime-config=apps/v1=true,autoscaling/v2=false,bar=false,batch/v1=false,policy/v1/poddisruptionbudgets=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
+						"--runtime-config=apps/v1=true,autoscaling/v2=false,bar=false,batch/v1=false,discovery.k8s.io/v1=false,policy/v1=false,storage.k8s.io/v1/csidrivers=false,storage.k8s.io/v1/csinodes=false",
 					))
 				})
 
