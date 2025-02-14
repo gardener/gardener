@@ -178,24 +178,24 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 						Domain: &domain,
 					},
-					ETCD: &core.ETCD{
-						Main: &core.ETCDConfig{
-							Autoscaling: &core.ControlPlaneAutoscaling{
-								MinAllowed: map[corev1.ResourceName]resource.Quantity{
-									"cpu": resource.MustParse("2"),
-								},
-							},
-						},
-						Events: &core.ETCDConfig{
-							Autoscaling: &core.ControlPlaneAutoscaling{
-								MinAllowed: map[corev1.ResourceName]resource.Quantity{
-									"cpu": resource.MustParse("1"),
-								},
-							},
-						},
-					},
 					Kubernetes: core.Kubernetes{
 						Version: "1.26.2",
+						ETCD: &core.ETCD{
+							Main: &core.ETCDConfig{
+								Autoscaling: &core.ControlPlaneAutoscaling{
+									MinAllowed: map[corev1.ResourceName]resource.Quantity{
+										"cpu": resource.MustParse("2"),
+									},
+								},
+							},
+							Events: &core.ETCDConfig{
+								Autoscaling: &core.ControlPlaneAutoscaling{
+									MinAllowed: map[corev1.ResourceName]resource.Quantity{
+										"cpu": resource.MustParse("1"),
+									},
+								},
+							},
+						},
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							OIDCConfig: &core.OIDCConfig{
 								CABundle:       ptr.To("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
@@ -766,7 +766,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("SecretBindingName/CredentialsBinding validation", func() {
-
 			It("should forbid adding secretBindingName in case of workerless shoot", func() {
 				shoot.Spec.Provider.Workers = nil
 				shoot.Spec.SecretBindingName = ptr.To("foo")
@@ -1045,7 +1044,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("Extensions validation", func() {
-
 			It("should forbid passing an extension w/o type information", func() {
 				extension := core.Extension{}
 				shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
@@ -1493,7 +1491,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		Context("dns section", func() {
+		Context("DNS section", func() {
 			It("should forbid specifying a provider without a domain", func() {
 				shoot.Spec.DNS.Domain = nil
 
@@ -1732,6 +1730,65 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		Context("ETCD validation", func() {
+			Context("Autoscaling validation", func() {
+				It("should succeed defining minAllowed values", func() {
+					shoot.Spec.Kubernetes.ETCD = &core.ETCD{
+						Main: &core.ETCDConfig{
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: corev1.ResourceList{
+									"memory": resource.MustParse("300M"),
+								},
+							},
+						},
+						Events: &core.ETCDConfig{
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: corev1.ResourceList{
+									"memory": resource.MustParse("60M"),
+								},
+							},
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should not allow minAllowed values below minimum", func() {
+					shoot.Spec.Kubernetes.ETCD = &core.ETCD{
+						Main: &core.ETCDConfig{
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: corev1.ResourceList{
+									"memory": resource.MustParse("299M"),
+								},
+							},
+						},
+						Events: &core.ETCDConfig{
+							Autoscaling: &core.ControlPlaneAutoscaling{
+								MinAllowed: corev1.ResourceList{
+									"memory": resource.MustParse("59M"),
+								},
+							},
+						},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.kubernetes.etcd.main.autoscaling.minAllowed.memory"),
+							"BadValue": Equal(resource.MustParse("299M")),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.kubernetes.etcd.events.autoscaling.minAllowed.memory"),
+							"BadValue": Equal(resource.MustParse("59M")),
+						})),
+					))
+				})
+			})
+		})
+
 		Context("KubeAPIServer validation", func() {
 			Context("OIDC validation", func() {
 				It("should forbid setting OIDC configuration from kubernetes version 1.32", func() {
@@ -1839,7 +1896,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
-			Context("admission plugin validation", func() {
+			Context("AdmissionPlugins validation", func() {
 				It("should allow not specifying admission plugins", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = nil
 
@@ -1908,7 +1965,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
-			Context("encryption config", func() {
+			Context("EncryptionConfig validation", func() {
 				BeforeEach(func() {
 					shoot.Spec.Kubernetes.Version = "1.28"
 				})
@@ -2239,7 +2296,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				)
 			})
 
-			Context("requests", func() {
+			Context("Requests validation", func() {
 				It("should not allow too high values for max inflight requests fields", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.APIServerRequests{
 						MaxNonMutatingInflight: ptr.To[int32](123123123),
@@ -2275,7 +2332,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
-			Context("service account config", func() {
+			Context("ServiceAccountConfig validation", func() {
 				It("should not allow to specify a negative max token duration", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
 						MaxTokenExpiration: &metav1.Duration{Duration: -1},
@@ -2343,6 +2400,35 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers[0]"),
 						"Detail": ContainSubstring("acceptedIssuers cannot contains the issuer field value: foo"),
+					}))))
+				})
+			})
+
+			Context("Autoscaling validation", func() {
+				It("should succeed defining minAllowed values", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.Autoscaling = &core.ControlPlaneAutoscaling{
+						MinAllowed: corev1.ResourceList{
+							"cpu":    resource.MustParse("20m"),
+							"memory": resource.MustParse("200M"),
+						},
+					}
+
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should not allow minAllowed values below minimum", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.Autoscaling = &core.ControlPlaneAutoscaling{
+						MinAllowed: corev1.ResourceList{
+							"cpu": resource.MustParse("19m"),
+						},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("spec.kubernetes.kubeAPIServer.autoscaling.minAllowed.cpu"),
+						"BadValue": Equal(resource.MustParse("19m")),
 					}))))
 				})
 			})
@@ -7445,7 +7531,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, field.NewPath("autoscaling"))).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("autoscaling.storage"),
+					"Field": Equal("autoscaling.minAllowed.storage"),
 				})),
 			))
 		})
@@ -7471,7 +7557,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateControlPlaneAutoscaling(autoscaling, minRequired, nil)).To(BeEmpty())
 			})
 
-			It("should fail for values falling below", func() {
+			It("should fail for values falling below minimum", func() {
 				autoscaling := &core.ControlPlaneAutoscaling{
 					MinAllowed: map[corev1.ResourceName]resource.Quantity{
 						"cpu":    resource.MustParse("9m"),
@@ -7482,8 +7568,25 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateControlPlaneAutoscaling(autoscaling, minRequired, field.NewPath("autoscaling"))).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeInvalid),
-						"Field":    Equal("autoscaling.cpu"),
+						"Field":    Equal("autoscaling.minAllowed.cpu"),
 						"BadValue": Equal(resource.MustParse("9m")),
+					})),
+				))
+			})
+
+			It("should fail for negative values", func() {
+				autoscaling := &core.ControlPlaneAutoscaling{
+					MinAllowed: map[corev1.ResourceName]resource.Quantity{
+						"cpu":    resource.MustParse("-100m"),
+						"memory": resource.MustParse("50Mi"),
+					},
+				}
+
+				Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, field.NewPath("autoscaling"))).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"Field":    Equal("autoscaling.minAllowed.cpu"),
+						"BadValue": Equal("-100m"),
 					})),
 				))
 			})

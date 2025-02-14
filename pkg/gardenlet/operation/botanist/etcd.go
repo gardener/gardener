@@ -45,9 +45,9 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 
 	switch role {
 	case v1beta1constants.ETCDRoleMain:
-		minAllowed = v1beta1helper.GetMinAllowedForETCDMain(b.Shoot.GetInfo().Spec.ETCD)
+		minAllowed = v1beta1helper.GetMinAllowedForETCDMain(b.Shoot.GetInfo().Spec.Kubernetes.ETCD)
 	case v1beta1constants.ETCDRoleEvents:
-		minAllowed = v1beta1helper.GetMinAllowedForETCDEvents(b.Shoot.GetInfo().Spec.ETCD)
+		minAllowed = v1beta1helper.GetMinAllowedForETCDEvents(b.Shoot.GetInfo().Spec.Kubernetes.ETCD)
 	}
 
 	e := NewEtcd(

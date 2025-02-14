@@ -110,8 +110,6 @@ type ShootSpec struct {
 	CredentialsBindingName *string
 	// AccessRestrictions describe a list of access restrictions for this shoot cluster.
 	AccessRestrictions []AccessRestrictionWithOptions
-	// ETCD contains configuration for etcds of the shoot cluster.
-	ETCD *ETCD
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -498,6 +496,8 @@ type Kubernetes struct {
 	// Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26.
 	// Starting Kubernetes 1.27 the field will be locked to false.
 	EnableStaticTokenKubeconfig *bool
+	// ETCD contains configuration for etcds of the shoot cluster.
+	ETCD *ETCD
 }
 
 // ETCD contains configuration for etcds of the shoot cluster.

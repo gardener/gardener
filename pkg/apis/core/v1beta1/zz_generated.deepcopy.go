@@ -2791,6 +2791,11 @@ func (in *Kubernetes) DeepCopyInto(out *Kubernetes) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ETCD != nil {
+		in, out := &in.ETCD, &out.ETCD
+		*out = new(ETCD)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
@@ -5384,11 +5389,6 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
-	}
-	if in.ETCD != nil {
-		in, out := &in.ETCD, &out.ETCD
-		*out = new(ETCD)
-		(*in).DeepCopyInto(*out)
 	}
 	return
 }
