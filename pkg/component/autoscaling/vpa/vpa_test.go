@@ -185,10 +185,10 @@ var _ = Describe("VPA", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
-		vpaFor = func(clusterType component.ClusterType, IsGardenCluster bool) component.DeployWaiter {
+		vpaFor = func(clusterType component.ClusterType, isGardenCluster bool) component.DeployWaiter {
 			vpa = New(c, namespace, sm, Values{
 				ClusterType:              clusterType,
-				IsGardenCluster:          IsGardenCluster,
+				IsGardenCluster:          isGardenCluster,
 				Enabled:                  true,
 				SecretNameServerCA:       secretNameCA,
 				RuntimeKubernetesVersion: runtimeKubernetesVersion,
@@ -1718,7 +1718,7 @@ var _ = Describe("VPA", func() {
 			})
 
 			Context("when deploying ServiceMonitors", func() {
-				var serviceMonitorExpected = &monitoringv1.ServiceMonitor{}
+				var serviceMonitorRecommender = &monitoringv1.ServiceMonitor{}
 
 				BeforeEach(func() {
 					serviceMonitorAdmissionController.TypeMeta = metav1.TypeMeta{}
@@ -1728,8 +1728,8 @@ var _ = Describe("VPA", func() {
 						"prometheus": "shoot",
 					}
 
-					serviceMonitorExpected = serviceMonitorRecommenderFor(component.ClusterTypeShoot)
-					serviceMonitorExpected.ResourceVersion = "1"
+					serviceMonitorRecommender = serviceMonitorRecommenderFor(component.ClusterTypeShoot)
+					serviceMonitorRecommender.ResourceVersion = "1"
 				})
 
 				Context("in a garden cluster", func() {
@@ -1738,28 +1738,20 @@ var _ = Describe("VPA", func() {
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 
-					It("should attach `prometheus=shoot` to vpa-admission-controller ServiceMonitor", func() {
+					It("should label `prometheus=shoot` to vpa-admission-controller ServiceMonitor", func() {
 						serviceMonitor := &monitoringv1.ServiceMonitor{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-admission-controller"}, serviceMonitor)).To(Succeed())
 
-						By("verify Prometheus label")
-						Expect(serviceMonitor.Labels).To(Equal(serviceMonitorAdmissionController.ObjectMeta.Labels))
-
-						By("verify object")
 						Expect(serviceMonitor).To(Equal(serviceMonitorAdmissionController))
 					})
 
-					It("should attach `prometheus=shoot` to vpa-recommender ServiceMonitor", func() {
+					It("should label `prometheus=shoot` to vpa-recommender ServiceMonitor", func() {
 						serviceMonitorExpected := serviceMonitorRecommenderFor(component.ClusterTypeShoot)
 						serviceMonitorExpected.ResourceVersion = "1"
 
 						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitorActual)).To(Succeed())
 
-						By("verify Prometheus label")
-						Expect(serviceMonitorActual.Labels).To(Equal(serviceMonitorExpected.ObjectMeta.Labels))
-
-						By("verify object")
 						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
 				})
@@ -1770,26 +1762,18 @@ var _ = Describe("VPA", func() {
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 
-					It("should attach `prometheus=shoot` to vpa-admission-controller ServiceMonitor", func() {
+					It("should label `prometheus=shoot` to vpa-admission-controller ServiceMonitor", func() {
 						serviceMonitor := &monitoringv1.ServiceMonitor{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-admission-controller"}, serviceMonitor)).To(Succeed())
 
-						By("verify Prometheus label")
-						Expect(serviceMonitor.Labels).To(Equal(serviceMonitorAdmissionController.ObjectMeta.Labels))
-
-						By("verify object")
 						Expect(serviceMonitor).To(Equal(serviceMonitorAdmissionController))
 					})
 
-					It("should attach `prometheus=shoot` to vpa-recommender ServiceMonitor", func() {
+					It("should label `prometheus=shoot` to vpa-recommender ServiceMonitor", func() {
 						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitorActual)).To(Succeed())
 
-						By("verify Prometheus label")
-						Expect(serviceMonitorActual.Labels).To(Equal(serviceMonitorExpected.ObjectMeta.Labels))
-
-						By("verify object")
-						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorRecommender))
 					})
 				})
 			})
