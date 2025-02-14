@@ -178,31 +178,29 @@ var _ = Describe("GardenClientMap", func() {
 			Expect(err).To(MatchError("fake"))
 		})
 
-		Context("correctly calculate hash", func() {
-			It("when in-cluster", func() {
-				gomock.InOrder(
-					mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-							(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
-							return nil
-						}),
-					mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-							(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
-							return nil
-						}),
-				)
+		It("should correctly calculate hash", func() {
+			gomock.InOrder(
+				mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
+						return nil
+					}),
+				mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
+						return nil
+					}),
+			)
 
-				hash, err := factory.CalculateClientSetHash(ctx, key)
-				Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
-				Expect(err).NotTo(HaveOccurred())
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+			Expect(err).NotTo(HaveOccurred())
 
-				Expect(factory.InvalidateClient(key)).To(Succeed())
+			Expect(factory.InvalidateClient(key)).To(Succeed())
 
-				hash, err = factory.CalculateClientSetHash(ctx, keys.ForGarden(garden))
-				Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
-				Expect(err).NotTo(HaveOccurred())
-			})
+			hash, err = factory.CalculateClientSetHash(ctx, keys.ForGarden(garden))
+			Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })
