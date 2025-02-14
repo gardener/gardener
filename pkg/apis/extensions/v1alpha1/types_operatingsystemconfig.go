@@ -8,6 +8,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ Object = (*OperatingSystemConfig)(nil)
@@ -85,18 +87,9 @@ type OperatingSystemConfigSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Files []File `json:"files,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
-	// OperatingSystemVersion is the version of the operating system.
+	// InPlaceUpdates contains the configuration for in-place updates.
 	// +optional
-	OperatingSystemVersion *string `json:"osVersion,omitempty"`
-	// KubeletVersion is the version of the Kubelet.
-	// +optional
-	KubeletVersion *string `json:"kubeletVersion,omitempty"`
-	// CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.
-	// +optional
-	CredentialsRotation *CredentialsRotation `json:"credentialsRotation,omitempty"`
-	// KubeletConfigHash is the hash calculated on the fields relevant to in-place update of the Kubelet configuration.
-	// +optional
-	KubeletConfigHash *string `json:"kubeletConfigHash,omitempty"`
+	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty"`
 }
 
 // Unit is a unit for the operating system configuration (usually, a systemd unit).
@@ -217,7 +210,7 @@ type OperatingSystemConfigStatus struct {
 	CloudConfig *CloudConfig `json:"cloudConfig,omitempty"`
 	// InPlaceUpdates contains the configuration for in-place updates.
 	// +optional
-	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty"`
+	InPlaceUpdates *InPlaceUpdatesStatus `json:"inPlaceUpdates,omitempty"`
 }
 
 // CloudConfig contains the generated output for the given operating system
@@ -368,6 +361,34 @@ const (
 
 // InPlaceUpdates is a structure containing configuration for in-place updates.
 type InPlaceUpdates struct {
+	// OperatingSystemVersion is the version of the operating system.
+	OperatingSystemVersion string `json:"operatingSystemVersion"`
+	// Kubelet contains the configuration for the kubelet.
+	Kubelet KubeletConfig `json:"kubelet"`
+	// CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.
+	// +optional
+	CredentialsRotation *CredentialsRotation `json:"credentialsRotation,omitempty"`
+}
+
+type KubeletConfig struct {
+	// Version is the version of the kubelet.
+	Version string `json:"version"`
+	// CPUManagerPolicy allows to set alternative CPU management policies (default: none).
+	// +optional
+	CPUManagerPolicy *string `json:"cpuManagerPolicy,omitempty"`
+	// EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction.
+	// +optional
+	EvictionHard *gardencorev1beta1.KubeletConfigEviction `json:"evictionHard,omitempty"`
+	// KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
+	// +optional
+	KubeReserved *gardencorev1beta1.KubeletConfigReserved `json:"kubeReserved,omitempty"`
+	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
+	// +optional
+	SystemReserved *gardencorev1beta1.KubeletConfigReserved `json:"systemReserved,omitempty"`
+}
+
+// InPlaceUpdates is a structure containing configuration for in-place updates.
+type InPlaceUpdatesStatus struct {
 	// OSUpdate defines the configuration for the operating system update.
 	// +optional
 	OSUpdate *OSUpdate `json:"osUpdate,omitempty"`
@@ -376,8 +397,7 @@ type InPlaceUpdates struct {
 // OSUpdate contains the configuration for the operating system update.
 type OSUpdate struct {
 	// Command defines the command responsible for performing machine image updates.
-	// +optional
-	Command *string `json:"command,omitempty"`
+	Command string `json:"command"`
 	// Args provides a mechanism to pass additional arguments or flags to the Command.
 	// +optional
 	Args []string `json:"args,omitempty"`

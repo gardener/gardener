@@ -1457,52 +1457,16 @@ This field is immutable.</p>
 </tr>
 <tr>
 <td>
-<code>osVersion</code></br>
+<code>inPlaceUpdates</code></br>
 <em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>OperatingSystemVersion is the version of the operating system.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>kubeletVersion</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>KubeletVersion is the version of the Kubelet.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>credentialsRotation</code></br>
-<em>
-<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">
-CredentialsRotation
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">
+InPlaceUpdates
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>kubeletConfigHash</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>KubeletConfigHash is the hash calculated on the fields relevant to in-place update of the Kubelet configuration.</p>
+<p>InPlaceUpdates contains the configuration for in-place updates.</p>
 </td>
 </tr>
 </table>
@@ -2667,7 +2631,7 @@ DefaultStatus
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">InPlaceUpdates</a>)
 </p>
 <p>
 <p>CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.</p>
@@ -3537,6 +3501,63 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+</p>
+<p>
+<p>InPlaceUpdates is a structure containing configuration for in-place updates.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>operatingSystemVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>OperatingSystemVersion is the version of the operating system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubelet</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.KubeletConfig">
+KubeletConfig
+</a>
+</em>
+</td>
+<td>
+<p>Kubelet contains the configuration for the kubelet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRotation</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">
+CredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.InPlaceUpdatesStatus">InPlaceUpdatesStatus
+</h3>
+<p>
+(<em>Appears on:</em>
 <a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
 </p>
 <p>
@@ -3764,6 +3785,89 @@ InfrastructureStatusNetworking
 <td>
 <em>(Optional)</em>
 <p>Services are the CIDRs of the service network.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.KubeletConfig">KubeletConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">InPlaceUpdates</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Version is the version of the kubelet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cpuManagerPolicy</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CPUManagerPolicy allows to set alternative CPU management policies (default: none).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>evictionHard</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.KubeletConfigEviction">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeReserved</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.KubeletConfigReserved">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>systemReserved</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.KubeletConfigReserved">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).</p>
 </td>
 </tr>
 </tbody>
@@ -4018,7 +4122,7 @@ Kubernetes core/v1.ResourceList
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">InPlaceUpdates</a>)
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdatesStatus">InPlaceUpdatesStatus</a>)
 </p>
 <p>
 <p>OSUpdate contains the configuration for the operating system update.</p>
@@ -4039,7 +4143,6 @@ string
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Command defines the command responsible for performing machine image updates.</p>
 </td>
 </tr>
@@ -4164,52 +4267,16 @@ This field is immutable.</p>
 </tr>
 <tr>
 <td>
-<code>osVersion</code></br>
+<code>inPlaceUpdates</code></br>
 <em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>OperatingSystemVersion is the version of the operating system.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>kubeletVersion</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>KubeletVersion is the version of the Kubelet.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>credentialsRotation</code></br>
-<em>
-<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">
-CredentialsRotation
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">
+InPlaceUpdates
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>kubeletConfigHash</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>KubeletConfigHash is the hash calculated on the fields relevant to in-place update of the Kubelet configuration.</p>
+<p>InPlaceUpdates contains the configuration for in-place updates.</p>
 </td>
 </tr>
 </tbody>
@@ -4295,8 +4362,8 @@ After Gardener v1.112, this will be only set for OperatingSystemConfigs with pur
 <td>
 <code>inPlaceUpdates</code></br>
 <em>
-<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">
-InPlaceUpdates
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdatesStatus">
+InPlaceUpdatesStatus
 </a>
 </em>
 </td>
