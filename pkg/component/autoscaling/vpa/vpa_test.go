@@ -150,7 +150,7 @@ var _ = Describe("VPA", func() {
 		deploymentAdmissionControllerFor       func(bool) *appsv1.Deployment
 		podDisruptionBudgetAdmissionController *policyv1.PodDisruptionBudget
 		vpaAdmissionController                 *vpaautoscalingv1.VerticalPodAutoscaler
-		serviceMonitorAdmissionController      *monitoringv1.ServiceMonitor
+		serviceMonitorAdmissionControllerFor   func(clusterType component.ClusterType, isGardenCluster bool) *monitoringv1.ServiceMonitor
 
 		clusterRoleGeneralActor               *rbacv1.ClusterRole
 		clusterRoleBindingGeneralActor        *rbacv1.ClusterRoleBinding
@@ -1182,44 +1182,58 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
-		serviceMonitorAdmissionController = &monitoringv1.ServiceMonitor{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "monitoring.coreos.com/v1",
-				Kind:       "ServiceMonitor",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "seed-vpa-admission-controller",
-				Namespace: namespace,
-				Labels:    map[string]string{"prometheus": "seed"},
-			},
-			Spec: monitoringv1.ServiceMonitorSpec{
-				Selector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app":                 "vpa-admission-controller",
-						"gardener.cloud/role": "vpa",
-					},
+		serviceMonitorAdmissionControllerFor = func(clusterType component.ClusterType, isGardenCluster bool) *monitoringv1.ServiceMonitor {
+			obj := &monitoringv1.ServiceMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
 				},
-				NamespaceSelector: monitoringv1.NamespaceSelector{Any: false},
-				Endpoints: []monitoringv1.Endpoint{{
-					Port: "metrics",
-					RelabelConfigs: []monitoringv1.RelabelConfig{
-						{
-							Action:      "replace",
-							Replacement: ptr.To("vpa-admission-controller"),
-							TargetLabel: "job",
-						},
-						{
-							SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_container_port_name"},
-							Regex:        "metrics",
-							Action:       "keep",
-						},
-						{
-							Action: "labelmap",
-							Regex:  `__meta_kubernetes_pod_label_(.+)`,
+				Spec: monitoringv1.ServiceMonitorSpec{
+					Selector: metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app":                 "vpa-admission-controller",
+							"gardener.cloud/role": "vpa",
 						},
 					},
-				}},
-			},
+					NamespaceSelector: monitoringv1.NamespaceSelector{Any: false},
+					Endpoints: []monitoringv1.Endpoint{{
+						Port: "metrics",
+						RelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								Action:      "replace",
+								Replacement: ptr.To("vpa-admission-controller"),
+								TargetLabel: "job",
+							},
+							{
+								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_container_port_name"},
+								Regex:        "metrics",
+								Action:       "keep",
+							},
+							{
+								Action: "labelmap",
+								Regex:  `__meta_kubernetes_pod_label_(.+)`,
+							},
+						},
+					}},
+				},
+			}
+
+			if clusterType == component.ClusterTypeSeed {
+				if isGardenCluster {
+					obj.Labels = map[string]string{"prometheus": "garden"}
+					obj.Name = "garden-vpa-admission-controller"
+				} else {
+					obj.Labels = map[string]string{"prometheus": "seed"}
+					obj.Name = "seed-vpa-admission-controller"
+				}
+			}
+
+			if clusterType == component.ClusterTypeShoot {
+				obj.Labels = map[string]string{"prometheus": "shoot"}
+				obj.Name = "shoot-vpa-admission-controller"
+				obj.ResourceVersion = "1"
+			}
+
+			return obj
 		}
 
 		clusterRoleGeneralActor = &rbacv1.ClusterRole{
@@ -1422,10 +1436,7 @@ var _ = Describe("VPA", func() {
 					})
 
 					It("should label vpa-admission-controller ServiceMonitor with `prometheus=garden`", func() {
-						serviceMonitorAdmissionController.ObjectMeta.Name = "garden-vpa-admission-controller"
-						serviceMonitorAdmissionController.ObjectMeta.Labels = map[string]string{
-							"prometheus": "garden",
-						}
+						serviceMonitorAdmissionController := serviceMonitorAdmissionControllerFor(component.ClusterTypeSeed, true)
 						Expect(managedResource).To(contain(serviceMonitorAdmissionController))
 					})
 
@@ -1441,6 +1452,7 @@ var _ = Describe("VPA", func() {
 					})
 
 					It("should label vpa-admission-controller ServiceMonitor with `prometheus=seed`", func() {
+						serviceMonitorAdmissionController := serviceMonitorAdmissionControllerFor(component.ClusterTypeSeed, false)
 						Expect(managedResource).To(contain(serviceMonitorAdmissionController))
 					})
 
@@ -1555,7 +1567,7 @@ var _ = Describe("VPA", func() {
 						serviceAdmissionControllerFor(component.ClusterTypeSeed, false),
 						deploymentAdmissionController,
 						vpaAdmissionController,
-						serviceMonitorAdmissionController,
+						serviceMonitorAdmissionControllerFor(component.ClusterTypeSeed, false),
 					)
 
 					By("Verify general resources")
@@ -1719,20 +1731,6 @@ var _ = Describe("VPA", func() {
 			})
 
 			Context("when deploying ServiceMonitors", func() {
-				var serviceMonitorRecommender = &monitoringv1.ServiceMonitor{}
-
-				BeforeEach(func() {
-					serviceMonitorAdmissionController.TypeMeta = metav1.TypeMeta{}
-					serviceMonitorAdmissionController.ResourceVersion = "1"
-					serviceMonitorAdmissionController.ObjectMeta.Name = "shoot-vpa-admission-controller"
-					serviceMonitorAdmissionController.ObjectMeta.Labels = map[string]string{
-						"prometheus": "shoot",
-					}
-
-					serviceMonitorRecommender = serviceMonitorRecommenderFor(component.ClusterTypeShoot, false)
-					serviceMonitorRecommender.ResourceVersion = "1"
-				})
-
 				Context("in a garden cluster", func() {
 					BeforeEach(func() {
 						vpa = vpaFor(component.ClusterTypeShoot, true)
@@ -1743,6 +1741,7 @@ var _ = Describe("VPA", func() {
 						serviceMonitor := &monitoringv1.ServiceMonitor{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-admission-controller"}, serviceMonitor)).To(Succeed())
 
+						serviceMonitorAdmissionController := serviceMonitorAdmissionControllerFor(component.ClusterTypeShoot, true)
 						Expect(serviceMonitor).To(Equal(serviceMonitorAdmissionController))
 					})
 
@@ -1767,14 +1766,18 @@ var _ = Describe("VPA", func() {
 						serviceMonitor := &monitoringv1.ServiceMonitor{}
 						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-admission-controller"}, serviceMonitor)).To(Succeed())
 
+						serviceMonitorAdmissionController := serviceMonitorAdmissionControllerFor(component.ClusterTypeShoot, false)
 						Expect(serviceMonitor).To(Equal(serviceMonitorAdmissionController))
 					})
 
 					It("should label `prometheus=shoot` to vpa-recommender ServiceMonitor", func() {
-						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
-						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitorActual)).To(Succeed())
+						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeShoot, false)
+						serviceMonitorRecommender.ResourceVersion = "1"
 
-						Expect(serviceMonitorActual).To(Equal(serviceMonitorRecommender))
+						serviceMonitor := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitor)).To(Succeed())
+
+						Expect(serviceMonitor).To(Equal(serviceMonitorRecommender))
 					})
 				})
 			})
