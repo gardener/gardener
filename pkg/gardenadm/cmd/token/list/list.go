@@ -9,11 +9,12 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"k8s.io/cli-runtime/pkg/genericiooptions"
+
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
 
 // NewCommand creates a new cobra.Command.
-func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
+func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 	opts := &Options{}
 
 	cmd := &cobra.Command{
@@ -33,7 +34,7 @@ gardenadm token list`,
 				return err
 			}
 
-			return run(cmd.Context(), ioStreams, opts)
+			return run(cmd.Context(), globalOpts, opts)
 		},
 	}
 
@@ -42,7 +43,7 @@ gardenadm token list`,
 	return cmd
 }
 
-func run(_ context.Context, ioStreams genericiooptions.IOStreams, _ *Options) error {
-	fmt.Fprintln(ioStreams.Out, "not implemented")
+func run(_ context.Context, globalOpts *cmd.Options, _ *Options) error {
+	fmt.Fprintln(globalOpts.IOStreams.Out, "not implemented")
 	return nil
 }
