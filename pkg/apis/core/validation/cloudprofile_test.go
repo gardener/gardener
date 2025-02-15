@@ -102,9 +102,8 @@ var (
 			MinSize: &negativeQuantity,
 		},
 	}
-	machineImageName = "some-machine-image"
-	regionName       = "region1"
-	zoneName         = "zone1"
+	regionName = "region1"
+	zoneName   = "zone1"
 
 	supportedClassification  = core.ClassificationSupported
 	previewClassification    = core.ClassificationPreview
