@@ -19,7 +19,6 @@ import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -214,7 +213,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							NodeCIDRMaskSize: ptr.To[int32](22),
 							HorizontalPodAutoscalerConfig: &core.HorizontalPodAutoscalerConfig{
 								SyncPeriod: &metav1.Duration{Duration: 30 * time.Second},
-								Tolerance:  ptr.To(float64(0.1)),
+								Tolerance:  ptr.To(0.1),
 							},
 						},
 					},
@@ -1425,29 +1424,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Entry("valid with empty options", core.ClusterAutoscalerOptions{}, BeEmpty()),
 					Entry("valid with nil options", nil, BeEmpty()),
 					Entry("valid with all options", core.ClusterAutoscalerOptions{
-						ScaleDownUtilizationThreshold:    ptr.To(float64(0.5)),
-						ScaleDownGpuUtilizationThreshold: ptr.To(float64(0.5)),
+						ScaleDownUtilizationThreshold:    ptr.To(0.5),
+						ScaleDownGpuUtilizationThreshold: ptr.To(0.5),
 						ScaleDownUnneededTime:            ptr.To(positiveDuration),
 						ScaleDownUnreadyTime:             ptr.To(positiveDuration),
 						MaxNodeProvisionTime:             ptr.To(positiveDuration),
 					}, BeEmpty()),
 					Entry("valid with ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownUtilizationThreshold: ptr.To(float64(0.5)),
+						ScaleDownUtilizationThreshold: ptr.To(0.5),
 					}, BeEmpty()),
 					Entry("invalid negative ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownUtilizationThreshold: ptr.To(float64(-0.5)),
+						ScaleDownUtilizationThreshold: ptr.To(-0.5),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 					Entry("invalid > 1 ScaleDownUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownUtilizationThreshold: ptr.To(float64(1.5)),
+						ScaleDownUtilizationThreshold: ptr.To(1.5),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 					Entry("valid with ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownGpuUtilizationThreshold: ptr.To(float64(0.5)),
+						ScaleDownGpuUtilizationThreshold: ptr.To(0.5),
 					}, BeEmpty()),
 					Entry("invalid negative ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownGpuUtilizationThreshold: ptr.To(float64(-0.5)),
+						ScaleDownGpuUtilizationThreshold: ptr.To(-0.5),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownGpuUtilizationThreshold"), -0.5, "can not be negative"))),
 					Entry("invalid > 1 ScaleDownGpuUtilizationThreshold", core.ClusterAutoscalerOptions{
-						ScaleDownGpuUtilizationThreshold: ptr.To(float64(1.5)),
+						ScaleDownGpuUtilizationThreshold: ptr.To(1.5),
 					}, ConsistOf(field.Invalid(field.NewPath("scaleDownGpuUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 					Entry("valid with ScaleDownUnneededTime", core.ClusterAutoscalerOptions{
 						ScaleDownUnneededTime: ptr.To(metav1.Duration{Duration: time.Minute}),
@@ -2854,13 +2853,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("valid", core.ClusterAutoscaler{}, version_1_28, BeEmpty()),
 				Entry("valid", core.ClusterAutoscaler{}, version_1_30, BeEmpty()),
 				Entry("valid with threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: ptr.To(float64(0.5)),
+					ScaleDownUtilizationThreshold: ptr.To(0.5),
 				}, version_1_28, BeEmpty()),
 				Entry("invalid negative threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: ptr.To(float64(-0.5)),
+					ScaleDownUtilizationThreshold: ptr.To(-0.5),
 				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 				Entry("invalid > 1 threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: ptr.To(float64(1.5)),
+					ScaleDownUtilizationThreshold: ptr.To(1.5),
 				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 				Entry("valid with maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &metav1.Duration{Duration: time.Minute},
@@ -5551,7 +5550,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 
-				It("should forbid changing the voulume details", func() {
+				It("should forbid changing the volume details", func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 					shoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
 					shoot.Spec.Provider.Workers[0].Volume = &core.Volume{Name: ptr.To("foo")}
@@ -5589,7 +5588,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("uid checks", func() {
 			It("should allow setting the uid", func() {
-				newShoot.Status.UID = types.UID("1234")
+				newShoot.Status.UID = "1234"
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 
@@ -5597,8 +5596,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid changing the uid", func() {
-				shoot.Status.UID = types.UID("1234")
-				newShoot.Status.UID = types.UID("1235")
+				shoot.Status.UID = "1234"
+				newShoot.Status.UID = "1235"
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 
@@ -6077,7 +6076,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			// invalid effects
 			Entry("no effect", []corev1.Taint{{Key: "foo", Value: "bar"}}, field.ErrorTypeRequired),
-			Entry("non-existing", []corev1.Taint{{Key: "foo", Value: "bar", Effect: corev1.TaintEffect("does-not-exist")}}, field.ErrorTypeNotSupported),
+			Entry("non-existing", []corev1.Taint{{Key: "foo", Value: "bar", Effect: "does-not-exist"}}, field.ErrorTypeNotSupported),
 
 			// uniqueness by key/effect
 			Entry("not unique", []corev1.Taint{{Key: "foo", Value: "bar", Effect: corev1.TaintEffectNoSchedule}, {Key: "foo", Value: "baz", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeDuplicate),

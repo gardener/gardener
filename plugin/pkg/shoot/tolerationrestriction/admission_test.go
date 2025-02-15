@@ -20,7 +20,7 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
 )
 
-var _ = Describe("tolerationrestriction", func() {
+var _ = Describe("toleration restriction", func() {
 	Describe("#Admit", func() {
 		var (
 			namespace = "dummy"

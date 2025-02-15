@@ -746,7 +746,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 		It("should overwrite coredns autoscaling mode field to horizontal when mode is not horizontal or cluster-proportional for shoot with workers", func() {
 			obj.Spec.SystemComponents = &SystemComponents{
-				CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingMode("foo")}},
+				CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: "foo"}},
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -833,7 +833,7 @@ var _ = Describe("Shoot defaulting", func() {
 				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},
 				ScaleDownDelayAfterFailure:    &metav1.Duration{Duration: 3 * time.Hour},
 				ScaleDownUnneededTime:         &metav1.Duration{Duration: 4 * time.Hour},
-				ScaleDownUtilizationThreshold: ptr.To(float64(0.8)),
+				ScaleDownUtilizationThreshold: ptr.To(0.8),
 				ScanInterval:                  &metav1.Duration{Duration: 5 * time.Hour},
 				Expander:                      &expanderRandom,
 				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
@@ -850,7 +850,7 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterDelete).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownDelayAfterFailure).To(PointTo(Equal(metav1.Duration{Duration: 3 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUnneededTime).To(PointTo(Equal(metav1.Duration{Duration: 4 * time.Hour})))
-			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUtilizationThreshold).To(PointTo(Equal(float64(0.8))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUtilizationThreshold).To(PointTo(Equal(0.8)))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.ScanInterval).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Expander).To(PointTo(Equal(ClusterAutoscalerExpanderRandom)))
