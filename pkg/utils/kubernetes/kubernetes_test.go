@@ -23,6 +23,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -1348,6 +1349,57 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 
 				Expect(toleration1).ToNot(BeIdenticalTo(toleration2))
 			})
+		})
+	})
+
+	Describe("#MaximumResourcesFromResourceList", func() {
+		var resources corev1.ResourceList
+
+		BeforeEach(func() {
+			resources = corev1.ResourceList{
+				"cpu":    resource.MustParse("100m"),
+				"memory": resource.MustParse("200Mi"),
+			}
+		})
+
+		It("should keep values when they are the same", func() {
+			newResources := corev1.ResourceList{
+				"cpu":    resource.MustParse("100m"),
+				"memory": resource.MustParse("200Mi"),
+			}
+
+			Expect(MaximumResourcesFromResourceList(resources, newResources)).To(Equal(resources))
+		})
+
+		It("should not change values as existing quantities are higher", func() {
+			newResources := corev1.ResourceList{
+				"cpu":    resource.MustParse("99m"),
+				"memory": resource.MustParse("199Mi"),
+			}
+
+			Expect(MaximumResourcesFromResourceList(resources, newResources)).To(Equal(resources))
+		})
+
+		It("should overwrite and merge affected values", func() {
+			newResources := corev1.ResourceList{
+				"cpu":     resource.MustParse("101m"),
+				"storage": resource.MustParse("10Gi"),
+			}
+
+			Expect(MaximumResourcesFromResourceList(resources, newResources)).To(Equal(corev1.ResourceList{
+				"cpu":     resource.MustParse("101m"),
+				"memory":  resource.MustParse("200Mi"),
+				"storage": resource.MustParse("10Gi"),
+			}))
+		})
+
+		It("should overwrite all values", func() {
+			newResources := corev1.ResourceList{
+				"cpu":    resource.MustParse("101m"),
+				"memory": resource.MustParse("201Mi"),
+			}
+
+			Expect(MaximumResourcesFromResourceList(resources, newResources)).To(Equal(newResources))
 		})
 	})
 })

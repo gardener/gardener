@@ -67,7 +67,7 @@ var _ = Describe("Etcd", func() {
 		etcd       Interface
 		log        logr.Logger
 
-		ctx                     = context.TODO()
+		ctx                     = context.Background()
 		fakeErr                 = errors.New("fake err")
 		class                   = ClassNormal
 		replicas                = ptr.To[int32](1)
@@ -89,6 +89,7 @@ var _ = Describe("Etcd", func() {
 		}
 		highAvailabilityEnabled bool
 		caRotationPhase         gardencorev1beta1.CredentialsRotationPhase
+		autoscalingConfig       AutoscalingConfig
 		backupConfig            *BackupConfig
 		now                     = time.Time{}
 		quota                   = resource.MustParse("8Gi")
@@ -351,7 +352,12 @@ var _ = Describe("Etcd", func() {
 			return obj
 		}
 
-		expectedVPAFor = func(class Class, evictionRequirement string) *vpaautoscalingv1.VerticalPodAutoscaler {
+		expectedVPAFor = func(class Class, evictionRequirement string, minAllowed corev1.ResourceList) *vpaautoscalingv1.VerticalPodAutoscaler {
+			minAllowedConfig := minAllowed
+			if minAllowedConfig == nil {
+				minAllowedConfig = corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}
+			}
+
 			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      vpaName,
@@ -370,7 +376,7 @@ var _ = Describe("Etcd", func() {
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName:    "etcd",
-								MinAllowed:       corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")},
+								MinAllowed:       minAllowedConfig,
 								ControlledValues: &controlledValues,
 								Mode:             &containerPolicyAuto,
 							},
@@ -671,8 +677,10 @@ var _ = Describe("Etcd", func() {
 		caRotationPhase = ""
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, testNamespace)
+		autoscalingConfig = AutoscalingConfig{}
 		backupConfig = nil
 		replicas = ptr.To[int32](1)
+		highAvailabilityEnabled = false
 	})
 
 	JustBeforeEach(func() {
@@ -686,6 +694,7 @@ var _ = Describe("Etcd", func() {
 			Role:                    testRole,
 			Class:                   class,
 			Replicas:                replicas,
+			Autoscaling:             autoscalingConfig,
 			StorageCapacity:         storageCapacity,
 			StorageClassName:        &storageClassName,
 			DefragmentationSchedule: &defragmentationSchedule,
@@ -744,7 +753,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+					Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -815,7 +824,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+					Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -891,7 +900,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+					Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -956,7 +965,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+					Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1020,7 +1029,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+					Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1061,7 +1070,7 @@ var _ = Describe("Etcd", func() {
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-					Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+					Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1125,7 +1134,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-						Expect(obj).To(DeepEqual(expectedVPAFor(class, evictionRequirement)))
+						Expect(obj).To(DeepEqual(expectedVPAFor(class, evictionRequirement, nil)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1181,7 +1190,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+						Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1245,7 +1254,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+						Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1302,7 +1311,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+						Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1458,6 +1467,10 @@ var _ = Describe("Etcd", func() {
 			})
 
 			Context("when peer url secrets are present in etcd CR", func() {
+				BeforeEach(func() {
+					highAvailabilityEnabled = true
+				})
+
 				It("should not remove peer URL secrets", func() {
 					var clientSecretName string
 
@@ -1499,7 +1512,7 @@ var _ = Describe("Etcd", func() {
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-							Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+							Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1516,6 +1529,10 @@ var _ = Describe("Etcd", func() {
 			})
 
 			Context("when peer url secrets are not present in etcd CR", func() {
+				BeforeEach(func() {
+					highAvailabilityEnabled = true
+				})
+
 				It("should add peer url secrets", func() {
 					var clientSecretName string
 
@@ -1546,7 +1563,7 @@ var _ = Describe("Etcd", func() {
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-							Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+							Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1608,7 +1625,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+						Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1681,11 +1698,70 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-						Expect(obj).To(DeepEqual(expectedVPAFor(class, "")))
+						Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "garden-virtual-garden-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(serviceMonitor("garden", "etcd-client")))
+					}),
+				)
+
+				Expect(etcd.Deploy(ctx)).To(Succeed())
+			})
+		})
+
+		When("minAllowed is configured", func() {
+			var minAllowed corev1.ResourceList
+
+			BeforeEach(func() {
+				minAllowed = corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("250m"),
+					corev1.ResourceMemory: resource.MustParse("1.5Gi"),
+				}
+
+				autoscalingConfig.MinAllowed = minAllowed
+			})
+
+			It("should successfully deploy the VPA resource", func() {
+				oldTimeNow := TimeNow
+				defer func() { TimeNow = oldTimeNow }()
+				TimeNow = func() time.Time { return now }
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(etcdObjFor(
+							class,
+							1,
+							nil,
+							"",
+							"",
+							&corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("300m"),
+									corev1.ResourceMemory: resource.MustParse("1.5Gi"),
+								},
+							},
+							nil,
+							secretNameCA,
+							secretNameClient,
+							secretNameServer,
+							nil,
+							nil,
+							false)))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+						Expect(obj).To(DeepEqual(expectedVPAFor(class, "", minAllowed)))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+					}),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
 					}),
 				)
 
