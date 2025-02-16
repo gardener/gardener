@@ -1481,4 +1481,15 @@ var _ = Describe("Helper", func() {
 			Expect(LastInitiationTimeForWorkerPool(poolName, []gardencorev1beta1.PendingWorkersRollout{{Name: poolName, LastInitiationTime: poolLastInitiationTime}}, globalLastInitiationTime)).To(Equal(poolLastInitiationTime))
 		})
 	})
+
+	DescribeTable("#IsUpdateStrategyInPlace",
+		func(updateStrategy *gardencorev1beta1.MachineUpdateStrategy, expected bool) {
+			Expect(IsUpdateStrategyInPlace(updateStrategy)).To(Equal(expected))
+		},
+
+		Entry("with nil", nil, false),
+		Entry("with AutoRollingUpdate update strategy", ptr.To(gardencorev1beta1.AutoRollingUpdate), false),
+		Entry("with AutoInPlaceUpdate update strategy", ptr.To(gardencorev1beta1.AutoInPlaceUpdate), true),
+		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
+	)
 })
