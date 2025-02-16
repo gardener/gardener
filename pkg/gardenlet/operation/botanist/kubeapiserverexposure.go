@@ -14,6 +14,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -92,7 +93,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.SeedNamespace,
 		func() *kubeapiserverexposure.SNIValues {
-			return &kubeapiserverexposure.SNIValues{
+			values := &kubeapiserverexposure.SNIValues{
 				Hosts: []string{
 					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 					gardenerutils.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
@@ -105,6 +106,12 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					Labels:    b.IstioLabels(),
 				},
 			}
+
+			if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
+				values.APIServerProxy = nil
+			}
+
+			return values
 		},
 	)
 }

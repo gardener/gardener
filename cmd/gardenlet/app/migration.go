@@ -6,6 +6,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -15,14 +16,24 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-func (g *garden) runMigrations(ctx context.Context, log logr.Logger) error {
+func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
 	log.Info("Migrating deprecated failure-domain.beta.kubernetes.io labels to topology.kubernetes.io")
 	if err := migrateDeprecatedTopologyLabels(ctx, log, g.mgr.GetClient(), g.mgr.GetConfig()); err != nil {
 		return err
+	}
+
+	if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
+		if err := verifyRemoveAPIServerProxyLegacyPortFeatureGate(ctx, gardenClient, g.config.SeedConfig.Name); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -105,4 +116,24 @@ func migrateDeprecatedTopologyLabels(ctx context.Context, log logr.Logger, seedC
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+// TODO(Wieneo): Remove this function when feature gate RemoveAPIServerProxyLegacyPort is removed
+func verifyRemoveAPIServerProxyLegacyPortFeatureGate(ctx context.Context, gardenClient client.Client, seedName string) error {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := gardenClient.List(ctx, shootList); err != nil {
+		return err
+	}
+
+	for _, k := range shootList.Items {
+		if specSeedName, statusSeedName := gardenerutils.GetShootSeedNames(&k); gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) != seedName {
+			continue
+		}
+
+		if cond := v1beta1helper.GetCondition(k.Status.Constraints, gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
+			return errors.New("the `proxy` port on the istio ingress gateway cannot be removed until all api server proxies in all shoots on this seed have been reconfigured to use the `tls-tunnel` port instead, i.e., the `RemoveAPIServerProxyLegacyPort` feature gate can only be enabled once all shoots have the `APIServerProxyUsesHTTPProxy` constraint with status `true`")
+		}
+	}
+
+	return nil
 }

@@ -206,9 +206,15 @@ var _ = Describe("#SNI", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVirtualService.Namespace, Name: expectedVirtualService.Name}, actualVirtualService)).To(Succeed())
 			Expect(actualVirtualService).To(BeComparableTo(expectedVirtualService, comptest.CmpOptsForVirtualService()))
 
+			managedResource := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: expectedManagedResource.Namespace,
+					Name:      expectedManagedResource.Name,
+				},
+			}
+
 			if apiServerProxyValues != nil {
-				managedResource := &resourcesv1alpha1.ManagedResource{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedManagedResource.Namespace, Name: expectedManagedResource.Name}, managedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedManagedResource.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResource.Spec.SecretRefs[0].Name}}
 				utilruntime.Must(references.InjectAnnotations(expectedManagedResource))
 				Expect(managedResource).To(DeepEqual(expectedManagedResource))
@@ -230,6 +236,8 @@ var _ = Describe("#SNI", func() {
 				actualEnvoyFilter := managedResourceEnvoyFilter.(*istionetworkingv1alpha3.EnvoyFilter)
 				// cannot validate the Spec as there is no meaningful way to unmarshal the data into the Golang structure
 				Expect(actualEnvoyFilter.ObjectMeta).To(DeepEqual(expectedEnvoyFilterObjectMeta))
+			} else {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError(), "should delete EnvoyFilter for apiserver-proxy")
 			}
 		}
 
@@ -242,6 +250,13 @@ var _ = Describe("#SNI", func() {
 		Context("when APIServer Proxy is not configured", func() {
 			BeforeEach(func() {
 				apiServerProxyValues = nil
+
+				// create EnvoyFilter to ensure that Deploy deletes it
+				envoyFilter := &istionetworkingv1alpha3.EnvoyFilter{
+					ObjectMeta: *expectedEnvoyFilterObjectMeta.DeepCopy(),
+				}
+				envoyFilter.ResourceVersion = ""
+				Expect(c.Create(ctx, envoyFilter)).To(Succeed())
 			})
 
 			It("should succeed deploying", func() {

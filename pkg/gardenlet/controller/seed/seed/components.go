@@ -262,6 +262,16 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenCluster bool) (component.DeployWaiter, map[string]string, string, error) {
 	labels := sharedcomponent.GetIstioZoneLabels(r.Config.SNI.Ingress.Labels, nil)
 
+	servicePorts := []corev1.ServicePort{
+		{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
+		{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)},
+	}
+
+	proxyProtocolEnabled := !features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort)
+	if proxyProtocolEnabled {
+		servicePorts = append(servicePorts, corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt32(8443)})
+	}
+
 	istioDeployer, err := sharedcomponent.NewIstio(
 		ctx,
 		r.SeedClientSet.Client(),
@@ -275,12 +285,8 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, isGardenC
 		seed.GetLoadBalancerServiceAnnotations(),
 		seed.GetLoadBalancerServiceExternalTrafficPolicy(),
 		r.Config.SNI.Ingress.ServiceExternalIP,
-		[]corev1.ServicePort{
-			{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt32(8443)},
-			{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
-			{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt32(vpnseedserver.GatewayPort)},
-		},
-		true,
+		servicePorts,
+		proxyProtocolEnabled,
 		seed.GetLoadBalancerServiceProxyProtocolTermination(),
 		true,
 		seed.GetInfo().Spec.Provider.Zones,

@@ -73,6 +73,18 @@ const (
 	// owner: @acumino @ary1992 @shafeeqes
 	// alpha: v1.113.0
 	InPlaceNodeUpdates featuregate.Feature = "InPlaceNodeUpdates"
+
+	// RemoveAPIServerProxyLegacyPort disables the proxy port (8443) on the istio-ingressgateway Services. It was previously
+	// used by the apiserver-proxy to route client traffic on the kubernetes Service to the corresponding API server using
+	// the TCP proxy protocol.
+	// As soon as a shoot has been reconciled by gardener v1.113+ the apiserver-proxy is reconfigured to use HTTP CONNECT
+	// on the tls-tunnel port (8132) instead, i.e., it reuses the reversed VPN path to connect to the correct API server.
+	// Operators can choose to remove the legacy apiserver-proxy port as soon as all shoots have switched to the new
+	// apiserver-proxy configuration. They might want to do so if they activate the ACL extension, which is vulnerable to
+	// proxy protocol headers of untrusted clients on the apiserver-proxy port.
+	// owner: @Wieneo @timebertt
+	// alpha: v1.113.0
+	RemoveAPIServerProxyLegacyPort featuregate.Feature = "RemoveAPIServerProxyLegacyPort"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -109,6 +121,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	NodeAgentAuthorizer:                      {Default: false, PreRelease: featuregate.Alpha},
 	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
+	RemoveAPIServerProxyLegacyPort:           {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
