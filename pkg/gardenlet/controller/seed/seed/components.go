@@ -128,12 +128,21 @@ func (r *Reconciler) instantiateComponents(
 	err error,
 ) {
 	// crds
-	c.machineCRD = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
-	c.extensionCRD = extensioncrds.NewCRD(r.SeedClientSet.Applier(), !seedIsGarden, true)
+	c.machineCRD, err = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
+	c.extensionCRD, err = extensioncrds.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), !seedIsGarden, true)
+	if err != nil {
+		return
+	}
 	c.etcdCRD = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	c.istioCRD = istio.NewCRD(r.SeedClientSet.ChartApplier())
 	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Applier(), nil)
-	c.fluentCRD = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
+	c.fluentCRD, err = fluentoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return
