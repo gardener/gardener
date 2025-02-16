@@ -664,6 +664,10 @@ const (
 	// trigger force-deletion of the cluster. It can only be set if the Shoot has a deletion timestamp and contains an ErrorCode in the Shoot Status.
 	AnnotationConfirmationForceDeletion = "confirmation.gardener.cloud/force-deletion"
 	// AnnotationManagedSeedAPIServer is a constant for an annotation on a Shoot resource containing the API server settings for a managed seed.
+	//
+	// Deprecated: The annotation is deprecated and will be removed in a future release.
+	// Instead, consider enabling high availability for the ManagedSeed's Shoot control plane.
+	// TODO(ialidzhikov): Remove the support for the annotation in v1.119.
 	AnnotationManagedSeedAPIServer = "shoot.gardener.cloud/managed-seed-api-server"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
 	// if alerts for this cluster should be ignored

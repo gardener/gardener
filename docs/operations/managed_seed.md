@@ -47,6 +47,8 @@ It is also possible to trigger the renewal on the secret directly, see [Rotate C
 
 ### Specifying `apiServer` `replicas` and `autoscaler` Options
 
+> 📌 **Deprecation Notice**: The annotation `shoot.gardener.cloud/managed-seed-api-server` is deprecated and will be removed in a future release. Instead, consider enabling high availability for the ManagedSeed's Shoot control plane.
+
 There are few configuration options that are not supported in a `Shoot` resource but due to backward compatibility reasons it is possible to specify them for a `Shoot` that is referred by a `ManagedSeed`. These options are:
 
 Option | Description
