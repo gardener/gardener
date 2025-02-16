@@ -316,11 +316,21 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || !cleanupShootResources || nodeAgentAuthorizerWebhookReady,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
+		// if the shoot is hibernated, the step "deployKubeAPIServerWithNodeAgentAuthorizer" scales the kube-apiserver back to 0,
+		//   which breaks steps that need the ShootClientSet (as it will be uninitialized)
+		//
+		// scale the kube-apiserver server back up, just like the first time we deploy it
+		scaleUpKubeAPIServerWithNodeAgentAuthorizer = g.Add(flow.Task{
+			Name:         "Scaling up Kubernetes API server with node-agent-authorizer",
+			Fn:           flow.TaskFn(botanist.ScaleKubeAPIServerToOne).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !cleanupShootResources || kubeAPIServerDeploymentReplicas != 0,
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerWithNodeAgentAuthorizer),
+		})
 		waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server with node-agent-authorizer rolled out",
 			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait,
 			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) || !cleanupShootResources || nodeAgentAuthorizerWebhookReady,
-			Dependencies: flow.NewTaskIDs(deployKubeAPIServerWithNodeAgentAuthorizer),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerWithNodeAgentAuthorizer, scaleUpKubeAPIServerWithNodeAgentAuthorizer),
 		})
 		deployGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying Gardener shoot access resources",
