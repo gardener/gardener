@@ -344,6 +344,14 @@ honor_labels: true`
 							ContainerName: "config-reloader",
 							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 						},
+						{
+							ContainerName: "oauth2-proxy",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						},
+						{
+							ContainerName: "kube-rbac-proxy",
+							Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+						},
 					},
 				},
 			},

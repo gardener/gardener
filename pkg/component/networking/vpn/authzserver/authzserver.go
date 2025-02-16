@@ -115,7 +115,6 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
@@ -223,6 +222,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 					MinAllowed: corev1.ResourceList{
 						corev1.ResourceMemory: resource.MustParse("100Mi"),
 					},
+					ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 				},
 			},
 		}
