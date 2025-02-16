@@ -6,15 +6,15 @@ package bootstrap
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
-	"k8s.io/cli-runtime/pkg/genericiooptions"
+
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
 
 // NewCommand creates a new cobra.Command.
-func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
-	opts := &Options{}
+func NewCommand(globalOpts *cmd.Options) *cobra.Command {
+	opts := &Options{Options: globalOpts}
 
 	cmd := &cobra.Command{
 		Use:   "bootstrap",
@@ -24,8 +24,8 @@ func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
 		Example: `# Bootstrap the infrastructure
 gardenadm bootstrap --kubeconfig ~/.kube/config`,
 
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := opts.Complete(); err != nil {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := opts.ParseArgs(args); err != nil {
 				return err
 			}
 
@@ -33,7 +33,11 @@ gardenadm bootstrap --kubeconfig ~/.kube/config`,
 				return err
 			}
 
-			return run(cmd.Context(), ioStreams, opts)
+			if err := opts.Complete(); err != nil {
+				return err
+			}
+
+			return run(cmd.Context(), opts)
 		},
 	}
 
@@ -42,7 +46,7 @@ gardenadm bootstrap --kubeconfig ~/.kube/config`,
 	return cmd
 }
 
-func run(_ context.Context, ioStreams genericiooptions.IOStreams, _ *Options) error {
-	fmt.Fprintln(ioStreams.Out, "not implemented as well")
+func run(_ context.Context, opts *Options) error {
+	opts.Log.Info("Not implemented as well")
 	return nil
 }

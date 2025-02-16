@@ -8,16 +8,19 @@ import (
 	"fmt"
 
 	"github.com/spf13/pflag"
+
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
 
 // Options contains options for this command.
 type Options struct {
+	*cmd.Options
 	// Kubeconfig is the path to the kubeconfig file pointing to the garden cluster.
 	Kubeconfig string
 }
 
-// Complete completes the options.
-func (o *Options) Complete() error { return nil }
+// ParseArgs parses the arguments to the options.
+func (o *Options) ParseArgs(_ []string) error { return nil }
 
 // Validate validates the options.
 func (o *Options) Validate() error {
@@ -27,6 +30,9 @@ func (o *Options) Validate() error {
 
 	return nil
 }
+
+// Complete completes the options.
+func (o *Options) Complete() error { return nil }
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&o.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file pointing to the garden cluster")

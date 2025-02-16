@@ -22,14 +22,14 @@ var _ = Describe("Options", func() {
 		options = &Options{}
 	})
 
-	Describe("#Complete", func() {
+	Describe("#ParseArgs", func() {
 		It("should use the first argument as token", func() {
-			Expect(options.Complete([]string{token})).To(Succeed())
+			Expect(options.ParseArgs([]string{token})).To(Succeed())
 			Expect(options.Token).To(Equal(token))
 		})
 
 		It("should generate a random token", func() {
-			Expect(options.Complete(nil)).To(Succeed())
+			Expect(options.ParseArgs(nil)).To(Succeed())
 			Expect(options.Token).To(Equal("foo123.bar4567890baz123"))
 		})
 	})
@@ -43,6 +43,12 @@ var _ = Describe("Options", func() {
 
 		It("should fail because token is not set", func() {
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a token to create")))
+		})
+	})
+
+	Describe("#Complete", func() {
+		It("should return nil", func() {
+			Expect(options.Complete()).To(Succeed())
 		})
 	})
 })
