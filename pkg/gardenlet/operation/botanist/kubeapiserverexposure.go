@@ -12,13 +12,38 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
+	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // DefaultKubeAPIServerService returns a deployer for the kube-apiserver service.
 func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
+	deployer := []component.Deployer{
+		b.defaultKubeAPIServerServiceWithSuffix("", true),
+	}
+	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
+	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()) {
+		deployer = append(deployer, mutualTLSService)
+	} else {
+		deployer = append(deployer, component.OpDestroy(mutualTLSService))
+	}
+	return component.OpWait(deployer...)
+}
+
+func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register bool) component.DeployWaiter {
+	clusterIPsFunc := b.setAPIServerServiceClusterIPs
+	ingressFunc := func(address string) {
+		b.APIServerAddress = address
+		b.newDNSComponentsTargetingAPIServerAddress()
+	}
+	if !register {
+		clusterIPsFunc = nil
+		ingressFunc = nil
+	}
+
 	return kubeapiserverexposure.NewService(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -27,16 +52,14 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 			AnnotationsFunc:             func() map[string]string { return b.IstioLoadBalancerAnnotations() },
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
+			NameSuffix:                  suffix,
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: b.IstioServiceName(), Namespace: b.IstioNamespace()}
 		},
 		nil,
-		b.setAPIServerServiceClusterIPs,
-		func(address string) {
-			b.APIServerAddress = address
-			b.newDNSComponentsTargetingAPIServerAddress()
-		},
+		clusterIPsFunc,
+		ingressFunc,
 	)
 }
 
@@ -51,12 +74,14 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		b.SeedClientSet.Client(),
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
+				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()),
 			}
 		},
 	))
@@ -91,6 +116,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 		b.SeedClientSet.Client(),
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
 				Hosts: []string{
@@ -104,6 +130,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
+				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()),
 			}
 		},
 	)

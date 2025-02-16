@@ -42,6 +42,8 @@ import (
 )
 
 const (
+	// SecretNameServerCert is the name of the kube-apiserver server certificate secret.
+	SecretNameServerCert = "kube-apiserver"
 	// SecretNameUserKubeconfig is the name for the user kubeconfig.
 	SecretNameUserKubeconfig = "user-kubeconfig" // #nosec G101 -- No credential.
 	// ServicePortName is the name of the port in the service.

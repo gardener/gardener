@@ -18,23 +18,24 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature Gates for Alpha or Beta Features
 
-| Feature                                  | Default | Stage   | Since   | Until   |
-|------------------------------------------|---------|---------|---------|---------|
-| DefaultSeccompProfile                    | `false` | `Alpha` | `1.54`  |         |
-| UseNamespacedCloudProfile                | `false` | `Alpha` | `1.92`  | `1.111` |
-| UseNamespacedCloudProfile                | `true`  | `Beta`  | `1.112` |         |
-| ShootCredentialsBinding                  | `false` | `Alpha` | `1.98`  | `1.106` |
-| ShootCredentialsBinding                  | `true`  | `Beta`  | `1.107` |         |
-| NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  |         |
-| NewVPN                                   | `false` | `Alpha` | `1.104` |         |
-| NodeAgentAuthorizer                      | `false` | `Alpha` | `1.109` |         |
-| CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` |         |
-| InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
+| Feature                                     | Default | Stage   | Since   | Until   |
+|---------------------------------------------|---------|---------|---------|---------|
+| DefaultSeccompProfile                       | `false` | `Alpha` | `1.54`  |         |
+| UseNamespacedCloudProfile                   | `false` | `Alpha` | `1.92`  | `1.111` |
+| UseNamespacedCloudProfile                   | `true`  | `Beta`  | `1.112` |         |
+| ShootCredentialsBinding                     | `false` | `Alpha` | `1.98`  | `1.106` |
+| ShootCredentialsBinding                     | `true`  | `Beta`  | `1.107` |         |
+| NewWorkerPoolHash                           | `false` | `Alpha` | `1.98`  |         |
+| NewVPN                                      | `false` | `Alpha` | `1.104` |         |
+| NodeAgentAuthorizer                         | `false` | `Alpha` | `1.109` |         |
+| CredentialsRotationWithoutWorkersRollout    | `false` | `Alpha` | `1.112` |         |
+| InPlaceNodeUpdates                          | `false` | `Alpha` | `1.113` |         |
+| IstioTLSTermination                         | `false` | `Alpha` | `1.113` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 
 | Feature                                      | Default | Stage        | Since   | Until   |
-| -------------------------------------------- | ------- | ------------ | ------- | ------- |
+|----------------------------------------------|---------|--------------|---------|---------|
 | NodeLocalDNS                                 | `false` | `Alpha`      | `1.7`   | `1.25`  |
 | NodeLocalDNS                                 |         | `Removed`    | `1.26`  |         |
 | KonnectivityTunnel                           | `false` | `Alpha`      | `1.6`   | `1.26`  |
@@ -230,3 +231,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | NodeAgentAuthorizer                      | `gardenlet`, `gardener-node-agent` | Enables authorization of gardener-node-agent to `kube-apiserver` of shoot clusters using an authorization webhook. It restricts the permissions of each gardener-node-agent instance to the objects belonging to its own node only.                                                                                                                                                                                                                                                                                                                      |
 | CredentialsRotationWithoutWorkersRollout | `gardener-apiserver`               | CredentialsRotationWithoutWorkersRollout enables starting the credentials rotation without immediately causing a rolling update of all worker nodes. Instead, the rolling update can be triggered manually by the user at a later point in time of their convenience. This should only be enabled when all deployed provider extensions vendor at least `gardener/gardener@v1.111+`.                                                                                                                                                                     |
 | InPlaceNodeUpdates                       | `gardener-apiserver`               | Enables setting the update strategy of worker pools to `AutoInPlaceUpdate` or `ManualInPlaceUpdate` in the Shoot API.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| IstioTLSTermination                      | `gardenlet`, `gardener-operator`   | Enables TLS termination for the Istio Ingress Gateway instead of TLS termination at the kube-apiserver. It allows load-balancing of requests to the kube-apiserver on request level instead of connection level.                                                                                                                                                                                                                                                                                                                                         |

@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/networking/istio"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -247,6 +248,16 @@ var _ = Describe("istiod", func() {
 			data, _ := os.ReadFile("./test_charts/proxyprotocol_virtualservice.yaml")
 			return string(data)
 		}
+
+		istioAPIServerTLSTerminationEnvoyFilter = func() string {
+			data, _ := os.ReadFile("./test_charts/apiserver_tls_termination.yaml")
+			return string(data)
+		}
+
+		istioStripTrailingDotEnvoyFilter = func() string {
+			data, _ := os.ReadFile("./test_charts/strip_trailing_dot_envoyfilter.yaml")
+			return string(data)
+		}
 	)
 
 	BeforeEach(func() {
@@ -410,6 +421,11 @@ var _ = Describe("istiod", func() {
 			} else {
 				expectedIstioManifests = append(expectedIstioManifests, istioIngressPodDisruptionBudget())
 				expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudget())
+			}
+
+			if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+				expectedIstioManifests = append(expectedIstioManifests, istioAPIServerTLSTerminationEnvoyFilter())
+				expectedIstioManifests = append(expectedIstioManifests, istioStripTrailingDotEnvoyFilter())
 			}
 
 			if igw[0].TerminateLoadBalancerProxyProtocol {
@@ -762,6 +778,16 @@ var _ = Describe("istiod", func() {
 						IngressGateway: igw,
 					},
 				)
+			})
+
+			It("should successfully deploy all resources", func() {
+				checkSuccessfulDeployment(false, nil, nil)
+			})
+		})
+
+		Context("With IstioTLSTermination feature gate enabled", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
 			})
 
 			It("should successfully deploy all resources", func() {
