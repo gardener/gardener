@@ -2,6 +2,47 @@
 
 This document describes the steps needed to perform in order to confidently add support for a new Kubernetes **minor** version.
 
+## Kubernetes Release Responsible Plan
+
+**Tasks:**
+- Ensure Gardener and extensions are updated to support the new Kubernetes version ([example](https://github.com/gardener/gardener/issues/11020))
+- Bump Golang dependencies for `k8s.io/*` and `sigs.k8s.io/controller-runtime` ([example](https://github.com/gardener/gardener/issues/11186))
+- Prepare a short (~30-60 min) session for a special edition of Gardener's Review Meeting on new key features and changes in the release
+- Check whether old versions can be dropped, and if yes, drive the needed adaptations ([example](https://github.com/gardener/gardener/pull/10664))
+
+Version | Expected Release Date | Release Responsibles                                                                         |
+--------|-----------------------|----------------------------------------------------------------------------------------------|
+v1.32   | December 11, 2024     | [@marc1404](https://github.com/marc1404), [@LucaBernstein](https://github.com/LucaBernstein) |
+v1.33   | April 23, 2025        | [@Kostov6](https://github.com/Kostov6), [@plkokanov](https://github.com/plkokanov)           |
+v1.34   | August ?, 2025        | [@tobschli](https://github.com/tobschli), [@ScheererJ](https://github.com/ScheererJ)         |
+v1.35   | December ?, 2025      | [@timuthy](https://github.com/timuthy), [@rfranzke](https://github.com/rfranzke)             |
+v1.36   | April ?, 2026         | [@oliver-goetz](https://github.com/oliver-goetz), [@ary1992](https://github.com/ary1992)     |
+v1.37   | August ?, 2026        | [@acumino](https://github.com/acumino), [@shafeeqes](https://github.com/shafeeqes)           |
+v1.38   | December ?, 2026      | [@ialidzhikov](https://github.com/ialidzhikov), TBD                                          |
+
+<details>
+  <summary>Click to expand the archived release responsible associations!</summary>
+
+  Version | Expected Release Date | Release Responsibles                                                                         |
+  --------|-----------------------|----------------------------------------------------------------------------------------------|
+  v1.18   | March 25, 2020        | [@rfranzke](https://github.com/rfranzke)                                                     |
+  v1.19   | August 20, 2020       | [@rfranzke](https://github.com/rfranzke)                                                     |
+  v1.20   | December 08, 2020     | [@rfranzke](https://github.com/rfranzke)                                                     |
+  v1.21   | April 08, 2021        | [@rfranzke](https://github.com/rfranzke)                                                     |
+  v1.22   | August 04, 2021       | [@timuthy](https://github.com/timuthy)                                                       |
+  v1.23   | December 07, 2021     | [@rfranzke](https://github.com/rfranzke), [@BeckerMax](https://github.com/BeckerMax)         |
+  v1.24   | May 03, 2022          | [@acumino](https://github.com/acumino)                                                       |
+  v1.25   | August 23, 2022       | [@shafeeqes](https://github.com/shafeeqes)                                                   |
+  v1.26   | December 09, 2022     | [@ialidzhikov](https://github.com/ialidzhikov)                                               |
+  v1.27   | April 11, 2023        | [@ary1992](https://github.com/ary1992)                                                       |
+  v1.28   | August 15, 2023       | [@oliver-goetz](https://github.com/oliver-goetz)                                             |
+  v1.29   | December 13, 2023     | [@acumino](https://github.com/acumino)                                                       |
+  v1.30   | April 17, 2024        | [@shafeeqes](https://github.com/shafeeqes)                                                   |
+  v1.31   | August 13, 2024       | [@ialidzhikov](https://github.com/ialidzhikov)                                               |
+</details>
+
+## Introduction
+
 > ⚠️ Typically, once a minor Kubernetes version `vX.Y` is supported by Gardener, then all patch versions `vX.Y.Z` are also automatically supported without any required action.
 This is because patch versions do not introduce any new feature or API changes, so there is nothing that needs to be adapted in `gardener/gardener` code.
 
@@ -15,7 +56,7 @@ As you can see, the task of supporting a new Kubernetes version also includes th
 Generally, the work items can be split into two groups:
 The first group contains tasks specific to the changes in the given Kubernetes release, the second group contains Kubernetes release-independent tasks.
 
-> ℹ️ Upgrading the `k8s.io/*` and `sigs.k8s.io/controller-runtime` Golang dependencies is typically tracked and worked on separately (see e.g. [#4772](https://github.com/gardener/gardener/issues/4772) or [#5282](https://github.com/gardener/gardener/issues/5282)).
+> ℹ️ Upgrading the `k8s.io/*` and `sigs.k8s.io/controller-runtime` Golang dependencies is typically tracked and worked on separately (see e.g. [#4772](https://github.com/gardener/gardener/issues/4772) or [#5282](https://github.com/gardener/gardener/issues/5282)), however, it is in the responsibility of the Kubernetes Release Responsibles to make sure the libraries get updated (see above).
 
 ## Deriving Release-Specific Tasks
 
