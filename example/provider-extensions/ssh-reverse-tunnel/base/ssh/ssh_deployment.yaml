@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - command: ["/gardener_apiserver_ssh/entrypoint.sh"]
-        image: alpine:3.21.2
+        image: alpine:3.21.3
         name: ssh
         # apk sometimes just hangs => restart container if there is no connection to target port
         livenessProbe:
