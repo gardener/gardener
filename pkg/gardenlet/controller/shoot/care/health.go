@@ -700,7 +700,7 @@ func (h *Health) CheckClusterNodes(
 		}
 
 		for _, condition := range deployment.Status.Conditions {
-			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
+			if condition.Type == machinev1alpha1.MachineDeploymentAvailable {
 				checkScaleUp = true
 				break
 			}
