@@ -324,7 +324,7 @@ spec:
           The seed cluster {{$labels.name}} in {{$externalLabels.landscape}}
           has a failing condition: {{$labels.condition}}.
 
-    - alert: SeedVerticalPodAutoscalerCappedRecommendation
+    - alert: SeedVerticalPodAutoscalerCappedRecommendationCount
       expr: |
           count(
             count by (seed) (ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="seed", alertstate="firing"})
@@ -335,4 +335,7 @@ spec:
         description: >-
           There are {{ .Value }} seeds in {{ $externalLabels.landscape }} with a VPA that shows
           an uncapped target recommendation larger than the regular target recommendation. Query
-          for this alert in the garden Prometheus for more details.
+          in the garden Prometheus for more details:
+
+
+          ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="seed"}
