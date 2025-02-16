@@ -9,10 +9,10 @@ import (
 	"time"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -42,32 +42,27 @@ func NewReconciler(mgr manager.Manager, extensionName string, namespace string, 
 // Reconcile renews the heartbeat lease resource.
 func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
+
 	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      extensions.HeartBeatResourceName,
 			Namespace: r.namespace,
 		},
+		Spec: coordinationv1.LeaseSpec{
+			HolderIdentity:       &r.extensionName,
+			LeaseDurationSeconds: &r.renewIntervalSeconds,
+		},
 	}
 
-	if err := r.client.Get(ctx, client.ObjectKeyFromObject(lease), lease); err != nil {
-		if apierrors.IsNotFound(err) {
-			lease.Spec = coordinationv1.LeaseSpec{
-				HolderIdentity:       &r.extensionName,
-				LeaseDurationSeconds: &r.renewIntervalSeconds,
-				RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
-			}
-			log.V(1).Info("Creating heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
-			return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Create(ctx, lease)
-		}
+	op, err := controllerutil.CreateOrUpdate(ctx, r.client, lease, func() error {
+		lease.Spec.RenewTime = &metav1.MicroTime{Time: r.clock.Now().UTC()}
+		return nil
+	})
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	lease.Spec = coordinationv1.LeaseSpec{
-		HolderIdentity:       &r.extensionName,
-		LeaseDurationSeconds: &r.renewIntervalSeconds,
-		RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
-	}
-
-	log.V(1).Info("Renewing heartbeat Lease", "lease", client.ObjectKeyFromObject(lease))
-	return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, r.client.Update(ctx, lease)
+	log.V(1).Info("Heartbeat Lease", "lease", client.ObjectKeyFromObject(lease), "operation", op)
+	// Ensure we update the lease much sooner to account for possible controller lag
+	return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second / 4}, nil
 }
