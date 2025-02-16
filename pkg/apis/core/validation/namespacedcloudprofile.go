@@ -19,10 +19,12 @@ func ValidateNamespacedCloudProfile(namespacedCloudProfile *core.NamespacedCloud
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&namespacedCloudProfile.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNamespacedCloudProfileParent(namespacedCloudProfile.Spec.Parent, field.NewPath("spec.parent"))...)
 
+	// TODO: (Roncossek) load parend cloud profile
+
 	allErrs = append(allErrs, validateNamespacedCloudProfileKubernetesVersions(namespacedCloudProfile.Spec.Kubernetes, field.NewPath("spec.kubernetes"))...)
-	allErrs = append(allErrs, ValidateMachineImages(namespacedCloudProfile.Spec.MachineImages, field.NewPath("spec.machineImages"))...)
+	allErrs = append(allErrs, ValidateMachineImages(namespacedCloudProfile.Spec.MachineImages, nil, field.NewPath("spec.machineImages"))...)
 	allErrs = append(allErrs, validateVolumeTypes(namespacedCloudProfile.Spec.VolumeTypes, field.NewPath("spec.volumeTypes"))...)
-	allErrs = append(allErrs, validateMachineTypes(namespacedCloudProfile.Spec.MachineTypes, field.NewPath("spec.machineTypes"))...)
+	allErrs = append(allErrs, validateMachineTypes(namespacedCloudProfile.Spec.MachineTypes, nil, field.NewPath("spec.machineTypes"))...)
 
 	if namespacedCloudProfile.Spec.CABundle != nil {
 		_, err := utils.DecodeCertificate([]byte(*(namespacedCloudProfile.Spec.CABundle)))
@@ -55,15 +57,15 @@ func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.Names
 }
 
 // ValidateNamespacedCloudProfileStatus validates the specification of a NamespacedCloudProfile object.
-func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
+func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	if spec.MachineImages != nil {
-		allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
+		allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, capabilitiesDefinition, fldPath.Child("machineImages"))...)
 	}
 	if spec.MachineTypes != nil {
-		allErrs = append(allErrs, validateMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
+		allErrs = append(allErrs, validateMachineTypes(spec.MachineTypes, capabilitiesDefinition, fldPath.Child("machineTypes"))...)
 	}
 	if spec.VolumeTypes != nil {
 		allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)

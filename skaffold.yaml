@@ -482,6 +482,7 @@ build:
             - pkg/client/kubernetes/cache
             - pkg/controllerutils
             - pkg/controllerutils/routes
+            - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/bootstrap/util
             - pkg/healthz
@@ -1358,6 +1359,7 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/controllerutils/routes
+            - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger
