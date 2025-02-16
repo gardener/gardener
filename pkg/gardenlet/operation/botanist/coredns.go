@@ -54,7 +54,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		values.WantsVerticalPodAutoscaler = b.Shoot.WantsVerticalPodAutoscaler
 	}
 
-	return coredns.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values), nil
+	return coredns.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, values), nil
 }
 
 // DeployCoreDNS deploys the CoreDNS system component.

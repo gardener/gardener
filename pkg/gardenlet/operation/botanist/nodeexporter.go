@@ -27,7 +27,7 @@ func (b *Botanist) DefaultNodeExporter() (component.DeployWaiter, error) {
 
 	return nodeexporter.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		values,
 	), nil
 }

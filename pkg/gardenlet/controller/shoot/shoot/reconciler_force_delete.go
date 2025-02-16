@@ -73,7 +73,7 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 		defaultTimeout          = 30 * time.Second
 		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 
-		cleaner = NewCleaner(log, botanist.SeedClientSet.Client(), r.GardenClient, botanist.Shoot.SeedNamespace)
+		cleaner = NewCleaner(log, botanist.SeedClientSet.Client(), r.GardenClient, botanist.Shoot.ControlPlaneNamespace)
 
 		g = flow.NewGraph("Shoot cluster force deletion")
 

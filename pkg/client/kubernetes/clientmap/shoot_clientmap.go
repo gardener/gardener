@@ -16,9 +16,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 )
 
@@ -30,7 +30,7 @@ type shootClientMap struct {
 // NewShootClientMap creates a new shootClientMap with the given factory.
 func NewShootClientMap(log logr.Logger, factory *ShootClientSetFactory) ClientMap {
 	logger := log.WithValues("clientmap", "ShootClientMap")
-	factory.clientKeyToSeedNamespace = make(map[ShootClientSetKey]string)
+	factory.clientKeyToControlPlaneNamespace = make(map[ShootClientSetKey]string)
 	factory.log = logger
 	return &shootClientMap{
 		ClientMap: NewGenericClientMap(factory, logger, clock.RealClock{}),
@@ -49,10 +49,11 @@ type ShootClientSetFactory struct {
 	// log is a logger for logging entries related to creating Shoot ClientSets.
 	log logr.Logger
 
-	clientKeyToSeedNamespace map[ShootClientSetKey]string
+	clientKeyToControlPlaneNamespace map[ShootClientSetKey]string
 }
 
-// CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the 'gardener' secret in the Shoot's Seed namespace.
+// CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the 'gardener' secret in the Shoot's control
+// plane namespace.
 func (f *ShootClientSetFactory) CalculateClientSetHash(ctx context.Context, k ClientSetKey) (string, error) {
 	_, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {
@@ -97,33 +98,17 @@ func (f *ShootClientSetFactory) getSecretAndComputeHash(ctx context.Context, k C
 		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
 	}
 
-	seedNamespace, err := f.getSeedNamespace(ctx, key)
+	controlPlaneNamespace, err := f.getControlPlaneNamespace(ctx, key)
 	if err != nil {
 		return nil, "", err
 	}
 
 	kubeconfigSecret := &corev1.Secret{}
-	if err := f.SeedClient.Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: f.secretName(seedNamespace)}, kubeconfigSecret); err != nil {
+	if err := f.SeedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: v1beta1constants.SecretNameGardenerInternal}, kubeconfigSecret); err != nil {
 		return nil, "", err
 	}
 
 	return kubeconfigSecret, utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
-}
-
-func (f *ShootClientSetFactory) secretName(seedNamespace string) string {
-	secretName := v1beta1constants.SecretNameGardener
-
-	// If the gardenlet runs in the same cluster like the API server of the shoot then use the internal kubeconfig
-	// and communicate internally. Otherwise, fall back to the "external" kubeconfig and communicate via the
-	// load balancer of the shoot API server.
-	addr, err := LookupHost(fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, seedNamespace))
-	if err != nil {
-		f.log.Info("Service DNS name lookup of kube-apiserver failed, falling back to external kubeconfig", "error", err)
-	} else if len(addr) > 0 {
-		secretName = v1beta1constants.SecretNameGardenerInternal
-	}
-
-	return secretName
 }
 
 var _ Invalidate = &ShootClientSetFactory{}
@@ -134,24 +119,24 @@ func (f *ShootClientSetFactory) InvalidateClient(k ClientSetKey) error {
 	if !ok {
 		return fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
 	}
-	delete(f.clientKeyToSeedNamespace, key)
+	delete(f.clientKeyToControlPlaneNamespace, key)
 	return nil
 }
 
-func (f *ShootClientSetFactory) seedNamespaceFromCache(key ShootClientSetKey) (string, error) {
-	namespace, ok := f.clientKeyToSeedNamespace[key]
+func (f *ShootClientSetFactory) controlPlaneNamespaceFromCache(key ShootClientSetKey) (string, error) {
+	namespace, ok := f.clientKeyToControlPlaneNamespace[key]
 	if !ok {
 		return "", fmt.Errorf("no seed info cached for client %s", key)
 	}
 	return namespace, nil
 }
 
-func (f *ShootClientSetFactory) seedNamespaceToCache(key ShootClientSetKey, namespace string) {
-	f.clientKeyToSeedNamespace[key] = namespace
+func (f *ShootClientSetFactory) controlPlaneNamespaceToCache(key ShootClientSetKey, namespace string) {
+	f.clientKeyToControlPlaneNamespace[key] = namespace
 }
 
-func (f *ShootClientSetFactory) getSeedNamespace(ctx context.Context, key ShootClientSetKey) (string, error) {
-	if namespace, err := f.seedNamespaceFromCache(key); err == nil {
+func (f *ShootClientSetFactory) getControlPlaneNamespace(ctx context.Context, key ShootClientSetKey) (string, error) {
+	if namespace, err := f.controlPlaneNamespaceFromCache(key); err == nil {
 		return namespace, nil
 	}
 
@@ -165,19 +150,12 @@ func (f *ShootClientSetFactory) getSeedNamespace(ctx context.Context, key ShootC
 		return "", fmt.Errorf("shoot %q is not scheduled yet", key.Key())
 	}
 
-	var namespace string
-	if len(shoot.Status.TechnicalID) > 0 {
-		namespace = shoot.Status.TechnicalID
-	} else {
-		project, err := ProjectForNamespaceFromReader(ctx, f.GardenClient, shoot.Namespace)
-		if err != nil {
-			return "", fmt.Errorf("failed to get Project for Shoot %q: %w", key.Key(), err)
-		}
-		namespace = gardenerutils.ComputeTechnicalID(project.Name, shoot)
+	namespace := v1beta1helper.ControlPlaneNamespaceForShoot(shoot)
+	if len(namespace) == 0 {
+		return "", fmt.Errorf("failed to determine control plane namespace for shoot %q", key.Key())
 	}
 
-	f.seedNamespaceToCache(key, namespace)
-
+	f.controlPlaneNamespaceToCache(key, namespace)
 	return namespace, nil
 }
 

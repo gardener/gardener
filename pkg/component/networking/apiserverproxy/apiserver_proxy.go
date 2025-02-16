@@ -77,8 +77,6 @@ type Values struct {
 	DNSLookupFamily     string
 
 	advertiseIPAddress string
-
-	SeedNamespace string
 }
 
 // New creates a new instance of DeployWaiter for apiserver-proxy
@@ -209,7 +207,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 		"adminPort":           adminPort,
 		"proxySeedServerHost": a.values.ProxySeedServerHost,
 		"proxySeedServerPort": proxySeedServerPort,
-		"seedNamespace":       a.values.SeedNamespace,
+		"seedNamespace":       a.namespace,
 	}); err != nil {
 		return nil, err
 	}

@@ -56,7 +56,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		ctx                   = context.TODO()
 		projectNamespace      = "garden-foo"
-		seedNamespace         = "shoot--foo--bar"
+		controlPlaneNamespace = "shoot--foo--bar"
 		shootName             = "bar"
 		internalClusterDomain = "internal.foo.bar.com"
 		externalClusterDomain = "external.foo.bar.com"
@@ -88,11 +88,11 @@ var _ = Describe("KubeAPIServer", func() {
 		Expect(err).NotTo(HaveOccurred())
 		serviceNetworks = []net.IPNet{*serviceNetwork}
 
-		sm = fakesecretsmanager.New(seedClient, seedNamespace)
+		sm = fakesecretsmanager.New(seedClient, controlPlaneNamespace)
 
 		By("Create secrets managed outside of this function for which secretsmanager.Get() will be called")
-		Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: seedNamespace}})).To(Succeed())
-		Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "user-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
+		Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: controlPlaneNamespace}})).To(Succeed())
+		Expect(seedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "user-kubeconfig", Namespace: controlPlaneNamespace}})).To(Succeed())
 
 		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
@@ -105,7 +105,7 @@ var _ = Describe("KubeAPIServer", func() {
 					KubernetesVersion: semver.MustParse(seedVersion),
 				},
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace: seedNamespace,
+					ControlPlaneNamespace: controlPlaneNamespace,
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{
 							KubeAPIServer: kubeAPIServer,
@@ -148,7 +148,7 @@ var _ = Describe("KubeAPIServer", func() {
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				TechnicalID: seedNamespace,
+				TechnicalID: controlPlaneNamespace,
 			},
 		})
 		botanist.Shoot.SetShootState(&gardencorev1beta1.ShootState{})
@@ -277,7 +277,7 @@ var _ = Describe("KubeAPIServer", func() {
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "wildcard-secret",
-					Namespace: seedNamespace,
+					Namespace: controlPlaneNamespace,
 					Labels: map[string]string{
 						"gardener.cloud/role": "controlplane-cert",
 					},
@@ -602,7 +602,7 @@ users:
 	})
 
 	Describe("#ScaleKubeAPIServerToOne", func() {
-		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: controlPlaneNamespace}}
 
 		It("should scale the deployment", func() {
 			Expect(seedClient.Create(ctx, deployment)).To(Succeed())

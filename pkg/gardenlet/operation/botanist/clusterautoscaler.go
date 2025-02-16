@@ -29,7 +29,7 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 
 	return clusterautoscaler.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		image.String(),
 		b.Shoot.GetReplicas(1),
@@ -59,7 +59,7 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 
 // ScaleClusterAutoscalerToZero scales cluster-autoscaler replicas to zero.
 func (b *Botanist) ScaleClusterAutoscalerToZero(ctx context.Context) error {
-	return client.IgnoreNotFound(kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameClusterAutoscaler}, 0))
+	return client.IgnoreNotFound(kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameClusterAutoscaler}, 0))
 }
 
 // CalculateMaxNodesTotal returns the maximum number of nodes the shoot can have based on the shoot networks and

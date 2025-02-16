@@ -374,13 +374,13 @@ var _ = Describe("Worker", func() {
 			shootInterface *kubernetesmock.MockInterface
 			shootClient    *mockclient.MockClient
 
-			namespace = "shoot--foo--bar"
+			controlPlaneNamespace = "shoot--foo--bar"
 		)
 
 		BeforeEach(func() {
 			botanist = &Botanist{Operation: &operation.Operation{
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace: namespace,
+					ControlPlaneNamespace: controlPlaneNamespace,
 				},
 			}}
 
@@ -401,7 +401,7 @@ var _ = Describe("Worker", func() {
 
 			gomock.InOrder(
 				seedInterface.EXPECT().Client().Return(seedClient),
-				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{Generation: 2},
 					Status:     resourcesv1alpha1.ManagedResourceStatus{ObservedGeneration: 1},
 				})).AnyTimes(),
@@ -428,7 +428,7 @@ var _ = Describe("Worker", func() {
 
 			gomock.InOrder(
 				seedInterface.EXPECT().Client().Return(seedClient),
-				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Generation: 1,
 					},
@@ -494,7 +494,7 @@ var _ = Describe("Worker", func() {
 
 			gomock.InOrder(
 				seedInterface.EXPECT().Client().Return(seedClient),
-				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: namespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+				seedClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: "shoot-gardener-node-agent"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Generation: 1,
 					},

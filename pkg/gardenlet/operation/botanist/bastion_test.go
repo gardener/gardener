@@ -38,7 +38,7 @@ var _ = Describe("Bastions", func() {
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
 		botanist.SeedClientSet = k8sSeedClient
 		botanist.Shoot = &shootpkg.Shoot{
-			SeedNamespace: namespace.Name,
+			ControlPlaneNamespace: namespace.Name,
 		}
 
 		bastion1 = &extensionsv1alpha1.Bastion{

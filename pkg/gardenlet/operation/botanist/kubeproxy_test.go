@@ -76,7 +76,7 @@ var _ = Describe("KubeProxy", func() {
 				Shoot: &shootpkg.Shoot{
 					InternalClusterDomain: internalClusterDomain,
 					KubernetesVersion:     kubernetesVersionControlPlane,
-					SeedNamespace:         namespace,
+					ControlPlaneNamespace: namespace,
 				},
 			},
 		}

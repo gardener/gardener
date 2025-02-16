@@ -34,7 +34,7 @@ func (b *Botanist) DefaultShootSystem() shootsystem.Interface {
 		EncryptedResources:    append(sets.List(gardenerutils.DefaultResourcesForEncryption()), b.Shoot.ResourcesToEncrypt...),
 	}
 
-	return shootsystem.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values)
+	return shootsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, values)
 }
 
 // DeployShootSystem deploys the shoot system resources.

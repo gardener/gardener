@@ -41,7 +41,7 @@ func (b *Botanist) DefaultKubernetesDashboard() (kubernetesdashboard.Interface, 
 		values.AuthenticationMode = *b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard.AuthenticationMode
 	}
 
-	return kubernetesdashboard.New(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, values), nil
+	return kubernetesdashboard.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, values), nil
 }
 
 // DeployKubernetesDashboard deploys the Kubernetes Dashboard component.

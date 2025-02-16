@@ -32,7 +32,7 @@ func (b *Botanist) DefaultNodeProblemDetector() (component.DeployWaiter, error) 
 
 	return nodeproblemdetector.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		values,
 	), nil
 }

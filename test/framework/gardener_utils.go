@@ -621,10 +621,10 @@ func (f *GardenerFramework) VerifyNoRunningPods(ctx context.Context, shoot *gard
 		return err
 	}
 
-	shootSeedNamespace := shoot.Status.TechnicalID
+	controlPlaneNamespace := shoot.Status.TechnicalID
 	podList := &metav1.PartialObjectMetadataList{}
 	podList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("PodList"))
-	if err := seedClient.Client().List(ctx, podList, client.InNamespace(shootSeedNamespace)); err != nil {
+	if err := seedClient.Client().List(ctx, podList, client.InNamespace(controlPlaneNamespace)); err != nil {
 		return err
 	}
 
@@ -633,7 +633,7 @@ func (f *GardenerFramework) VerifyNoRunningPods(ctx context.Context, shoot *gard
 		for _, pod := range podList.Items {
 			runningPodNames = append(runningPodNames, pod.Name)
 		}
-		return fmt.Errorf("found pods in namespace %s: %v", shootSeedNamespace, runningPodNames)
+		return fmt.Errorf("found pods in namespace %s: %v", controlPlaneNamespace, runningPodNames)
 	}
 
 	return nil

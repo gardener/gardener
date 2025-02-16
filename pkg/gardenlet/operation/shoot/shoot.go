@@ -61,9 +61,9 @@ func (b *Builder) WithShootObject(shootObject *gardencorev1beta1.Shoot) *Builder
 }
 
 // WithShootObjectFromCluster sets the shootObjectFunc attribute at the Builder.
-func (b *Builder) WithShootObjectFromCluster(seedClient kubernetes.Interface, shootNamespace string) *Builder {
+func (b *Builder) WithShootObjectFromCluster(seedClient kubernetes.Interface, clusterName string) *Builder {
 	b.shootObjectFunc = func(ctx context.Context) (*gardencorev1beta1.Shoot, error) {
-		cluster, err := gardenerextensions.GetCluster(ctx, seedClient.Client(), shootNamespace)
+		cluster, err := gardenerextensions.GetCluster(ctx, seedClient.Client(), clusterName)
 		if err != nil {
 			return nil, err
 		}
@@ -90,9 +90,9 @@ func (b *Builder) WithCloudProfileObjectFrom(reader client.Reader) *Builder {
 }
 
 // WithCloudProfileObjectFromCluster sets the cloudProfileFunc attribute at the Builder.
-func (b *Builder) WithCloudProfileObjectFromCluster(seedClient kubernetes.Interface, shootNamespace string) *Builder {
+func (b *Builder) WithCloudProfileObjectFromCluster(seedClient kubernetes.Interface, clusterName string) *Builder {
 	b.cloudProfileFunc = func(ctx context.Context, _ *gardencorev1beta1.Shoot) (*gardencorev1beta1.CloudProfile, error) {
-		cluster, err := gardenerextensions.GetCluster(ctx, seedClient.Client(), shootNamespace)
+		cluster, err := gardenerextensions.GetCluster(ctx, seedClient.Client(), clusterName)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +225,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 
 	shoot.HibernationEnabled = v1beta1helper.HibernationIsEnabled(shootObject)
-	shoot.SeedNamespace = gardenerutils.ComputeTechnicalID(b.projectName, shootObject)
+	shoot.ControlPlaneNamespace = v1beta1helper.ControlPlaneNamespaceForShoot(shootObject)
 	shoot.InternalClusterDomain = gardenerutils.ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
 	shoot.ExternalClusterDomain = gardenerutils.ConstructExternalClusterDomain(shootObject)
 	shoot.IgnoreAlerts = v1beta1helper.ShootIgnoresAlerts(shootObject)
@@ -493,7 +493,7 @@ func (s *Shoot) GetReplicas(wokenUp int32) int32 {
 func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) string {
 	url := v1beta1constants.DeploymentNameKubeAPIServer
 	if !runsInShootNamespace {
-		url = fmt.Sprintf("%s.%s.svc", url, s.SeedNamespace)
+		url = fmt.Sprintf("%s.%s.svc", url, s.ControlPlaneNamespace)
 	}
 	return url
 }

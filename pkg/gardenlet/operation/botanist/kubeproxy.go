@@ -37,7 +37,7 @@ func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
 
 	return kubeproxy.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		kubeproxy.Values{
 			IPVSEnabled:  b.Shoot.IPVSEnabled(),
 			FeatureGates: featureGates,
@@ -55,7 +55,7 @@ func (b *Botanist) DeployKubeProxy(ctx context.Context) error {
 	}
 
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		clientcmdv1.Cluster{
 			Server:                   b.Shoot.ComputeOutOfClusterAPIServerAddress(true),
 			CertificateAuthorityData: caSecret.Data[secrets.DataKeyCertificateBundle],

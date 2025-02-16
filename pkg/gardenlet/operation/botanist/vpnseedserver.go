@@ -56,7 +56,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 
 	return vpnseedserver.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		func() string { return b.IstioNamespace() },
 		values,

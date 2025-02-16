@@ -14,7 +14,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/virtual/access"
@@ -51,7 +50,7 @@ func AddToManagerFuncs(cfg *operatorconfigv1alpha1.OperatorConfiguration, storeC
 
 				return true, (&access.Reconciler{
 					Channel: channel,
-				}).AddToManager(mgr, v1beta1constants.GardenNamespace, clientmap.GardenerSecretName(log, v1beta1constants.GardenNamespace))
+				}).AddToManager(mgr, v1beta1constants.GardenNamespace, v1beta1constants.SecretNameGardenerInternal)
 			},
 		},
 	}

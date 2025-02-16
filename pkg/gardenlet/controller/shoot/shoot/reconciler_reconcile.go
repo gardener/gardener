@@ -375,7 +375,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name: "Renewing shoot access secrets after creation of new ServiceAccount signing key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return tokenrequest.RenewAccessSecrets(ctx, o.SeedClientSet.Client(),
-					client.InNamespace(o.Shoot.SeedNamespace),
+					client.InNamespace(o.Shoot.ControlPlaneNamespace),
 					client.MatchingLabels{resourcesv1alpha1.ResourceManagerClass: resourcesv1alpha1.ResourceManagerClassShoot},
 				)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -471,7 +471,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		rewriteResourcesAddLabel = g.Add(flow.Task{
 			Name: "Labeling resources after modification of encryption config or to encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet, o.SecretsManager, o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, o.Shoot.ResourcesToEncrypt, o.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption())
+				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet, o.SecretsManager, o.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer, o.Shoot.ResourcesToEncrypt, o.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption())
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf: v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing &&
 				apiequality.Semantic.DeepEqual(o.Shoot.ResourcesToEncrypt, o.Shoot.EncryptedResources),
@@ -480,7 +480,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		snapshotETCD = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after modification of encryption config or resources are re-encrypted with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, o.SeedClientSet.Client(), botanist.SnapshotEtcd, o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
+				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, o.SeedClientSet.Client(), botanist.SnapshotEtcd, o.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
 			}),
 			SkipIf: !allowBackup ||
 				(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing &&
@@ -490,7 +490,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name: "Removing label from resources after modification of encryption config or rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet, o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, o.Shoot.ResourcesToEncrypt, o.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption()); err != nil {
+				if err := secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet, o.Shoot.ControlPlaneNamespace, v1beta1constants.DeploymentNameKubeAPIServer, o.Shoot.ResourcesToEncrypt, o.Shoot.EncryptedResources, gardenerutils.DefaultGVKsForEncryption()); err != nil {
 					return err
 				}
 
@@ -1056,9 +1056,9 @@ func deleteGardenerNodeAgentShootAccess(ctx context.Context, o *operation.Operat
 	if err := kubernetesutils.DeleteObject(
 		ctx,
 		o.SeedClientSet.Client(),
-		gardenerutils.NewShootAccessSecret(nodeagentconfigv1alpha1.AccessSecretName, o.Shoot.SeedNamespace).Secret,
+		gardenerutils.NewShootAccessSecret(nodeagentconfigv1alpha1.AccessSecretName, o.Shoot.ControlPlaneNamespace).Secret,
 	); err != nil {
-		return fmt.Errorf("failed to delete gardener-node-agent shoot access secret in seed namespace: %w", err)
+		return fmt.Errorf("failed to delete gardener-node-agent shoot access secret in control plane namespace in seed: %w", err)
 	}
 
 	return kubernetesutils.DeleteObjects(

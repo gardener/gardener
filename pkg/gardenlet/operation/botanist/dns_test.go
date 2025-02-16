@@ -36,8 +36,8 @@ import (
 
 var _ = Describe("dns", func() {
 	const (
-		seedNS  = "test-ns"
-		shootNS = "shoot-ns"
+		controlPlaneNamespace = "test-ns"
+		shootNS               = "shoot-ns"
 	)
 
 	var (
@@ -62,7 +62,7 @@ var _ = Describe("dns", func() {
 					Components: &shootpkg.Components{
 						Extensions: &shootpkg.Extensions{},
 					},
-					SeedNamespace: seedNS,
+					ControlPlaneNamespace: controlPlaneNamespace,
 				},
 				Garden: &garden.Garden{},
 				Logger: logr.Discard(),

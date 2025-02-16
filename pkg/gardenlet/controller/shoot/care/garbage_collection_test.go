@@ -47,7 +47,7 @@ var _ = Describe("GarbageCollection", func() {
 		op = &operation.Operation{
 			Logger:        logr.Discard(),
 			SeedClientSet: fakeSeedKubernetesInterface,
-			Shoot:         &shoot.Shoot{SeedNamespace: "some-namespace"},
+			Shoot:         &shoot.Shoot{ControlPlaneNamespace: "some-namespace"},
 		}
 		op.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 

@@ -138,8 +138,9 @@ type ShootStatus struct {
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot. This value is only written
 	// after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.
 	SeedName *string
-	// TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
-	// basically everything that is related to this particular Shoot. This field is immutable.
+	// TechnicalID is a unique technical ID for this Shoot. It is used for the infrastructure resources, and
+	// basically everything that is related to this particular Shoot. For regular shoot clusters, this is also the name
+	// of the namespace in the seed cluster running the shoot's control plane. This field is immutable.
 	TechnicalID string
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 	// It is used to compute unique hashes. This field is immutable.
@@ -1247,7 +1248,13 @@ type Worker struct {
 	Priority *int32
 	// UpdateStrategy specifies the machine update strategy for the worker pool.
 	UpdateStrategy *MachineUpdateStrategy
+	// ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
+	// This is only relevant for autonomous shoot clusters.
+	ControlPlane *WorkerControlPlane
 }
+
+// WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
+type WorkerControlPlane struct{}
 
 // MachineUpdateStrategy specifies the machine update strategy for the worker pool.
 type MachineUpdateStrategy string

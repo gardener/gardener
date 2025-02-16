@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -148,12 +147,12 @@ func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
 // The credentials in the Shoot object are always set to `nil`.
 func (b *Builder) WithShootFromCluster(seedClientSet kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed, serviceAccountIssuerConfig *corev1.Secret) (*shootpkg.Shoot, error) {
-		shootNamespace := gardenerutils.ComputeTechnicalID(gardenObj.Project.Name, s)
+		controlPlaneNamespace := v1beta1helper.ControlPlaneNamespaceForShoot(s)
 
 		shoot, err := shootpkg.
 			NewBuilder().
-			WithShootObjectFromCluster(seedClientSet, shootNamespace).
-			WithCloudProfileObjectFromCluster(seedClientSet, shootNamespace).
+			WithShootObjectFromCluster(seedClientSet, controlPlaneNamespace).
+			WithCloudProfileObjectFromCluster(seedClientSet, controlPlaneNamespace).
 			WithoutShootCredentials().
 			WithSeedObject(seedObj.GetInfo()).
 			WithProjectName(gardenObj.Project.Name).
@@ -332,7 +331,7 @@ func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired b
 func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	// use API reader here to make sure, we're not reading from a stale cache, when checking if we should initialize a shoot client (e.g. from within the care controller)
-	if err := o.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, deployment); err != nil {
+	if err := o.SeedClientSet.APIReader().Get(ctx, client.ObjectKey{Namespace: o.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, deployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -399,7 +398,7 @@ func (o *Operation) ShootVersion() string {
 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
-	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
+	return client.IgnoreNotFound(o.SeedClientSet.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.ControlPlaneNamespace}}))
 }
 
 // IsShootMonitoringEnabled returns true if shoot monitoring is enabled and shoot is not of purpose testing.

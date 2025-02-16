@@ -40,17 +40,17 @@ var _ = Describe("Logging", func() {
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
 
-		k8sSeedClient       kubernetes.Interface
-		botanist            *Botanist
-		eventLoggerDeployer *mockcomponent.MockDeployer
-		valiDeployer        *mockvali.MockInterface
-		fakeSecretManager   secretsmanager.Interface
-		chartApplier        *mock.MockChartApplier
-		ctx                 = context.TODO()
-		seedNamespace       = "shoot--foo--bar"
-		shootName           = "bar"
-		projectNamespace    = "garden-foo"
-		fakeErr             = fmt.Errorf("fake error")
+		k8sSeedClient         kubernetes.Interface
+		botanist              *Botanist
+		eventLoggerDeployer   *mockcomponent.MockDeployer
+		valiDeployer          *mockvali.MockInterface
+		fakeSecretManager     secretsmanager.Interface
+		chartApplier          *mock.MockChartApplier
+		ctx                   = context.TODO()
+		controlPlaneNamespace = "shoot--foo--bar"
+		shootName             = "bar"
+		projectNamespace      = "garden-foo"
+		fakeErr               = fmt.Errorf("fake error")
 
 		shootPurposeDevelopment = gardencorev1beta1.ShootPurposeDevelopment
 		shootPurposeTesting     = gardencorev1beta1.ShootPurposeTesting
@@ -69,7 +69,7 @@ var _ = Describe("Logging", func() {
 
 		eventLoggerDeployer = mockcomponent.NewMockDeployer(ctrl)
 		valiDeployer = mockvali.NewMockInterface(ctrl)
-		fakeSecretManager = fakesecretsmanager.New(c, seedNamespace)
+		fakeSecretManager = fakesecretsmanager.New(c, controlPlaneNamespace)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -94,8 +94,8 @@ var _ = Describe("Logging", func() {
 				},
 				Seed: &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace: seedNamespace,
-					Purpose:       "development",
+					ControlPlaneNamespace: controlPlaneNamespace,
+					Purpose:               "development",
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{
 							EventLogger: eventLoggerDeployer,
@@ -122,7 +122,7 @@ var _ = Describe("Logging", func() {
 				Purpose: &shootPurposeDevelopment,
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				TechnicalID: seedNamespace,
+				TechnicalID: controlPlaneNamespace,
 			},
 		})
 	})
@@ -188,7 +188,7 @@ var _ = Describe("Logging", func() {
 						deployment := &appsv1.Deployment{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: seedNamespace,
+								Namespace: controlPlaneNamespace,
 							},
 							Status: appsv1.DeploymentStatus{
 								ReadyReplicas: 1,
@@ -214,7 +214,7 @@ var _ = Describe("Logging", func() {
 						deployment := &appsv1.Deployment{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: seedNamespace,
+								Namespace: controlPlaneNamespace,
 							},
 							Status: appsv1.DeploymentStatus{
 								ReadyReplicas: 1,
@@ -240,7 +240,7 @@ var _ = Describe("Logging", func() {
 						deployment := &appsv1.Deployment{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: seedNamespace,
+								Namespace: controlPlaneNamespace,
 							},
 							Status: appsv1.DeploymentStatus{
 								ReadyReplicas: 1,
@@ -266,7 +266,7 @@ var _ = Describe("Logging", func() {
 						deployment := &appsv1.Deployment{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: seedNamespace,
+								Namespace: controlPlaneNamespace,
 							},
 							Status: appsv1.DeploymentStatus{
 								ReadyReplicas: 1,
@@ -292,7 +292,7 @@ var _ = Describe("Logging", func() {
 						deployment := &appsv1.Deployment{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-								Namespace: seedNamespace,
+								Namespace: controlPlaneNamespace,
 							},
 							Status: appsv1.DeploymentStatus{
 								ReadyReplicas: 1,
@@ -334,7 +334,7 @@ var _ = Describe("Logging", func() {
 							deployment := &appsv1.Deployment{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: seedNamespace,
+									Namespace: controlPlaneNamespace,
 								},
 								Status: appsv1.DeploymentStatus{
 									ReadyReplicas: 1,
@@ -358,7 +358,7 @@ var _ = Describe("Logging", func() {
 							deployment := &appsv1.Deployment{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: seedNamespace,
+									Namespace: controlPlaneNamespace,
 								},
 								Status: appsv1.DeploymentStatus{
 									ReadyReplicas: 1,
@@ -383,7 +383,7 @@ var _ = Describe("Logging", func() {
 							deployment := &appsv1.Deployment{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-									Namespace: seedNamespace,
+									Namespace: controlPlaneNamespace,
 								},
 								Status: appsv1.DeploymentStatus{
 									ReadyReplicas: 1,

@@ -28,7 +28,7 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 
 	return nodelocaldns.New(
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		nodelocaldns.Values{
 			Image:             image.String(),
 			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,

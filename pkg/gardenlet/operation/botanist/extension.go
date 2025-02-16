@@ -26,8 +26,8 @@ func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, e
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&extension.Values{
-			Namespace:  b.Shoot.SeedNamespace,
-			Extensions: mergeExtensions(controllerRegistrations.Items, b.Shoot.GetInfo().Spec.Extensions, b.Shoot.SeedNamespace, b.Shoot.IsWorkerless),
+			Namespace:  b.Shoot.ControlPlaneNamespace,
+			Extensions: mergeExtensions(controllerRegistrations.Items, b.Shoot.GetInfo().Spec.Extensions, b.Shoot.ControlPlaneNamespace, b.Shoot.IsWorkerless),
 		},
 		extension.DefaultInterval,
 		extension.DefaultSevereThreshold,

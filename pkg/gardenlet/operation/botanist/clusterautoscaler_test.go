@@ -152,7 +152,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		BeforeEach(func() {
 			botanist.SeedClientSet = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
-				SeedNamespace: namespace,
+				ControlPlaneNamespace: namespace,
 			}
 
 			c = mockclient.NewMockClient(ctrl)

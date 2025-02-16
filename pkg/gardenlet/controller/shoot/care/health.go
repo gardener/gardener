@@ -136,7 +136,7 @@ func (h *Health) Check(
 	}
 
 	managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-	if err := h.seedClient.Client().List(ctx, managedResourceList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
+	if err := h.seedClient.Client().List(ctx, managedResourceList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
 		updatedConditions := managedResourceListingFailedConditions(h.clock, conditions.ConvertToSlice(), err)
 		return PardonConditions(h.clock, updatedConditions, lastOp, lastErrors)
 	}
@@ -305,7 +305,7 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 	}
 
 	for _, listObj := range extensionObjectList {
-		if err := h.seedClient.Client().List(ctx, listObj, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
+		if err := h.seedClient.Client().List(ctx, listObj, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
 			return nil, err
 		}
 
@@ -406,12 +406,12 @@ func (h *Health) checkControlPlane(
 		return nil, err
 	}
 
-	if exitCondition, err := h.healthChecker.CheckControlPlane(ctx, h.shoot.SeedNamespace, requiredControlPlaneDeployments, requiredControlPlaneEtcds, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := h.healthChecker.CheckControlPlane(ctx, h.shoot.ControlPlaneNamespace, requiredControlPlaneDeployments, requiredControlPlaneEtcds, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
 	if !h.shoot.IsWorkerless && v1beta1helper.SeedSettingDependencyWatchdogProberEnabled(h.seed.GetInfo().Spec.Settings) {
-		if scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, h.seedClient.Client(), h.shoot.SeedNamespace); err != nil {
+		if scaledDownDeploymentNames, err := CheckIfDependencyWatchdogProberScaledDownControllers(ctx, h.seedClient.Client(), h.shoot.ControlPlaneNamespace); err != nil {
 			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDownCheckError", err.Error())), nil
 		} else if len(scaledDownDeploymentNames) > 0 {
 			return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "ControllersScaledDown", fmt.Sprintf("The following deployments have been scaled down to 0 replicas (perhaps by dependency-watchdog-prober): %s", strings.Join(scaledDownDeploymentNames, ", ")))), nil
@@ -481,7 +481,7 @@ func (h *Health) checkObservabilityComponents(
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsMonitoringEnabled(h.gardenletConfiguration) {
 		if exitCondition, err := h.healthChecker.CheckMonitoringControlPlane(
 			ctx,
-			h.shoot.SeedNamespace,
+			h.shoot.ControlPlaneNamespace,
 			ComputeRequiredMonitoringSeedDeployments(h.shoot.GetInfo()),
 			monitoringSelector,
 			condition,
@@ -493,7 +493,7 @@ func (h *Health) checkObservabilityComponents(
 	if h.shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration) {
 		if exitCondition, err := h.healthChecker.CheckLoggingControlPlane(
 			ctx,
-			h.shoot.SeedNamespace,
+			h.shoot.ControlPlaneNamespace,
 			gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration),
 			condition,
 		); err != nil || exitCondition != nil {
@@ -641,7 +641,7 @@ func (h *Health) CheckClusterNodes(
 	}
 
 	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
-	if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
+	if err := h.seedClient.Client().List(ctx, machineDeploymentList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
 		return nil, err
 	}
 
@@ -673,7 +673,7 @@ func (h *Health) CheckClusterNodes(
 
 	machineList := &machinev1alpha1.MachineList{}
 	if registeredNodes != desiredMachines || readyNodes != desiredMachines {
-		if err := h.seedClient.Client().List(ctx, machineList, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
+		if err := h.seedClient.Client().List(ctx, machineList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
 			return nil, err
 		}
 	}

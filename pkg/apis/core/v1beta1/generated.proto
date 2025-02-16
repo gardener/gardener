@@ -3202,8 +3202,9 @@ message ShootStatus {
   // +optional
   optional string seedName = 9;
 
-  // TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
-  // basically everything that is related to this particular Shoot. This field is immutable.
+  // TechnicalID is a unique technical ID for this Shoot. It is used for the infrastructure resources, and
+  // basically everything that is related to this particular Shoot. For regular shoot clusters, this is also the name
+  // of the namespace in the seed cluster running the shoot's control plane. This field is immutable.
   optional string technicalID = 10;
 
   // UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
@@ -3535,6 +3536,15 @@ message Worker {
   // UpdateStrategy specifies the machine update strategy for the worker pool.
   // +optional
   optional string updateStrategy = 23;
+
+  // ControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
+  // This is only relevant for autonomous shoot clusters.
+  // +optional
+  optional WorkerControlPlane controlPlane = 24;
+}
+
+// WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
+message WorkerControlPlane {
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.

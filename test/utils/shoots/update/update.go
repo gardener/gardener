@@ -66,11 +66,11 @@ func RunTest(
 	if v1beta1helper.IsHAControlPlaneConfigured(f.Shoot) {
 		f.Seed, f.SeedClient, err = f.GetSeed(ctx, *f.Shoot.Spec.SeedName)
 		Expect(err).NotTo(HaveOccurred())
-		shootSeedNamespace := f.Shoot.Status.TechnicalID
+		controlPlaneNamespace := f.Shoot.Status.TechnicalID
 
 		By("Deploy zero-downtime validator job")
 		job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx,
-			f.SeedClient.Client(), "update", shootSeedNamespace, GetKubeAPIServerAuthToken(ctx, f.SeedClient, shootSeedNamespace))
+			f.SeedClient.Client(), "update", controlPlaneNamespace, GetKubeAPIServerAuthToken(ctx, f.SeedClient, controlPlaneNamespace))
 		Expect(err).NotTo(HaveOccurred())
 		WaitForJobToBeReady(ctx, f.SeedClient.Client(), job)
 	}
