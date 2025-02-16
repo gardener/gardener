@@ -1,30 +1,39 @@
 apiVersion: operator.gardener.cloud/v1alpha1
 kind: Extension
 metadata:
+  annotations:
+    security.gardener.cloud/pod-security-enforce: baseline
   name: provider-local
-#spec:
-#  resources:
-#  - kind: BackupBucket
-#    type: local
-#    primary: true|false
-#    globallyEnabled: true|false # only valid if kind=Extension
-#    reconcileTimeout: 30s # only valid if kind=Extension
-#    lifecycle: {}
-#    workerlessSupported: true|false # only valid if kind=Extension
-#  deployment:
-#    admission:
-#      values: {}
-#      runtimeCluster:
-#        helm:
-#          ociRepository: {}
-#      virtualCluster:
-#        helm:
-#          ociRepository: {}
-#    extension:
-#      values: {}
-#      runtimeClusterValues: {}
-#      helm:
-#        ociRepository: {}
-#      policy: OnDemand|Always
-#      seedSelector: {}
-
+spec:
+  deployment:
+    admission:
+      runtimeCluster:
+        helm:
+          ociRepository:
+            ref: local-skaffold/gardener-extension-admission-local/charts/runtime:v0.0.0
+      values: {}
+      virtualCluster:
+        helm:
+          ociRepository:
+            ref: local-skaffold/gardener-extension-admission-local/charts/application:v0.0.0
+    extension:
+      helm:
+        ociRepository:
+          ref: local-skaffold/gardener-extension-provider-local/charts/extension:v0.0.0
+      runtimeClusterValues: {}
+      values: {}
+  resources:
+  - kind: BackupBucket
+    type: local
+  - kind: BackupEntry
+    type: local
+  - kind: Bastion
+    type: local
+  - kind: ControlPlane
+    type: local
+  - kind: DNSRecord
+    type: local
+  - kind: Infrastructure
+    type: local
+  - kind: Worker
+    type: local
