@@ -72,7 +72,6 @@ func NewRuntimeGardenerResourceManager(
 		Replicas:                            ptr.To[int32](2),
 		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
 		ResponsibilityMode:                  resourcemanager.ForSource,
-		SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
 	}
 
 	applyDefaults(&values, defaultValues)
@@ -106,7 +105,6 @@ func NewTargetGardenerResourceManager(
 		MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
 		MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
 		ResponsibilityMode:                   resourcemanager.ForTarget,
-		SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
 		WatchedNamespace:                     &namespaceName,
 	}
 

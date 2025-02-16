@@ -75,7 +75,6 @@ var _ = Describe("ResourceManager", func() {
 				Replicas:                            ptr.To[int32](2),
 				ResourceClass:                       ptr.To("seed"),
 				ResponsibilityMode:                  resourcemanager.ForSource,
-				SyncPeriod:                          &metav1.Duration{Duration: time.Hour},
 			}))
 		})
 
@@ -97,7 +96,6 @@ var _ = Describe("ResourceManager", func() {
 				MaxConcurrentTokenInvalidatorWorkers: ptr.To(6),
 				MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
 				ResponsibilityMode:                   resourcemanager.ForTarget,
-				SyncPeriod:                           &metav1.Duration{Duration: time.Minute},
 				TargetNamespaces:                     []string{},
 				WatchedNamespace:                     &namespace,
 			}))
