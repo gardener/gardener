@@ -805,37 +805,30 @@ spec:
 			Expect(testClient.Delete(ctx, gardenerAPIServerService)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("Verify that the ManagedResources related to Gardener control plane components have been deployed")
-		Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
-			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
-			g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return managedResourceList.Items
-		}).Should(ContainElements(
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-apiserver-runtime")})}),
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-apiserver-virtual")})}),
-		))
-
-		// The garden controller waits for the Gardener-related ManagedResources to be healthy, but no
-		// gardener-resource-manager is running in this test, so let's fake this here.
-		By("Patch Gardener-related ManagedResources to report healthiness")
 		for _, name := range []string{"apiserver", "admission-controller", "controller-manager", "scheduler", "dashboard"} {
-			Eventually(makeManagedResourceHealthy("gardener-"+name+"-runtime", testNamespace.Name)).Should(Succeed())
-			Eventually(makeManagedResourceHealthy("gardener-"+name+"-virtual", testNamespace.Name)).Should(Succeed())
+			By("Verify that the ManagedResources related to gardener-" + name + " have been deployed")
+			Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
+				managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+				g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
+				return managedResourceList.Items
+			}).Should(ContainElements(
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-" + name + "-runtime")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-" + name + "-virtual")})}),
+			), "for gardener-"+name)
+
+			// The garden controller waits for the Gardener-related ManagedResources to be healthy, but no
+			// gardener-resource-manager is running in this test, so let's fake this here.
+			By("Patch gardener-" + name + "-related ManagedResources to report healthiness")
+			Eventually(makeManagedResourceHealthy("gardener-"+name+"-runtime", testNamespace.Name)).Should(Succeed(), "for gardener-"+name)
+			Eventually(makeManagedResourceHealthy("gardener-"+name+"-virtual", testNamespace.Name)).Should(Succeed(), "for gardener-"+name)
 		}
 
+		By("Verify that the ManagedResources related to other components have been deployed")
 		Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 			g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return managedResourceList.Items
 		}).Should(ContainElements(
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-admission-controller-runtime")})}),
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-admission-controller-virtual")})}),
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-controller-manager-runtime")})}),
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-controller-manager-virtual")})}),
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-scheduler-runtime")})}),
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-scheduler-virtual")})}),
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-dashboard-runtime")})}),
-			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("gardener-dashboard-virtual")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("terminal-runtime")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("terminal-virtual")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("garden-system-virtual")})}),
