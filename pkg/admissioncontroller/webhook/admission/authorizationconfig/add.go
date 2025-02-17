@@ -20,6 +20,7 @@ import (
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	apiservervalidation "k8s.io/apiserver/pkg/apis/apiserver/validation"
+	authorizationcel "k8s.io/apiserver/pkg/authorization/cel"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -118,7 +119,7 @@ func admitConfig(authorizationConfigurationRaw string, shoots []*gardencore.Shoo
 		}
 	}
 
-	if errList := apiservervalidation.ValidateAuthorizationConfiguration(field.NewPath(""), authorizationConfig, sets.NewString("Webhook"), sets.NewString("Webhook")); len(errList) != 0 {
+	if errList := apiservervalidation.ValidateAuthorizationConfiguration(authorizationcel.NewDefaultCompiler(), field.NewPath(""), authorizationConfig, sets.New("Webhook"), sets.New("Webhook")); len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authorization configuration: %v", errList)
 	}
 
