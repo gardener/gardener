@@ -8,8 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ Object = (*OperatingSystemConfig)(nil)
@@ -363,29 +361,11 @@ const (
 type InPlaceUpdates struct {
 	// OperatingSystemVersion is the version of the operating system.
 	OperatingSystemVersion string `json:"operatingSystemVersion"`
-	// Kubelet contains the configuration for the kubelet.
-	Kubelet KubeletConfig `json:"kubelet"`
+	// KubeletVersion is the version of the kubelet.
+	KubeletVersion string `json:"kubelet"`
 	// CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.
 	// +optional
 	CredentialsRotation *CredentialsRotation `json:"credentialsRotation,omitempty"`
-}
-
-// KubeletConfig contains the configuration for the kubelet.
-type KubeletConfig struct {
-	// Version is the version of the kubelet.
-	Version string `json:"version"`
-	// CPUManagerPolicy allows to set alternative CPU management policies (default: none).
-	// +optional
-	CPUManagerPolicy *string `json:"cpuManagerPolicy,omitempty"`
-	// EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction.
-	// +optional
-	EvictionHard *gardencorev1beta1.KubeletConfigEviction `json:"evictionHard,omitempty"`
-	// KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
-	// +optional
-	KubeReserved *gardencorev1beta1.KubeletConfigReserved `json:"kubeReserved,omitempty"`
-	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
-	// +optional
-	SystemReserved *gardencorev1beta1.KubeletConfigReserved `json:"systemReserved,omitempty"`
 }
 
 // InPlaceUpdatesStatus is a structure containing configuration for in-place updates.
