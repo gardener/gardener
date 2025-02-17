@@ -184,8 +184,8 @@ github.com/fxamacker/cbor/v2 v2.7.0 h1:iM5WgngdRBanHcxugY4JySA0nk1wZorNOpTgCMedv
 github.com/fxamacker/cbor/v2 v2.7.0/go.mod h1:pxXPTn3joSm21Gbwsv0w9OSA2y1HFR9qXEeXQVeNoDQ=
 github.com/gardener/cert-management v0.17.5 h1:feqNpdgkF2RJP5xPidbkUx2MS15m4mBWGNE5mo3sg34=
 github.com/gardener/cert-management v0.17.5/go.mod h1:jazLDc7bcJ0T8axC96A52X7AqeIYsEyALpYsuTFuhbw=
-github.com/gardener/dependency-watchdog v1.3.0 h1:C5EO/4GKv1TosvqVepJfzGssu8dDR06q1y05b11ozqI=
-github.com/gardener/dependency-watchdog v1.3.0/go.mod h1:KNUla1c54x6AGh7SXK/OlM0LrghMXXZG0f+d7+XojaA=
+github.com/gardener/dependency-watchdog v1.4.0 h1:RKsjOSS41cR2kjbacWsrVlyhpV71PZhAiaB49D821UM=
+github.com/gardener/dependency-watchdog v1.4.0/go.mod h1:B5OYoELKMn8D28OFU4ZMSQFv+RD4mSLV0rvXMEhp4KI=
 github.com/gardener/etcd-druid v0.27.0 h1:vqcusx1O3G01BU3CHke6nZEYvDfiFqgCGS59mQCK0LM=
 github.com/gardener/etcd-druid v0.27.0/go.mod h1:SKjfV8bvdLGF1ynFbWF4ioK2a6M33g7N6lct45p50J8=
 github.com/gardener/machine-controller-manager v0.56.1 h1:8L+69IArB0+r+ma+CJe/6SE7NMDs2GU9095RGSzwydk=
