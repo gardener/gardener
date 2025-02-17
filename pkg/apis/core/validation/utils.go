@@ -485,6 +485,13 @@ func validateCapabilitiesAgainstDefinition(capabilities core.Capabilities, capab
 			errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues, "must be a subset of spec.capabilitiesDefinition of the providers cloudProfile"))
 		}
 	}
+	// if there are multiple values for architecture, the architecture for machineTypes must be set and must contain exactly one value
+	allowedArchitectures := parsedCapabilitiesDefinition[v1beta1constants.ArchitectureKey].Values()
+	if len(allowedArchitectures) > 1 {
+		if value, ok := parsedCapabilities[v1beta1constants.ArchitectureKey]; !ok || len(value) != 1 {
+			errList = append(errList, field.Required(path.Child("capabilities", v1beta1constants.ArchitectureKey), fmt.Sprintf("multiple architectures are supported in the cloud profile. So it must be defined and contain exactly one of: %+v", allowedArchitectures)))
+		}
+	}
 
 	return errList
 }
