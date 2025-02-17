@@ -6,15 +6,15 @@ package create
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
-	"k8s.io/cli-runtime/pkg/genericiooptions"
+
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
 
 // NewCommand creates a new cobra.Command.
-func NewCommand(ioStreams genericiooptions.IOStreams) *cobra.Command {
-	opts := &Options{}
+func NewCommand(globalOpts *cmd.Options) *cobra.Command {
+	opts := &Options{Options: globalOpts}
 
 	cmd := &cobra.Command{
 		Use:   "create [token]",
@@ -32,7 +32,7 @@ gardenadm token create`,
 		Args: cobra.MaximumNArgs(1),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := opts.Complete(args); err != nil {
+			if err := opts.ParseArgs(args); err != nil {
 				return err
 			}
 
@@ -40,7 +40,11 @@ gardenadm token create`,
 				return err
 			}
 
-			return run(cmd.Context(), ioStreams, opts)
+			if err := opts.Complete(); err != nil {
+				return err
+			}
+
+			return run(cmd.Context(), opts)
 		},
 	}
 
@@ -49,7 +53,7 @@ gardenadm token create`,
 	return cmd
 }
 
-func run(_ context.Context, ioStreams genericiooptions.IOStreams, _ *Options) error {
-	fmt.Fprintln(ioStreams.Out, "not implemented")
+func run(_ context.Context, opts *Options) error {
+	opts.Log.Info("Not implemented")
 	return nil
 }

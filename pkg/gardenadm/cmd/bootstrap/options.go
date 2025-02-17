@@ -9,16 +9,19 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
 
 // Options contains options for this command.
 type Options struct {
+	*cmd.Options
 	// Kubeconfig is the path to the kubeconfig file pointing to the KinD cluster.
 	Kubeconfig string
 }
 
-// Complete completes the options.
-func (o *Options) Complete() error {
+// ParseArgs parses the arguments to the options.
+func (o *Options) ParseArgs(_ []string) error {
 	if o.Kubeconfig == "" {
 		o.Kubeconfig = os.Getenv("KUBECONFIG")
 	}
@@ -34,6 +37,9 @@ func (o *Options) Validate() error {
 
 	return nil
 }
+
+// Complete completes the options.
+func (o *Options) Complete() error { return nil }
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&o.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file pointing to the KinD cluster")

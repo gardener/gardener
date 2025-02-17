@@ -9,16 +9,19 @@ import (
 	"strings"
 
 	"github.com/spf13/pflag"
+
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
 
 // Options contains options for this command.
 type Options struct {
+	*cmd.Options
 	// Token is the token to create.
 	Token string
 }
 
-// Complete completes the options.
-func (o *Options) Complete(args []string) error {
+// ParseArgs parses the arguments to the options.
+func (o *Options) ParseArgs(args []string) error {
 	if len(args) > 0 {
 		o.Token = strings.TrimSpace(args[0])
 	}
@@ -41,5 +44,8 @@ func (o *Options) Validate() error {
 
 	return nil
 }
+
+// Complete completes the options.
+func (o *Options) Complete() error { return nil }
 
 func (o *Options) addFlags(_ *pflag.FlagSet) {}

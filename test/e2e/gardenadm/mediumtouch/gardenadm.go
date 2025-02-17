@@ -19,7 +19,7 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 
 	Describe("Prepare infrastructure and machines", Ordered, func() {
 		It("should bootstrap the machine pods", func(SpecContext) {
-			Eventually(RunAndWait("bootstrap")).Should(gbytes.Say("not implemented as well"))
+			Eventually(RunAndWait("bootstrap").Err).Should(gbytes.Say("Not implemented as well"))
 		}, SpecTimeout(time.Minute))
 	})
 })

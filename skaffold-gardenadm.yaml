@@ -11,6 +11,7 @@ build:
             - cmd/gardenadm
             - cmd/gardenadm/app
             - cmd/utils
+            - pkg/gardenadm/cmd
             - pkg/gardenadm/cmd/bootstrap
             - pkg/gardenadm/cmd/connect
             - pkg/gardenadm/cmd/discover
@@ -22,6 +23,7 @@ build:
             - pkg/gardenadm/cmd/token/generate
             - pkg/gardenadm/cmd/token/list
             - pkg/gardenadm/cmd/version
+            - pkg/logger
             - VERSION
         ldflags:
           - '{{.LD_FLAGS}}'

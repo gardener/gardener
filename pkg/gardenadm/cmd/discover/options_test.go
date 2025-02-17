@@ -20,9 +20,9 @@ var _ = Describe("Options", func() {
 		options = &Options{}
 	})
 
-	Describe("#Complete", func() {
+	Describe("#ParseArgs", func() {
 		It("should return nil", func() {
-			Expect(options.Complete()).To(Succeed())
+			Expect(options.ParseArgs(nil)).To(Succeed())
 		})
 	})
 
@@ -35,6 +35,12 @@ var _ = Describe("Options", func() {
 
 		It("should fail because kubeconfig path is not set", func() {
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a path to a garden cluster kubeconfig")))
+		})
+	})
+
+	Describe("#Complete", func() {
+		It("should return nil", func() {
+			Expect(options.Complete()).To(Succeed())
 		})
 	})
 })

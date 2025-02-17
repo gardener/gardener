@@ -20,15 +20,21 @@ var _ = Describe("Options", func() {
 		options = &Options{}
 	})
 
-	Describe("#Complete", func() {
+	Describe("#ParseArgs", func() {
 		It("should return nil", func() {
-			Expect(options.Complete()).To(Succeed())
+			Expect(options.ParseArgs(nil)).To(Succeed())
 		})
 	})
 
 	Describe("#Validate", func() {
 		It("should return nil", func() {
 			Expect(options.Validate()).To(Succeed())
+		})
+	})
+
+	Describe("#Complete", func() {
+		It("should return nil", func() {
+			Expect(options.Complete()).To(Succeed())
 		})
 	})
 })
