@@ -85,8 +85,6 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require github.com/bsm/gomega v1.26.0
-
 require (
 	cel.dev/expr v0.18.0 // indirect
 	dario.cat/mergo v1.0.1 // indirect

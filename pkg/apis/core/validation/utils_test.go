@@ -5,7 +5,8 @@
 package validation_test
 
 import (
-	"github.com/bsm/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -109,17 +110,17 @@ var _ = Describe("Utils tests", func() {
 		})
 
 		DescribeTable("should reject invalid capabilitiesDefinition",
-			func(capabilities core.Capabilities, expectedError []types.GomegaMatcher) {
+			func(capabilities core.Capabilities, expectedError []gomegatypes.GomegaMatcher) {
 				errorList := ValidateCapabilitiesDefinition(capabilities, dummyPath)
 				Expect(errorList).To(ConsistOf(expectedError))
 			},
-			Entry("empty capability values", core.Capabilities{"architecture": "amd64", "hypervisorType": ""}, []types.GomegaMatcher{
+			Entry("empty capability values", core.Capabilities{"architecture": "amd64", "hypervisorType": ""}, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(dummyPath.Child("hypervisorType").String()),
 				})),
 			}),
-			Entry("missing architecture capability", core.Capabilities{"hypervisorType": "gen1,gen2,gen3"}, []types.GomegaMatcher{
+			Entry("missing architecture capability", core.Capabilities{"hypervisorType": "gen1,gen2,gen3"}, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(dummyPath.Child("architecture").String()),
@@ -149,7 +150,7 @@ var _ = Describe("Utils tests", func() {
 
 			capabilitiesSet, err := UnmarshalCapabilitiesSet(CapabilitiesSet, dummyPath)
 
-			Expect(err).To(ConsistOf([]types.GomegaMatcher{
+			Expect(err).To(ConsistOf([]gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("dummy[1]"),
