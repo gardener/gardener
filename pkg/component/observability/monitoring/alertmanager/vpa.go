@@ -44,10 +44,10 @@ func (a *alertManager) vpa() *vpaautoscalingv1.VerticalPodAutoscaler {
 							corev1.ResourceMemory: resource.MustParse("20Mi"),
 						},
 						MaxAllowed: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("500m"),
 							corev1.ResourceMemory: resource.MustParse("200Mi"),
 						},
-						ControlledValues: &controlledValuesRequestsOnly,
+						ControlledValues:    &controlledValuesRequestsOnly,
+						ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 					},
 					{
 						ContainerName: "config-reloader",

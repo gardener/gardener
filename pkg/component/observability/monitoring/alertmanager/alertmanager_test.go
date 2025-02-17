@@ -185,7 +185,6 @@ var _ = Describe("Alertmanager", func() {
 				Version:           version,
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("5m"),
 						corev1.ResourceMemory: resource.MustParse("20Mi"),
 					},
 				},
@@ -236,10 +235,10 @@ var _ = Describe("Alertmanager", func() {
 								corev1.ResourceMemory: resource.MustParse("20Mi"),
 							},
 							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("500m"),
 								corev1.ResourceMemory: resource.MustParse("200Mi"),
 							},
-							ControlledValues: &vpaControlledValuesRequestsOnly,
+							ControlledValues:    &vpaControlledValuesRequestsOnly,
+							ControlledResources: &[]corev1.ResourceName{corev1.ResourceMemory},
 						},
 						{
 							ContainerName: "config-reloader",
