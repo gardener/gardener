@@ -805,8 +805,8 @@ spec:
 			Expect(testClient.Delete(ctx, gardenerAPIServerService)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		By("Verify that the ManagedResources related to Gardener control plane components have been deployed")
 		for _, name := range []string{"apiserver", "admission-controller", "controller-manager", "scheduler", "dashboard"} {
+			By("Verify that the ManagedResources related to gardener-" + name + " have been deployed")
 			Eventually(func(g Gomega) []resourcesv1alpha1.ManagedResource {
 				managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 				g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
@@ -818,7 +818,7 @@ spec:
 
 			// The garden controller waits for the Gardener-related ManagedResources to be healthy, but no
 			// gardener-resource-manager is running in this test, so let's fake this here.
-			By("Patch Gardener-related ManagedResources to report healthiness")
+			By("Patch gardener-" + name + "-related ManagedResources to report healthiness")
 			Eventually(makeManagedResourceHealthy("gardener-"+name+"-runtime", testNamespace.Name)).Should(Succeed(), "for gardener-"+name)
 			Eventually(makeManagedResourceHealthy("gardener-"+name+"-virtual", testNamespace.Name)).Should(Succeed(), "for gardener-"+name)
 		}
