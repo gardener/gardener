@@ -43,7 +43,6 @@ import (
 	kubescheduler "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
 	"github.com/gardener/gardener/pkg/component/networking/coredns"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
-	vpnauthzserver "github.com/gardener/gardener/pkg/component/networking/vpn/authzserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
@@ -98,9 +97,6 @@ type components struct {
 	machineControllerManager component.DeployWaiter
 	dwdWeeder                component.DeployWaiter
 	dwdProber                component.DeployWaiter
-
-	// TODO(Wieneo): Remove this after Gardener v1.117 was released
-	vpnAuthzServer component.DeployWaiter
 
 	kubeAPIServerService component.Deployer
 	kubeAPIServerIngress component.Deployer
@@ -196,12 +192,6 @@ func (r *Reconciler) instantiateComponents(
 	c.clusterAutoscaler = r.newClusterAutoscaler()
 	c.machineControllerManager = r.newMachineControllerManager()
 	c.dwdWeeder, c.dwdProber, err = r.newDependencyWatchdogs(seed.GetInfo().Spec.Settings)
-	if err != nil {
-		return
-	}
-
-	// TODO(Wieneo): Remove this after Gardener v1.117 was released
-	c.vpnAuthzServer, err = r.newVPNAuthzServer()
 	if err != nil {
 		return
 	}
@@ -462,20 +452,6 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 	}
 
 	return
-}
-
-// TODO(Wieneo): Remove this after Gardener v1.117 was released
-func (r *Reconciler) newVPNAuthzServer() (component.DeployWaiter, error) {
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameExtAuthzServer, imagevectorutils.RuntimeVersion(r.SeedVersion.String()), imagevectorutils.TargetVersion(r.SeedVersion.String()))
-	if err != nil {
-		return nil, err
-	}
-
-	return vpnauthzserver.New(
-		r.SeedClientSet.Client(),
-		r.GardenNamespace,
-		image.String(),
-	), nil
 }
 
 func (r *Reconciler) newSystem(seed *gardencorev1beta1.Seed) (component.DeployWaiter, error) {

@@ -173,11 +173,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroy kube-apiserver service",
 			Fn:   component.OpDestroyAndWait(c.kubeAPIServerService).Destroy,
 		})
-		// TODO(Wieneo): Remove this after Gardener v1.117 was released
-		destroyVPNAuthzServer = g.Add(flow.Task{
-			Name: "Destroy VPN authorization server",
-			Fn:   component.OpDestroyAndWait(c.vpnAuthzServer).Destroy,
-		})
 		destroyIstio = g.Add(flow.Task{
 			Name: "Destroy Istio",
 			Fn:   component.OpDestroyAndWait(c.istio).Destroy,
@@ -259,7 +254,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyDWDProber,
 			destroyKubeAPIServerIngress,
 			destroyKubeAPIServerService,
-			destroyVPNAuthzServer,
 			destroyIstio,
 			destroyFluentOperatorResources,
 			destroyPrometheusOperator,

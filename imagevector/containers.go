@@ -35,8 +35,6 @@ const (
 	ContainerImageNameEtcdDruid = "etcd-druid"
 	// ContainerImageNameEventLogger is a constant for an image in the image vector with name 'event-logger'.
 	ContainerImageNameEventLogger = "event-logger"
-	// ContainerImageNameExtAuthzServer is a constant for an image in the image vector with name 'ext-authz-server'.
-	ContainerImageNameExtAuthzServer = "ext-authz-server"
 	// ContainerImageNameFluentBit is a constant for an image in the image vector with name 'fluent-bit'.
 	ContainerImageNameFluentBit = "fluent-bit"
 	// ContainerImageNameFluentBitPluginInstaller is a constant for an image in the image vector with name 'fluent-bit-plugin-installer'.

@@ -735,13 +735,6 @@ images:
     - type: 'githubTeam'
       teamname: 'gardener/gardener-core-networking-maintainers'
 
-# TODO(Wieneo): Remove component after Gardener v1.117 was released
-# External Authorization Server for the Istio Endpoint of Reversed VPN
-- name: ext-authz-server
-  sourceRepository: github.com/gardener/ext-authz-server
-  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/ext-authz-server
-  tag: "0.11.0"
-
 # API Server SNI
 - name: apiserver-proxy
   sourceRepository: github.com/envoyproxy/envoy
