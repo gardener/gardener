@@ -608,6 +608,8 @@ users:
 			Expect(seedClient.Create(ctx, deployment)).To(Succeed())
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+
 			Expect(botanist.ScaleKubeAPIServerToOne(ctx)).To(Succeed())
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
