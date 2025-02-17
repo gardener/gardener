@@ -7,8 +7,8 @@
 package versioned
 
 import (
-	"fmt"
-	"net/http"
+	fmt "fmt"
+	http "net/http"
 
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1"
 	discovery "k8s.io/client-go/discovery"

@@ -7,10 +7,10 @@
 package v1beta1
 
 import (
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ShootStateLister helps list ShootStates.
@@ -18,7 +18,7 @@ import (
 type ShootStateLister interface {
 	// List lists all ShootStates in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.ShootState, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.ShootState, err error)
 	// ShootStates returns an object that can list and get ShootStates.
 	ShootStates(namespace string) ShootStateNamespaceLister
 	ShootStateListerExpansion
@@ -26,17 +26,17 @@ type ShootStateLister interface {
 
 // shootStateLister implements the ShootStateLister interface.
 type shootStateLister struct {
-	listers.ResourceIndexer[*v1beta1.ShootState]
+	listers.ResourceIndexer[*corev1beta1.ShootState]
 }
 
 // NewShootStateLister returns a new ShootStateLister.
 func NewShootStateLister(indexer cache.Indexer) ShootStateLister {
-	return &shootStateLister{listers.New[*v1beta1.ShootState](indexer, v1beta1.Resource("shootstate"))}
+	return &shootStateLister{listers.New[*corev1beta1.ShootState](indexer, corev1beta1.Resource("shootstate"))}
 }
 
 // ShootStates returns an object that can list and get ShootStates.
 func (s *shootStateLister) ShootStates(namespace string) ShootStateNamespaceLister {
-	return shootStateNamespaceLister{listers.NewNamespaced[*v1beta1.ShootState](s.ResourceIndexer, namespace)}
+	return shootStateNamespaceLister{listers.NewNamespaced[*corev1beta1.ShootState](s.ResourceIndexer, namespace)}
 }
 
 // ShootStateNamespaceLister helps list and get ShootStates.
@@ -44,15 +44,15 @@ func (s *shootStateLister) ShootStates(namespace string) ShootStateNamespaceList
 type ShootStateNamespaceLister interface {
 	// List lists all ShootStates in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.ShootState, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.ShootState, err error)
 	// Get retrieves the ShootState from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1beta1.ShootState, error)
+	Get(name string) (*corev1beta1.ShootState, error)
 	ShootStateNamespaceListerExpansion
 }
 
 // shootStateNamespaceLister implements the ShootStateNamespaceLister
 // interface.
 type shootStateNamespaceLister struct {
-	listers.ResourceIndexer[*v1beta1.ShootState]
+	listers.ResourceIndexer[*corev1beta1.ShootState]
 }

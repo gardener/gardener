@@ -7,13 +7,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	apissettingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	versioned "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/settings/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // ClusterOpenIDConnectPresets.
 type ClusterOpenIDConnectPresetInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ClusterOpenIDConnectPresetLister
+	Lister() settingsv1alpha1.ClusterOpenIDConnectPresetLister
 }
 
 type clusterOpenIDConnectPresetInformer struct {
@@ -58,7 +58,7 @@ func NewFilteredClusterOpenIDConnectPresetInformer(client versioned.Interface, r
 				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().Watch(context.TODO(), options)
 			},
 		},
-		&settingsv1alpha1.ClusterOpenIDConnectPreset{},
+		&apissettingsv1alpha1.ClusterOpenIDConnectPreset{},
 		resyncPeriod,
 		indexers,
 	)
@@ -69,9 +69,9 @@ func (f *clusterOpenIDConnectPresetInformer) defaultInformer(client versioned.In
 }
 
 func (f *clusterOpenIDConnectPresetInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&settingsv1alpha1.ClusterOpenIDConnectPreset{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissettingsv1alpha1.ClusterOpenIDConnectPreset{}, f.defaultInformer)
 }
 
-func (f *clusterOpenIDConnectPresetInformer) Lister() v1alpha1.ClusterOpenIDConnectPresetLister {
-	return v1alpha1.NewClusterOpenIDConnectPresetLister(f.Informer().GetIndexer())
+func (f *clusterOpenIDConnectPresetInformer) Lister() settingsv1alpha1.ClusterOpenIDConnectPresetLister {
+	return settingsv1alpha1.NewClusterOpenIDConnectPresetLister(f.Informer().GetIndexer())
 }

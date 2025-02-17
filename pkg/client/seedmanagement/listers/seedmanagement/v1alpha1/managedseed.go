@@ -7,10 +7,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ManagedSeedLister helps list ManagedSeeds.
@@ -18,7 +18,7 @@ import (
 type ManagedSeedLister interface {
 	// List lists all ManagedSeeds in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ManagedSeed, err error)
+	List(selector labels.Selector) (ret []*seedmanagementv1alpha1.ManagedSeed, err error)
 	// ManagedSeeds returns an object that can list and get ManagedSeeds.
 	ManagedSeeds(namespace string) ManagedSeedNamespaceLister
 	ManagedSeedListerExpansion
@@ -26,17 +26,17 @@ type ManagedSeedLister interface {
 
 // managedSeedLister implements the ManagedSeedLister interface.
 type managedSeedLister struct {
-	listers.ResourceIndexer[*v1alpha1.ManagedSeed]
+	listers.ResourceIndexer[*seedmanagementv1alpha1.ManagedSeed]
 }
 
 // NewManagedSeedLister returns a new ManagedSeedLister.
 func NewManagedSeedLister(indexer cache.Indexer) ManagedSeedLister {
-	return &managedSeedLister{listers.New[*v1alpha1.ManagedSeed](indexer, v1alpha1.Resource("managedseed"))}
+	return &managedSeedLister{listers.New[*seedmanagementv1alpha1.ManagedSeed](indexer, seedmanagementv1alpha1.Resource("managedseed"))}
 }
 
 // ManagedSeeds returns an object that can list and get ManagedSeeds.
 func (s *managedSeedLister) ManagedSeeds(namespace string) ManagedSeedNamespaceLister {
-	return managedSeedNamespaceLister{listers.NewNamespaced[*v1alpha1.ManagedSeed](s.ResourceIndexer, namespace)}
+	return managedSeedNamespaceLister{listers.NewNamespaced[*seedmanagementv1alpha1.ManagedSeed](s.ResourceIndexer, namespace)}
 }
 
 // ManagedSeedNamespaceLister helps list and get ManagedSeeds.
@@ -44,15 +44,15 @@ func (s *managedSeedLister) ManagedSeeds(namespace string) ManagedSeedNamespaceL
 type ManagedSeedNamespaceLister interface {
 	// List lists all ManagedSeeds in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ManagedSeed, err error)
+	List(selector labels.Selector) (ret []*seedmanagementv1alpha1.ManagedSeed, err error)
 	// Get retrieves the ManagedSeed from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ManagedSeed, error)
+	Get(name string) (*seedmanagementv1alpha1.ManagedSeed, error)
 	ManagedSeedNamespaceListerExpansion
 }
 
 // managedSeedNamespaceLister implements the ManagedSeedNamespaceLister
 // interface.
 type managedSeedNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.ManagedSeed]
+	listers.ResourceIndexer[*seedmanagementv1alpha1.ManagedSeed]
 }

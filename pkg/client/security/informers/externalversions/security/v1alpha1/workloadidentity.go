@@ -7,13 +7,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	apissecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	versioned "github.com/gardener/gardener/pkg/client/security/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/security/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // WorkloadIdentities.
 type WorkloadIdentityInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.WorkloadIdentityLister
+	Lister() securityv1alpha1.WorkloadIdentityLister
 }
 
 type workloadIdentityInformer struct {
@@ -59,7 +59,7 @@ func NewFilteredWorkloadIdentityInformer(client versioned.Interface, namespace s
 				return client.SecurityV1alpha1().WorkloadIdentities(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&securityv1alpha1.WorkloadIdentity{},
+		&apissecurityv1alpha1.WorkloadIdentity{},
 		resyncPeriod,
 		indexers,
 	)
@@ -70,9 +70,9 @@ func (f *workloadIdentityInformer) defaultInformer(client versioned.Interface, r
 }
 
 func (f *workloadIdentityInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&securityv1alpha1.WorkloadIdentity{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissecurityv1alpha1.WorkloadIdentity{}, f.defaultInformer)
 }
 
-func (f *workloadIdentityInformer) Lister() v1alpha1.WorkloadIdentityLister {
-	return v1alpha1.NewWorkloadIdentityLister(f.Informer().GetIndexer())
+func (f *workloadIdentityInformer) Lister() securityv1alpha1.WorkloadIdentityLister {
+	return securityv1alpha1.NewWorkloadIdentityLister(f.Informer().GetIndexer())
 }

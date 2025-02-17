@@ -7,116 +7,34 @@
 package fake
 
 import (
-	"context"
-
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeSecretBindings implements SecretBindingInterface
-type FakeSecretBindings struct {
+// fakeSecretBindings implements SecretBindingInterface
+type fakeSecretBindings struct {
+	*gentype.FakeClientWithList[*v1beta1.SecretBinding, *v1beta1.SecretBindingList]
 	Fake *FakeCoreV1beta1
-	ns   string
 }
 
-var secretbindingsResource = v1beta1.SchemeGroupVersion.WithResource("secretbindings")
-
-var secretbindingsKind = v1beta1.SchemeGroupVersion.WithKind("SecretBinding")
-
-// Get takes name of the secretBinding, and returns the corresponding secretBinding object, and an error if there is any.
-func (c *FakeSecretBindings) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.SecretBinding, err error) {
-	emptyResult := &v1beta1.SecretBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(secretbindingsResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeSecretBindings(fake *FakeCoreV1beta1, namespace string) corev1beta1.SecretBindingInterface {
+	return &fakeSecretBindings{
+		gentype.NewFakeClientWithList[*v1beta1.SecretBinding, *v1beta1.SecretBindingList](
+			fake.Fake,
+			namespace,
+			v1beta1.SchemeGroupVersion.WithResource("secretbindings"),
+			v1beta1.SchemeGroupVersion.WithKind("SecretBinding"),
+			func() *v1beta1.SecretBinding { return &v1beta1.SecretBinding{} },
+			func() *v1beta1.SecretBindingList { return &v1beta1.SecretBindingList{} },
+			func(dst, src *v1beta1.SecretBindingList) { dst.ListMeta = src.ListMeta },
+			func(list *v1beta1.SecretBindingList) []*v1beta1.SecretBinding {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1beta1.SecretBindingList, items []*v1beta1.SecretBinding) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1beta1.SecretBinding), err
-}
-
-// List takes label and field selectors, and returns the list of SecretBindings that match those selectors.
-func (c *FakeSecretBindings) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.SecretBindingList, err error) {
-	emptyResult := &v1beta1.SecretBindingList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(secretbindingsResource, secretbindingsKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1beta1.SecretBindingList{ListMeta: obj.(*v1beta1.SecretBindingList).ListMeta}
-	for _, item := range obj.(*v1beta1.SecretBindingList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested secretBindings.
-func (c *FakeSecretBindings) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(secretbindingsResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a secretBinding and creates it.  Returns the server's representation of the secretBinding, and an error, if there is any.
-func (c *FakeSecretBindings) Create(ctx context.Context, secretBinding *v1beta1.SecretBinding, opts v1.CreateOptions) (result *v1beta1.SecretBinding, err error) {
-	emptyResult := &v1beta1.SecretBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(secretbindingsResource, c.ns, secretBinding, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.SecretBinding), err
-}
-
-// Update takes the representation of a secretBinding and updates it. Returns the server's representation of the secretBinding, and an error, if there is any.
-func (c *FakeSecretBindings) Update(ctx context.Context, secretBinding *v1beta1.SecretBinding, opts v1.UpdateOptions) (result *v1beta1.SecretBinding, err error) {
-	emptyResult := &v1beta1.SecretBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(secretbindingsResource, c.ns, secretBinding, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.SecretBinding), err
-}
-
-// Delete takes name of the secretBinding and deletes it. Returns an error if one occurs.
-func (c *FakeSecretBindings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(secretbindingsResource, c.ns, name, opts), &v1beta1.SecretBinding{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeSecretBindings) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(secretbindingsResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.SecretBindingList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched secretBinding.
-func (c *FakeSecretBindings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.SecretBinding, err error) {
-	emptyResult := &v1beta1.SecretBinding{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(secretbindingsResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.SecretBinding), err
 }

@@ -7,9 +7,9 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,33 +25,34 @@ type ControllerInstallationsGetter interface {
 
 // ControllerInstallationInterface has methods to work with ControllerInstallation resources.
 type ControllerInstallationInterface interface {
-	Create(ctx context.Context, controllerInstallation *v1beta1.ControllerInstallation, opts v1.CreateOptions) (*v1beta1.ControllerInstallation, error)
-	Update(ctx context.Context, controllerInstallation *v1beta1.ControllerInstallation, opts v1.UpdateOptions) (*v1beta1.ControllerInstallation, error)
+	Create(ctx context.Context, controllerInstallation *corev1beta1.ControllerInstallation, opts v1.CreateOptions) (*corev1beta1.ControllerInstallation, error)
+	Update(ctx context.Context, controllerInstallation *corev1beta1.ControllerInstallation, opts v1.UpdateOptions) (*corev1beta1.ControllerInstallation, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, controllerInstallation *v1beta1.ControllerInstallation, opts v1.UpdateOptions) (*v1beta1.ControllerInstallation, error)
+	UpdateStatus(ctx context.Context, controllerInstallation *corev1beta1.ControllerInstallation, opts v1.UpdateOptions) (*corev1beta1.ControllerInstallation, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.ControllerInstallation, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ControllerInstallationList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*corev1beta1.ControllerInstallation, error)
+	List(ctx context.Context, opts v1.ListOptions) (*corev1beta1.ControllerInstallationList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ControllerInstallation, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1beta1.ControllerInstallation, err error)
 	ControllerInstallationExpansion
 }
 
 // controllerInstallations implements ControllerInstallationInterface
 type controllerInstallations struct {
-	*gentype.ClientWithList[*v1beta1.ControllerInstallation, *v1beta1.ControllerInstallationList]
+	*gentype.ClientWithList[*corev1beta1.ControllerInstallation, *corev1beta1.ControllerInstallationList]
 }
 
 // newControllerInstallations returns a ControllerInstallations
 func newControllerInstallations(c *CoreV1beta1Client) *controllerInstallations {
 	return &controllerInstallations{
-		gentype.NewClientWithList[*v1beta1.ControllerInstallation, *v1beta1.ControllerInstallationList](
+		gentype.NewClientWithList[*corev1beta1.ControllerInstallation, *corev1beta1.ControllerInstallationList](
 			"controllerinstallations",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1beta1.ControllerInstallation { return &v1beta1.ControllerInstallation{} },
-			func() *v1beta1.ControllerInstallationList { return &v1beta1.ControllerInstallationList{} }),
+			func() *corev1beta1.ControllerInstallation { return &corev1beta1.ControllerInstallation{} },
+			func() *corev1beta1.ControllerInstallationList { return &corev1beta1.ControllerInstallationList{} },
+		),
 	}
 }

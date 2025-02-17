@@ -7,13 +7,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	apissettingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	versioned "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/settings/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/client/settings/listers/settings/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // OpenIDConnectPresets.
 type OpenIDConnectPresetInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.OpenIDConnectPresetLister
+	Lister() settingsv1alpha1.OpenIDConnectPresetLister
 }
 
 type openIDConnectPresetInformer struct {
@@ -59,7 +59,7 @@ func NewFilteredOpenIDConnectPresetInformer(client versioned.Interface, namespac
 				return client.SettingsV1alpha1().OpenIDConnectPresets(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&settingsv1alpha1.OpenIDConnectPreset{},
+		&apissettingsv1alpha1.OpenIDConnectPreset{},
 		resyncPeriod,
 		indexers,
 	)
@@ -70,9 +70,9 @@ func (f *openIDConnectPresetInformer) defaultInformer(client versioned.Interface
 }
 
 func (f *openIDConnectPresetInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&settingsv1alpha1.OpenIDConnectPreset{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissettingsv1alpha1.OpenIDConnectPreset{}, f.defaultInformer)
 }
 
-func (f *openIDConnectPresetInformer) Lister() v1alpha1.OpenIDConnectPresetLister {
-	return v1alpha1.NewOpenIDConnectPresetLister(f.Informer().GetIndexer())
+func (f *openIDConnectPresetInformer) Lister() settingsv1alpha1.OpenIDConnectPresetLister {
+	return settingsv1alpha1.NewOpenIDConnectPresetLister(f.Informer().GetIndexer())
 }

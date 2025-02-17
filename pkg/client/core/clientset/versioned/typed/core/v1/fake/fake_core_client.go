@@ -17,7 +17,7 @@ type FakeCoreV1 struct {
 }
 
 func (c *FakeCoreV1) ControllerDeployments() v1.ControllerDeploymentInterface {
-	return &FakeControllerDeployments{c}
+	return newFakeControllerDeployments(c)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

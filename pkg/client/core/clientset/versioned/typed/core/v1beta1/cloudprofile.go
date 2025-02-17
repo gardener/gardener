@@ -7,9 +7,9 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,31 +25,32 @@ type CloudProfilesGetter interface {
 
 // CloudProfileInterface has methods to work with CloudProfile resources.
 type CloudProfileInterface interface {
-	Create(ctx context.Context, cloudProfile *v1beta1.CloudProfile, opts v1.CreateOptions) (*v1beta1.CloudProfile, error)
-	Update(ctx context.Context, cloudProfile *v1beta1.CloudProfile, opts v1.UpdateOptions) (*v1beta1.CloudProfile, error)
+	Create(ctx context.Context, cloudProfile *corev1beta1.CloudProfile, opts v1.CreateOptions) (*corev1beta1.CloudProfile, error)
+	Update(ctx context.Context, cloudProfile *corev1beta1.CloudProfile, opts v1.UpdateOptions) (*corev1beta1.CloudProfile, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.CloudProfile, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.CloudProfileList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*corev1beta1.CloudProfile, error)
+	List(ctx context.Context, opts v1.ListOptions) (*corev1beta1.CloudProfileList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.CloudProfile, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1beta1.CloudProfile, err error)
 	CloudProfileExpansion
 }
 
 // cloudProfiles implements CloudProfileInterface
 type cloudProfiles struct {
-	*gentype.ClientWithList[*v1beta1.CloudProfile, *v1beta1.CloudProfileList]
+	*gentype.ClientWithList[*corev1beta1.CloudProfile, *corev1beta1.CloudProfileList]
 }
 
 // newCloudProfiles returns a CloudProfiles
 func newCloudProfiles(c *CoreV1beta1Client) *cloudProfiles {
 	return &cloudProfiles{
-		gentype.NewClientWithList[*v1beta1.CloudProfile, *v1beta1.CloudProfileList](
+		gentype.NewClientWithList[*corev1beta1.CloudProfile, *corev1beta1.CloudProfileList](
 			"cloudprofiles",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1beta1.CloudProfile { return &v1beta1.CloudProfile{} },
-			func() *v1beta1.CloudProfileList { return &v1beta1.CloudProfileList{} }),
+			func() *corev1beta1.CloudProfile { return &corev1beta1.CloudProfile{} },
+			func() *corev1beta1.CloudProfileList { return &corev1beta1.CloudProfileList{} },
+		),
 	}
 }

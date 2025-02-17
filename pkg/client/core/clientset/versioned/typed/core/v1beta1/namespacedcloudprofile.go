@@ -7,9 +7,9 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,33 +25,34 @@ type NamespacedCloudProfilesGetter interface {
 
 // NamespacedCloudProfileInterface has methods to work with NamespacedCloudProfile resources.
 type NamespacedCloudProfileInterface interface {
-	Create(ctx context.Context, namespacedCloudProfile *v1beta1.NamespacedCloudProfile, opts v1.CreateOptions) (*v1beta1.NamespacedCloudProfile, error)
-	Update(ctx context.Context, namespacedCloudProfile *v1beta1.NamespacedCloudProfile, opts v1.UpdateOptions) (*v1beta1.NamespacedCloudProfile, error)
+	Create(ctx context.Context, namespacedCloudProfile *corev1beta1.NamespacedCloudProfile, opts v1.CreateOptions) (*corev1beta1.NamespacedCloudProfile, error)
+	Update(ctx context.Context, namespacedCloudProfile *corev1beta1.NamespacedCloudProfile, opts v1.UpdateOptions) (*corev1beta1.NamespacedCloudProfile, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, namespacedCloudProfile *v1beta1.NamespacedCloudProfile, opts v1.UpdateOptions) (*v1beta1.NamespacedCloudProfile, error)
+	UpdateStatus(ctx context.Context, namespacedCloudProfile *corev1beta1.NamespacedCloudProfile, opts v1.UpdateOptions) (*corev1beta1.NamespacedCloudProfile, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.NamespacedCloudProfile, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.NamespacedCloudProfileList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*corev1beta1.NamespacedCloudProfile, error)
+	List(ctx context.Context, opts v1.ListOptions) (*corev1beta1.NamespacedCloudProfileList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.NamespacedCloudProfile, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1beta1.NamespacedCloudProfile, err error)
 	NamespacedCloudProfileExpansion
 }
 
 // namespacedCloudProfiles implements NamespacedCloudProfileInterface
 type namespacedCloudProfiles struct {
-	*gentype.ClientWithList[*v1beta1.NamespacedCloudProfile, *v1beta1.NamespacedCloudProfileList]
+	*gentype.ClientWithList[*corev1beta1.NamespacedCloudProfile, *corev1beta1.NamespacedCloudProfileList]
 }
 
 // newNamespacedCloudProfiles returns a NamespacedCloudProfiles
 func newNamespacedCloudProfiles(c *CoreV1beta1Client, namespace string) *namespacedCloudProfiles {
 	return &namespacedCloudProfiles{
-		gentype.NewClientWithList[*v1beta1.NamespacedCloudProfile, *v1beta1.NamespacedCloudProfileList](
+		gentype.NewClientWithList[*corev1beta1.NamespacedCloudProfile, *corev1beta1.NamespacedCloudProfileList](
 			"namespacedcloudprofiles",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1beta1.NamespacedCloudProfile { return &v1beta1.NamespacedCloudProfile{} },
-			func() *v1beta1.NamespacedCloudProfileList { return &v1beta1.NamespacedCloudProfileList{} }),
+			func() *corev1beta1.NamespacedCloudProfile { return &corev1beta1.NamespacedCloudProfile{} },
+			func() *corev1beta1.NamespacedCloudProfileList { return &corev1beta1.NamespacedCloudProfileList{} },
+		),
 	}
 }

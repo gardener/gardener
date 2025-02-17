@@ -17,15 +17,15 @@ type FakeSeedmanagementV1alpha1 struct {
 }
 
 func (c *FakeSeedmanagementV1alpha1) Gardenlets(namespace string) v1alpha1.GardenletInterface {
-	return &FakeGardenlets{c, namespace}
+	return newFakeGardenlets(c, namespace)
 }
 
 func (c *FakeSeedmanagementV1alpha1) ManagedSeeds(namespace string) v1alpha1.ManagedSeedInterface {
-	return &FakeManagedSeeds{c, namespace}
+	return newFakeManagedSeeds(c, namespace)
 }
 
 func (c *FakeSeedmanagementV1alpha1) ManagedSeedSets(namespace string) v1alpha1.ManagedSeedSetInterface {
-	return &FakeManagedSeedSets{c, namespace}
+	return newFakeManagedSeedSets(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

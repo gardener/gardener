@@ -7,10 +7,10 @@
 package v1beta1
 
 import (
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // BackupBucketLister helps list BackupBuckets.
@@ -18,19 +18,19 @@ import (
 type BackupBucketLister interface {
 	// List lists all BackupBuckets in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.BackupBucket, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.BackupBucket, err error)
 	// Get retrieves the BackupBucket from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1beta1.BackupBucket, error)
+	Get(name string) (*corev1beta1.BackupBucket, error)
 	BackupBucketListerExpansion
 }
 
 // backupBucketLister implements the BackupBucketLister interface.
 type backupBucketLister struct {
-	listers.ResourceIndexer[*v1beta1.BackupBucket]
+	listers.ResourceIndexer[*corev1beta1.BackupBucket]
 }
 
 // NewBackupBucketLister returns a new BackupBucketLister.
 func NewBackupBucketLister(indexer cache.Indexer) BackupBucketLister {
-	return &backupBucketLister{listers.New[*v1beta1.BackupBucket](indexer, v1beta1.Resource("backupbucket"))}
+	return &backupBucketLister{listers.New[*corev1beta1.BackupBucket](indexer, corev1beta1.Resource("backupbucket"))}
 }

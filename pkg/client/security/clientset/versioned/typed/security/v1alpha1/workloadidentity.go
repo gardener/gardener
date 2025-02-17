@@ -7,9 +7,9 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	scheme "github.com/gardener/gardener/pkg/client/security/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,42 +25,43 @@ type WorkloadIdentitiesGetter interface {
 
 // WorkloadIdentityInterface has methods to work with WorkloadIdentity resources.
 type WorkloadIdentityInterface interface {
-	Create(ctx context.Context, workloadIdentity *v1alpha1.WorkloadIdentity, opts v1.CreateOptions) (*v1alpha1.WorkloadIdentity, error)
-	Update(ctx context.Context, workloadIdentity *v1alpha1.WorkloadIdentity, opts v1.UpdateOptions) (*v1alpha1.WorkloadIdentity, error)
+	Create(ctx context.Context, workloadIdentity *securityv1alpha1.WorkloadIdentity, opts v1.CreateOptions) (*securityv1alpha1.WorkloadIdentity, error)
+	Update(ctx context.Context, workloadIdentity *securityv1alpha1.WorkloadIdentity, opts v1.UpdateOptions) (*securityv1alpha1.WorkloadIdentity, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, workloadIdentity *v1alpha1.WorkloadIdentity, opts v1.UpdateOptions) (*v1alpha1.WorkloadIdentity, error)
+	UpdateStatus(ctx context.Context, workloadIdentity *securityv1alpha1.WorkloadIdentity, opts v1.UpdateOptions) (*securityv1alpha1.WorkloadIdentity, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.WorkloadIdentity, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.WorkloadIdentityList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*securityv1alpha1.WorkloadIdentity, error)
+	List(ctx context.Context, opts v1.ListOptions) (*securityv1alpha1.WorkloadIdentityList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.WorkloadIdentity, err error)
-	CreateToken(ctx context.Context, workloadIdentityName string, tokenRequest *v1alpha1.TokenRequest, opts v1.CreateOptions) (*v1alpha1.TokenRequest, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *securityv1alpha1.WorkloadIdentity, err error)
+	CreateToken(ctx context.Context, workloadIdentityName string, tokenRequest *securityv1alpha1.TokenRequest, opts v1.CreateOptions) (*securityv1alpha1.TokenRequest, error)
 
 	WorkloadIdentityExpansion
 }
 
 // workloadIdentities implements WorkloadIdentityInterface
 type workloadIdentities struct {
-	*gentype.ClientWithList[*v1alpha1.WorkloadIdentity, *v1alpha1.WorkloadIdentityList]
+	*gentype.ClientWithList[*securityv1alpha1.WorkloadIdentity, *securityv1alpha1.WorkloadIdentityList]
 }
 
 // newWorkloadIdentities returns a WorkloadIdentities
 func newWorkloadIdentities(c *SecurityV1alpha1Client, namespace string) *workloadIdentities {
 	return &workloadIdentities{
-		gentype.NewClientWithList[*v1alpha1.WorkloadIdentity, *v1alpha1.WorkloadIdentityList](
+		gentype.NewClientWithList[*securityv1alpha1.WorkloadIdentity, *securityv1alpha1.WorkloadIdentityList](
 			"workloadidentities",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1alpha1.WorkloadIdentity { return &v1alpha1.WorkloadIdentity{} },
-			func() *v1alpha1.WorkloadIdentityList { return &v1alpha1.WorkloadIdentityList{} }),
+			func() *securityv1alpha1.WorkloadIdentity { return &securityv1alpha1.WorkloadIdentity{} },
+			func() *securityv1alpha1.WorkloadIdentityList { return &securityv1alpha1.WorkloadIdentityList{} },
+		),
 	}
 }
 
 // CreateToken takes the representation of a tokenRequest and creates it.  Returns the server's representation of the tokenRequest, and an error, if there is any.
-func (c *workloadIdentities) CreateToken(ctx context.Context, workloadIdentityName string, tokenRequest *v1alpha1.TokenRequest, opts v1.CreateOptions) (result *v1alpha1.TokenRequest, err error) {
-	result = &v1alpha1.TokenRequest{}
+func (c *workloadIdentities) CreateToken(ctx context.Context, workloadIdentityName string, tokenRequest *securityv1alpha1.TokenRequest, opts v1.CreateOptions) (result *securityv1alpha1.TokenRequest, err error) {
+	result = &securityv1alpha1.TokenRequest{}
 	err = c.GetClient().Post().
 		Namespace(c.GetNamespace()).
 		Resource("workloadidentities").

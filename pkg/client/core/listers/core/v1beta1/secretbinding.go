@@ -7,10 +7,10 @@
 package v1beta1
 
 import (
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // SecretBindingLister helps list SecretBindings.
@@ -18,7 +18,7 @@ import (
 type SecretBindingLister interface {
 	// List lists all SecretBindings in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.SecretBinding, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.SecretBinding, err error)
 	// SecretBindings returns an object that can list and get SecretBindings.
 	SecretBindings(namespace string) SecretBindingNamespaceLister
 	SecretBindingListerExpansion
@@ -26,17 +26,17 @@ type SecretBindingLister interface {
 
 // secretBindingLister implements the SecretBindingLister interface.
 type secretBindingLister struct {
-	listers.ResourceIndexer[*v1beta1.SecretBinding]
+	listers.ResourceIndexer[*corev1beta1.SecretBinding]
 }
 
 // NewSecretBindingLister returns a new SecretBindingLister.
 func NewSecretBindingLister(indexer cache.Indexer) SecretBindingLister {
-	return &secretBindingLister{listers.New[*v1beta1.SecretBinding](indexer, v1beta1.Resource("secretbinding"))}
+	return &secretBindingLister{listers.New[*corev1beta1.SecretBinding](indexer, corev1beta1.Resource("secretbinding"))}
 }
 
 // SecretBindings returns an object that can list and get SecretBindings.
 func (s *secretBindingLister) SecretBindings(namespace string) SecretBindingNamespaceLister {
-	return secretBindingNamespaceLister{listers.NewNamespaced[*v1beta1.SecretBinding](s.ResourceIndexer, namespace)}
+	return secretBindingNamespaceLister{listers.NewNamespaced[*corev1beta1.SecretBinding](s.ResourceIndexer, namespace)}
 }
 
 // SecretBindingNamespaceLister helps list and get SecretBindings.
@@ -44,15 +44,15 @@ func (s *secretBindingLister) SecretBindings(namespace string) SecretBindingName
 type SecretBindingNamespaceLister interface {
 	// List lists all SecretBindings in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.SecretBinding, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.SecretBinding, err error)
 	// Get retrieves the SecretBinding from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1beta1.SecretBinding, error)
+	Get(name string) (*corev1beta1.SecretBinding, error)
 	SecretBindingNamespaceListerExpansion
 }
 
 // secretBindingNamespaceLister implements the SecretBindingNamespaceLister
 // interface.
 type secretBindingNamespaceLister struct {
-	listers.ResourceIndexer[*v1beta1.SecretBinding]
+	listers.ResourceIndexer[*corev1beta1.SecretBinding]
 }

@@ -7,9 +7,9 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,33 +25,34 @@ type BackupBucketsGetter interface {
 
 // BackupBucketInterface has methods to work with BackupBucket resources.
 type BackupBucketInterface interface {
-	Create(ctx context.Context, backupBucket *v1beta1.BackupBucket, opts v1.CreateOptions) (*v1beta1.BackupBucket, error)
-	Update(ctx context.Context, backupBucket *v1beta1.BackupBucket, opts v1.UpdateOptions) (*v1beta1.BackupBucket, error)
+	Create(ctx context.Context, backupBucket *corev1beta1.BackupBucket, opts v1.CreateOptions) (*corev1beta1.BackupBucket, error)
+	Update(ctx context.Context, backupBucket *corev1beta1.BackupBucket, opts v1.UpdateOptions) (*corev1beta1.BackupBucket, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, backupBucket *v1beta1.BackupBucket, opts v1.UpdateOptions) (*v1beta1.BackupBucket, error)
+	UpdateStatus(ctx context.Context, backupBucket *corev1beta1.BackupBucket, opts v1.UpdateOptions) (*corev1beta1.BackupBucket, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.BackupBucket, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.BackupBucketList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*corev1beta1.BackupBucket, error)
+	List(ctx context.Context, opts v1.ListOptions) (*corev1beta1.BackupBucketList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.BackupBucket, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1beta1.BackupBucket, err error)
 	BackupBucketExpansion
 }
 
 // backupBuckets implements BackupBucketInterface
 type backupBuckets struct {
-	*gentype.ClientWithList[*v1beta1.BackupBucket, *v1beta1.BackupBucketList]
+	*gentype.ClientWithList[*corev1beta1.BackupBucket, *corev1beta1.BackupBucketList]
 }
 
 // newBackupBuckets returns a BackupBuckets
 func newBackupBuckets(c *CoreV1beta1Client) *backupBuckets {
 	return &backupBuckets{
-		gentype.NewClientWithList[*v1beta1.BackupBucket, *v1beta1.BackupBucketList](
+		gentype.NewClientWithList[*corev1beta1.BackupBucket, *corev1beta1.BackupBucketList](
 			"backupbuckets",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1beta1.BackupBucket { return &v1beta1.BackupBucket{} },
-			func() *v1beta1.BackupBucketList { return &v1beta1.BackupBucketList{} }),
+			func() *corev1beta1.BackupBucket { return &corev1beta1.BackupBucket{} },
+			func() *corev1beta1.BackupBucketList { return &corev1beta1.BackupBucketList{} },
+		),
 	}
 }

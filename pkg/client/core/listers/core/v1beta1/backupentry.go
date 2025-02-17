@@ -7,10 +7,10 @@
 package v1beta1
 
 import (
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // BackupEntryLister helps list BackupEntries.
@@ -18,7 +18,7 @@ import (
 type BackupEntryLister interface {
 	// List lists all BackupEntries in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.BackupEntry, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.BackupEntry, err error)
 	// BackupEntries returns an object that can list and get BackupEntries.
 	BackupEntries(namespace string) BackupEntryNamespaceLister
 	BackupEntryListerExpansion
@@ -26,17 +26,17 @@ type BackupEntryLister interface {
 
 // backupEntryLister implements the BackupEntryLister interface.
 type backupEntryLister struct {
-	listers.ResourceIndexer[*v1beta1.BackupEntry]
+	listers.ResourceIndexer[*corev1beta1.BackupEntry]
 }
 
 // NewBackupEntryLister returns a new BackupEntryLister.
 func NewBackupEntryLister(indexer cache.Indexer) BackupEntryLister {
-	return &backupEntryLister{listers.New[*v1beta1.BackupEntry](indexer, v1beta1.Resource("backupentry"))}
+	return &backupEntryLister{listers.New[*corev1beta1.BackupEntry](indexer, corev1beta1.Resource("backupentry"))}
 }
 
 // BackupEntries returns an object that can list and get BackupEntries.
 func (s *backupEntryLister) BackupEntries(namespace string) BackupEntryNamespaceLister {
-	return backupEntryNamespaceLister{listers.NewNamespaced[*v1beta1.BackupEntry](s.ResourceIndexer, namespace)}
+	return backupEntryNamespaceLister{listers.NewNamespaced[*corev1beta1.BackupEntry](s.ResourceIndexer, namespace)}
 }
 
 // BackupEntryNamespaceLister helps list and get BackupEntries.
@@ -44,15 +44,15 @@ func (s *backupEntryLister) BackupEntries(namespace string) BackupEntryNamespace
 type BackupEntryNamespaceLister interface {
 	// List lists all BackupEntries in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.BackupEntry, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.BackupEntry, err error)
 	// Get retrieves the BackupEntry from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1beta1.BackupEntry, error)
+	Get(name string) (*corev1beta1.BackupEntry, error)
 	BackupEntryNamespaceListerExpansion
 }
 
 // backupEntryNamespaceLister implements the BackupEntryNamespaceLister
 // interface.
 type backupEntryNamespaceLister struct {
-	listers.ResourceIndexer[*v1beta1.BackupEntry]
+	listers.ResourceIndexer[*corev1beta1.BackupEntry]
 }
