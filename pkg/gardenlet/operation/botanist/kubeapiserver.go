@@ -326,5 +326,6 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one.
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](1))
 	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1)
 }
