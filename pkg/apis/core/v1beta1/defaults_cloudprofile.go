@@ -32,7 +32,8 @@ func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
 	}
 	if utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileCapabilities) {
 		if len(obj.CapabilitiesSet) == 0 {
-			obj.CapabilitiesSet = []v1.JSON{{Raw: []byte(`{"architecture":"` + v1beta1constants.ArchitectureAMD64 + `"}`)}}
+			v1Json := GetV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey}, []string{v1beta1constants.ArchitectureAMD64})
+			obj.CapabilitiesSet = []v1.JSON{v1Json}
 		}
 	} else {
 		if len(obj.Architectures) == 0 {
@@ -45,7 +46,7 @@ func SetDefaults_MachineImageVersion(obj *MachineImageVersion) {
 func SetDefaults_MachineType(obj *MachineType) {
 	if utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileCapabilities) {
 		if len(obj.Capabilities) == 0 {
-			obj.Capabilities = map[string]string{"architecture": v1beta1constants.ArchitectureAMD64}
+			obj.Capabilities = map[string]string{v1beta1constants.ArchitectureKey: v1beta1constants.ArchitectureAMD64}
 		}
 	} else {
 		if obj.Architecture == nil {
@@ -63,4 +64,32 @@ func SetDefaults_VolumeType(obj *VolumeType) {
 	if obj.Usable == nil {
 		obj.Usable = ptr.To(true)
 	}
+}
+
+// GetV1JsonCapabilities transforms the given keys and values into a JSON-string and returns it as v1.JSON object.
+// The keys and values must have the same length.
+func GetV1JsonCapabilities(keys []string, values []string) v1.JSON {
+	// Example:
+	//v1.JSON{Raw: []byte(`{"` +
+	//keys[0] + `":"` + values[0] + `,` +
+	//keys[1] + `":"` + value[1] +
+	//`"}`)}
+
+	if len(keys) != len(values) {
+		panic("keys and values must have the same length")
+	}
+	if len(keys) == 0 {
+		return v1.JSON{Raw: []byte(`{}`)}
+	}
+	var capabilities v1.JSON
+	jsonString := "{"
+	for i := 0; i < len(keys); i++ {
+		jsonString += `"` + keys[i] + `":"` + values[i] + `"`
+		if i < len(keys)-1 {
+			jsonString += ","
+		}
+	}
+	jsonString += "}"
+	capabilities.Raw = []byte(jsonString)
+	return capabilities
 }

@@ -6,6 +6,8 @@ package validation_test
 
 import (
 	"fmt"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -1517,18 +1519,18 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 	var (
 		updateStrategyMajor                      = core.MachineImageUpdateStrategy("major")
 		amd64                                    = "amd64"
-		machineArchitecture    *string           = &amd64
-		imageArchitecture      []string          = []string{"amd64", "arm64"}
+		machineArchitecture                      = &amd64
+		imageArchitecture                        = []string{"amd64"}
 		capabilitiesDefinition core.Capabilities = map[string]string{
-			"architecture":   "amd64,arm64",
-			"hypervisorType": "gen1,gen2,gen3",
+			v1beta1constants.ArchitectureKey: "amd64",
+			"hypervisorType":                 "gen1,gen2,gen3",
 		}
 		machineCapabilities core.Capabilities = map[string]string{
-			"architecture": "amd64",
+			v1beta1constants.ArchitectureKey: "amd64",
 		}
-		imageCapabilitiesSet []v1.JSON = []v1.JSON{
-			{Raw: []byte(`{"architecture":"amd64","hypervisorType":"gen2"}`)},
-			{Raw: []byte(`{"architecture":"amd64","hypervisorType":"gen2"}`)},
+		imageCapabilitiesSet = []v1.JSON{
+			v1beta1.GetV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen1"}),
+			v1beta1.GetV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen2"}),
 		}
 		cloudProfile = core.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1564,11 +1566,40 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 		}
 	)
 
+	Describe("MachineType validation", func() {
+		It("should enforce the capabilities.architecture to be set if multiple are allowed in cloud profile", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+			cp := cloudProfile.DeepCopy()
+			cp.Spec.CapabilitiesDefinition = map[string]string{v1beta1constants.ArchitectureKey: "arm64,amd64"}
+
+			// allow one architecture value
+			cp.Spec.MachineTypes[0].Capabilities = map[string]string{v1beta1constants.ArchitectureKey: "amd64"}
+			errorList := ValidateCloudProfile(cp)
+			Expect(errorList).To(BeEmpty())
+
+			// reject no architecture
+			cp.Spec.MachineTypes[0].Capabilities = map[string]string{}
+			errorList = ValidateCloudProfile(cp)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.machineTypes[0].capabilities.architecture"),
+			}))))
+
+			// reject two architectures
+			cp.Spec.MachineTypes[0].Capabilities = map[string]string{v1beta1constants.ArchitectureKey: "arm64,amd64"}
+			errorList = ValidateCloudProfile(cp)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.machineTypes[0].capabilities.architecture"),
+			}))))
+
+		})
+	})
+
 	var (
 		CapabilitiesTestData = []TableEntry{
 			Entry("accept capabilitiesDefinition without explicit capabilities on machineImage and machineType", cloudProfile, nil, nil, capabilitiesDefinition, nil, nil, nil),
 			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType", cloudProfile, nil, nil, capabilitiesDefinition, machineCapabilities, nil, nil),
-			Entry("accept capabilitiesDefinition and dedicated capabilities on machineImage", cloudProfile, nil, nil, capabilitiesDefinition, nil, imageCapabilitiesSet, nil),
 			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType and machineImage", cloudProfile, nil, nil, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, nil),
 			Entry("reject when CapabilitiesDefinition is missing", cloudProfile, nil, nil, nil, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
