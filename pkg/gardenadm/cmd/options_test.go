@@ -47,7 +47,7 @@ var _ = Describe("Options", func() {
 			options.IOStreams, _, _, stdErr = genericiooptions.NewTestIOStreams()
 
 			By("default logger does not log to stderr")
-			options.Log.Info("some example log message")
+			options.Log.Info("Some example log message")
 			output, err := io.ReadAll(stdErr)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(output)).To(BeEmpty())
@@ -55,10 +55,10 @@ var _ = Describe("Options", func() {
 			Expect(options.Complete()).To(Succeed())
 
 			By("completed logger logs to stderr")
-			options.Log.Info("some example log message")
+			options.Log.Info("Some example log message")
 			output, err = io.ReadAll(stdErr)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(ContainSubstring("some example log message"))
+			Expect(string(output)).To(ContainSubstring("Some example log message"))
 		})
 
 		It("should fail when log level is unknown", func() {
