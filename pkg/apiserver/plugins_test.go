@@ -18,7 +18,7 @@ var _ = Describe("AllPluginNames", func() {
 		admissionOpts := genericoptions.NewAdmissionOptions()
 		// we can't automatically insert our admission plugins in the right order
 		// we should reevaluate, what's the correct order for the plugins, when the default list of plugins changes
-		Expect(strings.Join(admissionOpts.RecommendedPluginOrder, ",")).To(Equal("NamespaceLifecycle,MutatingAdmissionWebhook,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook"))
-		Expect(strings.Join(admissionOpts.Plugins.Registered(), ",")).To(Equal("MutatingAdmissionWebhook,NamespaceLifecycle,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook"))
+		Expect(strings.Join(admissionOpts.RecommendedPluginOrder, ",")).To(Equal("NamespaceLifecycle,MutatingAdmissionPolicy,MutatingAdmissionWebhook,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook"))
+		Expect(strings.Join(admissionOpts.Plugins.Registered(), ",")).To(Equal("MutatingAdmissionPolicy,MutatingAdmissionWebhook,NamespaceLifecycle,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook"))
 	})
 })

@@ -16,6 +16,6 @@ import (
 var _ = Describe("AllPluginNames", func() {
 	It("must end with specific plugins", func() {
 		// it's important for these admission plugins to be invoked at the end, ensure correct order here
-		Expect(strings.Join(AllPluginNames(), ",")).To(HaveSuffix(",MutatingAdmissionWebhook,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook,ResourceQuota"))
+		Expect(strings.Join(AllPluginNames(), ",")).To(HaveSuffix(",MutatingAdmissionPolicy,MutatingAdmissionWebhook,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook,ResourceQuota"))
 	})
 })
