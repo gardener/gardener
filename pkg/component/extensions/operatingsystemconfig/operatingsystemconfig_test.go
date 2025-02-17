@@ -360,10 +360,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					oscOriginal.Spec.InPlaceUpdates = &extensionsv1alpha1.InPlaceUpdates{
 						OperatingSystemVersion: *worker.Machine.Image.Version,
-						Kubelet: extensionsv1alpha1.KubeletConfig{
-							Version:      k8sVersion.String(),
-							KubeReserved: worker.Kubernetes.Kubelet.KubeReserved,
-						},
+						KubeletVersion:         k8sVersion.String(),
 						CredentialsRotation: &extensionsv1alpha1.CredentialsRotation{
 							CertificateAuthorities: &extensionsv1alpha1.CARotation{
 								LastInitiationTime: &metav1.Time{Time: time.Date(2020, 12, 2, 10, 0, 0, 0, time.UTC)},

@@ -3529,13 +3529,11 @@ string
 <td>
 <code>kubelet</code></br>
 <em>
-<a href="#extensions.gardener.cloud/v1alpha1.KubeletConfig">
-KubeletConfig
-</a>
+string
 </em>
 </td>
 <td>
-<p>Kubelet contains the configuration for the kubelet.</p>
+<p>KubeletVersion is the version of the kubelet.</p>
 </td>
 </tr>
 <tr>
@@ -3785,90 +3783,6 @@ InfrastructureStatusNetworking
 <td>
 <em>(Optional)</em>
 <p>Services are the CIDRs of the service network.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="extensions.gardener.cloud/v1alpha1.KubeletConfig">KubeletConfig
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdates">InPlaceUpdates</a>)
-</p>
-<p>
-<p>KubeletConfig contains the configuration for the kubelet.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>version</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Version is the version of the kubelet.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>cpuManagerPolicy</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CPUManagerPolicy allows to set alternative CPU management policies (default: none).</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>evictionHard</code></br>
-<em>
-<a href="./core.md#core.gardener.cloud/v1beta1.KubeletConfigEviction">
-github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>EvictionHard describes a set of eviction thresholds (e.g. memory.available<1Gi) that if met would trigger a Pod eviction.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>kubeReserved</code></br>
-<em>
-<a href="./core.md#core.gardener.cloud/v1beta1.KubeletConfigReserved">
-github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>systemReserved</code></br>
-<em>
-<a href="./core.md#core.gardener.cloud/v1beta1.KubeletConfigReserved">
-github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).</p>
 </td>
 </tr>
 </tbody>

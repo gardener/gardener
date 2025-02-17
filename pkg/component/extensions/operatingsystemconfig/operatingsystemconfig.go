@@ -929,6 +929,8 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 				OperatingSystemVersion: ptr.Deref(d.worker.Machine.Image.Version, ""),
 			}
 
+			d.osc.Spec.InPlaceUpdates.KubeletVersion = d.kubernetesVersion.String()
+
 			if d.caRotationLastInitiationTime != nil || d.serviceAccountKeyRotationLastInitiationTime != nil {
 				d.osc.Spec.InPlaceUpdates.CredentialsRotation = &extensionsv1alpha1.CredentialsRotation{
 					CertificateAuthorities: &extensionsv1alpha1.CARotation{
@@ -937,22 +939,6 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 					ServiceAccountKey: &extensionsv1alpha1.ServiceAccountKeyRotation{
 						LastInitiationTime: d.serviceAccountKeyRotationLastInitiationTime,
 					},
-				}
-			}
-
-			d.osc.Spec.InPlaceUpdates.Kubelet.Version = d.kubernetesVersion.String()
-
-			if d.kubeletConfig != nil {
-				d.osc.Spec.InPlaceUpdates.Kubelet.CPUManagerPolicy = d.kubeletConfig.CPUManagerPolicy
-				d.osc.Spec.InPlaceUpdates.Kubelet.KubeReserved = d.kubeletConfig.KubeReserved
-				d.osc.Spec.InPlaceUpdates.Kubelet.SystemReserved = d.kubeletConfig.SystemReserved
-
-				if d.kubeletConfig.EvictionHard != nil {
-					d.osc.Spec.InPlaceUpdates.Kubelet.EvictionHard.ImageFSAvailable = d.kubeletConfig.EvictionHard.ImageFSAvailable
-					d.osc.Spec.InPlaceUpdates.Kubelet.EvictionHard.ImageFSInodesFree = d.kubeletConfig.EvictionHard.ImageFSInodesFree
-					d.osc.Spec.InPlaceUpdates.Kubelet.EvictionHard.MemoryAvailable = d.kubeletConfig.EvictionHard.MemoryAvailable
-					d.osc.Spec.InPlaceUpdates.Kubelet.EvictionHard.NodeFSAvailable = d.kubeletConfig.EvictionHard.NodeFSAvailable
-					d.osc.Spec.InPlaceUpdates.Kubelet.EvictionHard.NodeFSInodesFree = d.kubeletConfig.EvictionHard.NodeFSInodesFree
 				}
 			}
 		}
