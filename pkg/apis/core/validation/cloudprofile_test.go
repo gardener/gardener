@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bsm/gomega/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -1571,7 +1570,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType", cloudProfile, nil, nil, capabilitiesDefinition, machineCapabilities, nil, nil),
 			Entry("accept capabilitiesDefinition and dedicated capabilities on machineImage", cloudProfile, nil, nil, capabilitiesDefinition, nil, imageCapabilitiesSet, nil),
 			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType and machineImage", cloudProfile, nil, nil, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, nil),
-			Entry("reject when CapabilitiesDefinition is missing", cloudProfile, nil, nil, nil, machineCapabilities, imageCapabilitiesSet, []types.GomegaMatcher{
+			Entry("reject when CapabilitiesDefinition is missing", cloudProfile, nil, nil, nil, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet"),
@@ -1589,13 +1588,13 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 		}
 		ArchitectureTestData = []TableEntry{
 			Entry("accept architecture in machineType and machineImage", cloudProfile, machineArchitecture, imageArchitecture, nil, nil, nil, nil),
-			Entry("reject missing architecture on machineImage", cloudProfile, machineArchitecture, nil, nil, nil, nil, []types.GomegaMatcher{
+			Entry("reject missing architecture on machineImage", cloudProfile, machineArchitecture, nil, nil, nil, nil, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
 				})),
 			}),
-			Entry("reject missing architecture on machineType", cloudProfile, nil, imageArchitecture, nil, nil, nil, []types.GomegaMatcher{
+			Entry("reject missing architecture on machineType", cloudProfile, nil, imageArchitecture, nil, nil, nil, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.machineTypes[0].architecture"),
@@ -1603,7 +1602,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			}),
 		}
 		MixedUsageTestData = []TableEntry{
-			Entry("reject no architecture defined in capabilities and dedicated field", cloudProfile, nil, nil, nil, nil, nil, []types.GomegaMatcher{
+			Entry("reject no architecture defined in capabilities and dedicated field", cloudProfile, nil, nil, nil, nil, nil, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
@@ -1612,7 +1611,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 					"Field": Equal("spec.machineTypes[0].architecture"),
 				})),
 			}),
-			Entry("reject mixed usage of architecture and capabilitiesDefinition", cloudProfile, machineArchitecture, imageArchitecture, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, []types.GomegaMatcher{
+			Entry("reject mixed usage of architecture and capabilitiesDefinition", cloudProfile, machineArchitecture, imageArchitecture, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
@@ -1632,7 +1631,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			capabilitiesDefinition core.Capabilities,
 			machineCapabilities core.Capabilities,
 			imageCapabilitiesSet []v1.JSON,
-			expectedError []types.GomegaMatcher,
+			expectedError []gomegatypes.GomegaMatcher,
 		) {
 
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
