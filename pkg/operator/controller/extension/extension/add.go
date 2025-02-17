@@ -9,7 +9,9 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -77,6 +79,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	r.controllerRegistration = controllerregistration.New(r.RuntimeClientSet.Client(), r.Recorder, r.GardenNamespace)
 	r.runtime = extensionruntime.New(r.RuntimeClientSet, r.Recorder, r.GardenNamespace, r.HelmRegistry)
 
+	predicateHelmPullSecretLabel, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
+		MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleHelmPullSecret},
+	})
+	if err != nil {
+		return fmt.Errorf("failed creating label selector predicate: %w", err)
+	}
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -95,6 +103,11 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 				operatorpredicate.GardenDeletionTriggered(),
 			)),
 		).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.MapSecretToExtensions(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(predicate.And(predicateHelmPullSecretLabel, namespacePredicate(r.GardenNamespace))),
+		).
 		Complete(r)
 }
 
@@ -110,4 +123,34 @@ func (r *Reconciler) MapToAllExtensions(log logr.Logger) handler.MapFunc {
 
 		return mapper.ObjectListToRequests(extensionList)
 	}
+}
+
+// MapSecretToExtensions returns reconcile.Request objects for helm pull secrets of extension helm chart.
+func (r *Reconciler) MapSecretToExtensions(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, secret client.Object) []reconcile.Request {
+		extensionList := &operatorv1alpha1.ExtensionList{}
+		if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
+			log.Error(err, "Failed to list extensions")
+			return nil
+		}
+
+		var requests []reconcile.Request
+		for _, ext := range extensionList.Items {
+			secretRef := controllerregistration.GetExtensionHelmPullSecret(&ext)
+			if secretRef != nil && secretRef.Name == secret.GetName() {
+				// Only helm pull secret of extension helm chart is considered, as it is the only one that
+				// is used by gardenlets and needs to be copied to the virtual garden.
+				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ext.Name}})
+			}
+		}
+
+		return requests
+	}
+}
+
+// namespacePredicate returns a predicate that filters events based on the namespace.
+func namespacePredicate(namespace string) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetNamespace() == namespace
+	})
 }
