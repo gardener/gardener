@@ -146,7 +146,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleAdmissionController         *rbacv1.ClusterRole
 		clusterRoleBindingAdmissionController  *rbacv1.ClusterRoleBinding
 		shootAccessSecretAdmissionController   *corev1.Secret
-		serviceAdmissionControllerFor          func(component.ClusterType, bool) *corev1.Service
+		serviceAdmissionControllerFor          func(component.ClusterType, bool, bool) *corev1.Service
 		deploymentAdmissionControllerFor       func(bool) *appsv1.Deployment
 		podDisruptionBudgetAdmissionController *policyv1.PodDisruptionBudget
 		vpaAdmissionController                 *vpaautoscalingv1.VerticalPodAutoscaler
@@ -967,7 +967,7 @@ var _ = Describe("VPA", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
-		serviceAdmissionControllerFor = func(clusterType component.ClusterType, topologyAwareRoutingEnabled bool) *corev1.Service {
+		serviceAdmissionControllerFor = func(clusterType component.ClusterType, topologyAwareRoutingEnabled bool, isGardenCluster bool) *corev1.Service {
 			obj := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpa-webhook",
@@ -1002,7 +1002,11 @@ var _ = Describe("VPA", func() {
 
 			if clusterType == "seed" {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-world-to-ports", `[{"protocol":"TCP","port":10250}]`)
-				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
+				if isGardenCluster {
+					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
+				} else {
+					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
+				}
 			}
 			if clusterType == "shoot" {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports", `[{"protocol":"TCP","port":10250}]`)
@@ -1434,6 +1438,40 @@ var _ = Describe("VPA", func() {
 				managedResourceName = "vpa"
 			})
 
+			Context("when deploying Services", func() {
+				Context("in a garden cluster", func() {
+					BeforeEach(func() {
+						vpa = vpaFor(component.ClusterTypeSeed, true)
+						Expect(vpa.Deploy(ctx)).To(Succeed())
+					})
+
+					It("should annotate vpa-admission-controller Service with `garden` cluster metrics scrape network policy", func() {
+						serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeSeed, false, true)
+						Expect(managedResource).To(contain(serviceAdmissionController))
+					})
+
+					It("should annotate vpa-recommender Service with `garden` cluster metrics scrape network policy", func() {
+						serviceRecommender := serviceRecommenderFor(component.ClusterTypeSeed, true)
+						Expect(managedResource).To(contain(serviceRecommender))
+					})
+				})
+
+				Context("when not deployed in a garden cluster", func() {
+					BeforeEach(func() {
+						Expect(vpa.Deploy(ctx)).To(Succeed())
+					})
+					It("should annotate vpa-admission-controller Service with `seed` cluster metrics scrape network policy", func() {
+						serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeSeed, false, false)
+						Expect(managedResource).To(contain(serviceAdmissionController))
+					})
+
+					It("should annotate vpa-recommender Service with `seed` cluster metrics scrape network policy", func() {
+						serviceRecommender := serviceRecommenderFor(component.ClusterTypeSeed, false)
+						Expect(managedResource).To(contain(serviceRecommender))
+					})
+				})
+			})
+
 			Context("when deploying ServiceMonitors", func() {
 				Context("in a garden cluster", func() {
 					BeforeEach(func() {
@@ -1449,11 +1487,6 @@ var _ = Describe("VPA", func() {
 					It("should label vpa-recommender ServiceMonitor with `prometheus=garden`", func() {
 						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeSeed, true)
 						Expect(managedResource).To(contain(serviceMonitorRecommender))
-					})
-
-					It("should annotate vpa-recommender Service with `garden` cluster metrics scrape network policy", func() {
-						service := serviceRecommenderFor(component.ClusterTypeSeed, true)
-						Expect(managedResource).To(contain(service))
 					})
 				})
 
@@ -1575,7 +1608,7 @@ var _ = Describe("VPA", func() {
 						serviceAccountAdmissionController,
 						clusterRoleAdmissionController,
 						clusterRoleBindingAdmissionController,
-						serviceAdmissionControllerFor(component.ClusterTypeSeed, false),
+						serviceAdmissionControllerFor(component.ClusterTypeSeed, false, false),
 						deploymentAdmissionController,
 						vpaAdmissionController,
 						serviceMonitorAdmissionControllerFor(component.ClusterTypeSeed, false),
@@ -1916,7 +1949,7 @@ var _ = Describe("VPA", func() {
 
 					service = &corev1.Service{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, service)).To(Succeed())
-					serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, false)
+					serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, false, false)
 					serviceAdmissionController.ResourceVersion = "1"
 					Expect(service).To(Equal(serviceAdmissionController))
 
@@ -2021,7 +2054,7 @@ var _ = Describe("VPA", func() {
 
 					service := &corev1.Service{}
 					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, service)).To(Succeed())
-					serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, true)
+					serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, true, false)
 					serviceAdmissionController.ResourceVersion = "1"
 					Expect(service).To(Equal(serviceAdmissionController))
 				})
@@ -2070,7 +2103,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, serviceMonitorRecommenderFor(component.ClusterTypeShoot, false))).To(Succeed())
 
 				By("Create vpa-admission-controller runtime resources")
-				Expect(c.Create(ctx, serviceAdmissionControllerFor(component.ClusterTypeSeed, false))).To(Succeed())
+				Expect(c.Create(ctx, serviceAdmissionControllerFor(component.ClusterTypeSeed, false, false))).To(Succeed())
 				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true))).To(Succeed())
 				Expect(c.Create(ctx, podDisruptionBudgetAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, vpaAdmissionController)).To(Succeed())
@@ -2093,7 +2126,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitorRecommenderFor(component.ClusterTypeShoot, false)), &monitoringv1.ServiceMonitor{})).To(BeNotFoundError())
 
 				By("Verify vpa-admission-controller runtime resources")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionControllerFor(component.ClusterTypeSeed, false)), &corev1.Service{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionControllerFor(component.ClusterTypeSeed, false, false)), &corev1.Service{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentAdmissionControllerFor(true)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetAdmissionController), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaAdmissionController), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
