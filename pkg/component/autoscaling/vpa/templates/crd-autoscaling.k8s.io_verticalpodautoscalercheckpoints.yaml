@@ -5,7 +5,7 @@ metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes/kubernetes/pull/63797
     resources.gardener.cloud/keep-object: "true"
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.17.2
   name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
 spec:
   group: autoscaling.k8s.io
