@@ -35,7 +35,7 @@ extend-exclude = [
     "*fluentbit*.yaml",
     "*machine.sapcloud.io_machines.yaml",
     "*sapcloud.io_machineclasses.yaml",
-    "*crd-monitoring.coreos.com_alertmanagers.yaml",
+    "*crd-monitoring.coreos.com_*.yaml",
     "10-crd-cert.gardener.cloud_certificates.yaml",
     "generated.pb.go",
     "openapi_generated.go",

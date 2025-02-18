@@ -1024,8 +1024,10 @@ spec:
                 type: object
               alertDropLabels:
                 description: |-
-                  AlertDropLabels configure the label names which should be dropped in ThanosRuler alerts.
-                  The replica label `thanos_ruler_replica` will always be dropped in alerts.
+                  Configures the label names which should be dropped in Thanos Ruler
+                  alerts.
+
+                  The replica label `thanos_ruler_replica` will always be dropped from the alerts.
                 items:
                   type: string
                 type: array
@@ -1037,15 +1039,27 @@ spec:
                 type: string
               alertRelabelConfigFile:
                 description: |-
-                  AlertRelabelConfigFile specifies the path of the alert relabeling configuration file.
-                  When used alongside with AlertRelabelConfigs, alertRelabelConfigFile takes precedence.
+                  Configures the path to the alert relabeling configuration file.
+
+                  Alert relabel configuration must have the form as specified in the
+                  official Prometheus documentation:
+                  https://prometheus.io/docs/prometheus/latest/configuration/configuration/#alert_relabel_configs
+
+                  The operator performs no validation of the configuration file.
+
+                  This field takes precedence over `alertRelabelConfig`.
                 type: string
               alertRelabelConfigs:
                 description: |-
-                  AlertRelabelConfigs configures alert relabeling in ThanosRuler.
-                  Alert relabel configurations must have the form as specified in the official Prometheus documentation:
+                  Configures alert relabeling in Thanos Ruler.
+
+                  Alert relabel configuration must have the form as specified in the
+                  official Prometheus documentation:
                   https://prometheus.io/docs/prometheus/latest/configuration/configuration/#alert_relabel_configs
-                  Alternative to AlertRelabelConfigFile, and lower order priority.
+
+                  The operator performs no validation of the configuration.
+
+                  `alertRelabelConfigFile` takes precedence over this field.
                 properties:
                   key:
                     description: The key of the secret to select from.  Must be a
@@ -1069,8 +1083,15 @@ spec:
                 x-kubernetes-map-type: atomic
               alertmanagersConfig:
                 description: |-
-                  Define configuration for connecting to alertmanager.  Only available with thanos v0.10.0
-                  and higher.  Maps to the `alertmanagers.config` arg.
+                  Configures the list of Alertmanager endpoints to send alerts to.
+
+                  The configuration format is defined at https://thanos.io/tip/components/rule.md/#alertmanager.
+
+                  It requires Thanos >= v0.10.0.
+
+                  The operator performs no validation of the configuration.
+
+                  This field takes precedence over `alertmanagersUrl`.
                 properties:
                   key:
                     description: The key of the secret to select from.  Must be a
@@ -1094,10 +1115,11 @@ spec:
                 x-kubernetes-map-type: atomic
               alertmanagersUrl:
                 description: |-
-                  Define URLs to send alerts to Alertmanager.  For Thanos v0.10.0 and higher,
-                  AlertManagersConfig should be used instead.  Note: this field will be ignored
-                  if AlertManagersConfig is specified.
-                  Maps to the `alertmanagers.url` arg.
+                  Configures the list of Alertmanager endpoints to send alerts to.
+
+                  For Thanos >= v0.10.0, it is recommended to use `alertmanagersConfig` instead.
+
+                  `alertmanagersConfig` takes precedence over this field.
                 items:
                   type: string
                 type: array
@@ -4309,8 +4331,10 @@ spec:
                 additionalProperties:
                   type: string
                 description: |-
-                  Labels configure the external label pairs to ThanosRuler. A default replica label
-                  `thanos_ruler_replica` will be always added  as a label with the value of the pod's name and it will be dropped in the alerts.
+                  Configures the external label pairs of the ThanosRuler resource.
+
+                  A default replica label `thanos_ruler_replica` will be always added as a
+                  label with the value of the pod's name.
                 type: object
               listenLocal:
                 description: |-
@@ -4348,8 +4372,13 @@ spec:
                 type: object
               objectStorageConfig:
                 description: |-
-                  ObjectStorageConfig configures object storage in Thanos.
-                  Alternative to ObjectStorageConfigFile, and lower order priority.
+                  Configures object storage.
+
+                  The configuration format is defined at https://thanos.io/tip/thanos/storage.md/#configuring-access-to-object-storage
+
+                  The operator performs no validation of the configuration.
+
+                  `objectStorageConfigFile` takes precedence over this field.
                 properties:
                   key:
                     description: The key of the secret to select from.  Must be a
@@ -4373,8 +4402,13 @@ spec:
                 x-kubernetes-map-type: atomic
               objectStorageConfigFile:
                 description: |-
-                  ObjectStorageConfigFile specifies the path of the object storage configuration file.
-                  When used alongside with ObjectStorageConfig, ObjectStorageConfigFile takes precedence.
+                  Configures the path of the object storage configuration file.
+
+                  The configuration format is defined at https://thanos.io/tip/thanos/storage.md/#configuring-access-to-object-storage
+
+                  The operator performs no validation of the configuration file.
+
+                  This field takes precedence over `objectStorageConfig`.
                 type: string
               paused:
                 description: |-
@@ -4454,10 +4488,15 @@ spec:
                 type: array
               queryConfig:
                 description: |-
-                  Define configuration for connecting to thanos query instances.
-                  If this is defined, the QueryEndpoints field will be ignored.
-                  Maps to the `query.config` CLI argument.
-                  Only available with thanos v0.11.0 and higher.
+                  Configures the list of Thanos Query endpoints from which to query metrics.
+
+                  The configuration format is defined at https://thanos.io/tip/components/rule.md/#query-api
+
+                  It requires Thanos >= v0.11.0.
+
+                  The operator performs no validation of the configuration.
+
+                  This field takes precedence over `queryEndpoints`.
                 properties:
                   key:
                     description: The key of the secret to select from.  Must be a
@@ -4481,8 +4520,11 @@ spec:
                 x-kubernetes-map-type: atomic
               queryEndpoints:
                 description: |-
-                  QueryEndpoints defines Thanos querier endpoints from which to query metrics.
-                  Maps to the --query flag of thanos ruler.
+                  Configures the list of Thanos Query endpoints from which to query metrics.
+
+                  For Thanos >= v0.11.0, it is recommended to use `queryConfig` instead.
+
+                  `queryConfig` takes precedence over this field.
                 items:
                   type: string
                 type: array
@@ -4612,8 +4654,9 @@ spec:
                 x-kubernetes-map-type: atomic
               ruleSelector:
                 description: |-
-                  A label selector to select which PrometheusRules to mount for alerting and
-                  recording.
+                  PrometheusRule objects to be selected for rule evaluation. An empty
+                  label selector matches all objects. A null label selector matches no
+                  objects.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -5833,12 +5876,16 @@ spec:
                 type: array
               tracingConfig:
                 description: |-
-                  TracingConfig configures tracing in Thanos.
+                  Configures tracing.
 
-                  `tracingConfigFile` takes precedence over this field.
+                  The configuration format is defined at https://thanos.io/tip/thanos/tracing.md/#configuration
 
                   This is an *experimental feature*, it may change in any upcoming release
                   in a breaking way.
+
+                  The operator performs no validation of the configuration.
+
+                  `tracingConfigFile` takes precedence over this field.
                 properties:
                   key:
                     description: The key of the secret to select from.  Must be a
@@ -5862,12 +5909,16 @@ spec:
                 x-kubernetes-map-type: atomic
               tracingConfigFile:
                 description: |-
-                  TracingConfig specifies the path of the tracing configuration file.
+                  Configures the path of the tracing configuration file.
 
-                  This field takes precedence over `tracingConfig`.
+                  The configuration format is defined at https://thanos.io/tip/thanos/tracing.md/#configuration
 
                   This is an *experimental feature*, it may change in any upcoming release
                   in a breaking way.
+
+                  The operator performs no validation of the configuration file.
+
+                  This field takes precedence over `tracingConfig`.
                 type: string
               version:
                 description: Version of Thanos to be deployed.
@@ -7785,7 +7836,12 @@ spec:
                     description: Defines the TLS parameters for HTTPS.
                     properties:
                       cert:
-                        description: Contains the TLS certificate for the server.
+                        description: |-
+                          Secret or ConfigMap containing the TLS certificate for the web server.
+
+                          Either `keySecret` or `keyFile` must be defined.
+
+                          It is mutually exclusive with `certFile`.
                         properties:
                           configMap:
                             description: ConfigMap containing data to use for the
@@ -7838,20 +7894,28 @@ spec:
                         type: object
                       certFile:
                         description: |-
-                          Path to the TLS certificate file in the Prometheus container for the server.
-                          Mutually exclusive with `cert`.
+                          Path to the TLS certificate file in the container for the web server.
+
+                          Either `keySecret` or `keyFile` must be defined.
+
+                          It is mutually exclusive with `cert`.
                         type: string
                       cipherSuites:
                         description: |-
-                          List of supported cipher suites for TLS versions up to TLS 1.2. If empty,
-                          Go default cipher suites are used. Available cipher suites are documented
-                          in the go documentation: https://golang.org/pkg/crypto/tls/#pkg-constants
+                          List of supported cipher suites for TLS versions up to TLS 1.2.
+
+                          If not defined, the Go default cipher suites are used.
+                          Available cipher suites are documented in the Go documentation:
+                          https://golang.org/pkg/crypto/tls/#pkg-constants
                         items:
                           type: string
                         type: array
                       client_ca:
-                        description: Contains the CA certificate for client certificate
+                        description: |-
+                          Secret or ConfigMap containing the CA certificate for client certificate
                           authentication to the server.
+
+                          It is mutually exclusive with `clientCAFile`.
                         properties:
                           configMap:
                             description: ConfigMap containing data to use for the
@@ -7904,30 +7968,43 @@ spec:
                         type: object
                       clientAuthType:
                         description: |-
-                          Server policy for client authentication. Maps to ClientAuth Policies.
+                          The server policy for client TLS authentication.
+
                           For more detail on clientAuth options:
                           https://golang.org/pkg/crypto/tls/#ClientAuthType
                         type: string
                       clientCAFile:
                         description: |-
-                          Path to the CA certificate file for client certificate authentication to the server.
-                          Mutually exclusive with `client_ca`.
+                          Path to the CA certificate file for client certificate authentication to
+                          the server.
+
+                          It is mutually exclusive with `client_ca`.
                         type: string
                       curvePreferences:
                         description: |-
                           Elliptic curves that will be used in an ECDHE handshake, in preference
-                          order. Available curves are documented in the go documentation:
+                          order.
+
+                          Available curves are documented in the Go documentation:
                           https://golang.org/pkg/crypto/tls/#CurveID
                         items:
                           type: string
                         type: array
                       keyFile:
                         description: |-
-                          Path to the TLS key file in the Prometheus container for the server.
-                          Mutually exclusive with `keySecret`.
+                          Path to the TLS private key file in the container for the web server.
+
+                          If defined, either `cert` or `certFile` must be defined.
+
+                          It is mutually exclusive with `keySecret`.
                         type: string
                       keySecret:
-                        description: Secret containing the TLS key for the server.
+                        description: |-
+                          Secret containing the TLS private key for the web server.
+
+                          Either `cert` or `certFile` must be defined.
+
+                          It is mutually exclusive with `keyFile`.
                         properties:
                           key:
                             description: The key of the secret to select from.  Must
@@ -7951,18 +8028,17 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       maxVersion:
-                        description: Maximum TLS version that is acceptable. Defaults
-                          to TLS13.
+                        description: Maximum TLS version that is acceptable.
                         type: string
                       minVersion:
-                        description: Minimum TLS version that is acceptable. Defaults
-                          to TLS12.
+                        description: Minimum TLS version that is acceptable.
                         type: string
                       preferServerCipherSuites:
                         description: |-
-                          Controls whether the server selects the
-                          client's most preferred cipher suite, or the server's most preferred
-                          cipher suite. If true then the server's preference, as expressed in
+                          Controls whether the server selects the client's most preferred cipher
+                          suite, or the server's most preferred cipher suite.
+
+                          If true then the server's preference, as expressed in
                           the order of elements in cipherSuites, is used.
                         type: boolean
                     type: object
@@ -8010,9 +8086,11 @@ spec:
                       type: string
                     status:
                       description: Status of the condition.
+                      minLength: 1
                       type: string
                     type:
                       description: Type of the condition being reported.
+                      minLength: 1
                       type: string
                   required:
                   - lastTransitionTime
