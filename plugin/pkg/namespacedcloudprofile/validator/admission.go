@@ -310,8 +310,6 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 		} else {
 			// There is no entry for this image in the parent CloudProfile yet.
 			var capabilitiesDefinition = (gardencore.Capabilities)(c.parentCloudProfile.Spec.CapabilitiesDefinition)
-
-			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, &capabilitiesDefinition, imageIndexPath)...)
 			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, &capabilitiesDefinition, imageIndexPath)...)
 		}
 	}
