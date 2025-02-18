@@ -6,8 +6,6 @@ package validation_test
 
 import (
 	"fmt"
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -21,6 +19,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -1529,8 +1529,8 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			v1beta1constants.ArchitectureKey: "amd64",
 		}
 		imageCapabilitiesSet = []v1.JSON{
-			v1beta1.GetV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen1"}),
-			v1beta1.GetV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen2"}),
+			gardencorev1beta1.GetV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen1"}),
+			gardencorev1beta1.GetV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen2"}),
 		}
 		cloudProfile = core.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
