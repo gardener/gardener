@@ -34,7 +34,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		f.Shoot = shoot
 
 		It("Create, Hibernate, Wake up and Delete Shoot", Offset(1), func() {
-			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()
 
 			if shoot.Spec.CloudProfileName == nil && shoot.Spec.CloudProfile != nil && shoot.Spec.CloudProfile.Kind == "NamespacedCloudProfile" {

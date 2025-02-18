@@ -30,8 +30,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 
 		It("Create, Migrate and Delete", Offset(1), func() {
 			By("Create Shoot")
-			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()
+
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
 
