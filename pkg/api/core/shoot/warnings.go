@@ -14,6 +14,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // GetWarnings returns warnings for the provided shoot.
@@ -35,6 +36,10 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 
 	if kubeControllerManager := shoot.Spec.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.PodEvictionTimeout != nil {
 		warnings = append(warnings, "you are setting the spec.kubernetes.kubeControllerManager.podEvictionTimeout field. The field does not have effect since Kubernetes 1.13. Instead, use the spec.kubernetes.kubeAPIServer.(defaultNotReadyTolerationSeconds/defaultUnreachableTolerationSeconds) fields.")
+	}
+
+	if metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.AnnotationManagedSeedAPIServer) && shoot.Namespace == v1beta1constants.GardenNamespace {
+		warnings = append(warnings, "annotation 'shoot.gardener.cloud/managed-seed-api-server' is deprecated, instead consider enabling high availability for the ManagedSeed's Shoot control plane")
 	}
 
 	return warnings
