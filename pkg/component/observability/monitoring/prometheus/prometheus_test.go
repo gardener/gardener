@@ -1120,6 +1120,7 @@ query_range:
 						Name:         "cortex-config",
 						VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: cortexConfigMap.Name}}},
 					})
+					Expect(references.InjectAnnotations(prometheusObj)).To(Succeed())
 
 					service.Spec.Ports[0].TargetPort = intstr.FromInt32(9091)
 
@@ -1220,7 +1221,6 @@ query_range:
 							},
 						}}
 
-						// A reference for the garbage collector of the GRM gets injected for the
 						Expect(references.InjectAnnotations(prometheusObj)).To(Succeed())
 
 						prometheusRule.Namespace = namespace

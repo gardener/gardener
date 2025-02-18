@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -64,6 +65,8 @@ var _ = Describe("References", func() {
 			secret5               = "secret5"
 			secret6               = "secret6"
 			secret7               = "secret7"
+			secret8               = "secret8"
+			secret9               = "secret9"
 			additionalAnnotation1 = "foo"
 			additionalAnnotation2 = "bar"
 
@@ -349,13 +352,32 @@ var _ = Describe("References", func() {
 					},
 				},
 			}
-			managedResourceV1alpha1 = &resourcesv1alpha1.ManagedResource{
+			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: annotations,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs: []corev1.LocalObjectReference{
 						{Name: secret2}, {Name: secret5},
+					},
+				},
+			}
+
+			prometheus = &monitoringv1.Prometheus{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: annotations,
+				},
+				Spec: monitoringv1.PrometheusSpec{
+					CommonPrometheusFields: monitoringv1.CommonPrometheusFields{
+						Containers: podSpec.Containers,
+						Volumes:    podSpec.Volumes,
+						RemoteWrite: []monitoringv1.RemoteWriteSpec{
+							{BasicAuth: &monitoringv1.BasicAuth{
+								Username: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: secret8}},
+								Password: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: secret9}},
+							}},
+							{URL: "foo"},
+						},
 					},
 				},
 			}
@@ -460,14 +482,38 @@ var _ = Describe("References", func() {
 				},
 			),
 			Entry("resourcesv1alpha1.ManagedResource",
-				managedResourceV1alpha1,
+				managedResource,
 				func() {
-					Expect(managedResourceV1alpha1.Annotations).To(Equal(map[string]string{
+					Expect(managedResource.Annotations).To(Equal(map[string]string{
 						"some-existing":                    "annotation",
 						AnnotationKey(KindSecret, secret2): secret2,
 						AnnotationKey(KindSecret, secret5): secret5,
 						additionalAnnotation1:              "",
 						additionalAnnotation2:              "",
+					}))
+				},
+			),
+			Entry("monitoringv1.Prometheus",
+				prometheus,
+				func() {
+					Expect(prometheus.Annotations).To(Equal(map[string]string{
+						"some-existing":                          "annotation",
+						AnnotationKey(KindConfigMap, configMap1): configMap1,
+						AnnotationKey(KindConfigMap, configMap2): configMap2,
+						AnnotationKey(KindConfigMap, configMap3): configMap3,
+						AnnotationKey(KindConfigMap, configMap4): configMap4,
+						AnnotationKey(KindConfigMap, configMap5): configMap5,
+						AnnotationKey(KindConfigMap, configMap6): configMap6,
+						AnnotationKey(KindSecret, secret1):       secret1,
+						AnnotationKey(KindSecret, secret2):       secret2,
+						AnnotationKey(KindSecret, secret3):       secret3,
+						AnnotationKey(KindSecret, secret4):       secret4,
+						AnnotationKey(KindSecret, secret5):       secret5,
+						AnnotationKey(KindSecret, secret6):       secret6,
+						AnnotationKey(KindSecret, secret8):       secret8,
+						AnnotationKey(KindSecret, secret9):       secret9,
+						additionalAnnotation1:                    "",
+						additionalAnnotation2:                    "",
 					}))
 				},
 			),
