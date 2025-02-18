@@ -193,12 +193,12 @@ images:
 - name: vpn-server
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-server
-  tag: "0.35.0"
+  tag: "0.36.0"
 # TODO(MartinWeindel): vpn-seed-server is the old server image, remove when NewVPN feature gate is removed
 - name: vpn-seed-server
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-seed-server
-  tag: "0.26.0"
+  tag: "0.36.0"
 
 # Monitoring
 - name: prometheus-operator
@@ -400,12 +400,12 @@ images:
 - name: vpn-client
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-client
-  tag: "0.35.0"
+  tag: "0.36.0"
 # TODO(MartinWeindel): vpn-shoot-client is the old client, remove when NewVPN feature gate is removed
 - name: vpn-shoot-client
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-shoot-client
-  tag: "0.26.0"
+  tag: "0.36.0"
 # TODO(DockToFuture): When updating coredns to v1.13.x check if the NET_BIND_SERVICE capability can be removed.
 - name: coredns
   sourceRepository: github.com/coredns/coredns
