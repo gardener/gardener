@@ -130,9 +130,14 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	IngressGatewayLabels        map[string]string
 	Name                        string
 	Namespace                   string
+	ControlPlaneNamespace       string
 	Host                        string
+	MTLSHost                    string
 	Port                        int
 	APIServerClusterIPPrefixLen int
+	IstioTLSTermination         bool
+	IstioTLSSecret              string
+	TargetClusterProxyProtocol  string
 }
 
 type envoyFilterIstioTLSTerminationTemplateValues struct {
@@ -157,6 +162,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 		hostName                       = fmt.Sprintf("%s.%s.svc.%s", s.name, s.namespace, gardencorev1beta1.DefaultDomain)
 		mTLSHostName                   = fmt.Sprintf("%s%s.%s.svc.%s", s.name, MutualTLSServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
+		routeConfigurationName         = fmt.Sprintf("https.%d.tls.%s.%s", kubeapiserverconstants.Port, s.name, s.namespace)
 		envoyFilterAPIServerProxy      bytes.Buffer
 		envoyFilterIstioTLSTermination bytes.Buffer
 	)
@@ -169,15 +175,24 @@ func (s *sni) Deploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		targetClusterProxyProtocol := fmt.Sprintf("outbound|%d||%s", kubeapiserverconstants.Port, hostName)
+		if values.IstioTLSTermination {
+			targetClusterProxyProtocol = GetAPIServerProxyTargetClusterName(s.namespace)
+		}
 
 		if err := envoyFilterAPIServerProxyTemplate.Execute(&envoyFilterAPIServerProxy, envoyFilterAPIServerProxyTemplateValues{
 			APIServerProxy:              values.APIServerProxy,
 			IngressGatewayLabels:        values.IstioIngressGateway.Labels,
 			Name:                        envoyFilter.Name,
 			Namespace:                   envoyFilter.Namespace,
+			ControlPlaneNamespace:       s.namespace,
 			Host:                        hostName,
+			MTLSHost:                    mTLSHostName,
 			Port:                        kubeapiserverconstants.Port,
 			APIServerClusterIPPrefixLen: apiServerClusterIPPrefixLen,
+			IstioTLSTermination:         values.IstioTLSTermination,
+			IstioTLSSecret:              s.emptyIstioTLSSecret().Name,
+			TargetClusterProxyProtocol:  targetClusterProxyProtocol,
 		}); err != nil {
 			return err
 		}
@@ -207,7 +222,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			Namespace:                        envoyFilter.Namespace,
 			Port:                             kubeapiserverconstants.Port,
 			MutualTLSHost:                    mTLSHostName,
-			RouteConfigurationName:           fmt.Sprintf("https.%d.tls.%s.%s", kubeapiserverconstants.Port, s.name, s.namespace),
+			RouteConfigurationName:           routeConfigurationName,
 		}); err != nil {
 			return err
 		}
@@ -390,4 +405,10 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// GetAPIServerProxyTargetClusterName returns the name of the target cluster for apiserver-proxy for the given control-plane namespace.
+// This cluster is only available if Istio TLS termination is enabled for the shoot.
+func GetAPIServerProxyTargetClusterName(controlPlaneNamespace string) string {
+	return fmt.Sprintf("%s--kube-apiserver-socket", controlPlaneNamespace)
 }
