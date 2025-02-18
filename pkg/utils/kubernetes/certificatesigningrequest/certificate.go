@@ -183,37 +183,39 @@ func waitForCertificate(ctx context.Context, client kubernetesclientset.Interfac
 	var certData []byte
 
 	if err := retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
-		if csr, err := client.CertificatesV1().CertificateSigningRequests().Get(ctx, reqName, metav1.GetOptions{}); err == nil {
-			if csr.UID != reqUID {
-				return retry.SevereError(fmt.Errorf("csr %q changed UIDs", csr.Name))
-			}
-
-			approved := false
-			for _, c := range csr.Status.Conditions {
-				if c.Type == certificatesv1.CertificateDenied {
-					return retry.SevereError(fmt.Errorf("certificate signing request is denied, reason: %v, message: %v", c.Reason, c.Message))
-				}
-				if c.Type == certificatesv1.CertificateFailed {
-					return retry.SevereError(fmt.Errorf("certificate signing request failed, reason: %v, message: %v", c.Reason, c.Message))
-				}
-				if c.Type == certificatesv1.CertificateApproved {
-					approved = true
-				}
-			}
-
-			if !approved {
-				return retry.MinorError(fmt.Errorf("certificate signing request %s is not yet approved, waiting", csr.Name))
-			}
-
-			if len(csr.Status.Certificate) == 0 {
-				return retry.MinorError(fmt.Errorf("certificate signing request %s is approved, waiting to be issued", csr.Name))
-			}
-
-			certData = csr.Status.Certificate
-			return retry.Ok()
+		csr, err := client.CertificatesV1().CertificateSigningRequests().Get(ctx, reqName, metav1.GetOptions{})
+		if err != nil {
+			return retry.SevereError(fmt.Errorf("failed reading CertificateSigningRequest %s: %w", reqName, err))
 		}
 
-		return retry.SevereError(fmt.Errorf("certificates.k8s.io/v1 requests not succeeded"))
+		if csr.UID != reqUID {
+			return retry.SevereError(fmt.Errorf("csr %q changed UIDs", csr.Name))
+		}
+
+		approved := false
+		for _, condition := range csr.Status.Conditions {
+			if condition.Type == certificatesv1.CertificateDenied {
+				return retry.SevereError(fmt.Errorf("CertificateSigningRequest %s is denied, reason: %v, message: %v", csr.Name, condition.Reason, condition.Message))
+			}
+			if condition.Type == certificatesv1.CertificateFailed {
+				return retry.SevereError(fmt.Errorf("CertificateSigningRequest %s failed, reason: %v, message: %v", csr.Name, condition.Reason, condition.Message))
+			}
+			if condition.Type == certificatesv1.CertificateApproved {
+				approved = true
+				break
+			}
+		}
+
+		if !approved {
+			return retry.MinorError(fmt.Errorf("CertificateSigningRequest %s is not yet approved, waiting", csr.Name))
+		}
+
+		if len(csr.Status.Certificate) == 0 {
+			return retry.MinorError(fmt.Errorf("CertificateSigningRequest %s is approved, waiting to be issued", csr.Name))
+		}
+
+		certData = csr.Status.Certificate
+		return retry.Ok()
 	}); err != nil {
 		return nil, err
 	}

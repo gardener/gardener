@@ -63,7 +63,7 @@ var _ = Describe("RequestAndStoreKubeconfig", func() {
 			}).Should(Succeed())
 		}(ctx)
 
-		Expect(nodeagent.RequestAndStoreKubeconfig(ctx, log, fs, nodeAgentUser.Config(), machineName)).To(MatchError(ContainSubstring("certificate signing request is denied")))
+		Expect(nodeagent.RequestAndStoreKubeconfig(ctx, log, fs, nodeAgentUser.Config(), machineName)).To(MatchError(ContainSubstring("is denied")))
 	})
 
 	It("should handle a failed CSR", func(ctx context.Context) {
@@ -74,7 +74,7 @@ var _ = Describe("RequestAndStoreKubeconfig", func() {
 			}).Should(Succeed())
 		}(ctx)
 
-		Expect(nodeagent.RequestAndStoreKubeconfig(ctx, log, fs, nodeAgentUser.Config(), machineName)).To(MatchError(ContainSubstring("certificate signing request failed")))
+		Expect(nodeagent.RequestAndStoreKubeconfig(ctx, log, fs, nodeAgentUser.Config(), machineName)).To(MatchError(ContainSubstring("failed")))
 	})
 })
 

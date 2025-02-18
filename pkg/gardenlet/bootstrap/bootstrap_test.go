@@ -212,7 +212,7 @@ var _ = Describe("Bootstrap", func() {
 				Build()
 
 			_, _, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
-			Expect(err).To(MatchError(ContainSubstring("request is denied")))
+			Expect(err).To(MatchError(ContainSubstring("is denied")))
 		})
 
 		It("should return an error - the CSR failed", func() {
@@ -230,7 +230,7 @@ var _ = Describe("Bootstrap", func() {
 				Build()
 
 			_, _, _, err := RequestKubeconfigWithBootstrapClient(ctx, testLogger, seedClient, bootstrapClientSet, kubeconfigKey, bootstrapKubeconfigKey, seedName, nil)
-			Expect(err).To(MatchError(ContainSubstring("request failed")))
+			Expect(err).To(MatchError(ContainSubstring("failed")))
 		})
 	})
 
