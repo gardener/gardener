@@ -415,7 +415,7 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 	}
 
 	if oidc := config.OIDC; oidc != nil {
-		oidcPath := fldPath.Child("oidc")
+		oidcPath := fldPath.Child("oidcConfig")
 
 		if kubeAPIServerConfig == nil || (kubeAPIServerConfig.OIDCConfig == nil && kubeAPIServerConfig.StructuredAuthentication == nil) {
 			allErrs = append(allErrs, field.Invalid(oidcPath, config.OIDC, "must set OIDC configuration in .spec.virtualCluster.kubernetes.kubeAPIServer when configuring OIDC config for dashboard"))

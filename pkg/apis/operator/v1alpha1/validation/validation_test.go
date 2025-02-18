@@ -1978,7 +1978,7 @@ var _ = Describe("Validation Tests", func() {
 
 							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeInvalid),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidc"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig"),
 							}))))
 						})
 
@@ -1989,7 +1989,7 @@ var _ = Describe("Validation Tests", func() {
 
 							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidc.clientIDPublic"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.clientIDPublic"),
 							}))))
 						})
 
@@ -2003,7 +2003,7 @@ var _ = Describe("Validation Tests", func() {
 
 							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidc.clientIDPublic"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.clientIDPublic"),
 							}))))
 						})
 
@@ -2014,7 +2014,7 @@ var _ = Describe("Validation Tests", func() {
 
 							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidc.issuerURL"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.issuerURL"),
 							}))))
 						})
 
@@ -2028,7 +2028,7 @@ var _ = Describe("Validation Tests", func() {
 
 							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
-								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidc.issuerURL"),
+								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.issuerURL"),
 							}))))
 						})
 
