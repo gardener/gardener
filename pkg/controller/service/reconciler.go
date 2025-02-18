@@ -128,7 +128,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	if err := r.Client.Patch(ctx, service, patch); err != nil {
-		if apierrors.IsInvalid(err) && strings.Contains(err.Error(), "port is already allocated") {
+		if (apierrors.IsInvalid(err) && strings.Contains(err.Error(), "port is already allocated")) ||
+			// for some reason this error is not of type "Invalid"
+			strings.Contains(err.Error(), "duplicate nodePort") {
 			log.Info("Patching nodePort failed because it is already allocated, enabling auto-remediation")
 			return reconcile.Result{Requeue: true}, r.remediateAllocatedNodePorts(ctx, log)
 		}
