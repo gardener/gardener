@@ -53,7 +53,8 @@ func getShootControlPlane() *gardencorev1beta1.ControlPlane {
 func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: "garden-local",
 			Annotations: map[string]string{
 				v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds: "0",
 				v1beta1constants.AnnotationAuthenticationIssuer:                     v1beta1constants.AnnotationAuthenticationIssuerManaged,
@@ -124,7 +125,8 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 	shoot := &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name + "-wl",
+			Name:      name + "-wl",
+			Namespace: "garden-local",
 		},
 		Spec: gardencorev1beta1.ShootSpec{
 			ControlPlane: getShootControlPlane(),

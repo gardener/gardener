@@ -13,16 +13,19 @@ import (
 
 	"github.com/gardener/gardener/pkg/logger"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 	"github.com/gardener/gardener/test/framework"
 )
 
-const testID = "shoot-test"
+// TODO(timebertt): delete this file when finishing https://github.com/gardener/gardener/issues/11379
 
 var parentCtx context.Context
 
 var _ = BeforeEach(func() {
 	parentCtx = context.Background()
-	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName(testID))
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("shoot-test"))
+
+	internal.LoadLegacyFlags()
 })
 
 func defaultShootCreationFramework() *framework.ShootCreationFramework {

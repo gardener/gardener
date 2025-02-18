@@ -33,6 +33,8 @@ issues:
   - "\".*\" imported but not used"
   # allow non-capitalized messages if they start with technical terms
   - "structured logging message should be capitalized: \"garden(er-apiserver|er-controller-manager|er-admission-controller|er-operator|er-resource-manager|let)"
+  # ginkgolinter false positive: https://github.com/nunnatsa/ginkgolinter/issues/190
+  - the MatchError matcher used to assert a non error type \(ctx\)
   exclude-rules:
   - linters:
     - staticcheck

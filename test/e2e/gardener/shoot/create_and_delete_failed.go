@@ -5,7 +5,6 @@
 package shoot
 
 import (
-	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -13,45 +12,35 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/e2e"
+	. "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(shoot *gardencorev1beta1.Shoot) {
-		f := defaultShootCreationFramework()
-		f.Shoot = shoot
+	var s *ShootContext
 
-		It("Create and Delete Failed Shoot", Offset(1), func() {
-			By("Create Shoot")
-			if shoot.Namespace == "" {
-				shoot.SetNamespace(f.ProjectNamespace)
-			}
-			f.Shoot = shoot
+	Describe("Create and Delete Failed Shoot", func() {
+		Context("Shoot with invalid DNS configuration", Ordered, func() {
+			BeforeTestSetup(func() {
+				shoot := DefaultShoot("e2e-invalid-dns")
+				shoot.Spec.DNS = &gardencorev1beta1.DNS{
+					Domain: ptr.To("shoot.non-existing-domain"),
+				}
 
-			ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
-			defer cancel()
+				s = NewTestContext().ForShoot(shoot)
+			})
 
-			Expect(f.GardenClient.Client().Create(ctx, shoot)).To(Succeed())
+			ItShouldCreateShoot(s)
 
-			By("Wait until last operation in Shoot is set to Failed")
-			Eventually(func(g Gomega) {
-				g.Expect(f.GetShoot(ctx, shoot)).To(Succeed())
-				g.Expect(shoot.Status.LastOperation).ToNot(BeNil())
-				g.Expect(shoot.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateFailed))
-			}).WithTimeout(1 * time.Minute).Should(Succeed())
+			It("Wait until last operation in Shoot is set to Failed", func(ctx SpecContext) {
+				Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
+					HaveField("Status.LastOperation.State", Equal(gardencorev1beta1.LastOperationStateFailed)),
+				)
+			}, SpecTimeout(time.Minute))
 
-			By("Delete Shoot")
-			ctx, cancel = context.WithTimeout(parentCtx, 2*time.Minute)
-			defer cancel()
-			Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+			ItShouldDeleteShoot(s)
+			ItShouldWaitForShootToBeDeleted(s)
 		})
-	}
-
-	Context("Shoot with invalid DNS configuration", func() {
-		shoot := e2e.DefaultShoot("e2e-invalid-dns")
-		shoot.Spec.DNS = &gardencorev1beta1.DNS{
-			Domain: ptr.To("shoot.non-existing-domain"),
-		}
-		test(shoot)
 	})
 })
