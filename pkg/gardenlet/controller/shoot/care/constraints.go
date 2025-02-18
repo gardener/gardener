@@ -193,7 +193,7 @@ func (c *Constraint) CheckIfCACertificateValiditiesAcceptable(ctx context.Contex
 	const minimumValidity = 24 * time.Hour * 365
 
 	secretList := &corev1.SecretList{}
-	if err := c.seedClient.List(ctx, secretList, client.InNamespace(c.shoot.SeedNamespace), client.MatchingLabels{
+	if err := c.seedClient.List(ctx, secretList, client.InNamespace(c.shoot.ControlPlaneNamespace), client.MatchingLabels{
 		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
 		secretsmanager.LabelKeyManagerIdentity: v1beta1constants.SecretManagerIdentityGardenlet,
 		secretsmanager.LabelKeyPersist:         secretsmanager.LabelValueTrue,

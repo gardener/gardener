@@ -1409,6 +1409,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(errorList).To(BeEmpty())
 				})
+
+				It("should prevent setting 'ControlPlane' field for worker pool", func() {
+					shoot.Spec.Provider.Workers[0].ControlPlane = &core.WorkerControlPlane{}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.provider.workers[0].controlPlane"),
+					}))))
+				})
 			})
 
 			Describe("ClusterAutoscaler options validation", func() {

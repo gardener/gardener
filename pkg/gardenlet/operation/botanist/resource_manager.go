@@ -36,7 +36,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
-	return shared.NewTargetGardenerResourceManager(b.SeedClientSet.Client(), b.Shoot.SeedNamespace, b.SecretsManager, resourcemanager.Values{
+	return shared.NewTargetGardenerResourceManager(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, resourcemanager.Values{
 		ClusterIdentity:                     b.Seed.GetInfo().Status.ClusterIdentity,
 		DefaultNotReadyToleration:           defaultNotReadyTolerationSeconds,
 		DefaultUnreachableToleration:        defaultUnreachableTolerationSeconds,
@@ -64,7 +64,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 		b.SeedClientSet.Client(),
 		b.SecretsManager,
 		b.Shoot.Components.ControlPlane.ResourceManager,
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		func(ctx context.Context) (int32, error) {
 			return b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 2, false)
 		},
@@ -73,5 +73,5 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
 func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
-	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, 1)
+	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}, 1)
 }

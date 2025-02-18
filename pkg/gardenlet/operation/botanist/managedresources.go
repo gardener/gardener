@@ -23,21 +23,21 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 	return b.SeedClientSet.Client().DeleteAllOf(
 		ctx,
 		&resourcesv1alpha1.ManagedResource{},
-		client.InNamespace(b.Shoot.SeedNamespace),
+		client.InNamespace(b.Shoot.ControlPlaneNamespace),
 		client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener},
 	)
 }
 
 // WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` are gone or the context is cancelled.
 func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
-	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener})
+	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener})
 }
 
 // WaitUntilShootManagedResourcesDeleted waits until all managed resources that are describing shoot resources are deleted or the context is cancelled.
 func (b *Botanist) WaitUntilShootManagedResourcesDeleted(ctx context.Context) error {
 	return retry.Until(ctx, time.Second*5, func(ctx context.Context) (done bool, err error) {
 		mrList := &resourcesv1alpha1.ManagedResourceList{}
-		if err := b.SeedClientSet.Client().List(ctx, mrList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+		if err := b.SeedClientSet.Client().List(ctx, mrList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
 			return retry.SevereError(err)
 		}
 
@@ -65,7 +65,7 @@ func (b *Botanist) waitUntilManagedResourceAreDeleted(ctx context.Context, listO
 // KeepObjectsForManagedResources sets ManagedResource.Spec.KeepObjects to true.
 func (b *Botanist) KeepObjectsForManagedResources(ctx context.Context) error {
 	managedResources := &resourcesv1alpha1.ManagedResourceList{}
-	if err := b.SeedClientSet.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener}); err != nil {
+	if err := b.SeedClientSet.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.ControlPlaneNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener}); err != nil {
 		return fmt.Errorf("failed to list all managed resource, %w", err)
 	}
 

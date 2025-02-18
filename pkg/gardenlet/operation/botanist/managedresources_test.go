@@ -52,7 +52,7 @@ var _ = Describe("ManagedResources", func() {
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
 		botanist.SeedClientSet = k8sSeedClient
 		botanist.Shoot = &shootpkg.Shoot{
-			SeedNamespace: namespace.Name,
+			ControlPlaneNamespace: namespace.Name,
 		}
 		seedManagedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: "seed", Namespace: namespace.Name},

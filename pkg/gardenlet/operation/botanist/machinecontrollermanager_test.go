@@ -65,7 +65,7 @@ var _ = Describe("MachineControllerManager", func() {
 		botanist.SeedClientSet = kubernetesClient
 		botanist.SecretsManager = fakeSecretsManager
 		botanist.Seed = &seedpkg.Seed{KubernetesVersion: semver.MustParse("1.25.0")}
-		botanist.Shoot = &shootpkg.Shoot{SeedNamespace: namespace}
+		botanist.Shoot = &shootpkg.Shoot{ControlPlaneNamespace: namespace}
 		botanist.Shoot.SetInfo(shoot)
 
 		DeferCleanup(func() {

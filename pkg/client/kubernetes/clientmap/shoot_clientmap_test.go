@@ -68,20 +68,6 @@ var _ = Describe("ShootClientMap", func() {
 			},
 		}
 
-		ProjectForNamespaceFromReader = func(_ context.Context, _ client.Reader, _ string) (*gardencorev1beta1.Project, error) {
-			return &gardencorev1beta1.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "eden",
-				},
-				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: ptr.To("garden-eden"),
-				}}, nil
-		}
-		LookupHost = func(host string) ([]string, error) {
-			Expect(host).To(Equal("kube-apiserver." + shoot.Status.TechnicalID + ".svc"))
-			return []string{"10.0.1.1"}, nil
-		}
-
 		key = keys.ForShoot(shoot)
 
 		clientConnectionConfig = componentbaseconfigv1alpha1.ClientConnectionConfiguration{
@@ -132,89 +118,6 @@ var _ = Describe("ShootClientMap", func() {
 			cs, err := cm.GetClient(ctx, key)
 			Expect(cs).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("shoot %q is not scheduled yet", key.Key()))))
-		})
-
-		It("should fail if ProjectForNamespaceFromReader fails", func() {
-			shoot.Status.TechnicalID = "" // trigger retrieval of project instead of relying on shoot status
-
-			fakeErr := errors.New("fake")
-			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
-					return nil
-				})
-			ProjectForNamespaceFromReader = func(_ context.Context, _ client.Reader, _ string) (*gardencorev1beta1.Project, error) {
-				return nil, fakeErr
-			}
-
-			cs, err := cm.GetClient(ctx, key)
-			Expect(cs).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("failed to get Project for Shoot")))
-		})
-
-		It("should use external kubeconfig if LookupHost fails (out-of-cluster), failing because of unpopulated token", func() {
-			technicalID := shoot.Status.TechnicalID
-			shoot.Status.TechnicalID = "" // trigger retrieval of project instead of relying on shoot status
-
-			fakeErr := errors.New("fake")
-			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
-					return nil
-				})
-			mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: technicalID, Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
-					return nil
-				})
-			LookupHost = func(_ string) ([]string, error) {
-				return nil, fakeErr
-			}
-
-			NewClientFromSecretObject = func(secret *corev1.Secret, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				Expect(secret.Namespace).To(Equal(technicalID))
-				Expect(secret.Name).To(Equal("gardener"))
-				return nil, fakeErr
-			}
-
-			cs, err := cm.GetClient(ctx, key)
-			Expect(cs).To(BeNil())
-			Expect(err).To(MatchError(ContainSubstring("token for shoot kubeconfig was not populated yet")))
-		})
-
-		It("should use external kubeconfig if LookupHost fails (out-of-cluster), failing because NewClientFromSecretObject fails", func() {
-			technicalID := shoot.Status.TechnicalID
-			shoot.Status.TechnicalID = "" // trigger retrieval of project instead of relying on shoot status
-
-			fakeErr := errors.New("fake")
-			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
-					return nil
-				})
-			mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: technicalID, Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					(&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      key.Name,
-							Namespace: key.Namespace,
-						},
-						Data: dataWithPopulatedToken(),
-					}).DeepCopyInto(obj.(*corev1.Secret))
-					return nil
-				})
-			LookupHost = func(_ string) ([]string, error) {
-				return nil, fakeErr
-			}
-
-			NewClientFromSecretObject = func(secret *corev1.Secret, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				Expect(secret.Namespace).To(Equal(technicalID))
-				Expect(secret.Name).To(Equal("gardener"))
-				return nil, fakeErr
-			}
-
-			cs, err := cm.GetClient(ctx, key)
-			Expect(cs).To(BeNil())
-			Expect(err).To(MatchError(fmt.Sprintf("error creating new ClientSet for key %q: fake", key.Key())))
 		})
 
 		It("should fail constructing a new ClientSet (in-cluster) because token is not populated", func() {
@@ -335,54 +238,41 @@ var _ = Describe("ShootClientMap", func() {
 			Expect(err).To(MatchError("fake"))
 		})
 
-		Context("correctly calculate hash", func() {
-			test := func(secretName string) {
-				changedTechnicalID := "foo"
-				gomock.InOrder(
-					mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-							shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
-							return nil
-						}),
-					mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: secretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-							(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
-							return nil
-						}),
-					mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-							shoot.Status.TechnicalID = changedTechnicalID
-							shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
-							return nil
-						}),
-					mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: changedTechnicalID, Name: secretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-							(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
-							return nil
-						}),
-				)
+		It("should correctly calculate hash", func() {
+			changedTechnicalID := "foo"
+			gomock.InOrder(
+				mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
+						return nil
+					}),
+				mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
+						return nil
+					}),
+				mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						shoot.Status.TechnicalID = changedTechnicalID
+						shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
+						return nil
+					}),
+				mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: changedTechnicalID, Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
+						return nil
+					}),
+			)
 
-				hash, err := factory.CalculateClientSetHash(ctx, key)
-				Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
-				Expect(err).NotTo(HaveOccurred())
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+			Expect(err).NotTo(HaveOccurred())
 
-				Expect(factory.InvalidateClient(key)).To(Succeed())
+			Expect(factory.InvalidateClient(key)).To(Succeed())
 
-				hash, err = factory.CalculateClientSetHash(ctx, keys.ForShoot(shoot))
-				Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
-				Expect(err).NotTo(HaveOccurred())
-			}
-
-			It("when in-cluster", func() {
-				test("gardener-internal")
-			})
-
-			It("when out-of-cluster", func() {
-				LookupHost = func(_ string) ([]string, error) {
-					return nil, nil
-				}
-				test("gardener")
-			})
+			hash, err = factory.CalculateClientSetHash(ctx, keys.ForShoot(shoot))
+			Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

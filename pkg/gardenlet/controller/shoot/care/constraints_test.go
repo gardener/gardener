@@ -442,10 +442,10 @@ var _ = Describe("Constraints", func() {
 
 	Describe("Constraint", func() {
 		var (
-			ctx           = context.Background()
-			seedNamespace = "shoot--foo--bar"
-			seedClient    client.Client
-			shootClient   client.Client
+			ctx                   = context.Background()
+			controlPlaneNamespace = "shoot--foo--bar"
+			seedClient            client.Client
+			shootClient           client.Client
 
 			constraint *Constraint
 
@@ -453,7 +453,7 @@ var _ = Describe("Constraints", func() {
 				return &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						GenerateName: "some-secret-",
-						Namespace:    seedNamespace,
+						Namespace:    controlPlaneNamespace,
 						Labels: map[string]string{
 							"managed-by":       "secrets-manager",
 							"manager-identity": "gardenlet",
@@ -471,7 +471,7 @@ var _ = Describe("Constraints", func() {
 			shootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 
 			shoot := &shootpkg.Shoot{
-				SeedNamespace: seedNamespace,
+				ControlPlaneNamespace: controlPlaneNamespace,
 			}
 			shoot.SetInfo(&gardencorev1beta1.Shoot{})
 

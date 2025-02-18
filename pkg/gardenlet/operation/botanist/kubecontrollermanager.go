@@ -21,7 +21,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 	return shared.NewKubeControllerManager(
 		b.Logger,
 		b.SeedClientSet,
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.Seed.KubernetesVersion,
 		b.Shoot.KubernetesVersion,
 		b.SecretsManager,
@@ -60,5 +60,5 @@ func (b *Botanist) WaitForKubeControllerManagerToBeActive(ctx context.Context) e
 
 // ScaleKubeControllerManagerToOne scales kube-controller-manager replicas to one.
 func (b *Botanist) ScaleKubeControllerManagerToOne(ctx context.Context) error {
-	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeControllerManager}, 1)
+	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeControllerManager}, 1)
 }

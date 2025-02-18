@@ -101,9 +101,9 @@ var _ = Describe("ResourceManager", func() {
 			resourceManager *mockresourcemanager.MockInterface
 			secrets         resourcemanager.Secrets
 
-			ctx           = context.TODO()
-			fakeErr       = errors.New("fake err")
-			seedNamespace = "fake-seed-ns"
+			ctx                   = context.TODO()
+			fakeErr               = errors.New("fake err")
+			controlPlaneNamespace = "fake-seed-ns"
 
 			c             *mockclient.MockClient
 			k8sSeedClient kubernetes.Interface
@@ -120,10 +120,10 @@ var _ = Describe("ResourceManager", func() {
 
 			c = mockclient.NewMockClient(ctrl)
 			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithClient(c).Build()
-			sm = fakesecretsmanager.New(c, seedNamespace)
+			sm = fakesecretsmanager.New(c, controlPlaneNamespace)
 
 			By("Ensure secrets managed outside of this function for which secretsmanager.Get() will be called")
-			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: seedNamespace, Name: "ca"}, gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: controlPlaneNamespace, Name: "ca"}, gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
 
 			botanist.SeedClientSet = k8sSeedClient
 			botanist.SecretsManager = sm
@@ -134,7 +134,7 @@ var _ = Describe("ResourceManager", func() {
 						ResourceManager: resourceManager,
 					},
 				},
-				SeedNamespace: seedNamespace,
+				ControlPlaneNamespace: controlPlaneNamespace,
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Status: gardencorev1beta1.ShootStatus{
@@ -149,13 +149,13 @@ var _ = Describe("ResourceManager", func() {
 			bootstrapKubeconfigSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot-access-gardener-resource-manager-bootstrap-905aeb60",
-					Namespace: seedNamespace,
+					Namespace: controlPlaneNamespace,
 				},
 			}
 			shootAccessSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot-access-gardener-resource-manager",
-					Namespace: seedNamespace,
+					Namespace: controlPlaneNamespace,
 					Annotations: map[string]string{
 						"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339),
 					},
@@ -164,7 +164,7 @@ var _ = Describe("ResourceManager", func() {
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot-core-gardener-resource-manager",
-					Namespace: seedNamespace,
+					Namespace: controlPlaneNamespace,
 				},
 			}
 		})
@@ -202,7 +202,7 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "gardener-resource-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "gardener-resource-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						resourceManager.EXPECT().SetReplicas(ptr.To[int32](0)),
 					)
 				})
@@ -241,7 +241,7 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "gardener-resource-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "gardener-resource-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						resourceManager.EXPECT().SetReplicas(ptr.To[int32](0)),
 					)
 				})
@@ -264,7 +264,7 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "gardener-resource-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "gardener-resource-manager"}, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						resourceManager.EXPECT().SetReplicas(ptr.To[int32](0)),
 					)
 				})
@@ -522,7 +522,7 @@ var _ = Describe("ResourceManager", func() {
 							}),
 						)
 
-						Expect(botanist.DeployGardenerResourceManager(ctx).Error()).To(ContainSubstring(fmt.Sprintf("managed resource %s/%s is not healthy", seedNamespace, managedResource.Name)))
+						Expect(botanist.DeployGardenerResourceManager(ctx).Error()).To(ContainSubstring(fmt.Sprintf("managed resource %s/%s is not healthy", controlPlaneNamespace, managedResource.Name)))
 					})
 				})
 

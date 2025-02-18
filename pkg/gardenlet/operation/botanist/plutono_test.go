@@ -42,10 +42,10 @@ var _ = Describe("Plutono", func() {
 
 		botanist *Botanist
 
-		ctx              = context.TODO()
-		projectNamespace = "garden-foo"
-		seedNamespace    = "shoot--foo--bar"
-		shootName        = "bar"
+		ctx                   = context.TODO()
+		projectNamespace      = "garden-foo"
+		controlPlaneNamespace = "shoot--foo--bar"
+		shootName             = "bar"
 
 		shootPurposeEvaluation = gardencorev1beta1.ShootPurposeEvaluation
 	)
@@ -74,7 +74,7 @@ var _ = Describe("Plutono", func() {
 				Seed:                &seedpkg.Seed{},
 				SeedNamespaceObject: &corev1.Namespace{},
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace: seedNamespace,
+					ControlPlaneNamespace: controlPlaneNamespace,
 					Networks: &shootpkg.Networks{
 						Pods:     []net.IPNet{},
 						Services: []net.IPNet{},
@@ -103,7 +103,7 @@ var _ = Describe("Plutono", func() {
 				Purpose: &shootPurposeEvaluation,
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				TechnicalID: seedNamespace,
+				TechnicalID: controlPlaneNamespace,
 			},
 		})
 	})

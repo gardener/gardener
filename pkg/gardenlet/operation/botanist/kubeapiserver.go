@@ -56,7 +56,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		ctx,
 		b.SeedClientSet,
 		b.GardenClient,
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.Shoot.GetInfo().ObjectMeta,
 		b.Seed.KubernetesVersion,
 		b.Shoot.KubernetesVersion,
@@ -208,7 +208,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 	if err := shared.DeployKubeAPIServer(
 		ctx,
 		b.SeedClientSet.Client(),
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		b.Shoot.Components.ControlPlane.KubeAPIServer,
 		serviceAccountConfig,
 		b.computeKubeAPIServerServerCertificateConfig(),
@@ -318,7 +318,7 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 	if err := b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer); err != nil {
 		return err
 	}
-	if err := kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1); err != nil {
+	if err := kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1); err != nil {
 		return err
 	}
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Wait(ctx)
@@ -327,5 +327,5 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one.
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](1))
-	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.SeedNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1)
+	return kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1)
 }

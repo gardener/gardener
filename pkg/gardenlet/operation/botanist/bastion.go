@@ -17,7 +17,7 @@ func (b *Botanist) DeleteBastions(ctx context.Context) error {
 		ctx,
 		b.SeedClientSet.Client(),
 		&extensionsv1alpha1.BastionList{},
-		b.Shoot.SeedNamespace,
+		b.Shoot.ControlPlaneNamespace,
 		func(_ extensionsv1alpha1.Object) bool {
 			return true
 		},

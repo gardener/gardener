@@ -96,30 +96,11 @@ func (f *GardenClientSetFactory) getSecretAndComputeHash(ctx context.Context, k 
 	gardenNamespace := f.getGardenNamespace()
 
 	kubeconfigSecret := &corev1.Secret{}
-	if err := f.RuntimeClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: GardenerSecretName(f.log, gardenNamespace)}, kubeconfigSecret); err != nil {
+	if err := f.RuntimeClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: v1beta1constants.SecretNameGardenerInternal}, kubeconfigSecret); err != nil {
 		return nil, "", err
 	}
 
 	return kubeconfigSecret, utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
-}
-
-// GardenerSecretName returns the secret name which contains the kubeconfig to the Garden cluster.
-// It tries to resolve the internal domain name of the 'virtual-garden-kube-apiserver' service
-// and returns the secret name with the internal kubeconfig, if it succeeds.
-// Otherwise, the name of the external kubeconfig is returned.
-func GardenerSecretName(log logr.Logger, gardenNamespace string) string {
-	secretName := v1beta1constants.SecretNameGardener
-
-	// Prefer the internal host if available
-	addr, err := LookupHost(fmt.Sprintf("virtual-garden-%s.%s.svc.cluster.local", v1beta1constants.DeploymentNameKubeAPIServer, gardenNamespace))
-	if err != nil {
-		log.Info("Service DNS name lookup of virtual-garden-kube-apiserver failed, falling back to external kubeconfig", "error", err)
-	} else if len(addr) > 0 {
-		log.Info("Service DNS name lookup of virtual-garden-kube-apiserver successful, using internal kubeconfig", "error", err)
-		secretName = v1beta1constants.SecretNameGardenerInternal
-	}
-
-	return secretName
 }
 
 var _ Invalidate = &GardenClientSetFactory{}

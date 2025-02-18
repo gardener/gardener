@@ -16,7 +16,7 @@ func (b *Botanist) DefaultContainerRuntime() containerruntime.Interface {
 		b.Logger,
 		b.SeedClientSet.Client(),
 		&containerruntime.Values{
-			Namespace: b.Shoot.SeedNamespace,
+			Namespace: b.Shoot.ControlPlaneNamespace,
 			Workers:   b.Shoot.GetInfo().Spec.Provider.Workers,
 		},
 		containerruntime.DefaultInterval,

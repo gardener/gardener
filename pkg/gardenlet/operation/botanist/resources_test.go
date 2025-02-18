@@ -41,9 +41,9 @@ var _ = Describe("Resources", func() {
 
 		botanist *Botanist
 
-		ctx             = context.TODO()
-		gardenNamespace = "garden-foo"
-		seedNamespace   = "shoot--foo--bar"
+		ctx                   = context.TODO()
+		gardenNamespace       = "garden-foo"
+		controlPlaneNamespace = "shoot--foo--bar"
 
 		resource *corev1.Secret
 	)
@@ -56,7 +56,7 @@ var _ = Describe("Resources", func() {
 		botanist = &Botanist{Operation: &operation.Operation{
 			GardenClient:  gardenClient,
 			SeedClientSet: seedClientSet,
-			Shoot:         &shoot.Shoot{SeedNamespace: seedNamespace},
+			Shoot:         &shoot.Shoot{ControlPlaneNamespace: controlPlaneNamespace},
 		}}
 
 		resource = &corev1.Secret{
@@ -91,7 +91,7 @@ var _ = Describe("Resources", func() {
 	Describe("#DeployReferencedResources", func() {
 		expectReferencedResourcesInSeed := func(expectedObjects ...client.Object) {
 			managedResource := &resourcesv1alpha1.ManagedResource{}
-			Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: "referenced-resources"}, managedResource)).To(Succeed())
+			Expect(seedClient.Get(ctx, client.ObjectKey{Namespace: controlPlaneNamespace, Name: "referenced-resources"}, managedResource)).To(Succeed())
 			Expect(managedResource.Spec.Class).To(PointTo(Equal("seed")))
 			Expect(managedResource.Spec.ForceOverwriteAnnotations).To(PointTo(BeFalse()))
 			Expect(managedResource.Spec.KeepObjects).To(PointTo(BeFalse()))
@@ -144,7 +144,7 @@ var _ = Describe("Resources", func() {
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "ref-" + resource.Name,
-						Namespace:   seedNamespace,
+						Namespace:   controlPlaneNamespace,
 						Labels:      resource.Labels,
 						Annotations: resource.Annotations,
 					},
@@ -167,7 +167,7 @@ var _ = Describe("Resources", func() {
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "ref-" + resource.Name,
-						Namespace:   seedNamespace,
+						Namespace:   controlPlaneNamespace,
 						Labels:      resource.Labels,
 						Annotations: expectedAnnotations,
 					},
@@ -180,10 +180,10 @@ var _ = Describe("Resources", func() {
 
 	Describe("#DestroyReferencedResources", func() {
 		It("should destroy the managed resource and its secret for the referenced resources", func() {
-			managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "referenced-resources"}}
+			managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: controlPlaneNamespace, Name: "referenced-resources"}}
 			Expect(seedClient.Create(ctx, managedResource)).To(Succeed())
 
-			managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "referenced-resources"}}
+			managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: controlPlaneNamespace, Name: "referenced-resources"}}
 			Expect(seedClient.Create(ctx, managedResourceSecret)).To(Succeed())
 
 			Expect(botanist.DestroyReferencedResources(ctx)).To(Succeed())

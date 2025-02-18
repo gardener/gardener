@@ -96,8 +96,8 @@ var _ = Describe("NginxIngress", func() {
 	})
 
 	var (
-		shootName     = "testShoot"
-		seedNamespace = "shoot--foo--bar"
+		shootName             = "testShoot"
+		controlPlaneNamespace = "shoot--foo--bar"
 
 		scheme *runtime.Scheme
 		client client.Client
@@ -129,7 +129,7 @@ var _ = Describe("NginxIngress", func() {
 					},
 				},
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace:         seedNamespace,
+					ControlPlaneNamespace: controlPlaneNamespace,
 					ExternalClusterDomain: ptr.To(externalDomain),
 					ExternalDomain: &gardenerutils.Domain{
 						Domain:   externalDomain,
@@ -212,7 +212,7 @@ var _ = Describe("NginxIngress", func() {
 			Expect(actual).To(DeepEqual(&dnsrecord.Values{
 				Name:       b.Shoot.GetInfo().Name + "-ingress",
 				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-				Namespace:  seedNamespace,
+				Namespace:  controlPlaneNamespace,
 				TTL:        ptr.To(ttl),
 				Type:       externalProvider,
 				Zone:       ptr.To(externalZone),
@@ -259,7 +259,7 @@ var _ = Describe("NginxIngress", func() {
 			Expect(actual).To(DeepEqual(&dnsrecord.Values{
 				Name:       b.Shoot.GetInfo().Name + "-ingress",
 				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-				Namespace:  seedNamespace,
+				Namespace:  controlPlaneNamespace,
 				TTL:        ptr.To(ttl),
 				Type:       externalProvider,
 				Zone:       ptr.To(externalZone),
@@ -286,12 +286,12 @@ var _ = Describe("NginxIngress", func() {
 			Expect(c.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := client.Get(ctx, types.NamespacedName{Name: shootName + "-ingress", Namespace: seedNamespace}, dnsRecord)
+			err := client.Get(ctx, types.NamespacedName{Name: shootName + "-ingress", Namespace: controlPlaneNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            shootName + "-ingress",
-					Namespace:       seedNamespace,
+					Namespace:       controlPlaneNamespace,
 					ResourceVersion: "1",
 					Annotations: map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
@@ -304,7 +304,7 @@ var _ = Describe("NginxIngress", func() {
 					},
 					SecretRef: corev1.SecretReference{
 						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
-						Namespace: seedNamespace,
+						Namespace: controlPlaneNamespace,
 					},
 					Zone:       ptr.To(externalZone),
 					Name:       "*.ingress." + externalDomain,
@@ -315,12 +315,12 @@ var _ = Describe("NginxIngress", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: seedNamespace}, secret)
+			err = client.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: controlPlaneNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
-					Namespace:       seedNamespace,
+					Namespace:       controlPlaneNamespace,
 					ResourceVersion: "1",
 				},
 				Type: corev1.SecretTypeOpaque,

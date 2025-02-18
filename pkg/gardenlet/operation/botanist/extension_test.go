@@ -56,7 +56,7 @@ var _ = Describe("Extensions", func() {
 						Extension: extension,
 					},
 				},
-				SeedNamespace: namespace,
+				ControlPlaneNamespace: namespace,
 			},
 		}}
 		botanist.Shoot.SetShootState(shootState)
