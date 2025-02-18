@@ -39,6 +39,7 @@ func CentralServiceMonitors() []*monitoringv1.ServiceMonitor {
 							`{__name__="prometheus_tsdb_storage_blocks_bytes"}`,
 							`{__name__="kubeproxy_network_latency:quantile"}`,
 							`{__name__="kubeproxy_sync_proxy:quantile"}`,
+							`{__name__="apiserver_request_total"}`,
 						},
 					},
 					Port: prometheus.ServicePortName,
