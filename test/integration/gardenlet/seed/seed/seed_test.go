@@ -635,6 +635,9 @@ var _ = Describe("Seed controller tests", func() {
 						DeferCleanup(func() {
 							Expect(applier.DeleteManifest(ctx, managedResourceCRDReader)).To(Succeed())
 							Expect(testClient.Delete(ctx, istioSystemNamespace)).To(Succeed())
+							Eventually(func() error {
+								return testClient.Get(ctx, client.ObjectKeyFromObject(istioSystemNamespace), istioSystemNamespace)
+							}).Should(BeNotFoundError())
 							Expect(istioCRDs.Destroy(ctx)).To(Succeed())
 							Expect(vpaCRD.Destroy(ctx)).To(Succeed())
 							Expect(fluentCRD.Destroy(ctx)).To(Succeed())
