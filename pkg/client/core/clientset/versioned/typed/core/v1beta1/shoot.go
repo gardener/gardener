@@ -7,9 +7,9 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -25,33 +25,34 @@ type ShootsGetter interface {
 
 // ShootInterface has methods to work with Shoot resources.
 type ShootInterface interface {
-	Create(ctx context.Context, shoot *v1beta1.Shoot, opts v1.CreateOptions) (*v1beta1.Shoot, error)
-	Update(ctx context.Context, shoot *v1beta1.Shoot, opts v1.UpdateOptions) (*v1beta1.Shoot, error)
+	Create(ctx context.Context, shoot *corev1beta1.Shoot, opts v1.CreateOptions) (*corev1beta1.Shoot, error)
+	Update(ctx context.Context, shoot *corev1beta1.Shoot, opts v1.UpdateOptions) (*corev1beta1.Shoot, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, shoot *v1beta1.Shoot, opts v1.UpdateOptions) (*v1beta1.Shoot, error)
+	UpdateStatus(ctx context.Context, shoot *corev1beta1.Shoot, opts v1.UpdateOptions) (*corev1beta1.Shoot, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Shoot, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ShootList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*corev1beta1.Shoot, error)
+	List(ctx context.Context, opts v1.ListOptions) (*corev1beta1.ShootList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Shoot, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *corev1beta1.Shoot, err error)
 	ShootExpansion
 }
 
 // shoots implements ShootInterface
 type shoots struct {
-	*gentype.ClientWithList[*v1beta1.Shoot, *v1beta1.ShootList]
+	*gentype.ClientWithList[*corev1beta1.Shoot, *corev1beta1.ShootList]
 }
 
 // newShoots returns a Shoots
 func newShoots(c *CoreV1beta1Client, namespace string) *shoots {
 	return &shoots{
-		gentype.NewClientWithList[*v1beta1.Shoot, *v1beta1.ShootList](
+		gentype.NewClientWithList[*corev1beta1.Shoot, *corev1beta1.ShootList](
 			"shoots",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1beta1.Shoot { return &v1beta1.Shoot{} },
-			func() *v1beta1.ShootList { return &v1beta1.ShootList{} }),
+			func() *corev1beta1.Shoot { return &corev1beta1.Shoot{} },
+			func() *corev1beta1.ShootList { return &corev1beta1.ShootList{} },
+		),
 	}
 }

@@ -311,11 +311,11 @@ func (o *Options) Run(ctx context.Context) error {
 	log.Info("Feature Gates", "featureGates", features.DefaultFeatureGate)
 
 	if err := server.GenericAPIServer.AddPostStartHook("start-gardener-apiserver-informers", func(context genericapiserver.PostStartHookContext) error {
-		o.CoreInformerFactory.Start(context.StopCh)
-		o.KubeInformerFactory.Start(context.StopCh)
-		o.SeedManagementInformerFactory.Start(context.StopCh)
-		o.SecurityInformerFactory.Start(context.StopCh)
-		o.SettingsInformerFactory.Start(context.StopCh)
+		o.CoreInformerFactory.Start(context.Done())
+		o.KubeInformerFactory.Start(context.Done())
+		o.SeedManagementInformerFactory.Start(context.Done())
+		o.SecurityInformerFactory.Start(context.Done())
+		o.SettingsInformerFactory.Start(context.Done())
 		return nil
 	}); err != nil {
 		return err

@@ -139,6 +139,7 @@ containerRuntimeEndpoint: ""
 cpuCFSQuota: true
 cpuManagerPolicy: none
 cpuManagerReconcilePeriod: 10s
+crashLoopBackOff: {}
 enableControllerAttachDetach: true
 enableDebuggingHandlers: true
 enforceNodeAllocatable:

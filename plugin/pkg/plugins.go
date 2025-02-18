@@ -7,6 +7,7 @@ package pkg
 import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
+	"k8s.io/apiserver/pkg/admission/plugin/policy/mutating"
 	"k8s.io/apiserver/pkg/admission/plugin/policy/validating"
 	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
 	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
@@ -99,6 +100,7 @@ func AllPluginNames() []string {
 		// new admission plugins should generally be inserted above here
 		// webhook, and resourcequota plugins must go at the end
 
+		mutating.PluginName,          // MutatingAdmissionPolicy
 		mutatingwebhook.PluginName,   // MutatingAdmissionWebhook
 		validating.PluginName,        // ValidatingAdmissionPolicy
 		validatingwebhook.PluginName, // ValidatingAdmissionWebhook

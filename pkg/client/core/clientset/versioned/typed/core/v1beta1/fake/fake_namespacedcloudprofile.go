@@ -7,129 +7,34 @@
 package fake
 
 import (
-	"context"
-
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeNamespacedCloudProfiles implements NamespacedCloudProfileInterface
-type FakeNamespacedCloudProfiles struct {
+// fakeNamespacedCloudProfiles implements NamespacedCloudProfileInterface
+type fakeNamespacedCloudProfiles struct {
+	*gentype.FakeClientWithList[*v1beta1.NamespacedCloudProfile, *v1beta1.NamespacedCloudProfileList]
 	Fake *FakeCoreV1beta1
-	ns   string
 }
 
-var namespacedcloudprofilesResource = v1beta1.SchemeGroupVersion.WithResource("namespacedcloudprofiles")
-
-var namespacedcloudprofilesKind = v1beta1.SchemeGroupVersion.WithKind("NamespacedCloudProfile")
-
-// Get takes name of the namespacedCloudProfile, and returns the corresponding namespacedCloudProfile object, and an error if there is any.
-func (c *FakeNamespacedCloudProfiles) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.NamespacedCloudProfile, err error) {
-	emptyResult := &v1beta1.NamespacedCloudProfile{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(namespacedcloudprofilesResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeNamespacedCloudProfiles(fake *FakeCoreV1beta1, namespace string) corev1beta1.NamespacedCloudProfileInterface {
+	return &fakeNamespacedCloudProfiles{
+		gentype.NewFakeClientWithList[*v1beta1.NamespacedCloudProfile, *v1beta1.NamespacedCloudProfileList](
+			fake.Fake,
+			namespace,
+			v1beta1.SchemeGroupVersion.WithResource("namespacedcloudprofiles"),
+			v1beta1.SchemeGroupVersion.WithKind("NamespacedCloudProfile"),
+			func() *v1beta1.NamespacedCloudProfile { return &v1beta1.NamespacedCloudProfile{} },
+			func() *v1beta1.NamespacedCloudProfileList { return &v1beta1.NamespacedCloudProfileList{} },
+			func(dst, src *v1beta1.NamespacedCloudProfileList) { dst.ListMeta = src.ListMeta },
+			func(list *v1beta1.NamespacedCloudProfileList) []*v1beta1.NamespacedCloudProfile {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1beta1.NamespacedCloudProfileList, items []*v1beta1.NamespacedCloudProfile) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1beta1.NamespacedCloudProfile), err
-}
-
-// List takes label and field selectors, and returns the list of NamespacedCloudProfiles that match those selectors.
-func (c *FakeNamespacedCloudProfiles) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.NamespacedCloudProfileList, err error) {
-	emptyResult := &v1beta1.NamespacedCloudProfileList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(namespacedcloudprofilesResource, namespacedcloudprofilesKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1beta1.NamespacedCloudProfileList{ListMeta: obj.(*v1beta1.NamespacedCloudProfileList).ListMeta}
-	for _, item := range obj.(*v1beta1.NamespacedCloudProfileList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested namespacedCloudProfiles.
-func (c *FakeNamespacedCloudProfiles) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(namespacedcloudprofilesResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a namespacedCloudProfile and creates it.  Returns the server's representation of the namespacedCloudProfile, and an error, if there is any.
-func (c *FakeNamespacedCloudProfiles) Create(ctx context.Context, namespacedCloudProfile *v1beta1.NamespacedCloudProfile, opts v1.CreateOptions) (result *v1beta1.NamespacedCloudProfile, err error) {
-	emptyResult := &v1beta1.NamespacedCloudProfile{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(namespacedcloudprofilesResource, c.ns, namespacedCloudProfile, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.NamespacedCloudProfile), err
-}
-
-// Update takes the representation of a namespacedCloudProfile and updates it. Returns the server's representation of the namespacedCloudProfile, and an error, if there is any.
-func (c *FakeNamespacedCloudProfiles) Update(ctx context.Context, namespacedCloudProfile *v1beta1.NamespacedCloudProfile, opts v1.UpdateOptions) (result *v1beta1.NamespacedCloudProfile, err error) {
-	emptyResult := &v1beta1.NamespacedCloudProfile{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(namespacedcloudprofilesResource, c.ns, namespacedCloudProfile, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.NamespacedCloudProfile), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeNamespacedCloudProfiles) UpdateStatus(ctx context.Context, namespacedCloudProfile *v1beta1.NamespacedCloudProfile, opts v1.UpdateOptions) (result *v1beta1.NamespacedCloudProfile, err error) {
-	emptyResult := &v1beta1.NamespacedCloudProfile{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(namespacedcloudprofilesResource, "status", c.ns, namespacedCloudProfile, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.NamespacedCloudProfile), err
-}
-
-// Delete takes name of the namespacedCloudProfile and deletes it. Returns an error if one occurs.
-func (c *FakeNamespacedCloudProfiles) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(namespacedcloudprofilesResource, c.ns, name, opts), &v1beta1.NamespacedCloudProfile{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeNamespacedCloudProfiles) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(namespacedcloudprofilesResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1beta1.NamespacedCloudProfileList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched namespacedCloudProfile.
-func (c *FakeNamespacedCloudProfiles) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.NamespacedCloudProfile, err error) {
-	emptyResult := &v1beta1.NamespacedCloudProfile{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(namespacedcloudprofilesResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1beta1.NamespacedCloudProfile), err
 }

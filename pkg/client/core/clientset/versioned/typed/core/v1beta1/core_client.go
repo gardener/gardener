@@ -7,10 +7,10 @@
 package v1beta1
 
 import (
-	"net/http"
+	http "net/http"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -143,10 +143,10 @@ func New(c rest.Interface) *CoreV1beta1Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1beta1.SchemeGroupVersion
+	gv := corev1beta1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = rest.CodecFactoryForGeneratedClient(scheme.Scheme, scheme.Codecs).WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

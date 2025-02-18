@@ -7,10 +7,10 @@
 package v1beta1
 
 import (
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // QuotaLister helps list Quotas.
@@ -18,7 +18,7 @@ import (
 type QuotaLister interface {
 	// List lists all Quotas in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.Quota, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.Quota, err error)
 	// Quotas returns an object that can list and get Quotas.
 	Quotas(namespace string) QuotaNamespaceLister
 	QuotaListerExpansion
@@ -26,17 +26,17 @@ type QuotaLister interface {
 
 // quotaLister implements the QuotaLister interface.
 type quotaLister struct {
-	listers.ResourceIndexer[*v1beta1.Quota]
+	listers.ResourceIndexer[*corev1beta1.Quota]
 }
 
 // NewQuotaLister returns a new QuotaLister.
 func NewQuotaLister(indexer cache.Indexer) QuotaLister {
-	return &quotaLister{listers.New[*v1beta1.Quota](indexer, v1beta1.Resource("quota"))}
+	return &quotaLister{listers.New[*corev1beta1.Quota](indexer, corev1beta1.Resource("quota"))}
 }
 
 // Quotas returns an object that can list and get Quotas.
 func (s *quotaLister) Quotas(namespace string) QuotaNamespaceLister {
-	return quotaNamespaceLister{listers.NewNamespaced[*v1beta1.Quota](s.ResourceIndexer, namespace)}
+	return quotaNamespaceLister{listers.NewNamespaced[*corev1beta1.Quota](s.ResourceIndexer, namespace)}
 }
 
 // QuotaNamespaceLister helps list and get Quotas.
@@ -44,15 +44,15 @@ func (s *quotaLister) Quotas(namespace string) QuotaNamespaceLister {
 type QuotaNamespaceLister interface {
 	// List lists all Quotas in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1beta1.Quota, err error)
+	List(selector labels.Selector) (ret []*corev1beta1.Quota, err error)
 	// Get retrieves the Quota from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1beta1.Quota, error)
+	Get(name string) (*corev1beta1.Quota, error)
 	QuotaNamespaceListerExpansion
 }
 
 // quotaNamespaceLister implements the QuotaNamespaceLister
 // interface.
 type quotaNamespaceLister struct {
-	listers.ResourceIndexer[*v1beta1.Quota]
+	listers.ResourceIndexer[*corev1beta1.Quota]
 }

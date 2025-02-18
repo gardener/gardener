@@ -7,8 +7,8 @@
 package versioned
 
 import (
-	"fmt"
-	"net/http"
+	fmt "fmt"
+	http "net/http"
 
 	securityv1alpha1 "github.com/gardener/gardener/pkg/client/security/clientset/versioned/typed/security/v1alpha1"
 	discovery "k8s.io/client-go/discovery"

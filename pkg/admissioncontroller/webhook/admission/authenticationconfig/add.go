@@ -17,6 +17,7 @@ import (
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	apiservervalidation "k8s.io/apiserver/pkg/apis/apiserver/validation"
+	authenticationcel "k8s.io/apiserver/pkg/authentication/cel"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -90,7 +91,7 @@ func admitConfig(authenticationConfigurationRaw string, shoots []*gardencore.Sho
 		return http.StatusInternalServerError, fmt.Errorf("failed to cast to authentication configuration type: %v", schemaVersion)
 	}
 
-	if errList := apiservervalidation.ValidateAuthenticationConfiguration(authenticationConfig, getDisallowedIssuers(shoots)); len(errList) != 0 {
+	if errList := apiservervalidation.ValidateAuthenticationConfiguration(authenticationcel.NewDefaultCompiler(), authenticationConfig, getDisallowedIssuers(shoots)); len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authentication configuration: %v", errList)
 	}
 

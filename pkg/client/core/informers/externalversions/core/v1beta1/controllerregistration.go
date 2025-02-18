@@ -7,13 +7,13 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	apiscorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/core/informers/externalversions/internalinterfaces"
-	v1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // ControllerRegistrations.
 type ControllerRegistrationInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1beta1.ControllerRegistrationLister
+	Lister() corev1beta1.ControllerRegistrationLister
 }
 
 type controllerRegistrationInformer struct {
@@ -58,7 +58,7 @@ func NewFilteredControllerRegistrationInformer(client versioned.Interface, resyn
 				return client.CoreV1beta1().ControllerRegistrations().Watch(context.TODO(), options)
 			},
 		},
-		&corev1beta1.ControllerRegistration{},
+		&apiscorev1beta1.ControllerRegistration{},
 		resyncPeriod,
 		indexers,
 	)
@@ -69,9 +69,9 @@ func (f *controllerRegistrationInformer) defaultInformer(client versioned.Interf
 }
 
 func (f *controllerRegistrationInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&corev1beta1.ControllerRegistration{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiscorev1beta1.ControllerRegistration{}, f.defaultInformer)
 }
 
-func (f *controllerRegistrationInformer) Lister() v1beta1.ControllerRegistrationLister {
-	return v1beta1.NewControllerRegistrationLister(f.Informer().GetIndexer())
+func (f *controllerRegistrationInformer) Lister() corev1beta1.ControllerRegistrationLister {
+	return corev1beta1.NewControllerRegistrationLister(f.Informer().GetIndexer())
 }

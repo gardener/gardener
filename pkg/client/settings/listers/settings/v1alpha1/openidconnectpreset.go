@@ -7,10 +7,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // OpenIDConnectPresetLister helps list OpenIDConnectPresets.
@@ -18,7 +18,7 @@ import (
 type OpenIDConnectPresetLister interface {
 	// List lists all OpenIDConnectPresets in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.OpenIDConnectPreset, err error)
+	List(selector labels.Selector) (ret []*settingsv1alpha1.OpenIDConnectPreset, err error)
 	// OpenIDConnectPresets returns an object that can list and get OpenIDConnectPresets.
 	OpenIDConnectPresets(namespace string) OpenIDConnectPresetNamespaceLister
 	OpenIDConnectPresetListerExpansion
@@ -26,17 +26,17 @@ type OpenIDConnectPresetLister interface {
 
 // openIDConnectPresetLister implements the OpenIDConnectPresetLister interface.
 type openIDConnectPresetLister struct {
-	listers.ResourceIndexer[*v1alpha1.OpenIDConnectPreset]
+	listers.ResourceIndexer[*settingsv1alpha1.OpenIDConnectPreset]
 }
 
 // NewOpenIDConnectPresetLister returns a new OpenIDConnectPresetLister.
 func NewOpenIDConnectPresetLister(indexer cache.Indexer) OpenIDConnectPresetLister {
-	return &openIDConnectPresetLister{listers.New[*v1alpha1.OpenIDConnectPreset](indexer, v1alpha1.Resource("openidconnectpreset"))}
+	return &openIDConnectPresetLister{listers.New[*settingsv1alpha1.OpenIDConnectPreset](indexer, settingsv1alpha1.Resource("openidconnectpreset"))}
 }
 
 // OpenIDConnectPresets returns an object that can list and get OpenIDConnectPresets.
 func (s *openIDConnectPresetLister) OpenIDConnectPresets(namespace string) OpenIDConnectPresetNamespaceLister {
-	return openIDConnectPresetNamespaceLister{listers.NewNamespaced[*v1alpha1.OpenIDConnectPreset](s.ResourceIndexer, namespace)}
+	return openIDConnectPresetNamespaceLister{listers.NewNamespaced[*settingsv1alpha1.OpenIDConnectPreset](s.ResourceIndexer, namespace)}
 }
 
 // OpenIDConnectPresetNamespaceLister helps list and get OpenIDConnectPresets.
@@ -44,15 +44,15 @@ func (s *openIDConnectPresetLister) OpenIDConnectPresets(namespace string) OpenI
 type OpenIDConnectPresetNamespaceLister interface {
 	// List lists all OpenIDConnectPresets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.OpenIDConnectPreset, err error)
+	List(selector labels.Selector) (ret []*settingsv1alpha1.OpenIDConnectPreset, err error)
 	// Get retrieves the OpenIDConnectPreset from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.OpenIDConnectPreset, error)
+	Get(name string) (*settingsv1alpha1.OpenIDConnectPreset, error)
 	OpenIDConnectPresetNamespaceListerExpansion
 }
 
 // openIDConnectPresetNamespaceLister implements the OpenIDConnectPresetNamespaceLister
 // interface.
 type openIDConnectPresetNamespaceLister struct {
-	listers.ResourceIndexer[*v1alpha1.OpenIDConnectPreset]
+	listers.ResourceIndexer[*settingsv1alpha1.OpenIDConnectPreset]
 }

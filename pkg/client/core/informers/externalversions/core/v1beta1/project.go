@@ -7,13 +7,13 @@
 package v1beta1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	apiscorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/core/informers/externalversions/internalinterfaces"
-	v1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	corev1beta1 "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -24,7 +24,7 @@ import (
 // Projects.
 type ProjectInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1beta1.ProjectLister
+	Lister() corev1beta1.ProjectLister
 }
 
 type projectInformer struct {
@@ -58,7 +58,7 @@ func NewFilteredProjectInformer(client versioned.Interface, resyncPeriod time.Du
 				return client.CoreV1beta1().Projects().Watch(context.TODO(), options)
 			},
 		},
-		&corev1beta1.Project{},
+		&apiscorev1beta1.Project{},
 		resyncPeriod,
 		indexers,
 	)
@@ -69,9 +69,9 @@ func (f *projectInformer) defaultInformer(client versioned.Interface, resyncPeri
 }
 
 func (f *projectInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&corev1beta1.Project{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiscorev1beta1.Project{}, f.defaultInformer)
 }
 
-func (f *projectInformer) Lister() v1beta1.ProjectLister {
-	return v1beta1.NewProjectLister(f.Informer().GetIndexer())
+func (f *projectInformer) Lister() corev1beta1.ProjectLister {
+	return corev1beta1.NewProjectLister(f.Informer().GetIndexer())
 }
