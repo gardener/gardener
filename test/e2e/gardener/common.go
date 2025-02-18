@@ -6,6 +6,7 @@ package gardener
 
 import (
 	"os"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,6 +14,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 	"github.com/gardener/gardener/test/framework"
 )
 
@@ -109,6 +111,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 					Type: "local-ext-shoot-after-worker",
 				},
 			},
+			Maintenance: delayedShootMaintenance(),
 		},
 	}
 
@@ -149,7 +152,9 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 				{
 					Type: "local-ext-shoot",
 				},
-			}},
+			},
+			Maintenance: delayedShootMaintenance(),
+		},
 	}
 
 	if os.Getenv("IPFAMILY") == "ipv6" {
@@ -175,4 +180,17 @@ func DefaultNamespacedCloudProfile() *gardencorev1beta1.NamespacedCloudProfile {
 			},
 		},
 	}
+}
+
+// This computes a time window for Shoot maintenance which is ensured to be at least 2 hours in the future.
+// This is to prevent that we create Shoots in our e2e tests which are immediately in maintenance, since this can cause
+// that they might be reconciled multiple times (e.g., when gardenlet restarts). This might be undesired in some
+// test cases (e.g., upgrade tests).
+func delayedShootMaintenance() *gardencorev1beta1.Maintenance {
+	hour := (time.Now().UTC().Hour() + 3) % 24
+
+	return &gardencorev1beta1.Maintenance{TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
+		Begin: timewindow.NewMaintenanceTime(hour, 0, 0).Formatted(),
+		End:   timewindow.NewMaintenanceTime(hour+1, 0, 0).Formatted(),
+	}}
 }
