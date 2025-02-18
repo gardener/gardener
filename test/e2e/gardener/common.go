@@ -29,84 +29,10 @@ func DefaultGardenConfig(projectNamespace string) *framework.GardenerConfig {
 	}
 }
 
-// DefaultShoot returns a Shoot object with default values for the e2e tests.
-func DefaultShoot(name string) *gardencorev1beta1.Shoot {
-	shoot := &gardencorev1beta1.Shoot{
+func baseShoot(name string) *gardencorev1beta1.Shoot {
+	return &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: "garden-local",
-			Annotations: map[string]string{
-				v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds: "0",
-				v1beta1constants.AnnotationAuthenticationIssuer:                     v1beta1constants.AnnotationAuthenticationIssuerManaged,
-			},
-		},
-		Spec: gardencorev1beta1.ShootSpec{
-			ControlPlane:      getShootControlPlane(),
-			Region:            "local",
-			SecretBindingName: ptr.To("local"),
-			CloudProfile: &gardencorev1beta1.CloudProfileReference{
-				Name: "local",
-			},
-			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version:                     "1.31.1",
-				EnableStaticTokenKubeconfig: ptr.To(false),
-				Kubelet: &gardencorev1beta1.KubeletConfig{
-					SerializeImagePulls: ptr.To(false),
-					RegistryPullQPS:     ptr.To[int32](10),
-					RegistryBurst:       ptr.To[int32](20),
-				},
-				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
-			},
-			Networking: &gardencorev1beta1.Networking{
-				Type:  ptr.To("calico"),
-				Nodes: ptr.To("10.10.0.0/16"),
-			},
-			Provider: gardencorev1beta1.Provider{
-				Type: "local",
-				Workers: []gardencorev1beta1.Worker{{
-					Name: "local",
-					Machine: gardencorev1beta1.Machine{
-						Type: "local",
-					},
-					CRI: &gardencorev1beta1.CRI{
-						Name: gardencorev1beta1.CRINameContainerD,
-					},
-					Labels: map[string]string{
-						"foo": "bar",
-					},
-					Minimum: 1,
-					Maximum: 1,
-				}},
-			},
-			Extensions: []gardencorev1beta1.Extension{
-				{
-					Type: "local-ext-seed",
-				},
-				{
-					Type: "local-ext-shoot",
-				},
-				{
-					Type: "local-ext-shoot-after-worker",
-				},
-			},
-			Maintenance: getDelayedShootMaintenance(),
-		},
-	}
-
-	if os.Getenv("IPFAMILY") == "ipv6" {
-		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
-		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:a::/64")
-		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"ipv6":{"sourceNATEnabled":true}}`)}
-	}
-
-	return shoot
-}
-
-// DefaultWorkerlessShoot returns a workerless Shoot object with default values for the e2e tests.
-func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
-	shoot := &gardencorev1beta1.Shoot{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name + "-wl",
 			Namespace: "garden-local",
 		},
 		Spec: gardencorev1beta1.ShootSpec{
@@ -124,16 +50,59 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 				Type: "local",
 			},
 			Extensions: []gardencorev1beta1.Extension{
-				{
-					Type: "local-ext-seed",
-				},
-				{
-					Type: "local-ext-shoot",
-				},
+				{Type: "local-ext-seed"},
+				{Type: "local-ext-shoot"},
 			},
 			Maintenance: getDelayedShootMaintenance(),
 		},
 	}
+}
+
+// DefaultShoot returns a Shoot object with default values for the e2e tests.
+func DefaultShoot(name string) *gardencorev1beta1.Shoot {
+	shoot := baseShoot(name)
+
+	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds, "0")
+	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationAuthenticationIssuer, v1beta1constants.AnnotationAuthenticationIssuerManaged)
+
+	shoot.Spec.SecretBindingName = ptr.To("local")
+	shoot.Spec.Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
+		SerializeImagePulls: ptr.To(false),
+		RegistryPullQPS:     ptr.To[int32](10),
+		RegistryBurst:       ptr.To[int32](20),
+	}
+	shoot.Spec.Networking = &gardencorev1beta1.Networking{
+		Type:  ptr.To("calico"),
+		Nodes: ptr.To("10.10.0.0/16"),
+	}
+	shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
+		Name: "local",
+		Machine: gardencorev1beta1.Machine{
+			Type: "local",
+		},
+		CRI: &gardencorev1beta1.CRI{
+			Name: gardencorev1beta1.CRINameContainerD,
+		},
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+		Minimum: 1,
+		Maximum: 1,
+	})
+	shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{Type: "local-ext-shoot-after-worker"})
+
+	if os.Getenv("IPFAMILY") == "ipv6" {
+		shoot.Spec.Networking.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+		shoot.Spec.Networking.Nodes = ptr.To("fd00:10:a::/64")
+		shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"ipv6":{"sourceNATEnabled":true}}`)}
+	}
+
+	return shoot
+}
+
+// DefaultWorkerlessShoot returns a workerless Shoot object with default values for the e2e tests.
+func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
+	shoot := baseShoot(name + "-wl")
 
 	if os.Getenv("IPFAMILY") == "ipv6" {
 		shoot.Spec.Networking = &gardencorev1beta1.Networking{
