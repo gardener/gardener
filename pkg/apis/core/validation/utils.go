@@ -200,7 +200,7 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 }
 
 // ValidateMachineImages validates the given list of machine images for valid values and combinations.
-func ValidateMachineImages(machineImages []core.MachineImage, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
+func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {
@@ -261,15 +261,6 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilitiesDefini
 				allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
 			}
 
-			if IsDefined(capabilitiesDefinition) {
-				allErrs = append(allErrs, validateMachineImageVersionCapabilities(machineVersion, capabilitiesDefinition, versionsPath)...)
-			} else {
-				allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child("architecture"))...)
-				if machineVersion.CapabilitiesSet != nil {
-					allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilitiesSet"), "must not provide CapabilitiesSet when no capabilitiesDefinition is defined"))
-				}
-			}
-
 			if machineVersion.KubeletVersionConstraint != nil {
 				if _, err := semver.NewConstraint(*machineVersion.KubeletVersionConstraint); err != nil {
 					allErrs = append(allErrs, field.Invalid(versionsPath.Child("kubeletVersionConstraint"), machineVersion.KubeletVersionConstraint, fmt.Sprintf("cannot parse the kubeletVersionConstraint: %s", err.Error())))
@@ -282,7 +273,7 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilitiesDefini
 }
 
 // validateMachineTypes validates the given list of machine types for valid values and combinations.
-func validateMachineTypes(machineTypes []core.MachineType, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
+func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	names := make(map[string]struct{}, len(machineTypes))
@@ -293,7 +284,6 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilitiesDefinitio
 		cpuPath := idxPath.Child("cpu")
 		gpuPath := idxPath.Child("gpu")
 		memoryPath := idxPath.Child("memory")
-		archPath := idxPath.Child("architecture")
 
 		if len(machineType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
@@ -309,6 +299,44 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilitiesDefinitio
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
 
+		if machineType.Storage != nil {
+			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateMachineImageCapabilities validates the given list of machine images for valid capabilities and architecture values.
+func ValidateMachineImageCapabilities(machineImages []core.MachineImage, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, image := range machineImages {
+		idxPath := fldPath.Index(i)
+		for index, machineVersion := range image.Versions {
+			versionsPath := idxPath.Child("versions").Index(index)
+			if IsDefined(capabilitiesDefinition) {
+				allErrs = append(allErrs, validateMachineImageVersionCapabilities(machineVersion, capabilitiesDefinition, versionsPath)...)
+			} else {
+				allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child("architecture"))...)
+				if machineVersion.CapabilitiesSet != nil {
+					allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilitiesSet"), "must not provide CapabilitiesSet when no capabilitiesDefinition is defined"))
+				}
+			}
+		}
+	}
+
+	return allErrs
+}
+
+// validateMachineTypesCapabilities validates the given list of machine types for valid capabilities and architecture values.
+func validateMachineTypesCapabilities(machineTypes []core.MachineType, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, machineType := range machineTypes {
+		idxPath := fldPath.Index(i)
+		archPath := idxPath.Child("architecture")
+
 		if IsDefined(capabilitiesDefinition) {
 			allErrs = append(allErrs, ValidateMachineTypeCapabilities(machineType, *capabilitiesDefinition, idxPath)...)
 		} else {
@@ -317,12 +345,7 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilitiesDefinitio
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("capabilities"), "must not provide capabilities when no capabilitiesDefinition is defined"))
 			}
 		}
-
-		if machineType.Storage != nil {
-			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
-		}
 	}
-
 	return allErrs
 }
 

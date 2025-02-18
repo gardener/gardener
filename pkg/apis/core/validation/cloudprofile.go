@@ -161,7 +161,8 @@ func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilit
 	if len(machineTypes) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine type"))
 	}
-	allErrs = append(allErrs, validateMachineTypes(machineTypes, capabilitiesDefinition, fldPath)...)
+	allErrs = append(allErrs, validateMachineTypes(machineTypes, fldPath)...)
+	allErrs = append(allErrs, validateMachineTypesCapabilities(machineTypes, capabilitiesDefinition, fldPath)...)
 
 	return allErrs
 }
@@ -174,8 +175,8 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabi
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
 	}
 
-	allErrs = append(allErrs, ValidateMachineImages(machineImages, capabilitiesDefinition, fldPath)...)
-
+	allErrs = append(allErrs, ValidateMachineImages(machineImages, fldPath)...)
+	allErrs = append(allErrs, ValidateMachineImageCapabilities(machineImages, capabilitiesDefinition, fldPath)...)
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)
 
