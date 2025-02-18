@@ -62,7 +62,7 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 						`{__name__="garden_seed_usage"}`,
 						`{__name__="garden_seed_capacity"}`,
 						`{__name__="etcdbr_snapshot_duration_seconds_count"}`,
-						`{__name__="apiserver_request_total", job="virtual-garden-kube-apiserver"}`,
+						`{__name__="apiserver_request_total"}`,
 					},
 				},
 				StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: []monitoringv1alpha1.Target{"prometheus-" + garden.Label}}},
