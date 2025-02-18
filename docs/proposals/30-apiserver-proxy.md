@@ -277,8 +277,9 @@ For the detailed implementation steps, see the corresponding [umbrella issue](ht
 The first part is related to reworking the API server proxy to drop the proxy protocol:
 
 1. Prepare the existing VPN network infrastructure for reuse by the API server proxy.
-   - Handle the new `X-Gardener-Destination` header as described in [this section](#reconfiguring-the-istio-ingress-gateway).
+   - Extend the header matcher for the `Reversed-VPN` header to also allow the API server as a valid destination.
 2. Reconfigure the API server proxy as described in [this section](#reconfiguring-the-api-server-proxy).
+   - Reuse the existing `Reversed-VPN` header for now to keep backward compatibility with the ACL extension.
    - Report a new constraint `APIServerProxyUsesHTTPProxy` in the `Shoot` status once the API server proxy has been reconfigured to use the new protocol.
    - Can be released together with the previous step.
 3. Introduce a new feature gate `RemoveAPIServerProxyLegacyPort` to gardenlet.
@@ -291,7 +292,7 @@ After these steps, the proxy protocol is no longer used and the related network 
 The remaining steps are related to unifying the HTTP proxy infrastructure:
 
 1. Introduce the unified HTTP proxy network infrastructure as described in [this section](#unifying-the-http-proxy-infrastructure).
-   - Reconfigure the API server proxy and shoot VPN client to connect to the unified port.
+   - Reconfigure the API server proxy and shoot VPN client to connect to the unified port using the new `X-Gardener-Destination` header.
    - Report a new constraint `UsesUnifiedHTTPProxyPort` in the `Shoot` status once both components have been reconfigured to use the new port.
 2. Introduce a new feature gate `RemoveHTTPProxyLegacyPort` to gardenlet.
    - If enabled, gardenlet removes the old HTTP proxy network infrastructure on the seed side (ingress gateway port `tls-tunnel`, `Gateway`, `EnvoyFilter`, etc.)
