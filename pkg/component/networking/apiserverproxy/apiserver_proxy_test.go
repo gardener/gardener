@@ -270,7 +270,7 @@ var _ = Describe("APIServerProxy", func() {
 
 		Context("IPv4", func() {
 			It("should deploy the managed resource successfully", func() {
-				test("d383e1bb")
+				test("6049033b")
 			})
 		})
 
@@ -281,7 +281,7 @@ var _ = Describe("APIServerProxy", func() {
 			})
 
 			It("should deploy the managed resource successfully", func() {
-				test("331c4e9c")
+				test("5460b295")
 			})
 		})
 	})
@@ -469,7 +469,7 @@ static_resources:
             hostname: "api.internal.local.:443"
             headers_to_add:
             - header:
-                key: X-Gardener-Destination
+                key: Reversed-VPN
                 value: "outbound|443||kube-apiserver.shoot--internal--internal.svc.cluster.local"
           access_log:
           - name: envoy.access_loggers.stdout
