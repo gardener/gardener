@@ -10,11 +10,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
@@ -147,5 +149,50 @@ func ItShouldInitializeShootClient(s *ShootContext) {
 			s.WithShootClientSet(clientSet)
 			return err
 		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldGetResponsibleSeed retrieves the Seed object responsible for the shoot and stores it in ShootContext.Seed.
+func ItShouldGetResponsibleSeed(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Get the responsible Seed", func(ctx SpecContext) {
+		s.Seed = &gardencorev1beta1.Seed{}
+
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
+
+			s.Seed.Name = gardener.GetResponsibleSeedName(gardener.GetShootSeedNames(s.Shoot))
+			g.Expect(s.Seed.Name).NotTo(BeEmpty())
+			g.Expect(s.GardenKomega.Get(s.Seed)()).To(Succeed())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldInitializeSeedClient initializes the context's seed clients from the garden/seed-<name> kubeconfig secret.
+// Requires ItShouldGetResponsibleSeed to be called first.
+func ItShouldInitializeSeedClient(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Initialize Seed client", func(ctx SpecContext) {
+		Expect(s.Seed).NotTo(BeNil(), "ItShouldGetResponsibleSeed should be called first")
+
+		seedSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "seed-" + s.Seed.Name,
+				Namespace: "garden",
+			},
+		}
+		Eventually(ctx, s.GardenKomega.Object(seedSecret)).Should(
+			HaveField("Data", HaveKey(kubernetes.KubeConfig)),
+			"secret %v should contain the seed kubeconfig",
+		)
+
+		clientSet, err := kubernetes.NewClientFromSecretObject(seedSecret,
+			kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+			kubernetes.WithDisabledCachedClient(),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		s.WithSeedClientSet(clientSet)
 	}, SpecTimeout(time.Minute))
 }

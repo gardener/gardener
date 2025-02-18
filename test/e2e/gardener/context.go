@@ -105,6 +105,20 @@ type ShootContext struct {
 	//    HaveField("Items", HaveLen(1)),
 	//  )
 	ShootKomega komega.Komega
+
+	// Seed is the responsible Seed of the shoot.
+	Seed *gardencorev1beta1.Seed
+
+	// SeedClientSet is a client for the seed cluster. It must be initialized via WithSeedClientSet.
+	SeedClientSet kubernetes.Interface
+	// SeedClient is the controller-runtime client of the SeedClientSet. This is a more convenient equivalent of
+	// SeedClientSet.Client().
+	SeedClient client.Client
+	// SeedKomega is a Komega instance for writing assertions on objects in the seed cluster. E.g.,
+	//  Eventually(ctx, s.SeedKomega.ObjectList(&corev1.NodeList{})).Should(
+	//    HaveField("Items", HaveLen(1)),
+	//  )
+	SeedKomega komega.Komega
 }
 
 // WithShootClientSet initializes the shoot clients of this ShootContext from the given client set.
@@ -112,5 +126,13 @@ func (s *ShootContext) WithShootClientSet(clientSet kubernetes.Interface) *Shoot
 	s.ShootClientSet = clientSet
 	s.ShootClient = clientSet.Client()
 	s.ShootKomega = komega.New(s.ShootClient)
+	return s
+}
+
+// WithSeedClientSet initializes the seed clients of this ShootContext from the given client set.
+func (s *ShootContext) WithSeedClientSet(clientSet kubernetes.Interface) *ShootContext {
+	s.SeedClientSet = clientSet
+	s.SeedClient = clientSet.Client()
+	s.SeedKomega = komega.New(s.SeedClient)
 	return s
 }
