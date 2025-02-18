@@ -85,8 +85,10 @@ func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
 }
 
 // ShootContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
-// same test case, i.e., within the same ordered container. Accordingly, ShootContext values must not be reused across
-// multiple test cases (ordered containers).
+// same test case, i.e., within the same ordered container.
+// Accordingly, ShootContext values must not be reused across multiple test cases (ordered containers). Make sure to
+// declare ShootContext variables within the ordered container and initialize them during ginkgo tree construction,
+// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
 //
 // A ShootContext can be initialized using TestContext.ForShoot.
 type ShootContext struct {

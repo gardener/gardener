@@ -18,10 +18,10 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	var s *ShootContext
-
 	Describe("Create and Delete Failed Shoot", func() {
 		Context("Shoot with invalid DNS configuration", Ordered, func() {
+			var s *ShootContext
+
 			BeforeTestSetup(func() {
 				shoot := DefaultShoot("e2e-invalid-dns")
 				shoot.Spec.DNS = &gardencorev1beta1.DNS{
