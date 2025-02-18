@@ -1083,8 +1083,8 @@ spec:
                             - error
                             type: string
                           oidcConfig:
-                            description: OIDC contains configuration for the OIDC
-                              provider. This field must be provided when EnableTokenLogin
+                            description: OIDCConfig contains configuration for the
+                              OIDC provider. This field must be provided when EnableTokenLogin
                               is false.
                             properties:
                               additionalScopes:

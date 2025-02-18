@@ -1057,8 +1057,8 @@ func (in *GardenerDashboardConfig) DeepCopyInto(out *GardenerDashboardConfig) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.OIDC != nil {
-		in, out := &in.OIDC, &out.OIDC
+	if in.OIDCConfig != nil {
+		in, out := &in.OIDCConfig, &out.OIDCConfig
 		*out = new(DashboardOIDC)
 		(*in).DeepCopyInto(*out)
 	}

@@ -410,15 +410,15 @@ func validateGardenerDashboardConfig(config *operatorv1alpha1.GardenerDashboardC
 		return allErrs
 	}
 
-	if !ptr.Deref(config.EnableTokenLogin, true) && config.OIDC == nil {
+	if !ptr.Deref(config.EnableTokenLogin, true) && config.OIDCConfig == nil {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enableTokenLogin"), "OIDC must be configured when token login is disabled"))
 	}
 
-	if oidc := config.OIDC; oidc != nil {
+	if oidc := config.OIDCConfig; oidc != nil {
 		oidcPath := fldPath.Child("oidcConfig")
 
 		if kubeAPIServerConfig == nil || (kubeAPIServerConfig.OIDCConfig == nil && kubeAPIServerConfig.StructuredAuthentication == nil) {
-			allErrs = append(allErrs, field.Invalid(oidcPath, config.OIDC, "must set OIDC configuration in .spec.virtualCluster.kubernetes.kubeAPIServer when configuring OIDC config for dashboard"))
+			allErrs = append(allErrs, field.Invalid(oidcPath, config.OIDCConfig, "must set OIDC configuration in .spec.virtualCluster.kubernetes.kubeAPIServer when configuring OIDC config for dashboard"))
 		}
 
 		if oidc.IssuerURL == nil {

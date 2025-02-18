@@ -2144,7 +2144,7 @@ DashboardOIDC
 </td>
 <td>
 <em>(Optional)</em>
-<p>OIDC contains configuration for the OIDC provider. This field must be provided when EnableTokenLogin is false.</p>
+<p>OIDCConfig contains configuration for the OIDC provider. This field must be provided when EnableTokenLogin is false.</p>
 </td>
 </tr>
 <tr>

@@ -590,9 +590,9 @@ type GardenerDashboardConfig struct {
 	// +kubebuilder:default=info
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`
-	// OIDC contains configuration for the OIDC provider. This field must be provided when EnableTokenLogin is false.
+	// OIDCConfig contains configuration for the OIDC provider. This field must be provided when EnableTokenLogin is false.
 	// +optional
-	OIDC *DashboardOIDC `json:"oidcConfig,omitempty"`
+	OIDCConfig *DashboardOIDC `json:"oidcConfig,omitempty"`
 	// Terminal contains configuration for the terminal settings.
 	// +optional
 	Terminal *DashboardTerminal `json:"terminal,omitempty"`
