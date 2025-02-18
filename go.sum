@@ -476,8 +476,8 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRI
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prashantv/gostub v1.1.0 h1:BTyx3RfQjRHnUWaGF9oQos79AlQ5k8WNktv7VGvVH4g=
 github.com/prashantv/gostub v1.1.0/go.mod h1:A5zLQHz7ieHGG7is6LLXLz7I8+3LZzsrV0P1IAHhP5U=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.78.2 h1:SyoVBXD/r0PntR1rprb90ClI32FSUNOCWqqTatnipHM=
-github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.78.2/go.mod h1:SvsRXw4m1F2vk7HquU5h475bFpke27mIUswfyw9u3ug=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.80.0 h1:ckSycH7xHtpcvXsmEY/qEziRhDQKqKqbsHi9kX/BO7A=
+github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.80.0/go.mod h1:6x4x0t9BP35g4XcjkHE9EB3RxhyfxpdpmZKd/Qyk8+M=
 github.com/prometheus/blackbox_exporter v0.25.0 h1:cInPsiPsILpwYbir9A9cwJ8pjcf4/cGOuGR0BstQtuc=
 github.com/prometheus/blackbox_exporter v0.25.0/go.mod h1:SpTDn8xW1XOstBQ1uVgw54eTHIuB6HHVPe1xxLFIlaM=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
