@@ -94,6 +94,7 @@ var _ = Describe("ScrapeConfigs", func() {
 								SourceLabels: []monitoringv1.LabelName{"__address__", "__meta_kubernetes_service_annotation_prometheus_io_port"},
 								Action:       "replace",
 								Regex:        `([^:]+)(?::\d+)?;(\d+)`,
+								Replacement:  ptr.To("$1:$2"),
 								TargetLabel:  "__address__",
 							},
 							{
