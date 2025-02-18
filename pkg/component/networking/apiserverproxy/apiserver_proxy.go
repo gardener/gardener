@@ -27,6 +27,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -75,6 +76,7 @@ type Values struct {
 	Image               string
 	SidecarImage        string
 	DNSLookupFamily     string
+	IstioTLSTermination bool
 
 	advertiseIPAddress string
 }
@@ -201,13 +203,18 @@ func (a *apiserverProxy) emptyScrapeConfig() *monitoringv1alpha1.ScrapeConfig {
 
 func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 	var envoyYAML bytes.Buffer
+	reversedVPNHeaderValue := fmt.Sprintf("outbound|443||kube-apiserver.%s.svc.cluster.local", a.namespace)
+	if a.values.IstioTLSTermination {
+		reversedVPNHeaderValue = apiserverexposure.GetAPIServerProxyTargetClusterName(a.namespace)
+	}
+
 	if err := tplEnvoy.Execute(&envoyYAML, map[string]any{
-		"advertiseIPAddress":  a.values.advertiseIPAddress,
-		"dnsLookupFamily":     a.values.DNSLookupFamily,
-		"adminPort":           adminPort,
-		"proxySeedServerHost": a.values.ProxySeedServerHost,
-		"proxySeedServerPort": proxySeedServerPort,
-		"seedNamespace":       a.namespace,
+		"advertiseIPAddress":     a.values.advertiseIPAddress,
+		"dnsLookupFamily":        a.values.DNSLookupFamily,
+		"adminPort":              adminPort,
+		"proxySeedServerHost":    a.values.ProxySeedServerHost,
+		"proxySeedServerPort":    proxySeedServerPort,
+		"reversedVPNHeaderValue": reversedVPNHeaderValue,
 	}); err != nil {
 		return nil, err
 	}
