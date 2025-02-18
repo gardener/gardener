@@ -23,8 +23,8 @@ On eligible shoots L7 load balancing is activated by default. However, it can be
 
 ## How it works
 
-L7 load balancing currently works for the externally resolvable Kube API server endpoints only. Connections which use
-`apiserver-proxy` like `kubernetes.default.svc.cluster.local` still use L4 load balancing.
+L7 load balancing currently works for the externally resolvable Kube API server endpoints and for connections which use
+`apiserver-proxy` like endpoint `kubernetes.default.svc.cluster.local`.
 
 Clients might authenticate at Kube API server using client certificates, tokens or might connect unauthenticated. In the
 first case Istio ingress gateway must validate client certificates because it terminates the TLS connection. Thus, it is
