@@ -68,6 +68,7 @@ func CentralScrapeConfigs(prometheusAggregateTargets []monitoringv1alpha1.Target
 						`{__name__="seed:persistentvolume:inconsistent_size"}`,
 						`{__name__="seed:kube_pod_container_status_restarts_total:max_by_namespace"}`,
 						`{__name__=~"metering:.+:(sum_by_namespace|sum_by_instance_type)"}`,
+						`{__name__="apiserver_request_total"}`,
 					},
 				},
 				TLSConfig: &monitoringv1.SafeTLSConfig{InsecureSkipVerify: ptr.To(true)},
