@@ -291,13 +291,15 @@ The first part is related to reworking the API server proxy to drop the proxy pr
 After these steps, the proxy protocol is no longer used and the related network infrastructure (including the `proxy` port 8443) is removed.
 The remaining steps are related to unifying the HTTP proxy infrastructure:
 
-1. Introduce the unified HTTP proxy network infrastructure as described in [this section](#unifying-the-http-proxy-infrastructure).
-   - Reconfigure the API server proxy and shoot VPN client to connect to the unified port using the new `X-Gardener-Destination` header.
-   - Report a new constraint `UsesUnifiedHTTPProxyPort` in the `Shoot` status once both components have been reconfigured to use the new port.
-2. Introduce a new feature gate `RemoveHTTPProxyLegacyPort` to gardenlet.
+1. Introduce a new feature gate `UseUnifiedHTTPProxyPort` to gardenlet.
+   - If enabled, gardenlet sets up the unified HTTP proxy network infrastructure as described in [this section](#unifying-the-http-proxy-infrastructure). It also reconfigures the API server proxy and shoot VPN client to connect to the unified port using the new `X-Gardener-Destination` header.
+   - Report a new constraint `UsesUnifiedHTTPProxyPort` in the `Shoot` status once both shoot components have been reconfigured to use the new port.
+2. Graduate the `UseUnifiedHTTPProxyPort` feature gate.
+   - Before the feature gate can be enabled or graduated to beta, the ACL extension needs to be adapted to handle the new `http-proxy` port.
+3. Introduce a new feature gate `RemoveHTTPProxyLegacyPort` to gardenlet.
    - If enabled, gardenlet removes the old HTTP proxy network infrastructure on the seed side (ingress gateway port `tls-tunnel`, `Gateway`, `EnvoyFilter`, etc.)
    - The gardenlet only allows activating the feature gate if all shoot clusters on its seed cluster report that the API server proxy and shoot VPN client have been reconfigured.
-3. Graduate the `RemoveHTTPProxyLegacyPort` feature gate to GA and lock to `True`.
+4. Graduate the `RemoveHTTPProxyLegacyPort` feature gate to GA and lock to `True`.
    - Remove the `UsesUnifiedHTTPProxyPort` constraint in the `Shoot` status.
 
 After these steps, the legacy VPN network infrastructure on the seed side (including the `tls-tunnel` port 8132) is removed. Instead, the unifying infrastructure using the `http-proxy` port 8443 is used.
