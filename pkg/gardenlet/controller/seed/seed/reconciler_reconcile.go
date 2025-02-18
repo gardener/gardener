@@ -293,6 +293,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(waitUntilRequiredExtensionsReady),
 		})
 		syncPointReadyForSystemComponents = flow.NewTaskIDs(
+			deployGardenerResourceManager,
 			deployClusterIdentity,
 			cleanupOrphanedExposureClassHandlers,
 		)
@@ -453,16 +454,19 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying seed Prometheus",
-			Fn:   c.seedPrometheus.Deploy,
+			Name:         "Deploying seed Prometheus",
+			Fn:           c.seedPrometheus.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying aggregate Prometheus",
-			Fn:   c.aggregatePrometheus.Deploy,
+			Name:         "Deploying aggregate Prometheus",
+			Fn:           c.aggregatePrometheus.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying Alertmanager",
-			Fn:   c.alertManager.Deploy,
+			Name:         "Deploying Alertmanager",
+			Fn:           c.alertManager.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 	)
 
