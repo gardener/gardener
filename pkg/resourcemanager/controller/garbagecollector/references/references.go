@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -145,6 +146,14 @@ func InjectAnnotations(obj runtime.Object, additional ...string) error {
 		referenceAnnotations := computeAnnotationsFromLocalObjRefs(o.Spec.SecretRefs, KindSecret, additional...)
 		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
 
+	case *monitoringv1.Prometheus:
+		referenceAnnotations := utils.MergeStringMaps(
+			computeAnnotationsFromContainers(o.Spec.Containers),
+			computeAnnotationsFromVolumes(o.Spec.Volumes),
+			computeAnnotationsFromLocalObjRefs(localObjectReferencesFromRemoteWrites(o.Spec.RemoteWrite), KindSecret, additional...),
+		)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+
 	default:
 		return fmt.Errorf("unhandled object type %T", obj)
 	}
@@ -168,7 +177,21 @@ func computeAnnotationsFromLocalObjRefs(refs []corev1.LocalObjectReference, kind
 func computeAnnotations(spec corev1.PodSpec, additional ...string) map[string]string {
 	out := make(map[string]string)
 
-	for _, container := range spec.Containers {
+	out = utils.MergeStringMaps(out, computeAnnotationsFromContainers(spec.Containers))
+	out = utils.MergeStringMaps(out, computeAnnotationsFromVolumes(spec.Volumes))
+	out = utils.MergeStringMaps(out, computeAnnotationsFromLocalObjRefs(spec.ImagePullSecrets, KindSecret))
+
+	for _, v := range additional {
+		out[v] = ""
+	}
+
+	return out
+}
+
+func computeAnnotationsFromContainers(containers []corev1.Container) map[string]string {
+	out := make(map[string]string)
+
+	for _, container := range containers {
 		for _, env := range container.EnvFrom {
 			if env.SecretRef != nil {
 				out[AnnotationKey(KindSecret, env.SecretRef.Name)] = env.SecretRef.Name
@@ -190,7 +213,13 @@ func computeAnnotations(spec corev1.PodSpec, additional ...string) map[string]st
 		}
 	}
 
-	for _, volume := range spec.Volumes {
+	return out
+}
+
+func computeAnnotationsFromVolumes(volumes []corev1.Volume) map[string]string {
+	out := make(map[string]string)
+
+	for _, volume := range volumes {
 		if volume.Secret != nil {
 			out[AnnotationKey(KindSecret, volume.Secret.SecretName)] = volume.Secret.SecretName
 		}
@@ -212,14 +241,6 @@ func computeAnnotations(spec corev1.PodSpec, additional ...string) map[string]st
 		}
 	}
 
-	for _, imagePullSecret := range spec.ImagePullSecrets {
-		out[AnnotationKey(KindSecret, imagePullSecret.Name)] = imagePullSecret.Name
-	}
-
-	for _, v := range additional {
-		out[v] = ""
-	}
-
 	return out
 }
 
@@ -234,4 +255,17 @@ func mergeAnnotations(oldAnnotations, newAnnotations map[string]string) map[stri
 	}
 
 	return utils.MergeStringMaps(old, newAnnotations)
+}
+
+func localObjectReferencesFromRemoteWrites(remoteWrites []monitoringv1.RemoteWriteSpec) []corev1.LocalObjectReference {
+	var references []corev1.LocalObjectReference
+	for _, remoteWrite := range remoteWrites {
+		if basicAuth := remoteWrite.BasicAuth; basicAuth != nil {
+			references = append(references,
+				basicAuth.Username.LocalObjectReference,
+				basicAuth.Password.LocalObjectReference,
+			)
+		}
+	}
+	return references
 }

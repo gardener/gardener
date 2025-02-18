@@ -1120,6 +1120,7 @@ query_range:
 						Name:         "cortex-config",
 						VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: cortexConfigMap.Name}}},
 					})
+					Expect(references.InjectAnnotations(prometheusObj)).To(Succeed())
 
 					service.Spec.Ports[0].TargetPort = intstr.FromInt32(9091)
 
@@ -1219,6 +1220,8 @@ query_range:
 								},
 							},
 						}}
+
+						Expect(references.InjectAnnotations(prometheusObj)).To(Succeed())
 
 						prometheusRule.Namespace = namespace
 						metav1.SetMetaDataLabel(&prometheusRule.ObjectMeta, "prometheus", name)

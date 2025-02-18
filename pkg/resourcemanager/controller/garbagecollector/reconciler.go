@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -84,6 +85,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 			corev1.SchemeGroupVersion.WithKind("PodList"),
 			batchv1.SchemeGroupVersion.WithKind("CronJobList"),
 			resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"),
+			monitoringv1.SchemeGroupVersion.WithKind("PrometheusList"),
 		}
 	)
 
@@ -104,7 +106,6 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 			if objectKind == "" || objectName == "" {
 				continue
 			}
-
 			delete(objectsToGarbageCollect, objectId{objectKind, objectMeta.Namespace, objectName})
 		}
 	}

@@ -281,7 +281,7 @@ var _ = Describe("Fluent Bit", func() {
 			Expect(customResourcesManagedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 			Expect(customResourcesManagedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-			test.ExpectKindWithNameAndNamespace(manifests, "ConfigMap", "fluent-bit-lua-config-684e0e58", namespace)
+			test.ExpectKindWithNameAndNamespace(manifests, "ConfigMap", "fluent-bit-lua-config", namespace)
 			test.ExpectKindWithNameAndNamespace(manifests, "FluentBit", "fluent-bit-8259c", namespace)
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFluentBitConfig", "fluent-bit-config", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "tail-kubernetes", "")
