@@ -1240,7 +1240,6 @@ var _ = Describe("VPA", func() {
 			if clusterType == component.ClusterTypeShoot {
 				obj.Labels = map[string]string{"prometheus": "shoot"}
 				obj.Name = "shoot-vpa-admission-controller"
-				obj.ResourceVersion = "1"
 			}
 
 			return obj
@@ -1782,11 +1781,13 @@ var _ = Describe("VPA", func() {
 					})
 
 					It("should label vpa-admission-controller ServiceMonitor with `prometheus=shoot`", func() {
-						serviceMonitor := &monitoringv1.ServiceMonitor{}
-						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-admission-controller"}, serviceMonitor)).To(Succeed())
+						serviceMonitorExpected := serviceMonitorAdmissionControllerFor(component.ClusterTypeShoot, true)
+						serviceMonitorExpected.ResourceVersion = "1"
 
-						serviceMonitorAdmissionController := serviceMonitorAdmissionControllerFor(component.ClusterTypeShoot, true)
-						Expect(serviceMonitor).To(Equal(serviceMonitorAdmissionController))
+						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-admission-controller"}, serviceMonitorActual)).To(Succeed())
+
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
 
 					It("should label vpa-recommender ServiceMonitor with `prometheus=shoot`", func() {
@@ -1807,21 +1808,23 @@ var _ = Describe("VPA", func() {
 					})
 
 					It("should label vpa-admission-controller ServiceMonitor with `prometheus=shoot`", func() {
-						serviceMonitor := &monitoringv1.ServiceMonitor{}
-						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-admission-controller"}, serviceMonitor)).To(Succeed())
+						serviceMonitorExpected := serviceMonitorAdmissionControllerFor(component.ClusterTypeShoot, false)
+						serviceMonitorExpected.ResourceVersion = "1"
 
-						serviceMonitorAdmissionController := serviceMonitorAdmissionControllerFor(component.ClusterTypeShoot, false)
-						Expect(serviceMonitor).To(Equal(serviceMonitorAdmissionController))
+						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-admission-controller"}, serviceMonitorActual)).To(Succeed())
+
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
 
 					It("should label vpa-recommender ServiceMonitor with `prometheus=shoot`", func() {
-						serviceMonitorRecommender := serviceMonitorRecommenderFor(component.ClusterTypeShoot, false)
-						serviceMonitorRecommender.ResourceVersion = "1"
+						serviceMonitorExpected := serviceMonitorRecommenderFor(component.ClusterTypeShoot, false)
+						serviceMonitorExpected.ResourceVersion = "1"
 
-						serviceMonitor := &monitoringv1.ServiceMonitor{}
-						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitor)).To(Succeed())
+						serviceMonitorActual := &monitoringv1.ServiceMonitor{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "shoot-vpa-recommender"}, serviceMonitorActual)).To(Succeed())
 
-						Expect(serviceMonitor).To(Equal(serviceMonitorRecommender))
+						Expect(serviceMonitorActual).To(Equal(serviceMonitorExpected))
 					})
 				})
 			})
