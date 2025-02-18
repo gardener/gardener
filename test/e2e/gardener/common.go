@@ -29,28 +29,6 @@ func DefaultGardenConfig(projectNamespace string) *framework.GardenerConfig {
 	}
 }
 
-// getShootControlPlane returns a ControlPlane object based on env variable SHOOT_FAILURE_TOLERANCE_TYPE value
-func getShootControlPlane() *gardencorev1beta1.ControlPlane {
-	var failureToleranceType gardencorev1beta1.FailureToleranceType
-
-	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {
-	case "zone":
-		failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
-	case "node":
-		failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
-	default:
-		return nil
-	}
-
-	return &gardencorev1beta1.ControlPlane{
-		HighAvailability: &gardencorev1beta1.HighAvailability{
-			FailureTolerance: gardencorev1beta1.FailureTolerance{
-				Type: failureToleranceType,
-			},
-		},
-	}
-}
-
 // DefaultShoot returns a Shoot object with default values for the e2e tests.
 func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 	shoot := &gardencorev1beta1.Shoot{
@@ -111,7 +89,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 					Type: "local-ext-shoot-after-worker",
 				},
 			},
-			Maintenance: delayedShootMaintenance(),
+			Maintenance: getDelayedShootMaintenance(),
 		},
 	}
 
@@ -153,7 +131,7 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 					Type: "local-ext-shoot",
 				},
 			},
-			Maintenance: delayedShootMaintenance(),
+			Maintenance: getDelayedShootMaintenance(),
 		},
 	}
 
@@ -182,11 +160,33 @@ func DefaultNamespacedCloudProfile() *gardencorev1beta1.NamespacedCloudProfile {
 	}
 }
 
+// getShootControlPlane returns a ControlPlane object based on env variable SHOOT_FAILURE_TOLERANCE_TYPE value
+func getShootControlPlane() *gardencorev1beta1.ControlPlane {
+	var failureToleranceType gardencorev1beta1.FailureToleranceType
+
+	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {
+	case "zone":
+		failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
+	case "node":
+		failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
+	default:
+		return nil
+	}
+
+	return &gardencorev1beta1.ControlPlane{
+		HighAvailability: &gardencorev1beta1.HighAvailability{
+			FailureTolerance: gardencorev1beta1.FailureTolerance{
+				Type: failureToleranceType,
+			},
+		},
+	}
+}
+
 // This computes a time window for Shoot maintenance which is ensured to be at least 2 hours in the future.
 // This is to prevent that we create Shoots in our e2e tests which are immediately in maintenance, since this can cause
 // that they might be reconciled multiple times (e.g., when gardenlet restarts). This might be undesired in some
 // test cases (e.g., upgrade tests).
-func delayedShootMaintenance() *gardencorev1beta1.Maintenance {
+func getDelayedShootMaintenance() *gardencorev1beta1.Maintenance {
 	hour := (time.Now().UTC().Hour() + 3) % 24
 
 	return &gardencorev1beta1.Maintenance{TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
