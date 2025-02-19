@@ -679,11 +679,18 @@ var _ = Describe("KubeStateMetrics", func() {
 						Replacement: ptr.To("kube-state-metrics"),
 					},
 				},
-				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
-					SourceLabels: []monitoringv1.LabelName{"pod"},
-					Regex:        `^.+\.tf-pod.+$`,
-					Action:       "drop",
-				}},
+				MetricRelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{"namespace"},
+						Regex:        `shoot-.+`,
+						Action:       "drop",
+					},
+					{
+						SourceLabels: []monitoringv1.LabelName{"pod"},
+						Regex:        `^.+\.tf-pod.+$`,
+						Action:       "drop",
+					},
+				},
 			},
 		}
 		scrapeConfigShoot = &monitoringv1alpha1.ScrapeConfig{
