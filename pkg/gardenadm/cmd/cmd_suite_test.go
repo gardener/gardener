@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cmd_test
+package cmd
 
 import (
 	"testing"

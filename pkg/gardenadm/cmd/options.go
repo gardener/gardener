@@ -18,6 +18,11 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 )
 
+// Exposed for testing. `logf.SetLogger` discards all calls after the first invocation and there is no way of telling
+// from the outside whether it was called at all. Without a func alias, we cannot verify that Options.Complete correctly
+// initialized the global controller-runtime logger.
+var logfSetLogger = logf.SetLogger
+
 // Options contains persistent options for all commands.
 type Options struct {
 	genericiooptions.IOStreams
@@ -51,7 +56,7 @@ func (o *Options) Complete() error {
 		return fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	logf.SetLogger(o.Log)
+	logfSetLogger(o.Log)
 	klog.SetLogger(o.Log)
 	return nil
 }

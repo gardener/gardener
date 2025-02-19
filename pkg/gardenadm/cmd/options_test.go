@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cmd_test
+package cmd
 
 import (
 	"github.com/go-logr/logr"
@@ -70,6 +70,26 @@ var _ = Describe("Options", func() {
 			options.Log.Info("Some example log message")
 			Eventually(stdErr).Should(Say("Some example log message"))
 			Consistently(stdOut.Contents).Should(BeEmpty())
+		})
+
+		It("should initialize the global logger in controller-runtime", func() {
+			var logfLogger logr.Logger
+			DeferCleanup(test.WithVar(&logfSetLogger, func(l logr.Logger) {
+				logfLogger = l
+			}))
+
+			Expect(options.Complete()).To(Succeed())
+
+			Expect(logfLogger.GetSink()).NotTo(BeNil())
+			logfLogger.Info("Some example log message")
+			Eventually(stdErr).Should(Say("Some example log message"))
+		})
+
+		It("should initialize the global logger in klog", func() {
+			Expect(options.Complete()).To(Succeed())
+
+			klog.Info("Some example log message")
+			Eventually(stdErr).Should(Say("Some example log message"))
 		})
 	})
 })
