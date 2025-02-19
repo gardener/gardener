@@ -19,12 +19,12 @@ make kind-up
 make kind2-up
 
 # export all container logs and events after test execution
-trap '{
-  KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG export_artifacts "gardener-local"
-  KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_artifacts "gardener-local2"
-  make kind-down
-  make kind2-down
-}' EXIT
+trap "
+  ( export KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG; export_artifacts "gardener-local" )
+  ( export KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_artifacts "gardener-local2" )
+  ( make kind-down )
+  ( make kind2-down )
+" EXIT
 
 make gardener-up
 make gardenlet-kind2-up

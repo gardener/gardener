@@ -18,10 +18,10 @@ ensure_glgc_resolves_to_localhost
 make kind-up
 
 # export all container logs and events after test execution
-trap '{
-  export_artifacts "gardener-local"
-  make kind-down
-}' EXIT
+trap "
+  ( export_artifacts "gardener-local" )
+  ( make kind-down )
+" EXIT
 
 make gardener-up
 make test-e2e-local

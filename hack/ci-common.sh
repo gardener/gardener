@@ -43,11 +43,6 @@ export_artifacts() {
   cp /etc/hosts $ARTIFACTS/$cluster_name/hosts
 }
 
-export_events_for_kind() {
-  echo "> Exporting events of kind cluster '$1'"
-  export_events_for_cluster "$ARTIFACTS"
-}
-
 export_resource_yamls_for() {
   mkdir -p $ARTIFACTS
   # Loop over the resource types
