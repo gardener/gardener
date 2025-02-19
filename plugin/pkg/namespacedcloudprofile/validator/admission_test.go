@@ -27,7 +27,7 @@ import (
 	. "github.com/gardener/gardener/plugin/pkg/namespacedcloudprofile/validator"
 )
 
-var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enabled bool) {
+var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(isCapabilitiesEnabled bool) {
 
 	var _ = Describe("Admission", func() {
 		apiserverfeatures.RegisterFeatureGates()
@@ -44,7 +44,7 @@ var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enab
 
 				machineType            gardencorev1beta1.MachineType
 				machineTypeCore        gardencore.MachineType
-				imageName              string = "test-image"
+				imageName              = "test-image"
 				expiredExpirationDate  *metav1.Time
 				validExpirationDate    *metav1.Time
 				capabilitiesDefinition map[string]string
@@ -55,11 +55,11 @@ var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enab
 			)
 
 			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, enabled))
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, isCapabilitiesEnabled))
 
 				ctx = context.TODO()
 
-				if enabled {
+				if isCapabilitiesEnabled {
 					capabilitiesDefinition = map[string]string{
 						"architecture":   "amd64, arm64",
 						"hypervisorType": "gen1, gen2",
@@ -88,6 +88,8 @@ var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enab
 								Versions: []gardencorev1beta1.MachineImageVersion{{
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"},
 									CRI:              []gardencorev1beta1.CRI{{Name: "containerd"}},
+									Architectures:    imageArchitectures,
+									CapabilitiesSet:  capabilitiesSet,
 								}},
 							},
 						},
@@ -311,12 +313,29 @@ var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enab
 
 				It("should allow creating a NamespacedCloudProfile that defines a different machineType than the parent CloudProfile", func() {
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+					// Relevant checks are only executed if parentCloudProfile hast a machineType
+					parentCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{machineType}
 
 					namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{{Name: "my-other-machine", Architecture: &machineArchitecture, Capabilities: machineCapabilities}}
 
 					attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+				It("should default Architecture for MachineTypes depending if parentProfile uses Capabilities", func() {
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+					parentCloudProfile.Spec.MachineTypes = []gardencorev1beta1.MachineType{machineType}
+
+					namespacedCloudProfile.Spec.MachineTypes = []gardencore.MachineType{{Name: "my-other-machine", Capabilities: machineCapabilities}}
+
+					attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+					if isCapabilitiesEnabled {
+						Expect(namespacedCloudProfile.Spec.MachineTypes[0].Architecture).To(BeNil())
+					} else {
+						Expect(namespacedCloudProfile.Spec.MachineTypes[0].Architecture).To(PointTo(Equal("amd64")))
+					}
 				})
 			})
 

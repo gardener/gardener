@@ -6,6 +6,8 @@ package cloudprofile
 
 import (
 	"context"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"k8s.io/utils/ptr"
 	"slices"
 	"time"
 
@@ -32,6 +34,7 @@ func (cloudProfileStrategy) NamespaceScoped() bool {
 
 func (cloudProfileStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	cloudProfile := obj.(*core.CloudProfile)
+	DefaultBasedOnCapabilitiesDefinition(cloudProfile)
 
 	dropExpiredVersions(cloudProfile)
 }
@@ -54,6 +57,7 @@ func (cloudProfileStrategy) AllowCreateOnUpdate() bool {
 func (cloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj runtime.Object) {
 	oldCloudProfile := oldObj.(*core.CloudProfile)
 	newCloudProfile := newObj.(*core.CloudProfile)
+	DefaultBasedOnCapabilitiesDefinition(newCloudProfile)
 
 	syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(newCloudProfile, oldCloudProfile)
 }
@@ -101,6 +105,35 @@ func dropExpiredVersions(cloudProfile *core.CloudProfile) {
 
 		cloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
 	}
+}
+
+// TODO(Roncossek): Remove this function after Architecture(s) field is removed from MachineType and MachineImageVersion
+func DefaultBasedOnCapabilitiesDefinition(in *core.CloudProfile) {
+	// with CapabilitiesDefinition no defaulting for Architecture is required
+	// as the capabilities.architecture field is used instead
+	if in.Spec.CapabilitiesDefinition != nil {
+		return
+	}
+
+	for i := range in.Spec.MachineImages {
+		machineImage := &in.Spec.MachineImages[i]
+
+		for j := range machineImage.Versions {
+			b := &machineImage.Versions[j]
+			if len(b.Architectures) == 0 {
+				b.Architectures = []string{v1beta1constants.ArchitectureAMD64}
+			}
+		}
+
+	}
+
+	for i := range in.Spec.MachineTypes {
+		machineType := &in.Spec.MachineTypes[i]
+		if machineType.Architecture == nil {
+			machineType.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+		}
+	}
+
 }
 
 // TODO(rfranzke): Remove everything below this line and the legacy access restriction label after
