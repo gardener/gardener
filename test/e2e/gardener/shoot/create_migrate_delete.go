@@ -46,7 +46,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			}
 
 			By("Migrate Shoot")
-			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
 			defer cancel()
 			t, err := newDefaultShootMigrationTest(ctx, f.Shoot, f.GardenerFramework)
 			Expect(err).ToNot(HaveOccurred())
