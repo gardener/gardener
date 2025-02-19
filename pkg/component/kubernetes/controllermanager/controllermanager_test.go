@@ -772,7 +772,7 @@ namespace: kube-system
 				configWithNodeMonitorGracePeriod,
 				nil,
 				true,
-				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-ttl",
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
 			),
 			Entry("with disabled APIs (workerless)",
 				configWithNodeMonitorGracePeriod,
@@ -780,7 +780,7 @@ namespace: kube-system
 					"apps/v1": false,
 				},
 				true,
-				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-daemonset,-deployment,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-replicaset,-statefulset,-ttl",
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-daemonset,-deployment,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-replicaset,-statefulset,-ttl",
 			),
 			Entry("with non-disabled APIs (workerless)",
 				configWithNodeMonitorGracePeriod,
@@ -788,7 +788,7 @@ namespace: kube-system
 					"apps/v1": true,
 				},
 				true,
-				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-ttl",
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-endpoint,-ephemeral-volume,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-pv-protection,-ttl",
 			),
 			Entry("with disabled APIs",
 				configWithNodeMonitorGracePeriod,
@@ -1065,6 +1065,8 @@ func commandForKubernetesVersion(
 		controllers = append(controllers,
 			"-attachdetach",
 			"-cloud-node-lifecycle",
+			"-endpoint",
+			"-ephemeral-volume",
 		)
 
 		if controllerWorkers.Namespace != nil && *controllerWorkers.Namespace == 0 {
@@ -1076,6 +1078,7 @@ func commandForKubernetesVersion(
 			"-nodelifecycle",
 			"-persistentvolume-binder",
 			"-persistentvolume-expander",
+			"-pv-protection",
 		)
 
 		if controllerWorkers.ResourceQuota != nil && *controllerWorkers.ResourceQuota == 0 {

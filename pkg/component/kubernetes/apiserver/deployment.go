@@ -419,12 +419,13 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 
 	if k.values.IsWorkerless {
 		disableAPIs := map[string]bool{
-			"autoscaling/v2":                 false,
-			"batch/v1":                       false,
-			"apps/v1":                        false,
-			"policy/v1/poddisruptionbudgets": false,
-			"storage.k8s.io/v1/csidrivers":   false,
-			"storage.k8s.io/v1/csinodes":     false,
+			"apps/v1":                      false,
+			"autoscaling/v2":               false,
+			"batch/v1":                     false,
+			"discovery.k8s.io/v1":          false,
+			"policy/v1":                    false,
+			"storage.k8s.io/v1/csidrivers": false,
+			"storage.k8s.io/v1/csinodes":   false,
 		}
 
 		// Allow users to explicitly enable disabled APIs via RuntimeConfig.
