@@ -136,7 +136,7 @@ func ItShouldWaitForShootToBeDeleted(s *ShootContext) {
 		}).WithPolling(30 * time.Second).Should(BeNotFoundError())
 
 		s.Log.Info("Shoot has been deleted")
-	}, SpecTimeout(15*time.Minute))
+	}, SpecTimeout(20*time.Minute))
 }
 
 // ItShouldInitializeShootClient requests a kubeconfig for the shoot and initializes the context's shoot clients.

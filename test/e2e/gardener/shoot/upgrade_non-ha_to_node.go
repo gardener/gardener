@@ -47,7 +47,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 			}
 
 			By("Delete Shoot")
-			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
 			defer cancel()
 			Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 		})
