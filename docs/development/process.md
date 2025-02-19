@@ -134,6 +134,8 @@ The release responsible is the main contact person for coordinating new feature 
   v1.100  | Week 29-30  | July 15, 2024          | July 28, 2024      | [@shafeeqes](https://github.com/shafeeqes)                                             |
 </details>
 
+Click [here](new-kubernetes-version.md#kubernetes-release-responsible-plan) to view the Kubernetes Release Responsible plan.
+
 ### Release Validation
 
 The release phase for a new minor version lasts two weeks.
