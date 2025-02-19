@@ -87,6 +87,8 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 }
 
 func (g *graph) HasVertex(vertexType VertexType, vertexNamespace, vertexName string) bool {
+	g.lock.RLock()
+	defer g.lock.RUnlock()
 	_, ok := g.getVertex(vertexType, vertexNamespace, vertexName)
 	return ok
 }

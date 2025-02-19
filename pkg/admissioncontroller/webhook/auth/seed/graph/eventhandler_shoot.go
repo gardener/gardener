@@ -53,7 +53,8 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 				!apiequality.Semantic.DeepEqual(v1beta1helper.GetShootAuthorizationConfiguration(oldShoot.Spec.Kubernetes.KubeAPIServer), v1beta1helper.GetShootAuthorizationConfiguration(newShoot.Spec.Kubernetes.KubeAPIServer)) ||
 				!v1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
 				!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) ||
-				v1beta1helper.HasManagedIssuer(oldShoot) != v1beta1helper.HasManagedIssuer(newShoot) {
+				v1beta1helper.HasManagedIssuer(oldShoot) != v1beta1helper.HasManagedIssuer(newShoot) ||
+				!g.hasExpectedShootBindingEdges(newShoot) {
 				g.handleShootCreateOrUpdate(ctx, newShoot)
 			}
 		},
@@ -70,6 +71,32 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 		},
 	})
 	return err
+}
+
+func (g *graph) hasExpectedShootBindingEdges(shoot *gardencorev1beta1.Shoot) bool {
+	g.lock.RLock()
+	defer g.lock.RUnlock()
+
+	shootVertex, found := g.getVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
+	if !found {
+		return false
+	}
+
+	if shoot.Spec.SecretBindingName != nil {
+		bindingVertex, found := g.getVertex(VertexTypeSecretBinding, shoot.Namespace, *shoot.Spec.SecretBindingName)
+		if !found || !g.graph.HasEdgeFromTo(bindingVertex.id, shootVertex.id) {
+			return false
+		}
+	}
+
+	if shoot.Spec.CredentialsBindingName != nil {
+		bindingVertex, found := g.getVertex(VertexTypeCredentialsBinding, shoot.Namespace, *shoot.Spec.CredentialsBindingName)
+		if !found || !g.graph.HasEdgeFromTo(bindingVertex.id, shootVertex.id) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencorev1beta1.Shoot) {
