@@ -23,6 +23,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
@@ -86,8 +87,12 @@ func VerifyNodeCriticalComponentsBootstrapping(parentCtx context.Context, f *fra
 	// Use a container image that is already cached
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePauseContainer)
 	ExpectWithOffset(1, err).To(Succeed())
-	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, nodeCriticalDaemonSetName, image.String(), false)
-	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, csiNodeDaemonSetName, image.String(), true)
+
+	nodeCriticalDaemonSet := createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, nodeCriticalDaemonSetName, image.String(), false)
+	csiNodeDaemonSet := createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, csiNodeDaemonSetName, image.String(), true)
+
+	waitForDaemonSetToBecomeHealthy(ctx, shootClient, nodeCriticalDaemonSet)
+	waitForDaemonSetToBecomeHealthy(ctx, shootClient, csiNodeDaemonSet)
 
 	By("Patch CSINode object to contain required driver")
 	patchCSINodeObjectWithRequiredDriver(ctx, shootClient)
@@ -111,7 +116,7 @@ func getLabels(name string) map[string]string {
 	}
 }
 
-func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, shootClient client.Client, namespace, name, image string, annotateAsCSINodePod bool) {
+func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, shootClient client.Client, namespace, name, image string, annotateAsCSINodePod bool) *appsv1.DaemonSet {
 	daemonSet := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -165,12 +170,25 @@ func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, 
 		g.Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(daemonSet), daemonSet)).To(Succeed())
 		return daemonSet.Spec.Template.Spec.Containers[0].Image
 	}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Equal(image))
+
+	return daemonSet
+}
+
+func waitForDaemonSetToBecomeHealthy(ctx context.Context, shootClient client.Client, daemonSet *appsv1.DaemonSet) {
+	By("Wait for DaemonSet to become healthy")
+	EventuallyWithOffset(1, func(g Gomega) {
+		g.Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(daemonSet), daemonSet)).To(Succeed())
+		g.Expect(health.CheckDaemonSet(daemonSet)).To(Succeed())
+	}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
 }
 
 func patchCSINodeObjectWithRequiredDriver(ctx context.Context, shootClient client.Client) {
 	csiNodeList := &storagev1.CSINodeList{}
-	ExpectWithOffset(1, shootClient.List(ctx, csiNodeList)).To(Succeed())
-	ExpectWithOffset(1, csiNodeList.Items).To(HaveLen(1))
+
+	EventuallyWithOffset(1, func(g Gomega) {
+		g.Expect(shootClient.List(ctx, csiNodeList)).To(Succeed())
+		g.Expect(csiNodeList.Items).To(HaveLen(1))
+	}).WithContext(ctx).WithTimeout(1 * time.Minute).Should(Succeed())
 
 	csiNode := csiNodeList.Items[0].DeepCopy()
 	csiNode.Spec.Drivers = []storagev1.CSINodeDriver{
