@@ -160,7 +160,7 @@ func (p *plutono) Deploy(ctx context.Context) error {
 
 	// dashboards configmap is not deployed as part of MR because it can breach the secret size limit.
 	if dashboardConfigMap != nil {
-		configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: dashboardConfigMap.Name, Namespace: dashboardConfigMap.Namespace}}
+		configMap := p.emptyDashboardConfigMap()
 		if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, p.client, configMap, func() error {
 			for k, v := range dashboardConfigMap.Annotations {
 				metav1.SetMetaDataAnnotation(&configMap.ObjectMeta, k, v)
@@ -182,6 +182,9 @@ func (p *plutono) Deploy(ctx context.Context) error {
 }
 
 func (p *plutono) Destroy(ctx context.Context) error {
+	if err := kubernetesutils.DeleteObject(ctx, p.client, p.emptyDashboardConfigMap()); err != nil {
+		return fmt.Errorf("failed deleting dashboard ConfigMap: %w", err)
+	}
 	return managedresources.DeleteForSeed(ctx, p.client, p.namespace, managedResourceName)
 }
 
@@ -240,12 +243,7 @@ func (p *plutono) computeResourcesData(ctx context.Context, plutonoAdminUserSecr
 		}
 	)
 
-	var suffix string
-	if p.values.IsGardenCluster {
-		suffix = "-garden"
-	}
-
-	dashboardConfigMap, err := p.getDashboardConfigMap(suffix)
+	dashboardConfigMap, err := p.getDashboardConfigMap()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -368,20 +366,23 @@ datasources:
 	return datasource
 }
 
-func (p *plutono) getDashboardConfigMap(suffix string) (*corev1.ConfigMap, error) {
+func (p *plutono) emptyDashboardConfigMap() *corev1.ConfigMap {
+	name := "plutono-dashboards"
+	if p.values.IsGardenCluster {
+		name += "-garden"
+	}
+	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: p.namespace}}
+}
+
+func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 	var (
 		requiredDashboards map[string]embed.FS
 		ignorePaths        = sets.Set[string]{}
 		dashboards         = map[string]string{}
 	)
 
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "plutono-dashboards" + suffix,
-			Namespace: p.namespace,
-			Labels:    utils.MergeStringMaps(getLabels(), map[string]string{p.dashboardLabel(): dashboardLabelValue}),
-		},
-	}
+	configMap := p.emptyDashboardConfigMap()
+	configMap.Labels = utils.MergeStringMaps(getLabels(), map[string]string{p.dashboardLabel(): dashboardLabelValue})
 
 	if p.values.IsGardenCluster {
 		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
