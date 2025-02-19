@@ -47,7 +47,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
 
-		waitForGardenToBeReconciled(ctx, garden)
+		waitForGardenToBeReconciledAndHealthy(ctx, garden)
 
 		DeferCleanup(func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)

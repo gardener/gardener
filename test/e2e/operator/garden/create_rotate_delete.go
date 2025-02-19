@@ -39,7 +39,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		By("Create Garden")
 		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
 		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
-		waitForGardenToBeReconciled(ctx, garden)
+		waitForGardenToBeReconciledAndHealthy(ctx, garden)
 
 		DeferCleanup(func() {
 			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
@@ -202,7 +202,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			v.ExpectPreparingStatus(g)
 		}).Should(Succeed())
 
-		waitForGardenToBeReconciled(ctx, garden)
+		waitForGardenToBeReconciledAndHealthy(ctx, garden)
 
 		Eventually(func() error {
 			return runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
@@ -226,7 +226,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 			v.ExpectCompletingStatus(g)
 		}).Should(Succeed())
 
-		waitForGardenToBeReconciled(ctx, garden)
+		waitForGardenToBeReconciledAndHealthy(ctx, garden)
 
 		Eventually(func(g Gomega) {
 			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())

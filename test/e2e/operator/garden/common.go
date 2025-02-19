@@ -6,6 +6,7 @@ package garden
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -37,7 +38,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	logf.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)).WithName("garden-test"))
 
 	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&componentbaseconfigv1alpha1.ClientConnectionConfiguration{Kubeconfig: os.Getenv("KUBECONFIG")}, nil, kubernetes.AuthTokenFile)
 	Expect(err).NotTo(HaveOccurred())
@@ -146,14 +147,16 @@ func defaultGarden(backupSecret *corev1.Secret, specifyBackupBucket bool) *opera
 	}
 }
 
-func waitForGardenToBeReconciled(ctx context.Context, garden *operatorv1alpha1.Garden) {
-	CEventually(ctx, func(g Gomega) gardencorev1beta1.LastOperationState {
+func waitForGardenToBeReconciledAndHealthy(ctx context.Context, garden *operatorv1alpha1.Garden) {
+	CEventually(ctx, func(g Gomega) bool {
 		g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-		if garden.Status.LastOperation == nil {
-			return ""
+
+		completed, reason := gardenReconciliationSuccessful(garden)
+		if !completed {
+			logf.Log.Info("Waiting for reconciliation and healthiness", "lastOperation", garden.Status.LastOperation, "reason", reason)
 		}
-		return garden.Status.LastOperation.State
-	}).WithPolling(2 * time.Second).Should(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+		return completed
+	}).WithPolling(10 * time.Second).Should(BeTrue())
 }
 
 func waitForGardenToBeDeleted(ctx context.Context, garden *operatorv1alpha1.Garden) {
@@ -197,4 +200,27 @@ func cleanupVolumes(ctx context.Context) {
 
 		return true
 	}).WithPolling(2 * time.Second).Should(BeTrue())
+}
+
+func gardenReconciliationSuccessful(garden *operatorv1alpha1.Garden) (bool, string) {
+	if garden.Generation != garden.Status.ObservedGeneration {
+		return false, "garden generation did not equal observed generation"
+	}
+	if len(garden.Status.Conditions) == 0 && garden.Status.LastOperation == nil {
+		return false, "no conditions and last operation present yet"
+	}
+
+	for _, condition := range garden.Status.Conditions {
+		if condition.Status != gardencorev1beta1.ConditionTrue {
+			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)
+		}
+	}
+
+	if garden.Status.LastOperation != nil {
+		if garden.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
+			return false, "last operation state is not succeeded"
+		}
+	}
+
+	return true, ""
 }
