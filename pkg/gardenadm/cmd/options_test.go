@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package cmd
+package cmd_test
 
 import (
 	"github.com/go-logr/logr"
@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 	"k8s.io/klog/v2"
 
+	. "github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/test"
 	clitest "github.com/gardener/gardener/pkg/utils/test/cli"
 )
@@ -74,7 +75,7 @@ var _ = Describe("Options", func() {
 
 		It("should initialize the global logger in controller-runtime", func() {
 			var logfLogger logr.Logger
-			DeferCleanup(test.WithVar(&logfSetLogger, func(l logr.Logger) {
+			DeferCleanup(test.WithVar(&LogfSetLogger, func(l logr.Logger) {
 				logfLogger = l
 			}))
 
