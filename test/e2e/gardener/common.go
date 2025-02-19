@@ -160,6 +160,6 @@ func getDelayedShootMaintenance() *gardencorev1beta1.Maintenance {
 
 	return &gardencorev1beta1.Maintenance{TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
 		Begin: timewindow.NewMaintenanceTime(hour, 0, 0).Formatted(),
-		End:   timewindow.NewMaintenanceTime(hour+1, 0, 0).Formatted(),
+		End:   timewindow.NewMaintenanceTime((hour+1)%24, 0, 0).Formatted(),
 	}}
 }
