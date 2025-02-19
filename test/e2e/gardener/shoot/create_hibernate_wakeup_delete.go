@@ -44,9 +44,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				Expect(f.GardenClient.Client().Create(ctx, namespacedCloudProfile)).To(Succeed())
 				DeferCleanup(func() {
 					By("Delete NamespacedCloudProfile")
-					ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
-					defer cancel()
-					Expect(f.GardenClient.Client().Delete(ctx, namespacedCloudProfile)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(f.GardenClient.Client().Delete(parentCtx, namespacedCloudProfile)).To(Or(Succeed(), BeNotFoundError()))
 				})
 
 				By("Wait for new NamespacedCloudProfile to be reconciled")
