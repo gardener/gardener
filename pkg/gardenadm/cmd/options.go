@@ -18,6 +18,12 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 )
 
+// LogfSetLogger is an alias for logf.SetLogger for testing purposes.
+// logf.SetLogger discards all calls after the first invocation and there is no way of telling from the outside whether
+// it was called at all. Without a func alias, we cannot verify that Options.Complete correctly initialized the global
+// controller-runtime logger.
+var LogfSetLogger = logf.SetLogger
+
 // Options contains persistent options for all commands.
 type Options struct {
 	genericiooptions.IOStreams
@@ -51,7 +57,7 @@ func (o *Options) Complete() error {
 		return fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	logf.SetLogger(o.Log)
+	LogfSetLogger(o.Log)
 	klog.SetLogger(o.Log)
 	return nil
 }

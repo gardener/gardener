@@ -8,10 +8,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
-	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/token"
+	clitest "github.com/gardener/gardener/pkg/utils/test/cli"
 )
 
 var _ = Describe("Token", func() {
@@ -22,7 +22,7 @@ var _ = Describe("Token", func() {
 
 	BeforeEach(func() {
 		globalOpts = &cmd.Options{}
-		globalOpts.IOStreams, _, _, _ = genericiooptions.NewTestIOStreams()
+		globalOpts.IOStreams, _, _, _ = clitest.NewTestIOStreams()
 		command = NewCommand(globalOpts)
 	})
 

@@ -5,14 +5,15 @@
 package cmd_test
 
 import (
-	"bytes"
-	"io"
-
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/cli-runtime/pkg/genericiooptions"
+	. "github.com/onsi/gomega/gbytes"
+	"k8s.io/klog/v2"
 
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/utils/test"
+	clitest "github.com/gardener/gardener/pkg/utils/test/cli"
 )
 
 var _ = Describe("Options", func() {
@@ -42,23 +43,16 @@ var _ = Describe("Options", func() {
 	})
 
 	Describe("#Complete", func() {
-		It("should succeed", func() {
-			var stdErr *bytes.Buffer
-			options.IOStreams, _, _, stdErr = genericiooptions.NewTestIOStreams()
+		var stdOut, stdErr *Buffer
 
-			By("default logger does not log to stderr")
+		BeforeEach(func() {
+			options.IOStreams, _, stdOut, stdErr = clitest.NewTestIOStreams()
+		})
+
+		It("should not log anything if the logger is uninitialized", func() {
 			options.Log.Info("Some example log message")
-			output, err := io.ReadAll(stdErr)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(BeEmpty())
-
-			Expect(options.Complete()).To(Succeed())
-
-			By("completed logger logs to stderr")
-			options.Log.Info("Some example log message")
-			output, err = io.ReadAll(stdErr)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(output)).To(ContainSubstring("Some example log message"))
+			Consistently(stdErr.Contents).Should(BeEmpty())
+			Consistently(stdOut.Contents).Should(BeEmpty())
 		})
 
 		It("should fail when log level is unknown", func() {
@@ -69,6 +63,34 @@ var _ = Describe("Options", func() {
 		It("should fail when log format is unknown", func() {
 			options.LogFormat = "foo"
 			Expect(options.Complete()).To(MatchError(ContainSubstring("error instantiating zap logger: invalid log format")))
+		})
+
+		It("should initialize the logger to write to stderr", func() {
+			Expect(options.Complete()).To(Succeed())
+
+			options.Log.Info("Some example log message")
+			Eventually(stdErr).Should(Say("Some example log message"))
+			Consistently(stdOut.Contents).Should(BeEmpty())
+		})
+
+		It("should initialize the global logger in controller-runtime", func() {
+			var logfLogger logr.Logger
+			DeferCleanup(test.WithVar(&LogfSetLogger, func(l logr.Logger) {
+				logfLogger = l
+			}))
+
+			Expect(options.Complete()).To(Succeed())
+
+			Expect(logfLogger.GetSink()).NotTo(BeNil())
+			logfLogger.Info("Some example log message")
+			Eventually(stdErr).Should(Say("Some example log message"))
+		})
+
+		It("should initialize the global logger in klog", func() {
+			Expect(options.Complete()).To(Succeed())
+
+			klog.Info("Some example log message")
+			Eventually(stdErr).Should(Say("Some example log message"))
 		})
 	})
 })
