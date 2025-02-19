@@ -288,8 +288,6 @@ type Values struct {
 	ResponsibilityMode ResponsibilityMode
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
-	// SyncPeriod configures the duration of how often existing resources should be synced
-	SyncPeriod *metav1.Duration
 	// SystemComponentTolerations are the tolerations required for shoot system components.
 	SystemComponentTolerations []corev1.Toleration
 	// TargetDisableCache disables the cache for target cluster and always talk directly to the API server (defaults to false)
@@ -566,7 +564,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 			ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
 				ConcurrentSyncs: r.values.ConcurrentSyncs,
-				SyncPeriod:      r.values.SyncPeriod,
+				SyncPeriod:      &metav1.Duration{Duration: time.Hour},
 				AlwaysUpdate:    r.values.AlwaysUpdate,
 			},
 		},

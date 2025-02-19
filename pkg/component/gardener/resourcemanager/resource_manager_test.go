@@ -93,7 +93,6 @@ var _ = Describe("ResourceManager", func() {
 		maxConcurrentCSRApproverWorkers      = 24
 		maxConcurrentNetworkPolicyWorkers    = 25
 		resourceClass                        = "fake-ResourceClass"
-		syncPeriod                           = metav1.Duration{Duration: time.Second * 80}
 		watchedNamespace                     = "fake-ns"
 		targetDisableCache                   = true
 		maxUnavailable                       = intstr.FromInt32(1)
@@ -322,7 +321,6 @@ var _ = Describe("ResourceManager", func() {
 			ResourceClass:                                    &resourceClass,
 			RuntimeKubernetesVersion:                         version,
 			SecretNameServerCA:                               "ca",
-			SyncPeriod:                                       &syncPeriod,
 			SystemComponentTolerations: []corev1.Toleration{
 				{Key: "a"},
 				{Key: "b"},
@@ -400,7 +398,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
 						ConcurrentSyncs: &concurrentSyncs,
-						SyncPeriod:      &syncPeriod,
+						SyncPeriod:      &metav1.Duration{Duration: time.Hour},
 						AlwaysUpdate:    &alwaysUpdate,
 					},
 					TokenInvalidator: resourcemanagerconfigv1alpha1.TokenInvalidatorControllerConfig{
