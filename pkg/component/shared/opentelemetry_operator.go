@@ -22,7 +22,7 @@ func NewOpenTelemetryOperator(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	operatorImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameOpenTelemetryOperator)
+	operatorImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameOpentelemetryOperator)
 	if err != nil {
 		return nil, err
 	}
