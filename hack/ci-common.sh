@@ -53,7 +53,8 @@ export_resource_yamls_for() {
   # Loop over the resource types
   for resource_type in "$@"; do
     echo "> Exporting Resource '$resource_type' yaml > $ARTIFACTS/$resource_type.yaml"
-    kubectl get "$resource_type" -A -o yaml >"$ARTIFACTS/$resource_type.yaml" || true
+    echo -e "---\n# cluster name: $cluster_name" >> "$ARTIFACTS/$resource_type.yaml"
+    kubectl get "$resource_type" -A -o yaml >> "$ARTIFACTS/$resource_type.yaml" || true
   done
 }
 
