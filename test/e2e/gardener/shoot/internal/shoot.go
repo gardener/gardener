@@ -17,7 +17,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
@@ -92,7 +92,7 @@ func ItShouldDeleteShoot(s *ShootContext) {
 		s.Log.Info("Deleting Shoot")
 
 		Eventually(ctx, func(g Gomega) {
-			g.Expect(gardener.ConfirmDeletion(ctx, s.GardenClient, s.Shoot)).To(Succeed())
+			g.Expect(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Shoot)).To(Succeed())
 			g.Expect(s.GardenClient.Delete(ctx, s.Shoot)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
@@ -162,7 +162,7 @@ func ItShouldGetResponsibleSeed(s *ShootContext) {
 		Eventually(ctx, func(g Gomega) {
 			g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
 
-			s.Seed.Name = gardener.GetResponsibleSeedName(gardener.GetShootSeedNames(s.Shoot))
+			s.Seed.Name = gardenerutils.GetResponsibleSeedName(gardenerutils.GetShootSeedNames(s.Shoot))
 			g.Expect(s.Seed.Name).NotTo(BeEmpty())
 			g.Expect(s.GardenKomega.Get(s.Seed)()).To(Succeed())
 		}).Should(Succeed())
