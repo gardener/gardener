@@ -6,6 +6,9 @@ set -e
 set -o pipefail
 set -o nounset
 
+source $(dirname "${0}")/lockfile.sh
+acquire_lockfile "/tmp/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh.lock"
+
 patch_file=example/provider-local/garden/local/patch-controllerdeployment-prow.yaml
 
 cat <<EOF > $patch_file
