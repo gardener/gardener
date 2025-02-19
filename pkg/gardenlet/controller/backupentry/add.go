@@ -64,8 +64,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			&gardencorev1beta1.BackupEntry{},
 			&handler.EnqueueRequestForObject{},
 			&predicate.GenerationChangedPredicate{},
-			predicateutils.SeedNamePredicate(r.SeedName, gardenerutils.GetBackupEntrySeedNames),
-			predicate.NewPredicateFuncs(backupEntryPredicate),
+			predicate.NewPredicateFuncs(r.BackupEntryPredicate),
 		)).
 		WatchesRawSource(source.Kind[client.Object](
 			gardenCluster.GetCache(),
@@ -97,7 +96,7 @@ func (r *Reconciler) MapBackupBucketToBackupEntry(log logr.Logger) handler.MapFu
 			return nil
 		}
 
-		return mapper.ObjectListToRequests(backupEntryList, backupEntryPredicate)
+		return mapper.ObjectListToRequests(backupEntryList, r.BackupEntryPredicate)
 	}
 }
 
@@ -137,10 +136,14 @@ func getBackupBucketLastOperation(obj client.Object) *gardencorev1beta1.LastOper
 	return backupBucket.Status.LastOperation
 }
 
-// backupEntryPredicate is a predicate which returns true if the core.gardener.cloud/v1beta1.BackupEntry has not yet been successfully migrated or has the `gardener.cloud/operation: restore` annotation.
-func backupEntryPredicate(obj client.Object) bool {
+// BackupEntryPredicate is a predicate which returns true if the core.gardener.cloud/v1beta1.BackupEntry has not yet been successfully migrated or has the `gardener.cloud/operation: restore` annotation and this gardenlet's seed is responsible for this backupentry.
+func (r *Reconciler) BackupEntryPredicate(obj client.Object) bool {
 	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 	if !ok {
+		return false
+	}
+
+	if responsibleSeedName := gardenerutils.GetResponsibleSeedName(backupEntry.Spec.SeedName, backupEntry.Status.SeedName); responsibleSeedName != r.SeedName {
 		return false
 	}
 
