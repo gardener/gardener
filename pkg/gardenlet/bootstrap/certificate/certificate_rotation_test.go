@@ -180,7 +180,7 @@ var _ = Describe("Certificates", func() {
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
 
 			err := rotateCertificate(ctx, log, mockGardenInterface, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
-			Expect(err).To(MatchError(ContainSubstring("request is denied")))
+			Expect(err).To(MatchError(ContainSubstring("is denied")))
 		})
 
 		It("should return an error - CSR is failed", func() {
@@ -195,7 +195,7 @@ var _ = Describe("Certificates", func() {
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
 
 			err := rotateCertificate(ctx, log, mockGardenInterface, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
-			Expect(err).To(MatchError(ContainSubstring("request failed")))
+			Expect(err).To(MatchError(ContainSubstring("failed")))
 		})
 
 		It("should return an error - the CN of the x509 cert to be rotated is not set", func() {

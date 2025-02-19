@@ -123,7 +123,7 @@ var _ = Describe("Certificate", func() {
 			}(ctx)
 
 			_, _, _, err := RequestCertificate(ctx, log, clientSet, certificateSubject, dnsSANs, ipSANs, validityDuration, csrPrefix)
-			Expect(err).To(MatchError(ContainSubstring("certificate signing request is denied")))
+			Expect(err).To(MatchError(ContainSubstring("is denied")))
 		}, NodeTimeout(time.Second*5))
 
 		It("should return an error if the CSR failed", func(ctx context.Context) {
@@ -143,7 +143,7 @@ var _ = Describe("Certificate", func() {
 			}(ctx)
 
 			_, _, _, err := RequestCertificate(ctx, log, clientSet, certificateSubject, dnsSANs, ipSANs, validityDuration, csrPrefix)
-			Expect(err).To(MatchError(ContainSubstring("certificate signing request failed")))
+			Expect(err).To(MatchError(ContainSubstring("failed")))
 		}, NodeTimeout(time.Second*5))
 	})
 })

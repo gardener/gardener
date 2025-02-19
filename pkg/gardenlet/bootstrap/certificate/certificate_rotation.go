@@ -83,18 +83,16 @@ func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCan
 			return
 		}
 
-		err = retry.Until(ctx, certificateWaitTimeout, func(ctx context.Context) (bool, error) {
+		if err := retry.Until(ctx, 10*time.Second, func(ctx context.Context) (bool, error) {
 			ctxWithTimeout, cancel := context.WithTimeout(ctx, certificateWaitTimeout)
 			defer cancel()
 
-			err := rotateCertificate(ctxWithTimeout, cr.log, cr.gardenClientSet, cr.seedClient, cr.gardenClientConnection, certificateSubject, dnsSANs, ipSANs)
-			if err != nil {
+			if err := rotateCertificate(ctxWithTimeout, cr.log, cr.gardenClientSet, cr.seedClient, cr.gardenClientConnection, certificateSubject, dnsSANs, ipSANs); err != nil {
 				cr.log.Error(err, "Certificate rotation failed")
 				return retry.MinorError(err)
 			}
 			return retry.Ok()
-		})
-		if err != nil {
+		}); err != nil {
 			cr.log.Error(err, "Failed to rotate the kubeconfig for the Garden API Server", "certificateExpirationTime", certificateExpirationTime)
 			seed, err := cr.getTargetedSeed(ctx)
 			if err != nil {
