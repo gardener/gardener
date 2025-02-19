@@ -21,9 +21,9 @@ import (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	var s *ShootContext
-
 	Describe("Create and Delete Unprivileged Shoot", Ordered, Label("unprivileged", "basic"), func() {
+		var s *ShootContext
+
 		BeforeTestSetup(func() {
 			shoot := DefaultShoot("e2e-unpriv")
 			shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
