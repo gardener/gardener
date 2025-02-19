@@ -19,10 +19,10 @@ ensure_glgc_resolves_to_localhost
 make kind-ha-multi-zone-up
 
 # export all container logs and events after test execution
-trap '{
-  export_artifacts "gardener-local-ha-multi-zone"
-  make kind-ha-multi-zone-down
-}' EXIT
+trap "
+  ( export_artifacts "gardener-local-ha-multi-zone" )
+  ( make kind-ha-multi-zone-down )
+" EXIT
 
 make gardener-ha-multi-zone-up
 make test-e2e-local-ha-multi-zone

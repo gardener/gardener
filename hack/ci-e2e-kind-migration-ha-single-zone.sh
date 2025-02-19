@@ -19,12 +19,12 @@ make kind-ha-single-zone-up
 make kind2-ha-single-zone-up
 
 # export all container logs and events after test execution
-trap '{
-  KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG export_artifacts "gardener-local-ha-single-zone"
-  KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_artifacts "gardener-local2-ha-single-zone"
-  make kind-ha-single-zone-down
-  make kind2-ha-single-zone-down
-}' EXIT
+trap "
+  ( export KUBECONFIG=$GARDENER_LOCAL_KUBECONFIG; export_artifacts "gardener-local-ha-single-zone" )
+  ( export KUBECONFIG=$GARDENER_LOCAL2_KUBECONFIG; export_artifacts "gardener-local2-ha-single-zone" )
+  ( make kind-ha-single-zone-down )
+  ( make kind2-ha-single-zone-down )
+" EXIT
 
 make gardener-ha-single-zone-up
 make gardenlet-kind2-ha-single-zone-up
