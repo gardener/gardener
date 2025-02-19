@@ -16,18 +16,24 @@ import (
 )
 
 var (
-	//go:embed assets/crd-opentelemetry.io_instrumentations.yaml
-	openTelemetryInstrumentationCRD string
 	//go:embed assets/crd-opentelemetry.io_opentelemetrycollectors.yaml
 	openTelemetryOpenTelemetryCollectorCRD string
+	//go:embed assets/crd-opentelemetry.io_instrumentations.yaml
+	openTelemetryInstrumentationCRD string
+	//go:embed assets/crd-opentelemetry.io_opampbridges.yaml
+	openTelemetryOpenTelemetryCollectorBridgeCRD string
+	//go:embed assets/crd-opentelemetry.io_targetallocators.yaml
+	openTelemetryTargetAllocatorCRD string
 
 	resources []string
 )
 
 func init() {
 	resources = append(resources,
-		openTelemetryInstrumentationCRD,
 		openTelemetryOpenTelemetryCollectorCRD,
+		openTelemetryInstrumentationCRD,
+		openTelemetryOpenTelemetryCollectorBridgeCRD,
+		openTelemetryTargetAllocatorCRD,
 	)
 }
 
