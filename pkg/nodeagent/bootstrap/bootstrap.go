@@ -14,12 +14,11 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
-
-const pathVarLibKubelet = "/var/lib/kubelet"
 
 // Bootstrap bootstraps the gardener-node-agent by adding and starting its systemd unit and afterward disabling the
 // gardener-node-init. If `kubeletDataVolumeSize` is non-zero, it formats the data device.
@@ -38,9 +37,9 @@ func Bootstrap(
 	}
 
 	if bootstrapConfig != nil && bootstrapConfig.KubeletDataVolumeSize != nil {
-		log.Info("Ensure mount point for kubelet data volume exists", "path", pathVarLibKubelet)
-		if err := fs.MkdirAll(pathVarLibKubelet, os.ModeDir); err != nil {
-			return fmt.Errorf("unable to create directory for kubelet %q: %w", pathVarLibKubelet, err)
+		log.Info("Ensure mount point for kubelet data volume exists", "path", kubelet.PathKubeletDirectory)
+		if err := fs.MkdirAll(kubelet.PathKubeletDirectory, os.ModeDir); err != nil {
+			return fmt.Errorf("unable to create directory for kubelet %q: %w", kubelet.PathKubeletDirectory, err)
 		}
 		log.Info("Start kubelet data volume formatter", "kubeletDataVolumeSize", *bootstrapConfig.KubeletDataVolumeSize)
 		if err := formatKubeletDataDevice(log.WithName("kubelet-data-volume-device-formatter"), fs, *bootstrapConfig.KubeletDataVolumeSize); err != nil {
