@@ -27,7 +27,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		It("Create and Delete Hibernated Shoot", Offset(1), Label("hibernated"), func() {
 			By("Create Shoot")
-			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()

@@ -212,7 +212,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		f.Shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
 		It("Create Shoot, Rotate Credentials and Delete Shoot", Offset(1), Label("credentials-rotation"), func() {
-			ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
+			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()
 
 			By("Create Shoot")

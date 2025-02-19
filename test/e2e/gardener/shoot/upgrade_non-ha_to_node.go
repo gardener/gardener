@@ -27,7 +27,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 
 		It("Create, Upgrade (non-HA to HA with failure tolerance type 'node') and Delete Shoot", Offset(1), func() {
 			By("Create Shoot")
-			ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
+			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()
 
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())

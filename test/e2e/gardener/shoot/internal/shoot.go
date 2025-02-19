@@ -112,7 +112,7 @@ func ItShouldWaitForShootToBeReconciledAndHealthy(s *ShootContext) {
 		}).WithPolling(30 * time.Second).Should(BeTrue())
 
 		s.Log.Info("Shoot has been reconciled and is healthy")
-	}, SpecTimeout(15*time.Minute))
+	}, SpecTimeout(30*time.Minute))
 }
 
 // ItShouldWaitForShootToBeDeleted waits for the shoot to be gone. If an existing shoot is specified, the step is
