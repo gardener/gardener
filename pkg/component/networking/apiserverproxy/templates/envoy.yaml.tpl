@@ -56,7 +56,7 @@ static_resources:
             hostname: "{{ .proxySeedServerHost }}:443"
             headers_to_add:
             - header:
-                key: X-Gardener-Destination
+                key: Reversed-VPN
                 value: "outbound|443||kube-apiserver.{{ .seedNamespace }}.svc.cluster.local"
           access_log:
           - name: envoy.access_loggers.stdout
