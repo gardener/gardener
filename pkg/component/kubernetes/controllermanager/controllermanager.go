@@ -724,12 +724,15 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		}
 
 		controllersToDisable.Insert(
+			"attachdetach",
+			"cloud-node-lifecycle",
+			"endpoint",
+			"ephemeral-volume",
 			"nodeipam",
 			"nodelifecycle",
-			"cloud-node-lifecycle",
-			"attachdetach",
 			"persistentvolume-binder",
 			"persistentvolume-expander",
+			"pv-protection",
 			"ttl",
 		)
 	}
