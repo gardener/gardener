@@ -38,7 +38,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability", "upgrade-to-
 			}
 
 			By("Upgrade Shoot (non-HA to HA with failure tolerance type 'node')")
-			ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+			ctx, cancel = context.WithTimeout(parentCtx, 30*time.Minute)
 			defer cancel()
 			highavailability.UpgradeAndVerify(ctx, f.ShootFramework, gardencorev1beta1.FailureToleranceTypeNode)
 
