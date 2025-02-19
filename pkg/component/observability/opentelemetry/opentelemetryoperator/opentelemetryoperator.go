@@ -268,6 +268,10 @@ func (otel *opentelemetryOperator) Deploy(ctx context.Context) error {
 								},
 								Env: []corev1.EnvVar{
 									{
+										Name:  "ENABLE_WEBHOOKS",
+										Value: "false",
+									},
+									{
 										Name: "NAMESPACE",
 										ValueFrom: &corev1.EnvVarSource{
 											FieldRef: &corev1.ObjectFieldSelector{
