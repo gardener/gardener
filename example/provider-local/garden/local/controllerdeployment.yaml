@@ -6,3 +6,7 @@ helm:
   ociRepository:
     ref: local-skaffold/gardener-extension-provider-local/charts/extension:v0.0.0
   values:
+    imageVectorOverwrite:
+      images:
+      - name: machine-controller-manager-provider-local
+        ref: local-skaffold/machine-controller-manager-provider-local
