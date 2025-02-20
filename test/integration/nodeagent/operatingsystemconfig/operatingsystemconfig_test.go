@@ -416,8 +416,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 	})
 
 	It("should reconcile the configuration when there is no previous OSC", func() {
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that files and units have been created")
 		test.AssertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
@@ -492,8 +492,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 	})
 
 	It("should reconcile only parts of the configuration that were not applied yet", func() {
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
@@ -512,8 +512,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
@@ -530,8 +530,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 	})
 
 	It("should reconcile the configuration when there is a previous OSC", func() {
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
@@ -579,8 +579,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that files and units have been created")
 		test.AssertFileOnDisk(fakeFS, file1.Path, "file1", 0777)
@@ -645,8 +645,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 	})
 
 	It("should reconcile the configuration when the containerd registries change", func() {
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
@@ -664,8 +664,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that files and directories have been created")
 		test.AssertDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
@@ -686,8 +686,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 	})
 
 	It("should reconcile the configuration when the containerd plugins change", func() {
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
@@ -710,8 +710,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that containerd config was updated properly")
 		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.bar]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".containerd]\n\n      [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]\n\n        [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc]\n\n          [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
@@ -727,8 +727,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 	})
 
 	It("should reconcile the configuration when the cgroup driver changes", func() {
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
@@ -748,8 +748,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-		waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that containerd config was updated properly")
 		expectedContainerdContent := strings.ReplaceAll(containerdConfigFileContent, "SystemdCgroup = true", "SystemdCgroup = false")
@@ -815,8 +815,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		})
 
 		It("should not handle containerd configs", func() {
-			waitForUpdatedNodeAnnotation(node, "checksum/cloud-config-data", utils.ComputeSHA256Hex(oscRaw))
-			waitForUpdatedNodeLabel(node, "worker.gardener.cloud/kubernetes-version", kubernetesVersion.String())
+			waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 			By("Assert that files and units have been created")
 			test.AssertNoDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
@@ -836,20 +836,20 @@ func (c *cancelFuncEnsurer) cancel() {
 	c.called = true
 }
 
-func waitForUpdatedNodeAnnotation(node *corev1.Node, key, value string) {
+func waitForUpdatedNodeAnnotationCloudConfig(node *corev1.Node, value string) {
 	By("Wait for node annotations to be updated")
 	EventuallyWithOffset(1, func(g Gomega) map[string]string {
 		updatedNode := &corev1.Node{}
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
 		return updatedNode.Annotations
-	}).WithTimeout(2 * time.Second).Should(HaveKeyWithValue(key, value))
+	}).WithTimeout(2 * time.Second).Should(HaveKeyWithValue("checksum/cloud-config-data", value))
 }
 
-func waitForUpdatedNodeLabel(node *corev1.Node, key, value string) {
+func waitForUpdatedNodeLabelKubernetesVersion(node *corev1.Node, value string) {
 	By("Wait for node labels to be updated")
 	EventuallyWithOffset(1, func(g Gomega) map[string]string {
 		updatedNode := &corev1.Node{}
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
 		return updatedNode.Labels
-	}).Should(HaveKeyWithValue(key, value))
+	}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", value))
 }
