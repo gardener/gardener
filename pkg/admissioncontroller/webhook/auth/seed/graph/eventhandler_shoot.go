@@ -77,24 +77,15 @@ func (g *graph) hasExpectedShootBindingEdges(shoot *gardencorev1beta1.Shoot) boo
 	g.lock.RLock()
 	defer g.lock.RUnlock()
 
-	isEdgeMissingFrom := func(vertexType VertexType, bindingName *string) bool {
+	hasEdge := func(vertexType VertexType, bindingName *string) bool {
 		if bindingName == nil {
-			return false
+			return true // if bindingName is nil, there is no edge to target vertex, hence we assume the edge exists
 		}
-
 		shootVertex, foundShootVertex := g.getVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
 		bindingVertex, foundBindingVertex := g.getVertex(vertexType, shoot.Namespace, *bindingName)
-		return !foundShootVertex || !foundBindingVertex || !g.graph.HasEdgeFromTo(bindingVertex.id, shootVertex.id)
+		return foundShootVertex && foundBindingVertex && g.graph.HasEdgeFromTo(bindingVertex.id, shootVertex.id)
 	}
-
-	if isEdgeMissingFrom(VertexTypeSecretBinding, shoot.Spec.SecretBindingName) {
-		return false
-	}
-	if isEdgeMissingFrom(VertexTypeCredentialsBinding, shoot.Spec.CredentialsBindingName) {
-		return false
-	}
-
-	return true
+	return hasEdge(VertexTypeSecretBinding, shoot.Spec.SecretBindingName) && hasEdge(VertexTypeCredentialsBinding, shoot.Spec.CredentialsBindingName)
 }
 
 func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencorev1beta1.Shoot) {
