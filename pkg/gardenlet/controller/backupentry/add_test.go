@@ -268,12 +268,22 @@ var _ = Describe("Add", func() {
 			Expect((reconciler).BackupEntryPredicate(&corev1.Secret{})).To(BeFalse())
 		})
 
-		It("should return false when the seed is not responsible for the backupentry", func() {
+		It("should return true when the seed is responsible for the backupentry (spec.seedName match)", func() {
+			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeTrue())
+		})
+
+		It("should return true when the seed is responsible for the backupentry (status.seedName match)", func() {
+			backupEntry.Spec.SeedName = ptr.To("another-seed")
+			backupEntry.Status.SeedName = ptr.To("seed")
+			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeTrue())
+		})
+
+		It("should return false when the seed is not responsible for the backupentry (spec.seedName doesn't match)", func() {
 			backupEntry.Spec.SeedName = ptr.To("another-seed")
 			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeFalse())
 		})
 
-		It("should return false when the seed is not responsible for the backupentry", func() {
+		It("should return false when the seed is not responsible for the backupentry (status.seedName doesn't match)", func() {
 			backupEntry.Status.SeedName = ptr.To("another-seed")
 			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeFalse())
 		})
