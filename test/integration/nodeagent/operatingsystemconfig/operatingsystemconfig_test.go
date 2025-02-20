@@ -772,7 +772,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			var err error
 			lastAppliedOSC, err = fakeFS.ReadFile("/var/lib/gardener-node-agent/last-applied-osc.yaml")
 			return err
-		}).WithTimeout(2 * time.Second).Should(Succeed())
+		}).Should(Succeed())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
@@ -794,7 +794,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 			content, err := fakeFS.ReadFile("/var/lib/gardener-node-agent/last-applied-osc.yaml")
 			g.Expect(err).NotTo(HaveOccurred())
 			return content
-		}).WithTimeout(2 * time.Second).ShouldNot(Equal(lastAppliedOSC))
+		}).ShouldNot(Equal(lastAppliedOSC))
 
 		By("Assert that files and units have been created")
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+gnaUnit.Name, "#gna", 0600)
@@ -806,7 +806,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		))
 
 		By("Expect that cancel func has been called")
-		Eventually(cancelFunc.called).WithTimeout(2 * time.Second).Should(BeTrue())
+		Eventually(cancelFunc.called).Should(BeTrue())
 	})
 
 	Context("when CRI is not containerd", func() {
@@ -842,7 +842,7 @@ func waitForUpdatedNodeAnnotationCloudConfig(node *corev1.Node, value string) {
 		updatedNode := &corev1.Node{}
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
 		return updatedNode.Annotations
-	}).WithTimeout(2 * time.Second).Should(HaveKeyWithValue("checksum/cloud-config-data", value))
+	}).Should(HaveKeyWithValue("checksum/cloud-config-data", value))
 }
 
 func waitForUpdatedNodeLabelKubernetesVersion(node *corev1.Node, value string) {
