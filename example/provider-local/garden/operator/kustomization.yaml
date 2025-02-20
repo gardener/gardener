@@ -5,5 +5,4 @@ resources:
 - extension.yaml
 
 patches:
-- path: patch-imagevector-overwrite.yaml
 - path: patch-extension-prow.yaml
