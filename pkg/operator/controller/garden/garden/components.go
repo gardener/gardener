@@ -392,6 +392,7 @@ func (r *Reconciler) newVerticalPodAutoscaler(garden *operatorv1alpha1.Garden, s
 		v1beta1constants.PriorityClassNameGardenSystem300,
 		v1beta1constants.PriorityClassNameGardenSystem200,
 		v1beta1constants.PriorityClassNameGardenSystem200,
+		true,
 	)
 }
 

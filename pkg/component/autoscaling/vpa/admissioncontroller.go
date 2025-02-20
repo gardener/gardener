@@ -148,10 +148,15 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, vpaconstants.AdmissionControllerPort))
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, networkingv1.NetworkPolicyPort{
+		metricNetworkPolicyPort := networkingv1.NetworkPolicyPort{
 			Port:     ptr.To(intstr.FromInt32(admissionControllerMetricsPort)),
 			Protocol: ptr.To(corev1.ProtocolTCP),
-		}))
+		}
+		if v.values.IsGardenCluster {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, metricNetworkPolicyPort))
+		} else {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, metricNetworkPolicyPort))
+		}
 	case component.ClusterTypeShoot:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
 			Port:     ptr.To(intstr.FromInt32(vpaconstants.AdmissionControllerPort)),

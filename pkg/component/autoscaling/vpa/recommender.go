@@ -358,8 +358,11 @@ func (v *vpa) reconcileRecommenderService(service *corev1.Service) {
 
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, metricsNetworkPolicyPort))
-
+		if v.values.IsGardenCluster {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForGardenScrapeTargets(service, metricsNetworkPolicyPort))
+		} else {
+			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, metricsNetworkPolicyPort))
+		}
 	case component.ClusterTypeShoot:
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, metricsNetworkPolicyPort))
 	}

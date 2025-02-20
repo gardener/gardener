@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	vpaconstants "github.com/gardener/gardener/pkg/component/autoscaling/vpa/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/seed"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
@@ -88,6 +89,8 @@ type Values struct {
 	// resources (like Deployment, Service, etc.) are being deployed directly (with the client). All other application-
 	// related resources (like RBAC roles, CRD, etc.) are deployed as part of a ManagedResource.
 	ClusterType component.ClusterType
+	// IsGardenCluster specifies if the VPA is being deployed in a cluster registered as a Garden.
+	IsGardenCluster bool
 	// Enabled specifies if VPA is enabled.
 	Enabled bool
 	// SecretNameServerCA is the name of the server CA secret.
@@ -319,6 +322,9 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 
 func (v *vpa) getPrometheusLabel() string {
 	if v.values.ClusterType == component.ClusterTypeSeed {
+		if v.values.IsGardenCluster {
+			return garden.Label
+		}
 		return seed.Label
 	}
 	return shoot.Label
