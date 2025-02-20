@@ -113,6 +113,12 @@ var _ = Describe("Utils tests", func() {
 				errorList := ValidateCapabilitiesDefinition(capabilities, dummyPath)
 				Expect(errorList).To(ConsistOf(expectedError))
 			},
+			Entry("reject empty capability name", core.Capabilities{"architecture": "amd64", "": "gen1,gen2,gen3"}, []gomegatypes.GomegaMatcher{
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(dummyPath.String()),
+				})),
+			}),
 			Entry("empty capability values", core.Capabilities{"architecture": "amd64", "hypervisorType": ""}, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -163,7 +169,7 @@ var _ = Describe("Utils tests", func() {
 				"architecture":   "  amd64 ,arm64 ,amd32, , 'asdas   '    , I look weird  ",
 				"hypervisorType": `"gen1", "gen4"`,
 			}
-			parsedCapabilities := ParseCapabilityValues(capabilities2)
+			parsedCapabilities := ParseCapabilitiesValues(capabilities2)
 			architectureSet := parsedCapabilities["architecture"]
 			hypervisorTypeSet := parsedCapabilities["hypervisorType"]
 
@@ -179,7 +185,7 @@ var _ = Describe("Utils tests", func() {
 				"hypervisorType": "gen1,gen4",
 				"notIntersect":   "value",
 			}
-			intersection := GetCapabilitiesIntersection(ParseCapabilityValues(capabilities), ParseCapabilityValues(capabilities2))
+			intersection := GetCapabilitiesIntersection(ParseCapabilitiesValues(capabilities), ParseCapabilitiesValues(capabilities2))
 			isArchitectureIntersection := intersection["architecture"].Contains("amd64", "arm64")
 			isHypervisorTypeIntersection := intersection["hypervisorType"].Contains("gen1")
 			Expect(isArchitectureIntersection).To(BeTrue())

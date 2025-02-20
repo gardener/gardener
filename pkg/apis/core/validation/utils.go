@@ -318,7 +318,7 @@ func ValidateMachineImageCapabilities(machineImages []core.MachineImage, capabil
 			if IsDefined(capabilitiesDefinition) {
 				allErrs = append(allErrs, validateMachineImageVersionCapabilities(machineVersion, capabilitiesDefinition, versionsPath)...)
 			} else {
-				allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child("architecture"))...)
+				allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child(v1beta1constants.ArchitectureKey))...)
 				if machineVersion.CapabilitiesSet != nil {
 					allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilitiesSet"), "must not provide CapabilitiesSet when no capabilitiesDefinition is defined"))
 				}
@@ -335,7 +335,7 @@ func validateMachineTypesCapabilities(machineTypes []core.MachineType, capabilit
 
 	for i, machineType := range machineTypes {
 		idxPath := fldPath.Index(i)
-		archPath := idxPath.Child("architecture")
+		archPath := idxPath.Child(v1beta1constants.ArchitectureKey)
 
 		if IsDefined(capabilitiesDefinition) {
 			allErrs = append(allErrs, ValidateMachineTypeCapabilities(machineType, *capabilitiesDefinition, idxPath)...)
@@ -396,6 +396,7 @@ func validateMachineImageVersionArchitecture(archs []string, fldPath *field.Path
 func validateMachineTypeArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// Safeguard against nil pointer in case defaulting did not run correctly
 	if arch == nil {
 		arch = new(string)
 	}
@@ -450,10 +451,9 @@ func IsDefined(capabilitiesDefinition *core.Capabilities) bool {
 func ValidateCapabilitiesDefinition(capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
 	var errList field.ErrorList
 
-	parsedCapabilitiesDefinition := ParseCapabilityValues(capabilitiesDefinition)
+	parsedCapabilitiesDefinition := ParseCapabilitiesValues(capabilitiesDefinition)
 	errList = validateCapabilitiesDefinition(parsedCapabilitiesDefinition, path)
 
-	// TODO (Roncossek): Add validation for providerConfigurations
 	return errList
 }
 
@@ -469,8 +469,8 @@ func validateMachineImageVersionCapabilities(machineImageVersion core.MachineIma
 		errList = append(errList, unmarshalErrorList...)
 	} else {
 		parsedCapabilitiesSet := ParseCapabilitiesSet(capabilitiesSet)
-		for _, parsedCapabilities := range parsedCapabilitiesSet {
-			errList = append(errList, validateCapabilitiesAgainstDefinition(parsedCapabilities.toCapabilityMap(), *capabilitiesDefinition, path.Child("capabilitiesSet"))...)
+		for i, parsedCapabilities := range parsedCapabilitiesSet {
+			errList = append(errList, validateCapabilitiesAgainstDefinition(parsedCapabilities.toCapabilityMap(), *capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
 		}
 	}
 	return errList
@@ -479,18 +479,36 @@ func validateMachineImageVersionCapabilities(machineImageVersion core.MachineIma
 // ValidateMachineTypeCapabilities validates the capabilities of a machineType, ensures that the architecture is not set and that no capability is empty
 func ValidateMachineTypeCapabilities(machineType core.MachineType, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
 	errList := field.ErrorList{}
+
 	errList = append(errList, validateCapabilitiesAgainstDefinition(machineType.Capabilities, capabilitiesDefinition, path)...)
+	errList = append(errList, validateMachineTypeArchitectureCapability(machineType, capabilitiesDefinition, path)...)
 
 	if len(ptr.Deref(machineType.Architecture, "")) > 0 {
-		errList = append(errList, field.Invalid(path.Child("architecture"), machineType.Architecture, "must not be set when capabilities are used and capabilitiesDefinition is set"))
+		errList = append(errList, field.Invalid(path.Child(v1beta1constants.ArchitectureKey), machineType.Architecture, "must not be set when capabilities are used and capabilitiesDefinition is set"))
 	}
 
 	return errList
 }
 
+func validateMachineTypeArchitectureCapability(machineType core.MachineType, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
+	errList := field.ErrorList{}
+
+	// if there are multiple values for architecture, the architecture for machineTypes must be set and must contain exactly one value
+	parsedCapabilitiesDefinition := ParseCapabilitiesValues(capabilitiesDefinition)
+	parsedCapabilities := ParseCapabilitiesValues(machineType.Capabilities)
+
+	allowedArchitectures := parsedCapabilitiesDefinition[v1beta1constants.ArchitectureKey].Values()
+	if len(allowedArchitectures) > 1 {
+		if value, ok := parsedCapabilities[v1beta1constants.ArchitectureKey]; !ok || len(value) != 1 {
+			errList = append(errList, field.Required(path.Child("capabilities", v1beta1constants.ArchitectureKey), fmt.Sprintf("multiple architectures are supported in the cloud profile. So it must be defined and contain exactly one of: %+v", allowedArchitectures)))
+		}
+	}
+	return errList
+}
+
 func validateCapabilitiesAgainstDefinition(capabilities core.Capabilities, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
-	parsedCapabilities := ParseCapabilityValues(capabilities)
-	parsedCapabilitiesDefinition := ParseCapabilityValues(capabilitiesDefinition)
+	parsedCapabilities := ParseCapabilitiesValues(capabilities)
+	parsedCapabilitiesDefinition := ParseCapabilitiesValues(capabilitiesDefinition)
 	var errList field.ErrorList
 
 	if !IsDefined(&capabilitiesDefinition) {
@@ -505,14 +523,7 @@ func validateCapabilitiesAgainstDefinition(capabilities core.Capabilities, capab
 			continue
 		}
 		if !capabilityValues.IsSubsetOf(parsedCapabilitiesDefinition[capabilityName]) {
-			errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues, "must be a subset of spec.capabilitiesDefinition of the providers cloudProfile"))
-		}
-	}
-	// if there are multiple values for architecture, the architecture for machineTypes must be set and must contain exactly one value
-	allowedArchitectures := parsedCapabilitiesDefinition[v1beta1constants.ArchitectureKey].Values()
-	if len(allowedArchitectures) > 1 {
-		if value, ok := parsedCapabilities[v1beta1constants.ArchitectureKey]; !ok || len(value) != 1 {
-			errList = append(errList, field.Required(path.Child("capabilities", v1beta1constants.ArchitectureKey), fmt.Sprintf("multiple architectures are supported in the cloud profile. So it must be defined and contain exactly one of: %+v", allowedArchitectures)))
+			errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues.Values(), "must be a subset of spec.capabilitiesDefinition of the providers cloudProfile"))
 		}
 	}
 
@@ -529,16 +540,19 @@ func validateCapabilitiesDefinition(definition ParsedCapabilities, path *field.P
 	}
 
 	// architecture is a required capability
-	val, ok := definition["architecture"]
+	val, ok := definition[v1beta1constants.ArchitectureKey]
 	if ok {
-		errList = append(errList, validateMachineImageVersionArchitecture(val.Values(), path.Child("architecture"))...)
+		errList = append(errList, validateMachineImageVersionArchitecture(val.Values(), path.Child(v1beta1constants.ArchitectureKey))...)
 	} else {
-		errList = append(errList, field.Required(path.Child("architecture"),
+		errList = append(errList, field.Required(path.Child(v1beta1constants.ArchitectureKey),
 			"allowed architectures are: "+strings.Join(v1beta1constants.ValidArchitectures, ", ")))
 	}
 
 	// No empty capabilities allowed
 	for capabilityName, capabilityValues := range definition {
+		if len(capabilityName) == 0 {
+			errList = append(errList, field.Invalid(path, "", "empty capability name is not allowed"))
+		}
 		if len(capabilityValues) == 0 {
 			errList = append(errList, field.Required(path.Child(capabilityName), "must not be empty"))
 		}
@@ -554,7 +568,7 @@ func validateCapabilitiesDefinition(definition ParsedCapabilities, path *field.P
 func ParseCapabilitiesSet(capabilitiesSet []core.Capabilities) []ParsedCapabilities {
 	parsedImageCapabilitiesSet := make([]ParsedCapabilities, len(capabilitiesSet))
 	for j, capabilitySet := range capabilitiesSet {
-		parsedImageCapabilitiesSet[j] = ParseCapabilityValues(capabilitySet)
+		parsedImageCapabilitiesSet[j] = ParseCapabilitiesValues(capabilitySet)
 	}
 	return parsedImageCapabilitiesSet
 }
@@ -610,8 +624,8 @@ func HasEmptyCapabilityValue(capabilities ParsedCapabilities) bool {
 	return false
 }
 
-// ParseCapabilityValues parses the capabilities values string into a map of capability name and capability values
-func ParseCapabilityValues(capabilities core.Capabilities) ParsedCapabilities {
+// ParseCapabilitiesValues parses the capabilities values string into a map of capability name and capability values
+func ParseCapabilitiesValues(capabilities core.Capabilities) ParsedCapabilities {
 	parsedCapabilities := make(ParsedCapabilities)
 	for capabilityName, capabilityValuesString := range capabilities {
 		capabilityValues := splitAndSanitize(capabilityValuesString)
