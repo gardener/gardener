@@ -16,7 +16,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // IsDeleting is a predicate for objects having a deletion timestamp.
@@ -214,13 +213,4 @@ func GetExtensionLastOperation(obj client.Object) *gardencorev1beta1.LastOperati
 	}
 
 	return acc.GetExtensionStatus().GetLastOperation()
-}
-
-// SeedNamePredicate returns a predicate which returns true for objects that are being migrated to a different
-// seed cluster.
-func SeedNamePredicate(seedName string, getSeedNamesFromObject func(client.Object) (*string, *string)) predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		specSeedName, statusSeedName := getSeedNamesFromObject(obj)
-		return gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
-	})
 }

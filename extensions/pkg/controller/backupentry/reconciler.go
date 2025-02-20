@@ -61,19 +61,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	shootTechnicalID, _ := ExtractShootDetailsFromBackupEntryName(be.Name)
-	cluster, err := extensionscontroller.GetCluster(ctx, r.client, shootTechnicalID)
-	// As BackupEntry continues to exist post deletion of a Shoot,
-	// we do not want to block its deletion when the Cluster is not found.
-	if client.IgnoreNotFound(err) != nil {
-		return reconcile.Result{}, err
-	}
-
-	if extensionscontroller.IsFailed(cluster) {
-		log.Info("Skipping the reconciliation of BackupEntry of failed shoot")
-		return reconcile.Result{}, nil
-	}
-
 	operationType := v1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
 
 	switch {

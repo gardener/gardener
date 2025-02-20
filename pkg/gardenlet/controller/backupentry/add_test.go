@@ -245,4 +245,68 @@ var _ = Describe("Add", func() {
 			})
 		})
 	})
+
+	Describe("#BackupEntryPredicate", func() {
+		var (
+			backupEntry *gardencorev1beta1.BackupEntry
+			reconciler  = &Reconciler{SeedName: "seed"}
+		)
+
+		BeforeEach(func() {
+			backupEntry = &gardencorev1beta1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      entryName,
+					Namespace: projectNamespace,
+				},
+				Spec: gardencorev1beta1.BackupEntrySpec{
+					SeedName: ptr.To("seed"),
+				},
+			}
+		})
+
+		It("should return false when the object is not BackupEntry", func() {
+			Expect((reconciler).BackupEntryPredicate(&corev1.Secret{})).To(BeFalse())
+		})
+
+		It("should return true when the seed is responsible for the backupentry (spec.seedName match)", func() {
+			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeTrue())
+		})
+
+		It("should return true when the seed is responsible for the backupentry (status.seedName match)", func() {
+			backupEntry.Spec.SeedName = ptr.To("another-seed")
+			backupEntry.Status.SeedName = ptr.To("seed")
+			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeTrue())
+		})
+
+		It("should return false when the seed is not responsible for the backupentry (spec.seedName doesn't match)", func() {
+			backupEntry.Spec.SeedName = ptr.To("another-seed")
+			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeFalse())
+		})
+
+		It("should return false when the seed is not responsible for the backupentry (status.seedName doesn't match)", func() {
+			backupEntry.Status.SeedName = ptr.To("another-seed")
+			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeFalse())
+		})
+
+		It("should return false when the backupentry is successfully migrated", func() {
+			backupEntry.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+			}
+
+			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeFalse())
+		})
+
+		It("should return true when the backupentry is not successfully migrated", func() {
+			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeTrue())
+		})
+
+		It("should return true when the backupentry has `restore` annotation", func() {
+			backupEntry.Annotations = map[string]string{
+				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore,
+			}
+
+			Expect(reconciler.BackupEntryPredicate(backupEntry)).To(BeTrue())
+		})
+	})
 })
