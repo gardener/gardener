@@ -54,19 +54,19 @@ disableControllers: []
 disableWebhooks: []
 ignoreResources: false
 
-# imageVectorOverwrite: |
-#   images:
-#   - name: pause-container
-#     sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-#     repository: gcr.io/google_containers/pause-amd64
-#     tag: "3.0"
-#     version: 1.11.x
-#   - name: pause-container
-#     sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
-#     repository: gcr.io/google_containers/pause-amd64
-#     tag: "3.1"
-#     version: ">= 1.12"
-#   ...
+imageVectorOverwrite: {}
+  # images:
+  # - name: pause-container
+  #   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+  #   repository: gcr.io/google_containers/pause-amd64
+  #   tag: "3.0"
+  #   version: 1.11.x
+  # - name: pause-container
+  #   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+  #   repository: gcr.io/google_containers/pause-amd64
+  #   tag: "3.1"
+  #   version: ">= 1.12"
+  # ...
 
 webhookConfig:
   servicePort: 443
