@@ -5,7 +5,6 @@
 package v1beta1
 
 import (
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -40,32 +39,4 @@ func SetDefaults_VolumeType(obj *VolumeType) {
 	if obj.Usable == nil {
 		obj.Usable = ptr.To(true)
 	}
-}
-
-// GetV1JsonCapabilities transforms the given keys and values into a JSON-string and returns it as v1.JSON object.
-// The keys and values must have the same length.
-func GetV1JsonCapabilities(keys []string, values []string) v1.JSON {
-	// Example:
-	//v1.JSON{Raw: []byte(`{"` +
-	//keys[0] + `":"` + values[0] + `,` +
-	//keys[1] + `":"` + value[1] +
-	//`"}`)}
-
-	if len(keys) != len(values) {
-		panic("keys and values must have the same length")
-	}
-	if len(keys) == 0 {
-		return v1.JSON{Raw: []byte(`{}`)}
-	}
-	var capabilities v1.JSON
-	jsonString := "{"
-	for i := 0; i < len(keys); i++ {
-		jsonString += `"` + keys[i] + `":"` + values[i] + `"`
-		if i < len(keys)-1 {
-			jsonString += ","
-		}
-	}
-	jsonString += "}"
-	capabilities.Raw = []byte(jsonString)
-	return capabilities
 }
