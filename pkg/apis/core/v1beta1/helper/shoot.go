@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -699,4 +700,32 @@ func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStra
 	}
 
 	return *updateStrategy == gardencorev1beta1.AutoInPlaceUpdate || *updateStrategy == gardencorev1beta1.ManualInPlaceUpdate
+}
+
+// CalculateDataStringForKubeletConfiguration returns a data string for the relevant fields of the kubelet configuration.
+func CalculateDataStringForKubeletConfiguration(kubeletConfiguration *gardencorev1beta1.KubeletConfig) []string {
+	data := []string{}
+
+	if kubeletConfiguration == nil {
+		return data
+	}
+
+	if resources := SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
+		data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
+	}
+	if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
+		data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
+			ptr.Deref(eviction.ImageFSAvailable, ""),
+			ptr.Deref(eviction.ImageFSInodesFree, ""),
+			ptr.Deref(eviction.MemoryAvailable, ""),
+			ptr.Deref(eviction.NodeFSAvailable, ""),
+			ptr.Deref(eviction.NodeFSInodesFree, ""),
+		))
+	}
+
+	if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
+		data = append(data, *policy)
+	}
+
+	return data
 }
