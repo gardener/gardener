@@ -5,16 +5,15 @@
 package v1beta1_test
 
 import (
-	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apiserver/features"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+
+	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("CloudProfile defaulting", func() {
 	var obj *CloudProfile
-	features.RegisterFeatureGates()
 
 	BeforeEach(func() {
 		obj = &CloudProfile{
@@ -59,7 +58,7 @@ var _ = Describe("CloudProfile defaulting", func() {
 		})
 	})
 
-	FDescribe("MachineType defaulting", func() {
+	Describe("MachineType defaulting", func() {
 		It("should correctly default MachineType", func() {
 			SetObjectDefaults_CloudProfile(obj)
 

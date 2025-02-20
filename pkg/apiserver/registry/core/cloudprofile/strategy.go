@@ -6,17 +6,17 @@ package cloudprofile
 
 import (
 	"context"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"k8s.io/utils/ptr"
 	"slices"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
@@ -111,7 +111,7 @@ func dropExpiredVersions(cloudProfile *core.CloudProfile) {
 func DefaultBasedOnCapabilitiesDefinition(in *core.CloudProfile) {
 	// with CapabilitiesDefinition no defaulting for Architecture is required
 	// as the capabilities.architecture field is used instead
-	if in.Spec.CapabilitiesDefinition != nil {
+	if in.Spec.CapabilitiesDefinition != nil && len(in.Spec.CapabilitiesDefinition) > 0 {
 		return
 	}
 

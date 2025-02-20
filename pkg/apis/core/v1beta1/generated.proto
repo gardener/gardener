@@ -1835,7 +1835,7 @@ message MachineImageVersion {
   // CapabilitiesSet contains the set of capabilities of a MachineImage version. There is exactly one capabilities entry
   // per resource of a version the infrastructure provider serves.
   // +optional
-  repeated .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON capabilitySets = 6;
+  repeated .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON capabilitiesSet = 6;
 }
 
 // MachineType contains certain properties of a machine type.

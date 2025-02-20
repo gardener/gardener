@@ -19,7 +19,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
@@ -561,49 +560,6 @@ var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enab
 						}))))
 					})
 
-					It("should allow expiration date on latest machine image version", func() {
-						expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
-						cloudProfile.Spec.MachineImages = []core.MachineImage{
-							{
-								Name: machineImageName,
-								Versions: []core.MachineImageVersion{
-									{
-										ExpirableVersion: core.ExpirableVersion{
-											Version:        "0.1.2",
-											ExpirationDate: expirationDate,
-											Classification: &previewClassification,
-										},
-										CRI:           []core.CRI{{Name: "containerd"}},
-										Architectures: []string{"amd64"},
-									},
-									{
-										ExpirableVersion: core.ExpirableVersion{
-											Version:        "0.1.1",
-											Classification: &supportedClassification,
-										},
-										CRI:           []core.CRI{{Name: "containerd"}},
-										Architectures: []string{"amd64"},
-									},
-								},
-								UpdateStrategy: &updateStrategyMajor,
-							},
-							{
-								Name: "xy",
-								Versions: []core.MachineImageVersion{
-									{
-										ExpirableVersion: core.ExpirableVersion{
-											Version:        "0.1.1",
-											ExpirationDate: expirationDate,
-											Classification: &supportedClassification,
-										},
-										CRI:           []core.CRI{{Name: "containerd"}},
-										Architectures: []string{"amd64"},
-									},
-								},
-								UpdateStrategy: &updateStrategyMajor,
-							},
-						}
-					})
 					It("should forbid non semver min supported version for in-place update", func() {
 						cloudProfile.Spec.MachineImages = []core.MachineImage{
 							{
@@ -1529,8 +1485,8 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			v1beta1constants.ArchitectureKey: "amd64",
 		}
 		imageCapabilitiesSet = []v1.JSON{
-			gardencorev1beta1.GetV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen1"}),
-			gardencorev1beta1.GetV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen2"}),
+			getV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen1"}),
+			getV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey, "hypervisorType"}, []string{v1beta1constants.ArchitectureAMD64, "gen2"}),
 		}
 		cloudProfile = core.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1566,33 +1522,119 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 		}
 	)
 
-	Describe("MachineType validation", func() {
-		It("should enforce the capabilities.architecture to be set if multiple are allowed in cloud profile", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
-			cp := cloudProfile.DeepCopy()
-			cp.Spec.CapabilitiesDefinition = map[string]string{v1beta1constants.ArchitectureKey: "arm64,amd64"}
+	FDescribe("CloudProfile with Feature CloudProfileCapabilities == false", func() {
+		var cp *core.CloudProfile
 
-			// allow one architecture value
+		BeforeEach(func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, false))
+			cp = cloudProfile.DeepCopy()
+			cp.Spec.CapabilitiesDefinition = capabilitiesDefinition
+		})
+		It("should reject profile with capabilitiesDefinition", func() {
+			errorList := ValidateCloudProfile(cp)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.capabilitiesDefinition"),
+			}))))
+		})
+		It("should reject profile with capabilitiesDefinition but keep validating if the cloud profile itself is valid", func() {
+			cp.Spec.MachineTypes[0].Architecture = machineArchitecture
+			errorList := ValidateCloudProfile(cp)
+			Expect(errorList).To(ConsistOf([]gomegatypes.GomegaMatcher{
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.capabilitiesDefinition"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.machineTypes[0].architecture"),
+				})),
+			}))
+
+		})
+	})
+
+	Context("MachineImageVersion validation", func() {
+		var cp *core.CloudProfile
+		BeforeEach(func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+			cp = cloudProfile.DeepCopy()
+			cp.Spec.MachineTypes[0].Capabilities = machineCapabilities
+			cp.Spec.CapabilitiesDefinition = core.Capabilities{v1beta1constants.ArchitectureKey: "arm64,amd64", "hypervisorType": "gen1,gen2,gen3"}
+		})
+		It("should allow minimal capabilitiesSet of key architecture with one value", func() {
+
+			capabilitiesSet := []v1.JSON{getV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey}, []string{v1beta1constants.ArchitectureAMD64})}
+			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = capabilitiesSet
+
+			errorList := ValidateCloudProfile(cp)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow capabilitiesSet with multiple keys and multiple values for architecture", func() {
+			cp.Spec.CapabilitiesDefinition[v1beta1constants.ArchitectureKey] = "arm64,amd64"
+
+			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = imageCapabilitiesSet
+			v1JSON := getV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey}, []string{"arm64,amd64"})
+			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = append(cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet, v1JSON)
+
+			errorList := ValidateCloudProfile(cp)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow capabilitiesSet without architecture key", func() {
+			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{"hypervisorType"}, []string{"gen1"})}
+			errorList := ValidateCloudProfile(cp)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should reject capabilitiesSet with unsupported key", func() {
+			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{""}, []string{"unsupportedValue"})}
+			errorList := ValidateCloudProfile(cp)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet[0][]"),
+			}))))
+		})
+		It("should reject capabilitiesSet with unsupported value", func() {
+			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{"hypervisorType"}, []string{"unsupportedValue"})}
+			errorList := ValidateCloudProfile(cp)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet[0].hypervisorType"),
+			}))))
+		})
+	})
+
+	Context("MachineType validation", func() {
+		var cp *core.CloudProfile
+		BeforeEach(func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+			cp = cloudProfile.DeepCopy()
+			cp.Spec.CapabilitiesDefinition = map[string]string{v1beta1constants.ArchitectureKey: "arm64,amd64"}
+		})
+
+		It("should allow one architecture value", func() {
 			cp.Spec.MachineTypes[0].Capabilities = map[string]string{v1beta1constants.ArchitectureKey: "amd64"}
 			errorList := ValidateCloudProfile(cp)
 			Expect(errorList).To(BeEmpty())
+		})
 
-			// reject no architecture
+		It("should reject no architecture", func() {
 			cp.Spec.MachineTypes[0].Capabilities = map[string]string{}
-			errorList = ValidateCloudProfile(cp)
+			errorList := ValidateCloudProfile(cp)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.machineTypes[0].capabilities.architecture"),
 			}))))
+		})
 
-			// reject two architectures
+		It("should reject two architectures", func() {
 			cp.Spec.MachineTypes[0].Capabilities = map[string]string{v1beta1constants.ArchitectureKey: "arm64,amd64"}
-			errorList = ValidateCloudProfile(cp)
+			errorList := ValidateCloudProfile(cp)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.machineTypes[0].capabilities.architecture"),
 			}))))
-
 		})
 	})
 
@@ -1691,3 +1733,31 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 		ArchitectureTestData,
 	)
 })
+
+// GetV1JsonCapabilities transforms the given keys and values into a JSON-string and returns it as v1.JSON object.
+// The keys and values must have the same length.
+func getV1JsonCapabilities(keys []string, values []string) v1.JSON {
+	// Example:
+	//v1.JSON{Raw: []byte(`{"` +
+	//keys[0] + `":"` + values[0] + `,` +
+	//keys[1] + `":"` + value[1] +
+	//`"}`)}
+
+	if len(keys) != len(values) {
+		panic("keys and values must have the same length")
+	}
+	if len(keys) == 0 {
+		return v1.JSON{Raw: []byte(`{}`)}
+	}
+	var capabilities v1.JSON
+	jsonString := "{"
+	for i := 0; i < len(keys); i++ {
+		jsonString += `"` + keys[i] + `":"` + values[i] + `"`
+		if i < len(keys)-1 {
+			jsonString += ","
+		}
+	}
+	jsonString += "}"
+	capabilities.Raw = []byte(jsonString)
+	return capabilities
+}

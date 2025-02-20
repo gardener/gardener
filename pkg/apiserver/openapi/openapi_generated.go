@@ -5607,7 +5607,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates"),
 						},
 					},
-					"capabilitySets": {
+					"capabilitiesSet": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CapabilitiesSet contains the set of capabilities of a MachineImage version. There is exactly one capabilities entry per resource of a version the infrastructure provider serves.",
 							Type:        []string{"array"},
