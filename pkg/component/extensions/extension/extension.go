@@ -6,6 +6,7 @@ package extension
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -118,6 +119,7 @@ type extension struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
+	lock       sync.Mutex
 	extensions map[string]*extensionsv1alpha1.Extension
 }
 
@@ -461,23 +463,12 @@ func (e *extension) forEach(
 ) []flow.TaskFn {
 	fns := make([]flow.TaskFn, 0, len(e.values.Extensions))
 
-	for _, ext := range e.values.Extensions {
-		if !filterFn(ext) {
+	for _, extensionTemplate := range e.values.Extensions {
+		if !filterFn(extensionTemplate) {
 			continue
 		}
-		extensionTemplate := ext
 
-		extensionObj, ok := e.extensions[extensionTemplate.Name]
-		if !ok {
-			extensionObj = &extensionsv1alpha1.Extension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      extensionTemplate.Name,
-					Namespace: e.values.Namespace,
-				},
-			}
-			// store object for later usage (we want to pass a filled object to WaitUntil*)
-			e.extensions[extensionTemplate.Name] = extensionObj
-		}
+		extensionObj := e.initializeExtensionObject(extensionTemplate.Name)
 
 		fns = append(fns, func(ctx context.Context) error {
 			return fn(ctx, extensionObj, extensionTemplate.Spec.Type, extensionTemplate.Spec.ProviderConfig, extensionTemplate.Spec.Class, extensionTemplate.Timeout)
@@ -490,4 +481,23 @@ func (e *extension) forEach(
 // Extensions returns the map of extensions where the key is the type and the value is an Extension structure.
 func (e *extension) Extensions() map[string]Extension {
 	return e.values.Extensions
+}
+
+func (e *extension) initializeExtensionObject(name string) *extensionsv1alpha1.Extension {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+
+	extensionObj, ok := e.extensions[name]
+	if !ok {
+		extensionObj = &extensionsv1alpha1.Extension{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: e.values.Namespace,
+			},
+		}
+		// store object for later usage (we want to pass a filled object to WaitUntil*)
+		e.extensions[name] = extensionObj
+	}
+
+	return extensionObj
 }
