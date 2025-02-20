@@ -4,8 +4,8 @@
 
 package v1beta1
 
-// SetObjectDefaults_NamespacedCloudProfileSpec sets default values for NamespacedCloudProfileSpec objects.
-func SetObjectDefaults_NamespacedCloudProfileSpec(in *NamespacedCloudProfileSpec) {
+// SetobjectdefaultsNamespacedcloudprofilespec sets default values for NamespacedCloudProfileSpec objects.
+func SetobjectdefaultsNamespacedcloudprofilespec(in *NamespacedCloudProfileSpec) {
 	for i := range in.MachineTypes {
 		a := &in.MachineTypes[i]
 		SetDefaults_MachineType(a)

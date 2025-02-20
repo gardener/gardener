@@ -72,7 +72,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 	} else {
 		// if the feature is disabled, the capabilitiesDefinition must not be set
 		if IsDefined(&spec.CapabilitiesDefinition) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilitiesDefinition"), spec.CapabilitiesDefinition, "must not be defined as the CloudProfile Capabilities Feature is disabled."))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("capabilitiesDefinition"), "must not be defined as the CloudProfile Capabilities Feature is disabled."))
 		}
 	}
 

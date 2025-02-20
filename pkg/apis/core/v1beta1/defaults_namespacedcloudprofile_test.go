@@ -10,12 +10,10 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apiserver/features"
 )
 
 var _ = Describe("NamespacedCloudProfile defaulting", func() {
 	var obj *NamespacedCloudProfile
-	features.RegisterFeatureGates()
 
 	BeforeEach(func() {
 
