@@ -959,6 +959,17 @@ spec:
 			return secretList.Items
 		}).Should(BeEmpty())
 
+		By("Verify that garbage-collectable resources have been deleted")
+		Eventually(func(g Gomega) {
+			secretList := &corev1.SecretList{}
+			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels{"resources.gardener.cloud/garbage-collectable-reference": "true"})).To(Succeed())
+			g.Expect(secretList.Items).To(BeEmpty())
+
+			configMapList := &corev1.ConfigMapList{}
+			g.Expect(testClient.List(ctx, configMapList, client.InNamespace(testNamespace.Name), client.MatchingLabels{"resources.gardener.cloud/garbage-collectable-reference": "true"})).To(Succeed())
+			g.Expect(configMapList.Items).To(BeEmpty())
+		}).Should(Succeed())
+
 		By("Ensure Garden is gone")
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)

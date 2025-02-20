@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -385,6 +386,11 @@ func (r *Reconciler) delete(
 			Fn:           secretsManager.Cleanup,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning up garbage-collectable ConfigMaps and Secrets",
+			Fn:           r.cleanupGarbageCollectableResources,
+			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
+		})
 	)
 
 	gardenCopy := garden.DeepCopy()
@@ -492,4 +498,17 @@ func (r *Reconciler) destroyDNSRecords(ctx context.Context, log logr.Logger) err
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
+}
+
+func (r *Reconciler) cleanupGarbageCollectableResources(ctx context.Context) error {
+	matchingLabels := client.MatchingLabels{references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable}
+
+	if err := r.RuntimeClientSet.Client().DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(r.GardenNamespace), matchingLabels); err != nil {
+		return fmt.Errorf("failed to delete remaining garbage-collectable Secrets: %w", err)
+	}
+	if err := r.RuntimeClientSet.Client().DeleteAllOf(ctx, &corev1.ConfigMap{}, client.InNamespace(r.GardenNamespace), matchingLabels); err != nil {
+		return fmt.Errorf("failed to delete remaining garbage-collectable ConfigMaps: %w", err)
+	}
+
+	return nil
 }

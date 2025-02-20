@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type actuator struct {
@@ -59,7 +60,13 @@ func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, backupBucket 
 	return nil
 }
 
-func (a *actuator) Delete(_ context.Context, log logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
+func (a *actuator) Delete(ctx context.Context, log logr.Logger, bb *extensionsv1alpha1.BackupBucket) error {
+	if ref := bb.Status.GeneratedSecretRef; ref != nil {
+		if err := kubernetesutils.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ref.Name, Namespace: ref.Namespace}}); err != nil {
+			return err
+		}
+	}
+
 	path := filepath.Join(a.bbDirectory, bb.Name)
 	log.Info("Deleting directory", "path", path)
 	return os.RemoveAll(path)

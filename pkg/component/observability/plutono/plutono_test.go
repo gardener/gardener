@@ -715,17 +715,22 @@ status:
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
+			dashboardConfigMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "plutono-dashboards", Namespace: namespace}}
+
 			component = New(c, namespace, fakeSecretManager, values)
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
+			Expect(c.Create(ctx, dashboardConfigMap)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardConfigMap), dashboardConfigMap)).To(Succeed())
 
 			Expect(component.Destroy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(dashboardConfigMap), dashboardConfigMap)).To(BeNotFoundError())
 		})
 	})
 
