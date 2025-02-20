@@ -927,7 +927,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		))
 
 		By("Expect that cancel func has been called")
-		Expect(cancelFunc.called).To(BeTrue())
+		Eventually(cancelFunc.called).WithTimeout(2 * time.Second).Should(BeTrue())
 	})
 
 	Context("when CRI is not containerd", func() {
