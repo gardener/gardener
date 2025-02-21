@@ -780,3 +780,31 @@ func GetIPStackForShoot(shoot *gardencorev1beta1.Shoot) string {
 	}
 	return getIPStackForFamilies(ipFamilies)
 }
+
+// CalculateDataStringForKubeletConfiguration returns a data string for the relevant fields of the kubelet configuration.
+func CalculateDataStringForKubeletConfiguration(kubeletConfiguration *gardencorev1beta1.KubeletConfig) []string {
+	var data []string
+
+	if kubeletConfiguration == nil {
+		return nil
+	}
+
+	if resources := v1beta1helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
+		data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
+	}
+	if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
+		data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
+			ptr.Deref(eviction.ImageFSAvailable, ""),
+			ptr.Deref(eviction.ImageFSInodesFree, ""),
+			ptr.Deref(eviction.MemoryAvailable, ""),
+			ptr.Deref(eviction.NodeFSAvailable, ""),
+			ptr.Deref(eviction.NodeFSInodesFree, ""),
+		))
+	}
+
+	if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
+		data = append(data, *policy)
+	}
+
+	return data
+}

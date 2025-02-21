@@ -14,6 +14,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -1401,4 +1402,51 @@ var _ = Describe("Shoot", func() {
 		Entry("dual-stack shoot (ipv4 preferred)", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}}}}, "dual-stack"),
 		Entry("dual-stack shoot (ipv6 preferred)", &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6, gardencorev1beta1.IPFamilyIPv4}}}}, "dual-stack"),
 	)
+
+	Describe("CalculateDataStringForKubeletConfiguration", func() {
+		var kubeletConfig *gardencorev1beta1.KubeletConfig
+
+		BeforeEach(func() {
+			kubeletConfig = &gardencorev1beta1.KubeletConfig{}
+		})
+
+		It("should return nil if the kubelet config is nil", func() {
+			Expect(CalculateDataStringForKubeletConfiguration(nil)).To(BeNil())
+		})
+
+		It("should return an empty string if the kubelet config is empty", func() {
+			Expect(CalculateDataStringForKubeletConfiguration(kubeletConfig)).To(BeEmpty())
+		})
+
+		It("should return the correct data string for the kubelet config", func() {
+			kubeletConfig = &gardencorev1beta1.KubeletConfig{
+				CPUManagerPolicy: ptr.To("static"),
+				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+					ImageFSAvailable:  ptr.To("200Mi"),
+					ImageFSInodesFree: ptr.To("1k"),
+					MemoryAvailable:   ptr.To("200Mi"),
+					NodeFSAvailable:   ptr.To("200Mi"),
+					NodeFSInodesFree:  ptr.To("1k"),
+				},
+				SystemReserved: &gardencorev1beta1.KubeletConfigReserved{
+					CPU:              ptr.To(resource.MustParse("1m")),
+					Memory:           ptr.To(resource.MustParse("1Mi")),
+					PID:              ptr.To(resource.MustParse("1k")),
+					EphemeralStorage: ptr.To(resource.MustParse("100Gi")),
+				},
+				KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
+					CPU:              ptr.To(resource.MustParse("100m")),
+					Memory:           ptr.To(resource.MustParse("2Gi")),
+					PID:              ptr.To(resource.MustParse("15k")),
+					EphemeralStorage: ptr.To(resource.MustParse("42Gi")),
+				},
+			}
+
+			Expect(CalculateDataStringForKubeletConfiguration(kubeletConfig)).To(ConsistOf(
+				"101m-2049Mi-16k-142Gi",
+				"200Mi-1k-200Mi-200Mi-1k",
+				"static",
+			))
+		})
+	})
 })
