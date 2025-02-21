@@ -368,7 +368,12 @@ for node in $nodes; do
 
   # TODO(marc1404): Remove once kindest/node uses runc >= v1.2.4
   # workaround issue with runc v1.2.3 provided by kindest/node:v1.32.0 by installing runc v1.2.4 manually (https://github.com/opencontainers/runc/pull/4555)
-  docker exec -i "$node" sh -c "bash -" < "$(dirname "$0")/../pkg/provider-local/node/patch-runc.sh"
+  if [ -n "${CI:-}" ]; then
+    echo "Installing runc on node $node from container filesystem"
+    docker cp /get-runc/runc "$node":/usr/local/sbin/runc
+  else
+    docker exec -i "$node" sh -c "bash -" < "$(dirname "$0")/../pkg/provider-local/node/patch-runc.sh"
+  fi
 done
 
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
