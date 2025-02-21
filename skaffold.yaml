@@ -250,11 +250,13 @@ build:
             - pkg/api/extensions
             - pkg/api/indexer
             - pkg/apis/core
+            - pkg/apis/core/helper
             - pkg/apis/core/install
             - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
             - pkg/apis/core/v1beta1/constants
             - pkg/apis/core/v1beta1/helper
+            - pkg/apis/core/validation
             - pkg/apis/extensions
             - pkg/apis/extensions/v1alpha1
             - pkg/apis/operations
@@ -346,7 +348,10 @@ build:
             - pkg/utils/timewindow
             - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
+            - pkg/utils/validation/apigroups
+            - pkg/utils/validation/cidr
             - pkg/utils/validation/features
+            - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - third_party/gopkg.in/yaml.v2
@@ -482,7 +487,6 @@ build:
             - pkg/client/kubernetes/cache
             - pkg/controllerutils
             - pkg/controllerutils/routes
-            - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/bootstrap/util
             - pkg/healthz
@@ -1359,7 +1363,6 @@ build:
             - pkg/controllerutils/predicate
             - pkg/controllerutils/reconciler
             - pkg/controllerutils/routes
-            - pkg/features
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/healthz
             - pkg/logger

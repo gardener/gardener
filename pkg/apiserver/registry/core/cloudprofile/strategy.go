@@ -107,11 +107,12 @@ func dropExpiredVersions(cloudProfile *core.CloudProfile) {
 	}
 }
 
-// TODO(Roncossek): Remove this function after Architecture(s) field is removed from MachineType and MachineImageVersion
+// DefaultBasedOnCapabilitiesDefinition sets default values for the CloudProfile based on the CapabilitiesDefinition.
 func DefaultBasedOnCapabilitiesDefinition(in *core.CloudProfile) {
+	// TODO(Roncossek): Remove this function after Architecture(s) field is removed from MachineType and MachineImageVersion
 	// with CapabilitiesDefinition no defaulting for Architecture is required
-	// as the capabilities.architecture field is used instead
-	if in.Spec.CapabilitiesDefinition != nil && len(in.Spec.CapabilitiesDefinition) > 0 {
+	// as the default is defined in the CloudProfile itself in Spec.CapabilitiesDefinition.architecture
+	if len(in.Spec.CapabilitiesDefinition) > 0 {
 		return
 	}
 
@@ -124,16 +125,13 @@ func DefaultBasedOnCapabilitiesDefinition(in *core.CloudProfile) {
 				b.Architectures = []string{v1beta1constants.ArchitectureAMD64}
 			}
 		}
-
 	}
-
 	for i := range in.Spec.MachineTypes {
 		machineType := &in.Spec.MachineTypes[i]
 		if machineType.Architecture == nil {
 			machineType.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
 		}
 	}
-
 }
 
 // TODO(rfranzke): Remove everything below this line and the legacy access restriction label after

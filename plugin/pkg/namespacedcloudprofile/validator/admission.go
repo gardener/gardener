@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -140,8 +139,6 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 		namespacedCloudProfile:    namespacedCloudProfile,
 		oldNamespacedCloudProfile: oldNamespacedCloudProfile,
 	}
-	validationContext.DefaultArchitecture()
-
 	if err := validationContext.validateMachineTypes(a); err != nil {
 		return err
 	}
@@ -171,7 +168,6 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 
 	for _, machineType := range c.namespacedCloudProfile.Spec.MachineTypes {
 		for _, parentMachineType := range c.parentCloudProfile.Spec.MachineTypes {
-
 			if parentMachineType.Name != machineType.Name {
 				continue
 			}
@@ -190,10 +186,6 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 				return apierrors.NewBadRequest(fmt.Sprintf("Parent CloudProfile defines CapabilitiesDefinition. NamespacedCloudProfile machineTypes must define capabilities according to its definition: %+v", machineType))
 			}
 		} else {
-			errorList := validation.ValidateArchitecture(machineType.Architecture, field.NewPath("spec", "machineTypes", "architecture"))
-			if len(errorList) != 0 {
-				return apierrors.NewBadRequest(fmt.Sprintf("NamespacedCloudProfile machineTypes must define architecture: %+v", machineType))
-			}
 			if validation.IsDefined(&machineType.Capabilities) {
 				return apierrors.NewBadRequest(fmt.Sprintf("Parent CloudProfile does not define CapabilitiesDefinition. NamespacedCloudProfile machineTypes must not define capabilities: %+v", machineType))
 			}
@@ -355,17 +347,6 @@ func (c *validationContext) validateSimulatedCloudProfileStatusMergeResult(_ adm
 		return fmt.Errorf("error while validating merged NamespacedCloudProfile: %+v", errs)
 	}
 	return nil
-}
-
-func (c *validationContext) DefaultArchitecture() {
-	var capabilitiesDefinition = (gardencore.Capabilities)(c.parentCloudProfile.Spec.CapabilitiesDefinition)
-	if !validation.IsDefined(&capabilitiesDefinition) {
-		for i, machineType := range c.namespacedCloudProfile.Spec.MachineTypes {
-			if machineType.Architecture == nil {
-				c.namespacedCloudProfile.Spec.MachineTypes[i].Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
-			}
-		}
-	}
 }
 
 // ValidateSimulatedNamespacedCloudProfileStatus merges the parent CloudProfile and the created or updated NamespacedCloudProfile
