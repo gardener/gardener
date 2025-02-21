@@ -815,16 +815,16 @@ var _ = Describe("Strategy", func() {
 		Context("seed names", func() {
 			It("should correctly add the seed labels", func() {
 				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "foo", "bar")
-				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "seed.gardener.cloud/foo", "true")
+				metav1.SetMetaDataLabel(&shoot.ObjectMeta, "name.seed.gardener.cloud/foo", "true")
 				shoot.Spec.SeedName = ptr.To("spec-seed")
 				shoot.Status.SeedName = ptr.To("status-seed")
 
 				strategy.Canonicalize(shoot)
 
 				Expect(shoot.Labels).To(Equal(map[string]string{
-					"foo":                             "bar",
-					"seed.gardener.cloud/spec-seed":   "true",
-					"seed.gardener.cloud/status-seed": "true",
+					"foo":                                  "bar",
+					"name.seed.gardener.cloud/spec-seed":   "true",
+					"name.seed.gardener.cloud/status-seed": "true",
 				}))
 			})
 		})
