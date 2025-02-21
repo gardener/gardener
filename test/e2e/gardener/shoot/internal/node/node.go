@@ -25,8 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/test/framework"
-	"github.com/gardener/gardener/test/utils/access"
+	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
 const nodeCriticalDaemonSetName = "e2e-test-node-critical"
@@ -35,79 +34,81 @@ const waitForCSINodeAnnotation = v1beta1constants.AnnotationPrefixWaitForCSINode
 const driverName = "foo.driver.example.org"
 
 // VerifyNodeCriticalComponentsBootstrapping tests the node readiness feature (see docs/usage/advanced/node-readiness.md).
-func VerifyNodeCriticalComponentsBootstrapping(parentCtx context.Context, f *framework.ShootFramework) {
-	ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
-	defer cancel()
+func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
+	GinkgoHelper()
 
-	shootClientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
-	ExpectWithOffset(1, err).To(Succeed())
+	var technicalID string
 
-	var (
-		seedClient  = f.SeedClient.Client()
-		shootClient = shootClientSet.Client()
-		technicalID = f.Shoot.Status.TechnicalID
-	)
+	It("Create ManagedResources for shoot with broken node-critical components", func(ctx SpecContext) {
+		technicalID = s.Shoot.Status.TechnicalID
+		createOrUpdateNodeCriticalManagedResource(ctx, s.SeedClient, s.ShootClient, technicalID, nodeCriticalDaemonSetName, "non-existing", false)
+		createOrUpdateNodeCriticalManagedResource(ctx, s.SeedClient, s.ShootClient, technicalID, csiNodeDaemonSetName, "non-existing", true)
+	}, SpecTimeout(time.Minute))
 
-	By("Create ManagedResources for shoot with broken node-critical components")
-	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, nodeCriticalDaemonSetName, "non-existing", false)
-	createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, csiNodeDaemonSetName, "non-existing", true)
-	DeferCleanup(func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		cleanupNodeCriticalManagedResource(cleanupCtx, seedClient, technicalID, nodeCriticalDaemonSetName)
-		cleanupNodeCriticalManagedResource(cleanupCtx, seedClient, technicalID, csiNodeDaemonSetName)
+	BeforeAll(func() {
+		DeferCleanup(func(ctx SpecContext) {
+			cleanupNodeCriticalManagedResource(ctx, s.SeedClient, technicalID, nodeCriticalDaemonSetName)
+			cleanupNodeCriticalManagedResource(ctx, s.SeedClient, technicalID, csiNodeDaemonSetName)
+		}, NodeTimeout(time.Minute))
 	})
 
-	By("Delete Nodes and Machines to trigger new Node bootstrap")
-	EventuallyWithOffset(1, func(g Gomega) {
-		g.Expect(seedClient.DeleteAllOf(ctx, &machinev1alpha1.Machine{}, client.InNamespace(technicalID))).To(Succeed())
-		g.Expect(shootClient.DeleteAllOf(ctx, &corev1.Node{})).To(Succeed())
-	}).Should(Succeed())
+	It("Delete Nodes and Machines to trigger new Node bootstrap", func(ctx SpecContext) {
+		Eventually(func(g Gomega) {
+			g.Expect(s.SeedClient.DeleteAllOf(ctx, &machinev1alpha1.Machine{}, client.InNamespace(technicalID))).To(Succeed())
+			g.Expect(s.ShootClient.DeleteAllOf(ctx, &corev1.Node{})).To(Succeed())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 
-	By("Wait for new Node to be created")
 	var node *corev1.Node
-	EventuallyWithOffset(1, func(g Gomega) {
-		nodeList := &corev1.NodeList{}
-		g.Expect(shootClient.List(ctx, nodeList)).To(Succeed())
-		g.Expect(nodeList.Items).NotTo(BeEmpty(), "new Node should be created")
-		node = &nodeList.Items[0]
-	}).WithContext(ctx).WithTimeout(10 * time.Minute).Should(Succeed())
+	It("Wait for new Node to be created", func(ctx SpecContext) {
+		Eventually(func(g Gomega) {
+			nodeList := &corev1.NodeList{}
+			g.Expect(s.ShootClient.List(ctx, nodeList)).To(Succeed())
+			g.Expect(nodeList.Items).NotTo(BeEmpty(), "new Node should be created")
+			node = &nodeList.Items[0]
+		}).Should(Succeed())
+	}, SpecTimeout(10*time.Minute))
 
-	By("Verify node-critical components not ready taint is present")
-	ConsistentlyWithOffset(1, func(g Gomega) []corev1.Taint {
-		g.Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-		return node.Spec.Taints
-	}).Should(ContainElement(corev1.Taint{
-		Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
-		Effect: corev1.TaintEffectNoSchedule,
-	}))
+	It("Verify node-critical components not ready taint is present", func(ctx SpecContext) {
+		Consistently(func(g Gomega) []corev1.Taint {
+			g.Expect(s.ShootClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+			return node.Spec.Taints
+		}).Should(ContainElement(corev1.Taint{
+			Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
+			Effect: corev1.TaintEffectNoSchedule,
+		}))
+	}, SpecTimeout(10*time.Minute))
 
-	By("Update ManagedResources for shoot with working node-critical component")
-	// Use a container image that is already cached
-	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePauseContainer)
-	ExpectWithOffset(1, err).To(Succeed())
+	It("Update ManagedResources for shoot with working node-critical component", func(ctx SpecContext) {
+		// Use a container image that is already cached
+		image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNamePauseContainer)
+		Expect(err).To(Succeed())
 
-	nodeCriticalDaemonSet := createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, nodeCriticalDaemonSetName, image.String(), false)
-	csiNodeDaemonSet := createOrUpdateNodeCriticalManagedResource(ctx, seedClient, shootClient, technicalID, csiNodeDaemonSetName, image.String(), true)
+		nodeCriticalDaemonSet := createOrUpdateNodeCriticalManagedResource(ctx, s.SeedClient, s.ShootClient, technicalID, nodeCriticalDaemonSetName, image.String(), false)
+		csiNodeDaemonSet := createOrUpdateNodeCriticalManagedResource(ctx, s.SeedClient, s.ShootClient, technicalID, csiNodeDaemonSetName, image.String(), true)
 
-	waitForDaemonSetToBecomeHealthy(ctx, shootClient, nodeCriticalDaemonSet)
-	waitForDaemonSetToBecomeHealthy(ctx, shootClient, csiNodeDaemonSet)
+		waitForDaemonSetToBecomeHealthy(ctx, s.ShootClient, nodeCriticalDaemonSet)
+		waitForDaemonSetToBecomeHealthy(ctx, s.ShootClient, csiNodeDaemonSet)
+	}, SpecTimeout(5*time.Minute))
 
-	By("Patch CSINode object to contain required driver")
-	patchCSINodeObjectWithRequiredDriver(ctx, shootClient)
+	It("Patch CSINode object to contain required driver", func(ctx SpecContext) {
+		patchCSINodeObjectWithRequiredDriver(ctx, s.ShootClient)
+	}, SpecTimeout(time.Minute))
 
-	By("Verify node-critical components not ready taint is removed")
-	EventuallyWithOffset(1, func(g Gomega) []corev1.Taint {
-		g.Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-		return node.Spec.Taints
-	}).WithContext(ctx).WithTimeout(10 * time.Minute).ShouldNot(ContainElement(corev1.Taint{
-		Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
-		Effect: corev1.TaintEffectNoSchedule,
-	}))
+	It("Verify node-critical components not ready taint is removed", func(ctx SpecContext) {
+		Eventually(func(g Gomega) []corev1.Taint {
+			g.Expect(s.ShootClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+			return node.Spec.Taints
+		}).ShouldNot(ContainElement(corev1.Taint{
+			Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
+			Effect: corev1.TaintEffectNoSchedule,
+		}))
+	}, SpecTimeout(10*time.Minute))
 
-	cleanupNodeCriticalManagedResource(ctx, seedClient, technicalID, nodeCriticalDaemonSetName)
-	cleanupNodeCriticalManagedResource(ctx, seedClient, technicalID, csiNodeDaemonSetName)
+	It("Cleanup node-critical resources", func(ctx SpecContext) {
+		cleanupNodeCriticalManagedResource(ctx, s.SeedClient, technicalID, nodeCriticalDaemonSetName)
+		cleanupNodeCriticalManagedResource(ctx, s.SeedClient, technicalID, csiNodeDaemonSetName)
+	}, SpecTimeout(time.Minute))
 }
 
 func getLabels(name string) map[string]string {
@@ -117,6 +118,8 @@ func getLabels(name string) map[string]string {
 }
 
 func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, shootClient client.Client, namespace, name, image string, annotateAsCSINodePod bool) *appsv1.DaemonSet {
+	GinkgoHelper()
+
 	daemonSet := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -157,40 +160,46 @@ func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, 
 	}
 
 	data, err := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).AddAllAndSerialize(daemonSet)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
 
 	secretName, secret := managedresources.NewSecret(seedClient, namespace, name, data, true)
 	managedResource := managedresources.NewForShoot(seedClient, namespace, name, managedresources.LabelValueGardener, false).WithSecretRef(secretName)
 
-	ExpectWithOffset(1, secret.AddLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
-	ExpectWithOffset(1, managedResource.WithLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
+	Expect(secret.AddLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
+	Expect(managedResource.WithLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
 
 	By("Wait for DaemonSet to be applied in shoot")
-	EventuallyWithOffset(1, func(g Gomega) string {
+	Eventually(func(g Gomega) string {
 		g.Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(daemonSet), daemonSet)).To(Succeed())
 		return daemonSet.Spec.Template.Spec.Containers[0].Image
-	}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Equal(image))
+	}).Should(Equal(image))
 
 	return daemonSet
 }
 
 func waitForDaemonSetToBecomeHealthy(ctx context.Context, shootClient client.Client, daemonSet *appsv1.DaemonSet) {
+	GinkgoHelper()
+
 	By("Wait for DaemonSet to become healthy")
-	EventuallyWithOffset(1, func(g Gomega) {
+	Eventually(func(g Gomega) {
 		g.Expect(shootClient.Get(ctx, client.ObjectKeyFromObject(daemonSet), daemonSet)).To(Succeed())
 		g.Expect(health.CheckDaemonSet(daemonSet)).To(Succeed())
-	}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
+	}).Should(Succeed())
 }
 
 func patchCSINodeObjectWithRequiredDriver(ctx context.Context, shootClient client.Client) {
+	GinkgoHelper()
+
 	csiNodeList := &storagev1.CSINodeList{}
 
-	EventuallyWithOffset(1, func(g Gomega) {
+	Eventually(func(g Gomega) {
 		g.Expect(shootClient.List(ctx, csiNodeList)).To(Succeed())
 		g.Expect(csiNodeList.Items).To(HaveLen(1))
-	}).WithContext(ctx).WithTimeout(1 * time.Minute).Should(Succeed())
+	}).Should(Succeed())
 
-	csiNode := csiNodeList.Items[0].DeepCopy()
+	csiNode := csiNodeList.Items[0]
+	patch := client.MergeFrom(csiNode.DeepCopy())
+
 	csiNode.Spec.Drivers = []storagev1.CSINodeDriver{
 		{
 			Name:   driverName,
@@ -198,11 +207,17 @@ func patchCSINodeObjectWithRequiredDriver(ctx context.Context, shootClient clien
 		},
 	}
 
-	ExpectWithOffset(1, shootClient.Update(ctx, csiNode)).To(Succeed())
+	Eventually(func(g Gomega) {
+		g.Expect(shootClient.Patch(ctx, &csiNode, patch)).To(Succeed())
+	}).Should(Succeed())
 }
 
 func cleanupNodeCriticalManagedResource(ctx context.Context, seedClient client.Client, namespace, name string) {
+	GinkgoHelper()
+
 	By("Cleanup ManagedResource for shoot with node-critical component")
-	ExpectWithOffset(1, seedClient.DeleteAllOf(ctx, &resourcesv1alpha1.ManagedResource{}, client.InNamespace(namespace), client.MatchingLabels(getLabels(name)))).To(Succeed())
-	ExpectWithOffset(1, seedClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels(getLabels(name)))).To(Succeed())
+	Eventually(func(g Gomega) {
+		g.Expect(seedClient.DeleteAllOf(ctx, &resourcesv1alpha1.ManagedResource{}, client.InNamespace(namespace), client.MatchingLabels(getLabels(name)))).To(Succeed())
+		g.Expect(seedClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels(getLabels(name)))).To(Succeed())
+	}).Should(Succeed())
 }
