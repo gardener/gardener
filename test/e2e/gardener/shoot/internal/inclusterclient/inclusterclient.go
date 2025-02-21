@@ -6,6 +6,7 @@ package inclusterclient
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"maps"
 	"net"
@@ -97,6 +98,11 @@ func verifyAccessFromPod(ctx context.Context, f *framework.ShootFramework, podNa
 	By("Verify a typical API request works")
 	executeKubectl(ctx, f.ShootClient, podName, []string{"/kubectl", "get", "service", "kubernetes"}, Say(
 		`NAME.+\nkubernetes.+\n`,
+	))
+
+	By("Verify we reach the right API server")
+	executeKubectl(ctx, f.ShootClient, podName, []string{"/kubectl", "get", "configmaps", "-n", "kube-system", "cluster-identity", "-o", "yaml"}, Say(
+		fmt.Sprintf("cluster-identity: %s", *f.Shoot.Status.ClusterIdentity),
 	))
 }
 
@@ -305,14 +311,23 @@ func getRBACObjects() []client.Object {
 	}
 	objects = append(objects, roleBinding)
 
-	// permissions used by the test command: kubectl cluster-info
 	roleSystem := role.DeepCopy()
 	roleSystem.Namespace = metav1.NamespaceSystem
-	roleSystem.Rules = []rbacv1.PolicyRule{{
-		APIGroups: []string{""},
-		Resources: []string{"services"},
-		Verbs:     []string{"list"},
-	}}
+	roleSystem.Rules = []rbacv1.PolicyRule{
+		// permissions used by the test command: kubectl cluster-info
+		{
+			APIGroups: []string{""},
+			Resources: []string{"services"},
+			Verbs:     []string{"list"},
+		},
+		// permissions used by the test command: kubectl get configmaps -n kube-system cluster-identity
+		{
+			APIGroups:     []string{""},
+			Resources:     []string{"configmaps"},
+			ResourceNames: []string{"cluster-identity"},
+			Verbs:         []string{"get"},
+		},
+	}
 	objects = append(objects, roleSystem)
 
 	roleBindingSystem := roleBinding.DeepCopy()
