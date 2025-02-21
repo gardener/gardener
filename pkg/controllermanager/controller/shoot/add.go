@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/quota"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/retry"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/state/finalizer"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/statuslabel"
 )
 
@@ -65,6 +66,10 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 	if err := (&statuslabel.Reconciler{
 		Config: *cfg.Controllers.ShootStatusLabel,
 	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding statuslabel reconciler: %w", err)
+	}
+
+	if err := (&finalizer.Reconciler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding statuslabel reconciler: %w", err)
 	}
 
