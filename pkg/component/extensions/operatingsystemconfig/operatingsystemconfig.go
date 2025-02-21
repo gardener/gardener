@@ -1081,7 +1081,7 @@ func KeyV2(
 	}
 
 	if !inPlaceUpdate {
-		data = append(data, v1beta1helper.CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)
+		data = append(data, gardenerutils.CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)
 	}
 
 	var result string
