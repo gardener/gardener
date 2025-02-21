@@ -47,7 +47,7 @@ spec:
         # providerConfig:
         #   <some-machine-image-specific-configuration>
       # architecture: <some-cpu-architecture>
-    # updateStrategy: AutoInPlaceUpdate # AutoRollingUpdate/AutoInPlaceUpdate/ManualInPlaceUpdate defaulted to AutoRollingUpdate
+    # updateStrategy: AutoInPlaceUpdate # AutoRollingUpdate/AutoInPlaceUpdate/ManualInPlaceUpdate, defaulted to AutoRollingUpdate
     # clusterAutoscaler:
     #   scaleDownUtilizationThreshold: 0.5
     #   scaleDownGpuUtilizationThreshold: 0.5

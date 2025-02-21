@@ -85,18 +85,9 @@ type OperatingSystemConfigSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Files []File `json:"files,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
-	// OperatingSystemVersion is the version of the operating system.
+	// InPlaceUpdates contains the configuration for in-place updates.
 	// +optional
-	OperatingSystemVersion *string `json:"osVersion,omitempty"`
-	// KubeletVersion is the version of the Kubelet.
-	// +optional
-	KubeletVersion *string `json:"kubeletVersion,omitempty"`
-	// CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.
-	// +optional
-	CredentialsRotation *CredentialsRotation `json:"credentialsRotation,omitempty"`
-	// KubeletConfigHash is the hash calculated on the fields relevant to in-place update of the Kubelet configuration.
-	// +optional
-	KubeletConfigHash *string `json:"kubeletConfigHash,omitempty"`
+	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty"`
 }
 
 // Unit is a unit for the operating system configuration (usually, a systemd unit).
@@ -217,7 +208,7 @@ type OperatingSystemConfigStatus struct {
 	CloudConfig *CloudConfig `json:"cloudConfig,omitempty"`
 	// InPlaceUpdates contains the configuration for in-place updates.
 	// +optional
-	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty"`
+	InPlaceUpdates *InPlaceUpdatesStatus `json:"inPlaceUpdates,omitempty"`
 }
 
 // CloudConfig contains the generated output for the given operating system
@@ -368,6 +359,17 @@ const (
 
 // InPlaceUpdates is a structure containing configuration for in-place updates.
 type InPlaceUpdates struct {
+	// OperatingSystemVersion is the version of the operating system.
+	OperatingSystemVersion string `json:"operatingSystemVersion"`
+	// KubeletVersion is the version of the kubelet.
+	KubeletVersion string `json:"kubelet"`
+	// CredentialsRotation is a structure containing information about the last initiation time of the certificate authority and service account key rotation.
+	// +optional
+	CredentialsRotation *CredentialsRotation `json:"credentialsRotation,omitempty"`
+}
+
+// InPlaceUpdatesStatus is a structure containing configuration for in-place updates.
+type InPlaceUpdatesStatus struct {
 	// OSUpdate defines the configuration for the operating system update.
 	// +optional
 	OSUpdate *OSUpdate `json:"osUpdate,omitempty"`
@@ -376,8 +378,7 @@ type InPlaceUpdates struct {
 // OSUpdate contains the configuration for the operating system update.
 type OSUpdate struct {
 	// Command defines the command responsible for performing machine image updates.
-	// +optional
-	Command *string `json:"command,omitempty"`
+	Command string `json:"command"`
 	// Args provides a mechanism to pass additional arguments or flags to the Command.
 	// +optional
 	Args []string `json:"args,omitempty"`
