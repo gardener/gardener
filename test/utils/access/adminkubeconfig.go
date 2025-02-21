@@ -61,7 +61,7 @@ func RequestAdminKubeconfigForShoot(ctx context.Context, gardenClient kubernetes
 	return adminKubeconfigRequest.Status.Kubeconfig, nil
 }
 
-// RequestViewerKubeconfigForShoot requests an viewer kubeconfig for the given shoot.
+// RequestViewerKubeconfigForShoot requests a viewer kubeconfig for the given shoot.
 func RequestViewerKubeconfigForShoot(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, expirationSeconds *int64) ([]byte, error) {
 	viewerKubeconfigRequest := &authenticationv1alpha1.ViewerKubeconfigRequest{
 		Spec: authenticationv1alpha1.ViewerKubeconfigRequestSpec{
