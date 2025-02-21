@@ -1522,7 +1522,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 		}
 	)
 
-	FDescribe("CloudProfile with Feature CloudProfileCapabilities == false", func() {
+	Describe("CloudProfile with Feature CloudProfileCapabilities == false", func() {
 		var cp *core.CloudProfile
 
 		BeforeEach(func() {
@@ -1537,7 +1537,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 				"Field": Equal("spec.capabilitiesDefinition"),
 			}))))
 		})
-		It("should reject profile with capabilitiesDefinition but keep validating if the cloud profile itself is valid", func() {
+		It("should reject profile with capabilitiesDefinition but keep validating if the cloud profile itself is valid if featureGate was active", func() {
 			cp.Spec.MachineTypes[0].Architecture = machineArchitecture
 			errorList := ValidateCloudProfile(cp)
 			Expect(errorList).To(ConsistOf([]gomegatypes.GomegaMatcher{
@@ -1545,8 +1545,9 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.capabilitiesDefinition"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.machineTypes[0].architecture"),
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.machineTypes[0].architecture"),
+					"Detail": Equal("must not be set when capabilities are used and capabilitiesDefinition is set"),
 				})),
 			}))
 

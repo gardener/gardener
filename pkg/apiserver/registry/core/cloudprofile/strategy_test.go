@@ -270,7 +270,7 @@ var _ = Describe("Strategy", func() {
 			Context("when the cloudProfile HAS capabilitiesDefinition on Create", func() {
 				It("should NOT default the architecture for MachineImageVersion and MachineType", func() {
 					cloudProfile := cloudProfileBase.DeepCopy()
-					cloudProfile.Spec.CapabilitiesDefinition = core.Capabilities{}
+					cloudProfile.Spec.CapabilitiesDefinition = core.Capabilities{"architecture": "arm64"}
 					cloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), cloudProfile)
 
 					verifyEmptyArchitectures(cloudProfile)
@@ -291,7 +291,7 @@ var _ = Describe("Strategy", func() {
 			Context("when the cloudProfile HAS capabilitiesDefinition on Update", func() {
 				It("should NOT default the architecture for MachineImageVersion and MachineType", func() {
 					cloudProfile := cloudProfileBase.DeepCopy()
-					cloudProfile.Spec.CapabilitiesDefinition = core.Capabilities{}
+					cloudProfile.Spec.CapabilitiesDefinition = core.Capabilities{"architecture": "arm64"}
 					cloudprofileregistry.Strategy.PrepareForUpdate(context.TODO(), cloudProfile, cloudProfile)
 
 					verifyEmptyArchitectures(cloudProfile)
