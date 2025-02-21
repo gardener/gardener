@@ -186,8 +186,11 @@ func (shootStrategy) Canonicalize(obj runtime.Object) {
 	gardenerutils.MaintainSeedNameLabels(shoot, shoot.Spec.SeedName, shoot.Status.SeedName)
 	syncLegacyAccessRestrictionLabelWithNewField(shoot)
 
-	// TODO(shafeeqes): Remove this in gardener v1.112
+	// TODO(shafeeqes): Remove this in gardener v1.120
 	shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = nil
+	if shoot.Status.Credentials != nil && shoot.Status.Credentials.Rotation != nil {
+		shoot.Status.Credentials.Rotation.Kubeconfig = nil
+	}
 }
 
 func (shootStrategy) AllowCreateOnUpdate() bool {
