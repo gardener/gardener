@@ -5,7 +5,6 @@
 package shoot
 
 import (
-	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -15,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
-	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -23,111 +22,129 @@ import (
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/install"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(shoot *gardencorev1beta1.Shoot) {
-		f := defaultShootCreationFramework()
-		f.Shoot = shoot
-
-		It("Create, Hibernate, Wake up and Delete Shoot", Offset(1), func() {
-			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
-			defer cancel()
-
-			if shoot.Spec.CloudProfileName == nil && shoot.Spec.CloudProfile != nil && shoot.Spec.CloudProfile.Kind == "NamespacedCloudProfile" {
-				By("Create NamespacedCloudProfile")
-				originalNamespacedCloudProfile := e2e.DefaultNamespacedCloudProfile()
+	Describe("Create, Hibernate, Wake up and Delete Shoot", func() {
+		test := func(s *ShootContext) {
+			if s.Shoot.Spec.CloudProfileName == nil && s.Shoot.Spec.CloudProfile != nil && s.Shoot.Spec.CloudProfile.Kind == "NamespacedCloudProfile" {
+				originalNamespacedCloudProfile := DefaultNamespacedCloudProfile()
 				namespacedCloudProfile := addCustomMachineImage(originalNamespacedCloudProfile.DeepCopy())
-				Expect(f.GardenClient.Client().Create(ctx, namespacedCloudProfile)).To(Succeed())
-				DeferCleanup(func() {
-					By("Delete NamespacedCloudProfile")
-					Expect(f.GardenClient.Client().Delete(parentCtx, namespacedCloudProfile)).To(Or(Succeed(), BeNotFoundError()))
+
+				BeforeAll(func() {
+					DeferCleanup(func(ctx SpecContext) {
+						Eventually(func(g Gomega) {
+							g.Expect(s.GardenClient.Delete(ctx, namespacedCloudProfile)).To(Or(Succeed(), BeNotFoundError()))
+						}).Should(Succeed())
+					}, NodeTimeout(15*time.Minute))
 				})
 
-				By("Wait for new NamespacedCloudProfile to be reconciled")
-				Eventually(func(g Gomega) {
-					g.Expect(f.GardenClient.Client().Get(ctx, k8sclient.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-					g.Expect(namespacedCloudProfile.Generation).To(Equal(namespacedCloudProfile.Status.ObservedGeneration),
-						"NamespacedCloudProfile status has been reconciled")
-				}).WithContext(ctx).WithPolling(10 * time.Second).WithTimeout(60 * time.Second).Should(Succeed())
+				It("Create NamespacedCloudProfile", func(ctx SpecContext) {
+					Eventually(func(g Gomega) {
+						g.Expect(s.GardenClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+					}).Should(Succeed())
+				}, SpecTimeout(time.Minute))
 
-				By("Check for correct mutation of the status provider config")
-				utilruntime.Must(install.AddToScheme(f.GardenClient.Client().Scheme()))
-				decoder := serializer.NewCodecFactory(f.GardenClient.Client().Scheme(), serializer.EnableStrict).UniversalDecoder()
-				cloudProfileConfig := &api.CloudProfileConfig{}
-				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig).To(Not(BeNil()))
-				Expect(util.Decode(decoder, namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw, cloudProfileConfig)).To(Succeed())
-				Expect(cloudProfileConfig.MachineImages).To(ContainElement(MatchFields(IgnoreExtras, Fields{
-					"Name": Equal("nscpfl-machine-image-1"),
-					"Versions": ContainElements(
-						api.MachineImageVersion{Version: "1.1", Image: "local/image:1.1"},
-					),
-				})))
+				It("Wait for new NamespacedCloudProfile to be reconciled", func(ctx SpecContext) {
+					Eventually(func(g Gomega) {
+						g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+						g.Expect(namespacedCloudProfile.Generation).To(Equal(namespacedCloudProfile.Status.ObservedGeneration),
+							"NamespacedCloudProfile status has been reconciled")
+					}).WithPolling(5 * time.Second).Should(Succeed())
+				}, SpecTimeout(time.Minute))
 
-				By("Remove custom machine image again")
-				Expect(f.GardenClient.Client().Update(ctx, originalNamespacedCloudProfile)).To(Succeed())
-				Eventually(func(g Gomega) {
-					g.Expect(f.GardenClient.Client().Get(ctx, k8sclient.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-					g.Expect(namespacedCloudProfile.Generation).To(Equal(namespacedCloudProfile.Status.ObservedGeneration))
+				It("Check for correct mutation of the status provider config", func() {
+					utilruntime.Must(install.AddToScheme(s.GardenClient.Scheme()))
+					decoder := serializer.NewCodecFactory(s.GardenClient.Scheme(), serializer.EnableStrict).UniversalDecoder()
+					cloudProfileConfig := &api.CloudProfileConfig{}
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig).To(Not(BeNil()))
+					Expect(util.Decode(decoder, namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw, cloudProfileConfig)).To(Succeed())
+					Expect(cloudProfileConfig.MachineImages).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+						"Name": Equal("nscpfl-machine-image-1"),
+						"Versions": ContainElements(
+							api.MachineImageVersion{Version: "1.1", Image: "local/image:1.1"},
+						),
+					})))
+				})
+
+				It("Remove custom machine image again", func(ctx SpecContext) {
+					Eventually(func(g Gomega) {
+						patch := client.MergeFrom(namespacedCloudProfile)
+						g.Expect(s.GardenClient.Patch(ctx, originalNamespacedCloudProfile, patch)).To(Succeed())
+					}).Should(Succeed())
+
+					Eventually(func(g Gomega) {
+						g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+						g.Expect(namespacedCloudProfile.Generation).To(Equal(namespacedCloudProfile.Status.ObservedGeneration))
+						g.Expect(namespacedCloudProfile.Spec.MachineImages).To(Equal(originalNamespacedCloudProfile.Spec.MachineImages))
+						g.Expect(namespacedCloudProfile.Spec.ProviderConfig).To(Equal(originalNamespacedCloudProfile.Spec.ProviderConfig))
+					}).WithPolling(5 * time.Second).Should(Succeed())
+				}, SpecTimeout(time.Minute))
+			}
+
+			ItShouldCreateShoot(s)
+			ItShouldWaitForShootToBeReconciledAndHealthy(s)
+			ItShouldInitializeShootClient(s)
+			ItShouldGetResponsibleSeed(s)
+			ItShouldInitializeSeedClient(s)
+
+			//TODO: add inclusterclient.VerifyInClusterAccessToAPIServer once it got refactored
+
+			if !v1beta1helper.IsWorkerless(s.Shoot) {
+				node.VerifyNodeCriticalComponentsBootstrapping(s)
+			}
+
+			It("Hibernate Shoot", func(ctx SpecContext) {
+				Eventually(func() error {
+					patch := client.MergeFrom(s.Shoot.DeepCopy())
+					s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+						Enabled: ptr.To(true),
+					}
+
+					return s.GardenClient.Patch(ctx, s.Shoot, patch)
 				}).Should(Succeed())
-			}
+			}, SpecTimeout(time.Minute))
 
-			By("Create Shoot")
-			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
-			f.Verify()
+			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 
-			// TODO: add back VerifyInClusterAccessToAPIServer once this test has been refactored to ordered containers
-			// if !v1beta1helper.IsWorkerless(s.Shoot) {
-			// 	inclusterclient.VerifyInClusterAccessToAPIServer(s)
-			// }
+			It("Wake up Shoot", func(ctx SpecContext) {
+				Eventually(func() error {
+					patch := client.MergeFrom(s.Shoot.DeepCopy())
+					s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+						Enabled: ptr.To(false),
+					}
 
-			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				By("Verify Bootstrapping of Nodes with node-critical components")
-				// We verify the node readiness feature in this specific e2e test because it uses a single-node shoot cluster.
-				// The default shoot e2e test deals with multiple nodes, deleting all of them and waiting for them to be recreated
-				// might increase the test duration undesirably.
-				node.VerifyNodeCriticalComponentsBootstrapping(parentCtx, f.ShootFramework)
-			}
+					return s.GardenClient.Patch(ctx, s.Shoot, patch)
+				}).Should(Succeed())
+			}, SpecTimeout(time.Minute))
 
-			By("Hibernate Shoot")
-			ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
-			defer cancel()
-			Expect(f.HibernateShoot(ctx, f.Shoot)).To(Succeed())
+			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 
-			By("Wake up Shoot")
-			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
-			defer cancel()
-			Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
+			//TODO: add inclusterclient.VerifyInClusterAccessToAPIServer once it got refactored
 
-			// TODO: add back VerifyInClusterAccessToAPIServer once this test has been refactored to ordered containers
-			// if !v1beta1helper.IsWorkerless(s.Shoot) {
-			// 	inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, s)
-			// }
-
-			By("Delete Shoot")
-			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
-			defer cancel()
-			Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
-		})
-	}
-
-	Context("Shoot with workers", Label("basic"), func() {
-		test(e2e.DefaultShoot("e2e-wake-up"))
-	})
-
-	Context("Workerless Shoot", Label("workerless"), func() {
-		test(e2e.DefaultWorkerlessShoot("e2e-wake-up"))
-	})
-
-	Context("Shoot with workers with NamespacedCloudProfile", Label("basic"), func() {
-		shoot := e2e.DefaultShoot("e2e-wake-up-ncp")
-		shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
-			Kind: "NamespacedCloudProfile",
-			Name: "my-profile",
+			ItShouldDeleteShoot(s)
+			ItShouldWaitForShootToBeDeleted(s)
 		}
-		test(shoot)
+
+		Context("Shoot with workers", Label("basic"), Ordered, func() {
+			test(NewTestContext().ForShoot(DefaultShoot("e2e-wake-up")))
+		})
+
+		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-wake-up")))
+		})
+
+		Context("Shoot with workers with NamespacedCloudProfile", Label("basic"), Ordered, func() {
+			shoot := DefaultShoot("e2e-wake-up-ncp")
+			shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+				Kind: "NamespacedCloudProfile",
+				Name: "my-profile",
+			}
+			test(NewTestContext().ForShoot(shoot))
+		})
 	})
 })
 
