@@ -11,15 +11,23 @@ import (
 	"net/http"
 	"os"
 	goruntime "runtime"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"go.uber.org/automaxprocs/maxprocs"
+	"golang.org/x/exp/maps"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -27,12 +35,17 @@ import (
 	"github.com/gardener/gardener/cmd/gardener-controller-manager/app/bootstrappers"
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/api/indexer"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
 	"github.com/gardener/gardener/pkg/controllerutils/routes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // Name is a const for the name of this component.
@@ -142,6 +155,108 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 	log.Info("Adding controllers to manager")
 	if err := controller.AddToManager(ctx, mgr, cfg); err != nil {
 		return fmt.Errorf("failed adding controllers to manager: %w", err)
+	}
+
+	// TODO(rfranzke): Remove this after Gardener v1.114 has been released and add code that cleans up all legacy
+	//  `seed.gardener.cloud/<name>=true` labels from these objects.
+	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		var fns []flow.TaskFn
+
+		prepareEmptyPatchTasks := func(list client.ObjectList, seedNamesFromObject func(obj client.Object) ([]*string, error)) error {
+			if err := mgr.GetClient().List(ctx, list); err != nil {
+				return fmt.Errorf("failed listing objects: %w", err)
+			}
+
+			return meta.EachListItem(list, func(o runtime.Object) error {
+				fns = append(fns, func(ctx context.Context) error {
+					obj := o.(client.Object)
+
+					if slices.ContainsFunc(maps.Keys(obj.GetLabels()), func(s string) bool {
+						return strings.HasPrefix(s, v1beta1constants.LabelPrefixSeedName)
+					}) {
+						return nil
+					}
+
+					gvk, err := apiutil.GVKForObject(obj, mgr.GetScheme())
+					if err != nil {
+						return fmt.Errorf("could not get GroupVersionKind from object %v: %w", obj, err)
+					}
+
+					mgr.GetLogger().Info("Adding new seed name labels", "gvk", gvk, "objectKey", client.ObjectKeyFromObject(obj))
+
+					seedNames, err := seedNamesFromObject(obj)
+					if err != nil {
+						return err
+					}
+
+					patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+					gardenerutils.MaintainSeedNameLabels(obj, seedNames...)
+					return mgr.GetClient().Patch(ctx, obj, patch)
+				})
+				return nil
+			})
+		}
+
+		if err := prepareEmptyPatchTasks(&gardencorev1beta1.BackupEntryList{}, func(obj client.Object) ([]*string, error) {
+			backupEntry := obj.(*gardencorev1beta1.BackupEntry)
+			return []*string{backupEntry.Spec.SeedName, backupEntry.Status.SeedName}, nil
+		}); err != nil {
+			return fmt.Errorf("failed computing tasks for backup entries: %w", err)
+		}
+
+		if err := prepareEmptyPatchTasks(&gardencorev1beta1.ShootList{}, func(obj client.Object) ([]*string, error) {
+			shoot := obj.(*gardencorev1beta1.Shoot)
+			return []*string{shoot.Spec.SeedName, shoot.Status.SeedName}, nil
+		}); err != nil {
+			return fmt.Errorf("failed computing tasks for shoots: %w", err)
+		}
+
+		if err := prepareEmptyPatchTasks(&gardencorev1beta1.SeedList{}, func(obj client.Object) ([]*string, error) {
+			seed := obj.(*gardencorev1beta1.Seed)
+
+			seedNames := []*string{&seed.Name}
+
+			managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: seed.Name, Namespace: v1beta1constants.GardenNamespace}}
+			if err := mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return nil, fmt.Errorf("failed to get managed seed %q: %v", seed.Name, err)
+				}
+			} else if managedSeed.Spec.Shoot != nil {
+				shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: managedSeed.Spec.Shoot.Name, Namespace: managedSeed.Namespace}}
+				if err := mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
+					return nil, fmt.Errorf("failed to get shoot %s for managed seed %q: %v", managedSeed.Spec.Shoot.Name, managedSeed.Name, err)
+				}
+				seedNames = append(seedNames, shoot.Spec.SeedName)
+			}
+
+			return seedNames, nil
+		}); err != nil {
+			return fmt.Errorf("failed computing tasks for seeds: %w", err)
+		}
+
+		if err := prepareEmptyPatchTasks(&seedmanagementv1alpha1.ManagedSeedList{}, func(obj client.Object) ([]*string, error) {
+			managedSeed := obj.(*seedmanagementv1alpha1.ManagedSeed)
+
+			if managedSeed.Spec.Shoot == nil {
+				return nil, nil
+			}
+
+			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: managedSeed.Spec.Shoot.Name, Namespace: managedSeed.Namespace}}
+			if err := mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil, nil
+				}
+				return nil, err
+			}
+
+			return []*string{shoot.Spec.SeedName}, nil
+		}); err != nil {
+			return fmt.Errorf("failed computing tasks for managed seeds: %w", err)
+		}
+
+		return flow.Parallel(fns...)(ctx)
+	})); err != nil {
+		return fmt.Errorf("failed adding seed name label migration runnable to manager: %w", err)
 	}
 
 	log.Info("Starting manager")
