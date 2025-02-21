@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -41,13 +40,9 @@ var _ = Describe("DependencyWatchdog", func() {
 		dwd              component.DeployWaiter
 		manifests        []string
 		expectedManifest []string
-
-		kubernetesVersion *semver.Version
 	)
 
 	BeforeEach(func() {
-		kubernetesVersion = semver.MustParse("1.25.0")
-
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 	})
 
@@ -409,8 +404,7 @@ status: {}
 					return out
 				}
 
-				podDisruptionYAMLFor = func(k8sGreaterEquals126 bool) string {
-					out := `apiVersion: policy/v1
+				podDisruptionYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -423,23 +417,16 @@ spec:
   selector:
     matchLabels:
       app: ` + dwdName + `
-`
-					if k8sGreaterEquals126 {
-						out += `  unhealthyPodEvictionPolicy: AlwaysAllow
-`
-					}
-					out += `status:
+  unhealthyPodEvictionPolicy: AlwaysAllow
+status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
-					return out
-				}
 			)
 
 			JustBeforeEach(func() {
-				values.KubernetesVersion = kubernetesVersion
 				dwd = NewBootstrapper(c, namespace, values)
 
 				managedResource = &resourcesv1alpha1.ManagedResource{
@@ -456,70 +443,53 @@ spec:
 				}
 			})
 
-			Context("Different kubernetes versions", func() {
-				JustBeforeEach(func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+			It("should successfully deploy all resources for role "+string(values.Role), func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
-					Expect(dwd.Deploy(ctx)).To(Succeed())
+				Expect(dwd.Deploy(ctx)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					expectedMr := &resourcesv1alpha1.ManagedResource{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            managedResource.Name,
-							Namespace:       managedResource.Namespace,
-							Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
-							ResourceVersion: "1",
-						},
-						Spec: resourcesv1alpha1.ManagedResourceSpec{
-							Class: ptr.To("seed"),
-							SecretRefs: []corev1.LocalObjectReference{{
-								Name: managedResource.Spec.SecretRefs[0].Name,
-							}},
-							KeepObjects: ptr.To(false),
-						},
-					}
-					utilruntime.Must(references.InjectAnnotations(expectedMr))
-					Expect(managedResource).To(DeepEqual(expectedMr))
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						Labels:          map[string]string{"gardener.cloud/role": "seed-system-component"},
+						ResourceVersion: "1",
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: ptr.To("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResource.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
 
-					managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-					Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-					Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
-					Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
-					var err error
-					manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
-					Expect(err).NotTo(HaveOccurred())
+				var err error
+				manifests, err = test.ExtractManifestsFromManagedResourceData(managedResourceSecret.Data)
+				Expect(err).NotTo(HaveOccurred())
 
-					expectedManifest = []string{
-						clusterRoleYAMLFor(values.Role),
-						clusterRoleBindingYAML,
-						configMapYAMLFor(values.Role),
-						deploymentYAMLFor(values.Role),
-						roleYAMLFor(values.Role),
-						roleBindingYAML,
-						serviceAccountYAML,
-						vpaYAMLFor(values.Role),
-					}
-				})
+				expectedManifest = []string{
+					clusterRoleYAMLFor(values.Role),
+					clusterRoleBindingYAML,
+					configMapYAMLFor(values.Role),
+					deploymentYAMLFor(values.Role),
+					podDisruptionYAML,
+					roleYAMLFor(values.Role),
+					roleBindingYAML,
+					serviceAccountYAML,
+					vpaYAMLFor(values.Role),
+				}
 
-				Context("kubernetes versions < 1.26", func() {
-					It("should successfully deploy all resources for role "+string(values.Role), func() {
-						expectedManifest = append(expectedManifest, podDisruptionYAMLFor(false))
-						Expect(manifests).To(ConsistOf(expectedManifest))
-					})
-				})
-
-				Context("kubernetes versions >= 1.26", func() {
-					BeforeEach(func() {
-						kubernetesVersion = semver.MustParse("1.26.4")
-					})
-
-					It("should successfully deploy all resources for role "+string(values.Role), func() {
-						expectedManifest = append(expectedManifest, podDisruptionYAMLFor(true))
-						Expect(manifests).To(ConsistOf(expectedManifest))
-					})
-				})
+				Expect(manifests).To(ConsistOf(expectedManifest))
 			})
 
 			It("should successfully destroy all resources for role "+string(values.Role), func() {

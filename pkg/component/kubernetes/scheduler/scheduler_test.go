@@ -41,7 +41,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("KubeScheduler", func() {
@@ -113,34 +112,26 @@ var _ = Describe("KubeScheduler", func() {
 		}
 
 		pdbMaxUnavailable = intstr.FromInt32(1)
-		pdbFor            = func(runtimeVersion *semver.Version) *policyv1.PodDisruptionBudget {
-			pdb := &policyv1.PodDisruptionBudget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pdbName,
-					Namespace: namespace,
-					Labels: map[string]string{
+		pdb               = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pdbName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "scheduler",
+				},
+				ResourceVersion: "1",
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &pdbMaxUnavailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
 						"app":  "kubernetes",
 						"role": "scheduler",
 					},
-					ResourceVersion: "1",
 				},
-				Spec: policyv1.PodDisruptionBudgetSpec{
-					MaxUnavailable: &pdbMaxUnavailable,
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app":  "kubernetes",
-							"role": "scheduler",
-						},
-					},
-				},
-			}
-
-			unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
-			if versionutils.ConstraintK8sGreaterEqual126.Check(runtimeVersion) {
-				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-			}
-
-			return pdb
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
 		}
 
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -599,7 +590,7 @@ var _ = Describe("KubeScheduler", func() {
 					},
 				}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
-				Expect(actualPDB).To(DeepEqual(pdbFor(runtimeSemverVersion)))
+				Expect(actualPDB).To(DeepEqual(pdb))
 
 				actualPrometheusRule := &monitoringv1.PrometheusRule{
 					ObjectMeta: metav1.ObjectMeta{

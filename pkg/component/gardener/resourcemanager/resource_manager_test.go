@@ -853,6 +853,7 @@ var _ = Describe("ResourceManager", func() {
 						v1beta1constants.LabelApp:   "gardener-resource-manager",
 					},
 				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 		serviceMonitorFor = func(prometheusLabel string) *monitoringv1.ServiceMonitor {
@@ -1939,7 +1940,7 @@ subjects:
 			})
 
 			Context("should successfully deploy all resources (w/ shoot access secret)", func() {
-				JustBeforeEach(func() {
+				It("should successfully deploy all resources (w/ shoot access secret)", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: secret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 							Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
@@ -1978,6 +1979,11 @@ subjects:
 							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(deployment))
 							}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: pdb.Name}, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
+							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(pdb))
+							}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
 							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1997,42 +2003,13 @@ subjects:
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
 					)
-				})
 
-				Context("Kubernetes version < 1.26", func() {
-					It("should successfully deploy all resources (w/ shoot access secret)", func() {
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: pdb.Name}, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}))
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
-							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(pdb))
-							})
-
-						Expect(resourceManager.Deploy(ctx)).To(Succeed())
-					})
-				})
-
-				Context("Kubernetes version >= 1.26", func() {
-					BeforeEach(func() {
-						cfg.RuntimeKubernetesVersion = semver.MustParse("1.26.0")
-					})
-
-					It("should successfully deploy all resources (w/ shoot access secret)", func() {
-						unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
-						pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: pdb.Name}, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}))
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
-							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(pdb))
-							})
-
-						Expect(resourceManager.Deploy(ctx)).To(Succeed())
-					})
+					Expect(resourceManager.Deploy(ctx)).To(Succeed())
 				})
 			})
 
 			Context("should successfully deploy all resources (w/ bootstrap kubeconfig)", func() {
-				JustBeforeEach(func() {
+				It("should successfully deploy all resources (w/ bootstrap kubeconfig)", func() {
 					secretNameBootstrapKubeconfig := "bootstrap-kubeconfig"
 
 					secrets.BootstrapKubeconfig = &component.Secret{Name: secretNameBootstrapKubeconfig}
@@ -2081,6 +2058,11 @@ subjects:
 							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(deployment))
 							}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: pdb.Name}, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
+							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(pdb))
+							}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
 							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -2100,14 +2082,6 @@ subjects:
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
 					)
-				})
-
-				It("should successfully deploy all resources (w/ bootstrap kubeconfig)", func() {
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: pdb.Name}, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}))
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1.PodDisruptionBudget{}), gomock.Any()).
-						Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(pdb))
-						})
 
 					Expect(resourceManager.Deploy(ctx)).To(Succeed())
 				})

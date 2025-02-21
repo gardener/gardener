@@ -9,7 +9,6 @@ import (
 	"crypto"
 	"crypto/rand"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -560,7 +559,6 @@ var _ = Describe("GardenerDiscoveryServer", func() {
 		}
 
 		values = discoveryserver.Values{
-			RuntimeVersion:              semver.MustParse("1.26.4"),
 			Image:                       image,
 			Domain:                      "discovery.local.gardener.cloud",
 			WorkloadIdentityTokenIssuer: workloadIdentityIssuer,

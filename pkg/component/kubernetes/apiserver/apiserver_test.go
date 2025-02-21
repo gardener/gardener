@@ -131,8 +131,8 @@ var _ = Describe("KubeAPIServer", func() {
 		sm = fakesecretsmanager.New(c, namespace)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
-		version = semver.MustParse("1.25.1")
-		runtimeVersion = semver.MustParse("1.25.1")
+		version = semver.MustParse("1.28.1")
+		runtimeVersion = semver.MustParse("1.28.1")
 		namePrefix = ""
 	})
 
@@ -417,67 +417,32 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("PodDisruptionBudget", func() {
-			Context("Kubernetes version < 1.26", func() {
-				It("should successfully deploy the PDB resource", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(BeNotFoundError())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
-					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            podDisruptionBudget.Name,
-							Namespace:       podDisruptionBudget.Namespace,
-							ResourceVersion: "1",
-							Labels: map[string]string{
+			It("should successfully deploy the PDB resource", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
+
+				Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            podDisruptionBudget.Name,
+						Namespace:       podDisruptionBudget.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"app":  "kubernetes",
+							"role": "apiserver",
+						},
+					},
+					Spec: policyv1.PodDisruptionBudgetSpec{
+						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
 								"app":  "kubernetes",
 								"role": "apiserver",
 							},
 						},
-						Spec: policyv1.PodDisruptionBudgetSpec{
-							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app":  "kubernetes",
-									"role": "apiserver",
-								},
-							},
-						},
-					}))
-				})
-			})
-
-			Context("Kubernetes version >= 1.26", func() {
-				BeforeEach(func() {
-					runtimeVersion = semver.MustParse("1.26.4")
-				})
-
-				It("should successfully deploy the PDB resource", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(BeNotFoundError())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
-
-					unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
-					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            podDisruptionBudget.Name,
-							Namespace:       podDisruptionBudget.Namespace,
-							ResourceVersion: "1",
-							Labels: map[string]string{
-								"app":  "kubernetes",
-								"role": "apiserver",
-							},
-						},
-						Spec: policyv1.PodDisruptionBudgetSpec{
-							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app":  "kubernetes",
-									"role": "apiserver",
-								},
-							},
-							UnhealthyPodEvictionPolicy: &unhealthyPodEvictionPolicyAlwaysAllow,
-						},
-					}))
-				})
+						UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+					},
+				}))
 			})
 		})
 

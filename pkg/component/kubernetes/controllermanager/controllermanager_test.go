@@ -143,34 +143,26 @@ var _ = Describe("KubeControllerManager", func() {
 			Type: corev1.SecretTypeOpaque,
 		}
 
-		pdbFor = func(runtimeKubernetesVersionGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
-			pdb := &policyv1.PodDisruptionBudget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pdbName,
-					Namespace: namespace,
-					Labels: map[string]string{
+		pdb = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pdbName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "controller-manager",
+				},
+				ResourceVersion: "1",
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
 						"app":  "kubernetes",
 						"role": "controller-manager",
 					},
-					ResourceVersion: "1",
 				},
-				Spec: policyv1.PodDisruptionBudgetSpec{
-					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app":  "kubernetes",
-							"role": "controller-manager",
-						},
-					},
-				},
-			}
-
-			if runtimeKubernetesVersionGreaterEquals126 {
-				unhealthyPodEvictionPolicyAllowPolicy := policyv1.AlwaysAllow
-				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAllowPolicy
-			}
-
-			return pdb
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
 		}
 
 		vpaFor = func(isScaleDownDisabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
@@ -576,7 +568,7 @@ namespace: kube-system
 	})
 
 	Describe("#Deploy", func() {
-		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isScaleDownDisabled bool, controllerWorkers ControllerWorkers, runtimeVersionGreaterEqual126 bool) {
+		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isScaleDownDisabled bool, controllerWorkers ControllerWorkers) {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -616,7 +608,7 @@ namespace: kube-system
 
 			actualPDB := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
-			Expect(actualPDB).To(DeepEqual(pdbFor(runtimeVersionGreaterEqual126)))
+			Expect(actualPDB).To(DeepEqual(pdb))
 
 			expectedServiceMonitor := serviceMonitor("shoot", "")
 			actualServiceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: expectedServiceMonitor.Name, Namespace: namespace}}
@@ -660,7 +652,7 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, isScaleDownDisabled, controllerWorkers, versionutils.ConstraintK8sGreaterEqual126.Check(runtimeKubernetesVersion))
+				verifyDeployment(config, isScaleDownDisabled, controllerWorkers)
 			},
 
 			Entry("w/o config k8s >=1.26", emptyConfig, false, runtimeKubernetesVersion),
@@ -698,7 +690,7 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, isScaleDownDisabled, controllerWorkers, true)
+				verifyDeployment(config, isScaleDownDisabled, controllerWorkers)
 			},
 
 			Entry("w/o config", emptyConfig, false, controllerWorkers),
