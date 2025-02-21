@@ -37,7 +37,6 @@ func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		DisableNewVPN:                        !b.Shoot.UsesNewVPN,
-		KubernetesVersion:                    b.Shoot.KubernetesVersion,
 		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
 	}
 

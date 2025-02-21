@@ -14,7 +14,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (k *kubeAPIServer) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
@@ -25,11 +24,10 @@ func (k *kubeAPIServer) reconcilePodDisruptionBudget(ctx context.Context, pdb *p
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), pdb, func() error {
 		pdb.Labels = getLabels()
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}
-
-		kubernetesutils.SetAlwaysAllowEviction(pdb, k.values.RuntimeVersion)
 
 		return nil
 	})

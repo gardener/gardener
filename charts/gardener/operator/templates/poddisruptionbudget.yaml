@@ -15,6 +15,4 @@ spec:
     matchLabels:
       app: gardener
       role: operator
-{{- if semverCompare ">= 1.26-0" .Capabilities.KubeVersion.Version }}
   unhealthyPodEvictionPolicy: AlwaysAllow
-{{- end }}

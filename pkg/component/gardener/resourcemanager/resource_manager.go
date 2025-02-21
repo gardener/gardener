@@ -1139,9 +1139,8 @@ func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: r.getDeploymentTemplateLabels(),
 			},
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}
-
-		kubernetesutils.SetAlwaysAllowEviction(pdb, r.values.RuntimeKubernetesVersion)
 
 		return nil
 	})

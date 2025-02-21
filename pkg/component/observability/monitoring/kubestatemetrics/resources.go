@@ -336,11 +336,11 @@ func (k *kubeStateMetrics) podDisruptionBudget(deployment *appsv1.Deployment) *p
 	podDisruptionBudget := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics-pdb" + k.values.NameSuffix, Namespace: k.namespace}}
 	podDisruptionBudget.Labels = k.getLabels()
 	podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-		MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-		Selector:       deployment.Spec.Selector,
+		MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+		Selector:                   deployment.Spec.Selector,
+		UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 	}
 
-	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, k.values.KubernetesVersion)
 	return podDisruptionBudget
 }
 

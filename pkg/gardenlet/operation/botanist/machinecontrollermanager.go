@@ -61,9 +61,8 @@ func (b *Botanist) DefaultMachineControllerManager(ctx context.Context) (machine
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		machinecontrollermanager.Values{
-			Image:                    image.String(),
-			Replicas:                 replicas,
-			RuntimeKubernetesVersion: b.Seed.KubernetesVersion,
+			Image:    image.String(),
+			Replicas: replicas,
 		},
 	), nil
 }

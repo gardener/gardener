@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -80,8 +79,6 @@ type ReversedVPNValues struct {
 type Values struct {
 	// Image is the container image used for vpnShoot.
 	Image string
-	// KubernetesVersion is the Kubernetes version of the Shoot.
-	KubernetesVersion *semver.Version
 	// PodAnnotations is the set of additional annotations to be used for the pods.
 	PodAnnotations map[string]string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
@@ -545,12 +542,11 @@ func (v *vpnShoot) podDisruptionBudget() client.Object {
 			Labels:    getLabels(),
 		},
 		Spec: policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   &metav1.LabelSelector{MatchLabels: getLabels()},
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		},
 	}
-
-	kubernetesutils.SetAlwaysAllowEviction(pdb, v.values.KubernetesVersion)
 
 	return pdb
 }
