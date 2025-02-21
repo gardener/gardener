@@ -438,13 +438,7 @@ func validateMachineTypeStorage(storage core.MachineTypeStorage, fldPath *field.
 // it is intended to be used only during the transition period to capabilities and should be removed after capabilitiesDefinition is required
 // then only validateCapabilitiesDefinition should be used
 func IsDefined(capabilitiesDefinition *core.Capabilities) bool {
-	valid := false
-	if capabilitiesDefinition != nil {
-		if len(*capabilitiesDefinition) != 0 {
-			valid = true
-		}
-	}
-	return valid
+	return capabilitiesDefinition != nil && len(*capabilitiesDefinition) != 0
 }
 
 // ValidateCapabilitiesDefinition validates the capabilitiesDefinition of a cloudProfile, ensures that the architecture is set and that no capability is empty
