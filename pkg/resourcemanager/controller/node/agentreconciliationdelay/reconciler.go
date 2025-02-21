@@ -64,7 +64,9 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 
 			log.V(1).Info("Computed reconciliation delay", "delaySeconds", delaySeconds, "nodeName", node.Name)
 
-			patch := client.MergeFrom(node.DeepCopy())
+			// In environments with high churn rates, the patch call might write to a stale object, resulting in an unexpected final state.
+			// To mitigate this, we use optimistic locking.
+			patch := client.MergeFromWithOptions(node.DeepCopy(), client.MergeFromWithOptimisticLock{})
 			metav1.SetMetaDataAnnotation(&node.ObjectMeta, v1beta1constants.AnnotationNodeAgentReconciliationDelay, time.Duration(delaySeconds*float64(time.Second)).String())
 			return r.TargetClient.Patch(ctx, &node, patch)
 		})
