@@ -24,7 +24,10 @@ import (
 )
 
 var _ = Describe("Strategy", func() {
-	var strategy rest.RESTCreateUpdateStrategy
+	var (
+		ctx      = context.Background()
+		strategy rest.RESTCreateUpdateStrategy
+	)
 
 	BeforeEach(func() {
 		strategy = NewStrategy(0)
@@ -54,7 +57,7 @@ var _ = Describe("Strategy", func() {
 		})
 
 		It("should allow an empty worker list", func() {
-			Expect(strategy.Validate(context.TODO(), shoot)).To(BeEmpty())
+			Expect(strategy.Validate(ctx, shoot)).To(BeEmpty())
 		})
 	})
 
@@ -70,7 +73,7 @@ var _ = Describe("Strategy", func() {
 
 			It("should fill cloudProfile field with fallback if empty", func() {
 				shoot.Spec.CloudProfileName = ptr.To("foo")
-				strategy.PrepareForCreate(context.TODO(), shoot)
+				strategy.PrepareForCreate(ctx, shoot)
 
 				Expect(*shoot.Spec.CloudProfileName).To(Equal("foo"))
 				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -84,7 +87,7 @@ var _ = Describe("Strategy", func() {
 					Kind: "CloudProfile",
 					Name: "bar",
 				}
-				strategy.PrepareForCreate(context.TODO(), shoot)
+				strategy.PrepareForCreate(ctx, shoot)
 
 				Expect(*shoot.Spec.CloudProfileName).To(Equal("bar"))
 				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -99,7 +102,7 @@ var _ = Describe("Strategy", func() {
 					Kind: "CloudProfile",
 					Name: "bar",
 				}
-				strategy.PrepareForCreate(context.TODO(), shoot)
+				strategy.PrepareForCreate(ctx, shoot)
 
 				Expect(*shoot.Spec.CloudProfileName).To(Equal("bar"))
 				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -115,7 +118,7 @@ var _ = Describe("Strategy", func() {
 					Name: "bar",
 				}
 				shoot.Spec.CloudProfileName = ptr.To("foo")
-				strategy.PrepareForCreate(context.TODO(), shoot)
+				strategy.PrepareForCreate(ctx, shoot)
 
 				Expect(shoot.Spec.CloudProfileName).To(BeNil())
 				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -131,7 +134,7 @@ var _ = Describe("Strategy", func() {
 					Name: "bar",
 				}
 				shoot.Spec.CloudProfileName = ptr.To("foo")
-				strategy.PrepareForCreate(context.TODO(), shoot)
+				strategy.PrepareForCreate(ctx, shoot)
 
 				Expect(*shoot.Spec.CloudProfileName).To(Equal("foo"))
 				Expect(shoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -144,7 +147,7 @@ var _ = Describe("Strategy", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, false))
 
 				shoot.Spec.CredentialsBindingName = ptr.To("binding")
-				strategy.PrepareForCreate(context.TODO(), shoot)
+				strategy.PrepareForCreate(ctx, shoot)
 
 				Expect(shoot.Spec.CredentialsBindingName).To(BeNil())
 			})
@@ -153,7 +156,7 @@ var _ = Describe("Strategy", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, true))
 
 				shoot.Spec.CredentialsBindingName = ptr.To("binding")
-				strategy.PrepareForCreate(context.TODO(), shoot)
+				strategy.PrepareForCreate(ctx, shoot)
 
 				Expect(shoot.Spec.CredentialsBindingName).To(Equal(ptr.To("binding")))
 			})
@@ -174,7 +177,7 @@ var _ = Describe("Strategy", func() {
 		Context("cloudProfile field removal", func() {
 			It("should fill cloudProfile field with fallback if empty", func() {
 				newShoot.Spec.CloudProfileName = ptr.To("foo")
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
 				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -188,7 +191,7 @@ var _ = Describe("Strategy", func() {
 					Kind: "CloudProfile",
 					Name: "bar",
 				}
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(*newShoot.Spec.CloudProfileName).To(Equal("bar"))
 				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -203,7 +206,7 @@ var _ = Describe("Strategy", func() {
 					Kind: "CloudProfile",
 					Name: "bar",
 				}
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(*newShoot.Spec.CloudProfileName).To(Equal("bar"))
 				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -219,7 +222,7 @@ var _ = Describe("Strategy", func() {
 					Name: "bar",
 				}
 				newShoot.Spec.CloudProfileName = ptr.To("foo")
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.CloudProfileName).To(BeNil())
 				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -235,7 +238,7 @@ var _ = Describe("Strategy", func() {
 					Name: "bar",
 				}
 				newShoot.Spec.CloudProfileName = ptr.To("foo")
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(*newShoot.Spec.CloudProfileName).To(Equal("foo"))
 				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -254,7 +257,7 @@ var _ = Describe("Strategy", func() {
 					Kind: "NamespacedCloudProfile",
 					Name: "bar",
 				}
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.CloudProfileName).To(BeNil())
 				Expect(newShoot.Spec.CloudProfile).To(Equal(&core.CloudProfileReference{
@@ -267,7 +270,7 @@ var _ = Describe("Strategy", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, false))
 
 				newShoot.Spec.CredentialsBindingName = ptr.To("binding")
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.CredentialsBindingName).To(BeNil())
 			})
@@ -276,7 +279,7 @@ var _ = Describe("Strategy", func() {
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.ShootCredentialsBinding, true))
 
 				newShoot.Spec.CredentialsBindingName = ptr.To("binding")
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.CredentialsBindingName).To(Equal(ptr.To("binding")))
 			})
@@ -287,7 +290,7 @@ var _ = Describe("Strategy", func() {
 				bindingName := ptr.To("binding")
 				oldShoot.Spec.CredentialsBindingName = bindingName
 				newShoot.Spec.CredentialsBindingName = bindingName
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.CredentialsBindingName).To(Equal(ptr.To("binding")))
 			})
@@ -297,7 +300,7 @@ var _ = Describe("Strategy", func() {
 				oldShoot.DeletionTimestamp = ptr.To(metav1.Now())
 				newShoot = oldShoot.DeepCopy()
 
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec).To(Equal(oldShoot.Spec))
 			})
@@ -315,7 +318,7 @@ var _ = Describe("Strategy", func() {
 
 			It("should not allow change of seedName on shoot spec update", func() {
 				newShoot.Spec.SeedName = ptr.To("new-seed")
-				strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.SeedName).To(Equal(oldShoot.Spec.SeedName))
 			})
@@ -338,7 +341,7 @@ var _ = Describe("Strategy", func() {
 						mutateNewShoot(newShoot)
 					}
 
-					strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+					strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 					expectedGeneration := oldShoot.Generation
 					if shouldIncreaseGeneration {
@@ -392,7 +395,7 @@ var _ = Describe("Strategy", func() {
 							mutateNewShoot(newShoot)
 						}
 
-						strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+						strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 						expectedGeneration := oldShoot.Generation
 						if shouldIncreaseGeneration {
@@ -535,7 +538,7 @@ var _ = Describe("Strategy", func() {
 					newShoot := oldShoot.DeepCopy()
 					newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: operationAnnotation}
 
-					strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+					strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 					expectedGeneration := oldShoot.Generation
 					if shouldIncreaseGeneration {
@@ -690,7 +693,7 @@ var _ = Describe("Strategy", func() {
 				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}}}
 				newShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}}}
 
-				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.AccessRestrictions).To(BeEmpty())
 				Expect(newShoot.Spec.SeedSelector).To(BeNil())
@@ -701,7 +704,7 @@ var _ = Describe("Strategy", func() {
 				oldShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}}}
 				newShoot.Spec.SeedSelector = &core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"seed.gardener.cloud/eu-access": "true"}}}
 
-				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.AccessRestrictions).To(BeEmpty())
 				Expect(newShoot.Spec.SeedSelector).To(Equal(&core.SeedSelector{LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"seed.gardener.cloud/eu-access": "true"}}}))
@@ -722,7 +725,7 @@ var _ = Describe("Strategy", func() {
 				newShoot.Annotations = maps.Clone(oldShoot.Annotations)
 				newShoot.Spec.AccessRestrictions = []core.AccessRestrictionWithOptions{{AccessRestriction: core.AccessRestriction{Name: "eu-access-only"}}}
 
-				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Annotations).To(Equal(map[string]string{
 					"support.gardener.cloud/eu-access-for-cluster-addons": "true",
@@ -750,7 +753,7 @@ var _ = Describe("Strategy", func() {
 					},
 				}}
 
-				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.AccessRestrictions).To(HaveExactElements(core.AccessRestrictionWithOptions{
 					AccessRestriction: core.AccessRestriction{Name: "eu-access-only"},
@@ -779,7 +782,7 @@ var _ = Describe("Strategy", func() {
 					},
 				}}
 
-				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Annotations).To(Equal(map[string]string{
 					"support.gardener.cloud/eu-access-for-cluster-addons": "true",
@@ -808,7 +811,7 @@ var _ = Describe("Strategy", func() {
 				}}
 				newShoot.Annotations = maps.Clone(oldShoot.Annotations)
 
-				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.AccessRestrictions[0].Options).To(Equal(map[string]string{
 					"support.gardener.cloud/eu-access-for-cluster-addons": "true",
@@ -822,7 +825,7 @@ var _ = Describe("Strategy", func() {
 				}
 				newShoot.Annotations = map[string]string{}
 
-				strategy.PrepareForUpdate(context.Background(), newShoot, oldShoot)
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
 
 				Expect(newShoot.Spec.AccessRestrictions).To(BeEmpty())
 				Expect(newShoot.Annotations).NotTo(HaveKey("support.gardener.cloud/eu-access-for-cluster-addons"))
@@ -931,6 +934,66 @@ var _ = Describe("Strategy", func() {
 
 				Expect(shoot.Spec.AccessRestrictions).To(BeEmpty())
 				Expect(shoot.Spec.SeedSelector).To(BeNil())
+			})
+		})
+	})
+
+	Context("BindingStrategy", func() {
+		BeforeEach(func() {
+			strategy = NewBindingStrategy()
+		})
+
+		Describe("#PrepareForUpdate", func() {
+			var (
+				oldShoot *core.Shoot
+				newShoot *core.Shoot
+			)
+
+			BeforeEach(func() {
+				oldShoot = &core.Shoot{}
+				newShoot = &core.Shoot{}
+			})
+
+			It("should not allow editing the status", func() {
+				newShoot.Status.TechnicalID = "foo"
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+				Expect(newShoot.Status).To(Equal(oldShoot.Status))
+			})
+
+			Context("'create-pending' last operation", func() {
+				BeforeEach(func() {
+					oldShoot.Status.LastOperation = &core.LastOperation{
+						Type:  core.LastOperationTypeCreate,
+						State: core.LastOperationStatePending,
+					}
+					newShoot = oldShoot.DeepCopy()
+				})
+
+				It("should remove the last operation when seed was set", func() {
+					newShoot.Spec.SeedName = ptr.To("foo")
+
+					strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+					Expect(newShoot.Status.LastOperation).To(BeNil())
+				})
+
+				It("should not remove the last operation when seed was not set", func() {
+					newShoot.Spec.Region = "foo"
+
+					strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+					Expect(newShoot.Status.LastOperation).To(Equal(oldShoot.Status.LastOperation))
+				})
+			})
+
+			It("should increase the generation when spec was changed", func() {
+				newShoot.Spec.SeedName = ptr.To("foo")
+
+				strategy.PrepareForUpdate(ctx, newShoot, oldShoot)
+
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
 			})
 		})
 	})
