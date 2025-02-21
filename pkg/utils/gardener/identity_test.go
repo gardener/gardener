@@ -18,7 +18,7 @@ var _ = Describe("Identity", func() {
 	Describe("#MaintainSeedNameLabels", func() {
 		It("should maintain the labels", func() {
 			obj := &gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"seed.gardener.cloud/old-seed": "true"}},
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"name.seed.gardener.cloud/old-seed": "true"}},
 				Spec:       gardencorev1beta1.ShootSpec{SeedName: ptr.To("spec-seed")},
 				Status:     gardencorev1beta1.ShootStatus{SeedName: ptr.To("status-seed")},
 			}
@@ -26,8 +26,8 @@ var _ = Describe("Identity", func() {
 			MaintainSeedNameLabels(obj, obj.Spec.SeedName, obj.Status.SeedName)
 
 			Expect(obj.Labels).To(And(
-				HaveKeyWithValue("seed.gardener.cloud/spec-seed", "true"),
-				HaveKeyWithValue("seed.gardener.cloud/status-seed", "true"),
+				HaveKeyWithValue("name.seed.gardener.cloud/spec-seed", "true"),
+				HaveKeyWithValue("name.seed.gardener.cloud/status-seed", "true"),
 			))
 		})
 
@@ -39,12 +39,12 @@ var _ = Describe("Identity", func() {
 
 			MaintainSeedNameLabels(obj, obj.Spec.SeedName, obj.Status.SeedName)
 
-			Expect(obj.Labels).To(HaveKeyWithValue("seed.gardener.cloud/seed", "true"))
+			Expect(obj.Labels).To(HaveKeyWithValue("name.seed.gardener.cloud/seed", "true"))
 		})
 
 		It("should maintain the labels when spec and status names are empty", func() {
 			obj := &gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar", "seed.gardener.cloud/old-seed": "true"}},
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"foo": "bar", "name.seed.gardener.cloud/old-seed": "true"}},
 			}
 
 			MaintainSeedNameLabels(obj, obj.Spec.SeedName, obj.Status.SeedName)
