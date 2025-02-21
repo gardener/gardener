@@ -91,11 +91,6 @@ var _ = Describe("istiod", func() {
 			return string(data)
 		}
 
-		istiodPodDisruptionBudgetLess126 = func() string {
-			data, _ := os.ReadFile("./test_charts/istiod_poddisruptionbudget_less126.yaml")
-			return string(data)
-		}
-
 		istiodRole = func() string {
 			data, _ := os.ReadFile("./test_charts/istiod_role.yaml")
 			return string(data)
@@ -160,11 +155,6 @@ var _ = Describe("istiod", func() {
 
 		istioIngressPodDisruptionBudget = func() string {
 			data, _ := os.ReadFile("./test_charts/ingress_poddisruptionbudget.yaml")
-			return string(data)
-		}
-
-		istioIngressPodDisruptionBudgetLess126 = func() string {
-			data, _ := os.ReadFile("./test_charts/ingress_poddisruptionbudget_less126.yaml")
 			return string(data)
 		}
 
@@ -256,7 +246,7 @@ var _ = Describe("istiod", func() {
 		networkLabels = map[string]string{"to-target": "allowed"}
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.26.2"})
+		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.31.1"})
 
 		gardenletfeatures.RegisterFeatureGates()
 
@@ -349,7 +339,7 @@ var _ = Describe("istiod", func() {
 			))
 		})
 
-		checkSuccessfulDeployment := func(k8sVersionLess126 bool, minReplicas, maxReplicas *int) {
+		checkSuccessfulDeployment := func(minReplicas, maxReplicas *int) {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceIstio), managedResourceIstio)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -404,13 +394,8 @@ var _ = Describe("istiod", func() {
 				istiodServiceMonitor(),
 			}
 
-			if k8sVersionLess126 {
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressPodDisruptionBudgetLess126())
-				expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudgetLess126())
-			} else {
-				expectedIstioManifests = append(expectedIstioManifests, istioIngressPodDisruptionBudget())
-				expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudget())
-			}
+			expectedIstioManifests = append(expectedIstioManifests, istioIngressPodDisruptionBudget())
+			expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudget())
 
 			if igw[0].TerminateLoadBalancerProxyProtocol {
 				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilterDual(), istioProxyProtocolEnvoyFilterSNI(), istioProxyProtocolEnvoyFilterVPN())
@@ -460,7 +445,7 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
+				checkSuccessfulDeployment(nil, nil)
 			})
 		})
 
@@ -470,33 +455,7 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
-			})
-		})
-
-		Context("kubernetes version < 1.26", func() {
-			BeforeEach(func() {
-				renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.25.4"})
-
-				istiod = NewIstio(
-					c,
-					renderer,
-					Values{
-						Istiod: IstiodValues{
-							Enabled:           true,
-							Image:             "foo/bar",
-							Namespace:         deployNS,
-							PriorityClassName: v1beta1constants.PriorityClassNameSeedSystemCritical,
-							TrustDomain:       "foo.local",
-							Zones:             []string{"a", "b", "c"},
-						},
-						IngressGateway: igw,
-					},
-				)
-			})
-
-			It("should successfully deploy pdb with the correct spec", func() {
-				checkSuccessfulDeployment(true, nil, nil)
+				checkSuccessfulDeployment(nil, nil)
 			})
 		})
 
@@ -558,7 +517,7 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy correct autoscaling", func() {
-				checkSuccessfulDeployment(false, &minReplicas, &maxReplicas)
+				checkSuccessfulDeployment(&minReplicas, &maxReplicas)
 			})
 		})
 
@@ -710,7 +669,7 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
+				checkSuccessfulDeployment(nil, nil)
 			})
 		})
 
@@ -738,7 +697,7 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
+				checkSuccessfulDeployment(nil, nil)
 			})
 		})
 
@@ -765,7 +724,7 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				checkSuccessfulDeployment(false, nil, nil)
+				checkSuccessfulDeployment(nil, nil)
 			})
 		})
 	})

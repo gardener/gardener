@@ -78,15 +78,6 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 					"apiserver_watch_duration",
 					"apiserver_watch_events_sizes_.+",
 					"apiserver_watch_events_total",
-					// TODO: The etcd_db_total_size_in_bytes metric is renamed to
-					//  apiserver_storage_db_total_size_in_bytes in K8s 1.26
-					//  (https://github.com/kubernetes/kubernetes/pull/113310). Remove this metric when we remove
-					//  support for K8s 1.26.
-					"etcd_db_total_size_in_bytes",
-					// TODO: The etcd_object_counts metric is removed in K8s 1.25
-					//  (https://github.com/kubernetes/kubernetes/pull/110337). Remove this metric when we remove
-					//  support for K8s 1.25.
-					"etcd_object_counts",
 					"etcd_request_duration_seconds_.+",
 					"go_.+",
 					"process_max_fds",

@@ -5091,7 +5091,6 @@ triggered.</p>
 <td>
 <p>Resources contains the list of resources that shall be encrypted in addition to secrets.
 Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
-Note that configuring a custom resource is only supported for versions &gt;= 1.26.
 Wildcards are not supported for now.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md">https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md</a> for more details.</p>
 </td>
@@ -6292,7 +6291,7 @@ in favor of the kube-apiserver flags <code>--default-not-ready-toleration-second
 The <code>--pod-eviction-timeout</code> flag does not have effect when the taint based eviction is enabled. The taint
 based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 instead of setting this field, set the <code>spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds</code> and
-<code>spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds</code>.</p>
+<code>spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds</code>. This field will be removed in gardener v1.120.</p>
 </td>
 </tr>
 <tr>
@@ -6746,9 +6745,7 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeccompDefault enables the use of <code>RuntimeDefault</code> as the default seccomp profile for all workloads.
-This requires the corresponding SeccompDefault feature gate to be enabled as well.
-This field is only available for Kubernetes v1.25 or later.</p>
+<p>SeccompDefault enables the use of <code>RuntimeDefault</code> as the default seccomp profile for all workloads.</p>
 </td>
 </tr>
 <tr>
@@ -6788,7 +6785,7 @@ bool
 <td>
 <em>(Optional)</em>
 <p>ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
-Defaults to true for Kubernetes v1.26 or later.</p>
+Defaults to true.</p>
 </td>
 </tr>
 <tr>
@@ -6804,9 +6801,7 @@ Kubernetes meta/v1.Duration
 <em>(Optional)</em>
 <p>StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
 This field cannot be set lower than &ldquo;30s&rdquo; or greater than &ldquo;4h&rdquo;.
-Default:
-&ldquo;4h&rdquo; for Kubernetes &lt; v1.26.
-&ldquo;5m&rdquo; for Kubernetes &gt;= v1.26.</p>
+Default: &ldquo;5m&rdquo;.</p>
 </td>
 </tr>
 <tr>
@@ -7296,8 +7291,8 @@ bool
 <td>
 <em>(Optional)</em>
 <p>EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
-Defaults to true for Shoots with Kubernetes versions &lt; 1.26. Defaults to false for Shoots with Kubernetes versions &gt;= 1.26.
-Starting Kubernetes 1.27 the field will be locked to false.</p>
+Setting this field to true is not supported.</p>
+<p>Deprecated: This field is deprecated and will be removed in gardener v1.120</p>
 </td>
 </tr>
 </tbody>
@@ -11859,6 +11854,7 @@ ShootKubeconfigRotation
 <td>
 <em>(Optional)</em>
 <p>Kubeconfig contains information about the kubeconfig credential rotation.</p>
+<p>Deprecated: This field is deprecated and will be removed in gardener v1.120</p>
 </td>
 </tr>
 <tr>

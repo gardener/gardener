@@ -43,7 +43,6 @@ func NewEtcdDruid(
 	return etcd.NewBootstrapper(
 		c,
 		gardenNamespaceName,
-		runtimeVersion,
 		etcdConfig,
 		image.String(),
 		imageVectorOverwrite,

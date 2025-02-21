@@ -13,9 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apiserver/pkg/authentication/user"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -40,8 +37,7 @@ const (
 	secretAuthorizationWebhooksKubeconfigsNamePrefix = "kube-apiserver-authorization-webhooks-kubeconfigs" // #nosec G101 -- No credential.
 	secretAdmissionKubeconfigsNamePrefix             = "kube-apiserver-admission-kubeconfigs"              // #nosec G101 -- No credential.
 
-	userNameClusterAdmin = "system:cluster-admin"
-	userNameHealthCheck  = "health-check"
+	userNameHealthCheck = "health-check"
 )
 
 func (k *kubeAPIServer) emptySecret(name string) *corev1.Secret {
@@ -90,49 +86,7 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 		},
 	}
 
-	if ptr.Deref(k.values.StaticTokenKubeconfigEnabled, true) {
-		staticTokenSecretConfig.Tokens[userNameClusterAdmin] = secretsutils.TokenConfig{
-			Username: userNameClusterAdmin,
-			UserID:   userNameClusterAdmin,
-			Groups:   []string{user.SystemPrivilegedGroup},
-		}
-	}
-
 	return k.secretsManager.Generate(ctx, staticTokenSecretConfig, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
-}
-
-func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secretStaticToken *corev1.Secret) error {
-	caBundleSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
-
-	var err error
-	var token *secretsutils.Token
-	if secretStaticToken != nil {
-		staticToken, err := secretsutils.LoadStaticTokenFromCSV(SecretStaticTokenName, secretStaticToken.Data[secretsutils.DataKeyStaticTokenCSV])
-		if err != nil {
-			return err
-		}
-
-		token, err = staticToken.GetTokenForUsername(userNameClusterAdmin)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = k.secretsManager.Generate(ctx, &secretsutils.KubeconfigSecretConfig{
-		Name:        SecretNameUserKubeconfig,
-		ContextName: k.namespace,
-		Cluster: clientcmdv1.Cluster{
-			Server:                   k.values.ExternalServer,
-			CertificateAuthorityData: caBundleSecret.Data[secretsutils.DataKeyCertificateBundle],
-		},
-		AuthInfo: clientcmdv1.AuthInfo{
-			Token: token.Token,
-		},
-	}, secretsmanager.Rotate(secretsmanager.InPlace))
-	return err
 }
 
 func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.Context, secret *corev1.Secret) error {

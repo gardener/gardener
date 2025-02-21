@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -113,8 +112,6 @@ type NetworkValues struct {
 
 // Values is a set of configuration values for the VPNSeedServer component.
 type Values struct {
-	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
-	RuntimeKubernetesVersion *semver.Version
 	// ImageAPIServerProxy is the image name of the apiserver-proxy.
 	ImageAPIServerProxy string
 	// ImageVPNSeedServer is the image name of the vpn-seed-server.
@@ -689,11 +686,10 @@ func (v *vpnSeedServer) deployPodDisruptionBudget(ctx context.Context, podLabels
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, pdb, func() error {
 		pdb.Labels = podLabels
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-			Selector:       &metav1.LabelSelector{MatchLabels: podLabels},
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   &metav1.LabelSelector{MatchLabels: podLabels},
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}
-
-		kubernetesutils.SetAlwaysAllowEviction(pdb, v.values.RuntimeKubernetesVersion)
 
 		return nil
 	})

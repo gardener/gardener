@@ -44,7 +44,6 @@ import (
 	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -67,10 +66,6 @@ const (
 	volumeMountPathCAKubelet         = "/srv/kubernetes/ca-kubelet"
 	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
 	volumeMountPathServer            = "/var/lib/kube-controller-manager-server"
-
-	nodeMonitorGraceDuration = 2 * time.Minute
-	// NodeMonitorGraceDurationK8sGreaterEqual127 is the default node monitoring grace duration used with k8s versions >= 1.27
-	NodeMonitorGraceDurationK8sGreaterEqual127 = 40 * time.Second
 )
 
 // Interface contains functions for a kube-controller-manager deployer.
@@ -444,11 +439,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-			Selector:       deployment.Spec.Selector,
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   deployment.Spec.Selector,
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}
-
-		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, k.values.RuntimeVersion)
 
 		return nil
 	}); err != nil {
@@ -652,8 +646,7 @@ func (k *kubeControllerManager) isDualStack() bool {
 func (k *kubeControllerManager) computeCommand(port int32) []string {
 	var (
 		defaultHorizontalPodAutoscalerConfig = k.getHorizontalPodAutoscalerConfig()
-		podEvictionTimeout                   = metav1.Duration{Duration: 2 * time.Minute}
-		nodeMonitorGracePeriod               = metav1.Duration{Duration: nodeMonitorGraceDuration}
+		nodeMonitorGracePeriod               = metav1.Duration{Duration: 40 * time.Second}
 		command                              = []string{
 			"/usr/local/bin/kube-controller-manager",
 			"--authentication-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
@@ -664,10 +657,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		controllersToEnable  = sets.New("*", "bootstrapsigner", "tokencleaner")
 		controllersToDisable = sets.New[string]()
 	)
-
-	if versionutils.ConstraintK8sGreaterEqual127.Check(k.values.TargetVersion) {
-		nodeMonitorGracePeriod = metav1.Duration{Duration: NodeMonitorGraceDurationK8sGreaterEqual127}
-	}
 
 	if !k.values.IsWorkerless {
 		if v := k.values.Config.NodeMonitorGracePeriod; v != nil {
@@ -699,14 +688,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 			"--leader-elect=true",
 			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriod.Duration),
 		)
-
-		if versionutils.ConstraintK8sLess127.Check(k.values.TargetVersion) {
-			if v := k.values.Config.PodEvictionTimeout; v != nil {
-				podEvictionTimeout = *v
-			}
-
-			command = append(command, fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration))
-		}
 
 		command = append(command,
 			fmt.Sprintf("--concurrent-deployment-syncs=%d", ptr.Deref(k.values.ControllerWorkers.Deployment, defaultControllerWorkersDeployment)),

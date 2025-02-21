@@ -7,7 +7,6 @@ package metricsserver_test
 import (
 	"context"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -286,8 +285,7 @@ status: {}
 			return out
 		}
 
-		pdbYAMLFor = func(k8sGreaterEquals126 bool) string {
-			out := `apiVersion: policy/v1
+		pdbYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -300,19 +298,13 @@ spec:
   selector:
     matchLabels:
       k8s-app: metrics-server
-`
-			if k8sGreaterEquals126 {
-				out += `  unhealthyPodEvictionPolicy: AlwaysAllow
-`
-			}
-			out += `status:
+  unhealthyPodEvictionPolicy: AlwaysAllow
+status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
-			return out
-		}
 
 		serverSecretFor = func(data map[string][]byte) (string, string) {
 			serverSecret := &corev1.Secret{
@@ -343,8 +335,6 @@ spec:
 
 		managedResourceSecret *corev1.Secret
 		managedResource       *resourcesv1alpha1.ManagedResource
-
-		k8sGreaterEquals126 bool
 	)
 
 	BeforeEach(func() {
@@ -354,12 +344,10 @@ spec:
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-metrics-server", Namespace: namespace}})).To(Succeed())
 
-		k8sGreaterEquals126 = false
 		values = Values{
 			Image:             image,
 			VPAEnabled:        false,
 			KubeAPIServerHost: nil,
-			KubernetesVersion: semver.MustParse("1.25.0"),
 		}
 
 		metricsServer = New(fakeClient, namespace, sm, values)
@@ -434,7 +422,7 @@ spec:
 				roleBindingYAML,
 				serviceYAML,
 				serviceAccountYAML,
-				pdbYAMLFor(k8sGreaterEquals126),
+				pdbYAML,
 				serverSecretYAML,
 			}
 		})
@@ -450,20 +438,6 @@ spec:
 			BeforeEach(func() {
 				values.VPAEnabled = true
 				values.KubeAPIServerHost = &kubeAPIServerHost
-			})
-
-			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
-				expectedManifests = append(expectedManifests, vpaYAML, deploymentYAMLFor(secretName, true, true))
-				Expect(manifests).To(ConsistOf(expectedManifests))
-			})
-		})
-
-		Context("w/ VPA, w/ host env, kubernetes version >= 1.26", func() {
-			BeforeEach(func() {
-				values.VPAEnabled = true
-				values.KubeAPIServerHost = &kubeAPIServerHost
-				values.KubernetesVersion = semver.MustParse("1.26.0")
-				k8sGreaterEquals126 = true
 			})
 
 			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {

@@ -52,14 +52,14 @@ var _ = Describe("NginxIngress", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		shootKubernetesVersion, _ := semver.NewVersion("1.26.1")
+		shootKubernetesVersion, _ := semver.NewVersion("1.31.1")
 		botanist = &Botanist{Operation: &operation.Operation{}}
 		botanist.Shoot = &shootpkg.Shoot{KubernetesVersion: shootKubernetesVersion}
 		policy := corev1.ServiceExternalTrafficPolicyCluster
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.26.1",
+					Version: "1.31.1",
 				},
 				Addons: &gardencorev1beta1.Addons{
 					NginxIngress: &gardencorev1beta1.NginxIngress{

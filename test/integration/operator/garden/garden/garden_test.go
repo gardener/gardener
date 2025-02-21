@@ -214,7 +214,7 @@ var _ = Describe("Garden controller tests", func() {
 						},
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
-						Version: "1.26.3",
+						Version: "1.31.1",
 					},
 					Maintenance: operatorv1alpha1.Maintenance{
 						TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{

@@ -145,22 +145,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 		return err
 	}
 
-	// Set the .spec.kubernetes.enableStaticTokenKubeconfig field to false, when Shoot cluster is being forcefully updated to K8s >= 1.27.
-	// Gardener forbids enabling the static token kubeconfig for Shoots with K8s 1.27+. See https://github.com/gardener/gardener/pull/7883/commits/ca49644d32df48e0cf3fd00192f2ad078555796c
-	{
-		if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
-			if ptr.Deref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
-				maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
-
-				reason := ".spec.kubernetes.enableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27+"
-				operations = append(operations, reason)
-			}
-
-			reasonsForIncreasingMaxWorkers := ensureSufficientMaxWorkers(maintainedShoot, fmt.Sprintf("Maximum number of workers of a worker group must be greater or equal to its number of zones for updating Kubernetes to %q", shootKubernetesVersion.String()))
-			operations = append(operations, reasonsForIncreasingMaxWorkers...)
-		}
-	}
-
 	// Set the .spec.kubernetes.kubeAPIServer.oidcConfig.clientAuthentication field to nil, when Shoot cluster is being forcefully updated to K8s >= 1.31.
 	// Gardener forbids setting the field for Shoots with K8s 1.31+. See https://github.com/gardener/gardener/pull/10253
 	{
@@ -892,26 +876,6 @@ func ExpirationDateExpired(timestamp *metav1.Time) bool {
 		return false
 	}
 	return time.Now().UTC().After(timestamp.Time) || time.Now().UTC().Equal(timestamp.Time)
-}
-
-// ensureSufficientMaxWorkers ensures that the number of max workers of a worker group is greater or equal to its number of zones
-func ensureSufficientMaxWorkers(shoot *gardencorev1beta1.Shoot, reason string) []string {
-	var reasonsForUpdate []string
-
-	for i, worker := range shoot.Spec.Provider.Workers {
-		if !v1beta1helper.SystemComponentsAllowed(&worker) {
-			continue
-		}
-
-		if int(worker.Maximum) >= len(worker.Zones) {
-			continue
-		}
-		newMaximum := int32(len(worker.Zones)) // #nosec G115 -- `len(worker.Zones)` cannot be higher than max int32. Zones come from shoot spec and there is a validation that there cannot be more zones than worker.Maximum which is int32.
-		reasonsForUpdate = append(reasonsForUpdate, fmt.Sprintf("Maximum of worker-pool %q upgraded from %d to %d. Reason: %s", worker.Name, worker.Maximum, newMaximum, reason))
-		shoot.Spec.Provider.Workers[i].Maximum = newMaximum
-	}
-
-	return reasonsForUpdate
 }
 
 // setLimitedSwap sets the swap behavior to `LimitedSwap` if it's currently set to `UnlimitedSwap`

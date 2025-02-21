@@ -30,10 +30,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -85,7 +83,7 @@ var _ = Describe("KubeAPIServer", func() {
 		namePrefix          string
 		consistOf           func(...client.Object) types.GomegaMatcher
 
-		secretNameStaticToken             = "kube-apiserver-static-token-c069a0e6"
+		secretNameStaticToken             = "kube-apiserver-static-token-53d619b2"
 		secretNameCA                      = "ca"
 		secretNameCAClient                = "ca-client"
 		secretNameCAEtcd                  = "ca-etcd"
@@ -131,8 +129,8 @@ var _ = Describe("KubeAPIServer", func() {
 		sm = fakesecretsmanager.New(c, namespace)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
-		version = semver.MustParse("1.25.1")
-		runtimeVersion = semver.MustParse("1.25.1")
+		version = semver.MustParse("1.28.1")
+		runtimeVersion = semver.MustParse("1.28.1")
 		namePrefix = ""
 	})
 
@@ -417,67 +415,32 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("PodDisruptionBudget", func() {
-			Context("Kubernetes version < 1.26", func() {
-				It("should successfully deploy the PDB resource", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(BeNotFoundError())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
-					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            podDisruptionBudget.Name,
-							Namespace:       podDisruptionBudget.Namespace,
-							ResourceVersion: "1",
-							Labels: map[string]string{
+			It("should successfully deploy the PDB resource", func() {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(BeNotFoundError())
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
+
+				Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            podDisruptionBudget.Name,
+						Namespace:       podDisruptionBudget.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"app":  "kubernetes",
+							"role": "apiserver",
+						},
+					},
+					Spec: policyv1.PodDisruptionBudgetSpec{
+						MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
 								"app":  "kubernetes",
 								"role": "apiserver",
 							},
 						},
-						Spec: policyv1.PodDisruptionBudgetSpec{
-							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app":  "kubernetes",
-									"role": "apiserver",
-								},
-							},
-						},
-					}))
-				})
-			})
-
-			Context("Kubernetes version >= 1.26", func() {
-				BeforeEach(func() {
-					runtimeVersion = semver.MustParse("1.26.4")
-				})
-
-				It("should successfully deploy the PDB resource", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(BeNotFoundError())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
-
-					unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
-					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            podDisruptionBudget.Name,
-							Namespace:       podDisruptionBudget.Namespace,
-							ResourceVersion: "1",
-							Labels: map[string]string{
-								"app":  "kubernetes",
-								"role": "apiserver",
-							},
-						},
-						Spec: policyv1.PodDisruptionBudgetSpec{
-							MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app":  "kubernetes",
-									"role": "apiserver",
-								},
-							},
-							UnhealthyPodEvictionPolicy: &unhealthyPodEvictionPolicyAlwaysAllow,
-						},
-					}))
-				})
+						UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+					},
+				}))
 			})
 		})
 
@@ -524,7 +487,7 @@ var _ = Describe("KubeAPIServer", func() {
 							MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 								SourceLabels: []monitoringv1.LabelName{"__name__"},
 								Action:       "keep",
-								Regex:        `^(apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_request_total|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_cache_list_.+|apiserver_crd_webhook_conversion_duration_seconds_.+|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_init_events_total|apiserver_latency|apiserver_latency_seconds|apiserver_longrunning_requests|apiserver_request_duration_seconds_.+|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_count|apiserver_request_terminations_total|apiserver_response_sizes_.+|apiserver_storage_db_total_size_in_bytes|apiserver_storage_list_.+|apiserver_storage_objects|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_storage_size_bytes|apiserver_registered_watchers|apiserver_request_count|apiserver_request_total|apiserver_watch_duration|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_db_total_size_in_bytes|etcd_object_counts|etcd_request_duration_seconds_.+|go_.+|process_max_fds|process_open_fds|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity)$`,
+								Regex:        `^(apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_request_total|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_cache_list_.+|apiserver_crd_webhook_conversion_duration_seconds_.+|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_init_events_total|apiserver_latency|apiserver_latency_seconds|apiserver_longrunning_requests|apiserver_request_duration_seconds_.+|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_count|apiserver_request_terminations_total|apiserver_response_sizes_.+|apiserver_storage_db_total_size_in_bytes|apiserver_storage_list_.+|apiserver_storage_objects|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_storage_size_bytes|apiserver_registered_watchers|apiserver_request_count|apiserver_request_total|apiserver_watch_duration|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_request_duration_seconds_.+|go_.+|process_max_fds|process_open_fds|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity)$`,
 							}},
 						}},
 					},
@@ -2396,7 +2359,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
-						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-af50ac19":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
@@ -2585,7 +2548,7 @@ kind: AuthorizationConfiguration
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
-						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-af50ac19":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-c4700ce9":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": configMapNameAdmissionConfigs,
 						"reference.resources.gardener.cloud/secret-5613e39f":    secretNameAdmissionKubeconfigs,
@@ -3461,49 +3424,7 @@ kind: AuthorizationConfiguration
 					))
 				})
 
-				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
-					deployAndRead()
-
-					secretList := &corev1.SecretList{}
-					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-						"name": "user-kubeconfig",
-					})).To(Succeed())
-
-					Expect(secretList.Items).To(HaveLen(1))
-					Expect(secretList.Items[0].Data).To(HaveKey("kubeconfig"))
-
-					kubeconfig := &clientcmdv1.Config{}
-					Expect(yaml.Unmarshal(secretList.Items[0].Data["kubeconfig"], kubeconfig)).To(Succeed())
-					Expect(kubeconfig.CurrentContext).To(Equal(namespace))
-					Expect(kubeconfig.AuthInfos).To(HaveLen(1))
-					Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
-				})
-
-				It("should not generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to false", func() {
-					deployAndRead()
-
-					secretList := &corev1.SecretList{}
-					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-						"name": "user-kubeconfig",
-					})).To(Succeed())
-
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							RuntimeVersion: runtimeVersion,
-						},
-						Version:                      version,
-						StaticTokenKubeconfigEnabled: ptr.To(false),
-					})
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-					secretList = &corev1.SecretList{}
-					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-						"name": "user-kubeconfig",
-					})).To(Succeed())
-				})
-
-				It("should generate kube-apiserver-static-token without system:cluster-admin token when StaticTokenKubeconfigEnabled is set to false", func() {
+				It("should generate kube-apiserver-static-token without system:cluster-admin token", func() {
 					deployAndRead()
 
 					secret := &corev1.Secret{}
@@ -3519,19 +3440,7 @@ kind: AuthorizationConfiguration
 						},
 					))
 
-					newSecretNameStaticToken := "kube-apiserver-static-token-53d619b2"
-
-					kapi = New(kubernetesInterface, namespace, sm, Values{
-						Values: apiserver.Values{
-							RuntimeVersion: runtimeVersion,
-						},
-						Version:                      version,
-						StaticTokenKubeconfigEnabled: ptr.To(false),
-					})
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-					Expect(deployment.Spec.Template.Spec.Volumes).ToNot(ContainElements(
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
 						corev1.Volume{
 							Name: "static-token",
 							VolumeSource: corev1.VolumeSource{
@@ -3542,19 +3451,8 @@ kind: AuthorizationConfiguration
 						},
 					))
 
-					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
-						corev1.Volume{
-							Name: "static-token",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: newSecretNameStaticToken,
-								},
-							},
-						},
-					))
-
 					secret = &corev1.Secret{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: newSecretNameStaticToken}, secret)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretNameStaticToken}, secret)).To(Succeed())
 					Expect(secret.Data).To(HaveKey("static_tokens.csv"))
 				})
 
@@ -4049,9 +3947,8 @@ kind: AuthenticationConfiguration
 						Values: apiserver.Values{
 							RuntimeVersion: runtimeVersion,
 						},
-						Images:                       images,
-						Version:                      semver.MustParse("1.26.9"),
-						StaticTokenKubeconfigEnabled: ptr.To(true),
+						Images:  images,
+						Version: semver.MustParse("1.31.1"),
 					})
 					deployAndRead()
 

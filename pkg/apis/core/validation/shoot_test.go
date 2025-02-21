@@ -178,7 +178,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Domain: &domain,
 					},
 					Kubernetes: core.Kubernetes{
-						Version: "1.26.2",
+						Version: "1.30.3",
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							OIDCConfig: &core.OIDCConfig{
 								CABundle:       ptr.To("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
@@ -1217,24 +1217,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.provider.workers[0].name"),
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].name"),
+						"Detail": ContainSubstring("a lowercase RFC 1123 label must consist of lower case alphanumeric characters or"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.provider.workers[0].machine.type"),
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.provider.workers[0].machine.type"),
+						"Detail": ContainSubstring("must specify a machine type"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.provider.workers[0].minimum"),
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].minimum"),
+						"Detail": ContainSubstring("minimum value must not be negative"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.provider.workers[0].maximum"),
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[0].maximum"),
+						"Detail": ContainSubstring("maximum value must not be negative"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeForbidden),
-						"Field": Equal("spec.provider.workers[0].maximum"),
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.provider.workers[0].maximum"),
+						"Detail": ContainSubstring("maximum value must not be less than minimum value"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.provider.workers[0].maximum"),
+						"Detail": ContainSubstring("maximum node count should be greater than or equal to the number of zones specified for this pool"),
 					})),
 				))
 			})
@@ -1984,22 +1994,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should deny using custom resources for Kubernetes versions < 1.26", func() {
-					shoot.Spec.Kubernetes.Version = "1.25"
-					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"deployment.apps", "new.custom.io", "ingresses.networking.k8s.io"},
-					}
-
-					Expect(ValidateShoot(shoot)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":     Equal(field.ErrorTypeInvalid),
-							"Field":    Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
-							"BadValue": Equal("new.custom.io"),
-							"Detail":   Equal("custom resources are only supported for Kubernetes versions >= 1.26"),
-						})),
-					))
-				})
-
 				It("should deny changing items when resources in the spec and status are not equal", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"configmaps", "deployments.apps"},
@@ -2395,42 +2389,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("kubernetes.enableStaticTokenKubeconfig field validation", func() {
-			Context("kubernetes version < 1.27", func() {
-				It("should allow creating shoots with this field set to true", func() {
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
+			It("should deny creating shoots with this field set to true", func() {
+				shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).To(BeEmpty())
-				})
-			})
-
-			Context("kubernetes version >= 1.27", func() {
-				It("should deny creating shoots with this field set to true", func() {
-					shoot.Spec.Kubernetes.Version = "1.27.0"
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
-
-					errorList := ValidateShoot(shoot)
-					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.kubernetes.enableStaticTokenKubeconfig"),
-						"Detail": ContainSubstring("for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true"),
-					}))))
-				})
-
-				It("should deny updating shoots to v1.27 with this field set to true", func() {
-					shoot.Spec.Kubernetes.Version = "1.26.0"
-					shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
-
-					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.Version = "1.27.0"
-
-					errorList := ValidateShootUpdate(newShoot, shoot)
-					Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.kubernetes.enableStaticTokenKubeconfig"),
-						"Detail": ContainSubstring("for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true"),
-					}))))
-				})
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).Should(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal("spec.kubernetes.enableStaticTokenKubeconfig"),
+					"BadValue": Equal(true),
+					"Detail":   ContainSubstring("setting this field to true is not supported"),
+				}))))
 			})
 		})
 
@@ -2799,7 +2767,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Mode:             &mode,
 				}
 				shoot.Spec.Kubernetes.KubeProxy = &config
-				shoot.Spec.Kubernetes.Version = "1.25.1"
+				shoot.Spec.Kubernetes.Version = "1.28.1"
 				oldMode := core.ProxyMode("IPTables")
 				oldConfig := core.KubeProxyConfig{
 					KubernetesConfig: kubernetesConfig,
@@ -3240,7 +3208,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"GracefulNodeShutdown": true,
 					"Foo":                  true,
 				}
-				shoot.Spec.Kubernetes.Version = "1.26.14"
+				shoot.Spec.Kubernetes.Version = "1.31.1"
 				shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = featureGates
 				shoot.Spec.Kubernetes.KubeControllerManager.FeatureGates = featureGates
 				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
@@ -3361,7 +3329,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		Context("worker pool kubernetes version", func() {
 			It("should forbid worker pool kubernetes version higher than control plane", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.27.0")}
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: ptr.To("1.31.1")}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -3854,44 +3822,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
 			Expect(errorList).To(BeEmpty())
-		})
-
-		Describe("kubeconfig rotation", func() {
-			DescribeTable("DisallowKubeconfigRotationForShootInDeletion",
-				func(oldAnnotations, newAnnotations map[string]string, newSetDeletionTimestamp, expectedError bool) {
-					now := metav1.NewTime(time.Now())
-					newShoot := prepareShootForUpdate(shoot)
-					if oldAnnotations != nil {
-						shoot.Annotations = oldAnnotations
-					}
-
-					if newSetDeletionTimestamp {
-						newShoot.DeletionTimestamp = &now
-					}
-					newShoot.Annotations = newAnnotations
-
-					errorList := ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, shoot.ObjectMeta, field.NewPath("metadata"))
-
-					if expectedError {
-						Expect(errorList).ToNot(BeEmpty())
-						Expect(errorList).To(ConsistOfFields(Fields{
-							"Type":   Equal(field.ErrorTypeInvalid),
-							"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
-							"Detail": ContainSubstring(`kubeconfig rotations is not allowed for clusters in deletion`),
-						}))
-					} else {
-						Expect(errorList).To(BeEmpty())
-					}
-				},
-				Entry("should allow kubeconfig rotation for cluster not in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, false, false),
-				Entry("should allow reconcile operation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "reconcile"}, true, false),
-				Entry("should allow any annotations for cluster in deletion", nil, map[string]string{"foo": "bar"}, true, false),
-				Entry("should allow other update request for cluster in deletion and already requested kubeconfig rotation operation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "reconcile"}, true, false),
-				Entry("should allow any annotations for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"foo": "bar"}, true, false),
-				Entry("should allow update request for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials", "foo": "bar"}, true, false),
-				Entry("should not allow kubeconfig rotation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true, true),
-				Entry("should not allow kubeconfig rotation for cluster in deletion with already requested operation", map[string]string{"gardener.cloud/operation": "some-other-operation"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true, true),
-			)
 		})
 
 		Describe("#ValidateSystemComponents", func() {
@@ -6297,9 +6227,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Kubelet: &core.KubeletConfig{
 						KubernetesConfig: core.KubernetesConfig{
 							FeatureGates: map[string]bool{
-								"AnyVolumeDataSource":  true,
-								"DynamicKubeletConfig": true,
-								"Foo":                  true,
+								"AnyVolumeDataSource": true,
+								"Foo":                 true,
 							},
 						},
 					},
@@ -6307,10 +6236,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}
 			errList := ValidateWorker(worker, core.Kubernetes{Version: "1.27.3"}, nil, false)
 			Expect(errList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("kubernetes.kubelet.featureGates.DynamicKubeletConfig"),
-				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("kubernetes.kubelet.featureGates.Foo"),
@@ -6635,7 +6560,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateSystemComponentWorkers(workers, "", field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("at least one worker pool min>0, max>0", zero, zero, one, one, BeEmpty()),
@@ -6669,7 +6594,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateSystemComponentWorkers(workers, "", field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(matcher)
 			},
 
 			Entry("all worker pools min=max=0", zero, zero, zero, zero, true, true, ConsistOf(
@@ -6683,7 +6608,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		DescribeTable("validate maximum node count",
-			func(kubernetesVersion string, max1, max2 int, allowSystemComponents1, allowSystemComponents2 bool, zones1, zones2 []string, matcher gomegatypes.GomegaMatcher) {
+			func(max1, max2 int, allowSystemComponents1, allowSystemComponents2 bool, zones1, zones2 []string, matcher gomegatypes.GomegaMatcher) {
 				workers := []core.Worker{
 					{
 						Name:    "one-active",
@@ -6705,19 +6630,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				Expect(ValidateSystemComponentWorkers(workers, kubernetesVersion, field.NewPath("workers"))).To(matcher)
+				Expect(ValidateSystemComponentWorkers(workers, field.NewPath("workers"))).To(matcher)
 			},
 
-			Entry("maximum == len(zones)", "v1.27", three, one, true, false, []string{"1", "2", "3"}, []string{"1"}, BeEmpty()),
-			Entry("maximum == len(zones) with multiple system component worker pools and smaller group first", "v1.27", one, three, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
-			Entry("maximum == len(zones) with multiple system component worker pools and smaller group last", "v1.27", three, one, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
-			Entry("maximum < len(zones)", "1.27", two, one, true, false, []string{"1", "2", "3"}, []string{"1"}, ConsistOf(
+			Entry("maximum == len(zones)", three, one, true, false, []string{"1", "2", "3"}, []string{"1"}, BeEmpty()),
+			Entry("maximum == len(zones) with multiple system component worker pools and smaller group first", one, three, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
+			Entry("maximum == len(zones) with multiple system component worker pools and smaller group last", three, one, true, true, []string{"1", "2", "3"}, []string{"1", "2", "3"}, BeEmpty()),
+			Entry("maximum < len(zones)", two, one, true, false, []string{"1", "2", "3"}, []string{"1"}, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("workers[0].maximum"),
 				})),
 			)),
-			Entry("maximum < len(zones) with multiple system component worker pools in different zones", "1.27", two, one, true, true, []string{"1", "2", "3"}, []string{"3", "4", "5"}, ConsistOf(
+			Entry("maximum < len(zones) with multiple system component worker pools in different zones", two, one, true, true, []string{"1", "2", "3"}, []string{"3", "4", "5"}, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("workers[0].maximum"),
@@ -6727,13 +6652,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("workers[1].maximum"),
 				})),
 			)),
-			Entry("maximum < len(zones) with multiple system component worker pools in same zones", "1.27", two, one, true, false, []string{"1", "2", "3"}, []string{"3", "1", "2"}, ConsistOf(
+			Entry("maximum < len(zones) with multiple system component worker pools in same zones", two, one, true, false, []string{"1", "2", "3"}, []string{"3", "1", "2"}, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("workers[0].maximum"),
 				})),
 			)),
-			Entry("maximum < len(zones) for versions < 1.27", "1.26", two, one, true, false, []string{"1", "2", "3"}, []string{"1"}, BeEmpty()),
 		)
 	})
 
@@ -6928,30 +6852,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(BeEmpty())
 			})
 		})
-
-		DescribeTable("SeccompDefault",
-			func(version string, SeccompDefaultEnabled bool, SeccompDefaultFeatureGate *bool, matcher gomegatypes.GomegaMatcher) {
-				kubeletConfig := core.KubeletConfig{
-					SeccompDefault: &SeccompDefaultEnabled,
-				}
-				if SeccompDefaultFeatureGate != nil {
-					kubeletConfig.FeatureGates = make(map[string]bool)
-					kubeletConfig.FeatureGates["SeccompDefault"] = *SeccompDefaultFeatureGate
-				}
-
-				errList := ValidateKubeletConfig(kubeletConfig, version, nil)
-
-				Expect(errList).To(matcher)
-			},
-
-			Entry("valid configuration", "1.25", true, nil, BeEmpty()),
-			Entry("valid configuration with set feature gate", "1.25", true, ptr.To(true), BeEmpty()),
-			Entry("do not allow to set SeccompDefault to true when feature gate is disabled", "1.25", true, ptr.To(false), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal("seccompDefault"),
-				"Detail": Equal("seccomp defaulting is not available when kubelet's 'SeccompDefault' feature gate is disabled"),
-			})))),
-		)
 
 		validResourceQuantity := resource.MustParse(validResourceQuantityValueMi)
 		invalidResourceQuantity := resource.MustParse(invalidResourceQuantityValue)

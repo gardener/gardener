@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	blackboxexporterconfig "github.com/prometheus/blackbox_exporter/config"
@@ -71,8 +70,6 @@ type Values struct {
 	IsGardenCluster bool
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the cluster.
 	VPAEnabled bool
-	// KubernetesVersion is the Kubernetes version of the cluster.
-	KubernetesVersion *semver.Version
 	// Config is blackbox exporter configuration.
 	Config blackboxexporterconfig.Config
 	// ScrapeConfigs is a list of scrape configs for the blackbox exporter.
@@ -325,8 +322,9 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
-				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-				Selector:       deployment.Spec.Selector,
+				MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+				Selector:                   deployment.Spec.Selector,
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -334,7 +332,6 @@ func (b *blackboxExporter) computeResourcesData() (map[string][]byte, error) {
 	)
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
-	kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, b.values.KubernetesVersion)
 
 	if b.values.ClusterType == component.ClusterTypeSeed {
 		networkPolicyPort := networkingv1.NetworkPolicyPort{

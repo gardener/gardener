@@ -154,7 +154,7 @@ rules:
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.25.4",
+					Version: "1.31.1",
 					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 						AuditConfig: &gardencorev1beta1.AuditConfig{
 							AuditPolicy: &gardencorev1beta1.AuditPolicy{
@@ -404,7 +404,6 @@ rules:
 
 				It("should allow if the auditPolicy is changed to something valid", func() {
 					Expect(fakeClient.Create(ctx, shootv1beta1)).To(Succeed())
-					shootv1beta1.Spec.Kubernetes.Version = "1.26.0"
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = anotherValidAuditPolicy
 

@@ -200,6 +200,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 						"role": "cluster-autoscaler",
 					},
 				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
@@ -660,7 +661,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#Deploy", func() {
 		Context("should successfully deploy all the resources", func() {
-			test := func(withConfig bool, withWorkerConfig bool, runtimeVersionGreaterEquals126 bool, withPriorityExpander bool) {
+			test := func(withConfig bool, withWorkerConfig bool, withPriorityExpander bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
 				var shootWorkerConfig []gardencorev1beta1.Worker
 				if withConfig {
@@ -675,11 +676,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					shootWorkerConfig = workerConfig
 				}
 
-				if runtimeVersionGreaterEquals126 {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.26.1"))
-				} else {
-					clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.25.0"))
-				}
+				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.28.1"))
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
@@ -720,11 +717,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualDeployment).To(DeepEqual(deploy))
 
 				actualPDB := &policyv1.PodDisruptionBudget{}
-				unhealthyPodEvictionPolicyAlwatysAllow := policyv1.AlwaysAllow
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(pdb), actualPDB)).To(Succeed())
-				if runtimeVersionGreaterEquals126 {
-					pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
-				}
 				Expect(actualPDB).To(DeepEqual(pdb))
 
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
@@ -740,11 +733,10 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			}
 
-			It("w/o config", func() { test(false, false, false, false) })
-			It("w/ config, kubernetes version < 1.26", func() { test(true, false, false, false) })
-			It("w/ config, kubernetes version >= 1.26", func() { test(true, false, true, false) })
-			It("w/ config, w/ workerConfig, kubernetes version >= 1.26", func() { test(true, true, true, false) })
-			It("w/ config, w/ workerConfig, kubernetes version >= 1.26, w/ 'priority' expander already configured", func() { test(true, true, true, true) })
+			It("w/o config", func() { test(false, false, false) })
+			It("w/ config", func() { test(true, false, false) })
+			It("w/ config, w/ workerConfig", func() { test(true, true, false) })
+			It("w/ config, w/ workerConfig, w/ 'priority' expander already configured", func() { test(true, true, true) })
 		})
 	})
 

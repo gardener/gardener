@@ -261,6 +261,8 @@ type ShootCredentialsRotation struct {
 	CertificateAuthorities *CARotation `json:"certificateAuthorities,omitempty" protobuf:"bytes,1,opt,name=certificateAuthorities"`
 	// Kubeconfig contains information about the kubeconfig credential rotation.
 	// +optional
+	//
+	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	Kubeconfig *ShootKubeconfigRotation `json:"kubeconfig,omitempty" protobuf:"bytes,2,opt,name=kubeconfig"`
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	// +optional
@@ -615,9 +617,10 @@ type Kubernetes struct {
 	// +optional
 	VerticalPodAutoscaler *VerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,9,opt,name=verticalPodAutoscaler"`
 	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
-	// Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26.
-	// Starting Kubernetes 1.27 the field will be locked to false.
+	// Setting this field to true is not supported.
 	// +optional
+	//
+	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	EnableStaticTokenKubeconfig *bool `json:"enableStaticTokenKubeconfig,omitempty" protobuf:"varint,10,opt,name=enableStaticTokenKubeconfig"`
 }
 
@@ -933,7 +936,6 @@ type APIServerRequests struct {
 type EncryptionConfig struct {
 	// Resources contains the list of resources that shall be encrypted in addition to secrets.
 	// Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
-	// Note that configuring a custom resource is only supported for versions >= 1.26.
 	// Wildcards are not supported for now.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.
 	Resources []string `json:"resources" protobuf:"bytes,1,rep,name=resources"`
@@ -1110,14 +1112,14 @@ type KubeControllerManagerConfig struct {
 	// +optional
 	NodeCIDRMaskSize *int32 `json:"nodeCIDRMaskSize,omitempty" protobuf:"varint,3,opt,name=nodeCIDRMaskSize"`
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
+	// +optional
 	//
 	// Deprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated
 	// in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`.
 	// The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint
 	// based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence,
 	// instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and
-	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.
-	// +optional
+	// `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.120.
 	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,4,opt,name=podEvictionTimeout"`
 	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
 	// +optional
@@ -1313,8 +1315,6 @@ type KubeletConfig struct {
 	// +optional
 	RegistryBurst *int32 `json:"registryBurst,omitempty" protobuf:"varint,20,opt,name=registryBurst"`
 	// SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
-	// This requires the corresponding SeccompDefault feature gate to be enabled as well.
-	// This field is only available for Kubernetes v1.25 or later.
 	// +optional
 	SeccompDefault *bool `json:"seccompDefault,omitempty" protobuf:"varint,21,opt,name=seccompDefault"`
 	// A quantity defines the maximum size of the container log file before it is rotated. For example: "5Mi" or "256Ki".
@@ -1325,14 +1325,12 @@ type KubeletConfig struct {
 	// +optional
 	ContainerLogMaxFiles *int32 `json:"containerLogMaxFiles,omitempty" protobuf:"bytes,23,opt,name=containerLogMaxFiles"`
 	// ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
-	// Defaults to true for Kubernetes v1.26 or later.
+	// Defaults to true.
 	// +optional
 	ProtectKernelDefaults *bool `json:"protectKernelDefaults,omitempty" protobuf:"varint,24,opt,name=protectKernelDefaults"`
 	// StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
 	// This field cannot be set lower than "30s" or greater than "4h".
-	// Default:
-	//  "4h" for Kubernetes < v1.26.
-	//  "5m" for Kubernetes >= v1.26.
+	// Default: "5m".
 	// +optional
 	StreamingConnectionIdleTimeout *metav1.Duration `json:"streamingConnectionIdleTimeout,omitempty" protobuf:"bytes,25,opt,name=streamingConnectionIdleTimeout"`
 	// MemorySwap configures swap memory available to container workloads.

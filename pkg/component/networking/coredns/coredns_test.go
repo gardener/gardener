@@ -9,7 +9,6 @@ import (
 	"net"
 	"regexp"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -408,8 +407,7 @@ status: {}
 			return out
 		}
 
-		pdbYAMLFor = func(k8sGreaterEquals126 bool) string {
-			out := `apiVersion: policy/v1
+		pdbYAML = `apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -422,19 +420,13 @@ spec:
   selector:
     matchLabels:
       k8s-app: kube-dns
-`
-			if k8sGreaterEquals126 {
-				out += `  unhealthyPodEvictionPolicy: AlwaysAllow
-`
-			}
-			out += `status:
+  unhealthyPodEvictionPolicy: AlwaysAllow
+status:
   currentHealthy: 0
   desiredHealthy: 0
   disruptionsAllowed: 0
   expectedPods: 0
 `
-			return out
-		}
 
 		hpaYAML = `apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -711,12 +703,11 @@ status: {}
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			ClusterDomain:     clusterDomain,
-			ClusterIPs:        clusterIPs,
-			Image:             image,
-			PodNetworkCIDRs:   podNetworkCIDRs,
-			NodeNetworkCIDRs:  nodeNetworkCIDRs,
-			KubernetesVersion: semver.MustParse("1.25.0"),
+			ClusterDomain:    clusterDomain,
+			ClusterIPs:       clusterIPs,
+			Image:            image,
+			PodNetworkCIDRs:  podNetworkCIDRs,
+			NodeNetworkCIDRs: nodeNetworkCIDRs,
 		}
 
 		component = New(c, namespace, values)
@@ -737,17 +728,14 @@ status: {}
 
 	Describe("#Deploy", func() {
 		var (
-			cpaEnabled          bool
-			vpaEnabled          bool
-			commonSuffixes      []string
-			k8sGreaterEquals126 bool
+			cpaEnabled     bool
+			vpaEnabled     bool
+			commonSuffixes []string
 		)
-
 		BeforeEach(func() {
 			cpaEnabled = false
 			vpaEnabled = false
 			commonSuffixes = []string{}
-			k8sGreaterEquals126 = false
 			values.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}
 		})
 
@@ -801,15 +789,11 @@ status: {}
 				clusterRoleBindingYAML,
 				configMapYAML(commonSuffixes),
 				configMapCustomYAML,
+				pdbYAML,
 				serviceYAML(ipFamilyPolicy(values.IPFamilies)),
 				networkPolicyYAML,
 			))
 
-			if k8sGreaterEquals126 {
-				Expect(manifests).To(ContainElement(pdbYAMLFor(true)))
-			} else {
-				Expect(manifests).To(ContainElement(pdbYAMLFor(false)))
-			}
 			if cpaEnabled {
 				Expect(manifests).To(ContainElements(
 					cpasaYAML,
@@ -846,17 +830,6 @@ status: {}
 		})
 
 		Context("w/o apiserver host, w/o pod annotations", func() {
-			It("should successfully deploy all resources", func() {
-				Expect(manifests).To(ContainElement(deploymentYAMLFor("", nil, true, true)))
-			})
-		})
-
-		Context("w/o apiserver host, w/o pod annotations, kubernetes versions >= 1.26 ", func() {
-			BeforeEach(func() {
-				values.KubernetesVersion = semver.MustParse("1.26.4")
-				k8sGreaterEquals126 = true
-			})
-
 			It("should successfully deploy all resources", func() {
 				Expect(manifests).To(ContainElement(deploymentYAMLFor("", nil, true, true)))
 			})

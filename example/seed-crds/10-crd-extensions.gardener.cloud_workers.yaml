@@ -401,7 +401,7 @@ spec:
                         protectKernelDefaults:
                           description: |-
                             ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults.
-                            Defaults to true for Kubernetes v1.26 or later.
+                            Defaults to true.
                           type: boolean
                         registryBurst:
                           description: |-
@@ -419,10 +419,8 @@ spec:
                           format: int32
                           type: integer
                         seccompDefault:
-                          description: |-
-                            SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.
-                            This requires the corresponding SeccompDefault feature gate to be enabled as well.
-                            This field is only available for Kubernetes v1.25 or later.
+                          description: SeccompDefault enables the use of `RuntimeDefault`
+                            as the default seccomp profile for all workloads.
                           type: boolean
                         serializeImagePulls:
                           description: |-
@@ -433,9 +431,7 @@ spec:
                           description: |-
                             StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed.
                             This field cannot be set lower than "30s" or greater than "4h".
-                            Default:
-                             "4h" for Kubernetes < v1.26.
-                             "5m" for Kubernetes >= v1.26.
+                            Default: "5m".
                           type: string
                         systemReserved:
                           description: |-

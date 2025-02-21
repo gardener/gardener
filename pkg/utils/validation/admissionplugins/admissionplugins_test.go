@@ -28,10 +28,10 @@ var _ = Describe("admissionplugins", func() {
 				Expect(err).To(HaveOccurred())
 			}
 		},
-		Entry("Unknown admission plugin", "Unknown", "1.25", false, false),
-		Entry("Known admission plugin but version not present in supported range", "ClusterTrustBundleAttest", "1.25", false, true),
-		Entry("Known admission plugin and version present in supported range", "DenyServiceExternalIPs", "1.25", true, true),
-		Entry("Known admission plugin but version range not present", "PodNodeSelector", "1.25", true, true),
+		Entry("Unknown admission plugin", "Unknown", "1.30", false, false),
+		Entry("Known admission plugin but version not present in supported range", "SecurityContextDeny", "1.30", false, true),
+		Entry("Known admission plugin and version present in supported range", "DenyServiceExternalIPs", "1.30", true, true),
+		Entry("Known admission plugin but version range not present", "PodNodeSelector", "1.30", true, true),
 	)
 
 	Describe("#ValidateAdmissionPlugins", func() {
@@ -42,29 +42,29 @@ var _ = Describe("admissionplugins", func() {
 			},
 			Entry("empty list", nil, "1.27.1", BeEmpty()),
 			Entry("supported admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit"}}, "1.27.1", BeEmpty()),
-			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest"}}, "1.25.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported admission plugin", []core.AdmissionPlugin{{Name: "PersistentVolumeLabel"}}, "1.31.1", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
-				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.25.10"),
+				"Detail": Equal("admission plugin \"PersistentVolumeLabel\" is not supported in Kubernetes version 1.31.1"),
 			})))),
-			Entry("unsupported admission plugin but is disabled", []core.AdmissionPlugin{{Name: "ClusterTrustBundleAttest", Disabled: ptr.To(true)}}, "1.26.6", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unsupported admission plugin but is disabled", []core.AdmissionPlugin{{Name: "PersistentVolumeLabel", Disabled: ptr.To(true)}}, "1.31.1", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
-				"Detail": Equal("admission plugin \"ClusterTrustBundleAttest\" is not supported in Kubernetes version 1.26.6"),
+				"Detail": Equal("admission plugin \"PersistentVolumeLabel\" is not supported in Kubernetes version 1.31.1"),
 			})))),
-			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.26.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("admission plugin without name", []core.AdmissionPlugin{{}}, "1.29.10", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeRequired),
 				"Field":  Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"Detail": Equal("must provide a name"),
 			})))),
-			Entry("unknown admission plugin", []core.AdmissionPlugin{{Name: "Foo"}}, "1.26.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("unknown admission plugin", []core.AdmissionPlugin{{Name: "Foo"}}, "1.29.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal(field.NewPath("admissionPlugins[0].name").String()),
 				"BadValue": Equal("Foo"),
 				"Detail":   Equal("unknown admission plugin \"Foo\""),
 			})))),
-			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: ptr.To(true)}}, "1.26.8", BeEmpty()),
-			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: ptr.To(true)}}, "1.26.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("disabling non-required admission plugin", []core.AdmissionPlugin{{Name: "AlwaysAdmit", Disabled: ptr.To(true)}}, "1.29.8", BeEmpty()),
+			Entry("disabling required admission plugin", []core.AdmissionPlugin{{Name: "MutatingAdmissionWebhook", Disabled: ptr.To(true)}}, "1.29.8", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal(field.NewPath("admissionPlugins[0]").String()),
 				"Detail": Equal("admission plugin \"MutatingAdmissionWebhook\" cannot be disabled"),
@@ -99,7 +99,7 @@ usernames: "admin"
 							},
 						},
 					},
-						"1.26.8",
+						"1.31.1",
 						field.NewPath("admissionPlugins"),
 					)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -123,7 +123,7 @@ exemptions:
 							},
 						},
 					},
-						"1.26.8",
+						"1.31.1",
 						field.NewPath("admissionPlugins"),
 					)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
@@ -147,7 +147,7 @@ exemptions:
 							},
 						},
 					},
-						"1.26.8",
+						"1.31.1",
 						field.NewPath("admissionPlugins"),
 					)).To(BeEmpty())
 				})

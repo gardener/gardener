@@ -7,7 +7,6 @@ package kubestatemetrics_test
 import (
 	"context"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -69,7 +68,7 @@ var _ = Describe("KubeStateMetrics", func() {
 		serviceAccountFor            func(string) *corev1.ServiceAccount
 		secretShootAccess            *corev1.Secret
 		vpaFor                       func(string) *vpaautoscalingv1.VerticalPodAutoscaler
-		pdbFor                       func(bool, string) *policyv1.PodDisruptionBudget
+		pdbFor                       func(string) *policyv1.PodDisruptionBudget
 		customResourceStateConfigMap *corev1.ConfigMap
 
 		clusterRoleFor = func(clusterType component.ClusterType, nameSuffix string) *rbacv1.ClusterRole {
@@ -890,29 +889,21 @@ var _ = Describe("KubeStateMetrics", func() {
 			}
 		}
 		maxUnavailable := intstr.FromInt32(1)
-		pdbFor = func(k8sGreaterEqual126 bool, nameSuffix string) *policyv1.PodDisruptionBudget {
-			var (
-				unhealthyPodEvictionPolicyAlwatysAllow = policyv1.AlwaysAllow
-				pdb                                    = &policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "kube-state-metrics-pdb" + nameSuffix,
-						Namespace: namespace,
-						Labels:    selectorLabelsForClusterType(nameSuffix),
+		pdbFor = func(nameSuffix string) *policyv1.PodDisruptionBudget {
+			return &policyv1.PodDisruptionBudget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-state-metrics-pdb" + nameSuffix,
+					Namespace: namespace,
+					Labels:    selectorLabelsForClusterType(nameSuffix),
+				},
+				Spec: policyv1.PodDisruptionBudgetSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: selectorLabelsForClusterType(nameSuffix),
 					},
-					Spec: policyv1.PodDisruptionBudgetSpec{
-						Selector: &metav1.LabelSelector{
-							MatchLabels: selectorLabelsForClusterType(nameSuffix),
-						},
-						MaxUnavailable: &maxUnavailable,
-					},
-				}
-			)
-
-			if k8sGreaterEqual126 {
-				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAlwatysAllow
+					MaxUnavailable:             &maxUnavailable,
+					UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+				},
 			}
-
-			return pdb
 		}
 	})
 
@@ -947,7 +938,6 @@ var _ = Describe("KubeStateMetrics", func() {
 				}
 				ksm = New(c, namespace, nil, Values{
 					ClusterType:       component.ClusterTypeSeed,
-					KubernetesVersion: semver.MustParse("1.26.3"),
 					Image:             image,
 					PriorityClassName: priorityClassName,
 					NameSuffix:        "-runtime",
@@ -966,7 +956,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 			})
 
-			JustBeforeEach(func() {
+			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
 				Expect(ksm.Deploy(ctx)).To(Succeed())
@@ -998,6 +988,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					clusterRoleBindingFor(component.ClusterTypeSeed, "-runtime"),
 					serviceFor(component.ClusterTypeSeed),
 					deploymentFor(component.ClusterTypeSeed),
+					pdbFor("-runtime"),
 					vpaFor("-runtime"),
 					scrapeConfigGarden,
 					customResourceStateConfigMap,
@@ -1008,30 +999,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			})
-
-			Context("Kubernetes versions >= 1.26", func() {
-				It("should successfully deploy all resources", func() {
-					expectedObjects = append(expectedObjects, pdbFor(true, "-runtime"))
-					Expect(managedResource).To(consistOf(expectedObjects...))
-				})
-			})
-
-			Context("Kubernetes versions < 1.26", func() {
-				BeforeEach(func() {
-					ksm = New(c, namespace, nil, Values{
-						ClusterType:       component.ClusterTypeSeed,
-						KubernetesVersion: semver.MustParse("1.25.3"),
-						Image:             image,
-						PriorityClassName: priorityClassName,
-						NameSuffix:        "-runtime",
-					})
-				})
-
-				It("should successfully deploy all resources", func() {
-					expectedObjects = append(expectedObjects, pdbFor(false, "-runtime"))
-					Expect(managedResource).To(consistOf(expectedObjects...))
-				})
+				Expect(managedResource).To(consistOf(expectedObjects...))
 			})
 		})
 
@@ -1044,7 +1012,6 @@ var _ = Describe("KubeStateMetrics", func() {
 				}
 				ksm = New(c, namespace, nil, Values{
 					ClusterType:       component.ClusterTypeSeed,
-					KubernetesVersion: semver.MustParse("1.26.3"),
 					Image:             image,
 					PriorityClassName: priorityClassName,
 					NameSuffix:        "-seed",
@@ -1063,7 +1030,7 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(kubernetesutils.MakeUnique(customResourceStateConfigMap)).To(Succeed())
 			})
 
-			JustBeforeEach(func() {
+			It("should successfully deploy all resources", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
 
 				Expect(ksm.Deploy(ctx)).To(Succeed())
@@ -1095,6 +1062,7 @@ var _ = Describe("KubeStateMetrics", func() {
 					clusterRoleBindingFor(component.ClusterTypeSeed, "-seed"),
 					serviceFor(component.ClusterTypeSeed),
 					deploymentFor(component.ClusterTypeSeed),
+					pdbFor("-seed"),
 					vpaFor("-seed"),
 					scrapeConfigCacheFor("-seed"),
 					scrapeConfigSeed,
@@ -1106,30 +1074,8 @@ var _ = Describe("KubeStateMetrics", func() {
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
-			})
+				Expect(managedResource).To(consistOf(expectedObjects...))
 
-			Context("Kubernetes versions >= 1.26", func() {
-				It("should successfully deploy all resources", func() {
-					expectedObjects = append(expectedObjects, pdbFor(true, "-seed"))
-					Expect(managedResource).To(consistOf(expectedObjects...))
-				})
-			})
-
-			Context("Kubernetes versions < 1.26", func() {
-				BeforeEach(func() {
-					ksm = New(c, namespace, nil, Values{
-						ClusterType:       component.ClusterTypeSeed,
-						KubernetesVersion: semver.MustParse("1.25.3"),
-						Image:             image,
-						PriorityClassName: priorityClassName,
-						NameSuffix:        "-seed",
-					})
-				})
-
-				It("should successfully deploy all resources", func() {
-					expectedObjects = append(expectedObjects, pdbFor(false, "-seed"))
-					Expect(managedResource).To(consistOf(expectedObjects...))
-				})
 			})
 		})
 

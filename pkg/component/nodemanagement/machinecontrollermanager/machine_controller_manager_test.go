@@ -8,7 +8,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -43,10 +42,9 @@ var _ = Describe("MachineControllerManager", func() {
 		ctx       = context.Background()
 		namespace = "shoot--foo--bar"
 
-		image                    = "mcm-image:tag"
-		runtimeKubernetesVersion *semver.Version
-		namespaceUID             = types.UID("uid")
-		replicas                 = int32(1)
+		image        = "mcm-image:tag"
+		namespaceUID = types.UID("uid")
+		replicas     = int32(1)
 
 		fakeClient client.Client
 		sm         secretsmanager.Interface
@@ -75,9 +73,8 @@ var _ = Describe("MachineControllerManager", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
-			Image:                    image,
-			Replicas:                 replicas,
-			RuntimeKubernetesVersion: runtimeKubernetesVersion,
+			Image:    image,
+			Replicas: replicas,
 		}
 		mcm = New(fakeClient, namespace, sm, values)
 		mcm.SetNamespaceUID(namespaceUID)
@@ -271,6 +268,7 @@ var _ = Describe("MachineControllerManager", func() {
 						"role": "machine-controller-manager",
 					},
 				},
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 			},
 		}
 
@@ -515,7 +513,7 @@ subjects:
 	})
 
 	Describe("#Deploy", func() {
-		JustBeforeEach(func() {
+		It("should successfully deploy all resources", func() {
 			Expect(mcm.Deploy(ctx)).To(Succeed())
 
 			actualServiceAccount := &corev1.ServiceAccount{}
@@ -547,6 +545,11 @@ subjects:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(vpa), actualVPA)).To(Succeed())
 			vpa.ResourceVersion = "1"
 			Expect(actualVPA).To(Equal(vpa))
+
+			actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), actualPodDisruptionBudget)).To(Succeed())
+			podDisruptionBudget.ResourceVersion = "1"
+			Expect(actualPodDisruptionBudget).To(Equal(podDisruptionBudget))
 
 			actualPrometheusRule := &monitoringv1.PrometheusRule{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(prometheusRule), actualPrometheusRule)).To(Succeed())
@@ -580,35 +583,6 @@ subjects:
 				roleYAML,
 				roleBindingYAML,
 			))
-		})
-
-		Context("Kubernetes versions < 1.26", func() {
-			BeforeEach(func() {
-				runtimeKubernetesVersion = semver.MustParse("1.25.0")
-			})
-
-			It("should successfully deploy all resources", func() {
-				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), actualPodDisruptionBudget)).To(Succeed())
-				podDisruptionBudget.ResourceVersion = "1"
-				Expect(actualPodDisruptionBudget).To(Equal(podDisruptionBudget))
-			})
-		})
-
-		Context("Kubernetes versions >= 1.26", func() {
-			BeforeEach(func() {
-				runtimeKubernetesVersion = semver.MustParse("1.26.1")
-			})
-
-			It("should successfully deploy all resources", func() {
-				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), actualPodDisruptionBudget)).To(Succeed())
-				podDisruptionBudget.ResourceVersion = "1"
-
-				unhealthyPodEvictionPolicyAllowPolicy := policyv1.AlwaysAllow
-				podDisruptionBudget.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAllowPolicy
-				Expect(actualPodDisruptionBudget).To(Equal(podDisruptionBudget))
-			})
 		})
 	})
 

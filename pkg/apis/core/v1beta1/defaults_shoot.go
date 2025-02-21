@@ -91,6 +91,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = calculateDefaultNodeCIDRMaskSize(&obj.Spec)
 		}
 
+		if obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
+			obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 40 * time.Second}
+		}
+
 		if obj.Spec.Kubernetes.KubeScheduler == nil {
 			obj.Spec.Kubernetes.KubeScheduler = &KubeSchedulerConfig{}
 		}

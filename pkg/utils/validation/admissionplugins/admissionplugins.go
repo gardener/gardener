@@ -39,7 +39,7 @@ var (
 		"CertificateApproval":                  {},
 		"CertificateSigning":                   {},
 		"CertificateSubjectRestriction":        {},
-		"ClusterTrustBundleAttest":             {VersionRange: versionutils.VersionRange{AddedInVersion: "1.27"}},
+		"ClusterTrustBundleAttest":             {},
 		"DefaultIngressClass":                  {},
 		"DefaultStorageClass":                  {},
 		"DefaultTolerationSeconds":             {},
@@ -68,7 +68,7 @@ var (
 		"ServiceAccount":                       {},
 		"StorageObjectInUseProtection":         {Required: true},
 		"TaintNodesByCondition":                {},
-		"ValidatingAdmissionPolicy":            {VersionRange: versionutils.VersionRange{AddedInVersion: "1.26"}},
+		"ValidatingAdmissionPolicy":            {},
 		"ValidatingAdmissionWebhook":           {Required: true},
 	}
 

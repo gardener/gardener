@@ -44,7 +44,6 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var _ = Describe("KubeControllerManager", func() {
@@ -68,8 +67,8 @@ var _ = Describe("KubeControllerManager", func() {
 		namespace                = "shoot--foo--bar"
 		version                  = "1.27.3"
 		semverVersion, _         = semver.NewVersion(version)
-		runtimeKubernetesVersion = semver.MustParse("1.26.3")
-		image                    = "registry.k8s.io/kube-controller-manager:v1.25.3"
+		runtimeKubernetesVersion = semver.MustParse("1.31.1")
+		image                    = "registry.k8s.io/kube-controller-manager:v1.31.1"
 		isWorkerless             = false
 		priorityClassName        = v1beta1constants.PriorityClassNameShootControlPlane300
 
@@ -143,34 +142,26 @@ var _ = Describe("KubeControllerManager", func() {
 			Type: corev1.SecretTypeOpaque,
 		}
 
-		pdbFor = func(runtimeKubernetesVersionGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
-			pdb := &policyv1.PodDisruptionBudget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pdbName,
-					Namespace: namespace,
-					Labels: map[string]string{
+		pdb = &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pdbName,
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":  "kubernetes",
+					"role": "controller-manager",
+				},
+				ResourceVersion: "1",
+			},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MaxUnavailable: ptr.To(intstr.FromInt32(1)),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
 						"app":  "kubernetes",
 						"role": "controller-manager",
 					},
-					ResourceVersion: "1",
 				},
-				Spec: policyv1.PodDisruptionBudgetSpec{
-					MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"app":  "kubernetes",
-							"role": "controller-manager",
-						},
-					},
-				},
-			}
-
-			if runtimeKubernetesVersionGreaterEquals126 {
-				unhealthyPodEvictionPolicyAllowPolicy := policyv1.AlwaysAllow
-				pdb.Spec.UnhealthyPodEvictionPolicy = &unhealthyPodEvictionPolicyAllowPolicy
-			}
-
-			return pdb
+				UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
+			},
 		}
 
 		vpaFor = func(isScaleDownDisabled bool) *vpaautoscalingv1.VerticalPodAutoscaler {
@@ -302,7 +293,7 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		replicas      int32 = 1
-		deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool, controllerWorkers ControllerWorkers) *appsv1.Deployment {
+		deploymentFor       = func(config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool, controllerWorkers ControllerWorkers) *appsv1.Deployment {
 			deploy := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      v1beta1constants.DeploymentNameKubeControllerManager,
@@ -350,10 +341,9 @@ var _ = Describe("KubeControllerManager", func() {
 									Name:            "kube-controller-manager",
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
-									Command: commandForKubernetesVersion(version,
+									Command: commandForKubernetesVersion(
 										10257,
 										config.NodeCIDRMaskSize,
-										config.PodEvictionTimeout,
 										config.NodeMonitorGracePeriod,
 										namespace,
 										isWorkerless,
@@ -576,7 +566,7 @@ namespace: kube-system
 	})
 
 	Describe("#Deploy", func() {
-		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isScaleDownDisabled bool, controllerWorkers ControllerWorkers, runtimeVersionGreaterEqual126 bool) {
+		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isScaleDownDisabled bool, controllerWorkers ControllerWorkers) {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -604,7 +594,7 @@ namespace: kube-system
 
 			actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
-			Expect(actualDeployment).To(Equal(deploymentFor(version, config, isWorkerless, controllerWorkers)))
+			Expect(actualDeployment).To(Equal(deploymentFor(config, isWorkerless, controllerWorkers)))
 
 			actualService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
@@ -616,7 +606,7 @@ namespace: kube-system
 
 			actualPDB := &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: pdbName, Namespace: namespace}}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
-			Expect(actualPDB).To(DeepEqual(pdbFor(runtimeVersionGreaterEqual126)))
+			Expect(actualPDB).To(DeepEqual(pdb))
 
 			expectedServiceMonitor := serviceMonitor("shoot", "")
 			actualServiceMonitor := &monitoringv1.ServiceMonitor{ObjectMeta: metav1.ObjectMeta{Name: expectedServiceMonitor.Name, Namespace: namespace}}
@@ -660,11 +650,10 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, isScaleDownDisabled, controllerWorkers, versionutils.ConstraintK8sGreaterEqual126.Check(runtimeKubernetesVersion))
+				verifyDeployment(config, isScaleDownDisabled, controllerWorkers)
 			},
 
-			Entry("w/o config k8s >=1.26", emptyConfig, false, runtimeKubernetesVersion),
-			Entry("w/o config k8s < 1.26", emptyConfig, false, semver.MustParse("1.25.0")),
+			Entry("w/o config k8s", emptyConfig, false, runtimeKubernetesVersion),
 			Entry("with scale-down disabled", emptyConfig, true, runtimeKubernetesVersion),
 			Entry("with non-default autoscaler config", configWithAutoscalerConfig, false, runtimeKubernetesVersion),
 			Entry("with feature flags", configWithFeatureFlags, false, runtimeKubernetesVersion),
@@ -698,7 +687,7 @@ namespace: kube-system
 
 				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 
-				verifyDeployment(config, isScaleDownDisabled, controllerWorkers, true)
+				verifyDeployment(config, isScaleDownDisabled, controllerWorkers)
 			},
 
 			Entry("w/o config", emptyConfig, false, controllerWorkers),
@@ -930,7 +919,7 @@ namespace: kube-system
 
 		It("should successfully wait for the deployment to be updated", func() {
 			values = Values{
-				RuntimeVersion: semver.MustParse("1.25.0"),
+				RuntimeVersion: semver.MustParse("1.31.1"),
 				IsWorkerless:   isWorkerless,
 			}
 			kubeControllerManager = New(testLogger, fakeInterface, namespace, nil, values)
@@ -980,10 +969,8 @@ namespace: kube-system
 // Utility functions
 
 func commandForKubernetesVersion(
-	version string,
 	port int32,
 	nodeCIDRMaskSize *int32,
-	podEvictionTimeout *metav1.Duration,
 	nodeMonitorGracePeriod *metav1.Duration,
 	clusterName string,
 	isWorkerless bool,
@@ -995,19 +982,11 @@ func commandForKubernetesVersion(
 	controllerSyncPeriods ControllerSyncPeriods,
 ) []string {
 	var (
-		command     []string
-		controllers = []string{"*", "bootstrapsigner", "tokencleaner"}
+		command                       []string
+		controllers                   = []string{"*", "bootstrapsigner", "tokencleaner"}
+		nodeMonitorGracePeriodSetting = "40s"
 	)
 
-	podEvictionTimeoutSetting := "2m0s"
-	if podEvictionTimeout != nil {
-		podEvictionTimeoutSetting = podEvictionTimeout.Duration.String()
-	}
-
-	nodeMonitorGracePeriodSetting := "2m0s"
-	if versionutils.ConstraintK8sGreaterEqual127.Check(semver.MustParse(version)) {
-		nodeMonitorGracePeriodSetting = "40s"
-	}
 	if nodeMonitorGracePeriod != nil {
 		nodeMonitorGracePeriodSetting = nodeMonitorGracePeriod.Duration.String()
 	}
@@ -1041,10 +1020,6 @@ func commandForKubernetesVersion(
 			"--leader-elect=true",
 			fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriodSetting),
 		)
-
-		if versionutils.ConstraintK8sLess127.Check(semver.MustParse(version)) {
-			command = append(command, fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting))
-		}
 
 		if v := controllerWorkers.Deployment; v == nil {
 			command = append(command, "--concurrent-deployment-syncs=50")

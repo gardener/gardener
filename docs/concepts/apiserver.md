@@ -48,7 +48,7 @@ Please see [this](../../example/11-internal-secret.yaml) example manifest.
 ## `Seed`s
 
 `Seed`s are resources that represent seed clusters.
-Gardener does not care about how a seed cluster got created - the only requirement is that it is of at least Kubernetes v1.25 and passes the Kubernetes conformance tests.
+Gardener does not care about how a seed cluster got created - the only requirement is that it is of at least Kubernetes v1.27 and passes the Kubernetes conformance tests.
 The Gardener operator has to either deploy the gardenlet into the cluster they want to use as seed (recommended, then the gardenlet will create the `Seed` object itself after bootstrapping) or provide the kubeconfig to the cluster inside a secret (that is referenced by the `Seed` resource) and create the `Seed` resource themselves.
 
 Please see [this](../../example/45-secret-seed-backup.yaml), [this](../../example/50-seed.yaml), and optionally [this](../../example/40-secret-seed.yaml) example manifests.

@@ -8,7 +8,6 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -58,7 +57,6 @@ var _ = Describe("Terminal", func() {
 		namespace                  = "some-namespace"
 
 		image                string
-		runtimeVersion       *semver.Version
 		topologyAwareRouting bool
 
 		fakeClient        client.Client
@@ -95,7 +93,6 @@ var _ = Describe("Terminal", func() {
 		ctx = context.Background()
 
 		image = "terminal-image:latest"
-		runtimeVersion = semver.MustParse("1.30.1")
 		topologyAwareRouting = false
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
@@ -592,7 +589,6 @@ server:
 	JustBeforeEach(func() {
 		values = Values{
 			Image:                       image,
-			RuntimeVersion:              runtimeVersion,
 			TopologyAwareRoutingEnabled: topologyAwareRouting,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
@@ -731,30 +727,12 @@ server:
 					topologyAwareRouting = true
 
 					metav1.SetMetaDataLabel(&service.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+					metav1.SetMetaDataAnnotation(&service.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
 				})
 
-				When("runtime version >= 1.27", func() {
-					BeforeEach(func() {
-						metav1.SetMetaDataAnnotation(&service.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
-					})
-
-					It("should successfully deploy all resources", func() {
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
-					})
-				})
-
-				When("runtime version < 1.27", func() {
-					BeforeEach(func() {
-						runtimeVersion = semver.MustParse("1.26.4")
-
-						metav1.SetMetaDataAnnotation(&service.ObjectMeta, "service.kubernetes.io/topology-aware-hints", "auto")
-					})
-
-					It("should successfully deploy all resources", func() {
-						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
-					})
+				It("should successfully deploy all resources", func() {
+					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
 				})
 			})
 		})

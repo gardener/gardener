@@ -249,10 +249,10 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, podDisruptionBudget, func() error {
 		podDisruptionBudget.Labels = getLabels()
 		podDisruptionBudget.Spec = policyv1.PodDisruptionBudgetSpec{
-			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
-			Selector:       deployment.Spec.Selector,
+			MaxUnavailable:             ptr.To(intstr.FromInt32(1)),
+			Selector:                   deployment.Spec.Selector,
+			UnhealthyPodEvictionPolicy: ptr.To(policyv1.AlwaysAllow),
 		}
-		kubernetesutils.SetAlwaysAllowEviction(podDisruptionBudget, c.runtimeVersion)
 
 		return nil
 	}); err != nil {

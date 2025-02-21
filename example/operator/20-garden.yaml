@@ -168,7 +168,7 @@ spec:
     #   encryptionConfig: # See https://github.com/gardener/gardener/blob/master/docs/concepts/operator.md#etcd-encryption-config
     #     resources: # secrets are always encrypted
     #     - configmaps
-    #     - customresource.fancyoperator.io # requires Kubernetes version >= 1.26
+    #     - customresource.fancyoperator.io
     #   sni:
     #     secretName: name-of-secret-containing-tls-cert-and-key
     #     domainPatterns:

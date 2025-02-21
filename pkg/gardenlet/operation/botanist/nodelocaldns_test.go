@@ -46,7 +46,7 @@ var _ = Describe("NodeLocalDNS", func() {
 					},
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.26.1",
+					Version: "1.30.1",
 				},
 				Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4}},
 			},
@@ -127,7 +127,7 @@ var _ = Describe("NodeLocalDNS", func() {
 						},
 					},
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: "1.26.1",
+						Version: "1.28.1",
 					},
 					Networking: &gardencorev1beta1.Networking{IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}},
 				},

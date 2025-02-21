@@ -68,7 +68,6 @@ var (
 		v1beta1constants.OperationRotateCAStart,
 		v1beta1constants.OperationRotateCAStartWithoutWorkersRollout,
 		v1beta1constants.OperationRotateCAComplete,
-		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
 		v1beta1constants.OperationRotateObservabilityCredentials,
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 		v1beta1constants.OperationRotateRolloutWorkers,
@@ -217,30 +216,8 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 }
 
 // ValidateShootObjectMetaUpdate validates the object metadata of a Shoot object.
-func ValidateShootObjectMetaUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
+func ValidateShootObjectMetaUpdate(_, _ metav1.ObjectMeta, _ *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, validateShootKubeconfigRotation(newMeta, oldMeta, fldPath)...)
-	return allErrs
-}
-
-// validateShootKubeconfigRotation validates that shoot in deletion cannot rotate its kubeconfig.
-func validateShootKubeconfigRotation(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
-	if newMeta.DeletionTimestamp == nil {
-		return field.ErrorList{}
-	}
-
-	// already set operation is valid use case
-	if oldOperation, oldOk := oldMeta.Annotations[v1beta1constants.GardenerOperation]; oldOk && oldOperation == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
-		return field.ErrorList{}
-	}
-
-	allErrs := field.ErrorList{}
-
-	// disallow kubeconfig rotation
-	if operation, ok := newMeta.Annotations[v1beta1constants.GardenerOperation]; ok && operation == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("annotations").Key(v1beta1constants.GardenerOperation), v1beta1constants.ShootOperationRotateKubeconfigCredentials, "kubeconfig rotations is not allowed for clusters in deletion"))
-	}
-
 	return allErrs
 }
 
@@ -896,9 +873,8 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		return allErrs
 	}
 
-	k8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.27")
-	if k8sGreaterEqual127 && ptr.Deref(kubernetes.EnableStaticTokenKubeconfig, false) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), kubernetes.EnableStaticTokenKubeconfig, "for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true, please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_access.md#static-token-kubeconfig"))
+	if ptr.Deref(kubernetes.EnableStaticTokenKubeconfig, false) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), *kubernetes.EnableStaticTokenKubeconfig, "setting this field to true is not supported"))
 	}
 
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
@@ -1138,7 +1114,7 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 	return allErrs
 }
 
-func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version string, defaultEncryptedResources sets.Set[string], fldPath *field.Path) field.ErrorList {
+func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, defaultEncryptedResources sets.Set[string], fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if encryptionConfig == nil {
@@ -1163,22 +1139,6 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version s
 		}
 
 		seenResources.Insert(resource)
-	}
-
-	k8sLess126, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.26")
-	if k8sLess126 {
-		for i, resource := range encryptionConfig.Resources {
-			idxPath := fldPath.Child("encryptionConfig", "resources").Index(i)
-
-			if elements := strings.Split(resource, "."); len(elements) > 2 {
-				// If it's a kubernetes API group, skip
-				if strings.HasSuffix(resource, ".k8s.io") {
-					continue
-				}
-
-				allErrs = append(allErrs, field.Invalid(idxPath, resource, "custom resources are only supported for Kubernetes versions >= 1.26"))
-			}
-		}
 	}
 
 	return allErrs
@@ -1471,7 +1431,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*defaultUnreachableTolerationSeconds, fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
-	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, version, defaultEncryptedResources, fldPath)...)
+	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, defaultEncryptedResources, fldPath)...)
 
 	allErrs = append(allErrs, ValidateAPIServerRequests(kubeAPIServer.Requests, fldPath.Child("requests"))...)
 
@@ -1732,7 +1692,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, networ
 		}
 
 		allErrs = append(allErrs, ValidateWorkers(provider.Workers, fldPath.Child("workers"))...)
-		allErrs = append(allErrs, ValidateSystemComponentWorkers(provider.Workers, kubernetes.Version, fldPath.Child("workers"))...)
+		allErrs = append(allErrs, ValidateSystemComponentWorkers(provider.Workers, fldPath.Child("workers"))...)
 	}
 
 	if kubernetes.KubeControllerManager != nil && kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil && networking != nil {
@@ -1983,11 +1943,6 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 	if v := kubeletConfig.RegistryBurst; v != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), fldPath.Child("registryBurst"))...)
 	}
-	if v := kubeletConfig.SeccompDefault; v != nil {
-		if featureGateEnabled, ok := kubeletConfig.FeatureGates["SeccompDefault"]; ok && !featureGateEnabled && *v {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("seccompDefault"), "seccomp defaulting is not available when kubelet's 'SeccompDefault' feature gate is disabled"))
-		}
-	}
 	if v := kubeletConfig.ContainerLogMaxFiles; v != nil {
 		if *v < 2 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("containerLogMaxFiles"), *v, "value must be >= 2."))
@@ -2208,7 +2163,7 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 }
 
 // ValidateSystemComponentWorkers validates workers specified to run system components.
-func ValidateSystemComponentWorkers(workers []core.Worker, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
+func ValidateSystemComponentWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs                                   = field.ErrorList{}
 		atLeastOnePoolWithAllowedSystemComponents = false
@@ -2254,12 +2209,8 @@ func ValidateSystemComponentWorkers(workers []core.Worker, kubernetesVersion str
 		}
 	}
 
-	// TODO(timuthy): Remove this check as soon as v1.27 is the least supported Kubernetes version in Gardener.
-	k8sGreaterEqual127, _ := versionutils.CheckVersionMeetsConstraint(kubernetesVersion, ">= 1.27")
-	if k8sGreaterEqual127 {
-		for _, i := range workerPoolsWithInsufficientWorkers {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), "maximum node count should be greater than or equal to the number of zones specified for this pool"))
-		}
+	for _, i := range workerPoolsWithInsufficientWorkers {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("maximum"), "maximum node count should be greater than or equal to the number of zones specified for this pool"))
 	}
 
 	if !atLeastOnePoolWithAllowedSystemComponents {

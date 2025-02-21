@@ -3453,7 +3453,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionConfig(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"resources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Resources contains the list of resources that shall be encrypted in addition to secrets. Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted. Note that configuring a custom resource is only supported for versions >= 1.26. Wildcards are not supported for now. See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.",
+							Description: "Resources contains the list of resources that shall be encrypted in addition to secrets. Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted. Wildcards are not supported for now. See https://github.com/gardener/gardener/blob/master/docs/usage/security/etcd_encryption_config.md for more details.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4458,7 +4458,7 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 					},
 					"podEvictionTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`. The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence, instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`.",
+							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.\n\nDeprecated: The corresponding kube-controller-manager flag `--pod-eviction-timeout` is deprecated in favor of the kube-apiserver flags `--default-not-ready-toleration-seconds` and `--default-unreachable-toleration-seconds`. The `--pod-eviction-timeout` flag does not have effect when the taint based eviction is enabled. The taint based eviction is beta (enabled by default) since Kubernetes 1.13 and GA since Kubernetes 1.18. Hence, instead of setting this field, set the `spec.kubernetes.kubeAPIServer.defaultNotReadyTolerationSeconds` and `spec.kubernetes.kubeAPIServer.defaultUnreachableTolerationSeconds`. This field will be removed in gardener v1.120.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -4706,7 +4706,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					},
 					"seccompDefault": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads. This requires the corresponding SeccompDefault feature gate to be enabled as well. This field is only available for Kubernetes v1.25 or later.",
+							Description: "SeccompDefault enables the use of `RuntimeDefault` as the default seccomp profile for all workloads.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -4726,14 +4726,14 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					},
 					"protectKernelDefaults": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults. Defaults to true for Kubernetes v1.26 or later.",
+							Description: "ProtectKernelDefaults ensures that the kernel tunables are equal to the kubelet defaults. Defaults to true.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
 					"streamingConnectionIdleTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Description: "StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed. This field cannot be set lower than \"30s\" or greater than \"4h\". Default:\n \"4h\" for Kubernetes < v1.26.\n \"5m\" for Kubernetes >= v1.26.",
+							Description: "StreamingConnectionIdleTimeout is the maximum time a streaming connection can be idle before the connection is automatically closed. This field cannot be set lower than \"30s\" or greater than \"4h\". Default: \"5m\".",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -4986,7 +4986,7 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 					},
 					"enableStaticTokenKubeconfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster. Defaults to true for Shoots with Kubernetes versions < 1.26. Defaults to false for Shoots with Kubernetes versions >= 1.26. Starting Kubernetes 1.27 the field will be locked to false.",
+							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster. Setting this field to true is not supported.\n\nDeprecated: This field is deprecated and will be removed in gardener v1.120",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -8688,7 +8688,7 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 					},
 					"kubeconfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kubeconfig contains information about the kubeconfig credential rotation.",
+							Description: "Kubeconfig contains information about the kubeconfig credential rotation.\n\nDeprecated: This field is deprecated and will be removed in gardener v1.120",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation"),
 						},
 					},

@@ -27,87 +27,7 @@ var _ = Describe("Component", func() {
 
 		kubeletCABundle       = []byte("certificate")
 		kubeletCABundleBase64 = utils.EncodeBase64(kubeletCABundle)
-	)
-
-	BeforeEach(func() {
-		component = New()
-		ctx = components.Context{}
-	})
-
-	DescribeTable("#Config",
-		func(kubernetesVersion string, kubeletConfig string, preferIPv6 bool) {
-
-			ctx.CRIName = extensionsv1alpha1.CRINameContainerD
-			ctx.KubernetesVersion = semver.MustParse(kubernetesVersion)
-			ctx.KubeletCABundle = kubeletCABundle
-			ctx.Images = map[string]*imagevector.Image{
-				"hyperkube": {
-					Name:       "pause-container",
-					Repository: ptr.To(hyperkubeImageRepo),
-					Tag:        ptr.To(hyperkubeImageTag),
-				},
-				"pause-container": {
-					Name:       "pause-container",
-					Repository: ptr.To(pauseContainerImageRepo),
-					Tag:        ptr.To(pauseContainerImageTag),
-				},
-			}
-			ctx.NodeLabels = map[string]string{
-				"test": "foo",
-				"blub": "bar",
-			}
-			ctx.PreferIPv6 = preferIPv6
-			ctx.ClusterDNSAddresses = []string{"2001::db8:1", "2001::db8:2"}
-			ctx.NodeMonitorGracePeriod.Duration = time.Duration(40) * time.Second
-
-			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.KubeletCLIFlags, ctx.PreferIPv6)
-			units, files, err := component.Config(ctx)
-
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(units).To(ConsistOf(
-				kubeletUnit(cliFlags),
-			))
-			Expect(files).To(ConsistOf(kubeletFiles(ctx, kubeletConfig, kubeletCABundleBase64)))
-		},
-
-		Entry(
-			"kubernetes 1.25",
-			"1.25.1",
-			kubeletConfig(false),
-			false,
-		),
-		Entry(
-			"kubernetes 1.26",
-			"1.26.1",
-			kubeletConfig(true),
-			false,
-		),
-		Entry(
-			"kubernetes 1.26 and preferIPv6",
-			"1.26.1",
-			kubeletConfig(true),
-			true,
-		),
-	)
-})
-
-const (
-	pauseContainerImageRepo = "foo.io"
-	pauseContainerImageTag  = "v1.2.3"
-	hyperkubeImageRepo      = "hyperkube.io"
-	hyperkubeImageTag       = "v4.5.6"
-)
-
-func kubeletConfig(
-	k8sGreaterEqual126 bool,
-) string {
-	streamingConnectionIdleTimeout := "4h0m0s"
-	if k8sGreaterEqual126 {
-		streamingConnectionIdleTimeout = "5m0s"
-	}
-
-	out := `apiVersion: kubelet.config.k8s.io/v1beta1
+		kubeletConfig         = `apiVersion: kubelet.config.k8s.io/v1beta1
 authentication:
   anonymous:
     enabled: false
@@ -192,14 +112,8 @@ maxOpenFiles: 1000000
 maxPods: 110
 memorySwap: {}
 nodeStatusReportFrequency: 0s
-nodeStatusUpdateFrequency: 0s`
-
-	if k8sGreaterEqual126 {
-		out += `
-protectKernelDefaults: true`
-	}
-
-	out += `
+nodeStatusUpdateFrequency: 0s
+protectKernelDefaults: true
 registerWithTaints:
 - effect: NoSchedule
   key: node.gardener.cloud/critical-components-not-ready
@@ -210,14 +124,76 @@ serializeImagePulls: true
 serverTLSBootstrap: true
 shutdownGracePeriod: 0s
 shutdownGracePeriodCriticalPods: 0s
-streamingConnectionIdleTimeout: ` + streamingConnectionIdleTimeout + `
+streamingConnectionIdleTimeout: 5m0s
 syncFrequency: 1m0s
 volumePluginDir: /var/lib/kubelet/volumeplugins
 volumeStatsAggPeriod: 1m0s
 `
+	)
 
-	return out
-}
+	BeforeEach(func() {
+		component = New()
+		ctx = components.Context{}
+	})
+
+	DescribeTable("#Config",
+		func(kubernetesVersion string, kubeletConfig string, preferIPv6 bool) {
+
+			ctx.CRIName = extensionsv1alpha1.CRINameContainerD
+			ctx.KubernetesVersion = semver.MustParse(kubernetesVersion)
+			ctx.KubeletCABundle = kubeletCABundle
+			ctx.Images = map[string]*imagevector.Image{
+				"hyperkube": {
+					Name:       "pause-container",
+					Repository: ptr.To(hyperkubeImageRepo),
+					Tag:        ptr.To(hyperkubeImageTag),
+				},
+				"pause-container": {
+					Name:       "pause-container",
+					Repository: ptr.To(pauseContainerImageRepo),
+					Tag:        ptr.To(pauseContainerImageTag),
+				},
+			}
+			ctx.NodeLabels = map[string]string{
+				"test": "foo",
+				"blub": "bar",
+			}
+			ctx.PreferIPv6 = preferIPv6
+			ctx.ClusterDNSAddresses = []string{"2001::db8:1", "2001::db8:2"}
+			ctx.NodeMonitorGracePeriod.Duration = time.Duration(40) * time.Second
+
+			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.NodeLabels, ctx.CRIName, ctx.KubeletCLIFlags, ctx.PreferIPv6)
+			units, files, err := component.Config(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(units).To(ConsistOf(
+				kubeletUnit(cliFlags),
+			))
+			Expect(files).To(ConsistOf(kubeletFiles(ctx, kubeletConfig, kubeletCABundleBase64)))
+		},
+
+		Entry(
+			"kubernetes 1.27",
+			"1.27.1",
+			kubeletConfig,
+			false,
+		),
+		Entry(
+			"kubernetes 1.27 and preferIPv6",
+			"1.27.1",
+			kubeletConfig,
+			true,
+		),
+	)
+})
+
+const (
+	pauseContainerImageRepo = "foo.io"
+	pauseContainerImageTag  = "v1.2.3"
+	hyperkubeImageRepo      = "hyperkube.io"
+	hyperkubeImageTag       = "v4.5.6"
+)
 
 func kubeletUnit(cliFlags []string) extensionsv1alpha1.Unit {
 	var kubeletStartPre string

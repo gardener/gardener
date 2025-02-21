@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -45,8 +44,6 @@ type Values struct {
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
-	// RuntimeVersion is the Kubernetes version of the runtime cluster.
-	RuntimeVersion *semver.Version
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
 }

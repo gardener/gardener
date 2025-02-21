@@ -41,7 +41,7 @@ var _ = Describe("WaiterTest", func() {
 		fakeErr               = fmt.Errorf("fake error")
 		kubeControllerManager Interface
 		namespace             = "shoot--foo--bar"
-		version               = semver.MustParse("v1.25.8")
+		version               = semver.MustParse("v1.31.1")
 		isWorkerless          = false
 
 		// mock
@@ -76,7 +76,7 @@ var _ = Describe("WaiterTest", func() {
 	Describe("#WaitForControllerToBeActive", func() {
 		BeforeEach(func() {
 			kubeControllerManager = New(testLogger, fakeSeedInterface, namespace, nil, Values{
-				RuntimeVersion: semver.MustParse("1.25.0"),
+				RuntimeVersion: semver.MustParse("1.31.1"),
 				TargetVersion:  version,
 				IsWorkerless:   isWorkerless,
 			})

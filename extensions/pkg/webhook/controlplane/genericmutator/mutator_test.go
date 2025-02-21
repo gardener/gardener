@@ -74,7 +74,7 @@ var _ = Describe("Mutator", func() {
 		mgr    *mockmanager.MockManager
 		c      *mockclient.MockClient
 
-		kubernetesVersion       = "1.25.4"
+		kubernetesVersion       = "1.28.4"
 		kubernetesVersionSemver = semver.MustParse(kubernetesVersion)
 
 		clusterKey = client.ObjectKey{Name: namespace}
