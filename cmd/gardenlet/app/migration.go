@@ -130,6 +130,20 @@ func verifyRemoveAPIServerProxyLegacyPortFeatureGate(ctx context.Context, garden
 			continue
 		}
 
+		// we need to ignore shoots under the following conditions:
+		// - it is workerless
+		// - it is not yet picked up by gardenlet or still in phase "Creating"
+		//
+		// this is needed bcs. the constraint "ShootAPIServerProxyUsesHTTPProxy" is only set once the apiserver-proxy component is deployed to the shoot
+		// this will never happen if the shoot is workerless or the component could still be missing, if the gardenlet is restarted during the creation of a shoot
+		if v1beta1helper.IsWorkerless(&k) {
+			continue
+		}
+
+		if k.Status.LastOperation == nil || (k.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate && k.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) {
+			continue
+		}
+
 		if cond := v1beta1helper.GetCondition(k.Status.Constraints, gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
 			return errors.New("the `proxy` port on the istio ingress gateway cannot be removed until all api server proxies in all shoots on this seed have been reconfigured to use the `tls-tunnel` port instead, i.e., the `RemoveAPIServerProxyLegacyPort` feature gate can only be enabled once all shoots have the `APIServerProxyUsesHTTPProxy` constraint with status `true`")
 		}
