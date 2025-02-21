@@ -68,7 +68,7 @@ var _ = Describe("mutator", func() {
 				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 				Expect(handler.Admit(ctx, attrs, nil)).To(Succeed())
 
-				Expect(seed.Labels).To(HaveKeyWithValue("seed.gardener.cloud/the-seed", "true"))
+				Expect(seed.Labels).To(HaveKeyWithValue("name.seed.gardener.cloud/the-seed", "true"))
 			})
 
 			It("should add the label for the parent seed name", func() {
@@ -79,8 +79,8 @@ var _ = Describe("mutator", func() {
 				Expect(handler.Admit(ctx, attrs, nil)).To(Succeed())
 
 				Expect(seed.Labels).To(And(
-					HaveKeyWithValue("seed.gardener.cloud/the-seed", "true"),
-					HaveKeyWithValue("seed.gardener.cloud/parent-seed", "true"),
+					HaveKeyWithValue("name.seed.gardener.cloud/the-seed", "true"),
+					HaveKeyWithValue("name.seed.gardener.cloud/parent-seed", "true"),
 				))
 			})
 		})
@@ -90,7 +90,7 @@ var _ = Describe("mutator", func() {
 				attrs := admission.NewAttributesRecord(seed, seed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 				Expect(handler.Admit(ctx, attrs, nil)).To(Succeed())
 
-				Expect(seed.Labels).To(HaveKeyWithValue("seed.gardener.cloud/the-seed", "true"))
+				Expect(seed.Labels).To(HaveKeyWithValue("name.seed.gardener.cloud/the-seed", "true"))
 			})
 
 			It("should add the label for the parent seed name", func() {
@@ -101,8 +101,8 @@ var _ = Describe("mutator", func() {
 				Expect(handler.Admit(ctx, attrs, nil)).To(Succeed())
 
 				Expect(seed.Labels).To(And(
-					HaveKeyWithValue("seed.gardener.cloud/the-seed", "true"),
-					HaveKeyWithValue("seed.gardener.cloud/parent-seed", "true"),
+					HaveKeyWithValue("name.seed.gardener.cloud/the-seed", "true"),
+					HaveKeyWithValue("name.seed.gardener.cloud/parent-seed", "true"),
 				))
 			})
 
@@ -110,15 +110,15 @@ var _ = Describe("mutator", func() {
 				Expect(seedManagementInformerFactory.Seedmanagement().V1alpha1().ManagedSeeds().Informer().GetStore().Add(managedSeed)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
-				metav1.SetMetaDataLabel(&seed.ObjectMeta, "seed.gardener.cloud/foo", "true")
+				metav1.SetMetaDataLabel(&seed.ObjectMeta, "name.seed.gardener.cloud/foo", "true")
 
 				attrs := admission.NewAttributesRecord(seed, seed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
 				Expect(handler.Admit(ctx, attrs, nil)).To(Succeed())
 
 				Expect(seed.Labels).To(And(
-					HaveKeyWithValue("seed.gardener.cloud/the-seed", "true"),
-					HaveKeyWithValue("seed.gardener.cloud/parent-seed", "true"),
-					Not(HaveKey("seed.gardener.cloud/foo")),
+					HaveKeyWithValue("name.seed.gardener.cloud/the-seed", "true"),
+					HaveKeyWithValue("name.seed.gardener.cloud/parent-seed", "true"),
+					Not(HaveKey("name.seed.gardener.cloud/foo")),
 				))
 			})
 		})

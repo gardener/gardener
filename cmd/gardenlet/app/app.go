@@ -241,7 +241,7 @@ func (g *garden) Start(ctx context.Context) error {
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Field: fields.SelectorFromSet(fields.Set{gardencore.SeedRefName: g.config.SeedConfig.SeedTemplate.Name}),
 				},
-				// TODO(rfranzke): Enable the label selector for Seeds after Gardener v1.113 has been released.
+				// TODO(rfranzke): Enable the label selector for Seeds after Gardener v1.114 has been released.
 				// &gardencorev1beta1.Seed{}: {
 				// 	Label: labels.SelectorFromSet(labels.Set{v1beta1constants.LabelPrefixSeedName + g.config.SeedConfig.SeedTemplate.Name: "true"}),
 				// },

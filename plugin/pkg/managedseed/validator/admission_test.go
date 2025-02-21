@@ -379,18 +379,18 @@ var _ = Describe("ManagedSeed", func() {
 					Expect(admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
 
 					Expect(managedSeed.Labels).To(And(
-						HaveKeyWithValue("seed.gardener.cloud/parent-seed", "true"),
+						HaveKeyWithValue("name.seed.gardener.cloud/parent-seed", "true"),
 					))
 				})
 
 				It("should remove unneeded labels", func() {
-					metav1.SetMetaDataLabel(&seed.ObjectMeta, "seed.gardener.cloud/foo", "true")
+					metav1.SetMetaDataLabel(&seed.ObjectMeta, "name.seed.gardener.cloud/foo", "true")
 
 					Expect(admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
 
 					Expect(managedSeed.Labels).To(And(
-						HaveKeyWithValue("seed.gardener.cloud/parent-seed", "true"),
-						Not(HaveKey("seed.gardener.cloud/foo")),
+						HaveKeyWithValue("name.seed.gardener.cloud/parent-seed", "true"),
+						Not(HaveKey("name.seed.gardener.cloud/foo")),
 					))
 				})
 			})
