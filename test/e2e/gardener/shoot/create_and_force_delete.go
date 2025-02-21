@@ -30,7 +30,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Describe("Create and Force Delete Shoot", Label("force-delete"), func() {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			ItShouldSetShootAnnotation(s, v1beta1constants.ShootIgnore, "true")
+			ItShouldAnnotateShoot(s, map[string]string{
+				v1beta1constants.ShootIgnore: "true",
+			})
 			ItShouldDeleteShoot(s)
 
 			It("Add ErrorInfraDependencies to LastErrors", func(ctx SpecContext) {
@@ -44,11 +46,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
-			ItShouldSetShootAnnotation(s, v1beta1constants.AnnotationConfirmationForceDeletion, "true")
-			ItShouldSetShootAnnotation(s, v1beta1constants.ShootIgnore, "false")
-
-			// manually trigger reconcilation after stop ignoring the shoot
-			ItShouldSetShootAnnotation(s, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			ItShouldAnnotateShoot(s, map[string]string{
+				v1beta1constants.AnnotationConfirmationForceDeletion: "true",
+				v1beta1constants.ShootIgnore:                         "false",
+			})
 
 			ItShouldWaitForShootToBeDeleted(s)
 		})
