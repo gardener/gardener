@@ -1,0 +1,13 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: example-extension
+  annotations:
+    security.gardener.cloud/pod-security-enforce: baseline
+spec:
+  deployment:
+    extension:
+      values: {}
+      runtimeClusterValues: {}
+      helm:
+        ociRepository: {}

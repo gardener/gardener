@@ -1,0 +1,14 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: example-extension
+spec:
+  deployment:
+    admission:
+      values: {}
+      runtimeCluster:
+        helm:
+          ociRepository: {}
+      virtualCluster:
+        helm:
+          ociRepository: {}

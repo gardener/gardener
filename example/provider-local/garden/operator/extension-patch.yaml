@@ -1,0 +1,16 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: provider-local
+  annotations:
+    security.gardener.cloud/pod-security-enforce: privileged
+spec:
+  deployment:
+    extension:
+      runtimeClusterValues:
+        logLevel: debug
+      values:
+        logLevel: debug
+    admission:
+      values:
+        logLevel: debug
