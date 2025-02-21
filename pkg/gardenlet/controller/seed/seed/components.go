@@ -94,7 +94,9 @@ type components struct {
 	machineControllerManager component.DeployWaiter
 	dwdWeeder                component.DeployWaiter
 	dwdProber                component.DeployWaiter
-	vpnAuthzServer           component.DeployWaiter
+
+	// TODO(Wieneo): Remove this after Gardener v1.117 was released
+	vpnAuthzServer component.DeployWaiter
 
 	kubeAPIServerService component.Deployer
 	kubeAPIServerIngress component.Deployer
@@ -171,6 +173,8 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+
+	// TODO(Wieneo): Remove this after Gardener v1.117 was released
 	c.vpnAuthzServer, err = r.newVPNAuthzServer()
 	if err != nil {
 		return
@@ -433,6 +437,7 @@ func (r *Reconciler) newDependencyWatchdogs(seedSettings *gardencorev1beta1.Seed
 	return
 }
 
+// TODO(Wieneo): Remove this after Gardener v1.117 was released
 func (r *Reconciler) newVPNAuthzServer() (component.DeployWaiter, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameExtAuthzServer, imagevectorutils.RuntimeVersion(r.SeedVersion.String()), imagevectorutils.TargetVersion(r.SeedVersion.String()))
 	if err != nil {

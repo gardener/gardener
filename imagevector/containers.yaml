@@ -755,6 +755,7 @@ images:
     - type: 'githubTeam'
       teamname: 'gardener/gardener-core-networking-maintainers'
 
+# TODO(Wieneo): Remove component after Gardener v1.117 was released
 # External Authorization Server for the Istio Endpoint of Reversed VPN
 - name: ext-authz-server
   sourceRepository: github.com/gardener/ext-authz-server

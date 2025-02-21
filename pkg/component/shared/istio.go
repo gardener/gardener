@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
-	vpnauthzserver "github.com/gardener/gardener/pkg/component/networking/vpn/authzserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -305,7 +304,6 @@ func commonIstioIngressNetworkPolicyLabels(vpnEnabled bool) map[string]string {
 	}
 	if vpnEnabled {
 		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.LabelNetworkPolicyShootNamespaceAlias+"-"+v1beta1constants.DeploymentNameVPNSeedServer, vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
-		labels[gardenerutils.NetworkPolicyLabel(v1beta1constants.GardenNamespace+"-"+vpnauthzserver.Name, vpnauthzserver.ServerPort)] = v1beta1constants.LabelNetworkPolicyAllowed
 
 		for i := 0; i < vpnseedserver.HighAvailabilityReplicaCount; i++ {
 			labels[gardenerutils.NetworkPolicyLabel(fmt.Sprintf("%s-%s-%d", v1beta1constants.LabelNetworkPolicyShootNamespaceAlias, v1beta1constants.DeploymentNameVPNSeedServer, i), vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
