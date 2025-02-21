@@ -5,11 +5,14 @@
 package shoot
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -20,12 +23,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/framework"
@@ -36,9 +41,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	f := framework.NewGardenerFramework(e2e.DefaultGardenConfig("garden-local"))
 
 	It("Create, Authenticate, Delete", Label("authentication"), func() {
-		shoot1 := e2e.DefaultWorkerlessShoot("e2e-auth-one")
+		shoot1 := e2e.DefaultShoot("e2e-auth-one")
 		shoot1.Namespace = f.ProjectNamespace
-		shoot2 := e2e.DefaultWorkerlessShoot("e2e-auth-two")
+		shoot2 := e2e.DefaultShoot("e2e-auth-two")
 		shoot2.Namespace = f.ProjectNamespace
 
 		By("Create Shoots")
@@ -61,7 +66,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Eventually(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1Client.Client(), shoot1, true)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2Client.Client(), shoot2, true)).To(Succeed())
-		}).Should(Succeed())
+		}, "30s").Should(Succeed())
 
 		By("Verify a shoot cannot be accessed with a client certificate from another shoot")
 		shoot1NoAccessRestConfig := copyRESTConfigAndInjectAuthorization(shoot1Client.RESTConfig(), shoot2Client.RESTConfig())
@@ -77,6 +82,30 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			g.Expect(validateShootAccess(ctx, shoot2NoAccessClient, shoot2, false)).To(Succeed())
 		}, "10s").Should(Succeed())
 
+		By("Verify shoot access via apiserver-proxy endpoint")
+		shoot1ClientAPIServerProxy, err := getAPIServerProxyClient(shoot1Client.RESTConfig(), shoot1)
+		Expect(err).NotTo(HaveOccurred())
+
+		shoot2ClientAPIServerProxy, err := getAPIServerProxyClient(shoot2Client.RESTConfig(), shoot2)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func(g Gomega) {
+			g.Expect(validateShootAccess(ctx, shoot1ClientAPIServerProxy, shoot1, true)).To(Succeed())
+			g.Expect(validateShootAccess(ctx, shoot2ClientAPIServerProxy, shoot2, true)).To(Succeed())
+		}, "30s").Should(Succeed())
+
+		By("Verify a shoot cannot be accessed with a client certificate from another shoot by manipulating the apiserver-proxy header")
+		shoot1NoAccessClientAPIServerProxy, err := getAPIServerProxyClient(shoot1NoAccessRestConfig, shoot1)
+		Expect(err).NotTo(HaveOccurred())
+
+		shoot2NoAccessClientAPIServerProxy, err := getAPIServerProxyClient(shoot2NoAccessRestConfig, shoot2)
+		Expect(err).NotTo(HaveOccurred())
+
+		Consistently(func(g Gomega) {
+			g.Expect(validateShootAccess(ctx, shoot1NoAccessClientAPIServerProxy, shoot1, false)).To(Succeed())
+			g.Expect(validateShootAccess(ctx, shoot2NoAccessClientAPIServerProxy, shoot2, false)).To(Succeed())
+		}, "10s").Should(Succeed())
+
 		By("Verify shoot access using service account token kubeconfig")
 		shoot1TokenClient, err := access.CreateShootClientFromStaticServiceAccountToken(ctx, shoot1Client, "shoot-one")
 		Expect(err).NotTo(HaveOccurred())
@@ -87,7 +116,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Eventually(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1TokenClient.Client(), shoot1, true)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2TokenClient.Client(), shoot2, true)).To(Succeed())
-		}).Should(Succeed())
+		}, "30s").Should(Succeed())
 
 		By("Verify a shoot cannot be accessed with a service account token from another shoot")
 		shoot1NoAccessTokenRestConfig := copyRESTConfigAndInjectAuthorization(shoot1TokenClient.RESTConfig(), shoot2TokenClient.RESTConfig())
@@ -101,6 +130,30 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Consistently(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1NoAccessTokenClient, shoot1, false)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2NoAccessTokenClient, shoot2, false)).To(Succeed())
+		}, "10s").Should(Succeed())
+
+		By("Verify shoot access using service account token kubeconfig via apiserver-proxy endpoint")
+		shoot1TokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot1TokenClient.RESTConfig(), shoot1)
+		Expect(err).NotTo(HaveOccurred())
+
+		shoot2TokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot2TokenClient.RESTConfig(), shoot2)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func(g Gomega) {
+			g.Expect(validateShootAccess(ctx, shoot1TokenClientAPIServerProxy, shoot1, true)).To(Succeed())
+			g.Expect(validateShootAccess(ctx, shoot2TokenClientAPIServerProxy, shoot2, true)).To(Succeed())
+		}, "30s").Should(Succeed())
+
+		By("Verify a shoot cannot be accessed with a service account token from another shoot by manipulating the apiserver-proxy header")
+		shoot1NoAccessTokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot1NoAccessTokenRestConfig, shoot1)
+		Expect(err).NotTo(HaveOccurred())
+
+		shoot2NoAccessTokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot2NoAccessTokenRestConfig, shoot2)
+		Expect(err).NotTo(HaveOccurred())
+
+		Consistently(func(g Gomega) {
+			g.Expect(validateShootAccess(ctx, shoot1NoAccessTokenClientAPIServerProxy, shoot1, false)).To(Succeed())
+			g.Expect(validateShootAccess(ctx, shoot2NoAccessTokenClientAPIServerProxy, shoot2, false)).To(Succeed())
 		}, "10s").Should(Succeed())
 
 		By("Verify that authentication with istio tls termination cannot be bypassed")
@@ -124,7 +177,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(httpResponse.StatusCode).To(Equal(http.StatusUnauthorized))
 
 		By("Verify that users cannot escalate their privileges with istio tls termination")
-		customClient, err := clientWithCustomTransport(ctx, f.GardenClient, shoot1, &injectHeaderTransport{
+		customClient, err := viewerClientWithCustomTransport(ctx, f.GardenClient, shoot1, &injectHeaderTransport{
 			Headers: map[string]string{
 				"X-Remote-User":  "fake-kubernetes-admin",
 				"X-Remote-Group": "system:masters",
@@ -154,20 +207,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Expect(f.WaitForShootToBeDeleted(ctx, shoot2)).To(Succeed())
 	})
 })
-
-func copyRESTConfigAndInjectAuthorization(restConfig *rest.Config, authorization *rest.Config) *rest.Config {
-	newRESTConfig := rest.CopyConfig(restConfig)
-	newRESTConfig.BearerToken = authorization.BearerToken
-	newRESTConfig.BearerTokenFile = authorization.BearerTokenFile
-	newRESTConfig.CertData = authorization.CertData
-	newRESTConfig.CertFile = authorization.CertFile
-	newRESTConfig.KeyData = authorization.KeyData
-	newRESTConfig.KeyFile = authorization.KeyFile
-	newRESTConfig.Username = authorization.Username
-	newRESTConfig.Password = authorization.Password
-
-	return newRESTConfig
-}
 
 func validateShootAccess(ctx context.Context, shootClient client.Client, shoot *gardencorev1beta1.Shoot, shouldHaveAccess bool) error {
 	var clusterIdentity corev1.ConfigMap
@@ -206,34 +245,57 @@ func isAuthorizationError(err error) bool {
 	return apierrors.IsUnauthorized(err) || strings.HasSuffix(err.Error(), "remote error: tls: unknown certificate authority")
 }
 
-func httpClientForRESTConfig(restConfig *rest.Config) (string, *http.Client, error) {
-	rootCAs := x509.NewCertPool()
-	if restConfig.CAFile != "" {
-		caCert, err := os.ReadFile(restConfig.CAFile)
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to read CA file: %w", err)
-		}
-		if !rootCAs.AppendCertsFromPEM(caCert) {
-			return "", nil, fmt.Errorf("failed to append CA certificate")
-		}
+func copyRESTConfigAndInjectAuthorization(restConfig *rest.Config, authorization *rest.Config) *rest.Config {
+	newRESTConfig := rest.CopyConfig(restConfig)
+	newRESTConfig.BearerToken = authorization.BearerToken
+	newRESTConfig.BearerTokenFile = authorization.BearerTokenFile
+	newRESTConfig.CertData = authorization.CertData
+	newRESTConfig.CertFile = authorization.CertFile
+	newRESTConfig.KeyData = authorization.KeyData
+	newRESTConfig.KeyFile = authorization.KeyFile
+	newRESTConfig.Username = authorization.Username
+	newRESTConfig.Password = authorization.Password
+
+	return newRESTConfig
+}
+
+func getAPIServerProxyClient(restConfig *rest.Config, targetShoot *gardencorev1beta1.Shoot) (client.Client, error) {
+	transport, err := newHTTPConnectTransport(restConfig, apiserverexposure.GetAPIServerProxyTargetClusterName(targetShoot.Status.TechnicalID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP connect transport: %w", err)
 	}
-	if len(restConfig.CAData) > 0 {
-		if !rootCAs.AppendCertsFromPEM(restConfig.CAData) {
-			return "", nil, fmt.Errorf("failed to append CA certificate")
-		}
+
+	newRestConfig := rest.CopyConfig(restConfig)
+	newRestConfig.Host = "https://kubernetes.default.svc.cluster.local"
+	c, err := client.New(
+		newRestConfig,
+		client.Options{
+			HTTPClient: &http.Client{
+				Transport: transport,
+			},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
+
+	return c, nil
+}
+
+func httpClientForRESTConfig(restConfig *rest.Config) (string, *http.Client, error) {
+	tlsConfig, err := tlsConfigForRESTConfig(restConfig, false)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create TLS config: %w", err)
 	}
 
 	return restConfig.Host, &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs:    rootCAs,
-				MinVersion: tls.VersionTLS12,
-			},
+			TLSClientConfig: tlsConfig,
 		},
 	}, nil
 }
 
-func clientWithCustomTransport(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, transport http.RoundTripper) (kubernetes.Interface, error) {
+func viewerClientWithCustomTransport(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, transport http.RoundTripper) (kubernetes.Interface, error) {
 	viewer, err := access.RequestViewerKubeconfigForShoot(ctx, gardenClient, shoot, ptr.To[int64](7200))
 	if err != nil {
 		return nil, fmt.Errorf("failed to request viewer kubeconfig: %w", err)
@@ -255,12 +317,128 @@ func clientWithCustomTransport(ctx context.Context, gardenClient kubernetes.Inte
 	return c, err
 }
 
+func tlsConfigForRESTConfig(restConfig *rest.Config, withClientCertificates bool) (*tls.Config, error) {
+	rootCAs := x509.NewCertPool()
+	if restConfig.CAFile != "" {
+		caCert, err := os.ReadFile(restConfig.CAFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA file: %w", err)
+		}
+		if !rootCAs.AppendCertsFromPEM(caCert) {
+			return nil, fmt.Errorf("failed to append CA certificate")
+		}
+	}
+	if len(restConfig.CAData) > 0 {
+		if !rootCAs.AppendCertsFromPEM(restConfig.CAData) {
+			return nil, fmt.Errorf("failed to append CA certificate")
+		}
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs:    rootCAs,
+		MinVersion: tls.VersionTLS12,
+	}
+
+	if withClientCertificates {
+		if restConfig.CertFile != "" && restConfig.KeyFile == "" {
+			cert, err := tls.LoadX509KeyPair(restConfig.CertFile, restConfig.KeyFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load client certificate: %w", err)
+			}
+			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+		}
+		if len(restConfig.CertData) > 0 && len(restConfig.KeyData) > 0 {
+			cert, err := tls.X509KeyPair(restConfig.CertData, restConfig.KeyData)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load client certificate: %w", err)
+			}
+			tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+		}
+	}
+
+	return tlsConfig, nil
+}
+
+type httpConnectTransport struct {
+	httpConnectClient *http.Client
+	bearerToken       string
+}
+
+func newHTTPConnectTransport(restConfig *rest.Config, targetCluster string) (*httpConnectTransport, error) {
+	proxyAddress := strings.Split(strings.TrimPrefix(restConfig.Host, "https://"), ":")[0]
+	connectAddress := strings.TrimPrefix(restConfig.Host, "https://") + ":443"
+
+	tlsConfig, err := tlsConfigForRESTConfig(restConfig, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create TLS config: %w", err)
+	}
+
+	bearerToken := restConfig.BearerToken
+	if restConfig.BearerTokenFile != "" {
+		token, err := os.ReadFile(restConfig.BearerTokenFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read bearer token file: %w", err)
+		}
+		bearerToken = string(token)
+	}
+
+	httpConnectClient := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				connection, err := net.DialTimeout("tcp", fmt.Sprintf("%s:8132", proxyAddress), 5*time.Second)
+				if err != nil {
+					return nil, fmt.Errorf("failed to connect to proxy: %w", err)
+				}
+
+				connectRequest := &http.Request{
+					Method: http.MethodConnect,
+					URL:    &url.URL{Opaque: connectAddress},
+					Host:   connectAddress,
+					Header: http.Header{},
+				}
+				connectRequest.Header.Set("Reversed-VPN", targetCluster)
+
+				if err := connectRequest.Write(connection); err != nil {
+					return nil, fmt.Errorf("failed sending HTTP CONNECT request: %w", err)
+				}
+
+				resp, err := http.ReadResponse(bufio.NewReader(connection), connectRequest)
+				if err != nil {
+					return nil, fmt.Errorf("failed to read HTTP CONNECT response: %w", err)
+				}
+				defer func() { utilruntime.HandleError(resp.Body.Close()) }()
+
+				if resp.StatusCode != http.StatusOK {
+					return nil, fmt.Errorf("proxy returned status: %q", resp.Status)
+				}
+
+				return connection, nil
+			},
+			TLSClientConfig: tlsConfig,
+		},
+	}
+
+	return &httpConnectTransport{httpConnectClient: httpConnectClient, bearerToken: bearerToken}, nil
+}
+
+func (h *httpConnectTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if h.httpConnectClient == nil {
+		return nil, fmt.Errorf("connection to proxy not established")
+	}
+
+	if h.bearerToken != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.bearerToken))
+	}
+
+	return h.httpConnectClient.Do(req)
+}
+
 type injectHeaderTransport struct {
 	Headers map[string]string
 }
 
-func (c *injectHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	for key, value := range c.Headers {
+func (i *injectHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	for key, value := range i.Headers {
 		req.Header.Add(key, value)
 	}
 	return http.DefaultTransport.RoundTrip(req)

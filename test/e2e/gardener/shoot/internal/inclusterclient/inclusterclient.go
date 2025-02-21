@@ -6,6 +6,7 @@ package inclusterclient
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"maps"
 	"net"
@@ -129,19 +130,19 @@ func VerifyInClusterAccessToAPIServer(s *ShootContext) {
 		It("should access the API server via direct path", func(ctx SpecContext) {
 			// this pod connects to the API server directly, i.e., uses the KUBERNETES_SERVICE_HOST env var injected by gardener
 			expectedAddress := getInternalAPIServerAddress(s.Shoot)
-			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameDirect], expectedAddress)
+			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameDirect], expectedAddress, *s.Shoot.Status.ClusterIdentity)
 		}, SpecTimeout(time.Minute))
 
 		It("should access the API server via the kubernetes service's clusterIP", func(ctx SpecContext) {
 			// this pod connects via the API server proxy using the KUBERNETES_SERVICE_HOST env var injected by kubelet, i.e.,
 			// via the clusterIP of kubernetes.default.svc.cluster.local
 			expectedAddress := getInClusterAPIServerAddress(ctx, s)
-			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameAPIServerProxyIP], expectedAddress)
+			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameAPIServerProxyIP], expectedAddress, *s.Shoot.Status.ClusterIdentity)
 		}, SpecTimeout(time.Minute))
 
 		It("should access the API server via the kubernetes service's hostname", func(ctx SpecContext) {
 			// this pod connects via the API server proxy via the kubernetes.default.svc.cluster.local hostname
-			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameAPIServerProxyHostname], "https://kubernetes.default.svc.cluster.local:443")
+			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameAPIServerProxyHostname], "https://kubernetes.default.svc.cluster.local:443", *s.Shoot.Status.ClusterIdentity)
 		}, SpecTimeout(time.Minute))
 
 		AfterAll(func(ctx SpecContext) {
@@ -160,7 +161,7 @@ func VerifyInClusterAccessToAPIServer(s *ShootContext) {
 	})
 }
 
-func verifyAccessFromPod(ctx context.Context, clientSet kubernetes.Interface, podName, expectedAddress string) {
+func verifyAccessFromPod(ctx context.Context, clientSet kubernetes.Interface, podName, expectedAddress, expectedClusterIdentity string) {
 	By("Verify we are using the expected path")
 	executeKubectl(ctx, clientSet, podName, []string{"/kubectl", "cluster-info"}, Say(
 		"Kubernetes control plane is running at %s", regexp.QuoteMeta(expectedAddress),
@@ -169,6 +170,11 @@ func verifyAccessFromPod(ctx context.Context, clientSet kubernetes.Interface, po
 	By("Verify a typical API request works")
 	executeKubectl(ctx, clientSet, podName, []string{"/kubectl", "get", "service", "kubernetes"}, Say(
 		`NAME.+\nkubernetes.+\n`,
+	))
+
+	By("Verify we reach the right API server")
+	executeKubectl(ctx, clientSet, podName, []string{"/kubectl", "get", "configmaps", "-n", "kube-system", "cluster-identity", "-o", "yaml"}, Say(
+		fmt.Sprintf("cluster-identity: %s", expectedClusterIdentity),
 	))
 }
 
@@ -341,14 +347,23 @@ func getRBACObjects() []client.Object {
 	}
 	objects = append(objects, roleBinding)
 
-	// permissions used by the test command: kubectl cluster-info
 	roleSystem := role.DeepCopy()
 	roleSystem.Namespace = metav1.NamespaceSystem
-	roleSystem.Rules = []rbacv1.PolicyRule{{
-		APIGroups: []string{""},
-		Resources: []string{"services"},
-		Verbs:     []string{"list"},
-	}}
+	roleSystem.Rules = []rbacv1.PolicyRule{
+		// permissions used by the test command: kubectl cluster-info
+		{
+			APIGroups: []string{""},
+			Resources: []string{"services"},
+			Verbs:     []string{"list"},
+		},
+		// permissions used by the test command: kubectl get configmaps -n kube-system cluster-identity
+		{
+			APIGroups:     []string{""},
+			Resources:     []string{"configmaps"},
+			ResourceNames: []string{"cluster-identity"},
+			Verbs:         []string{"get"},
+		},
+	}
 	objects = append(objects, roleSystem)
 
 	roleBindingSystem := roleBinding.DeepCopy()
