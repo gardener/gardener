@@ -115,8 +115,6 @@ const (
 	SecretNameShootAccess = gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
 	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
 	LabelValue = "gardener-resource-manager"
-	// labelChecksum is a constant for the label key which holds the checksum of the pod template.
-	labelChecksum = "checksum/pod-template"
 
 	configMapNamePrefix = "gardener-resource-manager"
 	secretNameServer    = "gardener-resource-manager-server"
@@ -1047,23 +1045,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				false,
 			)
 
-			// ATTENTION: THIS MUST BE THE LAST THING HAPPENING IN THIS FUNCTION TO MAKE SURE THE COMPUTED CHECKSUM IS
-			// ACCURATE!
-			// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta
-			//  and enabled by default (probably 1.26+) for all supported clusters.
-			{
-				// Assign a predictable but unique label value per ReplicaSet which can be used for the
-				// Topology Spread Constraint selectors to prevent imbalanced deployments after rolling-updates.
-				// See https://github.com/kubernetes/kubernetes/issues/98215 for more information.
-				// This must be done as a last step because we need to consider that the pod topology constraints themselves
-				// can change and cause a rolling update.
-				podTemplateChecksum := utils.ComputeChecksum(deployment.Spec.Template)[:16]
-
-				deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
-				for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
-					deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[labelChecksum] = podTemplateChecksum
-				}
-			}
+			kubernetesutils.MutateMatchLabelKeys(deployment.Spec.Template.Spec.TopologySpreadConstraints)
 		}
 
 		return nil

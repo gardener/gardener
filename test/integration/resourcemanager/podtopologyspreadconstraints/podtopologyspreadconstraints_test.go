@@ -47,11 +47,14 @@ var _ = Describe("PodTopologySpreadConstraints tests", func() {
 					MaxSkew:           1,
 					TopologyKey:       corev1.LabelTopologyZone,
 					WhenUnsatisfiable: corev1.DoNotSchedule,
+					MatchLabelKeys: []string{
+						"pod-template-hash",
+					},
 				},
 			}
 		})
 
-		It("should add label selector to TSC", func() {
+		It("should add label selector to TSC and remove matchLabelKeys if present", func() {
 			Expect(testClient.Create(ctx, pod)).To(Succeed())
 
 			Expect(pod.Spec.TopologySpreadConstraints).To(ConsistOf(corev1.TopologySpreadConstraint{

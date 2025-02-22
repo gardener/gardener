@@ -31,16 +31,18 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	}
 
 	return shared.NewTargetGardenerResourceManager(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, resourcemanager.Values{
-		ClusterIdentity:                     b.Seed.GetInfo().Status.ClusterIdentity,
-		DefaultNotReadyToleration:           defaultNotReadyTolerationSeconds,
-		DefaultUnreachableToleration:        defaultUnreachableTolerationSeconds,
-		IsWorkerless:                        b.Shoot.IsWorkerless,
-		KubernetesServiceHost:               ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
-		LogLevel:                            logger.InfoLevel,
-		LogFormat:                           logger.FormatJSON,
-		NodeAgentReconciliationMaxDelay:     b.Shoot.OSCSyncJitterPeriod,
-		NodeAgentAuthorizerEnabled:          true,
-		PodTopologySpreadConstraintsEnabled: true,
+		ClusterIdentity:                 b.Seed.GetInfo().Status.ClusterIdentity,
+		DefaultNotReadyToleration:       defaultNotReadyTolerationSeconds,
+		DefaultUnreachableToleration:    defaultUnreachableTolerationSeconds,
+		IsWorkerless:                    b.Shoot.IsWorkerless,
+		KubernetesServiceHost:           ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
+		LogLevel:                        logger.InfoLevel,
+		LogFormat:                       logger.FormatJSON,
+		NodeAgentReconciliationMaxDelay: b.Shoot.OSCSyncJitterPeriod,
+		NodeAgentAuthorizerEnabled:      true,
+		// TODO(shafeeqes): Remove PodTopologySpreadConstraints webhook once the
+		// MatchLabelKeysInPodTopologySpread feature gate is locked to true.
+		PodTopologySpreadConstraintsEnabled: gardenerutils.IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(b.Shoot.GetInfo()),
 		PriorityClassName:                   v1beta1constants.PriorityClassNameShootControlPlane400,
 		SchedulingProfile:                   v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 		SecretNameServerCA:                  v1beta1constants.SecretNameCACluster,
