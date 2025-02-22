@@ -70,7 +70,7 @@ var _ = Describe("ResourceManager", func() {
 						"component": "controller",
 					}},
 				},
-				PodTopologySpreadConstraintsEnabled: true,
+				PodTopologySpreadConstraintsEnabled: false,
 				Replicas:                            ptr.To[int32](2),
 				ResourceClass:                       ptr.To("seed"),
 				ResponsibilityMode:                  resourcemanager.ForSource,

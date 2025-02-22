@@ -108,31 +108,34 @@ var _ = Describe("ResourceManager", func() {
 		kubernetesServiceHost                     = "some-host"
 		targetNamespaces                          = []string{"foo", "bar"}
 
-		allowAll                            []rbacv1.PolicyRule
-		allowManagedResources               []rbacv1.PolicyRule
-		allowMachines                       []rbacv1.PolicyRule
-		cfg                                 Values
-		clusterRole                         *rbacv1.ClusterRole
-		clusterRoleBinding                  *rbacv1.ClusterRoleBinding
-		configMap                           *corev1.ConfigMap
-		deployment                          *appsv1.Deployment
-		defaultNotReadyTolerationSeconds    *int64
-		defaultUnreachableTolerationSeconds *int64
-		configMapFor                        func(watchedNamespace *string, responsibilityMode ResponsibilityMode, isWorkerless, bootstrapControlPlaneNode bool) *corev1.ConfigMap
-		deploymentFor                       func(configMapName string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string, bootstrapControlPlaneNode bool) *appsv1.Deployment
-		defaultLabels                       map[string]string
-		roleBinding                         *rbacv1.RoleBinding
-		role                                *rbacv1.Role
-		secret                              *corev1.Secret
-		service                             *corev1.Service
-		serviceAccount                      *corev1.ServiceAccount
-		pdb                                 *policyv1.PodDisruptionBudget
-		serviceMonitorFor                   func(string) *monitoringv1.ServiceMonitor
-		vpa                                 *vpaautoscalingv1.VerticalPodAutoscaler
-		mutatingWebhookConfigurationFor     func(responsibilityMode ResponsibilityMode, bootstrapControlPlaneNode bool) *admissionregistrationv1.MutatingWebhookConfiguration
-		validatingWebhookConfiguration      *admissionregistrationv1.ValidatingWebhookConfiguration
-		managedResourceSecret               *corev1.Secret
-		managedResource                     *resourcesv1alpha1.ManagedResource
+		allowAll                                             []rbacv1.PolicyRule
+		allowManagedResources                                []rbacv1.PolicyRule
+		allowMachines                                        []rbacv1.PolicyRule
+		cfg                                                  Values
+		clusterRole                                          *rbacv1.ClusterRole
+		clusterRoleBinding                                   *rbacv1.ClusterRoleBinding
+		configMap                                            *corev1.ConfigMap
+		deployment                                           *appsv1.Deployment
+		defaultNotReadyTolerationSeconds                     *int64
+		defaultUnreachableTolerationSeconds                  *int64
+		configMapFor                                         func(watchedNamespace *string, responsibilityMode ResponsibilityMode, isWorkerless, bootstrapControlPlaneNode bool) *corev1.ConfigMap
+		deploymentFor                                        func(configMapName string, targetClusterDiffersFromSourceCluster bool, secretNameBootstrapKubeconfig *string, bootstrapControlPlaneNode bool) *appsv1.Deployment
+		defaultLabels                                        map[string]string
+		roleBinding                                          *rbacv1.RoleBinding
+		role                                                 *rbacv1.Role
+		secret                                               *corev1.Secret
+		service                                              *corev1.Service
+		serviceAccount                                       *corev1.ServiceAccount
+		pdb                                                  *policyv1.PodDisruptionBudget
+		serviceMonitorFor                                    func(string) *monitoringv1.ServiceMonitor
+		vpa                                                  *vpaautoscalingv1.VerticalPodAutoscaler
+		mutatingWebhookConfigurationFor                      func(responsibilityMode ResponsibilityMode, bootstrapControlPlaneNode bool) *admissionregistrationv1.MutatingWebhookConfiguration
+		mutatingWebhookConfigurationYAML                     func() string
+		clusterRoleBindingTargetYAML                         string
+		validatingWebhookConfiguration                       *admissionregistrationv1.ValidatingWebhookConfiguration
+		managedResourceSecret                                *corev1.Secret
+		managedResource                                      *resourcesv1alpha1.ManagedResource
+		matchLabelKeysInPodTopologySpreadFeatureGateDisabled bool
 	)
 
 	BeforeEach(func() {
@@ -336,6 +339,7 @@ var _ = Describe("ResourceManager", func() {
 		resourceManager = New(c, deployNamespace, sm, cfg)
 		resourceManager.SetSecrets(secrets)
 
+		matchLabelKeysInPodTopologySpreadFeatureGateDisabled = true
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager",
 				Namespace: deployNamespace,
@@ -418,7 +422,7 @@ var _ = Describe("ResourceManager", func() {
 						Enabled: false,
 					},
 					PodTopologySpreadConstraints: resourcemanagerconfigv1alpha1.PodTopologySpreadConstraintsWebhookConfig{
-						Enabled: !isWorkerless,
+						Enabled: !isWorkerless && matchLabelKeysInPodTopologySpreadFeatureGateDisabled,
 					},
 					ProjectedTokenMount: resourcemanagerconfigv1alpha1.ProjectedTokenMountWebhookConfig{
 						Enabled: !isWorkerless,
@@ -784,6 +788,7 @@ var _ = Describe("ResourceManager", func() {
 								v1beta1constants.LabelApp:   "gardener-resource-manager",
 							},
 						},
+						MatchLabelKeys: []string{"pod-template-hash"},
 					},
 					{
 						MaxSkew:           1,
@@ -796,10 +801,9 @@ var _ = Describe("ResourceManager", func() {
 								v1beta1constants.LabelApp:   "gardener-resource-manager",
 							},
 						},
+						MatchLabelKeys: []string{"pod-template-hash"},
 					},
 				}
-
-				calculatePodTemplateChecksum(deployment)
 			}
 
 			return deployment
@@ -1188,7 +1192,9 @@ var _ = Describe("ResourceManager", func() {
 
 			return obj
 		}
-		mutatingWebhookConfigurationYAML := `apiVersion: admissionregistration.k8s.io/v1
+
+		mutatingWebhookConfigurationYAML = func() string {
+			out := `apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   creationTimestamp: null
@@ -1361,7 +1367,9 @@ webhooks:
     resources:
     - pods
   sideEffects: None
-  timeoutSeconds: 10
+  timeoutSeconds: 10`
+			if matchLabelKeysInPodTopologySpreadFeatureGateDisabled {
+				out += `
 - admissionReviewVersions:
   - v1beta1
   - v1
@@ -1399,7 +1407,12 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 `
-		clusterRoleBindingTargetYAML := `apiVersion: rbac.authorization.k8s.io/v1
+			}
+
+			return out
+		}
+
+		clusterRoleBindingTargetYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   annotations:
@@ -1814,7 +1827,7 @@ subjects:
 			},
 		}
 
-		compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML, clusterRoleBindingTargetYAML)
+		compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), clusterRoleBindingTargetYAML)
 		Expect(err).NotTo(HaveOccurred())
 
 		managedResourceSecret = &corev1.Secret{
@@ -1865,7 +1878,7 @@ subjects:
 			})
 
 			Context("should successfully deploy all resources (w/ shoot access secret)", func() {
-				It("should successfully deploy all resources (w/ shoot access secret)", func() {
+				BeforeEach(func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: secret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 							Do(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) {
@@ -1919,17 +1932,104 @@ subjects:
 							Do(func(_ context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(serviceMonitorFor("shoot")))
 							}),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
-							Expect(obj).To(DeepEqual(managedResourceSecret))
-						}),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
-							Expect(obj).To(DeepEqual(managedResource))
-						}),
 					)
+				})
 
-					Expect(resourceManager.Deploy(ctx)).To(Succeed())
+				Context("MatchLabelKeysInPodTopologySpread feature gate is disabled (PodTopologySpreadConstraints webhook should be enabled)", func() {
+					JustBeforeEach(func() {
+						matchLabelKeysInPodTopologySpreadFeatureGateDisabled = true
+						cfg.PodTopologySpreadConstraintsEnabled = true
+						configMap = configMapFor(&watchedNamespace, ForTarget, false, false)
+						deployment = deploymentFor(configMap.Name, true, nil, false)
+
+						resourceManager = New(c, deployNamespace, sm, cfg)
+						resourceManager.SetSecrets(secrets)
+
+						compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), clusterRoleBindingTargetYAML)
+						Expect(err).NotTo(HaveOccurred())
+
+						managedResourceSecret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "managedresource-shoot-core-gardener-resource-manager",
+								Namespace: deployNamespace,
+							},
+							Type: corev1.SecretTypeOpaque,
+							Data: map[string][]byte{
+								"data.yaml.br": compressedData,
+							},
+						}
+						utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))
+
+						managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{
+							{Name: managedResourceSecret.Name},
+						}
+
+						utilruntime.Must(references.InjectAnnotations(managedResource))
+					})
+
+					It("should successfully deploy all resources (w/ shoot access secret)", func() {
+						gomock.InOrder(
+							c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
+							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResourceSecret))
+							}),
+							c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResource))
+							}),
+						)
+
+						Expect(resourceManager.Deploy(ctx)).To(Succeed())
+					})
+				})
+
+				Context("MatchLabelKeysInPodTopologySpread feature gate is enabled (PodTopologySpreadConstraints webhook should be disabled)", func() {
+					JustBeforeEach(func() {
+						matchLabelKeysInPodTopologySpreadFeatureGateDisabled = false
+						cfg.PodTopologySpreadConstraintsEnabled = false
+
+						configMap = configMapFor(&watchedNamespace, ForTarget, false, false)
+						deployment = deploymentFor(configMap.Name, true, nil, false)
+
+						resourceManager = New(c, deployNamespace, sm, cfg)
+						resourceManager.SetSecrets(secrets)
+
+						compressedData, err := test.BrotliCompressionForManifests(mutatingWebhookConfigurationYAML(), clusterRoleBindingTargetYAML)
+						Expect(err).NotTo(HaveOccurred())
+
+						managedResourceSecret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "managedresource-shoot-core-gardener-resource-manager",
+								Namespace: deployNamespace,
+							},
+							Type: corev1.SecretTypeOpaque,
+							Data: map[string][]byte{
+								"data.yaml.br": compressedData,
+							},
+						}
+						utilruntime.Must(kubernetesutils.MakeUnique(managedResourceSecret))
+
+						managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{
+							{Name: managedResourceSecret.Name},
+						}
+
+						utilruntime.Must(references.InjectAnnotations(managedResource))
+					})
+
+					It("should successfully deploy all resources (w/ shoot access secret)", func() {
+						gomock.InOrder(
+							c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: managedResourceSecret.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})),
+							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResourceSecret))
+							}),
+							c.EXPECT().Get(ctx, client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResource))
+							}),
+						)
+
+						Expect(resourceManager.Deploy(ctx)).To(Succeed())
+					})
 				})
 			})
 
@@ -2239,7 +2339,6 @@ subjects:
 				delete(deployment.Spec.Template.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
 
 				utilruntime.Must(references.InjectAnnotations(deployment))
-				calculatePodTemplateChecksum(deployment)
 
 				cfg.DefaultSeccompProfileEnabled = true
 				cfg.EndpointSliceHintsEnabled = true
@@ -2342,7 +2441,6 @@ subjects:
 				delete(deployment.Spec.Template.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
 
 				utilruntime.Must(references.InjectAnnotations(deployment))
-				calculatePodTemplateChecksum(deployment)
 
 				cfg.DefaultSeccompProfileEnabled = true
 				cfg.SchedulingProfile = nil
@@ -2427,7 +2525,6 @@ subjects:
 						deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
 					}
 					delete(deployment.Spec.Template.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
-					calculatePodTemplateChecksum(deployment)
 				})
 
 				It("should deploy the expected resources", func() {
@@ -2804,19 +2901,6 @@ subjects:
 		})
 	})
 })
-
-func calculatePodTemplateChecksum(deployment *appsv1.Deployment) {
-	delete(deployment.Spec.Template.Labels, "checksum/pod-template")
-	for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
-		delete(deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels, "checksum/pod-template")
-	}
-
-	checksumPodTemplate := utils.ComputeChecksum(deployment.Spec.Template)[:16]
-	deployment.Spec.Template.Labels["checksum/pod-template"] = checksumPodTemplate
-	for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
-		deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels["checksum/pod-template"] = checksumPodTemplate
-	}
-}
 
 var (
 	scheme *runtime.Scheme

@@ -1449,4 +1449,69 @@ var _ = Describe("Shoot", func() {
 			))
 		})
 	})
+
+	Describe("IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled", func() {
+		var (
+			shoot *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+						KubeScheduler: &gardencorev1beta1.KubeSchedulerConfig{},
+					},
+				},
+			}
+		})
+
+		It("should return false if the shoot is nil", func() {
+			Expect(IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(nil)).To(BeFalse())
+		})
+
+		It("should return false if the shoot.spec.kubernetes.kubeAPIServer is nil", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = nil
+			Expect(IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return false if the shoot.spec.kubernetes.kubeScheduler is nil", func() {
+			shoot.Spec.Kubernetes.KubeScheduler = nil
+			Expect(IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return false if the feature gate is not present in the kube-apiserver", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = nil
+			Expect(IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return false if the feature gate is not present in the kube-scheduler", func() {
+			shoot.Spec.Kubernetes.KubeScheduler.FeatureGates = nil
+			Expect(IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return false if the feature gate is disabled only in the kube-apiserver", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = map[string]bool{
+				"MatchLabelKeysInPodTopologySpread": false,
+			}
+			Expect(IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return false if the feature gate is disabled only in the kube-scheduler", func() {
+			shoot.Spec.Kubernetes.KubeScheduler.FeatureGates = map[string]bool{
+				"MatchLabelKeysInPodTopologySpread": false,
+			}
+			Expect(IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot)).To(BeFalse())
+		})
+
+		It("should return true if the feature gate is disabled in both kube-apiserver and kube-scheduler", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = map[string]bool{
+				"MatchLabelKeysInPodTopologySpread": false,
+			}
+			shoot.Spec.Kubernetes.KubeScheduler.FeatureGates = map[string]bool{
+				"MatchLabelKeysInPodTopologySpread": false,
+			}
+			Expect(IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot)).To(BeTrue())
+		})
+	})
 })

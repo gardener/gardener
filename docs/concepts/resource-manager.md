@@ -943,6 +943,8 @@ The webhook performs the following actions:
           minDomains: 3 # lower value of max replicas or 3
           maxSkew: 1
           whenUnsatisfiable: ScheduleAnyway # or DoNotSchedule
+          matchLabelKeys: 
+          - pod-template-hash
           labelSelector: ...
       ```
 
@@ -956,11 +958,15 @@ The webhook performs the following actions:
         - topologyKey: kubernetes.io/hostname
           maxSkew: 1
           whenUnsatisfiable: ScheduleAnyway # or DoNotSchedule
+          matchLabelKeys: 
+          - pod-template-hash
           labelSelector: ...
         - topologyKey: topology.kubernetes.io/zone
           minDomains: 2 # lower value of max replicas or number of zones
           maxSkew: 1
           whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys: 
+          - pod-template-hash
           labelSelector: ...
       ```
 
@@ -1057,7 +1063,7 @@ spec:
 ```
 
 The procedure circumvents a [known limitation](https://github.com/kubernetes/kubernetes/issues/98215) with TSCs which leads to imbalanced deployments after rolling updates.
-Gardener enables this webhook to schedule pods of deployments across nodes and zones.
+Gardener enables this webhook to schedule pods of deployments across nodes and zones. This webhook is enabled only when the `MatchLabelKeysInPodTopologySpread` feature gate (beta since `v1.27`) is explicitly disabled in the `kube-apiserver` and `kube-scheduler`.
 
 Please note that the `gardener-resource-manager` itself as well as pods labelled with `topology-spread-constraints.resources.gardener.cloud/skip` are excluded from any mutations.
 

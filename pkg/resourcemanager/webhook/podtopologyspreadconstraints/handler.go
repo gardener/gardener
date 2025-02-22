@@ -7,6 +7,7 @@ package podtopologyspreadconstraints
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -56,6 +57,10 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		// See https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#spread-constraint-definition,
 		// https://github.com/kubernetes/kubernetes/issues/98215
 		pod.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[appsv1.DefaultDeploymentUniqueLabelKey] = templateHash
+
+		pod.Spec.TopologySpreadConstraints[i].MatchLabelKeys = slices.DeleteFunc(pod.Spec.TopologySpreadConstraints[i].MatchLabelKeys, func(key string) bool {
+			return key == appsv1.DefaultDeploymentUniqueLabelKey
+		})
 	}
 
 	req, err := admission.RequestFromContext(ctx)
