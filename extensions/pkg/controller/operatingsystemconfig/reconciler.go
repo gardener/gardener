@@ -114,7 +114,7 @@ func (r *reconciler) reconcile(
 	}
 
 	log.Info("Starting the reconciliation of OperatingSystemConfig")
-	userData, extensionUnits, extensionFiles, err := r.actuator.Reconcile(ctx, log, osc)
+	userData, extensionUnits, extensionFiles, inPlaceUpdates, err := r.actuator.Reconcile(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
@@ -127,7 +127,7 @@ func (r *reconciler) reconcile(
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, extensionUnits, extensionFiles)
+	setOSCStatus(osc, secret, extensionUnits, extensionFiles, inPlaceUpdates)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update status")
 		return reconcilerutils.ReconcileErr(err)
@@ -159,7 +159,7 @@ func (r *reconciler) restore(
 	}
 
 	log.Info("Starting the restoration of OperatingSystemConfig")
-	userData, extensionUnits, extensionFiles, err := r.actuator.Restore(ctx, log, osc)
+	userData, extensionUnits, extensionFiles, inPlaceUpdates, err := r.actuator.Restore(ctx, log, osc)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring OperatingSystemConfig")
 		return reconcilerutils.ReconcileErr(err)
@@ -172,7 +172,7 @@ func (r *reconciler) restore(
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
-	setOSCStatus(osc, secret, extensionUnits, extensionFiles)
+	setOSCStatus(osc, secret, extensionUnits, extensionFiles, inPlaceUpdates)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
 		_ = r.statusUpdater.Error(ctx, log, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
 		return reconcilerutils.ReconcileErr(err)
@@ -299,6 +299,7 @@ func setOSCStatus(
 	secret *corev1.Secret,
 	extensionUnits []extensionsv1alpha1.Unit,
 	extensionFiles []extensionsv1alpha1.File,
+	inPlaceUpdates *extensionsv1alpha1.InPlaceUpdatesStatus,
 ) {
 	if secret != nil {
 		osc.Status.CloudConfig = &extensionsv1alpha1.CloudConfig{
@@ -310,4 +311,5 @@ func setOSCStatus(
 	}
 	osc.Status.ExtensionUnits = extensionUnits
 	osc.Status.ExtensionFiles = extensionFiles
+	osc.Status.InPlaceUpdates = inPlaceUpdates
 }

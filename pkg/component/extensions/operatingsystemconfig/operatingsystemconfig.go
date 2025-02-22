@@ -705,6 +705,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 	if err != nil {
 		return deployer{}, err
 	}
+	kubeletConfig := v1beta1helper.CalculateEffectiveKubeletConfiguration(o.values.KubeletConfig, worker.Kubernetes)
 
 	images := make(map[string]*imagevectorutils.Image, len(o.values.Images))
 	for imageName, image := range o.values.Images {
@@ -721,34 +722,48 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		return deployer{}, err
 	}
 
+	var caRotationLastInitiationTime, serviceAccountKeyRotationLastInitiationTime *metav1.Time
+
+	if o.values.CredentialsRotationStatus != nil {
+		if o.values.CredentialsRotationStatus.CertificateAuthorities != nil {
+			caRotationLastInitiationTime = o.values.CredentialsRotationStatus.CertificateAuthorities.LastInitiationTime
+		}
+		if o.values.CredentialsRotationStatus.ServiceAccountKey != nil {
+			serviceAccountKeyRotationLastInitiationTime = o.values.CredentialsRotationStatus.ServiceAccountKey.LastInitiationTime
+		}
+	}
+
 	return deployer{
-		client:                  o.client,
-		osc:                     osc,
-		worker:                  worker,
-		purpose:                 purpose,
-		key:                     oscKey,
-		apiServerURL:            o.values.APIServerURL,
-		caBundle:                caBundle,
-		clusterCASecretName:     clusterCASecret.Name,
-		clusterCABundle:         clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
-		clusterDNSAddresses:     o.values.ClusterDNSAddresses,
-		clusterDomain:           o.values.ClusterDomain,
-		criName:                 criName,
-		images:                  images,
-		kubeletCABundle:         kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
-		kubeletConfigParameters: kubeletConfigParameters,
-		kubeletCLIFlags:         kubeletCLIFlags,
-		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
-		kubeProxyEnabled:        o.values.KubeProxyEnabled,
-		kubernetesVersion:       kubernetesVersion,
-		sshPublicKeys:           o.values.SSHPublicKeys,
-		sshAccessEnabled:        o.values.SSHAccessEnabled,
-		valiIngressHostName:     o.values.ValiIngressHostName,
-		valitailEnabled:         o.values.ValitailEnabled,
-		nodeMonitorGracePeriod:  o.values.NodeMonitorGracePeriod,
-		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
-		primaryIPFamily:         o.values.PrimaryIPFamily,
-		taints:                  worker.Taints,
+		client:                       o.client,
+		osc:                          osc,
+		worker:                       worker,
+		purpose:                      purpose,
+		key:                          oscKey,
+		apiServerURL:                 o.values.APIServerURL,
+		caBundle:                     caBundle,
+		clusterCASecretName:          clusterCASecret.Name,
+		clusterCABundle:              clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
+		clusterDNSAddresses:          o.values.ClusterDNSAddresses,
+		clusterDomain:                o.values.ClusterDomain,
+		criName:                      criName,
+		images:                       images,
+		kubeletCABundle:              kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
+		kubeletConfig:                kubeletConfig,
+		kubeletConfigParameters:      kubeletConfigParameters,
+		kubeletCLIFlags:              kubeletCLIFlags,
+		kubeletDataVolumeName:        worker.KubeletDataVolumeName,
+		kubeProxyEnabled:             o.values.KubeProxyEnabled,
+		kubernetesVersion:            kubernetesVersion,
+		sshPublicKeys:                o.values.SSHPublicKeys,
+		sshAccessEnabled:             o.values.SSHAccessEnabled,
+		valiIngressHostName:          o.values.ValiIngressHostName,
+		valitailEnabled:              o.values.ValitailEnabled,
+		nodeMonitorGracePeriod:       o.values.NodeMonitorGracePeriod,
+		nodeLocalDNSEnabled:          o.values.NodeLocalDNSEnabled,
+		primaryIPFamily:              o.values.PrimaryIPFamily,
+		taints:                       worker.Taints,
+		caRotationLastInitiationTime: caRotationLastInitiationTime,
+		serviceAccountKeyRotationLastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
 	}, nil
 }
 
@@ -794,27 +809,30 @@ type deployer struct {
 	apiServerURL string
 
 	// original values
-	caBundle                *string
-	clusterCASecretName     string
-	clusterCABundle         []byte
-	clusterDNSAddresses     []string
-	clusterDomain           string
-	criName                 extensionsv1alpha1.CRIName
-	images                  map[string]*imagevectorutils.Image
-	kubeletCABundle         []byte
-	kubeletConfigParameters components.ConfigurableKubeletConfigParameters
-	kubeletCLIFlags         components.ConfigurableKubeletCLIFlags
-	kubeletDataVolumeName   *string
-	kubeProxyEnabled        bool
-	kubernetesVersion       *semver.Version
-	sshPublicKeys           []string
-	sshAccessEnabled        bool
-	valiIngressHostName     string
-	valitailEnabled         bool
-	nodeLocalDNSEnabled     bool
-	nodeMonitorGracePeriod  metav1.Duration
-	primaryIPFamily         gardencorev1beta1.IPFamily
-	taints                  []corev1.Taint
+	caBundle                                    *string
+	clusterCASecretName                         string
+	clusterCABundle                             []byte
+	clusterDNSAddresses                         []string
+	clusterDomain                               string
+	criName                                     extensionsv1alpha1.CRIName
+	images                                      map[string]*imagevectorutils.Image
+	kubeletCABundle                             []byte
+	kubeletConfig                               *gardencorev1beta1.KubeletConfig
+	kubeletConfigParameters                     components.ConfigurableKubeletConfigParameters
+	kubeletCLIFlags                             components.ConfigurableKubeletCLIFlags
+	kubeletDataVolumeName                       *string
+	kubeProxyEnabled                            bool
+	kubernetesVersion                           *semver.Version
+	sshPublicKeys                               []string
+	sshAccessEnabled                            bool
+	valiIngressHostName                         string
+	valitailEnabled                             bool
+	nodeLocalDNSEnabled                         bool
+	nodeMonitorGracePeriod                      metav1.Duration
+	primaryIPFamily                             gardencorev1beta1.IPFamily
+	taints                                      []corev1.Taint
+	caRotationLastInitiationTime                *metav1.Time
+	serviceAccountKeyRotationLastInitiationTime *metav1.Time
 }
 
 // exposed for testing
@@ -905,6 +923,25 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		d.osc.Spec.Purpose = d.purpose
 		d.osc.Spec.Units = units
 		d.osc.Spec.Files = files
+
+		if v1beta1helper.IsUpdateStrategyInPlace(d.worker.UpdateStrategy) && d.purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+			d.osc.Spec.InPlaceUpdates = &extensionsv1alpha1.InPlaceUpdates{
+				OperatingSystemVersion: ptr.Deref(d.worker.Machine.Image.Version, ""),
+			}
+
+			d.osc.Spec.InPlaceUpdates.KubeletVersion = d.kubernetesVersion.String()
+
+			if d.caRotationLastInitiationTime != nil || d.serviceAccountKeyRotationLastInitiationTime != nil {
+				d.osc.Spec.InPlaceUpdates.CredentialsRotation = &extensionsv1alpha1.CredentialsRotation{
+					CertificateAuthorities: &extensionsv1alpha1.CARotation{
+						LastInitiationTime: d.caRotationLastInitiationTime,
+					},
+					ServiceAccountKey: &extensionsv1alpha1.ServiceAccountKeyRotation{
+						LastInitiationTime: d.serviceAccountKeyRotationLastInitiationTime,
+					},
+				}
+			}
+		}
 
 		if d.worker.CRI != nil {
 			d.osc.Spec.CRIConfig = &extensionsv1alpha1.CRIConfig{
@@ -998,12 +1035,21 @@ func KeyV2(
 		return ""
 	}
 
-	kubernetesMajorMinorVersion := fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+	var (
+		inPlaceUpdate               = v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
+		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+		data                        = []string{
+			kubernetesMajorMinorVersion,
+			worker.Machine.Type,
+			worker.Machine.Image.Name + *worker.Machine.Image.Version,
+		}
+	)
 
-	data := []string{
-		kubernetesMajorMinorVersion,
-		worker.Machine.Type,
-		worker.Machine.Image.Name + *worker.Machine.Image.Version,
+	if inPlaceUpdate {
+		data = []string{
+			worker.Machine.Type,
+			worker.Machine.Image.Name,
+		}
 	}
 
 	if worker.Volume != nil {
@@ -1017,7 +1063,7 @@ func KeyV2(
 		data = append(data, string(worker.CRI.Name))
 	}
 
-	if credentialsRotation != nil {
+	if !inPlaceUpdate && credentialsRotation != nil {
 		if credentialsRotation.CertificateAuthorities != nil {
 			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(worker.Name, credentialsRotation.CertificateAuthorities.PendingWorkersRollouts, credentialsRotation.CertificateAuthorities.LastInitiationTime); lastInitiationTime != nil {
 				data = append(data, lastInitiationTime.Time.String())
@@ -1034,22 +1080,8 @@ func KeyV2(
 		data = append(data, "node-local-dns")
 	}
 
-	if kubeletConfiguration != nil {
-		if resources := v1beta1helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
-			data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
-		}
-		if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
-			data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
-				ptr.Deref(eviction.ImageFSAvailable, ""),
-				ptr.Deref(eviction.ImageFSInodesFree, ""),
-				ptr.Deref(eviction.MemoryAvailable, ""),
-				ptr.Deref(eviction.NodeFSAvailable, ""),
-				ptr.Deref(eviction.NodeFSInodesFree, ""),
-			))
-		}
-		if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
-			data = append(data, *policy)
-		}
+	if !inPlaceUpdate {
+		data = append(data, gardenerutils.CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)
 	}
 
 	var result string
