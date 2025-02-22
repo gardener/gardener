@@ -1240,11 +1240,6 @@ build:
         ldflags:
           - '{{.LD_FLAGS}}'
         main: ./cmd/machine-controller-manager-provider-local
-      hooks:
-        after:
-          - command:
-              - bash
-              - hack/generate-kustomize-patch-extension-provider-local.sh
     - image: local-skaffold/gardener-extension-provider-local/charts/extension
       custom:
         buildCommand: |
@@ -1302,5 +1297,6 @@ resourceSelector:
     - groupKind: Extension.operator.gardener.cloud
       image:
         - .spec.deployment.extension.helm.ociRepository.ref
+        - .spec.deployment.extension.values.imageVectorOverwrite.images.*.ref
         - .spec.deployment.admission.runtimeCluster.helm.ociRepository.ref
         - .spec.deployment.admission.virtualCluster.helm.ociRepository.ref

@@ -6,5 +6,4 @@ resources:
 - controllerregistration.yaml
 
 patches:
-- path: patch-imagevector-overwrite.yaml
 - path: patch-controllerdeployment-prow.yaml

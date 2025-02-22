@@ -32,15 +32,6 @@ patch_files=(
   "example/gardener-local/gardenlet/operator/patch-imagevector-overwrite.yaml"
 )
 
-# If the target is 'operator' (`skaffold-operator.yaml`) the path of the following patch file changes.
-if [[ "$make_target" = "operator" ]]; then
-  patch_files+=("example/provider-local/garden/operator/patch-imagevector-overwrite.yaml")
-  patch_files+=("example/provider-local/garden/operator/patch-controllerdeployment-prow.yaml" )
-else
-  patch_files+=("example/provider-local/garden/local/patch-imagevector-overwrite.yaml" )
-  patch_files+=("example/provider-local/garden/local/patch-controllerdeployment-prow.yaml" )
-fi
-
 # Iterate over all patch files and check for their existence.
 for patch_file in "${patch_files[@]}"; do
   if [[ ! -f "$patch_file" ]]; then
