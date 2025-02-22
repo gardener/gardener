@@ -65,9 +65,7 @@ func NewRuntimeGardenerResourceManager(
 				nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
 			}},
 		},
-		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
-		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
-		PodTopologySpreadConstraintsEnabled: true,
+		PodTopologySpreadConstraintsEnabled: false,
 		Replicas:                            ptr.To[int32](2),
 		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
 		ResponsibilityMode:                  resourcemanager.ForSource,
