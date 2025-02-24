@@ -673,6 +673,16 @@ status:
 					values.IsGardenCluster = true
 				})
 
+				Context("with VPAEnabled=true", func() {
+					BeforeEach(func() {
+						values.VPAEnabled = true
+					})
+
+					It("should successfully deploy all resources", func() {
+						checkDeployedResources("plutono-dashboards-garden", 26)
+					})
+				})
+
 				It("should successfully deploy all resources", func() {
 					checkDeployedResources("plutono-dashboards-garden", 23)
 				})
