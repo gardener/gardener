@@ -34,8 +34,8 @@ var _ = Describe("DestinationRule", func() {
 
 	DescribeTable("#DestinationRuleWithLocalityPreferenceAndTLS", func(labels map[string]string, destinationHost string, tlsMode istioapinetworkingv1beta1.ClientTLSSettings_TLSmode) {
 		destinationRule := &istionetworkingv1beta1.DestinationRule{}
-
-		function := DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, destinationHost, tlsMode)
+		tlsSettings := &istioapinetworkingv1beta1.ClientTLSSettings{Mode: tlsMode}
+		function := DestinationRuleWithLocalityPreferenceAndTLS(destinationRule, labels, destinationHost, tlsSettings)
 
 		Expect(function).NotTo(BeNil())
 
@@ -44,7 +44,7 @@ var _ = Describe("DestinationRule", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(destinationRule.Labels).To(Equal(labels))
 		Expect(destinationRule.Spec.Host).To(Equal(destinationHost))
-		Expect(destinationRule.Spec.TrafficPolicy.Tls.Mode).To(Equal(tlsMode))
+		Expect(destinationRule.Spec.TrafficPolicy.Tls).To(Equal(tlsSettings))
 	},
 
 		Entry("Nil values", nil, "", istioapinetworkingv1beta1.ClientTLSSettings_DISABLE),

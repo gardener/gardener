@@ -15,7 +15,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -169,12 +171,14 @@ func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testNa
 
 func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernetes.Interface, shootName string, checkLabels bool) {
 	var filteredList []*istionetworkingv1alpha3.EnvoyFilter
+	// TODO(oliver-goetz): Remove `shootName` from the set when Gardener v1.113 is released.
+	shootFilterNames := sets.New(shootName, shootName+"-apiserver-proxy", shootName+"-istio-tls-termination")
 	CEventually(ctx, func(g Gomega) {
 		envoyFilters := &istionetworkingv1alpha3.EnvoyFilterList{}
 		g.Expect(seedClient.Client().List(ctx, envoyFilters)).To(Succeed(), "trying to list envoy filters, but did not succeed.")
 		filteredList = []*istionetworkingv1alpha3.EnvoyFilter{}
 		for _, filter := range envoyFilters.Items {
-			if filter.Name != shootName {
+			if !shootFilterNames.Has(filter.Name) {
 				continue
 			}
 			// Old Gardener releases do not manage the envoy filter and hence we may end up with one managed and one unmanaged filter
@@ -183,7 +187,16 @@ func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernete
 			}
 			filteredList = append(filteredList, filter)
 		}
-		g.Expect(filteredList).To(HaveLen(1))
+		// We expect 2 envoy filters when Istio TLS termination is active and 1 if it is not.
+		// It is considered to be active when `kube-apiserver-mtls` service exists in the shoot namespace.
+		expectedEnvoyFilters := 2
+		err := seedClient.Client().Get(ctx, client.ObjectKey{Name: "kube-apiserver-mtls", Namespace: shootName}, &corev1.Service{})
+		if errors.IsNotFound(err) {
+			expectedEnvoyFilters = 1
+		} else {
+			g.Expect(err).To(Not(HaveOccurred()))
+		}
+		g.Expect(filteredList).To(HaveLen(expectedEnvoyFilters))
 	}).Should(Succeed())
 	Expect(filteredList[0].Namespace).To(HavePrefix("istio-ingress"))
 }

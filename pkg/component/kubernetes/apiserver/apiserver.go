@@ -42,6 +42,8 @@ import (
 )
 
 const (
+	// SecretNameServerCert is the name of the kube-apiserver server certificate secret.
+	SecretNameServerCert = "kube-apiserver"
 	// ServicePortName is the name of the port in the service.
 	ServicePortName = "kube-apiserver"
 	// UserNameVPNSeedClient is the user name for the HA vpn-seed-client components (used as common name in its client certificate)
