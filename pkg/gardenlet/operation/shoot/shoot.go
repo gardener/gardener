@@ -49,7 +49,7 @@ func NewBuilder() *Builder {
 			return nil, fmt.Errorf("shoot credentials object is required but not set")
 		},
 		serviceAccountIssuerHostname: func() (*string, error) {
-			return nil, fmt.Errorf("service account issuer hostname is required but not set")
+			return nil, nil
 		},
 	}
 }
@@ -305,10 +305,9 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		shoot.EncryptedResources = sharedcomponent.NormalizeResources(shoot.GetInfo().Status.EncryptedResources)
 	}
 
-	if b.seed == nil {
-		return nil, fmt.Errorf("seed object is required but not set")
+	if b.seed != nil {
+		shoot.TopologyAwareRoutingEnabled = v1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(b.seed, shootObject)
 	}
-	shoot.TopologyAwareRoutingEnabled = v1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(b.seed, shootObject)
 
 	backupEntryName, err := gardenerutils.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.UID)
 	if err != nil {
