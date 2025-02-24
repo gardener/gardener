@@ -23,20 +23,23 @@ type Reconciler struct {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(ctx)
+	log := logf.FromContext(ctx).WithValues("reconcileRequest", request)
 
-	shootState := &gardencorev1beta1.ShootState{}
-	if err := r.client.Get(ctx, request.NamespacedName, shootState); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.V(1).Info("Object is gone, stop reconciling")
-			return reconcile.Result{}, nil
-		}
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := r.client.Get(ctx, request.NamespacedName, shoot); err != nil {
+		log.Info("Did not manage to retrieve Shoot for the given ShootState")
 		return reconcile.Result{}, err
 	}
 
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.client.Get(ctx, client.ObjectKeyFromObject(shootState), shoot); err != nil {
-		log.Info("Did not manage to retrieve Shoot for the given ShootState")
+	shootUid := shoot.ObjectMeta.UID
+	log = log.WithValues("shootUid", shootUid)
+
+	shootState := &gardencorev1beta1.ShootState{}
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(shoot), shootState); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Did not manage to retrieve ShootState object")
+			return reconcile.Result{}, nil
+		}
 		return reconcile.Result{}, err
 	}
 
