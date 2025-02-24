@@ -13,7 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
-	kubernetesfake "k8s.io/client-go/kubernetes/fake"
+	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -97,7 +97,7 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should correctly set kubernetes attribute", func() {
-		kubernetes := kubernetesfake.NewSimpleClientset()
+		kubernetes := fakekubernetes.NewSimpleClientset()
 		cs := builder.WithKubernetes(kubernetes).Build()
 
 		Expect(cs.Kubernetes()).To(BeIdenticalTo(kubernetes))

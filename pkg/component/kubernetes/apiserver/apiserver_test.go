@@ -40,7 +40,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
@@ -146,7 +146,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Version:           version,
 			VPN:               VPNConfig{Enabled: true},
 		}
-		kubernetesInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
+		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		kapi = New(kubernetesInterface, namespace, sm, values)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
@@ -4330,7 +4330,7 @@ kind: AuthenticationConfiguration
 
 		It("should successfully wait for the deployment to be updated", func() {
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{
 				Values: apiserver.Values{
 					RuntimeVersion: runtimeVersion,
@@ -4375,7 +4375,7 @@ kind: AuthenticationConfiguration
 	Describe("#WaitCleanup", func() {
 		It("should successfully wait for the deployment to be deleted", func() {
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{})
 			deploy := deployment.DeepCopy()
 
@@ -4410,7 +4410,7 @@ kind: AuthenticationConfiguration
 
 			scheme := runtime.NewScheme()
 			clientWithoutScheme := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
-			kubernetesInterface2 := kubernetesfake.NewClientSetBuilder().WithClient(clientWithoutScheme).Build()
+			kubernetesInterface2 := fakekubernetes.NewClientSetBuilder().WithClient(clientWithoutScheme).Build()
 			kapi = New(kubernetesInterface2, namespace, nil, Values{})
 
 			Expect(runtime.IsNotRegisteredError(kapi.WaitCleanup(ctx))).To(BeTrue())

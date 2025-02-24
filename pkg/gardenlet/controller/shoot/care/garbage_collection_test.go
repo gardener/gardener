@@ -19,7 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -41,8 +41,8 @@ var _ = Describe("GarbageCollection", func() {
 	BeforeEach(func() {
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeShootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-		fakeSeedKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
-		fakeShootKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeShootClient).Build()
+		fakeSeedKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
+		fakeShootKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeShootClient).Build()
 
 		op = &operation.Operation{
 			Logger:        logr.Discard(),

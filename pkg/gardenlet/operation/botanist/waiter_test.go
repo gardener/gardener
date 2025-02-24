@@ -20,7 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -35,7 +35,7 @@ var _ = Describe("Waiter", func() {
 
 	BeforeEach(func() {
 		shootClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-		shootClientSet := kubernetesfake.NewClientSetBuilder().WithClient(shootClient).Build()
+		shootClientSet := fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build()
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{

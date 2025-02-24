@@ -22,7 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 	mockkubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -59,9 +59,9 @@ var _ = Describe("KubeProxy", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSeedKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
+		fakeSeedKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
 		fakeShootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-		fakeShootKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeShootClient).Build()
+		fakeShootKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeShootClient).Build()
 		sm = fakesecretsmanager.New(fakeSeedClient, namespace)
 
 		By("Create secrets managed outside of this function for which secretsmanager.Get() will be called")

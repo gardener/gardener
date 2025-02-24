@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -131,7 +131,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 					reconciler = &Reconciler{
 						GardenClient:  gardenClient,
-						SeedClientSet: kubernetesfake.NewClientSet(),
+						SeedClientSet: fakekubernetes.NewClientSet(),
 						Config:        gardenletConf,
 						Clock:         fakeClock,
 						SeedName:      seedName,
@@ -175,7 +175,7 @@ var _ = Describe("Shoot Care Control", func() {
 					defer test.WithVars(&NewOperation, operationFunc)()
 					reconciler = &Reconciler{
 						GardenClient:  gardenClient,
-						SeedClientSet: kubernetesfake.NewClientSet(),
+						SeedClientSet: fakekubernetes.NewClientSet(),
 						Config:        gardenletConf,
 						Clock:         fakeClock,
 						SeedName:      seedName,
@@ -199,7 +199,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 				op := &operation.Operation{
 					GardenClient:  gardenClient,
-					SeedClientSet: kubernetesfake.NewClientSetBuilder().Build(),
+					SeedClientSet: fakekubernetes.NewClientSetBuilder().Build(),
 					ManagedSeed:   managedSeed,
 					Shoot:         &shootpkg.Shoot{},
 					Logger:        logr.Discard(),
@@ -213,7 +213,7 @@ var _ = Describe("Shoot Care Control", func() {
 				))
 				reconciler = &Reconciler{
 					GardenClient:   gardenClient,
-					SeedClientSet:  kubernetesfake.NewClientSet(),
+					SeedClientSet:  fakekubernetes.NewClientSet(),
 					ShootClientMap: shootClientMap,
 					Config:         gardenletConf,
 					Clock:          fakeClock,

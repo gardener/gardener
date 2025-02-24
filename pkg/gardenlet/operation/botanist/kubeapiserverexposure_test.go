@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -52,7 +52,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 		Expect(istionetworkingv1beta1.AddToScheme(scheme)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		fakeClientSet := kubernetesfake.NewClientSetBuilder().
+		fakeClientSet := fakekubernetes.NewClientSetBuilder().
 			WithAPIReader(c).
 			WithClient(c).
 			Build()
