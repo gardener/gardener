@@ -148,6 +148,7 @@ func (h *Handler) handleDeployment(
 	)
 
 	h.mutateTopologySpreadConstraints(
+		"Deployment",
 		failureToleranceType,
 		zones,
 		isHorizontallyScaled,
@@ -207,6 +208,7 @@ func (h *Handler) handleStatefulSet(
 	// were not updated yet.
 	// Please see https://github.com/gardener/etcd-druid/issues/899 for why this is especially important for StatefulSets.
 	h.mutateTopologySpreadConstraints(
+		"StatefulSet",
 		failureToleranceType,
 		zones,
 		isHorizontallyScaled,
@@ -377,6 +379,7 @@ func (h *Handler) mutateNodeAffinity(
 }
 
 func (h *Handler) mutateTopologySpreadConstraints(
+	kind string,
 	failureToleranceType *gardencorev1beta1.FailureToleranceType,
 	zones []string,
 	isHorizontallyScaled bool,
@@ -417,6 +420,12 @@ func (h *Handler) mutateTopologySpreadConstraints(
 		}
 
 		podTemplateSpec.Spec.TopologySpreadConstraints = append(filteredConstraints, constraints...)
+	}
+
+	// If the MatchLabelKeysInPodTopologySpreadFeatureGateDisabled is true, it means the PodTopologySpreadConstraintsEnabled webhook
+	// is enabled, so we shouldn't try to mutate.
+	if kind == "Deployment" {
+		kubernetesutils.MutateMatchLabelKeys(podTemplateSpec.Spec.TopologySpreadConstraints)
 	}
 }
 

@@ -38,7 +38,7 @@ func TestTokenRequestor(t *testing.T) {
 	RunSpecs(t, "Test Integration ResourceManager TokenRequestor Suite")
 }
 
-const testID = "tokeninvalidator-controller-test"
+const testID = "tokenrequestor-controller-test"
 
 var (
 	ctx = context.Background()
