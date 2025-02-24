@@ -167,6 +167,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
+		o.Shoot.Components.SystemComponents.DenyAllTraffic, err = b.DefaultDenyAllTraffic()
+		if err != nil {
+			return nil, err
+		}
 		o.Shoot.Components.SystemComponents.NodeLocalDNS, err = b.DefaultNodeLocalDNS()
 		if err != nil {
 			return nil, err

@@ -164,6 +164,7 @@ type SystemComponents struct {
 	BlackboxExporter    component.DeployWaiter
 	ClusterIdentity     clusteridentity.Interface
 	CoreDNS             coredns.Interface
+	DenyAllTraffic      component.Deployer
 	KubeProxy           kubeproxy.Interface
 	MetricsServer       component.DeployWaiter
 	Namespaces          component.DeployWaiter
