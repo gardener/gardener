@@ -45,6 +45,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed/seed"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -572,12 +573,12 @@ var _ = Describe("Seed controller tests", func() {
 						crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 						g.Expect(testClient.List(ctx, crdList)).To(Succeed())
 						return crdList.Items
-					}).Should(ContainElements(crdsOnlyForSeedClusters))
+					}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(crdsOnlyForSeedClusters))
 
 					By("Verify that VPA was created for gardenlet")
 					Eventually(func() error {
 						return testClient.Get(ctx, client.ObjectKey{Name: "gardenlet-vpa", Namespace: testNamespace.Name}, &vpaautoscalingv1.VerticalPodAutoscaler{})
-					}).Should(Succeed())
+					}).WithTimeout(kubernetesutils.WaitTimeout).Should(Succeed())
 
 					if !seedIsGarden {
 						By("Verify that the CRDs shared with the garden cluster have been deployed")

@@ -19,7 +19,7 @@ import (
 
 var (
 	// WaitTimeout specifies the total time to wait for CRDs to become ready or to be deleted. Exposed for testing.
-	WaitTimeout = 15 * time.Second
+	WaitTimeout = 2 * time.Minute
 )
 
 // WaitUntilCRDManifestsReady takes names of CRDs and waits for them to get ready with a timeout of 15 seconds.
@@ -29,7 +29,6 @@ func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, crdNames .
 		fns = append(fns, func(ctx context.Context) error {
 			timeoutCtx, cancel := context.WithTimeout(ctx, WaitTimeout)
 			defer cancel()
-
 			return retry.Until(timeoutCtx, 1*time.Second, func(ctx context.Context) (done bool, err error) {
 				crd := &apiextensionsv1.CustomResourceDefinition{}
 
