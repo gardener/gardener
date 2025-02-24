@@ -116,7 +116,7 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 
 		changes.Containerd.ConfigFileChanged = true
 		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
-			changes.Containerd.Registries.Desired = newOSC.Spec.CRIConfig.Containerd.Registries
+			changes.Containerd.Registries.Changed = newOSC.Spec.CRIConfig.Containerd.Registries
 		}
 		changes.lock.Lock()
 		defer changes.lock.Unlock()
@@ -321,19 +321,26 @@ func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensions
 }
 
 func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) containerdRegistries {
-	r := containerdRegistries{
-		Desired: newRegistries,
+	var r containerdRegistries
+
+	for _, oldRegistry := range oldRegistries {
+		if !slices.ContainsFunc(newRegistries, func(newRegistry extensionsv1alpha1.RegistryConfig) bool {
+			return oldRegistry.Upstream == newRegistry.Upstream
+		}) {
+			r.Deleted = append(r.Deleted, oldRegistry)
+		}
 	}
 
-	upstreamsInUse := sets.New[string]()
-	for _, registryConfig := range r.Desired {
-		upstreamsInUse.Insert(registryConfig.Upstream)
+	for _, newRegistry := range newRegistries {
+		oldRegistryIndex := slices.IndexFunc(oldRegistries, func(oldRegistry extensionsv1alpha1.RegistryConfig) bool {
+			return oldRegistry.Upstream == newRegistry.Upstream
+		})
+
+		if oldRegistryIndex == -1 || !apiequality.Semantic.DeepEqual(oldRegistries[oldRegistryIndex], newRegistry) {
+			r.Changed = append(r.Changed, newRegistry)
+			continue
+		}
 	}
-
-	r.Deleted = slices.DeleteFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
-		return upstreamsInUse.Has(config.Upstream)
-	})
-
 	return r
 }
 
