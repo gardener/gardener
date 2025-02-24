@@ -5751,6 +5751,7 @@ func autoConvert_v1beta1_SeedBackup_To_core_SeedBackup(in *SeedBackup, out *core
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = (*string)(unsafe.Pointer(in.Region))
 	out.SecretRef = in.SecretRef
+	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
 
@@ -5764,6 +5765,7 @@ func autoConvert_core_SeedBackup_To_v1beta1_SeedBackup(in *core.SeedBackup, out 
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Region = (*string)(unsafe.Pointer(in.Region))
 	out.SecretRef = in.SecretRef
+	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
 

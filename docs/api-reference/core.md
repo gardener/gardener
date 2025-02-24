@@ -10361,7 +10361,26 @@ Kubernetes core/v1.SecretReference
 <td>
 <p>SecretRef is a reference to a Secret object containing the cloud provider credentials for
 the object store where backups should be stored. It should have enough privileges to manipulate
-the objects as well as buckets.</p>
+the objects as well as buckets.
+Deprecated: This field will be removed in a future version of Gardener. Use <code>CredentialsRef</code> instead.
+Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRef is reference to a resource holding the credentials used for
+authentication with the object store service where the backups are stored.
+Supported referenced resources are v1.Secrets and
+security.gardener.cloud/v1alpha1.WorkloadIdentity</p>
 </td>
 </tr>
 </tbody>

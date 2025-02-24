@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -112,6 +113,84 @@ var _ = Describe("Strategy", func() {
 				Expect(newSeed.Generation).To(Equal(oldSeed.Generation))
 			})
 
+			It("should bump generation when backup.secretRef is synced with backup.credentialsRef", func() {
+				newSeed.Spec.Backup = &core.SeedBackup{
+					SecretRef: corev1.SecretReference{
+						Namespace: "namespace",
+						Name:      "name",
+					},
+				}
+				oldSeed = newSeed.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				Expect(newSeed.Generation).To(Equal(oldSeed.Generation + 1))
+			})
+
+			It("should not bump generation when backup.secretRef is already synced with backup.credentialsRef", func() {
+				oldSeed.Spec.Backup = &core.SeedBackup{
+					SecretRef: corev1.SecretReference{
+						Namespace: "namespace",
+						Name:      "name",
+					},
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  "namespace",
+						Name:       "name",
+					},
+				}
+				newSeed.Spec.Backup = &core.SeedBackup{
+					SecretRef: corev1.SecretReference{
+						Namespace: "namespace",
+						Name:      "name",
+					},
+				}
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				Expect(newSeed.Generation).To(Equal(oldSeed.Generation))
+			})
+
+			It("should bump generation when backup.credentialsRef is synced with backup.secretRef", func() {
+				newSeed.Spec.Backup = &core.SeedBackup{
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  "namespace",
+						Name:       "name",
+					},
+				}
+				oldSeed = newSeed.DeepCopy()
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				Expect(newSeed.Generation).To(Equal(oldSeed.Generation + 1))
+			})
+
+			It("should not bump generation when backup.credentialsRef is already synced with backup.secretRef", func() {
+				oldSeed.Spec.Backup = &core.SeedBackup{
+					SecretRef: corev1.SecretReference{
+						Namespace: "namespace",
+						Name:      "name",
+					},
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  "namespace",
+						Name:       "name",
+					},
+				}
+				newSeed.Spec.Backup = &core.SeedBackup{
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  "namespace",
+						Name:       "name",
+					},
+				}
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+				Expect(newSeed.Generation).To(Equal(oldSeed.Generation))
+			})
+
 			Context("access restrictions", func() {
 				BeforeEach(func() {
 					newSeed = &core.Seed{}
@@ -139,6 +218,112 @@ var _ = Describe("Strategy", func() {
 					Expect(newSeed.Spec.AccessRestrictions).To(BeEmpty())
 					Expect(newSeed.Labels).To(Equal(map[string]string{"seed.gardener.cloud/eu-access": "true"}))
 				})
+			})
+		})
+
+		Describe("#syncBackupSecretRefAndCredentialsRef", func() {
+			It("should sync backup.secretRef with backup.credentialsRef", func() {
+				newSeed.Spec.Backup = &core.SeedBackup{
+					SecretRef: corev1.SecretReference{
+						Namespace: "namespace",
+						Name:      "name",
+					},
+				}
+
+				Expect(newSeed.Spec.Backup.CredentialsRef).To(BeNil())
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.Backup.CredentialsRef).ToNot(BeNil())
+				Expect(newSeed.Spec.Backup.CredentialsRef.APIVersion).To(Equal("v1"))
+				Expect(newSeed.Spec.Backup.CredentialsRef.Kind).To(Equal("Secret"))
+				Expect(newSeed.Spec.Backup.CredentialsRef.Namespace).To(Equal("namespace"))
+				Expect(newSeed.Spec.Backup.CredentialsRef.Name).To(Equal("name"))
+			})
+
+			It("should sync backup.credentialsRef referring secret with backup.secretRef", func() {
+				newSeed.Spec.Backup = &core.SeedBackup{
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  "namespace",
+						Name:       "name",
+					},
+				}
+
+				Expect(newSeed.Spec.Backup.SecretRef.Namespace).To(BeEmpty())
+				Expect(newSeed.Spec.Backup.SecretRef.Name).To(BeEmpty())
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.Backup.SecretRef.Namespace).To(Equal("namespace"))
+				Expect(newSeed.Spec.Backup.SecretRef.Name).To(Equal("name"))
+			})
+
+			It("should not sync backup.credentialsRef referring workloadidentity with backup.secretRef", func() {
+				newSeed.Spec.Backup = &core.SeedBackup{
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "security.gardener.cloud/v1alpha1",
+						Kind:       "WorkloadIdentity",
+						Namespace:  "namespace",
+						Name:       "name",
+					},
+				}
+
+				Expect(newSeed.Spec.Backup.SecretRef.Namespace).To(BeEmpty())
+				Expect(newSeed.Spec.Backup.SecretRef.Name).To(BeEmpty())
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.Backup.SecretRef.Namespace).To(BeEmpty())
+				Expect(newSeed.Spec.Backup.SecretRef.Name).To(BeEmpty())
+			})
+
+			It("should not sync empty backup.credentialsRef with backup.secretRef", func() {
+				newSeed.Spec.Backup = &core.SeedBackup{
+					CredentialsRef: nil,
+					SecretRef:      corev1.SecretReference{},
+				}
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.Backup.SecretRef.Namespace).To(BeEmpty())
+				Expect(newSeed.Spec.Backup.SecretRef.Name).To(BeEmpty())
+				Expect(newSeed.Spec.Backup.CredentialsRef).To(BeNil())
+			})
+
+			It("should not sync backup.credentialsRef with backup.secretRef when they refer different resources", func() {
+				newSeed.Spec.Backup = &core.SeedBackup{
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "security.gardener.cloud/v1alpha1",
+						Kind:       "WorkloadIdentity",
+						Namespace:  "namespace",
+						Name:       "name",
+					},
+					SecretRef: corev1.SecretReference{
+						Namespace: "namespace",
+						Name:      "name",
+					},
+				}
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.Backup.SecretRef.Namespace).To(Equal("namespace"))
+				Expect(newSeed.Spec.Backup.SecretRef.Name).To(Equal("name"))
+
+				Expect(newSeed.Spec.Backup.CredentialsRef).ToNot(BeNil())
+				Expect(newSeed.Spec.Backup.CredentialsRef.APIVersion).To(Equal("security.gardener.cloud/v1alpha1"))
+				Expect(newSeed.Spec.Backup.CredentialsRef.Kind).To(Equal("WorkloadIdentity"))
+				Expect(newSeed.Spec.Backup.CredentialsRef.Namespace).To(Equal("namespace"))
+				Expect(newSeed.Spec.Backup.CredentialsRef.Name).To(Equal("name"))
+			})
+
+			It("Should not sync anything when backup is nil", func() {
+				newSeed.Spec.Backup = nil
+
+				strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
+
+				Expect(newSeed.Spec.Backup).To(BeNil())
 			})
 		})
 	})

@@ -8,6 +8,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -91,4 +93,153 @@ var _ = Describe("Utils tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 	})
+
+	Describe("#ValidateObjectReferenceNameAndNamespace", func() {
+		var fldPath *field.Path
+
+		BeforeEach(func() {
+			fldPath = field.NewPath("objectRef")
+		})
+
+		It("should allow only name when namespace is not required", func() {
+			ref := corev1.ObjectReference{Name: "name"}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, false)).To(BeEmpty())
+		})
+
+		It("should allow name and namespace when namespace is not required", func() {
+			ref := corev1.ObjectReference{Name: "name", Namespace: "namespace"}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, false)).To(BeEmpty())
+		})
+
+		It("should allow name and namespace when namespace is required", func() {
+			ref := corev1.ObjectReference{Name: "name", Namespace: "namespace"}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, true)).To(BeEmpty())
+		})
+
+		It("should deny unset name when namespace is not required and unset", func() {
+			ref := corev1.ObjectReference{}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, false)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fldPath.Child("name").String()),
+				})),
+			))
+		})
+
+		It("should deny unset name when namespace is not required but set", func() {
+			ref := corev1.ObjectReference{Namespace: "namespace"}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, false)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fldPath.Child("name").String()),
+				})),
+			))
+		})
+
+		It("should deny unset name and namespace when namespace is required", func() {
+			ref := corev1.ObjectReference{}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, true)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fldPath.Child("name").String()),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fldPath.Child("namespace").String()),
+				})),
+			))
+		})
+
+		It("should deny unset name when namespace is required and set", func() {
+			ref := corev1.ObjectReference{Namespace: "namespace"}
+			Expect(ValidateObjectReferenceNameAndNamespace(ref, fldPath, true)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fldPath.Child("name").String()),
+				})),
+			))
+		})
+	})
+
+	DescribeTable("#ValidateCredentialsRef",
+		func(ref corev1.ObjectReference, matcher gomegatypes.GomegaMatcher) {
+			fldPath := field.NewPath("credentialsRef")
+			errList := ValidateCredentialsRef(ref, fldPath)
+			Expect(errList).To(matcher)
+		},
+		Entry("should allow v1.Secret",
+			corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"},
+			BeEmpty(),
+		),
+		Entry("should allow security.gardener.cloud/v1alpha1.WorkloadIdentity",
+			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"},
+			BeEmpty(),
+		),
+		Entry("should forbid v1.Secret with non DNS1123 name",
+			corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "Foo", Namespace: "bar"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("credentialsRef.name"),
+				})),
+			),
+		),
+		Entry("should forbid security.gardener.cloud/v1alpha1.WorkloadIdentity with non DNS1123 namespace",
+			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar?"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("credentialsRef.namespace"),
+				})),
+			),
+		),
+		Entry("should forbid credentialsRef with empty apiVersion, kind, name, or namespace",
+			corev1.ObjectReference{APIVersion: "", Kind: "", Name: "", Namespace: ""},
+			ContainElements(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.apiVersion"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.kind"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("credentialsRef.namespace"),
+				})),
+			),
+		),
+		Entry("should forbid v1.ConfigMap",
+			corev1.ObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo", Namespace: "bar"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
+				})),
+			),
+		),
+		Entry("should forbid security.gardener.cloud/v1alpha1.FooBar",
+			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "FooBar", Name: "foo", Namespace: "bar"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
+				})),
+			),
+		),
+		Entry("should forbid security.gardener.cloud/v2alpha1.WorkloadIdentity",
+			corev1.ObjectReference{APIVersion: "security.gardener.cloud/v2alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"},
+			ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("credentialsRef"),
+				})),
+			),
+		),
+	)
 })
