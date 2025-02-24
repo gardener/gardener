@@ -5,89 +5,100 @@
 package shoot
 
 import (
-	"context"
 	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	e2e "github.com/gardener/gardener/test/e2e/gardener"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	. "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	. "github.com/gardener/gardener/test/framework"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
-	test := func(shoot *gardencorev1beta1.Shoot) {
-		f := defaultShootCreationFramework()
-		f.Shoot = shoot
-
+	test := func(s *ShootContext) {
 		// Assign seedName so that shoot does not get scheduled to the seed that will be used as target.
-		f.Shoot.Spec.SeedName = ptr.To(getSeedName(false))
+		s.Shoot.Spec.SeedName = ptr.To(getSeedName(false))
 
-		It("Create, Migrate and Delete", Offset(1), func() {
-			By("Create Shoot")
-			ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
-			defer cancel()
+		ItShouldCreateShoot(s)
+		ItShouldWaitForShootToBeReconciledAndHealthy(s)
+		ItShouldInitializeShootClient(s)
+		ItShouldGetResponsibleSeed(s)
+		ItShouldInitializeSeedClient(s)
 
-			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
-			f.Verify()
+		if !v1beta1helper.IsWorkerless(s.Shoot) && !v1beta1helper.HibernationIsEnabled(s.Shoot) {
+			// We can only verify in-cluster access to the API server before the migration in local e2e tests.
+			// After the migration, the shoot API server's hostname still points to the source seed, because
+			// the /etc/hosts entry is never updated. Hence, we talk to the API server for starting in-cluster
+			// clients. That's also why the ShootMigrationTest is configured to skip all interactions with the
+			// shoot API server for local e2e tests.
+			inclusterclient.VerifyInClusterAccessToAPIServer(s)
+		}
 
-			// TODO: add back VerifyInClusterAccessToAPIServer once this test has been refactored to ordered containers
-			// if !v1beta1helper.IsWorkerless(s.Shoot) && !v1beta1helper.HibernationIsEnabled(s.Shoot) {
-			// 	// We can only verify in-cluster access to the API server before the migration in local e2e tests.
-			// 	// After the migration, the shoot API server's hostname still points to the source seed, because
-			// 	// the /etc/hosts entry is never updated. Hence, we talk to the API server for starting in-cluster
-			// 	// clients. That's also why the ShootMigrationTest is configured to skip all interactions with the
-			// 	// shoot API server for local e2e tests.
-			// 	inclusterclient.VerifyInClusterAccessToAPIServer(s)
-			// }
+		var (
+			seedClientSourceCluster client.Client
+			secretsBeforeMigration  map[string]corev1.Secret
+		)
 
-			By("Migrate Shoot")
-			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
-			defer cancel()
-			t, err := newDefaultShootMigrationTest(ctx, f.Shoot, f.GardenerFramework)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(t.MigrateShoot(ctx)).To(Succeed())
-			Expect(t.VerifyMigration(ctx)).To(Succeed())
-
-			By("Delete Shoot")
-			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
-			defer cancel()
-			Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
+		It("Record current seed client", func() {
+			seedClientSourceCluster = s.SeedClient
 		})
+
+		It("Populate comparison elements before migration", func(ctx SpecContext) {
+			var err error
+			secretsBeforeMigration, err = GetPersistedSecrets(ctx, s.SeedClientSet, s.Shoot.Status.TechnicalID)
+			Expect(err).ToNot(HaveOccurred())
+		}, SpecTimeout(time.Minute))
+
+		It("Migrate Shoot", func(ctx SpecContext) {
+			Eventually(ctx, func() error {
+				patch := client.MergeFrom(s.Shoot.DeepCopy())
+				s.Shoot.Spec.SeedName = ptr.To(getSeedName(true))
+				return s.GardenClient.SubResource("binding").Patch(ctx, s.Shoot, patch)
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		ItShouldWaitForShootToBeReconciledAndHealthy(s)
+		ItShouldGetResponsibleSeed(s)
+		ItShouldInitializeSeedClient(s)
+
+		It("Verify that all secrets have been migrated without regeneration", func(ctx SpecContext) {
+			secretsAfterMigration, err := GetPersistedSecrets(ctx, s.SeedClientSet, s.Shoot.Status.TechnicalID)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ComparePersistedSecrets(secretsBeforeMigration, secretsAfterMigration)).To(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("Verify that there are no orphaned resources in the source seed", func(ctx SpecContext) {
+			Expect(CheckForOrphanedNonNamespacedResources(ctx, s.Shoot.Namespace, seedClientSourceCluster)).To(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		ItShouldDeleteShoot(s)
+		ItShouldWaitForShootToBeDeleted(s)
 	}
 
-	Context("Shoot with workers", func() {
-		test(e2e.DefaultShoot("e2e-migrate"))
+	Context("Shoot with workers", Ordered, func() {
+		test(NewTestContext().ForShoot(DefaultShoot("e2e-migrate")))
 	})
 
-	Context("Workerless Shoot", Label("workerless"), func() {
-		test(e2e.DefaultWorkerlessShoot("e2e-migrate"))
+	Context("Workerless Shoot", Label("workerless"), Ordered, func() {
+		test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-migrate")))
 	})
 
-	Context("Hibernated Shoot", Label("hibernated"), func() {
-		shoot := e2e.DefaultShoot("e2e-mgr-hib")
+	Context("Hibernated Shoot", Label("hibernated"), Ordered, func() {
+		shoot := DefaultShoot("e2e-mgr-hib")
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Enabled: ptr.To(true),
 		}
-		test(shoot)
+		test(NewTestContext().ForShoot(shoot))
 	})
 })
-
-func newDefaultShootMigrationTest(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenerFramework *GardenerFramework) (*ShootMigrationTest, error) {
-	t, err := NewShootMigrationTest(ctx, gardenerFramework, &ShootMigrationConfig{
-		ShootName:               shoot.Name,
-		ShootNamespace:          shoot.Namespace,
-		TargetSeedName:          getSeedName(true),
-		SkipShootClientCreation: true,
-		SkipNodeCheck:           true,
-		SkipMachinesCheck:       true,
-		SkipProtectedToleration: true,
-	})
-	return t, err
-}
 
 func getSeedName(isTarget bool) (seedName string) {
 	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {

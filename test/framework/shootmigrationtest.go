@@ -182,7 +182,7 @@ func (t ShootMigrationTest) VerifyMigration(ctx context.Context) error {
 	}
 
 	ginkgo.By("Check for orphaned resources")
-	return t.checkForOrphanedNonNamespacedResources(ctx)
+	return CheckForOrphanedNonNamespacedResources(ctx, t.SeedShootNamespace, t.SourceSeedClient.Client())
 }
 
 // GetNodeNames uses the shootClient to fetch all Node names from the Shoot
@@ -236,11 +236,17 @@ func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient k
 // GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
 // from the Shoot's control plane namespace
 func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient kubernetes.Interface) (map[string]corev1.Secret, error) {
+	return GetPersistedSecrets(ctx, seedClient, t.SeedShootNamespace)
+}
+
+// GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
+// from the Shoot's control plane namespace
+func GetPersistedSecrets(ctx context.Context, seedClient kubernetes.Interface, namespace string) (map[string]corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
 	if err := seedClient.Client().List(
 		ctx,
 		secretList,
-		client.InNamespace(t.SeedShootNamespace),
+		client.InNamespace(namespace),
 		client.MatchingLabels(map[string]string{secretsmanager.LabelKeyPersist: secretsmanager.LabelValueTrue}),
 	); err != nil {
 		return nil, err
@@ -252,6 +258,28 @@ func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient
 	}
 
 	return secretsMap, nil
+}
+
+// ComparePersistedSecrets ensures that two secret maps are equal.
+func ComparePersistedSecrets(secretsBefore, secretsAfter map[string]corev1.Secret) error {
+	var errorMsg string
+	for name, secret := range secretsBefore {
+		if !reflect.DeepEqual(secret.Data, secretsAfter[name].Data) {
+			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's data persisted.\n", secret.Namespace, secret.Name)
+		}
+		if !maps.Equal(secret.Labels, secretsAfter[name].Labels) {
+			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's labels persisted: labels before migration: %v, labels after migration: %v\n",
+				secret.Namespace,
+				secret.Name,
+				secret.Labels,
+				secretsAfter[name].Labels,
+			)
+		}
+	}
+	if len(errorMsg) > 0 {
+		return fmt.Errorf("control plane secrets did not have their data or labels persisted during control plane migration:\n %s", errorMsg)
+	}
+	return nil
 }
 
 // PopulateBeforeMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsBeforeMigration with the necessary Machine details and Node names
@@ -309,25 +337,7 @@ func (t *ShootMigrationTest) compareElementsAfterMigration() error {
 		}
 	}
 
-	var errorMsg string
-	for name, secret := range t.ComparisonElementsBeforeMigration.SecretsMap {
-		if !reflect.DeepEqual(secret.Data, t.ComparisonElementsAfterMigration.SecretsMap[name].Data) {
-			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's data persisted.\n", secret.Namespace, secret.Name)
-		}
-		if !maps.Equal(secret.Labels, t.ComparisonElementsAfterMigration.SecretsMap[name].Labels) {
-			errorMsg += fmt.Sprintf("Secret %s/%s did not have it's labels persisted: labels before migration: %v, labels after migration: %v\n",
-				secret.Namespace,
-				secret.Name,
-				secret.Labels,
-				t.ComparisonElementsAfterMigration.SecretsMap[name].Labels,
-			)
-		}
-	}
-	if len(errorMsg) > 0 {
-		return fmt.Errorf("control plane secrets did not have their data or labels persisted during control plane migration:\n %s", errorMsg)
-	}
-
-	return nil
+	return ComparePersistedSecrets(t.ComparisonElementsBeforeMigration.SecretsMap, t.ComparisonElementsAfterMigration.SecretsMap)
 }
 
 // CheckObjectsTimestamp checks the timestamp of all objects that the resource-manager creates in the Shoot cluster.
@@ -383,14 +393,14 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 
 // CheckForOrphanedNonNamespacedResources checks if there are orphaned resources left on the target seed after the shoot migration.
 // The function checks for Cluster, DNSOwner, BackupEntry, ClusterRoleBinding, ClusterRole and PersistentVolume
-func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.Context) error {
-	seedClientScheme := t.SourceSeedClient.Client().Scheme()
+func CheckForOrphanedNonNamespacedResources(ctx context.Context, shootNamespace string, sourceSeedClient client.Client) error {
+	seedClientScheme := sourceSeedClient.Scheme()
 
 	if err := extensionsv1alpha1.AddToScheme(seedClientScheme); err != nil {
 		return err
 	}
 
-	leakedObjects := []string{}
+	var leakedObjects []string
 
 	for _, obj := range []client.ObjectList{
 		&extensionsv1alpha1.ClusterList{},
@@ -398,12 +408,12 @@ func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.
 		&rbacv1.ClusterRoleBindingList{},
 		&rbacv1.ClusterRoleList{},
 	} {
-		if err := t.SourceSeedClient.Client().List(ctx, obj, client.InNamespace(corev1.NamespaceAll)); err != nil {
+		if err := sourceSeedClient.List(ctx, obj, client.InNamespace(corev1.NamespaceAll)); err != nil {
 			return err
 		}
 
 		if err := meta.EachListItem(obj, func(object runtime.Object) error {
-			if strings.Contains(object.(client.Object).GetName(), t.SeedShootNamespace) {
+			if strings.Contains(object.(client.Object).GetName(), shootNamespace) {
 				leakedObjects = append(leakedObjects, fmt.Sprintf("%T %s", object, object.(client.Object).GetName()))
 			}
 			return nil
@@ -413,12 +423,12 @@ func (t *ShootMigrationTest) checkForOrphanedNonNamespacedResources(ctx context.
 	}
 
 	pvList := &corev1.PersistentVolumeList{}
-	if err := t.SourceSeedClient.Client().List(ctx, pvList, client.InNamespace(corev1.NamespaceAll)); err != nil {
+	if err := sourceSeedClient.List(ctx, pvList, client.InNamespace(corev1.NamespaceAll)); err != nil {
 		return err
 	}
 	if err := meta.EachListItem(pvList, func(obj runtime.Object) error {
 		pv := obj.(*corev1.PersistentVolume)
-		if strings.Contains(pv.Spec.ClaimRef.Namespace, t.SeedShootNamespace) {
+		if strings.Contains(pv.Spec.ClaimRef.Namespace, shootNamespace) {
 			leakedObjects = append(leakedObjects, fmt.Sprintf("PersistentVolume/%s", pv.GetName()))
 		}
 		return nil
