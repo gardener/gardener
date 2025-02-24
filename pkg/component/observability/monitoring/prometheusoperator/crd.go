@@ -51,5 +51,5 @@ func NewCRDs(client client.Client, applier kubernetes.Applier) (component.Deploy
 		crdServiceMonitors,
 		crdThanosRulers,
 	}
-	return crddeployer.New(client, applier, resources)
+	return crddeployer.New(client, applier, resources, false)
 }
