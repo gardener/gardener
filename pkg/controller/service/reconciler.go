@@ -131,7 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		if (apierrors.IsInvalid(err) && strings.Contains(err.Error(), "port is already allocated")) ||
 			// for some reason this error is not of type "Invalid"
 			strings.Contains(err.Error(), "duplicate nodePort") {
-			log.Info("Patching nodePort failed because it is already allocated, enabling auto-remediation")
+			log.Info("Patching nodePort failed because it is already allocated, enabling auto-remediation", "err", err.Error())
 			return reconcile.Result{Requeue: true}, r.remediateAllocatedNodePorts(ctx, log)
 		}
 		return reconcile.Result{}, err
@@ -177,10 +177,15 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 		)
 
 		for i, port := range service.Spec.Ports {
+			if port.NodePort != 0 {
+				log.Info("Found service with nodePort", "serviceCheckedForAllocation", client.ObjectKeyFromObject(&service), "nodePort", port.NodePort)
+			}
+
 			if port.NodePort == nodePortIstioIngressGateway ||
 				port.NodePort == nodePortIstioIngressGatewayZone0 ||
 				port.NodePort == nodePortIstioIngressGatewayZone1 ||
-				port.NodePort == nodePortIstioIngressGatewayZone2 {
+				port.NodePort == nodePortIstioIngressGatewayZone2 ||
+				port.NodePort == nodePortVirtualGardenKubeAPIServer {
 				var (
 					min, max    = 30000, 32767
 					newNodePort = int32(rand.N(max-min) + min) // #nosec: G115 G404 -- Value range limited in previous line, no cryptographic context.
