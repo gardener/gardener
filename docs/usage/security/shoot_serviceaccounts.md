@@ -73,7 +73,15 @@ Prerequisites:
 
 ### Enablement
 
-If the prerequisites are met then the feature can be enabled for a shoot cluster by annotating it with `authentication.gardener.cloud/issuer=managed`. Mind that once enabled, this feature cannot be disabled. After the shoot is reconciled, you can retrieve the new shoot service account issuer value from the shoot's status. A sample query that will retrieve the managed issuer looks like this:
+If the prerequisites are met then the feature can be enabled for a shoot cluster by annotating it with `authentication.gardener.cloud/issuer=managed`.
+Mind that once enabled, this feature cannot be disabled. 
+
+> [!NOTE]
+> After annotating the shoot with `authentication.gardener.cloud/issuer=managed` the reconciliation will not be triggered immediatelly.
+> One can wait for the shoot maintenance window or trigger reconciliation by annotating the shoot with `gardener.cloud/operation=reconcile`.
+
+After the shoot is reconciled, you can retrieve the new shoot service account issuer value from the shoot's status.
+A sample query that will retrieve the managed issuer looks like this:
 
 ```bash
 kubectl -n my-project get shoot my-shoot -o jsonpath='{.status.advertisedAddresses[?(@.name=="service-account-issuer")].url}'
