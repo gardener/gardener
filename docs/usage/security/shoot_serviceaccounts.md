@@ -77,7 +77,7 @@ If the prerequisites are met then the feature can be enabled for a shoot cluster
 Mind that once enabled, this feature cannot be disabled. 
 
 > [!NOTE]
-> After annotating the shoot with `authentication.gardener.cloud/issuer=managed` the reconciliation will not be triggered immediatelly.
+> After annotating the shoot with `authentication.gardener.cloud/issuer=managed` the reconciliation will not be triggered immediately.
 > One can wait for the shoot maintenance window or trigger reconciliation by annotating the shoot with `gardener.cloud/operation=reconcile`.
 
 After the shoot is reconciled, you can retrieve the new shoot service account issuer value from the shoot's status.
