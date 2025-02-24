@@ -287,7 +287,6 @@ var _ = Describe("ControllerInstallation controller tests", func() {
     labels:
       ` + testID + `: ` + testRunID + `
       dnsrecord.extensions.gardener.cloud/` + seed.Spec.DNS.Provider.Type + `: "true"
-      name.seed.gardener.cloud/` + seed.Name + `: "true"
       provider.extensions.gardener.cloud/` + seed.Spec.Provider.Type + `: "true"
     name: ` + seed.Name + `
     networks:
