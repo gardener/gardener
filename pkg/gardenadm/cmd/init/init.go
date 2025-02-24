@@ -6,10 +6,14 @@ package init
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
+	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -46,7 +50,33 @@ gardenadm init`,
 	return cmd
 }
 
-func run(_ context.Context, opts *Options) error {
-	opts.Log.Info("Not implemented")
+func run(ctx context.Context, opts *Options) error {
+	fs := afero.Afero{Fs: afero.NewOsFs()}
+
+	cloudProfile, project, shoot, err := gardenadm.ReadKubernetesResourcesFromConfigDir(opts.Log, fs, opts.ConfigDir)
+	if err != nil {
+		return fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", opts.ConfigDir, err)
+	}
+
+	b, err := gardenadm.NewBotanist(ctx, opts.Log, project, cloudProfile, shoot)
+	if err != nil {
+		return err
+	}
+
+	var (
+		g = flow.NewGraph("init")
+
+		_ = g.Add(flow.Task{
+			Name: "Initializing secrets management",
+			Fn:   b.InitializeSecretsManagement,
+		})
+	)
+
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log: opts.Log,
+	}); err != nil {
+		return flow.Errors(err)
+	}
+
 	return nil
 }
