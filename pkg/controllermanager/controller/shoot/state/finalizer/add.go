@@ -7,7 +7,6 @@ package finalizer
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,13 +16,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 const ControllerName = "shootstate-finalizer"
 
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
-	if r.client == nil {
-		r.client = mgr.GetClient()
+	if r.Client == nil {
+		r.Client = mgr.GetClient()
 	}
 
 	return builder.ControllerManagedBy(mgr).

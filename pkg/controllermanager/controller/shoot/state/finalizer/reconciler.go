@@ -19,14 +19,14 @@ import (
 const FinalizerName = "core.gardener.cloud/shootstate"
 
 type Reconciler struct {
-	client client.Client
+	Client client.Client
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx).WithValues("reconcileRequest", request)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.client.Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {
 		log.Info("Did not manage to retrieve Shoot for the given ShootState")
 		return reconcile.Result{}, err
 	}
@@ -35,7 +35,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log = log.WithValues("shootUid", shootUid)
 
 	shootState := &gardencorev1beta1.ShootState{}
-	if err := r.client.Get(ctx, client.ObjectKeyFromObject(shoot), shootState); err != nil {
+	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shootState); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Did not manage to retrieve ShootState object")
 			return reconcile.Result{}, nil
@@ -60,7 +60,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	isShootOpMigrate := shootLastOperationType == gardencorev1beta1.LastOperationTypeMigrate
 	if isShootOpMigrate && !shootStateHasFinalizer {
 		log.Info("Adding finalizer")
-		if err := controllerutils.AddFinalizers(ctx, r.client, shootState, FinalizerName); err != nil {
+		if err := controllerutils.AddFinalizers(ctx, r.Client, shootState, FinalizerName); err != nil {
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{}, nil
@@ -70,7 +70,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	isShootOpSucceeded := shootLastOperationState == gardencorev1beta1.LastOperationStateSucceeded
 	if isShootOpRestore && isShootOpSucceeded && shootStateHasFinalizer {
 		log.Info("Removing finalizer")
-		if err := controllerutils.RemoveFinalizers(ctx, r.client, shootState, FinalizerName); err != nil {
+		if err := controllerutils.RemoveFinalizers(ctx, r.Client, shootState, FinalizerName); err != nil {
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{}, nil
