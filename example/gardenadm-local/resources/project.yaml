@@ -1,0 +1,6 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Project
+metadata:
+  name: garden
+spec:
+  namespace: garden
