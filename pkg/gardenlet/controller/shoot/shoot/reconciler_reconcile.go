@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // runReconcileShootFlow reconciles the Shoot cluster.
@@ -50,8 +51,9 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		isCopyOfBackupsRequired bool
 		tasksWithErrors         []string
 
-		isRestoring   = operationType == gardencorev1beta1.LastOperationTypeRestore
-		skipReadiness = metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipReadiness)
+		isRestoring           = operationType == gardencorev1beta1.LastOperationTypeRestore
+		skipReadiness         = metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipReadiness)
+		k8sGreaterEqual133, _ = versionutils.CheckVersionMeetsConstraint(o.Shoot.GetInfo().Spec.Kubernetes.Version, ">= 1.33")
 	)
 
 	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
@@ -642,6 +644,14 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilShootNamespacesReady),
 		})
+		deployDenyAllTraffic = g.Add(flow.Task{
+			Name: "Deploying deny-all network policy to namespaces",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.Shoot.Components.SystemComponents.DenyAllTraffic.Deploy(ctx)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       !k8sGreaterEqual133,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, initializeShootClients, deployKubeScheduler, waitUntilShootNamespacesReady),
+		})
 		deployCoreDNS = g.Add(flow.Task{
 			Name: "Deploying CoreDNS system component",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -752,6 +762,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			deployAPIServerProxy,
 			deployShootSystemResources,
 			deployCoreDNS,
+			deployDenyAllTraffic,
 			deployNodeExporter,
 			deployNodeLocalDNS,
 			deployMetricsServer,
