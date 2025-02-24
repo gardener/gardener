@@ -264,6 +264,13 @@ func (shootBindingStrategy) PrepareForUpdate(_ context.Context, obj, old runtime
 
 	newShoot.Status = oldShoot.Status
 
+	// Remove "Create Pending" from status if seed name got set
+	if lastOp := newShoot.Status.LastOperation; lastOp != nil &&
+		lastOp.Type == core.LastOperationTypeCreate && lastOp.State == core.LastOperationStatePending &&
+		oldShoot.Spec.SeedName == nil && newShoot.Spec.SeedName != nil {
+		newShoot.Status.LastOperation = nil
+	}
+
 	if !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
@@ -302,7 +309,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("not a shoot")
 	}
-	return labels.Set(shoot.ObjectMeta.Labels), ToSelectableFields(shoot), nil
+	return shoot.ObjectMeta.Labels, ToSelectableFields(shoot), nil
 }
 
 // MatchShoot returns a generic matcher for a given label and field selector.
