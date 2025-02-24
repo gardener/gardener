@@ -22,6 +22,7 @@ SYSTEM_NAME                := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 SYSTEM_ARCH                := $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin/$(SYSTEM_NAME)-$(SYSTEM_ARCH)
 CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
+EXTENSION_GEN              := $(TOOLS_BIN_DIR)/extension-generator
 GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
 GINKGO                     := $(TOOLS_BIN_DIR)/ginkgo
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
@@ -240,6 +241,14 @@ $(OIDC_METADATA): $(TOOLS_PKG_PATH)/oidcmeta/*.go
 else
 $(OIDC_METADATA): go.mod
 	go build -o $(OIDC_METADATA) github.com/gardener/gardener/hack/tools/oidcmeta
+endif
+
+ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
+$(EXTENSION_GEN): $(TOOLS_PKG_PATH)/extension-generator/*.go
+	go build -o $(EXTENSION_GEN) $(TOOLS_PKG_PATH)/extension-generator
+else
+$(EXTENSION_GEN): go.mod
+	go build -o $(EXTENSION_GEN) github.com/gardener/gardener/hack/tools/extension-generator
 endif
 
 $(SETUP_ENVTEST): $(call tool_version_file,$(SETUP_ENVTEST),$(CONTROLLER_RUNTIME_VERSION))
