@@ -4304,6 +4304,11 @@ func (in *SeedBackup) DeepCopyInto(out *SeedBackup) {
 		**out = **in
 	}
 	out.SecretRef = in.SecretRef
+	if in.CredentialsRef != nil {
+		in, out := &in.CredentialsRef, &out.CredentialsRef
+		*out = new(v1.ObjectReference)
+		**out = **in
+	}
 	return
 }
 
