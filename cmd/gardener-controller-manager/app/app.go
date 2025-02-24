@@ -20,9 +20,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/automaxprocs/maxprocs"
 	"golang.org/x/exp/maps"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/version/verflag"
 	"k8s.io/utils/ptr"
@@ -37,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
@@ -209,49 +206,6 @@ func run(ctx context.Context, log logr.Logger, cfg *config.ControllerManagerConf
 			return []*string{shoot.Spec.SeedName, shoot.Status.SeedName}, nil
 		}); err != nil {
 			return fmt.Errorf("failed computing tasks for shoots: %w", err)
-		}
-
-		if err := prepareEmptyPatchTasks(&gardencorev1beta1.SeedList{}, func(obj client.Object) ([]*string, error) {
-			seed := obj.(*gardencorev1beta1.Seed)
-
-			seedNames := []*string{&seed.Name}
-
-			managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: seed.Name, Namespace: v1beta1constants.GardenNamespace}}
-			if err := mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return nil, fmt.Errorf("failed to get managed seed %q: %v", seed.Name, err)
-				}
-			} else if managedSeed.Spec.Shoot != nil {
-				shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: managedSeed.Spec.Shoot.Name, Namespace: managedSeed.Namespace}}
-				if err := mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
-					return nil, fmt.Errorf("failed to get shoot %s for managed seed %q: %v", managedSeed.Spec.Shoot.Name, managedSeed.Name, err)
-				}
-				seedNames = append(seedNames, shoot.Spec.SeedName)
-			}
-
-			return seedNames, nil
-		}); err != nil {
-			return fmt.Errorf("failed computing tasks for seeds: %w", err)
-		}
-
-		if err := prepareEmptyPatchTasks(&seedmanagementv1alpha1.ManagedSeedList{}, func(obj client.Object) ([]*string, error) {
-			managedSeed := obj.(*seedmanagementv1alpha1.ManagedSeed)
-
-			if managedSeed.Spec.Shoot == nil {
-				return nil, nil
-			}
-
-			shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: managedSeed.Spec.Shoot.Name, Namespace: managedSeed.Namespace}}
-			if err := mgr.GetClient().Get(ctx, client.ObjectKeyFromObject(shoot), shoot); err != nil {
-				if apierrors.IsNotFound(err) {
-					return nil, nil
-				}
-				return nil, err
-			}
-
-			return []*string{shoot.Spec.SeedName}, nil
-		}); err != nil {
-			return fmt.Errorf("failed computing tasks for managed seeds: %w", err)
 		}
 
 		return flow.Parallel(fns...)(ctx)
