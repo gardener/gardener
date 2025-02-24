@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
@@ -138,7 +137,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					}
 				}).Should(Succeed())
 
-				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
+				// TODO: add back VerifyInClusterAccessToAPIServer once this test has been refactored to ordered containers
+				// inclusterclient.VerifyInClusterAccessToAPIServer(s)
 			}
 
 			By("Update Shoot")
@@ -149,9 +149,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				Shoot:             f.Shoot,
 			}, nil, nil)
 
-			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
-			}
+			// TODO: add back VerifyInClusterAccessToAPIServer once this test has been refactored to ordered containers
+			// if !v1beta1helper.IsWorkerless(s.Shoot) {
+			// 	inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			// }
 
 			By("Add skip readiness annotation")
 			ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)

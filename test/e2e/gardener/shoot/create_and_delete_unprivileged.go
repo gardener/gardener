@@ -18,6 +18,7 @@ import (
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -74,15 +75,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			}, NodeTimeout(time.Minute))
 
 			Eventually(ctx, func() error {
-				return s.ShootClient.Create(ctx, pod)
+				if err := s.ShootClient.Create(ctx, pod); err != nil {
+					return err
+				}
+				return StopTrying("pod was created")
 			}).Should(And(
 				BeForbiddenError(),
 				MatchError(ContainSubstring("pods %q is forbidden: violates PodSecurity %q", "nginx", "restricted:latest")),
 			))
 		}, SpecTimeout(time.Minute))
 
-		// TODO(timebertt): add back inclusterclient.VerifyInClusterAccessToAPIServer once it has been refactored to ordered
-		// containers
+		inclusterclient.VerifyInClusterAccessToAPIServer(s)
 
 		ItShouldDeleteShoot(s)
 		ItShouldWaitForShootToBeDeleted(s)

@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/apis/local/install"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
 )
 
@@ -79,9 +78,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
 
-			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
-			}
+			// TODO: add back VerifyInClusterAccessToAPIServer once this test has been refactored to ordered containers
+			// if !v1beta1helper.IsWorkerless(s.Shoot) {
+			// 	inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			// }
 
 			if !v1beta1helper.IsWorkerless(f.Shoot) {
 				By("Verify Bootstrapping of Nodes with node-critical components")
@@ -101,9 +101,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			defer cancel()
 			Expect(f.WakeUpShoot(ctx, f.Shoot)).To(Succeed())
 
-			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
-			}
+			// TODO: add back VerifyInClusterAccessToAPIServer once this test has been refactored to ordered containers
+			// if !v1beta1helper.IsWorkerless(s.Shoot) {
+			// 	inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, s)
+			// }
 
 			By("Delete Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
