@@ -18,6 +18,7 @@ import (
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -81,8 +82,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			))
 		}, SpecTimeout(time.Minute))
 
-		// TODO(timebertt): add back inclusterclient.VerifyInClusterAccessToAPIServer once it has been refactored to ordered
-		// containers
+		inclusterclient.VerifyInClusterAccessToAPIServer(s)
 
 		ItShouldDeleteShoot(s)
 		ItShouldWaitForShootToBeDeleted(s)
