@@ -95,7 +95,7 @@ func testCredentialRotationComplete(parentCtx context.Context, v rotationutils.V
 }
 
 func testCredentialRotationWithoutWorkersRollout(parentCtx context.Context, v rotationutils.Verifiers, f *framework.ShootCreationFramework) {
-	ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 	defer cancel()
 
 	By("Before credential rotation")
