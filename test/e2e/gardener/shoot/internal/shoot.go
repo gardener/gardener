@@ -200,3 +200,21 @@ func ItShouldInitializeSeedClient(s *ShootContext) {
 		s.WithSeedClientSet(clientSet)
 	}, SpecTimeout(time.Minute))
 }
+
+// ItShouldAnnotateShoot sets the given annotation within the shoot metadata to the specified value and patches the shoot object
+func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
+	GinkgoHelper()
+
+	It("Annotate Shoot", func(ctx SpecContext) {
+		patch := client.MergeFrom(s.Shoot.DeepCopy())
+
+		for annotationKey, annotationValue := range annotations {
+			s.Log.Info("Setting annotation", "annotation", annotationKey, "value", annotationValue)
+			metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, annotationKey, annotationValue)
+		}
+
+		Eventually(ctx, func() error {
+			return s.GardenClient.Patch(ctx, s.Shoot, patch)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
