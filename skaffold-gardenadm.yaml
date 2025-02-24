@@ -347,7 +347,7 @@ deploy:
                 image="$(cat /tmp/.skaffold-image)"
 
                 echo "> Pull gardenadm image and mount it to the temporary directory"
-                ctr images pull  "$image" --hosts-dir "/etc/containerd/certs.d"
+                ctr images pull --hosts-dir "/etc/containerd/certs.d" "$image"
                 ctr images mount "$image" "$tmp_dir"
 
                 echo "> Copy gardenadm binary to host (/gardenadm) and make it executable"
