@@ -211,3 +211,26 @@ tests:
 
 
               ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="seed"}
+
+  - name: SeedKubeApiServerLatency
+    interval: 1m
+    input_series:
+      - series: shoot:apiserver_latency:percentage{project="garden", name="seed-one"}
+        values: "1x31"
+    external_labels:
+      landscape: landscape-unit-tests
+    alert_rule_test:
+      - alertname: SeedKubeApiServerLatency
+        eval_time: 31m # test the alert fires immediately
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              topology: garden
+              name: seed-one
+              project: garden
+            exp_annotations:
+              summary: >-
+                Seed Kube API server Latency
+              description: >-
+                The seed cluster seed-one in landscape-unit-tests
+                Kube API server has latency issues.
