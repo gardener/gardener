@@ -146,8 +146,12 @@ func ItShouldInitializeShootClient(s *ShootContext) {
 	It("Initialize Shoot client", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
 			clientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, s.GardenClientSet, s.Shoot)
+			if err != nil {
+				return err
+			}
+
 			s.WithShootClientSet(clientSet)
-			return err
+			return nil
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }

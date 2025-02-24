@@ -75,7 +75,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			}, NodeTimeout(time.Minute))
 
 			Eventually(ctx, func() error {
-				return s.ShootClient.Create(ctx, pod)
+				if err := s.ShootClient.Create(ctx, pod); err != nil {
+					return err
+				}
+				return StopTrying("pod was created")
 			}).Should(And(
 				BeForbiddenError(),
 				MatchError(ContainSubstring("pods %q is forbidden: violates PodSecurity %q", "nginx", "restricted:latest")),
