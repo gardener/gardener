@@ -118,16 +118,16 @@ var _ = Describe("#Canonicalize", func() {
 	Context("seed names", func() {
 		It("should correctly add the seed labels", func() {
 			metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, "foo", "bar")
-			metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, "seed.gardener.cloud/foo", "true")
+			metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, "name.seed.gardener.cloud/foo", "true")
 			backupEntry.Spec.SeedName = ptr.To("spec-seed")
 			backupEntry.Status.SeedName = ptr.To("status-seed")
 
 			backupentryregistry.NewStrategy().Canonicalize(backupEntry)
 
 			Expect(backupEntry.Labels).To(Equal(map[string]string{
-				"foo":                             "bar",
-				"seed.gardener.cloud/spec-seed":   "true",
-				"seed.gardener.cloud/status-seed": "true",
+				"foo":                                  "bar",
+				"name.seed.gardener.cloud/spec-seed":   "true",
+				"name.seed.gardener.cloud/status-seed": "true",
 			}))
 		})
 	})
