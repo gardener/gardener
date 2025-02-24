@@ -85,6 +85,13 @@ const (
 	// owner: @Wieneo @timebertt
 	// alpha: v1.113.0
 	RemoveAPIServerProxyLegacyPort featuregate.Feature = "RemoveAPIServerProxyLegacyPort"
+
+	// CloudProfileCapabilities enables the usage of capabilities in the CloudProfile. Capabilities are used to create a relation between
+	// machineTypes and machineImages. It allows to validate worker groups of a shoot ensuring the selected image and machine combination
+	// will boot up successfully. Capabilities are also used to determine valid upgrade paths during automated maintenance operation.
+	// owner: @roncossek
+	// alpha: v1.113.0
+	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -122,6 +129,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
 	RemoveAPIServerProxyLegacyPort:           {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

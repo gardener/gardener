@@ -36,30 +36,6 @@ var _ = Describe("CloudProfile defaulting", func() {
 		})
 	})
 
-	Describe("MachineImageVersion defaulting", func() {
-		It("should correctly default MachineImageVersion", func() {
-			SetObjectDefaults_CloudProfile(obj)
-
-			machineImageVersion := obj.Spec.MachineImages[0].Versions[0]
-			Expect(machineImageVersion.CRI).To(ConsistOf(
-				CRI{Name: "containerd"},
-			))
-			Expect(machineImageVersion.Architectures).To(ConsistOf(
-				"amd64",
-			))
-		})
-	})
-
-	Describe("MachineType defaulting", func() {
-		It("should correctly default MachineType", func() {
-			SetObjectDefaults_CloudProfile(obj)
-
-			machineType := obj.Spec.MachineTypes[0]
-			Expect(machineType.Architecture).To(PointTo(Equal("amd64")))
-			Expect(machineType.Usable).To(PointTo(BeTrue()))
-		})
-	})
-
 	Describe("VolumeType defaulting", func() {
 		It("should correctly default VolumeType", func() {
 			SetObjectDefaults_CloudProfile(obj)
@@ -68,4 +44,29 @@ var _ = Describe("CloudProfile defaulting", func() {
 			Expect(volumeType.Usable).To(PointTo(BeTrue()))
 		})
 	})
+
+	Describe("MachineImageVersion defaulting ", func() {
+
+		It("should correctly default MachineImageVersion", func() {
+			SetObjectDefaults_CloudProfile(obj)
+			machineImageVersion := obj.Spec.MachineImages[0].Versions[0]
+			Expect(machineImageVersion.CRI).To(ConsistOf(
+				CRI{Name: "containerd"},
+			))
+			Expect(machineImageVersion.Architectures).To(BeEmpty())
+			Expect(machineImageVersion.CapabilitiesSet).To(BeNil())
+		})
+	})
+
+	Describe("MachineType defaulting", func() {
+		It("should correctly default MachineType", func() {
+			SetObjectDefaults_CloudProfile(obj)
+
+			machineType := obj.Spec.MachineTypes[0]
+			Expect(machineType.Architecture).To(BeNil())
+			Expect(machineType.Capabilities).To(BeNil())
+			Expect(machineType.Usable).To(PointTo(BeTrue()))
+		})
+	})
+
 })
