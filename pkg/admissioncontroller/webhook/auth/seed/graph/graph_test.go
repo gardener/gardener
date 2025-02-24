@@ -1034,6 +1034,32 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeShootState, shoot1.Namespace, shoot1.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 	})
 
+	It("should restore edges on recreating SecretBinding and CredentialBinding for gardenercorev1beta1.Shoot", func() {
+		By("Add")
+		fakeInformerShoot.Add(shoot1)
+		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeCredentialsBinding, shoot1.Namespace, *shoot1.Spec.CredentialsBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+
+		By("Intermediate deletion of secret and credentials binding")
+		credentialsBinding := &securityv1alpha1.CredentialsBinding{ObjectMeta: metav1.ObjectMeta{
+			Name:      *shoot1.Spec.CredentialsBindingName,
+			Namespace: shoot1.Namespace,
+		}}
+		secretBinding := &gardencorev1beta1.SecretBinding{ObjectMeta: metav1.ObjectMeta{
+			Name:      *shoot1.Spec.SecretBindingName,
+			Namespace: shoot1.Namespace,
+		}}
+		fakeInformerCredentialsBinding.Delete(credentialsBinding)
+		fakeInformerSecretBinding.Delete(secretBinding)
+		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeCredentialsBinding, shoot1.Namespace, *shoot1.Spec.CredentialsBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
+		fakeInformerCredentialsBinding.Add(credentialsBinding)
+		fakeInformerSecretBinding.Add(secretBinding)
+		fakeInformerShoot.Update(shoot1, shoot1)
+		Expect(graph.HasPathFrom(VertexTypeSecretBinding, shoot1.Namespace, *shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeCredentialsBinding, shoot1.Namespace, *shoot1.Spec.CredentialsBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeTrue())
+	})
+
 	It("should behave as expected for gardencorev1beta1.Project", func() {
 		By("Add")
 		fakeInformerProject.Add(project1)

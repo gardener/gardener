@@ -53,7 +53,8 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 				!apiequality.Semantic.DeepEqual(v1beta1helper.GetShootAuthorizationConfiguration(oldShoot.Spec.Kubernetes.KubeAPIServer), v1beta1helper.GetShootAuthorizationConfiguration(newShoot.Spec.Kubernetes.KubeAPIServer)) ||
 				!v1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
 				!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) ||
-				v1beta1helper.HasManagedIssuer(oldShoot) != v1beta1helper.HasManagedIssuer(newShoot) {
+				v1beta1helper.HasManagedIssuer(oldShoot) != v1beta1helper.HasManagedIssuer(newShoot) ||
+				!g.hasExpectedShootBindingEdges(newShoot) {
 				g.handleShootCreateOrUpdate(ctx, newShoot)
 			}
 		},
@@ -70,6 +71,21 @@ func (g *graph) setupShootWatch(ctx context.Context, informer cache.Informer) er
 		},
 	})
 	return err
+}
+
+func (g *graph) hasExpectedShootBindingEdges(shoot *gardencorev1beta1.Shoot) bool {
+	g.lock.RLock()
+	defer g.lock.RUnlock()
+
+	hasEdge := func(vertexType VertexType, bindingName *string) bool {
+		if bindingName == nil {
+			return true // if bindingName is nil, there is no edge to target vertex, hence we assume the edge exists
+		}
+		shootVertex, foundShootVertex := g.getVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
+		bindingVertex, foundBindingVertex := g.getVertex(vertexType, shoot.Namespace, *bindingName)
+		return foundShootVertex && foundBindingVertex && g.graph.HasEdgeFromTo(bindingVertex.id, shootVertex.id)
+	}
+	return hasEdge(VertexTypeSecretBinding, shoot.Spec.SecretBindingName) && hasEdge(VertexTypeCredentialsBinding, shoot.Spec.CredentialsBindingName)
 }
 
 func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencorev1beta1.Shoot) {
