@@ -20,8 +20,10 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
+// ControllerName is the name of the controller.
 const ControllerName = "shootstate-finalizer"
 
+// AddToManager adds the Reconciler to the given manager.
 func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
@@ -43,6 +45,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		).Complete(r)
 }
 
+// MapShootToShootState maps a Shoot object to ShootState reconciliation request.
 func (r *Reconciler) MapShootToShootState(_ context.Context, obj client.Object) []reconcile.Request {
 	shoot, ok := obj.(*gardencorev1beta1.Shoot)
 	if !ok {
@@ -56,6 +59,7 @@ func (r *Reconciler) MapShootToShootState(_ context.Context, obj client.Object) 
 	return []reconcile.Request{{NamespacedName: namespacedName}}
 }
 
+// ShootStatePredicates returns predicates for ShootState requests acceptance.
 func (r *Reconciler) ShootStatePredicates() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool { return true },
@@ -63,6 +67,7 @@ func (r *Reconciler) ShootStatePredicates() predicate.Predicate {
 	}
 }
 
+// ShootPredicates returns predicates for Shoot requests acceptance.
 func (r *Reconciler) ShootPredicates() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool { return true },
