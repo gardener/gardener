@@ -78,7 +78,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: ptr.To(secretBinding.Name),
 				CloudProfileName:  ptr.To("cloudprofile1"),
-				SeedName:          &seedName,
+				SeedName:          ptr.To(seedName),
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -139,6 +139,7 @@ var _ = Describe("Shoot Care controller tests", func() {
 
 		By("Patch shoot status")
 		patch := client.MergeFrom(shoot.DeepCopy())
+		shoot.Status.SeedName = ptr.To(seedName)
 		shoot.Status.Gardener.Version = "1.2.3"
 		shoot.Status.TechnicalID = testNamespace.Name
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())

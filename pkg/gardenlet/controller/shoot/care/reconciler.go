@@ -75,15 +75,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	// if shoot has not been scheduled, requeue
-	if shoot.Spec.SeedName == nil {
+	// if shoot has not been picked up by gardenlet yet, requeue
+	if shoot.Status.SeedName == nil {
 		requeueAfter := 30 * time.Second
-		log.V(1).Info("Shoot has not been scheduled yet, requeue", "requeueAfter", requeueAfter)
+		log.V(1).Info("Shoot has not been picked up by gardenlet yet, requeue", "requeueAfter", requeueAfter)
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue.
-	if ptr.Deref(shoot.Spec.SeedName, "") != r.SeedName {
+	if ptr.Deref(shoot.Status.SeedName, "") != r.SeedName {
 		return reconcile.Result{}, nil
 	}
 
@@ -98,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if r.gardenSecrets == nil {
-		secrets, err := gardenerutils.ReadGardenSecrets(careCtx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(*shoot.Spec.SeedName), true)
+		secrets, err := gardenerutils.ReadGardenSecrets(careCtx, log, r.GardenClient, gardenerutils.ComputeGardenNamespace(*shoot.Status.SeedName), true)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reading Garden secrets: %w", err)
 		}

@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -66,12 +67,15 @@ var _ = Describe("Shoot Care Control", func() {
 				Namespace: shootNamespace,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: &seedName,
+				SeedName: ptr.To(seedName),
 				Provider: gardencorev1beta1.Provider{
 					Workers: []gardencorev1beta1.Worker{
 						{Name: "foo"},
 					},
 				},
+			},
+			Status: gardencorev1beta1.ShootStatus{
+				SeedName: ptr.To(seedName),
 			},
 		}
 
@@ -253,10 +257,8 @@ var _ = Describe("Shoot Care Control", func() {
 						Status: gardencorev1beta1.ConditionFalse,
 					}
 
-					shoot.Status = gardencorev1beta1.ShootStatus{
-						Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
-						Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
-					}
+					shoot.Status.Conditions = []gardencorev1beta1.Condition{apiServerCondition}
+					shoot.Status.Constraints = []gardencorev1beta1.Condition{hibernationConstraint}
 					Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
@@ -303,10 +305,8 @@ var _ = Describe("Shoot Care Control", func() {
 						Status: gardencorev1beta1.ConditionFalse,
 					}
 
-					shoot.Status = gardencorev1beta1.ShootStatus{
-						Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
-						Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
-					}
+					shoot.Status.Conditions = []gardencorev1beta1.Condition{apiServerCondition}
+					shoot.Status.Constraints = []gardencorev1beta1.Condition{hibernationConstraint}
 					Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 					Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
@@ -393,10 +393,8 @@ var _ = Describe("Shoot Care Control", func() {
 							Status: gardencorev1beta1.ConditionFalse,
 						}
 
-						shoot.Status = gardencorev1beta1.ShootStatus{
-							Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
-							Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
-						}
+						shoot.Status.Conditions = []gardencorev1beta1.Condition{apiServerCondition}
+						shoot.Status.Constraints = []gardencorev1beta1.Condition{hibernationConstraint}
 						Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
 
 						Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
@@ -410,11 +408,9 @@ var _ = Describe("Shoot Care Control", func() {
 
 				Context("when shoot has a successful last operation", func() {
 					BeforeEach(func() {
-						shoot.Status = gardencorev1beta1.ShootStatus{
-							LastOperation: &gardencorev1beta1.LastOperation{
-								Type:  gardencorev1beta1.LastOperationTypeReconcile,
-								State: gardencorev1beta1.LastOperationStateSucceeded,
-							},
+						shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+							Type:  gardencorev1beta1.LastOperationTypeReconcile,
+							State: gardencorev1beta1.LastOperationStateSucceeded,
 						}
 					})
 
@@ -481,11 +477,9 @@ var _ = Describe("Shoot Care Control", func() {
 
 				Context("when shoot has a successful last operation", func() {
 					BeforeEach(func() {
-						shoot.Status = gardencorev1beta1.ShootStatus{
-							LastOperation: &gardencorev1beta1.LastOperation{
-								Type:  gardencorev1beta1.LastOperationTypeReconcile,
-								State: gardencorev1beta1.LastOperationStateSucceeded,
-							},
+						shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+							Type:  gardencorev1beta1.LastOperationTypeReconcile,
+							State: gardencorev1beta1.LastOperationStateSucceeded,
 						}
 					})
 
