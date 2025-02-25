@@ -180,13 +180,13 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 		}
 
 		var capabilitiesDefinition = (gardencore.Capabilities)(c.parentCloudProfile.Spec.CapabilitiesDefinition)
-		if validation.IsDefined(&capabilitiesDefinition) {
+		if validation.IsDefined(capabilitiesDefinition) {
 			errorList := validation.ValidateMachineTypeCapabilities(machineType, capabilitiesDefinition, field.NewPath("spec", "machineTypes"))
 			if len(errorList) != 0 {
 				return apierrors.NewBadRequest(fmt.Sprintf("Parent CloudProfile defines CapabilitiesDefinition. NamespacedCloudProfile machineTypes must define capabilities according to its definition: %+v", machineType))
 			}
 		} else {
-			if validation.IsDefined(&machineType.Capabilities) {
+			if validation.IsDefined(machineType.Capabilities) {
 				return apierrors.NewBadRequest(fmt.Sprintf("Parent CloudProfile does not define CapabilitiesDefinition. NamespacedCloudProfile machineTypes must not define capabilities: %+v", machineType))
 			}
 		}
@@ -309,7 +309,7 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 		} else {
 			// There is no entry for this image in the parent CloudProfile yet.
 			var capabilitiesDefinition = (gardencore.Capabilities)(c.parentCloudProfile.Spec.CapabilitiesDefinition)
-			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, &capabilitiesDefinition, imageIndexPath)...)
+			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, capabilitiesDefinition, imageIndexPath)...)
 		}
 	}
 	return allErrs.ToAggregate()
@@ -369,6 +369,6 @@ func ValidateSimulatedNamespacedCloudProfileStatus(originalParentCloudProfile *g
 
 	return validation.ValidateNamespacedCloudProfileStatus(
 		&coreNamespacedCloudProfile.Status.CloudProfileSpec,
-		(*gardencore.Capabilities)(&parentCloudProfile.Spec.CapabilitiesDefinition),
+		(gardencore.Capabilities)(parentCloudProfile.Spec.CapabilitiesDefinition),
 		field.NewPath("status.cloudProfileSpec"))
 }

@@ -20,12 +20,12 @@ import (
 // IsDefined checks if the capabilitiesDefinition is set and not empty
 // it is intended to be used only during the transition period to capabilities and should be removed after capabilitiesDefinition is required
 // then only validateCapabilitiesDefinition should be used
-func IsDefined(capabilitiesDefinition *core.Capabilities) bool {
-	return capabilitiesDefinition != nil && len(*capabilitiesDefinition) != 0
+func IsDefined(capabilitiesDefinition core.Capabilities) bool {
+	return len(capabilitiesDefinition) != 0
 }
 
 // ValidateMachineImageCapabilities validates the given list of machine images for valid capabilities and architecture values.
-func ValidateMachineImageCapabilities(machineImages []core.MachineImage, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
+func ValidateMachineImageCapabilities(machineImages []core.MachineImage, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for i, image := range machineImages {
@@ -46,7 +46,7 @@ func ValidateMachineImageCapabilities(machineImages []core.MachineImage, capabil
 	return allErrs
 }
 
-func validateMachineImageVersionCapabilities(machineImageVersion core.MachineImageVersion, capabilitiesDefinition *core.Capabilities, path *field.Path) field.ErrorList {
+func validateMachineImageVersionCapabilities(machineImageVersion core.MachineImageVersion, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
 	errList := field.ErrorList{}
 
 	if machineImageVersion.Architectures != nil {
@@ -59,14 +59,14 @@ func validateMachineImageVersionCapabilities(machineImageVersion core.MachineIma
 	} else {
 		parsedCapabilitiesSet := ParseCapabilitiesSet(capabilitiesSet)
 		for i, parsedCapabilities := range parsedCapabilitiesSet {
-			errList = append(errList, validateCapabilitiesAgainstDefinition(parsedCapabilities.ToCapabilities(), *capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
+			errList = append(errList, validateCapabilitiesAgainstDefinition(parsedCapabilities.ToCapabilities(), capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
 		}
 	}
 	return errList
 }
 
 // validateMachineTypesCapabilities validates the given list of machine types for valid capabilities and architecture values.
-func validateMachineTypesCapabilities(machineTypes []core.MachineType, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
+func validateMachineTypesCapabilities(machineTypes []core.MachineType, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for i, machineType := range machineTypes {
@@ -74,7 +74,7 @@ func validateMachineTypesCapabilities(machineTypes []core.MachineType, capabilit
 		archPath := idxPath.Child(v1beta1constants.ArchitectureKey)
 
 		if IsDefined(capabilitiesDefinition) {
-			allErrs = append(allErrs, ValidateMachineTypeCapabilities(machineType, *capabilitiesDefinition, idxPath)...)
+			allErrs = append(allErrs, ValidateMachineTypeCapabilities(machineType, capabilitiesDefinition, idxPath)...)
 		} else {
 			allErrs = append(allErrs, validateMachineTypeArchitecture(machineType.Architecture, archPath)...)
 			if machineType.Capabilities != nil {
@@ -130,7 +130,7 @@ func validateCapabilitiesAgainstDefinition(capabilities core.Capabilities, capab
 	parsedCapabilitiesDefinition := ParseCapabilities(capabilitiesDefinition)
 	var errList field.ErrorList
 
-	if !IsDefined(&capabilitiesDefinition) {
+	if !IsDefined(capabilitiesDefinition) {
 		//  do not create errors if capabilitiesDefinition is not set, as it would pollute the error list
 		//  capabilitiesDefinition must be checked before calling this function
 		return errList

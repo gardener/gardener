@@ -71,13 +71,13 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 		}
 	} else {
 		// If the feature gate is disabled, the capabilitiesDefinition must not be set.
-		if IsDefined(&spec.CapabilitiesDefinition) {
+		if IsDefined(spec.CapabilitiesDefinition) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("capabilitiesDefinition"), "must not be defined as the CloudProfile Capabilities Feature is disabled."))
 		}
 	}
 
-	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, &spec.CapabilitiesDefinition, fldPath.Child("machineImages"))...)
-	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, &spec.CapabilitiesDefinition, fldPath.Child("machineTypes"))...)
+	allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, spec.CapabilitiesDefinition, fldPath.Child("machineImages"))...)
+	allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, spec.CapabilitiesDefinition, fldPath.Child("machineTypes"))...)
 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
@@ -155,7 +155,7 @@ func validateSupportedVersionsConfiguration(version core.ExpirableVersion, allVe
 	return allErrs
 }
 
-func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
+func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineTypes) == 0 {
@@ -168,7 +168,7 @@ func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilit
 }
 
 // ValidateCloudProfileMachineImages validates the machine images of a CloudProfile object.
-func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {

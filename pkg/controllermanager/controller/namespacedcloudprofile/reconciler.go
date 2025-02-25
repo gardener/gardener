@@ -114,7 +114,7 @@ func mergeAndPatchCloudProfile(ctx context.Context, c client.Client, namespacedC
 
 func defaultArchitecture(machineTypes []gardencorev1beta1.MachineType, coreCapabilitiesDefinition gardencorev1beta1.Capabilities) {
 	var capabilitiesDefinition = (gardencore.Capabilities)(coreCapabilitiesDefinition)
-	if validation.IsDefined(&capabilitiesDefinition) {
+	if validation.IsDefined(capabilitiesDefinition) {
 		return
 	}
 
