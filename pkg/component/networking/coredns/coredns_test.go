@@ -122,10 +122,7 @@ subjects:
 data:
   Corefile: |
     .:8053 {
-      errors
-      log . {
-          class error
-      }
+      errors      
       health {
           lameduck 15s
       }
@@ -150,12 +147,17 @@ data:
           ttl 30
       }
       prometheus :9153
+
+      import custom/*.override
+
+      log . {
+          class error
+      }
       forward . /etc/resolv.conf
-      cache 30
       loop
       reload
       loadbalance round_robin
-      import custom/*.override
+      cache 30
     }
     import custom/*.server
 kind: ConfigMap
