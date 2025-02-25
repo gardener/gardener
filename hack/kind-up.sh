@@ -362,6 +362,13 @@ EOF
 fi
 
 # workarounds for KinD issues
+# TODO(marc1404): Remove once kindest/node uses runc >= v1.2.4
+if [[ -n "${CI:-}" ]]; then
+  cp /get-runc/runc "$(dirname "$0")/../pkg/provider-local/node/runc"
+else
+  "$(dirname "$0")/../pkg/provider-local/node/get-runc.sh"
+fi
+
 for node in $nodes; do
   # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
   docker exec "$node" sh -c "sysctl fs.inotify.max_user_instances=8192"
@@ -372,7 +379,7 @@ for node in $nodes; do
     echo "Installing runc on node $node from container filesystem"
     docker cp /get-runc/runc "$node":/usr/local/sbin/runc
   else
-    docker exec -i "$node" sh -c "bash -" < "$(dirname "$0")/../pkg/provider-local/node/patch-runc.sh"
+    docker cp "$(dirname "$0")/../pkg/provider-local/node/runc" "$node":/usr/local/sbin/runc
   fi
 done
 

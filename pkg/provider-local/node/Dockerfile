@@ -20,9 +20,6 @@ RUN systemctl enable run-userdata.service
 
 # TODO(marc1404): Remove once kindest/node uses runc >= v1.2.4
 # workaround issue with runc v1.2.3 provided by kindest/node:v1.32.0 by installing runc v1.2.4 manually (https://github.com/opencontainers/runc/pull/4555)
-COPY patch-runc.sh /patch-runc.sh
-RUN chmod +x /patch-runc.sh \
-    && /patch-runc.sh \
-    && rm -f /patch-runc.sh
+COPY runc /usr/local/sbin/runc
 
 ENTRYPOINT ["/usr/local/bin/entrypoint", "/sbin/init"]
