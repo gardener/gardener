@@ -17,12 +17,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// FinalizerName is the finalizer used by the controller.
 const FinalizerName = "core.gardener.cloud/shootstate"
 
+// Reconciler reconciles ShootState objects and ensures the finalizer
+// exists during "Migrate" and "Restore" phases of Shoot migration to
+// another Seed.
 type Reconciler struct {
+	// Client is the API Server client used by the Reconciler.
 	Client client.Client
 }
 
+// Reconcile reconciles ShootStates.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
