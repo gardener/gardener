@@ -259,6 +259,9 @@ var _ = Describe("Fluent Operator", func() {
 									corev1.ResourceMemory: resource.MustParse("50Mi"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "env",
