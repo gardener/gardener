@@ -16,7 +16,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -334,7 +333,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		lastOperation.Type == gardencorev1beta1.LastOperationTypeRestore &&
 		lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 		shootState := &gardencorev1beta1.ShootState{ObjectMeta: metav1.ObjectMeta{Name: shootObject.Name, Namespace: shootObject.Namespace}}
-		if err := c.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); nil != err && !apierrors.IsNotFound(err) {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
 			return nil, err
 		}
 		shoot.SetShootState(shootState)
