@@ -338,6 +338,24 @@ var _ = Describe("ShootSystem", func() {
 			})
 
 			var (
+				networkPolicyDenyAll = &networkingv1.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener.cloud--deny-all",
+						Namespace: "kube-system",
+						Annotations: map[string]string{
+							"gardener.cloud/description": "Disables all ingress and egress traffic into/from this namespace.",
+						},
+					},
+					Spec: networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{},
+						Egress:      []networkingv1.NetworkPolicyEgressRule{},
+						Ingress:     []networkingv1.NetworkPolicyIngressRule{},
+						PolicyTypes: []networkingv1.PolicyType{
+							networkingv1.PolicyTypeIngress,
+							networkingv1.PolicyTypeEgress,
+						},
+					},
+				}
 				networkPolicyToAPIServer = &networkingv1.NetworkPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "gardener.cloud--allow-to-apiserver",
@@ -524,6 +542,22 @@ var _ = Describe("ShootSystem", func() {
 					networkPolicyToKubelet,
 					networkPolicyToPublicNetworks,
 				))
+
+				Expect(managedResource).NotTo(contain(
+					networkPolicyDenyAll,
+				))
+			})
+
+			Context("k8s >= 1.33", func() {
+				BeforeEach(func() {
+					values.KubernetesVersion = semver.MustParse("1.33.0")
+				})
+
+				It("should successfully deploy all deny-all", func() {
+					Expect(managedResource).To(contain(
+						networkPolicyDenyAll,
+					))
+				})
 			})
 		})
 
