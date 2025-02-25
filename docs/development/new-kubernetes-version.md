@@ -154,7 +154,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - Any defaulting logic that depends on the version should be placed in this admission plugin ([example](https://github.com/gardener/gardener/blob/f754c071e6cf8e45f7ac7bc5924acaf81b96dc06/plugin/pkg/shoot/validator/admission.go#L782)).
 - Ensure that [maintenance-controller](../../pkg/controllermanager/controller/shoot/maintenance) is able to auto-update shoots to the new Kubernetes version. Changes to the shoot spec required for the Kubernetes update should be enforced in such cases ([examples](https://github.com/gardener/gardener/blob/bdfc06dc5cb4e5764800fd31ba1dd07727ad78bf/pkg/controllermanager/controller/shoot/maintenance/reconciler.go#L146-L162)).
 - Maintain the [Shoot Kubernetes Minor Version Upgrades](usage/shoot/shoot_kubernetes_versions.md) documentation file.
-  - Add breaking and/or behavioral changes introduces with the new Kubernetes version.
+  - Add breaking and/or behavioral changes introduced with the new Kubernetes version.
 - Add the new Kubernetes version to the CloudProfile in local setup.
   - See [this](https://github.com/gardener/gardener/pull/9689/commits/b067a468285a570d5950b62dd99d679ffa4a8bae) example commit.
 - In the next Gardener release, file a PR that bumps the used Kubernetes version for local e2e test.
