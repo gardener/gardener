@@ -73,6 +73,8 @@ func VerifyInClusterAccessToAPIServer(s *ShootContext) {
 
 	Describe("in-cluster access to API server", func() {
 		It("should create test objects", func(ctx SpecContext) {
+			Expect(s.ShootClient).NotTo(BeNil(), "ItShouldInitializeShootClient should be called first")
+
 			for _, obj := range getRBACObjects() {
 				Eventually(ctx, func() error {
 					return s.ShootClient.Create(ctx, obj)
