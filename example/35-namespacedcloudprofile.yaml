@@ -11,7 +11,7 @@ spec:
     name: local # could be any CloudProfile
   kubernetes:
     versions:
-    - version: 1.29.0
+    - version: 1.31.1
       expirationDate: "2025-02-28T23:59:59Z"
   machineTypes:
   - name: local-large
@@ -30,8 +30,9 @@ spec:
     - version: 1.0.0
       expirationDate: "2024-12-31T23:59:59Z"
   - name: ubuntu-custom
+    updateStrategy: major
     versions:
-    - version: 18.04.201906170
+    - version: 18.4.201906170
       architectures:
       - amd64
       cri:
@@ -46,6 +47,6 @@ spec:
         image: local-skaffold/gardener-extension-provider-local-node:v1.0.1-dev
     - name: ubuntu-custom
       versions:
-      - version: 18.04.201906170
+      - version: 18.4.201906170
         image: local-skaffold/gardener-extension-provider-ubuntu-node:18.04.201906170
   # volumeTypes: # add additional volume types if necessary
