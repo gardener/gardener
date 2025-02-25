@@ -72,11 +72,13 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		ItShouldInitializeSeedClient(s)
 
 		It("Verify that all secrets have been migrated without regeneration", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) {
-				secretsAfterMigration, err := GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
-				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(ComparePersistedSecrets(secretsBeforeMigration, secretsAfterMigration)).To(Succeed())
+			var secretsAfterMigration map[string]corev1.Secret
+			Eventually(ctx, func() error {
+				var err error
+				secretsAfterMigration, err = GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
+				return err
 			}).Should(Succeed())
+			Expect(ComparePersistedSecrets(secretsBeforeMigration, secretsAfterMigration)).To(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("Verify that there are no orphaned resources in the source seed", func(ctx SpecContext) {
