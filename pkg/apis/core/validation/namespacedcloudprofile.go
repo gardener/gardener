@@ -55,7 +55,7 @@ func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.Names
 }
 
 // ValidateNamespacedCloudProfileStatus validates the specification of a NamespacedCloudProfile object.
-func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, capabilitiesDefinition *core.Capabilities, fldPath *field.Path) field.ErrorList {
+func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
