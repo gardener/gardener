@@ -12,7 +12,7 @@ unmount() {
 trap unmount EXIT
 
 echo "> Pull gardener-node-agent image and mount it to the temporary directory"
-ctr images pull  "{{ .image }}" --hosts-dir "/etc/containerd/certs.d"
+ctr images pull --hosts-dir "/etc/containerd/certs.d" "{{ .image }}"
 ctr images mount "{{ .image }}" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host ({{ .binaryDirectory }}) and make it executable"
