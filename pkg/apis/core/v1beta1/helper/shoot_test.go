@@ -1505,7 +1505,7 @@ var _ = Describe("Helper", func() {
 		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
 	)
 
-	DescribeTable("#IsShootIstioTLSTerminalEnabled",
+	DescribeTable("#IsShootIstioTLSTerminationEnabled",
 		func(shootKubernetesVersion string, shootAnnotations map[string]string, expected bool) {
 			shoot := &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1517,7 +1517,7 @@ var _ = Describe("Helper", func() {
 					},
 				},
 			}
-			Expect(IsShootIstioTLSTerminalEnabled(shoot)).To(Equal(expected))
+			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(Equal(expected))
 		},
 
 		Entry("shoot with Kubernetes v1.30.0 has no Istio TLS termination", "1.30.0", nil, false),

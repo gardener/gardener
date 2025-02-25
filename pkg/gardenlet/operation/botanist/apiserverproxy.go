@@ -42,7 +42,7 @@ func (b *Botanist) DefaultAPIServerProxy() (apiserverproxy.Interface, error) {
 		SidecarImage:        sidecarImage.String(),
 		ProxySeedServerHost: b.outOfClusterAPIServerFQDN(),
 		DNSLookupFamily:     dnsLookupFamily,
-		IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()),
+		IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
 	}
 
 	return apiserverproxy.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, values), nil

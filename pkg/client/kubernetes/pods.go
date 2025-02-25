@@ -64,14 +64,14 @@ func (p *podExecutor) ExecuteWithStreams(ctx context.Context, namespace, name, c
 
 	// Use a fallback executor with websocket as primary and spdy as fallback similar to kubectl.
 	// https://github.com/kubernetes/kubectl/blob/2e38fc220409bbc92f8270c49612f0f9d8e36c89/pkg/cmd/exec/exec.go#L143-L155
-	spdyExecutor, err := remotecommand.NewSPDYExecutor(p.config, http.MethodPost, request.URL())
-	if err != nil {
-		return fmt.Errorf("failed to initialize the spdy executor: %w", err)
-	}
-
 	websocketExecutor, err := remotecommand.NewWebSocketExecutor(p.config, http.MethodGet, request.URL().String())
 	if err != nil {
 		return fmt.Errorf("failed to initialize the websocket executor: %w", err)
+	}
+
+	spdyExecutor, err := remotecommand.NewSPDYExecutor(p.config, http.MethodPost, request.URL())
+	if err != nil {
+		return fmt.Errorf("failed to initialize the spdy executor: %w", err)
 	}
 
 	executor, err := remotecommand.NewFallbackExecutor(websocketExecutor, spdyExecutor, func(err error) bool {

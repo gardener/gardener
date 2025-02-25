@@ -71,7 +71,7 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"serviceName":                        v1beta1constants.DefaultSNIIngressServiceName,
 			"proxyProtocolEnabled":               istioIngressGateway.ProxyProtocolEnabled,
 			"terminateLoadBalancerProxyProtocol": istioIngressGateway.TerminateLoadBalancerProxyProtocol,
-			"terminateLoadBalancerAPIServer":     features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
+			"terminateAPIServerTLS":              features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 			"vpn": map[string]any{
 				"enabled": istioIngressGateway.VPNEnabled,
 			},

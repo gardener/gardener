@@ -25,7 +25,7 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 		b.defaultKubeAPIServerServiceWithSuffix("", true),
 	}
 	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
-	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()) {
+	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()) {
 		deployer = append(deployer, mutualTLSService)
 	} else {
 		deployer = append(deployer, component.OpDestroy(mutualTLSService))
@@ -81,7 +81,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()),
+				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
 			}
 		},
 	))
@@ -130,7 +130,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminalEnabled(b.Shoot.GetInfo()),
+				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
 			}
 
 			if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
