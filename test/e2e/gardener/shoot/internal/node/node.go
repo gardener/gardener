@@ -62,27 +62,23 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 
 		var node *corev1.Node
 		It("Wait for new Node to be created", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) {
-				nodeList := &corev1.NodeList{}
-				g.Expect(s.ShootClient.List(ctx, nodeList)).To(Succeed())
-				g.Expect(nodeList.Items).NotTo(BeEmpty(), "new Node should be created")
-				node = &nodeList.Items[0]
-			}).Should(Succeed())
+			nodeList := &corev1.NodeList{}
+			Eventually(ctx, s.ShootKomega.ObjectList(nodeList)).Should(
+				HaveField("Items", Not(BeEmpty())), "new Node should be created",
+			)
+			node = &nodeList.Items[0]
 		}, SpecTimeout(10*time.Minute))
 
 		It("Verify node-critical components not ready taint is present", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) []corev1.Taint {
-				g.Expect(s.ShootClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-				return node.Spec.Taints
-			}).MustPassRepeatedly(3).WithPolling(2 * time.Second).Should(ContainElement(corev1.Taint{
-				Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
-				Effect: corev1.TaintEffectNoSchedule,
-			}))
+			Eventually(ctx, s.ShootKomega.Object(node)).MustPassRepeatedly(3).WithPolling(2 * time.Second).Should(
+				HaveField("Spec.Taints", ContainElement(corev1.Taint{
+					Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
+					Effect: corev1.TaintEffectNoSchedule,
+				})),
+			)
 		}, SpecTimeout(time.Minute))
 
-		var (
-			nodeCriticalDaemonSet, csiNodeDaemonSet *appsv1.DaemonSet
-		)
+		var nodeCriticalDaemonSet, csiNodeDaemonSet *appsv1.DaemonSet
 
 		It("Update ManagedResources for shoot with working node-critical component", func(ctx SpecContext) {
 			// Use a container image that is already cached
@@ -109,13 +105,12 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		}, SpecTimeout(time.Minute))
 
 		It("Verify node-critical components not ready taint is removed", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) []corev1.Taint {
-				g.Expect(s.ShootClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-				return node.Spec.Taints
-			}).ShouldNot(ContainElement(corev1.Taint{
-				Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
-				Effect: corev1.TaintEffectNoSchedule,
-			}))
+			Eventually(ctx, s.ShootKomega.Object(node)).WithPolling(2 * time.Second).Should(
+				HaveField("Spec.Taints", Not(ContainElement(corev1.Taint{
+					Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
+					Effect: corev1.TaintEffectNoSchedule,
+				}))),
+			)
 		}, SpecTimeout(time.Minute))
 	})
 }

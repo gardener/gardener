@@ -19,6 +19,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	localv1alpha1 "github.com/gardener/gardener/pkg/provider-local/apis/local/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
@@ -43,27 +44,21 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			}
 
 			It("Hibernate Shoot", func(ctx SpecContext) {
-				Eventually(ctx, func() error {
-					patch := client.MergeFrom(s.Shoot.DeepCopy())
+				Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
 					s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 						Enabled: ptr.To(true),
 					}
-
-					return s.GardenClient.Patch(ctx, s.Shoot, patch)
-				}).Should(Succeed())
+				})).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 
 			It("Wake up Shoot", func(ctx SpecContext) {
-				Eventually(ctx, func() error {
-					patch := client.MergeFrom(s.Shoot.DeepCopy())
+				Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
 					s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 						Enabled: ptr.To(false),
 					}
-
-					return s.GardenClient.Patch(ctx, s.Shoot, patch)
-				}).Should(Succeed())
+				})).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
@@ -83,13 +78,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		})
 
 		Context("Shoot with workers with NamespacedCloudProfile", Label("basic"), Ordered, func() {
-			shoot := DefaultShoot("e2e-wake-up-ncp")
-			shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
-				Kind: "NamespacedCloudProfile",
-				Name: "my-profile",
-			}
+			var s *ShootContext
 
-			s := NewTestContext().ForShoot(shoot)
+			BeforeTestSetup(func() {
+				shoot := DefaultShoot("e2e-wake-up-ncp")
+				shoot.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "my-profile",
+				}
+
+				s = NewTestContext().ForShoot(shoot)
+			})
 
 			originalNamespacedCloudProfile := DefaultNamespacedCloudProfile()
 			namespacedCloudProfile := addCustomMachineImage(originalNamespacedCloudProfile.DeepCopy())
@@ -117,12 +116,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			It("Check for correct mutation of the status provider config", func() {
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig).NotTo(BeNil())
 
-				cloudProfileConfig := &localv1alpha1.CloudProfileConfig{}
-
 				scheme := runtime.NewScheme()
 				Expect(localv1alpha1.AddToScheme(scheme)).To(Succeed())
 				decoder := serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()
 
+				cloudProfileConfig := &localv1alpha1.CloudProfileConfig{}
 				Expect(runtime.DecodeInto(decoder, namespacedCloudProfile.Status.CloudProfileSpec.ProviderConfig.Raw, cloudProfileConfig)).To(Succeed())
 
 				Expect(cloudProfileConfig.MachineImages).To(ContainElement(MatchFields(IgnoreExtras, Fields{
