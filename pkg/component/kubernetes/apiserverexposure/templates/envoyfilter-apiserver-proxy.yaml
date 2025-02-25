@@ -70,7 +70,7 @@ spec:
                       dynamic_metadata:
                       - filter: envoy.filters.http.lua
                         path:
-                        - key: authenticated-shoot
+                        - key: {{ .APIServerAuthenticationDynamicMetadataKey }}
                         value:
                           string_match:
                             exact: {{ .ControlPlaneNamespace }}
@@ -88,7 +88,7 @@ spec:
                     inlineString: |
                       function envoy_on_request(request_handle)
                         -- Drop headers used by kube-apiserver authentication proxy.
-                        local remove = {"X-Remote-User", "X-Remote-Group"}
+                        local remove = {"{{ .APIServerRequestHeaderUserName }}", "{{ .APIServerRequestHeaderGroup }}"}
                         for key, value in pairs(remove) do
                           request_handle:headers():remove(value)
                         end
@@ -100,7 +100,7 @@ spec:
                         local cn = ssl:subjectPeerCertificate()
                         if cn ~= "" then
                           -- Set the authenticated shoot as dynamic metadata.
-                          streamInfo:dynamicMetadata():set("envoy.filters.http.lua", "authenticated-shoot", "{{ .ControlPlaneNamespace }}")
+                          streamInfo:dynamicMetadata():set("envoy.filters.http.lua", "{{ .APIServerAuthenticationDynamicMetadataKey }}", "{{ .ControlPlaneNamespace }}")
         
                           -- Add request headers for kube-apiserver authentication.
                           local remoteUserHeaderAdded = false
@@ -113,10 +113,10 @@ spec:
                               -- CN of the client certificate defines the username, O defines groups.
                               -- see https://kubernetes.io/docs/setup/best-practices/certificates/#configure-certificates-for-user-accounts
                               if key == "CN" then
-                                request_handle:headers():add("X-Remote-User", value)
+                                request_handle:headers():add("{{ .APIServerRequestHeaderUserName }}", value)
                                 remoteUserHeaderAdded = true
                               elseif key == "O" then
-                                request_handle:headers():add("X-Remote-Group", value)
+                                request_handle:headers():add("{{ .APIServerRequestHeaderGroup }}", value)
                               end
                           end
         

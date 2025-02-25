@@ -43,6 +43,9 @@ const (
 	// AuthenticationDynamicMetadataKey is the key used to configure the istio envoy filter.
 	AuthenticationDynamicMetadataKey = "authenticated-kube-apiserver-host"
 
+	// authenticationDynamicMetadataKeyAPIServerProxy is the key used to configure the istio envoy filter for the APIServer proxy.
+	authenticationDynamicMetadataKeyAPIServerProxy = "authenticated-shoot"
+
 	// istioMTLSSecretSuffix is the suffix for the secret used for mutual tls authentication to kube-apiserver.
 	istioMTLSSecretSuffix = "-kube-apiserver-istio-mtls" // #nosec G101 -- No credential.
 	// istioTLSSecretSuffix is the suffix for secret used for TLS termination for connections to kube-apiserver.
@@ -127,17 +130,20 @@ type sni struct {
 
 type envoyFilterAPIServerProxyTemplateValues struct {
 	*APIServerProxy
-	IngressGatewayLabels        map[string]string
-	Name                        string
-	Namespace                   string
-	ControlPlaneNamespace       string
-	Host                        string
-	MTLSHost                    string
-	Port                        int
-	APIServerClusterIPPrefixLen int
-	IstioTLSTermination         bool
-	IstioTLSSecret              string
-	TargetClusterProxyProtocol  string
+	IngressGatewayLabels                      map[string]string
+	Name                                      string
+	Namespace                                 string
+	ControlPlaneNamespace                     string
+	Host                                      string
+	MTLSHost                                  string
+	Port                                      int
+	APIServerClusterIPPrefixLen               int
+	APIServerRequestHeaderUserName            string
+	APIServerRequestHeaderGroup               string
+	APIServerAuthenticationDynamicMetadataKey string
+	IstioTLSTermination                       bool
+	IstioTLSSecret                            string
+	TargetClusterProxyProtocol                string
 }
 
 type envoyFilterIstioTLSTerminationTemplateValues struct {
@@ -181,18 +187,21 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 
 		if err := envoyFilterAPIServerProxyTemplate.Execute(&envoyFilterAPIServerProxy, envoyFilterAPIServerProxyTemplateValues{
-			APIServerProxy:              values.APIServerProxy,
-			IngressGatewayLabels:        values.IstioIngressGateway.Labels,
-			Name:                        envoyFilter.Name,
-			Namespace:                   envoyFilter.Namespace,
-			ControlPlaneNamespace:       s.namespace,
-			Host:                        hostName,
-			MTLSHost:                    mTLSHostName,
-			Port:                        kubeapiserverconstants.Port,
-			APIServerClusterIPPrefixLen: apiServerClusterIPPrefixLen,
-			IstioTLSTermination:         values.IstioTLSTermination,
-			IstioTLSSecret:              s.emptyIstioTLSSecret().Name,
-			TargetClusterProxyProtocol:  targetClusterProxyProtocol,
+			APIServerProxy:                 values.APIServerProxy,
+			IngressGatewayLabels:           values.IstioIngressGateway.Labels,
+			Name:                           envoyFilter.Name,
+			Namespace:                      envoyFilter.Namespace,
+			ControlPlaneNamespace:          s.namespace,
+			Host:                           hostName,
+			MTLSHost:                       mTLSHostName,
+			Port:                           kubeapiserverconstants.Port,
+			APIServerClusterIPPrefixLen:    apiServerClusterIPPrefixLen,
+			APIServerRequestHeaderUserName: kubeapiserverconstants.RequestHeaderUserName,
+			APIServerRequestHeaderGroup:    kubeapiserverconstants.RequestHeaderGroup,
+			APIServerAuthenticationDynamicMetadataKey: authenticationDynamicMetadataKeyAPIServerProxy,
+			IstioTLSTermination:                       values.IstioTLSTermination,
+			IstioTLSSecret:                            s.emptyIstioTLSSecret().Name,
+			TargetClusterProxyProtocol:                targetClusterProxyProtocol,
 		}); err != nil {
 			return err
 		}
@@ -201,14 +210,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 		registry.AddSerialized(filename, envoyFilterAPIServerProxy.Bytes())
 	}
 
-	if values.IstioTLSTermination {
-		if err := s.reconcileIstioTLSSecrets(ctx); err != nil {
-			return err
-		}
-	} else {
-		if err := managedresources.DeleteForSeed(ctx, s.client, s.namespace, managedResourceNameIstioTLSSecrets); err != nil {
-			return err
-		}
+	if err := s.reconcileIstioTLSSecrets(ctx); err != nil {
+		return err
 	}
 
 	if values.IstioTLSTermination {
@@ -246,8 +249,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 	}
 
-	var destinationMutateFn func() error
-	destinationMutateFn = istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), hostName)
+	destinationMutateFn := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), hostName)
 	if values.IstioTLSTermination {
 		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
 	}
@@ -267,8 +269,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 	}
 
-	var gatewayMutateFn func() error
-	gatewayMutateFn = istio.GatewayWithTLSPassthrough(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port)
+	gatewayMutateFn := istio.GatewayWithTLSPassthrough(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port)
 	if values.IstioTLSTermination {
 		gatewayMutateFn = istio.GatewayWithMutualTLS(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, s.valuesFunc().Hosts, kubeapiserverconstants.Port, s.namespace+istioTLSSecretSuffix)
 	}
@@ -277,8 +278,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	var virtualServiceMutateFn func() error
-	virtualServiceMutateFn = istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), s.valuesFunc().Hosts, gateway.Name, kubeapiserverconstants.Port, hostName)
+	virtualServiceMutateFn := istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), s.valuesFunc().Hosts, gateway.Name, kubeapiserverconstants.Port, hostName)
 	if values.IstioTLSTermination {
 		virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(virtualService, getLabels(), s.valuesFunc().Hosts, gateway.Name, kubeapiserverconstants.Port, hostName)
 	}
@@ -355,6 +355,10 @@ func (s *sni) emptyIstioTLSSecret() *corev1.Secret {
 }
 
 func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
+	if !s.valuesFunc().IstioTLSTermination {
+		return managedresources.DeleteForSeed(ctx, s.client, s.namespace, managedResourceNameIstioTLSSecrets)
+	}
+
 	secretCA, found := s.secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)

@@ -160,11 +160,6 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		}
 	}
 
-	// Shoot needs to be reconciled when the disable-istio-tls-termination annotation changes.
-	if newShoot.Annotations[v1beta1constants.ShootDisableIstioTLSTermination] != oldShoot.Annotations[v1beta1constants.ShootDisableIstioTLSTermination] {
-		return true
-	}
-
 	return false
 }
 

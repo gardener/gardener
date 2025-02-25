@@ -667,8 +667,8 @@ func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStra
 	return *updateStrategy == gardencorev1beta1.AutoInPlaceUpdate || *updateStrategy == gardencorev1beta1.ManualInPlaceUpdate
 }
 
-// IsShootIstioTLSTerminalEnabled returns true if the Istio TLS termination for the shoot kube-apiserver is enabled.
-func IsShootIstioTLSTerminalEnabled(shoot *gardencorev1beta1.Shoot) bool {
+// IsShootIstioTLSTerminationEnabled returns true if the Istio TLS termination for the shoot kube-apiserver is enabled.
+func IsShootIstioTLSTerminationEnabled(shoot *gardencorev1beta1.Shoot) bool {
 	shootKubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
 	if err != nil || versionutils.ConstraintK8sLess131.Check(shootKubernetesVersion) {
 		return false
