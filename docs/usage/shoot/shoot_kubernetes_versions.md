@@ -23,4 +23,4 @@ This documentation describes the differences and requirements for upgrading to a
 
 ## Upgrading to Kubernetes `v1.30`
 
-- The `kubelet` `UnlimitedSwap` behavior, configured in the `Shoot`'s and `Worker`'s field `kubernetes.kubelet.memorySwap.swapBehavior`, can no longer be used.
+- The `kubelet` `UnlimitedSwap` behavior, configured in the `Shoot`'s `.spec.{kubernetes,provider.workers[]}.kubelet.memorySwap.swapBehavior` fields, can no longer be used.
