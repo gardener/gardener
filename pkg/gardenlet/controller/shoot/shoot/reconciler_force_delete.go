@@ -106,22 +106,26 @@ func (r *Reconciler) runForceDeleteShootFlow(ctx context.Context, log logr.Logge
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.ControlPlane.MachineControllerManager.Destroy(ctx)
 			}),
+			SkipIf: botanist.Shoot.IsWorkerless,
 		})
 		waitUntilMachineControllerManagerDeleted = g.Add(flow.Task{
 			Name: "Waiting until machine-controller-manager has been deleted",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.Shoot.Components.ControlPlane.MachineControllerManager.WaitCleanup(ctx)
 			}),
+			SkipIf:       botanist.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deleteMachineControllerManager),
 		})
 		deleteMachineResources = g.Add(flow.Task{
 			Name:         "Deleting machine resources",
 			Fn:           flow.TaskFn(cleaner.DeleteMachineResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			SkipIf:       botanist.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(waitUntilMachineControllerManagerDeleted),
 		})
 		waitUntilMachineResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until machine resources have been deleted",
 			Fn:           flow.TaskFn(cleaner.WaitUntilMachineResourcesDeleted).Timeout(defaultTimeout),
+			SkipIf:       botanist.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(deleteMachineResources),
 		})
 		setKeepObjectsForManagedResources = g.Add(flow.Task{
