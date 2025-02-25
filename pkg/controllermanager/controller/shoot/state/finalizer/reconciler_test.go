@@ -33,9 +33,10 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 		shoot      *gardencorev1beta1.Shoot
 		reconciler *finalizer.Reconciler
 
-		lastOpMigrateProcessing func() *gardencorev1beta1.LastOperation
-		lastOpRestoreProcessing func() *gardencorev1beta1.LastOperation
-		lastOpRestoreSucceeded  func() *gardencorev1beta1.LastOperation
+		lastOpMigrateProcessing   func() *gardencorev1beta1.LastOperation
+		lastOpRestoreProcessing   func() *gardencorev1beta1.LastOperation
+		lastOpRestoreSucceeded    func() *gardencorev1beta1.LastOperation
+		lastOpReconcileProcessing func() *gardencorev1beta1.LastOperation
 
 		defaultShootWith               func(*gardencorev1beta1.LastOperation) *gardencorev1beta1.Shoot
 		defaultShootState              func() *gardencorev1beta1.ShootState
@@ -72,6 +73,15 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			op := &gardencorev1beta1.LastOperation{
 				Type:     gardencorev1beta1.LastOperationTypeRestore,
 				State:    gardencorev1beta1.LastOperationStateSucceeded,
+				Progress: 100,
+			}
+			return op
+		}
+
+		lastOpReconcileProcessing = func() *gardencorev1beta1.LastOperation {
+			op := &gardencorev1beta1.LastOperation{
+				Type:     gardencorev1beta1.LastOperationTypeReconcile,
+				State:    gardencorev1beta1.LastOperationStateProcessing,
 				Progress: 100,
 			}
 			return op
@@ -212,6 +222,22 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 				Expect(c.Create(ctx, shoot)).To(Succeed())
 			})
 
+			It("should add finalizer if not exists", func() {
+				By("Create new default ShootState")
+				shootState := defaultShootState()
+				Expect(c.Create(ctx, shootState)).To(Succeed())
+
+				By("Run reconciliation")
+				reconciliationRequest := defaultReconciliationRequest()
+				_, err := reconciler.Reconcile(ctx, reconciliationRequest)
+				Expect(err).NotTo(HaveOccurred())
+
+				By("Verify that finalizer is present")
+				actualShootState := &gardencorev1beta1.ShootState{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
+				Expect(actualShootState.GetFinalizers()).To(ConsistOf(finalizer.FinalizerName))
+			})
+
 			It("should not remove finalizer", func() {
 				defaultShootStateWithFinalizer()
 
@@ -225,6 +251,27 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
 				Expect(actualShootState.GetFinalizers()).To(ConsistOf(finalizer.FinalizerName))
 			})
+		})
+	})
+
+	Context("when Shoot last operation has `Reconcile` type", func() {
+		BeforeEach(func() {
+			shoot = defaultShootWith(lastOpReconcileProcessing())
+			Expect(c.Create(ctx, shoot)).To(Succeed())
+		})
+
+		It("should remove finalizer regardless of the last operation state", func() {
+			defaultShootStateWithFinalizer()
+
+			By("Run reconciliation")
+			reconciliationRequest := defaultReconciliationRequest()
+			_, err := reconciler.Reconcile(ctx, reconciliationRequest)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Verify that finalizer is not present")
+			actualShootState := &gardencorev1beta1.ShootState{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
+			Expect(actualShootState.GetFinalizers()).NotTo(ConsistOf(finalizer.FinalizerName))
 		})
 	})
 })
