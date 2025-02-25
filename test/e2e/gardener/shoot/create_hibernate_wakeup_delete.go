@@ -22,6 +22,7 @@ import (
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/node"
 )
 
@@ -34,7 +35,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldGetResponsibleSeed(s)
 			ItShouldInitializeSeedClient(s)
 
-			// TODO(timebertt): add inclusterclient.VerifyInClusterAccessToAPIServer once it got refactored
+			if !v1beta1helper.IsWorkerless(s.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			}
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				// We verify the node readiness feature in this specific e2e test because it uses a single-node shoot cluster.
@@ -63,7 +66,9 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 
-			// TODO(timebertt): add inclusterclient.VerifyInClusterAccessToAPIServer once it got refactored
+			if !v1beta1helper.IsWorkerless(s.Shoot) {
+				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			}
 
 			ItShouldDeleteShoot(s)
 			ItShouldWaitForShootToBeDeleted(s)
