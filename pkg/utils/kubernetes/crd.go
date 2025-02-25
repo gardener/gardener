@@ -19,6 +19,9 @@ import (
 
 var (
 	// WaitTimeout specifies the total time to wait for CRDs to become ready or to be deleted. Exposed for testing.
+	// While waiting for CRD readiness is parallelized (see WaitUntilCRDManifestsReady below), the component checking
+	// it in kube-apiserver is not. Therefore, we need to wait for a longer time here  (basically proportional to the
+	// amount of CRDs).
 	WaitTimeout = 2 * time.Minute
 )
 
