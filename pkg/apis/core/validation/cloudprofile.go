@@ -61,16 +61,16 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 
 	// capabilitiesDefinition is used in the validate-functions for machineTypes and machineImages
 	//   nil: the architecture field is required --> capabilities forbidden
-	//	 defined: the architecture field is forbidden --> capabilities required
+	//   defined: the architecture field is forbidden --> capabilities required
 	if utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileCapabilities) {
-		// if the feature is enabled, the capabilitiesDefinition will be evaluated if set
-		// both capabilities or current architecture cloudProfiles are valid, only mixed usage is not allowed
+		// If the feature gate is enabled and capabilitiesDefinition is set, it will be evaluated.
+		// The capabilities and architecture fields cannot be set at the same time.
 		errList := ValidateCapabilitiesDefinition(spec.CapabilitiesDefinition, fldPath.Child("capabilitiesDefinition"))
 		if errList != nil {
 			allErrs = append(allErrs, errList...)
 		}
 	} else {
-		// if the feature is disabled, the capabilitiesDefinition must not be set
+		// If the feature gate is disabled, the capabilitiesDefinition must not be set.
 		if IsDefined(&spec.CapabilitiesDefinition) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("capabilitiesDefinition"), "must not be defined as the CloudProfile Capabilities Feature is disabled."))
 		}

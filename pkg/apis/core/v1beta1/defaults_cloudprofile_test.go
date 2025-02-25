@@ -46,7 +46,6 @@ var _ = Describe("CloudProfile defaulting", func() {
 	})
 
 	Describe("MachineImageVersion defaulting ", func() {
-
 		It("should correctly default MachineImageVersion", func() {
 			SetObjectDefaults_CloudProfile(obj)
 			machineImageVersion := obj.Spec.MachineImages[0].Versions[0]
