@@ -374,3 +374,13 @@ It maintains the `ReadyForMigration` constraint in the `.status.constraints[]` l
 A `Shoot` is considered ready for migration if the destination `Seed` is up-to-date and healthy.
 
 The main purpose of this constraint is to allow the `gardenlet` running in the source seed cluster to check if it can start with the migration flow without that it needs to directly read the destination `Seed` resource (for which it won't have permissions).
+
+#### ["ShootState Finalizer" Reconciler](../../pkg/controllermanager/controller/shoot/state/finalizer)
+
+During a migration of a `Shoot` to another `Seed`, the corresponding `ShootState`
+can get deleted before the `shoot.status.lastOperation.State` is set to `Succeeded`,
+causing the cluster to enter an indefinite `Restore` loop.
+
+This reconciler is responsible for managing a `ShootState` finalizer aiming to block
+the object deletion until a `Shoot` `lastOperation` is of `Restore` type with
+`Succeeded` state.
