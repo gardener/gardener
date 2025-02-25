@@ -497,7 +497,7 @@ Capabilities
 <p>CapabilitiesDefinition contains the definition of all possible capabilities of the CloudProfile.
 Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 The order values for a given capability is relevant. To the left is the most important value.
-During maintenance upgrades the image that enables most important capabilities will be selected.</p>
+During maintenance upgrades, the image that enables the most important capabilities will be selected.</p>
 </td>
 </tr>
 </table>
@@ -3613,7 +3613,7 @@ Capabilities
 <p>CapabilitiesDefinition contains the definition of all possible capabilities of the CloudProfile.
 Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 The order values for a given capability is relevant. To the left is the most important value.
-During maintenance upgrades the image that enables most important capabilities will be selected.</p>
+During maintenance upgrades, the image that enables the most important capabilities will be selected.</p>
 </td>
 </tr>
 </tbody>
