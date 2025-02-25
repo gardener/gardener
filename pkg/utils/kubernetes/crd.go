@@ -19,8 +19,12 @@ import (
 
 var (
 	// WaitTimeout specifies the total time to wait for CRDs to become ready or to be deleted. Exposed for testing.
-	// While waiting for CRD readiness is parallelized (see WaitUntilCRDManifestsReady below), the controllers responsible for populating the "readiness" status into the CRD only have one worker each (e.g., see https://github.com/kubernetes/apiextensions-apiserver/blob/376adbc0c7f0bc548dbbf2ad7c4f3e53840aa08f/pkg/controller/establish/establishing_controller.go#L88-L89). Therefore, we need to wait for a longer time here  (basically proportional to the
-	// amount of CRDs) in case we create a lot of CRDs in parallel (which happens at Garden or Seed creation), since they are processed sequentially.
+	// While waiting for CRD readiness is parallelized (see WaitUntilCRDManifestsReady below), the controllers
+	// responsible for populating the "readiness" status into the CRD only have one worker each (e.g., see
+	// https://github.com/kubernetes/apiextensions-apiserver/blob/376adbc0c7f0bc548dbbf2ad7c4f3e53840aa08f/pkg/controller/establish/establishing_controller.go#L88-L89).
+	// Therefore, we need to wait for a longer time here  (basically proportional to the
+	// amount of CRDs) in case we create a lot of CRDs in parallel (which happens at Garden or Seed creation), since
+	// they are processed sequentially.
 	WaitTimeout = 2 * time.Minute
 )
 
@@ -31,6 +35,7 @@ func WaitUntilCRDManifestsReady(ctx context.Context, c client.Client, crdNames .
 		fns = append(fns, func(ctx context.Context) error {
 			timeoutCtx, cancel := context.WithTimeout(ctx, WaitTimeout)
 			defer cancel()
+
 			return retry.Until(timeoutCtx, 1*time.Second, func(ctx context.Context) (done bool, err error) {
 				crd := &apiextensionsv1.CustomResourceDefinition{}
 
