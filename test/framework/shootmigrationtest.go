@@ -236,14 +236,14 @@ func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient k
 // GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
 // from the Shoot's control plane namespace
 func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient kubernetes.Interface) (map[string]corev1.Secret, error) {
-	return GetPersistedSecrets(ctx, seedClient, t.SeedShootNamespace)
+	return GetPersistedSecrets(ctx, seedClient.Client(), t.SeedShootNamespace)
 }
 
 // GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
 // from the Shoot's control plane namespace
-func GetPersistedSecrets(ctx context.Context, seedClient kubernetes.Interface, namespace string) (map[string]corev1.Secret, error) {
+func GetPersistedSecrets(ctx context.Context, seedClient client.Reader, namespace string) (map[string]corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
-	if err := seedClient.Client().List(
+	if err := seedClient.List(
 		ctx,
 		secretList,
 		client.InNamespace(namespace),

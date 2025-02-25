@@ -29,11 +29,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 
 		ItShouldCreateShoot(s)
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
-		ItShouldInitializeShootClient(s)
 		ItShouldGetResponsibleSeed(s)
 		ItShouldInitializeSeedClient(s)
 
 		if !v1beta1helper.IsWorkerless(s.Shoot) && !v1beta1helper.HibernationIsEnabled(s.Shoot) {
+			ItShouldInitializeShootClient(s)
 			// We can only verify in-cluster access to the API server before the migration in local e2e tests.
 			// After the migration, the shoot API server's hostname still points to the source seed, because
 			// the /etc/hosts entry is never updated. Hence, we talk to the API server for starting in-cluster
@@ -52,15 +52,17 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		})
 
 		It("Populate comparison elements before migration", func(ctx SpecContext) {
-			var err error
-			secretsBeforeMigration, err = GetPersistedSecrets(ctx, s.SeedClientSet, s.Shoot.Status.TechnicalID)
-			Expect(err).ToNot(HaveOccurred())
+			Eventually(ctx, func() error {
+				var err error
+				secretsBeforeMigration, err = GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
+				return err
+			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("Migrate Shoot", func(ctx SpecContext) {
+			patch := client.MergeFrom(s.Shoot.DeepCopy())
+			s.Shoot.Spec.SeedName = ptr.To(getSeedName(true))
 			Eventually(ctx, func() error {
-				patch := client.MergeFrom(s.Shoot.DeepCopy())
-				s.Shoot.Spec.SeedName = ptr.To(getSeedName(true))
 				return s.GardenClient.SubResource("binding").Patch(ctx, s.Shoot, patch)
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
@@ -70,9 +72,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		ItShouldInitializeSeedClient(s)
 
 		It("Verify that all secrets have been migrated without regeneration", func(ctx SpecContext) {
-			secretsAfterMigration, err := GetPersistedSecrets(ctx, s.SeedClientSet, s.Shoot.Status.TechnicalID)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(ComparePersistedSecrets(secretsBeforeMigration, secretsAfterMigration)).To(Succeed())
+			Eventually(ctx, func(g Gomega) {
+				secretsAfterMigration, err := GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(ComparePersistedSecrets(secretsBeforeMigration, secretsAfterMigration)).To(Succeed())
+			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("Verify that there are no orphaned resources in the source seed", func(ctx SpecContext) {
