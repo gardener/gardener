@@ -43,14 +43,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	shootLastOperationType := shoot.Status.LastOperation.Type
 	shootLastOperationState := shoot.Status.LastOperation.State
+
+	isShootOpMigrate := shootLastOperationType == gardencorev1beta1.LastOperationTypeMigrate
+	isShootOpRestore := shootLastOperationType == gardencorev1beta1.LastOperationTypeRestore
+	isShootOpReconcile := shootLastOperationType == gardencorev1beta1.LastOperationTypeReconcile
+
+	isShootOpSucceeded := shootLastOperationState == gardencorev1beta1.LastOperationStateSucceeded
 	shootStateHasFinalizer := controllerutil.ContainsFinalizer(shootState, FinalizerName)
 
 	log = log.
 		WithValues("shootLastOperationType", shootLastOperationType).
 		WithValues("shootLastOperationState", shootLastOperationState)
 
-	isShootOpMigrate := shootLastOperationType == gardencorev1beta1.LastOperationTypeMigrate
-	if isShootOpMigrate && !shootStateHasFinalizer {
+	isShootRestoreNotSucceeded := isShootOpRestore && !isShootOpSucceeded
+	if (isShootOpMigrate || isShootRestoreNotSucceeded) && !shootStateHasFinalizer {
 		log.Info("Adding finalizer")
 		if err := controllerutils.AddFinalizers(ctx, r.Client, shootState, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error adding finalizer to ShootState: %w", err)
@@ -58,9 +64,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	isShootOpRestore := shootLastOperationType == gardencorev1beta1.LastOperationTypeRestore
-	isShootOpSucceeded := shootLastOperationState == gardencorev1beta1.LastOperationStateSucceeded
-	if isShootOpRestore && isShootOpSucceeded && shootStateHasFinalizer {
+	isShootRestoreSucceeded := isShootOpRestore && isShootOpSucceeded
+	if (isShootRestoreSucceeded || isShootOpReconcile) && shootStateHasFinalizer {
 		log.Info("Removing finalizer")
 		if err := controllerutils.RemoveFinalizers(ctx, r.Client, shootState, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error removing finalizer from ShootState: %w", err)
