@@ -31,6 +31,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 		c   client.Client
 
 		shoot      *gardencorev1beta1.Shoot
+		shootState *gardencorev1beta1.ShootState
 		reconciler *finalizer.Reconciler
 
 		lastOpMigrateProcessing   func() *gardencorev1beta1.LastOperation
@@ -38,10 +39,11 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 		lastOpRestoreSucceeded    func() *gardencorev1beta1.LastOperation
 		lastOpReconcileProcessing func() *gardencorev1beta1.LastOperation
 
-		defaultShootWith               func(*gardencorev1beta1.LastOperation) *gardencorev1beta1.Shoot
-		defaultShootState              func() *gardencorev1beta1.ShootState
-		defaultShootStateWithFinalizer func()
-		defaultReconciliationRequest   func() reconcile.Request
+		defaultShootWith             func(*gardencorev1beta1.LastOperation) *gardencorev1beta1.Shoot
+		defaultReconciliationRequest func() reconcile.Request
+
+		createDefaultShootState              func() *gardencorev1beta1.ShootState
+		createDefaultShootStateWithFinalizer func() *gardencorev1beta1.ShootState
 	)
 
 	BeforeEach(func() {
@@ -101,21 +103,23 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			return shoot
 		}
 
-		defaultShootState = func() *gardencorev1beta1.ShootState {
-			shootState := &gardencorev1beta1.ShootState{
+		createDefaultShootState = func() *gardencorev1beta1.ShootState {
+			shootState = &gardencorev1beta1.ShootState{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      defaultShootName,
 					Namespace: defaultNamespace,
 					UID:       defaultUuid,
 				},
 			}
+
+			By("Create new default ShootState")
+			Expect(c.Create(ctx, shootState)).To(Succeed())
+
 			return shootState
 		}
 
-		defaultShootStateWithFinalizer = func() {
-			By("Create new default ShootState")
-			shootState := defaultShootState()
-			Expect(c.Create(ctx, shootState)).To(Succeed())
+		createDefaultShootStateWithFinalizer = func() *gardencorev1beta1.ShootState {
+			createDefaultShootState()
 
 			By("Add finalizer to the default ShootState")
 			err := controllerutils.AddFinalizers(ctx, c, shootState, finalizer.FinalizerName)
@@ -125,6 +129,8 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			shootStateWithFinalizer := &gardencorev1beta1.ShootState{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), shootStateWithFinalizer)).To(Succeed())
 			Expect(shootStateWithFinalizer.GetFinalizers()).To(ConsistOf(finalizer.FinalizerName))
+
+			return shootStateWithFinalizer
 		}
 
 		defaultReconciliationRequest = func() reconcile.Request {
@@ -146,9 +152,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 		})
 
 		It("should add finalizer if not present", func() {
-			By("Create new default ShootState")
-			shootState := defaultShootState()
-			Expect(c.Create(ctx, shootState)).To(Succeed())
+			createDefaultShootState()
 
 			By("Run reconciliation")
 			reconciliationRequest := defaultReconciliationRequest()
@@ -162,7 +166,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 		})
 
 		It("should not add/duplicate finalizer if already present", func() {
-			defaultShootStateWithFinalizer()
+			createDefaultShootStateWithFinalizer()
 
 			By("Run reconciliation")
 			reconciliationRequest := defaultReconciliationRequest()
@@ -174,7 +178,6 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
 			Expect(actualShootState.GetFinalizers()).To(HaveLen(1))
 			Expect(actualShootState.GetFinalizers()).To(ConsistOf(finalizer.FinalizerName))
-
 		})
 	})
 
@@ -186,7 +189,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			})
 
 			It("should remove finalizer if present", func() {
-				defaultShootStateWithFinalizer()
+				createDefaultShootStateWithFinalizer()
 
 				By("Run reconciliation")
 				reconciliationRequest := defaultReconciliationRequest()
@@ -200,9 +203,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			})
 
 			It("should not fail if finalizer is not present", func() {
-				By("Create new default ShootState")
-				shootState := defaultShootState()
-				Expect(c.Create(ctx, shootState)).To(Succeed())
+				createDefaultShootState()
 
 				By("Run reconciliation")
 				reconciliationRequest := defaultReconciliationRequest()
@@ -223,9 +224,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			})
 
 			It("should add finalizer if not exists", func() {
-				By("Create new default ShootState")
-				shootState := defaultShootState()
-				Expect(c.Create(ctx, shootState)).To(Succeed())
+				createDefaultShootState()
 
 				By("Run reconciliation")
 				reconciliationRequest := defaultReconciliationRequest()
@@ -239,7 +238,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			})
 
 			It("should not remove finalizer", func() {
-				defaultShootStateWithFinalizer()
+				createDefaultShootStateWithFinalizer()
 
 				By("Run reconciliation")
 				reconciliationRequest := defaultReconciliationRequest()
@@ -261,7 +260,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 		})
 
 		It("should remove finalizer regardless of the last operation state", func() {
-			defaultShootStateWithFinalizer()
+			createDefaultShootStateWithFinalizer()
 
 			By("Run reconciliation")
 			reconciliationRequest := defaultReconciliationRequest()
