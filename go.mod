@@ -33,7 +33,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.80.1
 	github.com/prometheus/blackbox_exporter v0.25.0
-	github.com/prometheus/client_golang v1.20.5
+	github.com/prometheus/client_golang v1.21.0
 	github.com/prometheus/common v0.62.0
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/afero v1.12.0
