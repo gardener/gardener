@@ -377,10 +377,9 @@ The main purpose of this constraint is to allow the `gardenlet` running in the s
 
 #### ["ShootState Finalizer" Reconciler](../../pkg/controllermanager/controller/shoot/state/finalizer)
 
-During a migration of a `Shoot` to another `Seed`, the corresponding `ShootState`
-can get deleted before the `shoot.status.lastOperation.State` is set to `Succeeded`,
-causing the cluster to enter an indefinite `Restore` loop.
+This reconciler is responsible for managing a `ShootState` finalizer that
+ensures the object existence during migration of `Shoot`s control plane
+to another `Seed`.
 
-This reconciler is responsible for managing a `ShootState` finalizer aiming to block
-the object deletion until a `Shoot` `lastOperation` is of `Restore` type with
-`Succeeded` state.
+The main goal is to keep the `ShootState` present during the `Migrate` and
+`Restore` operations that are not yet finished successfully.
