@@ -28,7 +28,7 @@ import (
 
 var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", func(useCapabilitiesDefinition bool) {
 
-	var _ = Describe("Admission", func() {
+	Describe("Admission", func() {
 		apiserverfeatures.RegisterFeatureGates()
 
 		Describe("#Validate", func() {

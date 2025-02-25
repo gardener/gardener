@@ -94,7 +94,7 @@ const (
 
 	// CloudProfileCapabilities enables the usage of capabilities in the CloudProfile. Capabilities are used to create a relation between
 	// machineTypes and machineImages. It allows to validate worker groups of a shoot ensuring the selected image and machine combination
-	// will boot up successfully. Capabilities are also used to determine valid upgrade paths during automated maintenance operation.
+	// will boot up successfully. Capabilities are also used to determine valid upgrade paths during automated maintenance operations.
 	// owner: @roncossek
 	// alpha: v1.113.0
 	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
