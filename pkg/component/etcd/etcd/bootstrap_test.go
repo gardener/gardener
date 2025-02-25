@@ -338,6 +338,9 @@ var _ = Describe("Etcd", func() {
 												corev1.ResourceMemory: resource.MustParse("128Mi"),
 											},
 										},
+										SecurityContext: &corev1.SecurityContext{
+											AllowPrivilegeEscalation: ptr.To(false),
+										},
 										VolumeMounts: []corev1.VolumeMount{
 											{
 												MountPath: "/etc/webhook-server-tls",
@@ -449,6 +452,9 @@ var _ = Describe("Etcd", func() {
 											corev1.ResourceCPU:    resource.MustParse("50m"),
 											corev1.ResourceMemory: resource.MustParse("128Mi"),
 										},
+									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
