@@ -140,12 +140,9 @@ func (s *shootSystem) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
-	var (
-		registry              = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		k8sGreaterEqual133, _ = versionutils.CheckVersionMeetsConstraint(s.values.KubernetesVersion.String(), ">= 1.33")
-	)
+	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
-	if k8sGreaterEqual133 {
+	if versionutils.ConstraintK8sGreaterEqual133.Check(s.values.KubernetesVersion) {
 		networkPolicyDenyAll := &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener.cloud--deny-all",
