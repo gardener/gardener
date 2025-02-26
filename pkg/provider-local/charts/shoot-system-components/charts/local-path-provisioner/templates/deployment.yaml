@@ -39,6 +39,8 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - mountPath: /etc/config/
               name: config-volume

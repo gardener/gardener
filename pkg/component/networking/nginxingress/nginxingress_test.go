@@ -446,6 +446,8 @@ spec:
           requests:
             cpu: 20m
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
       priorityClassName: gardener-system-600
       securityContext:
         fsGroup: 65534
@@ -1010,6 +1012,8 @@ spec:
           requests:
             cpu: 20m
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
       priorityClassName: gardener-shoot-system-600
