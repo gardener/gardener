@@ -64,7 +64,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -116,8 +115,6 @@ const (
 	SecretNameShootAccess = gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
 	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
 	LabelValue = "gardener-resource-manager"
-	// labelChecksum is a constant for the label key which holds the checksum of the pod template.
-	labelChecksum = "checksum/pod-template"
 
 	configMapNamePrefix = "gardener-resource-manager"
 	secretNameServer    = "gardener-resource-manager-server"
@@ -267,8 +264,6 @@ type Values struct {
 	ManagedResourceLabels map[string]string
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources.
 	MaxConcurrentHealthWorkers *int
-	// MaxConcurrentTokenInvalidatorWorkers configures the number of worker threads for concurrent token invalidator reconciliations.
-	MaxConcurrentTokenInvalidatorWorkers *int
 	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations.
 	MaxConcurrentTokenRequestorWorkers *int
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations.
@@ -635,12 +630,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	if v := r.values.MaxConcurrentTokenRequestorWorkers; v != nil {
 		config.Controllers.TokenRequestor.Enabled = true
 		config.Controllers.TokenRequestor.ConcurrentSyncs = v
-	}
-
-	if v := r.values.MaxConcurrentTokenInvalidatorWorkers; v != nil {
-		config.Webhooks.TokenInvalidator.Enabled = true
-		config.Controllers.TokenInvalidator.Enabled = true
-		config.Controllers.TokenInvalidator.ConcurrentSyncs = v
 	}
 
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
@@ -1056,23 +1045,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				false,
 			)
 
-			// ATTENTION: THIS MUST BE THE LAST THING HAPPENING IN THIS FUNCTION TO MAKE SURE THE COMPUTED CHECKSUM IS
-			// ACCURATE!
-			// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta
-			//  and enabled by default (probably 1.26+) for all supported clusters.
-			{
-				// Assign a predictable but unique label value per ReplicaSet which can be used for the
-				// Topology Spread Constraint selectors to prevent imbalanced deployments after rolling-updates.
-				// See https://github.com/kubernetes/kubernetes/issues/98215 for more information.
-				// This must be done as a last step because we need to consider that the pod topology constraints themselves
-				// can change and cause a rolling update.
-				podTemplateChecksum := utils.ComputeChecksum(deployment.Spec.Template)[:16]
-
-				deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
-				for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
-					deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[labelChecksum] = podTemplateChecksum
-				}
-			}
+			kubernetesutils.MutateMatchLabelKeys(deployment.Spec.Template.Spec.TopologySpreadConstraints)
 		}
 
 		return nil
@@ -1308,7 +1281,6 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	}
 
 	webhooks := []admissionregistrationv1.MutatingWebhook{
-		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		r.getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 	}
 
@@ -1352,41 +1324,6 @@ func (r *resourceManager) getValidatingWebhookConfigurationWebhooks(
 		GetCRDDeletionProtectionValidatingWebhooks(secretServerCA, buildClientConfigFn),
 		GetExtensionValidationValidatingWebhooks(secretServerCA, buildClientConfigFn)...,
 	)
-}
-
-// GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component
-// for reuse between the component and integration tests.
-func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
-	return admissionregistrationv1.MutatingWebhook{
-		Name: "token-invalidator.resources.gardener.cloud",
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{corev1.GroupName},
-				APIVersions: []string{corev1.SchemeGroupVersion.Version},
-				Resources:   []string{"secrets"},
-			},
-			Operations: []admissionregistrationv1.OperationType{
-				admissionregistrationv1.Create,
-				admissionregistrationv1.Update,
-			},
-		}},
-		NamespaceSelector: namespaceSelector,
-		ObjectSelector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
-		},
-		ClientConfig:            buildClientConfigFn(secretServerCA, tokeninvalidator.WebhookPath),
-		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To[int32](10),
-	}
 }
 
 // GetCRDDeletionProtectionValidatingWebhooks returns the ValidatingWebhooks for the crd-deletion-protection webhook for
