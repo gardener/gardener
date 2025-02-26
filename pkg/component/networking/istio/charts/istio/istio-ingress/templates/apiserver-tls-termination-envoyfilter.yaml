@@ -1,0 +1,78 @@
+{{- if eq .Values.terminateAPIServerTLS true }}
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+  name: apiserver-tls-termination
+  namespace: {{ .Release.Namespace }}
+spec:
+  workloadSelector:
+    labels:
+{{ .Values.labels | toYaml | indent 6 }}
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        portNumber: 9443
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+            subFilter:
+              name: "envoy.filters.http.router"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.filters.http.lua
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
+          defaultSourceCode:
+            inlineString: |
+              function envoy_on_request(request_handle)
+                -- Drop headers used by kube-apiserver authentication proxy.
+                local remove = {"{{ .Values.apiServerRequestHeaderUserName }}", "{{ .Values.apiServerRequestHeaderGroup }}"}
+                for key, value in pairs(remove) do
+                  request_handle:headers():remove(value)
+                end
+
+                local streamInfo = request_handle:streamInfo()
+                local ssl = streamInfo:downstreamSslConnection()
+
+                -- TODO(oliver-goetz) switch to ssl:parsedSubjectPeerCertificate() once it is available.
+                local cn = ssl:subjectPeerCertificate()
+                if cn ~= "" then
+                  -- Get the host from the request and set it as dynamic metadata.
+                  local host = streamInfo:requestedServerName()
+                  streamInfo:dynamicMetadata():set("envoy.filters.http.lua", "{{ .Values.apiServerAuthenticationDynamicMetadataKey }}", host)
+
+                  -- Add request headers for kube-apiserver authentication.
+                  local remoteUserHeaderAdded = false
+                  -- Iterate over all substrings in cn that are separated by commas.
+                  for pair in string.gmatch(cn, "([^,]+)") do
+                      -- For each substring extract key and value that are separated by '='.
+                      local key, value = pair:match("([^=]+)=([^=]+)")
+                      -- Istio is an authenticating proxy in this case, so we must set the defined headers accordingly.
+                      -- https://kubernetes.io/docs/reference/access-authn-authz/authentication/#authenticating-proxy
+                      -- CN of the client certificate defines the username, O defines groups.
+                      -- see https://kubernetes.io/docs/setup/best-practices/certificates/#configure-certificates-for-user-accounts
+                      if key == "CN" then
+                        request_handle:headers():add("{{ .Values.apiServerRequestHeaderUserName }}", value)
+                        remoteUserHeaderAdded = true
+                      elseif key == "O" then
+                        request_handle:headers():add("{{ .Values.apiServerRequestHeaderGroup }}", value)
+                      end
+                  end
+
+                  -- Kill request if remote user header was not added.
+                  if not remoteUserHeaderAdded then
+                    request_handle:respond({[":status"] = "400"}, "Invalid certificate subject")
+                  end
+                end
+
+                -- Route timeouts to upstream have to be disabled. Otherwise, watches would be terminated after 15 seconds.
+                -- See https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#route-timeouts
+                request_handle:headers():add("x-envoy-upstream-rq-timeout-ms", "0")
+                request_handle:headers():add("x-envoy-upstream-rq-per-try-timeout-ms", "0")
+              end
+{{ end -}}

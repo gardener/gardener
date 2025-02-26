@@ -118,7 +118,7 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 	}
 
 	return k.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                              secretNameServerCert,
+		Name:                              SecretNameServerCert,
 		CommonName:                        deploymentName,
 		IPAddresses:                       append(ipAddresses, k.values.ServerCertificate.ExtraIPAddresses...),
 		DNSNames:                          append(dnsNames, k.values.ServerCertificate.ExtraDNSNames...),

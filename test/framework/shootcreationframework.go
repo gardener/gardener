@@ -382,7 +382,7 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 			return err
 		}
 
-		if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot); err != nil {
+		if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot, true); err != nil {
 			log.Error(err, "Failed creating shoot")
 
 			dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
