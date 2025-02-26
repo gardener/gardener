@@ -5,11 +5,7 @@
 package shoot
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -34,18 +30,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
 			}
 
-			It("Update high-availability configuration", func(ctx SpecContext) {
-				patch := client.MergeFrom(s.Shoot.DeepCopy())
-				s.Shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-					HighAvailability: &gardencorev1beta1.HighAvailability{
-						FailureTolerance: gardencorev1beta1.FailureTolerance{
-							Type: failureToleranceType,
-						},
-					},
-				}
-				Eventually(ctx, func() error { return s.GardenClient.Patch(ctx, s.Shoot, patch) }).Should(Succeed())
-			}, SpecTimeout(time.Minute))
-
+			ItShouldUpdateShootToHighAvailability(s, failureToleranceType)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			highavailability.VerifyHighAvailabilityUpdate(s)
 

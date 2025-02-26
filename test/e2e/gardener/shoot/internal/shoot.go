@@ -80,6 +80,26 @@ func ItShouldCreateShoot(s *ShootContext) {
 	}, SpecTimeout(time.Minute))
 }
 
+// ItShouldUpdateShootToHighAvailability updates shoot to high availability configuration with the given failure
+// tolerance type.
+func ItShouldUpdateShootToHighAvailability(s *ShootContext, failureToleranceType gardencorev1beta1.FailureToleranceType) {
+	GinkgoHelper()
+
+	It("Update Shoot to High Availability", func(ctx SpecContext) {
+		s.Log.Info("Updating Shoot to High Availability")
+
+		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
+			s.Shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{
+					FailureTolerance: gardencorev1beta1.FailureTolerance{
+						Type: failureToleranceType,
+					},
+				},
+			}
+		})).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
 // ItShouldDeleteShoot deletes the shoot. If an existing shoot is specified, the step is skipped.
 func ItShouldDeleteShoot(s *ShootContext) {
 	GinkgoHelper()
