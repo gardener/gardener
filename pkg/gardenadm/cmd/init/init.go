@@ -7,8 +7,8 @@ package init
 import (
 	"context"
 	"fmt"
+	"os"
 
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
 	"github.com/gardener/gardener/pkg/gardenadm"
@@ -51,9 +51,7 @@ gardenadm init`,
 }
 
 func run(ctx context.Context, opts *Options) error {
-	fs := afero.Afero{Fs: afero.NewOsFs()}
-
-	cloudProfile, project, shoot, err := gardenadm.ReadKubernetesResourcesFromConfigDir(opts.Log, fs, opts.ConfigDir)
+	cloudProfile, project, shoot, err := gardenadm.ReadManifests(opts.Log, os.DirFS(opts.ConfigDir))
 	if err != nil {
 		return fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", opts.ConfigDir, err)
 	}

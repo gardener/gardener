@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/spf13/afero"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -23,10 +22,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
-// ReadKubernetesResourcesFromConfigDir reads Kubernetes resources from the specified configuration directory.
+// ReadManifests reads Kubernetes and Gardener manifests in YAML or JSON format.
 // It returns a CloudProfile, Project, and Shoot resource if found, or an error if any issues occur during reading or
 // decoding.
-func ReadKubernetesResourcesFromConfigDir(log logr.Logger, f afero.Afero, configDir string) (*gardencorev1beta1.CloudProfile, *gardencorev1beta1.Project, *gardencorev1beta1.Shoot, error) {
+func ReadManifests(log logr.Logger, fsys fs.FS) (*gardencorev1beta1.CloudProfile, *gardencorev1beta1.Project, *gardencorev1beta1.Shoot, error) {
 	var (
 		cloudProfile *gardencorev1beta1.CloudProfile
 		project      *gardencorev1beta1.Project
@@ -35,16 +34,16 @@ func ReadKubernetesResourcesFromConfigDir(log logr.Logger, f afero.Afero, config
 		decoder = serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(gardencorev1.SchemeGroupVersion, gardencorev1beta1.SchemeGroupVersion)
 	)
 
-	if err := afero.Walk(f, configDir, func(path string, fileInfo fs.FileInfo, err error) error {
+	if err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return fmt.Errorf("failed walking directory %s: %w", configDir, err)
+			return fmt.Errorf("failed walking directory: %w", err)
 		}
 
-		if fileInfo.IsDir() || !(strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".json")) {
+		if d.IsDir() || !(strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".json")) {
 			return nil
 		}
 
-		file, err := f.Open(path)
+		file, err := fsys.Open(path)
 		if err != nil {
 			return fmt.Errorf("failed opening file %s: %w", path, err)
 		}
@@ -96,7 +95,7 @@ func ReadKubernetesResourcesFromConfigDir(log logr.Logger, f afero.Afero, config
 
 		return nil
 	}); err != nil {
-		return nil, nil, nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", configDir, err)
+		return nil, nil, nil, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
 	}
 
 	if cloudProfile == nil {
