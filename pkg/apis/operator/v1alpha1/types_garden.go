@@ -244,6 +244,9 @@ type ETCD struct {
 
 // ETCDMain contains configuration for the main etcd.
 type ETCDMain struct {
+	// Autoscaling contains auto-scaling configuration options for etcd.
+	// +optional
+	Autoscaling *gardencorev1beta1.ControlPlaneAutoscaling `json:"autoscaling,omitempty"`
 	// Backup contains the object store configuration for backups for the virtual garden etcd.
 	// +optional
 	Backup *Backup `json:"backup,omitempty"`
@@ -254,6 +257,9 @@ type ETCDMain struct {
 
 // ETCDEvents contains configuration for the events etcd.
 type ETCDEvents struct {
+	// Autoscaling contains auto-scaling configuration options for etcd.
+	// +optional
+	Autoscaling *gardencorev1beta1.ControlPlaneAutoscaling `json:"autoscaling,omitempty"`
 	// Storage contains storage configuration.
 	// +optional
 	Storage *Storage `json:"storage,omitempty"`

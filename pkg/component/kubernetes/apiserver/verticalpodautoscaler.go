@@ -7,6 +7,7 @@ package apiserver
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -29,6 +30,8 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, vert
 		corev1.ResourceCPU:    resource.MustParse("20m"),
 		corev1.ResourceMemory: resource.MustParse("200M"),
 	}
+
+	maps.Insert(kubeAPIServerMinAllowed, maps.All(k.values.Autoscaling.MinAllowed))
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), verticalPodAutoscaler, func() error {
 		verticalPodAutoscaler.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{

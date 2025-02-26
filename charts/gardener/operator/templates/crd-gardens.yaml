@@ -355,6 +355,25 @@ spec:
                         description: Events contains configuration for the events
                           etcd.
                         properties:
+                          autoscaling:
+                            description: Autoscaling contains auto-scaling configuration
+                              options for etcd.
+                            properties:
+                              minAllowed:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+                                  Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+                                  Default values are not applied to this field.
+                                type: object
+                            required:
+                            - minAllowed
+                            type: object
                           storage:
                             description: Storage contains storage configuration.
                             properties:
@@ -375,6 +394,25 @@ spec:
                       main:
                         description: Main contains configuration for the main etcd.
                         properties:
+                          autoscaling:
+                            description: Autoscaling contains auto-scaling configuration
+                              options for etcd.
+                            properties:
+                              minAllowed:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+                                  Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+                                  Default values are not applied to this field.
+                                type: object
+                            required:
+                            - minAllowed
+                            type: object
                           backup:
                             description: Backup contains the object store configuration
                               for backups for the virtual garden etcd.
@@ -1344,6 +1382,25 @@ spec:
                                 required:
                                 - kubeconfigSecretName
                                 type: object
+                            type: object
+                          autoscaling:
+                            description: Autoscaling contains auto-scaling configuration
+                              options for the kube-apiserver.
+                            properties:
+                              minAllowed:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+                                  Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+                                  Default values are not applied to this field.
+                                type: object
+                            required:
+                            - minAllowed
                             type: object
                           defaultNotReadyTolerationSeconds:
                             description: |-

@@ -66,6 +66,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition":                                  schema_pkg_apis_core_v1beta1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime":                           schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane":                               schema_pkg_apis_core_v1beta1_ControlPlane(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling":                    schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment":                       schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentList":                   schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallation":                     schema_pkg_apis_core_v1beta1_ControllerInstallation(ref),
@@ -87,6 +88,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                                 schema_pkg_apis_core_v1beta1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                              schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DualApprovalForDeletion":                    schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD":                                       schema_pkg_apis_core_v1beta1_ETCD(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig":                                 schema_pkg_apis_core_v1beta1_ETCDConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation":                  schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                           schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                           schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
@@ -2532,6 +2535,36 @@ func schema_pkg_apis_core_v1beta1_ControlPlane(ref common.ReferenceCallback) com
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"minAllowed": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.. Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays. Default values are not applied to this field.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"minAllowed"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3393,6 +3426,54 @@ func schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref common.ReferenceCa
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ETCD(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ETCD contains configuration for etcds of the shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"main": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Main contains configuration for the main etcd.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig"),
+						},
+					},
+					"events": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Events contains configuration for the events etcd.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ETCDConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ETCDConfig contains etcd configuration.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains auto-scaling configuration options for etcd.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"},
 	}
 }
 
@@ -4412,11 +4493,17 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization"),
 						},
 					},
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains auto-scaling configuration options for the kube-apiserver.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -4991,11 +5078,17 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"etcd": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ETCD contains configuration for etcds of the shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"},
 	}
 }
 
