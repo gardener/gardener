@@ -289,11 +289,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 			},
 			Data: map[string]string{
-				configDataKey: `.:` + strconv.Itoa(corednsconstants.PortServer) + ` {
-  errors
-  log . {
-      class error
-  }
+				configDataKey: `.:` + strconv.Itoa(corednsconstants.PortServer) + ` {  
   health {
       lameduck 15s
   }
@@ -304,12 +300,18 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
       ttl 30
   }
   prometheus :` + strconv.Itoa(portMetrics) + `
+
+  import custom/*.override
+
+  errors
+  log . {
+      class error
+  }
   forward . /etc/resolv.conf
-  cache 30
   loop
   reload
   loadbalance round_robin
-  import custom/*.override
+  cache 30
 }
 import custom/*.server
 `,
