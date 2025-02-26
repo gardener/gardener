@@ -448,7 +448,7 @@ var _ = Describe("Garden", func() {
 		})
 	})
 
-	Describe("#CheckRuntimeExtensionInstallation", func() {
+	Describe("#IsRuntimeExtensionInstallationSuccessful", func() {
 		var (
 			ctx        context.Context
 			fakeClient client.Client
@@ -475,7 +475,7 @@ var _ = Describe("Garden", func() {
 		})
 
 		It("should return an error if no managed resource status is available", func() {
-			Expect(CheckRuntimeExtensionInstallation(ctx, fakeClient, gardenNamespace, extensionName)).To(MatchError("condition ResourcesApplied for managed resource test-namespace/extension-test-garden has not been reported yet"))
+			Expect(IsRuntimeExtensionInstallationSuccessful(ctx, fakeClient, gardenNamespace, extensionName)).To(MatchError("condition ResourcesApplied for managed resource test-namespace/extension-test-garden has not been reported yet"))
 		})
 
 		It("should return an error if managed resource applied condition is false", func() {
@@ -484,7 +484,7 @@ var _ = Describe("Garden", func() {
 			}
 			Expect(fakeClient.Update(ctx, managedResource)).To(Succeed())
 
-			Expect(CheckRuntimeExtensionInstallation(ctx, fakeClient, gardenNamespace, extensionName)).To(MatchError("condition ResourcesApplied of managed resource test-namespace/extension-test-garden is False: "))
+			Expect(IsRuntimeExtensionInstallationSuccessful(ctx, fakeClient, gardenNamespace, extensionName)).To(MatchError("condition ResourcesApplied of managed resource test-namespace/extension-test-garden is False: "))
 		})
 
 		It("should return an error if managed resource healthy condition is false", func() {
@@ -494,7 +494,7 @@ var _ = Describe("Garden", func() {
 			}
 			Expect(fakeClient.Update(ctx, managedResource)).To(Succeed())
 
-			Expect(CheckRuntimeExtensionInstallation(ctx, fakeClient, gardenNamespace, extensionName)).To(MatchError("condition ResourcesHealthy of managed resource test-namespace/extension-test-garden is False: "))
+			Expect(IsRuntimeExtensionInstallationSuccessful(ctx, fakeClient, gardenNamespace, extensionName)).To(MatchError("condition ResourcesHealthy of managed resource test-namespace/extension-test-garden is False: "))
 		})
 
 		It("should return an error if managed resource is progressing", func() {
@@ -505,7 +505,7 @@ var _ = Describe("Garden", func() {
 			}
 			Expect(fakeClient.Update(ctx, managedResource)).To(Succeed())
 
-			Expect(CheckRuntimeExtensionInstallation(ctx, fakeClient, gardenNamespace, extensionName)).To(MatchError("condition ResourcesProgressing of managed resource test-namespace/extension-test-garden is True: "))
+			Expect(IsRuntimeExtensionInstallationSuccessful(ctx, fakeClient, gardenNamespace, extensionName)).To(MatchError("condition ResourcesProgressing of managed resource test-namespace/extension-test-garden is True: "))
 		})
 
 		It("should succeed if managed resource is healthy", func() {
@@ -516,7 +516,7 @@ var _ = Describe("Garden", func() {
 			}
 			Expect(fakeClient.Update(ctx, managedResource)).To(Succeed())
 
-			Expect(CheckRuntimeExtensionInstallation(ctx, fakeClient, gardenNamespace, extensionName)).To(Succeed())
+			Expect(IsRuntimeExtensionInstallationSuccessful(ctx, fakeClient, gardenNamespace, extensionName)).To(Succeed())
 		})
 	})
 
