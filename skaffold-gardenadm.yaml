@@ -546,6 +546,14 @@ manifests:
           command:
             - bash
             - hack/generate-kustomize-patch-controllerdeployment-provider-local-prow.sh
+    after:
+      - host:
+          command:
+            - bash
+            - -ec
+            - |
+              mkdir -p example/gardenadm-local/resources
+              kubectl kustomize example/provider-local/gardenadm > example/gardenadm-local/resources/manifests.yaml
 resourceSelector:
   # instruct skaffold to inject the built image reference into the image field in our ControllerDeployment
   allow:
