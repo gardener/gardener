@@ -19,7 +19,13 @@ import (
 
 var (
 	// WaitTimeout specifies the total time to wait for CRDs to become ready or to be deleted. Exposed for testing.
-	WaitTimeout = 15 * time.Second
+	// While waiting for CRD readiness is parallelized (see WaitUntilCRDManifestsReady below), the controllers
+	// responsible for populating the "readiness" status into the CRD only have one worker each (e.g., see
+	// https://github.com/kubernetes/apiextensions-apiserver/blob/376adbc0c7f0bc548dbbf2ad7c4f3e53840aa08f/pkg/controller/establish/establishing_controller.go#L88-L89).
+	// Therefore, we need to wait for a longer time here  (basically proportional to the
+	// amount of CRDs) in case we create a lot of CRDs in parallel (which happens at Garden or Seed creation), since
+	// they are processed sequentially.
+	WaitTimeout = 2 * time.Minute
 )
 
 // WaitUntilCRDManifestsReady takes names of CRDs and waits for them to get ready with a timeout of 15 seconds.
