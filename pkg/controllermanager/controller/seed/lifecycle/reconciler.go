@@ -139,7 +139,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	)
 
 	shootList := &gardencorev1beta1.ShootList{}
-	if err := r.Client.List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
+	if err := r.Client.List(ctx, shootList, client.MatchingFields{core.ShootStatusSeedName: seed.Name}); err != nil {
 		return reconcile.Result{}, err
 	}
 

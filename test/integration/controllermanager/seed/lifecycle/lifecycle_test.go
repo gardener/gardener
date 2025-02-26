@@ -57,6 +57,10 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 	})
 
 	JustBeforeEach(func() {
+		By("Create garden Namespace")
+		Expect(testClient.Create(ctx, gardenNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+		log.Info("Created garden Namespace", "namespace", client.ObjectKeyFromObject(gardenNamespace))
+
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   lease.Name,
@@ -123,7 +127,7 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: ptr.To("my-provider-account"),
 				CloudProfileName:  ptr.To("cloudprofile1"),
-				SeedName:          &seed.Name,
+				SeedName:          ptr.To(seed.Name),
 				Region:            "europe-central-1",
 				Provider: gardencorev1beta1.Provider{
 					Type: "foo-provider",
@@ -227,10 +231,6 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 
 		Context("rebootstrapping of ManagedSeed", func() {
 			JustBeforeEach(func() {
-				By("Create garden Namespace")
-				Expect(testClient.Create(ctx, gardenNamespace)).To(Succeed())
-				log.Info("Created garden Namespace", "namespace", client.ObjectKeyFromObject(gardenNamespace))
-
 				By("Create ManagedSeed")
 				Expect(testClient.Create(ctx, managedSeed)).To(Succeed())
 				log.Info("Created ManagedSeed", "managedSeed", client.ObjectKeyFromObject(managedSeed))
@@ -263,17 +263,16 @@ var _ = Describe("Seed Lifecycle controller tests", func() {
 
 					By("Set shoot constraints and conditions to status True")
 					patch := client.MergeFrom(shoot.DeepCopy())
-					shoot.Status = gardencorev1beta1.ShootStatus{
-						Conditions: []gardencorev1beta1.Condition{
-							{Type: gardencorev1beta1.ShootAPIServerAvailable, Status: gardencorev1beta1.ConditionTrue},
-							{Type: gardencorev1beta1.ShootControlPlaneHealthy, Status: gardencorev1beta1.ConditionTrue},
-							{Type: gardencorev1beta1.ShootObservabilityComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
-							{Type: gardencorev1beta1.ShootSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
-						},
-						Constraints: []gardencorev1beta1.Condition{
-							{Type: gardencorev1beta1.ShootHibernationPossible, Status: gardencorev1beta1.ConditionTrue},
-							{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied, Status: gardencorev1beta1.ConditionTrue},
-						},
+					shoot.Status.SeedName = ptr.To(seed.Name)
+					shoot.Status.Conditions = []gardencorev1beta1.Condition{
+						{Type: gardencorev1beta1.ShootAPIServerAvailable, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.ShootControlPlaneHealthy, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.ShootObservabilityComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.ShootSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
+					}
+					shoot.Status.Constraints = []gardencorev1beta1.Condition{
+						{Type: gardencorev1beta1.ShootHibernationPossible, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied, Status: gardencorev1beta1.ConditionTrue},
 					}
 
 					if !workerless {

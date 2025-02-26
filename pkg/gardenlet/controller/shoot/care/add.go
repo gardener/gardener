@@ -119,5 +119,5 @@ func (r *Reconciler) ShootPredicate() predicate.Predicate {
 }
 
 func seedGotAssigned(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return oldShoot.Spec.SeedName == nil && newShoot.Spec.SeedName != nil
+	return oldShoot.Status.SeedName == nil && newShoot.Status.SeedName != nil
 }

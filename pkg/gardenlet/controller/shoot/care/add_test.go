@@ -157,21 +157,21 @@ var _ = Describe("Add", func() {
 			})
 
 			It("should return false when the seed name is unchanged in the Shoot spec", func() {
-				shoot.Spec.SeedName = ptr.To("test-seed")
+				shoot.Status.SeedName = ptr.To("test-seed")
 				oldShoot := shoot.DeepCopy()
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: shoot})).To(BeFalse())
 			})
 
 			It("should return false when the seed name is changed in the Shoot spec", func() {
-				shoot.Spec.SeedName = ptr.To("test-seed")
+				shoot.Status.SeedName = ptr.To("test-seed")
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.SeedName = ptr.To("test-seed1")
+				shoot.Status.SeedName = ptr.To("test-seed1")
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: shoot})).To(BeFalse())
 			})
 
 			It("should return true when seed gets assigned to shoot", func() {
 				oldShoot := shoot.DeepCopy()
-				shoot.Spec.SeedName = ptr.To("test-seed")
+				shoot.Status.SeedName = ptr.To("test-seed")
 				Expect(p.Update(event.UpdateEvent{ObjectOld: oldShoot, ObjectNew: shoot})).To(BeTrue())
 			})
 		})

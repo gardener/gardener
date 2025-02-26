@@ -739,7 +739,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 				gardencorev1beta1.ShootMaintenancePreconditionsSatisfied:
 				if constr.Status != gardencorev1beta1.ConditionFalse {
 					shoot.Status.Constraints[i].Status = gardencorev1beta1.ConditionProgressing
-					shoot.Status.Conditions[i].LastUpdateTime = metav1.Now()
+					shoot.Status.Constraints[i].LastUpdateTime = metav1.Now()
 				}
 			}
 		}
