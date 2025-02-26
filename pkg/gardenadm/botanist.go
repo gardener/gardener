@@ -40,7 +40,7 @@ func NewBotanist(
 ) {
 	gardenObj, err := newGardenObject(ctx, project)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating seed object: %w", err)
+		return nil, fmt.Errorf("failed creating garden object: %w", err)
 	}
 
 	shootObj, err := newShootObject(ctx, project.Name, cloudProfile, shoot)
@@ -91,8 +91,6 @@ func newSeedObject(ctx context.Context, shootObj *shootpkg.Shoot) (*seedpkg.Seed
 func newShootObject(ctx context.Context, projectName string, cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot) (*shootpkg.Shoot, error) {
 	shoot.Status.TechnicalID = gardenerutils.ComputeTechnicalID(projectName, shoot)
 	shoot.Status.Gardener = gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion}
-
-	gardencorev1beta1.SetObjectDefaults_Shoot(shoot)
 	// TODO(rfranzke): This UID is used to compute the name of the BackupEntry object. Consider persisting this random
 	//  UID on the machine in case `gardenadm init` is retried/executed multiple times (otherwise, we'd always generate
 	//  a new one).
@@ -116,7 +114,6 @@ func newFakeGardenClient() client.Client {
 	return fakeclient.
 		NewClientBuilder().
 		WithScheme(kubernetes.GardenScheme).
-		WithStatusSubresource(&gardencorev1beta1.ControllerInstallation{}).
 		Build()
 }
 

@@ -5,7 +5,7 @@
 package gardenadm
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
 	"io"
 	"io/fs"
@@ -13,9 +13,12 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
@@ -28,6 +31,8 @@ func ReadKubernetesResourcesFromConfigDir(log logr.Logger, f afero.Afero, config
 		cloudProfile *gardencorev1beta1.CloudProfile
 		project      *gardencorev1beta1.Project
 		shoot        *gardencorev1beta1.Shoot
+
+		decoder = serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(gardencorev1.SchemeGroupVersion, gardencorev1beta1.SchemeGroupVersion)
 	)
 
 	if err := afero.Walk(f, configDir, func(path string, fileInfo fs.FileInfo, err error) error {
@@ -39,75 +44,69 @@ func ReadKubernetesResourcesFromConfigDir(log logr.Logger, f afero.Afero, config
 			return nil
 		}
 
-		content, err := f.ReadFile(path)
+		file, err := f.Open(path)
 		if err != nil {
-			return fmt.Errorf("failed reading file %s: %w", path, err)
+			return fmt.Errorf("failed opening file %s: %w", path, err)
 		}
+		defer file.Close()
 
-		var (
-			decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(content), 1024)
-			decodedObj map[string]any
-		)
+		reader := yaml.NewYAMLReader(bufio.NewReader(file))
 
 		for indexInFile := 0; true; indexInFile++ {
-			objLog := log.WithValues("path", path, "indexInFile", indexInFile)
-
-			if err := decoder.Decode(&decodedObj); err == io.EOF {
+			content, err := reader.Read()
+			if err == io.EOF {
 				break
 			} else if err != nil {
-				return fmt.Errorf("failed decoding resource at index %d in %s", indexInFile, path)
+				return fmt.Errorf("failed reading resource at index %d in %s: %w", indexInFile, path, err)
 			}
 
-			if decodedObj == nil {
-				continue
+			o, err := runtime.Decode(decoder, content)
+			if err != nil {
+				return fmt.Errorf("failed decoding resource at index %d in %s: %w", indexInFile, path, err)
 			}
 
-			obj := &unstructured.Unstructured{Object: decodedObj}
-			objLog.V(2).Info("Read resource", "apiVersion", obj.GetAPIVersion(), "kind", obj.GetKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
+			obj, ok := o.(client.Object)
+			if !ok {
+				return fmt.Errorf("expected client.Object but got %T at index %d in %s", o, indexInFile, path)
+			}
 
-			switch gk := obj.GroupVersionKind().GroupKind(); gk {
-			case gardencorev1beta1.SchemeGroupVersion.WithKind("CloudProfile").GroupKind():
+			objLog := log.WithValues("path", path, "indexInFile", indexInFile)
+			objLog.V(2).Info("Read resource", "gvk", obj.GetObjectKind().GroupVersionKind(), "name", obj.GetName(), "namespace", obj.GetNamespace())
+
+			switch typedObj := obj.(type) {
+			case *gardencorev1beta1.CloudProfile:
 				if cloudProfile != nil {
 					return fmt.Errorf("found more than one *gardencorev1beta1.CloudProfile resource, but only one is allowed")
 				}
-				cloudProfile = &gardencorev1beta1.CloudProfile{}
-				if err := kubernetes.GardenScheme.Convert(obj, cloudProfile, nil); err != nil {
-					return fmt.Errorf("failed converting object with group kind %s to CloudProfile: %w", gk, err)
-				}
+				cloudProfile = typedObj
 
-			case gardencorev1beta1.SchemeGroupVersion.WithKind("Project").GroupKind():
+			case *gardencorev1beta1.Project:
 				if project != nil {
 					return fmt.Errorf("found more than one *gardencorev1beta1.Project resource, but only one is allowed")
 				}
-				project = &gardencorev1beta1.Project{}
-				if err := kubernetes.GardenScheme.Convert(obj, project, nil); err != nil {
-					return fmt.Errorf("failed converting object with group kind %s to Project: %w", gk, err)
-				}
+				project = typedObj
 
-			case gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot").GroupKind():
+			case *gardencorev1beta1.Shoot:
 				if shoot != nil {
 					return fmt.Errorf("found more than one *gardencorev1beta1.Shoot resource, but only one is allowed")
 				}
-				shoot = &gardencorev1beta1.Shoot{}
-				if err := kubernetes.GardenScheme.Convert(obj, shoot, nil); err != nil {
-					return fmt.Errorf("failed converting object with group kind %s to Shoot: %w", gk, err)
-				}
+				shoot = typedObj
 			}
 		}
 
 		return nil
 	}); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", configDir, err)
 	}
 
 	if cloudProfile == nil {
-		return nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource but did not find any")
+		return nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
 	}
 	if project == nil {
-		return nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Project resource but did not find any")
+		return nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
 	}
 	if shoot == nil {
-		return nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource but did not find any")
+		return nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
 	}
 
 	return cloudProfile, project, shoot, nil

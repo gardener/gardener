@@ -60,7 +60,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	b, err := gardenadm.NewBotanist(ctx, opts.Log, project, cloudProfile, shoot)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed constructing botanist: %w", err)
 	}
 
 	var (

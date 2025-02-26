@@ -85,7 +85,7 @@ var _ = Describe("Resources", func() {
 			Expect(fs.WriteFile(filepath.Join(configDir, "shoot-foo.json"), []byte(`{}`), 0600)).To(Succeed())
 
 			_, _, _, err := gardenadm.ReadKubernetesResourcesFromConfigDir(log, fs, configDir)
-			Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource but did not find any")))
+			Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")))
 		})
 	})
 
@@ -128,7 +128,7 @@ var _ = Describe("Resources", func() {
 				createProject(fs, configDir, "project")
 
 				_, _, _, err := gardenadm.ReadKubernetesResourcesFromConfigDir(log, fs, configDir)
-				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource but did not find any")))
+				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")))
 			})
 		})
 
@@ -138,7 +138,7 @@ var _ = Describe("Resources", func() {
 				createShoot(fs, configDir, "shoot")
 
 				_, _, _, err := gardenadm.ReadKubernetesResourcesFromConfigDir(log, fs, configDir)
-				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Project resource but did not find any")))
+				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Project resource, but did not find any")))
 			})
 		})
 
@@ -148,7 +148,7 @@ var _ = Describe("Resources", func() {
 				createProject(fs, configDir, "project")
 
 				_, _, _, err := gardenadm.ReadKubernetesResourcesFromConfigDir(log, fs, configDir)
-				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Shoot resource but did not find any")))
+				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Shoot resource, but did not find any")))
 			})
 		})
 	})
