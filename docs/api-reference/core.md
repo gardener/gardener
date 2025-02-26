@@ -4123,8 +4123,7 @@ Kubernetes core/v1.ResourceList
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>MinAllowed configures the minimum allowed resource requests.
+<p>MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
 Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
 Default values are not applied to this field.</p>
 </td>

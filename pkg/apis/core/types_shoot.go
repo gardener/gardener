@@ -705,7 +705,7 @@ type KubeAPIServerConfig struct {
 
 // ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
 type ControlPlaneAutoscaling struct {
-	// MinAllowed configures the minimum allowed resource requests.
+	// MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.
 	MinAllowed corev1.ResourceList
 }
 

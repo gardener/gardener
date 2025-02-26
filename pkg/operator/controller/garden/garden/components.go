@@ -434,7 +434,9 @@ func (r *Reconciler) newEtcd(
 		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementNever)
 		defragmentationScheduleFormat = "%d %d * * *" // defrag main etcd daily in the maintenance window
 		storageCapacity = "25Gi"
-		minAllowed = helper.GetMinAllowedForETCDMain(garden.Spec.VirtualCluster.ETCD)
+		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
+			minAllowed = etcd.Main.Autoscaling.MinAllowed
+		}
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Storage != nil {
 			storageClassName = etcd.Main.Storage.ClassName
 			if etcd.Main.Storage.Capacity != nil {
@@ -446,7 +448,9 @@ func (r *Reconciler) newEtcd(
 		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 		defragmentationScheduleFormat = "%d %d */3 * *"
 		storageCapacity = "10Gi"
-		minAllowed = helper.GetMinAllowedForETCDEvents(garden.Spec.VirtualCluster.ETCD)
+		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
+			minAllowed = etcd.Events.Autoscaling.MinAllowed
+		}
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Storage != nil {
 			storageClassName = etcd.Events.Storage.ClassName
 			if etcd.Events.Storage.Capacity != nil {
@@ -630,7 +634,10 @@ func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserve
 		minReplicas = 3
 	}
 
-	minAllowed := helper.GetMinAllowedForKubeAPIServer(garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer)
+	var minAllowed corev1.ResourceList
+	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil && kubeAPIServer.Autoscaling != nil {
+		minAllowed = kubeAPIServer.Autoscaling.MinAllowed
+	}
 
 	return apiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
