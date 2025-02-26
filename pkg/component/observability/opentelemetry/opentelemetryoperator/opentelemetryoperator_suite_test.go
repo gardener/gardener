@@ -6,9 +6,12 @@ package opentelemetryoperator_test
 
 import (
 	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 func TestFluentOperator(t *testing.T) {
-	// RegisterFailHandler(Fail)
-	// RunSpecs(t, "Component Observability Logging FluentOperator Suite")
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Component Observability OpenTelemetry operator Suite")
 }

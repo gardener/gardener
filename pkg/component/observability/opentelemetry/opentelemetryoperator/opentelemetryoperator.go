@@ -66,268 +66,13 @@ func (otel *opentelemetryOperator) Deploy(ctx context.Context) error {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-		serviceAccount = &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: otel.namespace,
-				Labels:    getLabels(),
-			},
-			AutomountServiceAccountToken: ptr.To(false),
-		}
-		clusterRole = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   roleName,
-				Labels: getLabels(),
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{""},
-					Resources: []string{"configmaps", "pods", "serviceaccounts", "services"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"events"},
-					Verbs:     []string{"create", "patch"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"namespaces", "secrets"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{"apps"},
-					Resources: []string{"daemonsets", "deployments", "statefulsets"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"apps"},
-					Resources: []string{"replicasets"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{"autoscaling"},
-					Resources: []string{"horizontalpodautoscalers"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"batch"},
-					Resources: []string{"jobs"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{"config.openshift.io"},
-					Resources: []string{"infrastructures", "infrastructures/status"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{"coordination.k8s.io"},
-					Resources: []string{"leases"},
-					Verbs:     []string{"create", "get", "list", "update"},
-				},
-				{
-					APIGroups: []string{"monitoring.coreos.com"},
-					Resources: []string{"podmonitors", "servicemonitors"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"networking.k8s.io"},
-					Resources: []string{"ingresses"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"opentelemetry.io"},
-					Resources: []string{"instrumentations", "opentelemetrycollectors"},
-					Verbs:     []string{"get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"opentelemetry.io"},
-					Resources: []string{"opampbridges", "targetallocators"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"opentelemetry.io"},
-					Resources: []string{"opampbridges/finalizers"},
-					Verbs:     []string{"update"},
-				},
-				{
-					APIGroups: []string{"opentelemetry.io"},
-					Resources: []string{"opampbridges/status", "opentelemetrycollectors/finalizers", "opentelemetrycollectors/status", "targetallocators/status"},
-					Verbs:     []string{"get", "patch", "update"},
-				},
-				{
-					APIGroups: []string{"policy"},
-					Resources: []string{"poddisruptionbudgets"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-				{
-					APIGroups: []string{"route.openshift.io"},
-					Resources: []string{"routes", "routes/custom-host"},
-					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-				},
-			},
-		}
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   name,
-				Labels: getLabels(),
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRole.Name,
-			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			}},
-		}
-		role = &rbacv1.Role{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      roleName,
-				Namespace: otel.namespace,
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{""},
-					Resources: []string{"configmaps"},
-					Verbs:     []string{"list", "patch", "create", "get", "watch", "update", "delete"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"configmaps/status"},
-					Verbs:     []string{"get", "update", "patch"},
-				},
-				{
-					APIGroups: []string{""},
-					Resources: []string{"events"},
-					Verbs:     []string{"create", "patch"},
-				},
-			},
-		}
-		roleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      role.Name,
-				Namespace: otel.namespace,
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind:      rbacv1.ServiceAccountKind,
-					Name:      serviceAccount.Name,
-					Namespace: serviceAccount.Namespace,
-				},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "Role",
-				Name:     role.Name,
-			},
-		}
-		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
-				Namespace: otel.namespace,
-				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
-				}),
-			},
-			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: ptr.To[int32](2),
-				Replicas:             ptr.To[int32](1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels(),
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
-							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-						}),
-					},
-					Spec: corev1.PodSpec{
-						ServiceAccountName: serviceAccount.Name,
-						PriorityClassName:  otel.values.PriorityClassName,
-						SecurityContext: &corev1.PodSecurityContext{
-							RunAsNonRoot: ptr.To(true),
-							RunAsUser:    ptr.To[int64](65532),
-							RunAsGroup:   ptr.To[int64](65532),
-							FSGroup:      ptr.To[int64](65532),
-						},
-						Containers: []corev1.Container{
-							{
-								Name:            name,
-								Image:           otel.values.Image,
-								ImagePullPolicy: corev1.PullIfNotPresent,
-								Args: []string{
-									"--metrics-addr=127.0.0.1:8080",
-									"--enable-leader-election",
-									"--zap-log-level=info",
-									"--zap-time-encoding=rfc3339nano",
-								},
-								Env: []corev1.EnvVar{
-									{
-										Name:  "ENABLE_WEBHOOKS",
-										Value: "false",
-									},
-									{
-										Name: "NAMESPACE",
-										ValueFrom: &corev1.EnvVarSource{
-											FieldRef: &corev1.ObjectFieldSelector{
-												APIVersion: "v1",
-												FieldPath:  "metadata.namespace",
-											},
-										},
-									},
-									{
-										Name: "SERVICE_ACCOUNT_NAME",
-										ValueFrom: &corev1.EnvVarSource{
-											FieldRef: &corev1.ObjectFieldSelector{
-												APIVersion: "v1",
-												FieldPath:  "spec.serviceAccountName",
-											},
-										},
-									},
-								},
-								Resources: corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("100m"),
-										corev1.ResourceMemory: resource.MustParse("64Mi"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
-		vpa           = &vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: otel.namespace,
-			},
-			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       deployment.Name,
-				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
-				},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-						{
-							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("128Mi"),
-							},
-						},
-					},
-				},
-			},
-		}
+		serviceAccount     = serviceAccount(otel.namespace)
+		clusterRole        = clusterRole()
+		clusterRoleBinding = clusterRoleBinding(clusterRole.Name, serviceAccount.Name, serviceAccount.Namespace)
+		role               = role(otel.namespace)
+		roleBinding        = roleBinding(role.Name, role.Namespace)
+		deployment         = deployment(otel.namespace, otel.values.Image, otel.values.PriorityClassName)
+		vpa                = vpa(otel.namespace)
 	)
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
@@ -374,4 +119,289 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelRole:  v1beta1constants.LabelLogging,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging,
 	}
+}
+
+func serviceAccount(namespace string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    getLabels(),
+		},
+		AutomountServiceAccountToken: ptr.To(false),
+	}
+}
+
+func clusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   roleName,
+			Labels: getLabels(),
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps", "pods", "serviceaccounts", "services"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"create", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"namespaces", "secrets"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"apps"},
+				Resources: []string{"daemonsets", "deployments", "statefulsets"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"apps"},
+				Resources: []string{"replicasets"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"autoscaling"},
+				Resources: []string{"horizontalpodautoscalers"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"batch"},
+				Resources: []string{"jobs"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"config.openshift.io"},
+				Resources: []string{"infrastructures", "infrastructures/status"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+				Verbs:     []string{"create", "get", "list", "update"},
+			},
+			{
+				APIGroups: []string{"monitoring.coreos.com"},
+				Resources: []string{"podmonitors", "servicemonitors"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"networking.k8s.io"},
+				Resources: []string{"ingresses"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"opentelemetry.io"},
+				Resources: []string{"instrumentations", "opentelemetrycollectors"},
+				Verbs:     []string{"get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"opentelemetry.io"},
+				Resources: []string{"opampbridges", "targetallocators"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"opentelemetry.io"},
+				Resources: []string{"opampbridges/finalizers"},
+				Verbs:     []string{"update"},
+			},
+			{
+				APIGroups: []string{"opentelemetry.io"},
+				Resources: []string{"opampbridges/status", "opentelemetrycollectors/finalizers", "opentelemetrycollectors/status", "targetallocators/status"},
+				Verbs:     []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"policy"},
+				Resources: []string{"poddisruptionbudgets"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{"route.openshift.io"},
+				Resources: []string{"routes", "routes/custom-host"},
+				Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+		},
+	}
+}
+
+func clusterRoleBinding(clusterRoleName, serviceAccountName, serviceAccountNamespace string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: getLabels(),
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     clusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccountName,
+			Namespace: serviceAccountNamespace,
+		}},
+	}
+}
+
+func role(namespace string) *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleName,
+			Namespace: namespace,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"list", "patch", "create", "get", "watch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps/status"},
+				Verbs:     []string{"get", "update", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"create", "patch"},
+			},
+		},
+	}
+}
+
+func roleBinding(roleName, namespace string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleName,
+			Namespace: namespace,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      name,
+				Namespace: namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     roleName,
+		},
+	}
+}
+
+func deployment(namespace, imageName, priorityClassName string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
+			Namespace: namespace,
+			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+			}),
+		},
+		Spec: appsv1.DeploymentSpec{
+			RevisionHistoryLimit: ptr.To[int32](2),
+			Replicas:             ptr.To[int32](1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: getLabels(),
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+						v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+						v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+					}),
+				},
+				Spec: corev1.PodSpec{
+					ServiceAccountName: name,
+					PriorityClassName:  priorityClassName,
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsNonRoot: ptr.To(true),
+						RunAsUser:    ptr.To[int64](65532),
+						RunAsGroup:   ptr.To[int64](65532),
+						FSGroup:      ptr.To[int64](65532),
+					},
+					Containers: []corev1.Container{
+						{
+							Name:            name,
+							Image:           imageName,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Args: []string{
+								"--metrics-addr=127.0.0.1:8080",
+								"--enable-leader-election",
+								"--zap-log-level=info",
+								"--zap-time-encoding=rfc3339nano",
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "ENABLE_WEBHOOKS",
+									Value: "false",
+								},
+								{
+									Name: "NAMESPACE",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											APIVersion: "v1",
+											FieldPath:  "metadata.namespace",
+										},
+									},
+								},
+								{
+									Name: "SERVICE_ACCOUNT_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											APIVersion: "v1",
+											FieldPath:  "spec.serviceAccountName",
+										},
+									},
+								},
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("64Mi"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+}
+
+func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
+	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+	return &vpaautoscalingv1.VerticalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       v1beta1constants.DeploymentNameOpenTelemetryOperator,
+			},
+			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+				UpdateMode: &vpaUpdateMode,
+			},
+			ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+					{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("128Mi"),
+						},
+					},
+				},
+			},
+		},
+	}
+
 }
