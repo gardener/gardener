@@ -389,8 +389,8 @@ func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden) sets.Se
 	return requiredExtensions
 }
 
-// CheckRuntimeExtensionInstallation checks if an Extension has been marked as "successfully" in the Garden runtime cluster.
-func CheckRuntimeExtensionInstallation(ctx context.Context, c client.Client, gardenNamespace, extensionName string) error {
+// IsRuntimeExtensionInstallationSuccessful returns an error if an Extension is not marked as "successfully" in the Garden runtime cluster.
+func IsRuntimeExtensionInstallationSuccessful(ctx context.Context, c client.Client, gardenNamespace, extensionName string) error {
 	managedResource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      helper.ExtensionRuntimeManagedResourceName(extensionName),
@@ -413,7 +413,7 @@ func CheckRuntimeExtensionInstallation(ctx context.Context, c client.Client, gar
 func RequiredGardenExtensionsReady(ctx context.Context, log logr.Logger, c client.Client, gardenNamespace string, requiredExtensions sets.Set[string]) error {
 	extensionList := &operatorv1alpha1.ExtensionList{}
 	if err := c.List(ctx, extensionList); err != nil {
-		return err
+		return fmt.Errorf("failed to check if required extensions are ready: %w", err)
 	}
 
 	for _, extension := range extensionList.Items {
@@ -421,10 +421,11 @@ func RequiredGardenExtensionsReady(ctx context.Context, log logr.Logger, c clien
 			extensionChecked  bool
 			extensionCheckErr error
 		)
+
 		for _, kindType := range requiredExtensions.UnsortedList() {
 			extensionKind, extensionType, err := ExtensionKindAndTypeForID(kindType)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to check if required extensions are ready: %w", err)
 			}
 
 			if !v1beta1helper.IsResourceSupported(extension.Spec.Resources, extensionKind, extensionType) {
@@ -432,7 +433,7 @@ func RequiredGardenExtensionsReady(ctx context.Context, log logr.Logger, c clien
 			}
 
 			if !extensionChecked {
-				extensionCheckErr = CheckRuntimeExtensionInstallation(ctx, c, gardenNamespace, extension.Name)
+				extensionCheckErr = IsRuntimeExtensionInstallationSuccessful(ctx, c, gardenNamespace, extension.Name)
 				extensionChecked = true
 			}
 
