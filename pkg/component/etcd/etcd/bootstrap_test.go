@@ -349,6 +349,12 @@ var _ = Describe("Etcd", func() {
 								},
 								PriorityClassName:  priorityClassName,
 								ServiceAccountName: "etcd-druid",
+								SecurityContext: &corev1.PodSecurityContext{
+									RunAsNonRoot: ptr.To[bool](true),
+									RunAsUser:    ptr.To[int64](65532),
+									RunAsGroup:   ptr.To[int64](65532),
+									FSGroup:      ptr.To[int64](65532),
+								},
 								Volumes: []corev1.Volume{
 									{
 										Name: "webhook-server-tls-cert",
@@ -466,6 +472,12 @@ var _ = Describe("Etcd", func() {
 							},
 							PriorityClassName:  priorityClassName,
 							ServiceAccountName: "etcd-druid",
+							SecurityContext: &corev1.PodSecurityContext{
+								RunAsNonRoot: ptr.To[bool](true),
+								RunAsUser:    ptr.To[int64](65532),
+								RunAsGroup:   ptr.To[int64](65532),
+								FSGroup:      ptr.To[int64](65532),
+							},
 							Volumes: []corev1.Volume{
 								{
 									Name: "webhook-server-tls-cert",
