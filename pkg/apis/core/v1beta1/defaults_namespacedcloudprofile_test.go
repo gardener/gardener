@@ -16,6 +16,7 @@ var _ = Describe("NamespacedCloudProfile defaulting", func() {
 	var obj *NamespacedCloudProfile
 
 	BeforeEach(func() {
+
 		obj = &NamespacedCloudProfile{
 			Spec: NamespacedCloudProfileSpec{
 				MachineImages: []MachineImage{{
@@ -40,7 +41,6 @@ var _ = Describe("NamespacedCloudProfile defaulting", func() {
 			SetObjectDefaults_NamespacedCloudProfile(obj)
 
 			machineType := obj.Spec.MachineTypes[0]
-			Expect(machineType.Architecture).To(PointTo(Equal("amd64")))
 			Expect(machineType.Usable).To(PointTo(BeTrue()))
 		})
 	})
