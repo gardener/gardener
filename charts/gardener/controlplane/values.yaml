@@ -417,6 +417,8 @@ global:
         managedSeedSet:
           concurrentSyncs: 5
           syncPeriod: 30m
+        shootState:
+          concurrentSyncs: 5
         exposureClass:
           concurrentSyncs: 5
         certificateSigningRequest:
