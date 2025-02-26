@@ -40,13 +40,6 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 	Describe("Verify node-critical components", func() {
 		var seedNamespace string
 
-		BeforeAll(func() {
-			DeferCleanup(func(ctx SpecContext) {
-				cleanupNodeCriticalManagedResource(ctx, s.SeedClient, seedNamespace, nodeCriticalDaemonSetName)
-				cleanupNodeCriticalManagedResource(ctx, s.SeedClient, seedNamespace, csiNodeDaemonSetName)
-			}, NodeTimeout(time.Minute))
-		})
-
 		It("Create ManagedResources for shoot with broken node-critical components", func(ctx SpecContext) {
 			seedNamespace = s.Shoot.Status.TechnicalID
 			createOrUpdateNodeCriticalManagedResource(ctx, s.SeedClient, s.ShootClient, seedNamespace, nodeCriticalDaemonSetName, "non-existing", false)
@@ -92,7 +85,7 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 		It("Wait for node-critical components to become healthy", func(ctx SpecContext) {
 			waitForDaemonSetToBecomeHealthy(ctx, s.ShootClient, nodeCriticalDaemonSet)
 			waitForDaemonSetToBecomeHealthy(ctx, s.ShootClient, csiNodeDaemonSet)
-		})
+		}, SpecTimeout(time.Minute))
 
 		var csiNodeObject *storagev1.CSINode
 
@@ -111,7 +104,12 @@ func VerifyNodeCriticalComponentsBootstrapping(s *ShootContext) {
 					Effect: corev1.TaintEffectNoSchedule,
 				}))),
 			)
-		}, SpecTimeout(time.Minute))
+		}, SpecTimeout(5*time.Minute))
+
+		AfterAll(func(ctx SpecContext) {
+			cleanupNodeCriticalManagedResource(ctx, s.SeedClient, seedNamespace, nodeCriticalDaemonSetName)
+			cleanupNodeCriticalManagedResource(ctx, s.SeedClient, seedNamespace, csiNodeDaemonSetName)
+		}, NodeTimeout(time.Minute))
 	})
 }
 
