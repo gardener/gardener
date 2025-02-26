@@ -7,10 +7,6 @@ package finalizer_test
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/state/finalizer"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +14,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/state/finalizer"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 var _ = Describe("ShootState Finalizer Reconciler", func() {

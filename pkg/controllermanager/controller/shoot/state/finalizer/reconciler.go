@@ -8,13 +8,15 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // FinalizerName is the finalizer used by the controller.
@@ -26,6 +28,7 @@ const FinalizerName = "core.gardener.cloud/shootstate"
 type Reconciler struct {
 	// Client is the API Server client used by the Reconciler.
 	Client client.Client
+	Config controllermanagerconfigv1alpha1.ShootStateControllerConfiguration
 }
 
 // Reconcile reconciles ShootStates.

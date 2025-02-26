@@ -69,7 +69,9 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Contr
 		return fmt.Errorf("failed adding statuslabel reconciler: %w", err)
 	}
 
-	if err := (&finalizer.Reconciler{}).AddToManager(mgr); err != nil {
+	if err := (&finalizer.Reconciler{
+		Config: *cfg.Controllers.ShootState,
+	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding statuslabel reconciler: %w", err)
 	}
 
