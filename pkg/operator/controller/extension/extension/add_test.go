@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/extension"
 )
@@ -43,7 +43,7 @@ var _ = Describe("Add", func() {
 
 	Describe("#MapToAllExtensions", func() {
 		It("should map to all extensions", func() {
-			Expect((&Reconciler{RuntimeClientSet: kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()}).MapToAllExtensions(log)(ctx, nil)).To(ConsistOf(
+			Expect((&Reconciler{RuntimeClientSet: fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()}).MapToAllExtensions(log)(ctx, nil)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: "extension1"}},
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: "extension2"}},
 			))

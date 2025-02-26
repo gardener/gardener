@@ -24,7 +24,8 @@ func (b *Botanist) NeedsExternalDNS() bool {
 
 // NeedsInternalDNS returns true if the Shoot cluster needs internal DNS.
 func (b *Botanist) NeedsInternalDNS() bool {
-	return b.Garden.InternalDomain != nil &&
+	return b.Garden != nil &&
+		b.Garden.InternalDomain != nil &&
 		b.Garden.InternalDomain.Provider != "unmanaged"
 }
 

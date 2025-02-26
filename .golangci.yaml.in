@@ -197,6 +197,8 @@ linters-settings:
         alias: gardencorev1beta1listers
       - pkg: github.com/gardener/gardener/pkg/client/kubernetes
         alias: kubernetesclient
+      - pkg: github.com/gardener/gardener/pkg/client/kubernetes/fake
+        alias: fakekubernetes
       - pkg: github.com/gardener/gardener/pkg/client/kubernetes/(\w+)
         alias: kubernetes${1}
       - pkg: github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder

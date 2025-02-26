@@ -46,10 +46,10 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 	Describe("Single-node control plane", Ordered, Label("single"), func() {
 		It("should initialize as control plane node", func(ctx SpecContext) {
 			_, stdErr := execute(ctx, 0,
-				"gardenadm", "init",
+				"gardenadm", "init", "-d", "/gardenadm/resources",
 			)
 
-			Eventually(ctx, stdErr).Should(gbytes.Say("Not implemented"))
+			Eventually(ctx, stdErr).Should(gbytes.Say(`Finished\t{"flow": "init"}`))
 		}, SpecTimeout(time.Minute))
 
 		It("should join as worker node", func(ctx SpecContext) {

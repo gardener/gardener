@@ -32,7 +32,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	mocketcd "github.com/gardener/gardener/pkg/component/etcd/etcd/mock"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -70,7 +70,7 @@ var _ = Describe("Etcd", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		reader = mockclient.NewMockReader(ctrl)
-		kubernetesClient = kubernetesfake.NewClientSetBuilder().
+		kubernetesClient = fakekubernetes.NewClientSetBuilder().
 			WithClient(c).
 			WithAPIReader(reader).
 			Build()

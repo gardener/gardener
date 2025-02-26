@@ -43,7 +43,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -480,7 +480,7 @@ var _ = Describe("Constraints", func() {
 				shoot,
 				seedClient,
 				func() (kubernetes.Interface, bool, error) {
-					return kubernetesfake.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+					return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
 				},
 				clock,
 			)

@@ -16,7 +16,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -34,7 +34,7 @@ var _ = Describe("Bastions", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		botanist = &Botanist{Operation: &operation.Operation{}}
-		k8sSeedClient := kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()
+		k8sSeedClient := fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
 		botanist.SeedClientSet = k8sSeedClient
 		botanist.Shoot = &shootpkg.Shoot{

@@ -16,7 +16,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
 
@@ -50,7 +50,7 @@ var _ = Describe("FakeClientMap", func() {
 
 	Context("#AddClient", func() {
 		It("should correctly add and return a ClientSet", func() {
-			fakeCS := kubernetesfake.NewClientSet()
+			fakeCS := fakekubernetes.NewClientSet()
 			cm.AddClient(key, fakeCS)
 
 			Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(fakeCS))
@@ -70,7 +70,7 @@ var _ = Describe("FakeClientMap", func() {
 
 	Context("#NewClientMapWithClientSets", func() {
 		It("should correctly add and return a ClientSet", func() {
-			fakeCS := kubernetesfake.NewClientSet()
+			fakeCS := fakekubernetes.NewClientSet()
 			cm = fake.NewClientMapWithClientSets(map[clientmap.ClientSetKey]kubernetes.Interface{
 				key: fakeCS,
 			})
@@ -85,7 +85,7 @@ var _ = Describe("FakeClientMap", func() {
 		})
 
 		It("should delete the matching ClientSet from the ClientMap", func() {
-			cm.AddClient(key, kubernetesfake.NewClientSet())
+			cm.AddClient(key, fakekubernetes.NewClientSet())
 			Expect(cm.InvalidateClient(key)).To(Succeed())
 
 			cs, err := cm.GetClient(ctx, key)

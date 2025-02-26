@@ -24,7 +24,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
@@ -63,7 +63,7 @@ var _ = Describe("ServiceAccountKeys", func() {
 			}),
 		}
 
-		shootClientSet = kubernetesfake.NewClientSetBuilder().WithClient(shootClient).WithRESTClient(fakeShootRESTClient).Build()
+		shootClientSet = fakekubernetes.NewClientSetBuilder().WithClient(shootClient).WithRESTClient(fakeShootRESTClient).Build()
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -152,7 +152,7 @@ var _ = Describe("ServiceAccountKeys", func() {
 						}
 					}),
 				}
-				shootClientSet = kubernetesfake.NewClientSetBuilder().WithClient(shootClient).WithRESTClient(fakeShootRESTClient).Build()
+				shootClientSet = fakekubernetes.NewClientSetBuilder().WithClient(shootClient).WithRESTClient(fakeShootRESTClient).Build()
 				botanist.ShootClientSet = shootClientSet
 
 				err := botanist.SyncPublicServiceAccountKeys(ctx)
@@ -176,7 +176,7 @@ var _ = Describe("ServiceAccountKeys", func() {
 						}
 					}),
 				}
-				shootClientSet = kubernetesfake.NewClientSetBuilder().WithClient(shootClient).WithRESTClient(fakeShootRESTClient).Build()
+				shootClientSet = fakekubernetes.NewClientSetBuilder().WithClient(shootClient).WithRESTClient(fakeShootRESTClient).Build()
 				botanist.ShootClientSet = shootClientSet
 
 				err := botanist.SyncPublicServiceAccountKeys(ctx)

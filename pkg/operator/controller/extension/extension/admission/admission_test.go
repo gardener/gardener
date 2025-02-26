@@ -27,7 +27,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/extension/admission"
@@ -44,9 +44,9 @@ var _ = Describe("Deployment", func() {
 
 		chartRenderer    *mockchartrenderer.MockInterface
 		runtimeClient    client.Client
-		runtimeClientSet *kubernetesfake.ClientSet
+		runtimeClientSet *fakekubernetes.ClientSet
 		virtualClient    client.Client
-		virtualClientSet *kubernetesfake.ClientSet
+		virtualClientSet *fakekubernetes.ClientSet
 
 		ociRefRuntime     string
 		ociRefApplication string
@@ -69,9 +69,9 @@ var _ = Describe("Deployment", func() {
 
 		chartRenderer = mockchartrenderer.NewMockInterface(ctrl)
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
-		runtimeClientSet = kubernetesfake.NewClientSetBuilder().WithChartRenderer(chartRenderer).WithClient(runtimeClient).Build()
+		runtimeClientSet = fakekubernetes.NewClientSetBuilder().WithChartRenderer(chartRenderer).WithClient(runtimeClient).Build()
 		virtualClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.VirtualScheme).Build()
-		virtualClientSet = kubernetesfake.NewClientSetBuilder().WithChartRenderer(chartRenderer).WithClient(virtualClient).Build()
+		virtualClientSet = fakekubernetes.NewClientSetBuilder().WithChartRenderer(chartRenderer).WithClient(virtualClient).Build()
 
 		admission = New(runtimeClientSet, &record.FakeRecorder{}, "garden", ociRegistry)
 

@@ -7,3 +7,5 @@ sortOptions:
 resources:
 - ../garden/cloudprofile
 - ../garden/local
+- project.yaml
+- shoot.yaml

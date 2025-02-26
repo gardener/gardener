@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mockshootsystem "github.com/gardener/gardener/pkg/component/shoot/system/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -72,7 +72,7 @@ var _ = Describe("ShootSystem", func() {
 
 			fakeDiscoveryClient := &fakeDiscoveryWithServerPreferredResources{apiResourceList: apiResourceList}
 			fakeKubernetes := test.NewClientSetWithDiscovery(nil, fakeDiscoveryClient)
-			botanist.ShootClientSet = kubernetesfake.NewClientSetBuilder().WithKubernetes(fakeKubernetes).Build()
+			botanist.ShootClientSet = fakekubernetes.NewClientSetBuilder().WithKubernetes(fakeKubernetes).Build()
 
 			_, nodes, err := net.ParseCIDR(nodeCIDR)
 			Expect(err).ToNot(HaveOccurred())

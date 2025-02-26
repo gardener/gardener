@@ -23,7 +23,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -66,9 +66,9 @@ var _ = Describe("Secrets", func() {
 	BeforeEach(func() {
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		seedClientSet = kubernetesfake.NewClientSetBuilder().WithClient(seedClient).Build()
+		seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
 		shootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-		shootClientSet = kubernetesfake.NewClientSetBuilder().WithClient(shootClient).Build()
+		shootClientSet = fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build()
 
 		fakeSecretsManager = fakesecretsmanager.New(seedClient, controlPlaneNamespace)
 

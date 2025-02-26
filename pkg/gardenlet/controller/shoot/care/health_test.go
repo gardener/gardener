@@ -29,7 +29,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -310,7 +310,7 @@ var _ = Describe("health check", func() {
 					logr.Discard(),
 					shootObj,
 					seedObj,
-					kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build(),
+					fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
 					nil,
 					nil,
 					fakeClock,
@@ -318,7 +318,7 @@ var _ = Describe("health check", func() {
 					nil,
 				)
 
-				exitCondition, err := health.CheckClusterNodes(ctx, kubernetesfake.NewClientSetBuilder().WithClient(c).Build(), condition)
+				exitCondition, err := health.CheckClusterNodes(ctx, fakekubernetes.NewClientSetBuilder().WithClient(c).Build(), condition)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(exitCondition).To(conditionMatcher)
 			},

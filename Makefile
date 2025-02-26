@@ -419,7 +419,7 @@ operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/operator-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)
 
 gardenadm-high-touch-up: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,machine --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh)
+	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh)
 gardenadm-high-touch-down: $(SKAFFOLD) $(KUBECTL)
 	$(SKAFFOLD) delete -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
 gardenadm-medium-touch-up: $(SKAFFOLD) $(KUBECTL)

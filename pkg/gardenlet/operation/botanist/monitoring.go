@@ -79,7 +79,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		"ignoreAlerts":  strconv.FormatBool(b.Shoot.IgnoreAlerts),
 	}
 
-	if b.Config.Monitoring != nil && b.Config.Monitoring.Shoot != nil {
+	if b.Config != nil && b.Config.Monitoring != nil && b.Config.Monitoring.Shoot != nil {
 		externalLabels = utils.MergeStringMaps(externalLabels, b.Config.Monitoring.Shoot.ExternalLabels)
 	}
 
@@ -132,7 +132,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		}
 	}
 
-	if b.Config.Monitoring != nil && b.Config.Monitoring.Shoot != nil && b.Config.Monitoring.Shoot.RemoteWrite != nil {
+	if b.Config != nil && b.Config.Monitoring != nil && b.Config.Monitoring.Shoot != nil && b.Config.Monitoring.Shoot.RemoteWrite != nil {
 		values.RemoteWrite = &prometheus.RemoteWriteValues{
 			URL:                          b.Config.Monitoring.Shoot.RemoteWrite.URL,
 			KeptMetrics:                  b.Config.Monitoring.Shoot.RemoteWrite.Keep,
