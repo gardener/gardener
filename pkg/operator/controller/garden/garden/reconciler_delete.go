@@ -396,7 +396,7 @@ func (r *Reconciler) delete(
 	gardenCopy := garden.DeepCopy()
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              log,
-		ProgressReporter: r.reportProgress(log, gardenCopy),
+		ProgressReporter: r.reportProgress(log, gardenCopy, true),
 	}); err != nil {
 		return reconcilerutils.ReconcileErr(flow.Errors(err))
 	}

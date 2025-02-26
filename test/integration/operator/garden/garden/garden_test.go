@@ -75,6 +75,7 @@ var _ = Describe("Garden controller tests", func() {
 		testNamespace                  *corev1.Namespace
 
 		extension                *operatorv1alpha1.Extension
+		extensionManagedResource *resourcesv1alpha1.ManagedResource
 		extensionType            string
 		extensionTypeBeforeKAS   string
 		extensionTypeAfterWorker string
@@ -90,6 +91,7 @@ var _ = Describe("Garden controller tests", func() {
 			&etcd.DefaultInterval, 100*time.Millisecond,
 			&etcd.DefaultTimeout, 500*time.Millisecond,
 			&gardeneraccess.TimeoutWaitForManagedResource, 500*time.Millisecond,
+			&gardencontroller.IntervalWaitUntilExtensionReady, 100*time.Millisecond,
 			&istio.TimeoutWaitForManagedResource, 500*time.Millisecond,
 			&extensioncomponent.DefaultInterval, 100*time.Millisecond,
 			&extensioncomponent.DefaultTimeout, 500*time.Millisecond,
@@ -289,8 +291,8 @@ var _ = Describe("Garden controller tests", func() {
 		By("Create Extension", func() {
 			extension = &operatorv1alpha1.Extension{
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "test-extension-",
-					Namespace:    testNamespace.Name,
+					Name:      testRunID,
+					Namespace: testNamespace.Name,
 				},
 				Spec: operatorv1alpha1.ExtensionSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
@@ -301,7 +303,21 @@ var _ = Describe("Garden controller tests", func() {
 				},
 			}
 
+			extensionManagedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "extension-" + extension.Name + "-garden",
+					Namespace: testNamespace.Name,
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					SecretRefs: []corev1.LocalObjectReference{
+						{Name: "extension-" + extension.Name + "-garden"},
+					},
+				},
+			}
+
 			Expect(testClient.Create(ctx, extension)).To(Succeed())
+			Expect(testClient.Create(ctx, extensionManagedResource)).To(Succeed())
+
 			log.Info("Created Extension for test", "extension", client.ObjectKeyFromObject(extension))
 		})
 
@@ -448,6 +464,16 @@ spec:
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("dnsrecords.extensions.gardener.cloud")})}),
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("extensions.extensions.gardener.cloud")})}),
 		))
+
+		By("Patch extension managed resource")
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionManagedResource), extensionManagedResource)).To(Succeed())
+		extensionManagedResource.Status.ObservedGeneration = extensionManagedResource.Generation
+		extensionManagedResource.Status.Conditions = []gardencorev1beta1.Condition{
+			{Type: resourcesv1alpha1.ResourcesApplied, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+			{Type: resourcesv1alpha1.ResourcesHealthy, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+			{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionFalse, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+		}
+		Expect(testClient.Status().Update(ctx, extensionManagedResource)).To(Succeed())
 
 		By("Verify and patch extension before kube-api-server")
 		patchExtensionStatus(testClient, extensionTypeBeforeKAS, testNamespace.Name, gardencorev1beta1.LastOperationStateSucceeded)
@@ -869,6 +895,9 @@ spec:
 
 		By("Delete Garden")
 		Expect(testClient.Delete(ctx, garden)).To(Succeed())
+
+		By("Delete Extension ManagedResource")
+		Expect(testClient.Delete(ctx, extensionManagedResource)).To(Succeed())
 
 		By("Verify that the virtual garden control plane components have been deleted")
 		Eventually(func(g Gomega) []appsv1.Deployment {
