@@ -41,6 +41,7 @@
 * [Accessing Shoot Clusters](usage/shoot/shoot_access.md)
 * [Hibernate a Cluster](usage/shoot/shoot_hibernate.md)
 * [Shoot Info `ConfigMap`](usage/shoot/shoot_info_configmap.md)
+* [Shoot Kubernetes Minor Version Upgrades](usage/shoot/shoot_kubernetes_versions.md)
 * [Shoot Cluster Limits](usage/shoot/shoot_limits.md)
 * [Shoot Maintenance](usage/shoot/shoot_maintenance.md)
 * [Shoot Cluster Purposes](usage/shoot/shoot_purposes.md)

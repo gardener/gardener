@@ -142,6 +142,31 @@ func (s *shootSystem) WaitCleanup(ctx context.Context) error {
 func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
+	if versionutils.ConstraintK8sGreaterEqual133.Check(s.values.KubernetesVersion) {
+		networkPolicyDenyAll := &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud--deny-all",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					v1beta1constants.GardenerDescription: "Disables all ingress and egress traffic into/from this namespace.",
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{},
+				Egress:      []networkingv1.NetworkPolicyEgressRule{},
+				Ingress:     []networkingv1.NetworkPolicyIngressRule{},
+				PolicyTypes: []networkingv1.PolicyType{
+					networkingv1.PolicyTypeIngress,
+					networkingv1.PolicyTypeEgress,
+				},
+			},
+		}
+
+		if err := registry.Add(networkPolicyDenyAll); err != nil {
+			return nil, err
+		}
+	}
+
 	if !s.values.IsWorkerless {
 		var (
 			shootInfoConfigMap = &corev1.ConfigMap{

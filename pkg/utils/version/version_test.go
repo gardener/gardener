@@ -58,6 +58,11 @@ var _ = Describe("Version", func() {
 		Entry("ConstraintK8sGreaterEqual132, failure", ConstraintK8sGreaterEqual132, semver.MustParse("1.31.0"), BeFalse()),
 		Entry("ConstraintK8sGreaterEqual132, success w/ suffix", ConstraintK8sGreaterEqual132, semver.MustParse("v1.32.0-foo.12"), BeTrue()),
 		Entry("ConstraintK8sGreaterEqual132, failure w/ suffix", ConstraintK8sGreaterEqual132, semver.MustParse("v1.31.0-foo.12"), BeFalse()),
+
+		Entry("ConstraintK8sGreaterEqual133, success", ConstraintK8sGreaterEqual133, semver.MustParse("1.33.0"), BeTrue()),
+		Entry("ConstraintK8sGreaterEqual133, failure", ConstraintK8sGreaterEqual133, semver.MustParse("1.32.0"), BeFalse()),
+		Entry("ConstraintK8sGreaterEqual133, success w/ suffix", ConstraintK8sGreaterEqual133, semver.MustParse("v1.33.0-foo.12"), BeTrue()),
+		Entry("ConstraintK8sGreaterEqual133, failure w/ suffix", ConstraintK8sGreaterEqual133, semver.MustParse("v1.32.0-foo.12"), BeFalse()),
 	)
 
 	DescribeTable("#CompareVersions",
