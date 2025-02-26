@@ -1,4 +1,4 @@
-FROM kindest/node:v1.31.2@sha256:18fbefc20a7113353c7b75b5c869d7145a6abd6269154825872dc59c1329912e AS base
+FROM kindest/node:v1.32.2@sha256:f226345927d7e348497136874b6d207e0b32cc52154ad8323129352923a3142f AS base
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -21,5 +21,7 @@ RUN systemctl enable run-userdata.service
 # TODO(marc1404): Remove once kindest/node uses runc >= v1.2.4
 # workaround issue with runc v1.2.3 provided by kindest/node:v1.32.0 by installing runc v1.2.4 manually (https://github.com/opencontainers/runc/pull/4555)
 COPY runc /usr/local/sbin/runc
+
+RUN runc --version ; containerd --version
 
 ENTRYPOINT ["/usr/local/bin/entrypoint", "/sbin/init"]

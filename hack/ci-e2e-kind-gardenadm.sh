@@ -17,6 +17,7 @@ ensure_glgc_resolves_to_localhost
 make kind-up
 
 trap "
+  ( export_artifacts "gardener-local" )
   ( make kind-down )
 " EXIT
 
