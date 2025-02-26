@@ -6,16 +6,21 @@ package oci
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/google/go-containerregistry/pkg/name"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var _ = Describe("helmregistry", func() {
@@ -101,7 +106,48 @@ var _ = Describe("helmregistry", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rc.cacheHits).To(Equal(1))
 	})
+
+	It("should pull the chart with pull secret", func() {
+		hr := newHelmRegistryWithPullSecret(rc, registryAddress)
+
+		out, err := hr.Pull(ctx,
+			&gardencorev1.OCIRepository{
+				Repository:    ptr.To(registryAddress + "/charts/example"),
+				Tag:           ptr.To("0.1.0"),
+				PullSecretRef: &corev1.LocalObjectReference{Name: "pull-secret"},
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeEmpty())
+		Expect(authProvider.receivedAuthorization).To(Equal(fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("foo:bar")))))
+	})
+
+	It("should pull the chart by tag without pull secret if repository is not matching", func() {
+		hr := newHelmRegistryWithPullSecret(rc, "other-"+registryAddress)
+		out, err := hr.Pull(ctx,
+			&gardencorev1.OCIRepository{
+				Repository:    ptr.To(registryAddress + "/charts/example"),
+				Tag:           ptr.To("0.1.0"),
+				PullSecretRef: &corev1.LocalObjectReference{Name: "pull-secret"},
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeEmpty())
+		Expect(authProvider.receivedAuthorization).To(BeEmpty())
+	})
 })
+
+func newHelmRegistryWithPullSecret(cache cacher, registryAddress string) *HelmRegistry {
+	return &HelmRegistry{
+		cache: cache,
+		client: fake.NewFakeClient(&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: v1beta1constants.GardenNamespace,
+				Name:      "pull-secret",
+			},
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(fmt.Sprintf("{\"auths\":{\"%s\":{\"username\":\"foo\",\"password\":\"bar\"}}}", registryAddress)),
+			},
+		})}
+}
 
 type recordingCache struct {
 	cache     cacher

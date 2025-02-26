@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -158,6 +159,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				OCIRepository: oci,
 			}
 			fakeRegistry.AddArtifact(oci, rawChart)
+			fakeRegistry.SetExpectedPullSecretNamespace(gardenerutils.ComputeGardenNamespace(seed.Name))
 		})
 
 		It("should deploy the chart", func() {
