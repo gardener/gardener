@@ -55,6 +55,9 @@ import (
 
 const finalizerName = "core.gardener.cloud/controllerinstallation"
 
+const usablePortsStart = 10101
+const usablePortsRangeSize = 5
+
 // RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeuing when owned resources are still in
 // the process of being deleted when deleting a ControllerInstallation.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
@@ -69,6 +72,12 @@ type Reconciler struct {
 	Clock                 clock.Clock
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
+	// BootstrapControlPlaneNode controls whether the pods are used to bootstrap a control plane node. If set to true,
+	// they are deployed to the host network. In addition, all taints are tolerated to make sure they can get deployed
+	// to nodes even when they are not ready yet. Furthermore, the replicas are set to 1 and a usable port range is
+	// provided.
+	BootstrapControlPlaneNode bool
+	nextUsablePort            *int
 }
 
 // Reconcile reconciles ControllerInstallations and deploys them into the seed cluster.
@@ -206,8 +215,8 @@ func (r *Reconciler) reconcile(
 
 	var (
 		gardenAccessSecret = gardenerutils.NewGardenAccessSecret("extension", namespace.Name).
-					WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name).
-					WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
+			WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name).
+			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
 
 		volumeProvider  string
 		volumeProviders []gardencorev1beta1.SeedVolumeProvider
@@ -257,6 +266,10 @@ func (r *Reconciler) reconcile(
 
 	if genericGardenKubeconfigSecretName != "" {
 		gardenerValues["gardener"].(map[string]any)["garden"].(map[string]any)["genericKubeconfigSecretName"] = genericGardenKubeconfigSecretName
+	}
+
+	if r.BootstrapControlPlaneNode {
+		gardenerValues["usablePorts"] = r.CalculateNextUsablePorts()
 	}
 
 	archive := controllerDeployment.Helm.RawChart
@@ -324,6 +337,7 @@ func (r *Reconciler) reconcile(
 				})
 			})
 		},
+		r.BootstrapControlPlaneNodeFunc,
 	); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
 	}
@@ -554,4 +568,36 @@ func objectEnablesGardenKubeconfig(o runtime.Object) bool {
 
 	v, ok := obj.GetLabels()[v1beta1constants.LabelInjectGardenKubeconfig]
 	return !ok || v == "true"
+}
+
+// BootstrapControlPlaneNodeFunc adapts host network, replicas, tolerations and usable ports range for autonomous shoot
+// clusters if necessary.
+func (r *Reconciler) BootstrapControlPlaneNodeFunc(obj runtime.Object) error {
+	if !r.BootstrapControlPlaneNode {
+		return nil
+	}
+
+	if deployment, ok := obj.(*appsv1.Deployment); ok {
+		deployment.Spec.Replicas = ptr.To(int32(1))
+	}
+	return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
+		podSpec.HostNetwork = r.BootstrapControlPlaneNode
+		podSpec.Tolerations = append(podSpec.Tolerations,
+			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
+			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
+		)
+	})
+}
+
+// CalculateNextUsablePorts returns the next usable port range for the next controller installation.
+func (r *Reconciler) CalculateNextUsablePorts() []int {
+	if r.nextUsablePort == nil {
+		start := usablePortsStart
+		r.nextUsablePort = ptr.To(start)
+	}
+	var ports []int
+	for endPort := *r.nextUsablePort + usablePortsRangeSize; *r.nextUsablePort < endPort; *r.nextUsablePort++ {
+		ports = append(ports, *r.nextUsablePort)
+	}
+	return ports
 }
