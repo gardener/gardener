@@ -7429,6 +7429,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, nil)).To(BeEmpty())
 		})
 
+		It("should fail when minAllowed is not specified", func() {
+			autoscaling := &core.ControlPlaneAutoscaling{}
+
+			Expect(ValidateControlPlaneAutoscaling(autoscaling, nil, field.NewPath("autoscaling"))).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("autoscaling.minAllowed"),
+				})),
+			))
+		})
+
 		It("should fail for unsupported resources", func() {
 			autoscaling := &core.ControlPlaneAutoscaling{
 				MinAllowed: map[corev1.ResourceName]resource.Quantity{

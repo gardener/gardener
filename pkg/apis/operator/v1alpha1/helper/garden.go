@@ -5,12 +5,7 @@
 package helper
 
 import (
-	"maps"
-
-	corev1 "k8s.io/api/core/v1"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
@@ -172,41 +167,4 @@ func HighAvailabilityEnabled(garden *operatorv1alpha1.Garden) bool {
 // TopologyAwareRoutingEnabled returns true if the topology-aware routing is enabled.
 func TopologyAwareRoutingEnabled(settings *operatorv1alpha1.Settings) bool {
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
-}
-
-// GetMinAllowedForKubeAPIServer returns the minAllowed configuration values for Kube API Server if configured or nil otherwise.
-func GetMinAllowedForKubeAPIServer(apiServerConfig *operatorv1alpha1.KubeAPIServerConfig) corev1.ResourceList {
-	if apiServerConfig != nil {
-		return v1beta1helper.GetMinAllowedForKubeAPIServer(apiServerConfig.KubeAPIServerConfig)
-	}
-	return nil
-}
-
-// GetMinAllowedForETCDMain returns the minAllowed configuration values for etcd main if configured or nil otherwise.
-func GetMinAllowedForETCDMain(etcd *operatorv1alpha1.ETCD) corev1.ResourceList {
-	return copyMinAllowed(func() corev1.ResourceList {
-		if etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
-			return etcd.Main.Autoscaling.MinAllowed
-		}
-		return nil
-	})
-}
-
-// GetMinAllowedForETCDEvents returns the minAllowed configuration values for etcd events if configured or nil otherwise.
-func GetMinAllowedForETCDEvents(etcd *operatorv1alpha1.ETCD) corev1.ResourceList {
-	return copyMinAllowed(func() corev1.ResourceList {
-		if etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
-			return etcd.Events.Autoscaling.MinAllowed
-		}
-		return nil
-	})
-}
-
-func copyMinAllowed(getMinAllowed func() corev1.ResourceList) corev1.ResourceList {
-	if minAllowed := getMinAllowed(); minAllowed != nil {
-		minAllowedCopy := make(corev1.ResourceList)
-		maps.Copy(minAllowedCopy, minAllowed)
-		return minAllowedCopy
-	}
-	return nil
 }

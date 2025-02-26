@@ -83,9 +83,12 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		// That's why minReplicas is set to 2.
 		minReplicas int32 = 2
 		maxReplicas int32 = 6
-		minAllowed        = v1beta1helper.GetMinAllowedForKubeAPIServer(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
+		minAllowed  corev1.ResourceList
 	)
 
+	if apiServerConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; apiServerConfig != nil && apiServerConfig.Autoscaling != nil {
+		minAllowed = apiServerConfig.Autoscaling.MinAllowed
+	}
 	if v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		minReplicas = 3
 	}

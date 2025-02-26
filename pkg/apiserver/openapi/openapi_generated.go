@@ -2544,7 +2544,7 @@ func schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"minAllowed": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MinAllowed configures the minimum allowed resource requests. Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays. Default values are not applied to this field.",
+							Description: "MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.. Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays. Default values are not applied to this field.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -2557,6 +2557,7 @@ func schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref common.ReferenceCa
 						},
 					},
 				},
+				Required: []string{"minAllowed"},
 			},
 		},
 		Dependencies: []string{

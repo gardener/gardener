@@ -2815,8 +2815,12 @@ func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, 
 	allErrs := field.ErrorList{}
 
 	if autoscaling != nil {
-		allowedResources := sets.New[corev1.ResourceName](corev1.ResourceCPU, corev1.ResourceMemory)
+		if len(autoscaling.MinAllowed) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("minAllowed"), "must provide minAllowed"))
+			return allErrs
+		}
 
+		allowedResources := sets.New[corev1.ResourceName](corev1.ResourceCPU, corev1.ResourceMemory)
 		for resource, quantity := range autoscaling.MinAllowed {
 			resourcePath := fldPath.Child("minAllowed", resource.String())
 			if !allowedResources.Has(resource) {
