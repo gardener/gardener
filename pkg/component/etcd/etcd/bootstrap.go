@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -188,12 +188,12 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 				{
-					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
+					APIGroups: []string{druidv1alpha1.SchemeGroupVersion.Group},
 					Resources: []string{"etcds", "etcdcopybackupstasks"},
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 				{
-					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
+					APIGroups: []string{druidv1alpha1.SchemeGroupVersion.Group},
 					Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers"},
 					Verbs:     []string{"get", "update", "patch", "create"},
 				},

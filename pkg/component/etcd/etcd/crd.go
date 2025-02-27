@@ -9,7 +9,8 @@ import (
 	_ "embed"
 	"fmt"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcrds "github.com/gardener/etcd-druid/api/core/crds"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -23,12 +24,6 @@ import (
 )
 
 var (
-	//go:embed crds/templates/crd-druid.gardener.cloud_etcds.yaml
-	// CRD holds the etcd custom resource definition template
-	CRD string
-	//go:embed crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
-	etcdCopyBackupsTaskCRD string
-
 	etcdCRDName                = "etcds.druid.gardener.cloud"
 	etcdCopyBackupsTaskCRDName = "etcdcopybackupstasks.druid.gardener.cloud"
 	crdResources               []string
@@ -40,7 +35,7 @@ type crd struct {
 }
 
 func init() {
-	crdResources = append(crdResources, CRD, etcdCopyBackupsTaskCRD)
+	crdResources = append(crdResources, druidcrds.GetEtcdCRD(), druidcrds.GetEtcdCopyBackupsTaskCRD())
 }
 
 // NewCRD can be used to deploy the CRD definitions for Etcd and EtcdCopyBackupsTask.

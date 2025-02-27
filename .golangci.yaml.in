@@ -127,8 +127,10 @@ linters-settings:
       # Gradener external imported packages
       - pkg: github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
         alias: machinev1alpha1
-      - pkg: github.com/gardener/etcd-druid/api/v1alpha1
+      - pkg: github.com/gardener/etcd-druid/api/core/v1alpha1
         alias: druidv1alpha1
+      - pkg: github.com/gardener/etcd-druid/api/core/crds
+        alias: druidcrds
       - pkg: github.com/gardener/cert-management/pkg/apis/cert/v1alpha1
         alias: certv1alpha1
       # Gardener extension package
