@@ -33,6 +33,7 @@ func DestinationRuleWithTLSTermination(destinationRule *istionetworkingv1beta1.D
 		&istioapinetworkingv1beta1.ClientTLSSettings{
 			Mode:           mode,
 			CredentialName: caSecret,
+			Sni:            destinationHost,
 		},
 	)
 }

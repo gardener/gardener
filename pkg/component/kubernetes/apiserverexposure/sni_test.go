@@ -348,6 +348,7 @@ var _ = Describe("#SNI", func() {
 				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
 					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
 					CredentialName: namespace + "-kube-apiserver-istio-mtls",
+					Sni:            expectedDestinationRule.Spec.Host,
 				}
 
 				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"

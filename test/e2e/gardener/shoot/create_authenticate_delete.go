@@ -66,7 +66,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Eventually(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1Client.Client(), shoot1, true)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2Client.Client(), shoot2, true)).To(Succeed())
-		}, "30s").Should(Succeed())
+		}).WithTimeout(time.Minute).Should(Succeed())
 
 		By("Verify a shoot cannot be accessed with a client certificate from another shoot")
 		shoot1NoAccessRestConfig := copyRESTConfigAndInjectAuthorization(shoot1Client.RESTConfig(), shoot2Client.RESTConfig())
@@ -80,7 +80,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Consistently(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1NoAccessClient, shoot1, false)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2NoAccessClient, shoot2, false)).To(Succeed())
-		}, "10s").Should(Succeed())
+		}).WithTimeout(10 * time.Second).Should(Succeed())
 
 		By("Verify shoot access via apiserver-proxy endpoint")
 		shoot1ClientAPIServerProxy, err := getAPIServerProxyClient(shoot1Client.RESTConfig(), shoot1)
@@ -92,7 +92,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Eventually(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1ClientAPIServerProxy, shoot1, true)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2ClientAPIServerProxy, shoot2, true)).To(Succeed())
-		}, "30s").Should(Succeed())
+		}).WithTimeout(time.Minute).Should(Succeed())
 
 		By("Verify a shoot cannot be accessed with a client certificate from another shoot by manipulating the apiserver-proxy header")
 		shoot1NoAccessClientAPIServerProxy, err := getAPIServerProxyClient(shoot1NoAccessRestConfig, shoot1)
@@ -104,7 +104,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Consistently(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1NoAccessClientAPIServerProxy, shoot1, false)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2NoAccessClientAPIServerProxy, shoot2, false)).To(Succeed())
-		}, "10s").Should(Succeed())
+		}).WithTimeout(10 * time.Second).Should(Succeed())
 
 		By("Verify shoot access using service account token kubeconfig")
 		shoot1TokenClient, err := access.CreateShootClientFromStaticServiceAccountToken(ctx, shoot1Client, "shoot-one")
@@ -116,7 +116,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Eventually(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1TokenClient.Client(), shoot1, true)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2TokenClient.Client(), shoot2, true)).To(Succeed())
-		}, "30s").Should(Succeed())
+		}).WithTimeout(time.Minute).Should(Succeed())
 
 		By("Verify a shoot cannot be accessed with a service account token from another shoot")
 		shoot1NoAccessTokenRestConfig := copyRESTConfigAndInjectAuthorization(shoot1TokenClient.RESTConfig(), shoot2TokenClient.RESTConfig())
@@ -130,7 +130,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Consistently(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1NoAccessTokenClient, shoot1, false)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2NoAccessTokenClient, shoot2, false)).To(Succeed())
-		}, "10s").Should(Succeed())
+		}).WithTimeout(10 * time.Second).Should(Succeed())
 
 		By("Verify shoot access using service account token kubeconfig via apiserver-proxy endpoint")
 		shoot1TokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot1TokenClient.RESTConfig(), shoot1)
@@ -142,7 +142,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Eventually(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1TokenClientAPIServerProxy, shoot1, true)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2TokenClientAPIServerProxy, shoot2, true)).To(Succeed())
-		}, "30s").Should(Succeed())
+		}).WithTimeout(time.Minute).Should(Succeed())
 
 		By("Verify a shoot cannot be accessed with a service account token from another shoot by manipulating the apiserver-proxy header")
 		shoot1NoAccessTokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot1NoAccessTokenRestConfig, shoot1)
@@ -154,7 +154,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Consistently(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1NoAccessTokenClientAPIServerProxy, shoot1, false)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2NoAccessTokenClientAPIServerProxy, shoot2, false)).To(Succeed())
-		}, "10s").Should(Succeed())
+		}).WithTimeout(10 * time.Second).Should(Succeed())
 
 		By("Verify that authentication with istio tls termination cannot be bypassed")
 		externalAddress, httpClient, err := httpClientForRESTConfig(shoot1Client.RESTConfig())

@@ -8,6 +8,7 @@ import (
 	"context"
 	"net"
 
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -76,12 +77,20 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
+			var wildcardHost *string
+
+			if b.ControlPlaneWildcardCert != nil {
+				wildcardHost = ptr.To(b.ComputeKubeAPIServerHost())
+			}
+
 			return &kubeapiserverexposure.SNIValues{
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
 				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+				WildcardHost:        wildcardHost,
+				WildcardTLSSecret:   b.ControlPlaneWildcardCert,
 			}
 		},
 	))
@@ -118,6 +127,12 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
+			var wildcardHost *string
+
+			if b.ControlPlaneWildcardCert != nil {
+				wildcardHost = ptr.To(b.ComputeKubeAPIServerHost())
+			}
+
 			values := &kubeapiserverexposure.SNIValues{
 				Hosts: []string{
 					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
@@ -131,6 +146,8 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					Labels:    b.IstioLabels(),
 				},
 				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+				WildcardHost:        wildcardHost,
+				WildcardTLSSecret:   b.ControlPlaneWildcardCert,
 			}
 
 			if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
@@ -151,6 +168,7 @@ func mapToReservedKubeApiServerRange(ip net.IP) string {
 }
 
 // DefaultKubeAPIServerIngress returns a deployer for the kube-apiserver ingress.
+// TODO(oliver-goetz): Remove this method when Gardener v1.115.0 is released.
 func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
 	return kubeapiserverexposure.NewIngress(
 		b.SeedClientSet.Client(),
@@ -168,10 +186,8 @@ func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
 }
 
 // DeployKubeAPIServerIngress deploys the ingress for the kube-apiserver.
+// TODO(oliver-goetz): Remove this method when Gardener v1.115.0 is released.
 func (b *Botanist) DeployKubeAPIServerIngress(ctx context.Context) error {
-	// Do not deploy ingress if there is no wildcard certificate
-	if b.ControlPlaneWildcardCert == nil {
-		return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy(ctx)
-	}
-	return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Deploy(ctx)
+	// This is now part of the SNI deployer in kubeapiserverexposure.
+	return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy(ctx)
 }
