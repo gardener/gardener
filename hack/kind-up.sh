@@ -363,11 +363,7 @@ fi
 
 # workarounds for KinD issues
 # TODO(marc1404): Remove once kindest/node uses runc >= v1.2.4
-if [[ -n "${CI:-}" ]]; then
-  cp /get-runc/runc "$(dirname "$0")/../pkg/provider-local/node/runc"
-else
-  "$(dirname "$0")/../pkg/provider-local/node/get-runc.sh"
-fi
+"$(dirname "$0")/../pkg/provider-local/node/get-runc.sh"
 
 for node in $nodes; do
   # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files

@@ -8,7 +8,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-RUNC_VERSION="v1.2.4"
+RUNC_VERSION="v1.2.5"
 ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 DEV_DIR="${SCRIPT_DIR}/../../../dev"
