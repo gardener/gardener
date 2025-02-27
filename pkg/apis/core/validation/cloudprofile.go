@@ -189,10 +189,8 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabi
 			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 			allErrs = append(allErrs, validateSupportedVersionsConfiguration(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
 
-			if !IsDefined(capabilitiesDefinition) {
-				if len(machineVersion.Architectures) == 0 {
-					allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
-				}
+			if !IsDefined(capabilitiesDefinition) && len(machineVersion.Architectures) == 0 {
+				allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
 			}
 		}
 	}
