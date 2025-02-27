@@ -166,6 +166,8 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 		return nil
 	}
 
+	var capabilitiesDefinition = (gardencore.Capabilities)(c.parentCloudProfile.Spec.CapabilitiesDefinition)
+
 	for _, machineType := range c.namespacedCloudProfile.Spec.MachineTypes {
 		for _, parentMachineType := range c.parentCloudProfile.Spec.MachineTypes {
 			if parentMachineType.Name != machineType.Name {
@@ -178,8 +180,6 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 			}
 			return apierrors.NewBadRequest(fmt.Sprintf("NamespacedCloudProfile attempts to overwrite parent CloudProfile with machineType: %+v", machineType))
 		}
-
-		var capabilitiesDefinition = (gardencore.Capabilities)(c.parentCloudProfile.Spec.CapabilitiesDefinition)
 		if validation.IsDefined(capabilitiesDefinition) {
 			errorList := validation.ValidateMachineTypeCapabilities(machineType, capabilitiesDefinition, field.NewPath("spec", "machineTypes"))
 			if len(errorList) != 0 {
@@ -232,10 +232,10 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 
 func (c *validationContext) validateMachineImageOverrides(attr admission.Attributes) error {
 	var (
-		allErrs      = field.ErrorList{}
-		now          = ptr.To(metav1.Now())
-		parentImages = util.NewV1beta1ImagesContext(c.parentCloudProfile.Spec.MachineImages)
-
+		allErrs                            = field.ErrorList{}
+		now                                = ptr.To(metav1.Now())
+		parentImages                       = util.NewV1beta1ImagesContext(c.parentCloudProfile.Spec.MachineImages)
+		capabilitiesDefinition             = (gardencore.Capabilities)(c.parentCloudProfile.Spec.CapabilitiesDefinition)
 		oldVersionsSpec, oldVersionsMerged *util.ImagesContext[gardencore.MachineImage, gardencore.MachineImageVersion]
 	)
 
@@ -308,7 +308,6 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 			}
 		} else {
 			// There is no entry for this image in the parent CloudProfile yet.
-			var capabilitiesDefinition = (gardencore.Capabilities)(c.parentCloudProfile.Spec.CapabilitiesDefinition)
 			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, capabilitiesDefinition, imageIndexPath)...)
 		}
 	}
