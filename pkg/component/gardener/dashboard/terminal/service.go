@@ -52,7 +52,7 @@ func (t *terminal) service() *corev1.Service {
 		Protocol: ptr.To(corev1.ProtocolTCP),
 	}))
 
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(svc, t.values.TopologyAwareRoutingEnabled)
+	gardenerutils.ReconcileTopologyAwareRoutingSettings(svc, t.values.TopologyAwareRoutingEnabled, t.values.RuntimeVersion)
 
 	return svc
 }
