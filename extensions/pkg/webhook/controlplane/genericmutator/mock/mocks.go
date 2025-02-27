@@ -15,7 +15,7 @@ import (
 
 	semver "github.com/Masterminds/semver/v3"
 	unit "github.com/coreos/go-systemd/v22/unit"
-	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	v1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	context0 "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
