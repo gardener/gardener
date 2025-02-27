@@ -55,9 +55,6 @@ get_group_package () {
   "operator.gardener.cloud")
     echo "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
     ;;
-  "druid.gardener.cloud")
-    echo "github.com/gardener/etcd-druid/api/v1alpha1"
-    ;;
   "fluentbit.fluent.io")
     echo "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
     ;;
@@ -92,7 +89,6 @@ generate_all_groups () {
   generate_group extensions.gardener.cloud
   generate_group resources.gardener.cloud
   generate_group operator.gardener.cloud
-  generate_group druid.gardener.cloud
   generate_group autoscaling.k8s.io
   generate_group fluentbit.fluent.io
   generate_group monitoring.coreos.com_v1
@@ -117,21 +113,7 @@ generate_group () {
 
   generate="controller-gen crd"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
 
-  if [[ "$group" == "druid.gardener.cloud" ]]; then
-    # /scale subresource is intentionally removed from this CRD, although it is specified in the original CRD from
-    # etcd-druid, due to adverse interaction with VPA.
-    # See https://github.com/gardener/gardener/pull/6850 and https://github.com/gardener/gardener/pull/8560#discussion_r1347470394
-    # TODO(shreyas-s-rao): Remove this workaround as soon as the scale subresource is supported properly.
-    etcd_druid_dir="$(go list -f '{{ .Dir }}' "github.com/gardener/etcd-druid")"
-    etcd_api_file="${etcd_druid_dir}/api/v1alpha1/etcd.go"
-    # Create a local copy outside the mod cache path in order to patch the types file via sed.
-    etcd_api_file_backup="$(mktemp -d)/etcd.go"
-    cp "$etcd_api_file" "$etcd_api_file_backup"
-    chmod +w "$etcd_api_file" "$etcd_druid_dir/api/v1alpha1/"
-    trap 'cp "$etcd_api_file_backup" "$etcd_api_file" && chmod -w "$etcd_druid_dir/api/v1alpha1/"' EXIT
-    sed -i '/\/\/ +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas/d' "$etcd_api_file"
-    $generate
-  elif [[ "$group" == "autoscaling.k8s.io" ]]; then
+  if [[ "$group" == "autoscaling.k8s.io" ]]; then
     # See https://github.com/kubernetes/autoscaler/blame/master/vertical-pod-autoscaler/hack/generate-crd-yaml.sh#L43-L45
     generator_output="$(mktemp -d)/controller-gen.log"
     # As go list does not work with symlinks we need to manually construct the package paths to correctly

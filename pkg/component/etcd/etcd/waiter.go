@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
