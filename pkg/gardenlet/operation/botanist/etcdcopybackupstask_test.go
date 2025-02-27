@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	etcdcopybackupstask "github.com/gardener/gardener/pkg/component/etcd/copybackupstask"
 	mocketcdcopybackupstask "github.com/gardener/gardener/pkg/component/etcd/copybackupstask/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -56,7 +56,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		reader = mockclient.NewMockReader(ctrl)
-		kubernetesClient = kubernetesfake.NewClientSetBuilder().
+		kubernetesClient = fakekubernetes.NewClientSetBuilder().
 			WithClient(c).
 			WithAPIReader(reader).
 			Build()

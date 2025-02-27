@@ -1,0 +1,13 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: root
+  namespace: garden
+spec:
+  provider:
+    type: local
+  kubernetes:
+    version: 1.32.0
+  networking:
+    services: 100.64.0.0/11
+    pods: 100.96.0.0/13

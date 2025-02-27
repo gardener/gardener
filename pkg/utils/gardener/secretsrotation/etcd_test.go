@@ -21,7 +21,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mocketcd "github.com/gardener/gardener/pkg/component/etcd/etcd/mock"
 	. "github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
@@ -51,7 +51,7 @@ var _ = Describe("ETCD", func() {
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 		fakeDiscoveryClient = &fakeDiscoveryWithServerPreferredResources{}
-		fakeTargetInterface = kubernetesfake.NewClientSetBuilder().WithKubernetes(test.NewClientSetWithDiscovery(nil, fakeDiscoveryClient)).WithClient(targetClient).Build()
+		fakeTargetInterface = fakekubernetes.NewClientSetBuilder().WithKubernetes(test.NewClientSetWithDiscovery(nil, fakeDiscoveryClient)).WithClient(targetClient).Build()
 		fakeSecretsManager = fakesecretsmanager.New(runtimeClient, kubeAPIServerNamespace)
 	})
 

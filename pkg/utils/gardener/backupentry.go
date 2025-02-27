@@ -18,14 +18,20 @@ import (
 var backupEntryDelimiter = "--"
 
 // GenerateBackupEntryName returns BackupEntry resource name created from provided <seedNamespace> and <shootUID>.
-func GenerateBackupEntryName(shootTechnicalID string, shootUID types.UID) (string, error) {
+func GenerateBackupEntryName(shootTechnicalID string, shootStatusUID, shootUID types.UID) (string, error) {
 	if shootTechnicalID == "" {
 		return "", errors.New("can't generate backup entry name with an empty shoot technical ID")
 	}
-	if shootUID == "" {
+
+	uid := shootStatusUID
+	if uid == "" {
+		uid = shootUID
+	}
+	if uid == "" {
 		return "", errors.New("can't generate backup entry name with an empty shoot UID")
 	}
-	return shootTechnicalID + backupEntryDelimiter + string(shootUID), nil
+
+	return shootTechnicalID + backupEntryDelimiter + string(uid), nil
 }
 
 // ExtractShootDetailsFromBackupEntryName returns Shoot resource technicalID its UID from provided <backupEntryName>.

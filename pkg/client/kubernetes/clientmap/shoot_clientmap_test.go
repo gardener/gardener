@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
@@ -121,7 +121,7 @@ var _ = Describe("ShootClientMap", func() {
 		})
 
 		It("should fail constructing a new ClientSet (in-cluster) because token is not populated", func() {
-			fakeCS := kubernetesfake.NewClientSet()
+			fakeCS := fakekubernetes.NewClientSet()
 
 			gomock.InOrder(
 				mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
@@ -152,7 +152,7 @@ var _ = Describe("ShootClientMap", func() {
 		})
 
 		It("should correctly construct a new ClientSet (in-cluster)", func() {
-			fakeCS := kubernetesfake.NewClientSet()
+			fakeCS := fakekubernetes.NewClientSet()
 			changedTechnicalID := "foo"
 			gomock.InOrder(
 				mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).

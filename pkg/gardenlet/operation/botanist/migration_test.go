@@ -22,7 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mocketcd "github.com/gardener/gardener/pkg/component/etcd/etcd/mock"
 	mockcontainerruntime "github.com/gardener/gardener/pkg/component/extensions/containerruntime/mock"
 	mockcontrolplane "github.com/gardener/gardener/pkg/component/extensions/controlplane/mock"
@@ -70,7 +70,7 @@ var _ = Describe("migration", func() {
 		worker = mockworker.NewMockInterface(ctrl)
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()
+		fakeKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{
 			SeedClientSet: fakeKubernetesInterface,

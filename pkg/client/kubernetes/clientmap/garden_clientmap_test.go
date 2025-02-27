@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
@@ -85,7 +85,7 @@ var _ = Describe("GardenClientMap", func() {
 		})
 
 		It("should fail constructing a new ClientSet (in-cluster) because token is not populated", func() {
-			fakeCS := kubernetesfake.NewClientSet()
+			fakeCS := fakekubernetes.NewClientSet()
 
 			mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
@@ -109,7 +109,7 @@ var _ = Describe("GardenClientMap", func() {
 		})
 
 		It("should correctly construct a new ClientSet (in-cluster)", func() {
-			fakeCS := kubernetesfake.NewClientSet()
+			fakeCS := fakekubernetes.NewClientSet()
 			gomock.InOrder(
 				mockRuntimeClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: "garden", Name: "gardener-internal"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 					DoAndReturn(func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
