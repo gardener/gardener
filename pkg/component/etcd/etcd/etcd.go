@@ -7,6 +7,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -150,12 +151,38 @@ type Values struct {
 	StorageClassName            *string
 	DefragmentationSchedule     *string
 	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
+	Autoscaling                 AutoscalingConfig
 	BackupConfig                *BackupConfig
 	MaintenanceTimeWindow       gardencorev1beta1.MaintenanceTimeWindow
 	EvictionRequirement         *string
 	PriorityClassName           string
 	HighAvailabilityEnabled     bool
 	TopologyAwareRoutingEnabled bool
+}
+
+// BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
+// the etcd's data directory.
+type BackupConfig struct {
+	// Provider is the name of the infrastructure provider for the blob storage bucket.
+	Provider string
+	// Container is the name of the blob storage bucket.
+	Container string
+	// SecretRefName is the name of a Secret object containing the credentials of the selected infrastructure provider.
+	SecretRefName string
+	// Prefix is a prefix that shall be used for the filename of the backups of this etcd.
+	Prefix string
+	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
+	FullSnapshotSchedule string
+	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+	LeaderElection *gardenletconfigv1alpha1.ETCDBackupLeaderElection
+	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
+	DeltaSnapshotRetentionPeriod *metav1.Duration
+}
+
+// AutoscalingConfig contains information for configuring autoscaling settings for etcd.
+type AutoscalingConfig struct {
+	// MinAllowed are the minimum allowed resources for vertical autoscaling.
+	MinAllowed corev1.ResourceList
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -175,12 +202,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		replicas = e.computeReplicas(existingEtcd)
 
-		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources()
-		resourcesCompactionJob                = e.computeCompactionJobContainerResources()
-		garbageCollectionPolicy               = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
-		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
-		compressionPolicy                     = druidv1alpha1.GzipCompression
-		compressionSpec                       = druidv1alpha1.CompressionSpec{
+		garbageCollectionPolicy = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
+		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
+		compressionPolicy       = druidv1alpha1.GzipCompression
+		compressionSpec         = druidv1alpha1.CompressionSpec{
 			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
@@ -188,26 +213,19 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		annotations         map[string]string
 		metrics             = druidv1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
-		minAllowed          = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("60M"),
-		}
+
+		minAllowed             = e.computeMinAllowedForETCDContainer()
+		resourcesEtcd          = e.computeETCDContainerResources(minAllowed)
+		resourcesBackupRestore = e.computeBackupRestoreContainerResources()
+		resourcesCompactionJob = e.computeCompactionJobContainerResources()
 	)
 
 	if e.values.Class == ClassImportant {
 		if !e.values.HighAvailabilityEnabled {
 			annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		}
-		resourcesBackupRestore = &corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("20m"),
-				corev1.ResourceMemory: resource.MustParse("80Mi"),
-			},
-		}
 		metrics = druidv1alpha1.Extensive
 		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
-		minAllowed = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("300M"),
-		}
 	}
 
 	etcdCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
@@ -757,7 +775,7 @@ func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutosca
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
 }
 
-func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed corev1.ResourceList) error {
+func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowedETCD corev1.ResourceList) error {
 	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
 	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
@@ -794,7 +812,7 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
 						ContainerName:    containerNameEtcd,
-						MinAllowed:       minAllowed,
+						MinAllowed:       minAllowedETCD,
 						ControlledValues: &controlledValues,
 						Mode:             &containerPolicyAuto,
 					},
@@ -939,18 +957,47 @@ func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
 
 func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
-func (e *etcd) computeContainerResources() (*corev1.ResourceRequirements, *corev1.ResourceRequirements) {
-	return &corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("300m"),
-				corev1.ResourceMemory: resource.MustParse("1G"),
-			},
-		}, &corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("10m"),
-				corev1.ResourceMemory: resource.MustParse("40Mi"),
-			},
+func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
+	minAllowed := corev1.ResourceList{
+		corev1.ResourceMemory: resource.MustParse("60M"),
+	}
+
+	if e.values.Class == ClassImportant {
+		minAllowed = corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("300M"),
 		}
+	}
+
+	maps.Insert(minAllowed, maps.All(e.values.Autoscaling.MinAllowed))
+	return minAllowed
+}
+
+func (e *etcd) computeETCDContainerResources(minAllowedETCD corev1.ResourceList) *corev1.ResourceRequirements {
+	resourcesETCD := kubernetesutils.MaximumResourcesFromResourceList(
+		corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("300m"),
+			corev1.ResourceMemory: resource.MustParse("1G"),
+		},
+		minAllowedETCD,
+	)
+
+	return &corev1.ResourceRequirements{Requests: resourcesETCD}
+}
+
+func (e *etcd) computeBackupRestoreContainerResources() *corev1.ResourceRequirements {
+	resourcesBackupRestore := corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("10m"),
+		corev1.ResourceMemory: resource.MustParse("40Mi"),
+	}
+
+	if e.values.Class == ClassImportant {
+		resourcesBackupRestore = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("20m"),
+			corev1.ResourceMemory: resource.MustParse("80Mi"),
+		}
+	}
+
+	return &corev1.ResourceRequirements{Requests: resourcesBackupRestore}
 }
 
 func (e *etcd) computeCompactionJobContainerResources() *corev1.ResourceRequirements {
@@ -1016,23 +1063,4 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 	caSecretName = etcdPeerCASecret.Name
 	peerSecretName = peerServerSecret.Name
 	return
-}
-
-// BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
-// the etcd's data directory.
-type BackupConfig struct {
-	// Provider is the name of the infrastructure provider for the blob storage bucket.
-	Provider string
-	// Container is the name of the blob storage bucket.
-	Container string
-	// SecretRefName is the name of a Secret object containing the credentials of the selected infrastructure provider.
-	SecretRefName string
-	// Prefix is a prefix that shall be used for the filename of the backups of this etcd.
-	Prefix string
-	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
-	FullSnapshotSchedule string
-	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
-	LeaderElection *gardenletconfigv1alpha1.ETCDBackupLeaderElection
-	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
-	DeltaSnapshotRetentionPeriod *metav1.Duration
 }

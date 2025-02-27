@@ -877,6 +877,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), *kubernetes.EnableStaticTokenKubeconfig, "setting this field to true is not supported"))
 	}
 
+	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
@@ -896,6 +897,22 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 
 		if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
 			allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
+		}
+	}
+
+	return allErrs
+}
+
+func validateETCD(etcd *core.ETCD, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if etcd != nil {
+		if etcd.Main != nil {
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("main", "autoscaling"))...)
+		}
+
+		if etcd.Events != nil {
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Events.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}, fldPath.Child("events", "autoscaling"))...)
 		}
 	}
 
@@ -1477,6 +1494,15 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("eventTTL"), *kubeAPIServer.EventTTL, "can not be longer than 7d"))
 		}
 	}
+
+	allErrs = append(allErrs, ValidateControlPlaneAutoscaling(
+		kubeAPIServer.Autoscaling,
+		corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("20m"),
+			corev1.ResourceMemory: resource.MustParse("200M"),
+		},
+		fldPath.Child("autoscaling"))...,
+	)
 
 	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, version, fldPath.Child("featureGates"))...)
 
@@ -2782,4 +2808,32 @@ func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []stri
 	}
 
 	return sets.List(resources)
+}
+
+// ValidateControlPlaneAutoscaling validates the given auto-scaling configuration.
+func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, minRequired corev1.ResourceList, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if autoscaling != nil {
+		if len(autoscaling.MinAllowed) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("minAllowed"), "must provide minAllowed"))
+			return allErrs
+		}
+
+		allowedResources := sets.New[corev1.ResourceName](corev1.ResourceCPU, corev1.ResourceMemory)
+		for resource, quantity := range autoscaling.MinAllowed {
+			resourcePath := fldPath.Child("minAllowed", resource.String())
+			if !allowedResources.Has(resource) {
+				allErrs = append(allErrs, field.NotSupported(resourcePath, resource, allowedResources.UnsortedList()))
+			}
+
+			if minValue, ok := minRequired[resource]; ok && quantity.Cmp(minValue) < 0 {
+				allErrs = append(allErrs, field.Invalid(resourcePath, quantity, fmt.Sprintf("value must be bigger than >= %s", minValue.String())))
+			}
+
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+		}
+	}
+
+	return allErrs
 }
