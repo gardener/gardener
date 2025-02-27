@@ -100,8 +100,8 @@ func (r *registration) createOrUpdateControllerRegistration(ctx context.Context,
 		delete(controllerRegistration.Annotations, v1beta1constants.AnnotationPodSecurityEnforce)
 	}
 	objs := []client.Object{controllerDeployment, controllerRegistration}
-	if pullSecretRef := GetExtensionHelmPullSecret(extension); pullSecretRef != nil {
-		secret, err := r.getPullSecret(ctx, extension.Name, pullSecretRef)
+	if pullSecretRef := GetExtensionPullSecretRef(extension); pullSecretRef != nil {
+		secret, err := r.createPullSecretCopy(ctx, extension.Name, pullSecretRef)
 		if err != nil {
 			return fmt.Errorf("failed to get pull secret: %w", err)
 		}
@@ -128,7 +128,7 @@ func (r *registration) Delete(ctx context.Context, log logr.Logger, extension *o
 	return managedresources.WaitUntilDeleted(ctx, r.runtimeClient, r.gardenNamespace, mrName)
 }
 
-func (r *registration) getPullSecret(ctx context.Context, extensionName string, pullSecretRef *corev1.LocalObjectReference) (*corev1.Secret, error) {
+func (r *registration) createPullSecretCopy(ctx context.Context, extensionName string, pullSecretRef *corev1.LocalObjectReference) (*corev1.Secret, error) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pullSecretRef.Name,
@@ -139,14 +139,14 @@ func (r *registration) getPullSecret(ctx context.Context, extensionName string, 
 		return nil, fmt.Errorf("failed to get pull secret: %w", err)
 	}
 
-	vsecret := secret.DeepCopy()
-	vsecret.ObjectMeta = metav1.ObjectMeta{
+	secretCopy := secret.DeepCopy()
+	secretCopy.ObjectMeta = metav1.ObjectMeta{
 		Name:      fmt.Sprintf("%s-%s", extensionName, pullSecretRef.Name),
 		Namespace: v1beta1constants.GardenNamespace,
-		Labels:    vsecret.Labels,
+		Labels:    secretCopy.Labels,
 	}
 
-	return vsecret, nil
+	return secretCopy, nil
 }
 
 func managedResourceName(extension *operatorv1alpha1.Extension) string {
@@ -163,8 +163,8 @@ func New(runtimeClient client.Client, recorder record.EventRecorder, gardenNames
 	}
 }
 
-// GetExtensionHelmPullSecret returns the pull secret reference for the extension's Helm chart.
-func GetExtensionHelmPullSecret(extension *operatorv1alpha1.Extension) *corev1.LocalObjectReference {
+// GetExtensionPullSecretRef returns the pull secret reference for the extension's Helm chart.
+func GetExtensionPullSecretRef(extension *operatorv1alpha1.Extension) *corev1.LocalObjectReference {
 	if extension.Spec.Deployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment == nil ||
 		extension.Spec.Deployment.ExtensionDeployment.Helm == nil ||

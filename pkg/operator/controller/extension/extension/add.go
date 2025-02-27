@@ -136,7 +136,7 @@ func (r *Reconciler) MapSecretToExtensions(log logr.Logger) handler.MapFunc {
 
 		var requests []reconcile.Request
 		for _, ext := range extensionList.Items {
-			secretRef := controllerregistration.GetExtensionHelmPullSecret(&ext)
+			secretRef := controllerregistration.GetExtensionPullSecretRef(&ext)
 			if secretRef != nil && secretRef.Name == secret.GetName() {
 				// Only helm pull secret of extension helm chart is considered, as it is the only one that
 				// is used by gardenlets and needs to be copied to the virtual garden.
@@ -148,7 +148,7 @@ func (r *Reconciler) MapSecretToExtensions(log logr.Logger) handler.MapFunc {
 	}
 }
 
-// namespacePredicate returns a predicate that filters events based on the namespace.
+// namespacePredicate returns a predicate that filters events based on the object's namespace.
 func namespacePredicate(namespace string) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == namespace

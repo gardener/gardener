@@ -167,6 +167,35 @@ spec:
     type: openstack-designate
 ```
 
+If needed, a pull secret can be referenced for the Helm charts.
+
+```yaml
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: ...
+spec:
+    deployment:
+      ...
+        helm:
+          ociRepository:
+            repository: ...
+            tag: ...
+            pullSecretRef:
+              name: my-pull-secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-pull-secret
+  namespace: garden
+  labels:
+    gardener.cloud/role: helm-pull-secret
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: <base64-encoded-docker-config-json>
+```
+
 To make use of the automated DNS management, the `Garden` resource has to contain a primary provider. Here is an example for an OpenStack-based setup, where the actual credentials are stored in the referenced `Secret`:
 
 ```yaml
