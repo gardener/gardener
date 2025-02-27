@@ -808,3 +808,23 @@ func CalculateDataStringForKubeletConfiguration(kubeletConfiguration *gardencore
 
 	return data
 }
+
+// IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled checks if the feature gate "MatchLabelKeysInPodTopologySpread" is disabled in
+// both kube-apiserver and kube-scheduler in the Shoot.
+func IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot *gardencorev1beta1.Shoot) bool {
+	if shoot == nil || shoot.Spec.Kubernetes.KubeAPIServer == nil || shoot.Spec.Kubernetes.KubeScheduler == nil {
+		return false
+	}
+
+	valueKubeAPIServer, ok := shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates["MatchLabelKeysInPodTopologySpread"]
+	if !ok {
+		return false
+	}
+
+	valueKubeScheduler, ok := shoot.Spec.Kubernetes.KubeScheduler.FeatureGates["MatchLabelKeysInPodTopologySpread"]
+	if !ok {
+		return false
+	}
+
+	return !valueKubeAPIServer && !valueKubeScheduler
+}
