@@ -32,7 +32,7 @@ Kubernetes runs a primary "agent" on every node, the kubelet,
 which is responsible for managing pods and containers on its particular node.
 Decentralizing the responsibility to the kubelet has the advantage that the overall system
 is scalable. Gardener achieves the same for cluster management by using a **gardenlet**
-as а primary "agent" on every seed cluster, and is only responsible for shoot clusters
+as a primary "agent" on every seed cluster, and is only responsible for shoot clusters
 located in its particular seed cluster:
 
 ![Counterparts in the Gardener Architecture and the Kubernetes Architecture](images/gardenlet-architecture-similarities.png)

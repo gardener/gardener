@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -23,6 +24,11 @@ import (
 
 // DefaultResourceManager returns an instance of Gardener Resource Manager with defaults configured for being deployed in a Shoot namespace
 func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
+	seedVersion, err := semver.NewVersion(b.SeedClientSet.Version())
+	if err != nil {
+		return nil, err
+	}
+
 	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
 	if b.Config != nil && b.Config.NodeToleration != nil {
 		nodeToleration := b.Config.NodeToleration
@@ -44,6 +50,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		// MatchLabelKeysInPodTopologySpread feature gate is locked to true.
 		PodTopologySpreadConstraintsEnabled: gardenerutils.IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(b.Shoot.GetInfo()),
 		PriorityClassName:                   v1beta1constants.PriorityClassNameShootControlPlane400,
+		RuntimeKubernetesVersion:            seedVersion,
 		SchedulingProfile:                   v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
 		SecretNameServerCA:                  v1beta1constants.SecretNameCACluster,
 		SystemComponentTolerations:          gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),

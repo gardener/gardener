@@ -8,6 +8,7 @@ import (
 	"context"
 	_ "embed"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -58,6 +59,7 @@ var _ = Describe("Terminal", func() {
 
 		image                string
 		topologyAwareRouting bool
+		runtimeVersion       *semver.Version
 
 		fakeClient        client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -590,6 +592,7 @@ server:
 		values = Values{
 			Image:                       image,
 			TopologyAwareRoutingEnabled: topologyAwareRouting,
+			RuntimeVersion:              runtimeVersion,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 
@@ -722,17 +725,50 @@ server:
 				})
 			})
 
-			When("topology aware routing is configured", func() {
+			Context("when topology aware routing is configured", func() {
 				BeforeEach(func() {
 					topologyAwareRouting = true
-
-					metav1.SetMetaDataLabel(&service.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
-					metav1.SetMetaDataAnnotation(&service.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
 				})
 
-				It("should successfully deploy all resources", func() {
-					Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
-					Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+				When("runtime Kubernetes version is >= 1.32", func() {
+					BeforeEach(func() {
+						runtimeVersion = semver.MustParse("1.32.1")
+					})
+
+					It("should successfully deploy all resources", func() {
+						service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+					})
+				})
+
+				When("runtime Kubernetes version is 1.31", func() {
+					BeforeEach(func() {
+						runtimeVersion = semver.MustParse("1.31.2")
+					})
+
+					It("should successfully deploy all resources", func() {
+						service.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+						metav1.SetMetaDataLabel(&service.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+					})
+				})
+
+				When("runtime Kubernetes version is < 1.31", func() {
+					BeforeEach(func() {
+						runtimeVersion = semver.MustParse("1.30.3")
+					})
+
+					It("should successfully deploy all resources", func() {
+						metav1.SetMetaDataAnnotation(&service.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
+						metav1.SetMetaDataLabel(&service.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+
+						Expect(managedResourceRuntime).To(consistOf(expectedRuntimeObjects...))
+						Expect(managedResourceVirtual).To(consistOf(expectedVirtualObjects...))
+					})
 				})
 			})
 		})

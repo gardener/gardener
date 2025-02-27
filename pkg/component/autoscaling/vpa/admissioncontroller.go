@@ -143,7 +143,7 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 		metav1.SetMetaDataLabel(&service.ObjectMeta, label, value)
 	}
 	topologyAwareRoutingEnabled := v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
+	gardenerutils.ReconcileTopologyAwareRoutingSettings(service, topologyAwareRoutingEnabled, v.values.RuntimeKubernetesVersion)
 
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
