@@ -65,6 +65,9 @@ type Reconciler struct {
 	Clock                 clock.Clock
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
+	HostNetwork           *bool
+	Replicas              *int32
+	Tolerations           []corev1.Toleration
 }
 
 // Reconcile reconciles ControllerInstallations and deploys them into the seed cluster.
@@ -283,6 +286,20 @@ func (r *Reconciler) reconcile(
 						Value: seed.Name,
 					}, true)
 				})
+			})
+		},
+		// Adapt host network, replicas and tolerations for autonomous shoot clusters if necessary
+		func(obj runtime.Object) error {
+			if deployment, ok := obj.(*appsv1.Deployment); ok && r.Replicas != nil {
+				deployment.Spec.Replicas = r.Replicas
+			}
+			return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
+				if r.HostNetwork != nil {
+					podSpec.HostNetwork = *r.HostNetwork
+				}
+				if len(r.Tolerations) > 0 {
+					podSpec.Tolerations = append(podSpec.Tolerations, r.Tolerations...)
+				}
 			})
 		}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
