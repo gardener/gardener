@@ -555,11 +555,14 @@ spec:
             - SYS_CHROOT` + `
             drop:
             - ALL
-          runAsNonRoot: true
-          runAsUser: 101
           seccompProfile:
             type: Unconfined
       priorityClassName: gardener-system-600
+      securityContext:
+        fsGroup: 101
+        runAsGroup: 101
+        runAsNonRoot: true
+        runAsUser: 101
       serviceAccountName: nginx-ingress
       terminationGracePeriodSeconds: 60
 status: {}
@@ -1125,8 +1128,6 @@ spec:
             - SYS_CHROOT
             drop:
             - ALL
-          runAsNonRoot: true
-          runAsUser: 101
           seccompProfile:
             type: Unconfined
         terminationMessagePath: /dev/termination-log
@@ -1137,6 +1138,11 @@ spec:
       priorityClassName: gardener-shoot-system-600
       restartPolicy: Always
       schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 101
+        runAsGroup: 101
+        runAsNonRoot: true
+        runAsUser: 101
       serviceAccountName: addons-nginx-ingress
       terminationGracePeriodSeconds: 60
 status: {}
