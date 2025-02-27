@@ -620,9 +620,9 @@ var _ = Describe("Seed controller tests", func() {
 							istioSystemNamespace     = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
 							istioCRDs                = istio.NewCRD(chartApplier)
 							vpaCRD                   = vpa.NewCRD(applier, nil)
-							fluentCRD                = fluentoperator.NewCRDs(applier)
 						)
-
+						fluentCRD, err := fluentoperator.NewCRDs(testClient, applier)
+						Expect(err).NotTo(HaveOccurred())
 						monitoringCRD, err := prometheusoperator.NewCRDs(testClient, applier)
 						Expect(err).NotTo(HaveOccurred())
 
