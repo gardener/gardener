@@ -16,6 +16,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -42,7 +43,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 				return
 			}
 
-			if !v1beta1helper.SeedBackupSecretRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
+			if !v1beta1helper.SeedBackupCredentialsRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
 				!v1beta1helper.ResourceReferencesEqual(oldSeed.Spec.Resources, newSeed.Spec.Resources) ||
 				!seedDNSProviderSecretRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
 				g.handleSeedCreateOrUpdate(newSeed)
@@ -83,6 +84,7 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 	defer g.lock.Unlock()
 
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeSeed, "", seed.Name)
+	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeSeed, "", seed.Name)
 	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeSeed, "", seed.Name)
 	g.deleteAllIncomingEdges(VertexTypeLease, VertexTypeSeed, "", seed.Name)
 	g.deleteAllIncomingEdges(VertexTypeConfigMap, VertexTypeSeed, "", seed.Name)
@@ -98,8 +100,18 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 	g.addEdge(leaseVertex, seedVertex)
 
 	if seed.Spec.Backup != nil {
-		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.Backup.SecretRef.Namespace, seed.Spec.Backup.SecretRef.Name)
-		g.addEdge(secretVertex, seedVertex)
+		var (
+			namespace = seed.Spec.Backup.CredentialsRef.Namespace
+			name      = seed.Spec.Backup.CredentialsRef.Name
+			vertex    *vertex
+		)
+		if seed.Spec.Backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			seed.Spec.Backup.CredentialsRef.Kind == "WorkloadIdentity" {
+			vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
+		} else {
+			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
+		}
+		g.addEdge(vertex, seedVertex)
 	}
 
 	if seed.Spec.DNS.Provider != nil {
