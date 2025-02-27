@@ -316,6 +316,8 @@ spec:
         dnsConfig:
 {{ toYaml .Values.global.apiserver.dnsConfig | indent 10 }}
         {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         {{- if .Values.global.apiserver.encryption.config }}
         - name: gardener-apiserver-encryption-config
@@ -409,6 +411,8 @@ spec:
         resources:
           requests:
             cpu: 200m
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: etcd
           mountPath: /var/etcd/data
