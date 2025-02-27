@@ -1037,13 +1037,13 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		if workerErr != nil {
 			allErrs = append(allErrs, workerErr)
 		} else {
-			allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfileSpec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
+			allErrs = append(allErrs, validateContainerRuntimeInterface(c.cloudProfileSpec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
 			kubeletVersion, err := helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
 			if err != nil {
 				// exit early, all other validation errors will be misleading
 				return append(allErrs, field.Invalid(idxPath.Child("kubernetes", "version"), worker.Kubernetes.Version, "cannot determine effective Kubernetes version for worker pool"))
 			}
-			if err := validateKubeletVersionConstraint(c.cloudProfileSpec.MachineImages, worker, kubeletVersion, idxPath); err != nil {
+			if err := validateKubeletVersion(c.cloudProfileSpec.MachineImages, worker, kubeletVersion, idxPath); err != nil {
 				allErrs = append(allErrs, err)
 			}
 		}
@@ -1910,7 +1910,7 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 		sets.List(validMachineImageVersions)
 }
 
-func validateContainerRuntimeConstraints(constraints []gardencorev1beta1.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
+func validateContainerRuntimeInterface(constraints []gardencorev1beta1.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
 	if worker.CRI == nil || worker.Machine.Image == nil {
 		return nil
 	}
@@ -1981,7 +1981,7 @@ func validateCRMembership(constraints []core.ContainerRuntime, cr string) (bool,
 	return false, validValues
 }
 
-func validateKubeletVersionConstraint(constraints []gardencorev1beta1.MachineImage, worker core.Worker, kubeletVersion *semver.Version, fldPath *field.Path) *field.Error {
+func validateKubeletVersion(constraints []gardencorev1beta1.MachineImage, worker core.Worker, kubeletVersion *semver.Version, fldPath *field.Path) *field.Error {
 	if worker.Machine.Image == nil {
 		return nil
 	}
