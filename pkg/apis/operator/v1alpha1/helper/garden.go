@@ -168,3 +168,20 @@ func HighAvailabilityEnabled(garden *operatorv1alpha1.Garden) bool {
 func TopologyAwareRoutingEnabled(settings *operatorv1alpha1.Settings) bool {
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
 }
+
+// GetETCDMainBackup returns the backup configuration for etcd main of the given garden object or nil if not configured.
+func GetETCDMainBackup(garden *operatorv1alpha1.Garden) *operatorv1alpha1.Backup {
+	if garden != nil && garden.Spec.VirtualCluster.ETCD != nil && garden.Spec.VirtualCluster.ETCD.Main != nil {
+		return garden.Spec.VirtualCluster.ETCD.Main.Backup
+	}
+	return nil
+}
+
+// GetDNSProviders returns the DNS providers for the given garden object or nil if non are configured.
+func GetDNSProviders(garden *operatorv1alpha1.Garden) []operatorv1alpha1.DNSProvider {
+	if garden != nil && garden.Spec.DNS != nil {
+		return garden.Spec.DNS.Providers
+	}
+
+	return nil
+}

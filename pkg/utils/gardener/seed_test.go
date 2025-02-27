@@ -188,6 +188,29 @@ var _ = Describe("utils", func() {
 		})
 	})
 
+	Describe("#ExtensionKindAndTypeForID", func() {
+		It("should return the expected kind and type", func() {
+			extKind, extType, err := ExtensionKindAndTypeForID("extension/test")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(extKind).To(Equal("extension"))
+			Expect(extType).To(Equal("test"))
+		})
+
+		It("should return an error when separator is invalid", func() {
+			extKind, extType, err := ExtensionKindAndTypeForID("extension-test")
+			Expect(err).To(MatchError(ContainSubstring("unexpected required extension")))
+			Expect(extKind).To(BeEmpty())
+			Expect(extType).To(BeEmpty())
+		})
+
+		It("should return an error when format is invalid", func() {
+			extKind, extType, err := ExtensionKindAndTypeForID("extension/backupbucket/test")
+			Expect(err).To(MatchError(ContainSubstring("unexpected required extension")))
+			Expect(extKind).To(BeEmpty())
+			Expect(extType).To(BeEmpty())
+		})
+	})
+
 	Describe("#RequiredExtensionsReady", func() {
 		var (
 			ctx        context.Context
