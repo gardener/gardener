@@ -46,7 +46,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	patch := client.MergeFrom(shoot.DeepCopy())
+	patch := client.StrategicMergeFrom(shoot.DeepCopy())
 
 	if !v1beta1helper.ShouldPrepareShootForMigration(shoot) {
 		if v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootReadyForMigration) == nil {

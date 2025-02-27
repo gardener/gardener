@@ -112,7 +112,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Setup field indexes")
-	Expect(indexer.AddShootSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+	Expect(indexer.AddShootStatusSeedName(ctx, mgr.GetFieldIndexer())).To(Succeed())
 
 	By("Register controller")
 	fakeClock = testclock.NewFakeClock(time.Now())
