@@ -32,7 +32,7 @@ type Verifier interface {
 type Verifiers []Verifier
 
 var _ Verifier = Verifiers{}
-var _ cleanupVerifier = Verifiers{}
+var _ CleanupVerifier = Verifiers{}
 
 // Before is called before the rotation is started.
 func (v Verifiers) Before(ctx context.Context) {
@@ -83,8 +83,8 @@ func (v Verifiers) AfterCompleted(ctx context.Context) {
 	}
 }
 
-// cleanupVerifier can be implemented optionally to run cleanup code.
-type cleanupVerifier interface {
+// CleanupVerifier can be implemented optionally to run cleanup code.
+type CleanupVerifier interface {
 	// Cleanup is passed to ginkgo.DeferCleanup.
 	Cleanup(ctx context.Context)
 }
@@ -92,7 +92,7 @@ type cleanupVerifier interface {
 // Cleanup is passed to ginkgo.DeferCleanup.
 func (v Verifiers) Cleanup(ctx context.Context) {
 	for _, vv := range v {
-		if cleanup, ok := vv.(cleanupVerifier); ok {
+		if cleanup, ok := vv.(CleanupVerifier); ok {
 			cleanup.Cleanup(ctx)
 		}
 	}

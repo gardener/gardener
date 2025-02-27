@@ -26,10 +26,10 @@ import (
 
 // ETCDEncryptionKeyVerifier verifies the etcd encryption key rotation.
 type ETCDEncryptionKeyVerifier struct {
-	RuntimeClient                client.Client
-	Namespace                    string
-	SecretsManagerLabelSelector  client.MatchingLabels
-	GetETCDEncryptionKeyRotation func() *gardencorev1beta1.ETCDEncryptionKeyRotation
+	SecretsManagerLabelSelector   client.MatchingLabels
+	GetETCDEncryptionKeyRotation  func() *gardencorev1beta1.ETCDEncryptionKeyRotation
+	ListETCDEncryptionSecretsFunc func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error)
+	GetETCDSecretNamespace        func() string
 
 	EncryptionKey  string
 	RoleLabelValue string
@@ -50,8 +50,8 @@ func init() {
 func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 	By("Verify old etcd encryption key secret")
 	Eventually(func(g Gomega) {
-		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
+		secretList, err := v.ListETCDEncryptionSecretsFunc(ctx, client.InNamespace(v.GetETCDSecretNamespace()), v.SecretsManagerLabelSelector)
+		g.Expect(err).NotTo(HaveOccurred())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(1), "etcd encryption key should get created, but not rotated yet")
@@ -60,8 +60,8 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 
 	By("Verify old etcd encryption config secret")
 	Eventually(func(g Gomega) {
-		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
+		secretList, err := v.ListETCDEncryptionSecretsFunc(ctx, client.InNamespace(v.GetETCDSecretNamespace()), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})
+		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
 		sort.Sort(sort.Reverse(AgeSorter(secretList.Items)))
 
@@ -112,8 +112,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 
 	By("Verify etcd encryption key secrets")
 	Eventually(func(g Gomega) {
-		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
+		secretList, err := v.ListETCDEncryptionSecretsFunc(ctx, client.InNamespace(v.GetETCDSecretNamespace()), v.SecretsManagerLabelSelector)
+		g.Expect(err).NotTo(HaveOccurred())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(2), "etcd encryption key should get rotated")
@@ -123,13 +123,13 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 
 	By("Verify combined etcd encryption config secret")
 	Eventually(func(g Gomega) {
-		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
+		secretList, err := v.ListETCDEncryptionSecretsFunc(ctx, client.InNamespace(v.GetETCDSecretNamespace()), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})
+		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
 		sort.Sort(sort.Reverse(AgeSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
-		err := runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)
+		err = runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
@@ -173,8 +173,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 
 	By("Verify new etcd encryption key secret")
 	Eventually(func(g Gomega) {
-		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
+		secretList, err := v.ListETCDEncryptionSecretsFunc(ctx, client.InNamespace(v.GetETCDSecretNamespace()), v.SecretsManagerLabelSelector)
+		g.Expect(err).NotTo(HaveOccurred())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(1), "old etcd encryption key should get cleaned up")
@@ -183,13 +183,13 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 
 	By("Verify new etcd encryption config secret")
 	Eventually(func(g Gomega) {
-		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
+		secretList, err := v.ListETCDEncryptionSecretsFunc(ctx, client.InNamespace(v.GetETCDSecretNamespace()), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})
+		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
 		sort.Sort(sort.Reverse(AgeSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
-		err := runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)
+		err = runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
