@@ -465,6 +465,18 @@ spec:
 			MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("extensions.extensions.gardener.cloud")})}),
 		))
 
+		// The garden controller waits for the gardener-resource-manager Deployment to be healthy, so let's fake this here.
+		By("Patch gardener-resource-manager deployment to report healthiness")
+		Eventually(func(g Gomega) {
+			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			patch := client.MergeFrom(deployment.DeepCopy())
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
+			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+		}).Should(Succeed())
+
 		By("Patch extension managed resource")
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extensionManagedResource), extensionManagedResource)).To(Succeed())
 		extensionManagedResource.Status.ObservedGeneration = extensionManagedResource.Generation
@@ -507,18 +519,6 @@ spec:
 		By("Verify that ServiceMonitor was created for gardener-operator")
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKey{Name: "garden-gardener-operator", Namespace: testNamespace.Name}, &monitoringv1.ServiceMonitor{})
-		}).Should(Succeed())
-
-		// The garden controller waits for the gardener-resource-manager Deployment to be healthy, so let's fake this here.
-		By("Patch gardener-resource-manager deployment to report healthiness")
-		Eventually(func(g Gomega) {
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			patch := client.MergeFrom(deployment.DeepCopy())
-			deployment.Status.ObservedGeneration = deployment.Generation
-			deployment.Status.Conditions = []appsv1.DeploymentCondition{{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue}}
-			g.Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
 		}).Should(Succeed())
 
 		By("Verify that the ManagedResources related to runtime components have been deployed")
