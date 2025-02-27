@@ -248,6 +248,19 @@
       ],
     },
     {
+      // Group Prometheus blackbox-exporter updates in one PR.
+      groupName: 'blackbox-exporter',
+      matchDatasources: [
+        'docker',
+        'go',
+        'github-releases',
+      ],
+      matchPackageNames: [
+        'github.com/prometheus/blackbox_exporter',
+        'quay.io/prometheus/blackbox-exporter',
+      ],
+    },
+    {
       // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
       // require manual adaptations of the code.
       matchDatasources: [
