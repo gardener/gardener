@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"net/http"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -76,7 +76,7 @@ var _ = Describe("handler", func() {
 			resources = []metav1.GroupVersionResource{
 				{Group: apiextensionsv1beta1.SchemeGroupVersion.Group, Version: apiextensionsv1beta1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"},
 				{Group: apiextensionsv1.SchemeGroupVersion.Group, Version: apiextensionsv1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"},
-				{Group: druidv1alpha1.GroupVersion.Group, Version: druidv1alpha1.GroupVersion.Version, Resource: "etcds"},
+				{Group: druidv1alpha1.SchemeGroupVersion.Group, Version: druidv1alpha1.SchemeGroupVersion.Version, Resource: "etcds"},
 
 				{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupbuckets"},
 				{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupentries"},
