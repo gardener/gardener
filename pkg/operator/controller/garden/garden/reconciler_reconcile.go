@@ -543,6 +543,7 @@ func (r *Reconciler) reconcile(
 				c.alertManager.SetIngressAuthSecret(credentialsSecret)
 				return c.alertManager.Deploy(ctx)
 			},
+			Dependencies: flow.NewTaskIDs(generateObservabilityIngressPassword),
 		})
 		deployPrometheusGarden = g.Add(flow.Task{
 			Name: "Deploying Garden Prometheus",
