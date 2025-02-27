@@ -57,7 +57,7 @@ static_resources:
             headers_to_add:
             - header:
                 key: Reversed-VPN
-                value: "outbound|443||kube-apiserver.{{ .seedNamespace }}.svc.cluster.local"
+                value: "{{ .reversedVPNHeaderValue }}"
           access_log:
           - name: envoy.access_loggers.stdout
             typed_config:

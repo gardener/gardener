@@ -32,7 +32,7 @@ spec:
                     - name: Reversed-VPN
                       string_match:
                         safe_regex:
-                          regex: '^outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local$'
+                          regex: '^(outbound\|(1194\|\|vpn-seed-server(-[0-4])?|443\|\|kube-apiserver)\..*\.svc\.cluster\.local|shoot--.*--.*--kube-apiserver-socket)$'
                 route:
                   cluster_header: Reversed-VPN
                   upgrade_configs:

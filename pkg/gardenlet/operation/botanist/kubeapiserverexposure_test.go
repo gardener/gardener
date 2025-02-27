@@ -138,13 +138,13 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			}
 		})
 
-		It("should create the ingress if there is a wildcard certificate", func() {
+		It("should not create the ingress if there is a wildcard certificate anymore", func() {
 			botanist.ControlPlaneWildcardCert = secret
 			botanist.Shoot.Components.ControlPlane.KubeAPIServerIngress = botanist.DefaultKubeAPIServerIngress()
 			Expect(botanist.DeployKubeAPIServerIngress(ctx)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(gateway), gateway)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(virtualService), virtualService)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule), destinationRule)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(gateway), gateway)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(virtualService), virtualService)).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule), destinationRule)).To(BeNotFoundError())
 		})
 
 		It("should not create the ingress if there is no wildcard certificate", func() {
