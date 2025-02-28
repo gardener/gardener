@@ -104,7 +104,8 @@ func (r *Reconciler) newActuator(gardenlet *seedmanagementv1alpha1.Gardenlet) ga
 			if seedTemplate.Spec.Backup == nil {
 				return nil, nil
 			}
-			return kubernetesutils.GetSecretByReference(ctx, r.VirtualClient, &seedTemplate.Spec.Backup.SecretRef)
+			// TODO(vpnachev): Add support for WorkloadIdentity
+			return kubernetesutils.GetSecretByObjectReference(ctx, r.VirtualClient, seedTemplate.Spec.Backup.CredentialsRef)
 		},
 		GetTargetDomain: func() string {
 			return ""
