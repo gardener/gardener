@@ -63,14 +63,14 @@ func (r *Reconciler) MapShootToShootState(_ context.Context, obj client.Object) 
 // ShootStatePredicates returns predicates for ShootState requests acceptance.
 func (r *Reconciler) ShootStatePredicates() predicate.Predicate {
 	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool { return true },
-		UpdateFunc: func(e event.UpdateEvent) bool { return true },
+		CreateFunc: func(event.CreateEvent) bool { return true },
+		UpdateFunc: func(event.UpdateEvent) bool { return true },
 	}
 }
 
 // ShootPredicates returns predicates for Shoot requests acceptance.
 func (r *Reconciler) ShootPredicates() predicate.Predicate {
 	return predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool { return true },
+		UpdateFunc: func(event.UpdateEvent) bool { return true },
 	}
 }
