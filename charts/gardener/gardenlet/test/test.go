@@ -976,6 +976,9 @@ func ComputeExpectedGardenletDeploymentSpec(
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
 						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
+						},
 						TerminationMessagePath:   "/dev/termination-log",
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 						VolumeMounts: []corev1.VolumeMount{{
