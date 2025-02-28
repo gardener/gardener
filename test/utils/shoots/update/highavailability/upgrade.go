@@ -22,45 +22,45 @@ import (
 // zero downtime by continuously checking the kube-apiserver's health.
 // This job fails once a health check fails. Its associated pod results in error status.
 func DeployZeroDownTimeValidatorJob(ctx context.Context, c client.Client, testName, namespace, token string) (*batchv1.Job, error) {
-	job := batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "zero-down-time-validator-" + testName,
-			Namespace: namespace,
-		},
-		Spec: batchv1.JobSpec{
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-					Labels: map[string]string{
-						v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
-						gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "validator",
-							Image: "quay.io/curl/curl",
-							Command: []string{"/bin/sh", "-ec",
-								// To avoid flakiness, consider downtime when curl fails consecutively back-to-back three times.
-								"failed=0; threshold=3; " +
-									"while [ $failed -lt $threshold ]; do " +
-									"if curl -m 2 -k https://kube-apiserver/healthz -H 'Authorization: " + token + "' -s -f -o /dev/null ; then " +
-									"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') INFO: kube-apiserver is healthy.; failed=0; " +
-									"else failed=$((failed+1)); " +
-									"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') ERROR: kube-apiserver is unhealthy and retrying.; " +
-									"fi; " +
-									"sleep 10; " +
-									"done; " +
-									"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') ERROR: kube-apiserver is still unhealthy after $failed attempts. Considered as downtime.; " +
-									"exit 1; "},
-						},
-					},
-					RestartPolicy: corev1.RestartPolicyNever,
+	job := EmptyZeroDownTimeValidatorJob(testName, namespace)
+	job.Spec = batchv1.JobSpec{
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Labels: map[string]string{
+					v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed,
+					gardenerutils.NetworkPolicyLabel(v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
 				},
 			},
-			BackoffLimit: ptr.To[int32](0),
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "validator",
+						Image: "quay.io/curl/curl",
+						Command: []string{"/bin/sh", "-ec",
+							// To avoid flakiness, consider downtime when curl fails consecutively back-to-back three times.
+							"failed=0; threshold=3; " +
+								"while [ $failed -lt $threshold ]; do " +
+								"if curl -m 2 -k https://kube-apiserver/healthz -H 'Authorization: " + token + "' -s -f -o /dev/null ; then " +
+								"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') INFO: kube-apiserver is healthy.; failed=0; " +
+								"else failed=$((failed+1)); " +
+								"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') ERROR: kube-apiserver is unhealthy and retrying.; " +
+								"fi; " +
+								"sleep 10; " +
+								"done; " +
+								"echo $(date +'%Y-%m-%dT%H:%M:%S.%3N%z') ERROR: kube-apiserver is still unhealthy after $failed attempts. Considered as downtime.; " +
+								"exit 1; "},
+					},
+				},
+				RestartPolicy: corev1.RestartPolicyNever,
+			},
 		},
+		BackoffLimit: ptr.To[int32](0),
 	}
-	return &job, c.Create(ctx, &job)
+	return job, c.Create(ctx, job)
+}
+
+// EmptyZeroDownTimeValidatorJob returns a Job object with only metadata set.
+func EmptyZeroDownTimeValidatorJob(name, namespace string) *batchv1.Job {
+	return &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "zero-down-time-validator-" + name, Namespace: namespace}}
 }
