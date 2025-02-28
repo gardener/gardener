@@ -32,10 +32,13 @@ func FindMachineImageVersion(machineImages []core.MachineImage, name, version st
 }
 
 // DetermineLatestMachineImageVersions determines the latest versions (semVer) of the given machine images from a slice of machine images
-func DetermineLatestMachineImageVersions(images []core.MachineImage) (map[string]core.MachineImageVersion, error) {
+func DetermineLatestMachineImageVersions(images []core.MachineImage, allowEmptyVersions bool) (map[string]core.MachineImageVersion, error) {
 	resultMapVersions := make(map[string]core.MachineImageVersion)
 
 	for _, image := range images {
+		if len(image.Versions) == 0 && allowEmptyVersions {
+			continue
+		}
 		latestMachineImageVersion, err := DetermineLatestMachineImageVersion(image.Versions, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to determine latest machine image version for image '%s': %w", image.Name, err)

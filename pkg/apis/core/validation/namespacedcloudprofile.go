@@ -20,7 +20,7 @@ func ValidateNamespacedCloudProfile(namespacedCloudProfile *core.NamespacedCloud
 	allErrs = append(allErrs, validateNamespacedCloudProfileParent(namespacedCloudProfile.Spec.Parent, field.NewPath("spec.parent"))...)
 
 	allErrs = append(allErrs, validateNamespacedCloudProfileKubernetesVersions(namespacedCloudProfile.Spec.Kubernetes, field.NewPath("spec.kubernetes"))...)
-	allErrs = append(allErrs, ValidateMachineImages(namespacedCloudProfile.Spec.MachineImages, field.NewPath("spec.machineImages"))...)
+	allErrs = append(allErrs, ValidateMachineImages(namespacedCloudProfile.Spec.MachineImages, field.NewPath("spec.machineImages"), true)...)
 	allErrs = append(allErrs, validateVolumeTypes(namespacedCloudProfile.Spec.VolumeTypes, field.NewPath("spec.volumeTypes"))...)
 	allErrs = append(allErrs, validateMachineTypes(namespacedCloudProfile.Spec.MachineTypes, field.NewPath("spec.machineTypes"))...)
 

@@ -251,10 +251,6 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 				}
 			}
 
-			if len(ptr.Deref(image.UpdateStrategy, "")) > 0 && !imageAlreadyExistsInNamespacedCloudProfile {
-				allErrs = append(allErrs, field.Forbidden(imageIndexPath.Child("updateStrategy"), "must not provide an updateStrategy to an extended machine image in NamespacedCloudProfile"))
-			}
-
 			for imageVersionIndex, imageVersion := range image.Versions {
 				if _, isExistingVersion := parentImages.GetImageVersion(image.Name, imageVersion.Version); isExistingVersion {
 					// An image with the specified version is already present in the parent CloudProfile.
@@ -298,7 +294,7 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 			}
 		} else {
 			// There is no entry for this image in the parent CloudProfile yet.
-			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, imageIndexPath)...)
+			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, imageIndexPath, false)...)
 			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, imageIndexPath)...)
 		}
 	}
