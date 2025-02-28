@@ -178,9 +178,11 @@ var _ = Describe("Interface", func() {
 			},
 			Spec: gardencorev1beta1.SeedSpec{
 				Backup: &gardencorev1beta1.SeedBackup{
-					SecretRef: corev1.SecretReference{
-						Name:      backupSecretName,
-						Namespace: namespace,
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       backupSecretName,
+						Namespace:  namespace,
 					},
 				},
 				Settings: &gardencorev1beta1.SeedSettings{
