@@ -13,6 +13,9 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
+	"github.com/gardener/gardener/pkg/features"
 )
 
 var (
@@ -68,10 +71,14 @@ func (i *istiod) generateIstioIngressGatewayChart() (*chartrenderer.RenderedChar
 			"serviceName":                        v1beta1constants.DefaultSNIIngressServiceName,
 			"proxyProtocolEnabled":               istioIngressGateway.ProxyProtocolEnabled,
 			"terminateLoadBalancerProxyProtocol": istioIngressGateway.TerminateLoadBalancerProxyProtocol,
+			"terminateAPIServerTLS":              features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 			"vpn": map[string]any{
 				"enabled": istioIngressGateway.VPNEnabled,
 			},
-			"enforceSpreadAcrossHosts": istioIngressGateway.EnforceSpreadAcrossHosts,
+			"enforceSpreadAcrossHosts":                  istioIngressGateway.EnforceSpreadAcrossHosts,
+			"apiServerRequestHeaderUserName":            kubeapiserverconstants.RequestHeaderUserName,
+			"apiServerRequestHeaderGroup":               kubeapiserverconstants.RequestHeaderGroup,
+			"apiServerAuthenticationDynamicMetadataKey": apiserverexposure.AuthenticationDynamicMetadataKey,
 		}
 
 		if istioIngressGateway.MinReplicas != nil {

@@ -1504,4 +1504,28 @@ var _ = Describe("Helper", func() {
 		Entry("with AutoInPlaceUpdate update strategy", ptr.To(gardencorev1beta1.AutoInPlaceUpdate), true),
 		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
 	)
+
+	DescribeTable("#IsShootIstioTLSTerminationEnabled",
+		func(shootKubernetesVersion string, shootAnnotations map[string]string, expected bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: shootAnnotations,
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: shootKubernetesVersion,
+					},
+				},
+			}
+			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(Equal(expected))
+		},
+
+		Entry("shoot with Kubernetes v1.30.0 has no Istio TLS termination", "1.30.0", nil, false),
+		Entry("shoot with Kubernetes v1.31.0 has Istio TLS termination", "1.31.0", nil, true),
+		Entry("shoot with Kubernetes v1.31.0 has no Istio TLS termination if is disabled by annotation", "1.31.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "true"}, false),
+		Entry("shoot with Kubernetes v1.31.0 has no Istio TLS termination if is not disabled by annotation", "1.31.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}, true),
+		Entry("shoot with Kubernetes v1.31.0 has no Istio TLS termination if it is annotated with a bogus value", "1.31.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "foobar"}, true),
+		Entry("shoot with Kubernetes v1.30.0 has no Istio TLS termination even if is not disabled by annotation", "1.30.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}, false),
+		Entry("shoot with bogus Kubernetes version has no Istio TLS termination - this should not happen in reality anyway", "foobar", nil, false),
+	)
 })

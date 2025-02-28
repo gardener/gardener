@@ -275,6 +275,8 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	}
 	b.ShootClientSet = nil
 
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
+
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Destroy(ctx)
 }
 
@@ -286,13 +288,13 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
 		return err
 	}
+	if err := b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer); err != nil {
+		return err
+	}
 	if b.ShootUsesDNS() {
 		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
 			return err
 		}
-	}
-	if err := b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer); err != nil {
-		return err
 	}
 	if err := kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1); err != nil {
 		return err

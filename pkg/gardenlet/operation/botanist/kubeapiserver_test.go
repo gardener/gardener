@@ -24,6 +24,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -33,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -96,6 +98,18 @@ var _ = Describe("KubeAPIServer", func() {
 		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
+				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
+					SNI: &gardenletconfigv1alpha1.SNI{
+						Ingress: &gardenletconfigv1alpha1.SNIIngress{
+							Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
+							ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
+							Labels: map[string]string{
+								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
+								"istio":                   "ingressgateway",
+							},
+						},
+					},
+				},
 				GardenClient:   gardenClient,
 				SeedClientSet:  seedClientSet,
 				SecretsManager: sm,
@@ -519,6 +533,7 @@ users:
 
 			botanist.ShootClientSet = fake.NewClientSetBuilder().WithClient(seedClient).Build()
 
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 			kubeAPIServer.EXPECT().Destroy(ctx)
 
 			Expect(botanist.DeleteKubeAPIServer(ctx)).To(Succeed())

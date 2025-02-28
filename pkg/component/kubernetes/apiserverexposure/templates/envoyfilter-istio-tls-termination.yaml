@@ -1,0 +1,55 @@
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+spec:
+  workloadSelector:
+    labels:
+{{- range $k, $v := .IngressGatewayLabels }}
+      {{ $k }}: {{ $v }}
+{{- end }}
+  configPatches:
+{{- range $v := .Hosts }}
+  - applyTo: HTTP_ROUTE
+    match:
+      context: GATEWAY
+      routeConfiguration:
+        name: "{{ $.RouteConfigurationName }}"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        match:
+          dynamic_metadata:
+          - filter: envoy.filters.http.lua
+            path:
+            - key: {{ $.AuthenticationDynamicMetadataKey }}
+            value:
+              string_match:
+                exact: {{ $v }}
+          prefix: /
+        route:
+          cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
+{{- end }}
+{{- range $v := .WildcardHosts }}
+  - applyTo: HTTP_ROUTE
+    match:
+      context: GATEWAY
+      routeConfiguration:
+        name: "{{ $.WildcardRouteConfigurationName }}"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        match:
+          dynamic_metadata:
+          - filter: envoy.filters.http.lua
+            path:
+            - key: {{ $.AuthenticationDynamicMetadataKey }}
+            value:
+              string_match:
+                exact: {{ $v }}
+          prefix: /
+        route:
+          cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
+{{- end }}
