@@ -723,6 +723,7 @@ build:
             - pkg/controllermanager/controller/shoot/quota
             - pkg/controllermanager/controller/shoot/reference
             - pkg/controllermanager/controller/shoot/retry
+            - pkg/controllermanager/controller/shoot/state/finalizer
             - pkg/controllermanager/controller/shoot/statuslabel
             - pkg/controllermanager/features
             - pkg/controllerutils
