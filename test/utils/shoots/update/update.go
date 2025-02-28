@@ -30,15 +30,14 @@ import (
 )
 
 // GetKubeAPIServerAuthToken returns kube API server auth token for given shoot's control-plane namespace in seed cluster.
-func GetKubeAPIServerAuthToken(ctx context.Context, seedClient kubernetes.Interface, namespace string) string {
-	c := seedClient.Client()
+func GetKubeAPIServerAuthToken(ctx context.Context, seedClient client.Client, namespace string) string {
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 			Namespace: namespace,
 		},
 	}
-	Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+	Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 	return deployment.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.HTTPHeaders[0].Value
 }
 
@@ -70,7 +69,7 @@ func RunTest(
 
 		By("Deploy zero-downtime validator job")
 		job, err = highavailability.DeployZeroDownTimeValidatorJob(ctx,
-			f.SeedClient.Client(), "update", controlPlaneNamespace, GetKubeAPIServerAuthToken(ctx, f.SeedClient, controlPlaneNamespace))
+			f.SeedClient.Client(), "update", controlPlaneNamespace, GetKubeAPIServerAuthToken(ctx, f.SeedClient.Client(), controlPlaneNamespace))
 		Expect(err).NotTo(HaveOccurred())
 		WaitForJobToBeReady(ctx, f.SeedClient.Client(), job)
 	}
