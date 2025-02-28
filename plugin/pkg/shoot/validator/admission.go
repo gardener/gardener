@@ -1026,7 +1026,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 
 	controlPlaneVersion, err := semver.NewVersion(c.shoot.Spec.Kubernetes.Version)
 	if err != nil {
-		return append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, fmt.Sprintf("cannot parse the kubernetes version: %s", err.Error())))
+		return append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, fmt.Sprintf("cannot parse the kubernetes version: %w", err)))
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
