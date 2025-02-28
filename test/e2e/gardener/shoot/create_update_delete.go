@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
@@ -39,25 +40,27 @@ const (
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	test := func(s *ShootContext) {
-		s.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
-			Resources: []string{"services", "clusterroles.rbac.authorization.k8s.io"},
-		}
+	Describe("Create, Update, Delete", Label("simple"), func() {
+		test := func(s *ShootContext) {
+			BeforeTestSetup(func() {
+				s.Shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+					Resources: []string{"services", "clusterroles.rbac.authorization.k8s.io"},
+				}
 
-		s.Shoot.Spec.Kubernetes.Version = kubernetesTargetVersion
+				s.Shoot.Spec.Kubernetes.Version = kubernetesTargetVersion
 
-		if !v1beta1helper.IsWorkerless(s.Shoot) {
-			// create two additional worker pools which explicitly specify the kubernetes version
-			pool1 := s.Shoot.Spec.Provider.Workers[0]
-			pool2, pool3 := pool1.DeepCopy(), pool1.DeepCopy()
-			pool2.Name += "2"
-			pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
-			pool3.Name += "3"
-			pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(kubernetesSourceVersion)}
-			s.Shoot.Spec.Provider.Workers = append(s.Shoot.Spec.Provider.Workers, *pool2, *pool3)
-		}
+				if !v1beta1helper.IsWorkerless(s.Shoot) {
+					// create two additional worker pools which explicitly specify the kubernetes version
+					pool1 := s.Shoot.Spec.Provider.Workers[0]
+					pool2, pool3 := pool1.DeepCopy(), pool1.DeepCopy()
+					pool2.Name += "2"
+					pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &s.Shoot.Spec.Kubernetes.Version}
+					pool3.Name += "3"
+					pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: ptr.To(kubernetesSourceVersion)}
+					s.Shoot.Spec.Provider.Workers = append(s.Shoot.Spec.Provider.Workers, *pool2, *pool3)
+				}
+			})
 
-		Describe("Create, Update, Delete", Label("simple"), Offset(1), func() {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -65,26 +68,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldInitializeSeedClient(s)
 
 			It("Verify shoot access using admin kubeconfig", func(ctx SpecContext) {
-				Eventually(func(g Gomega) {
-					g.Expect(s.ShootClient.List(ctx, &corev1.NamespaceList{})).To(Succeed())
-				}).Should(Succeed())
+				Eventually(ctx, s.ShootKomega.List(&corev1.NamespaceList{})).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
-			It("Verify shoot access using viewer kubeconfig", func(ctx SpecContext) {
-				Eventually(ctx, func(g Gomega) {
-					readOnlyShootClient, err := access.CreateShootClientFromViewerKubeconfig(ctx, s.GardenClientSet, s.Shoot)
-					g.Expect(err).NotTo(HaveOccurred())
-
-					g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.ConfigMapList{})).To(Succeed())
-					g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.SecretList{})).To(BeForbiddenError())
-					g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.ServiceList{})).To(BeForbiddenError())
-					g.Expect(readOnlyShootClient.Client().List(ctx, &rbacv1.ClusterRoleList{})).To(BeForbiddenError())
-					g.Expect(readOnlyShootClient.Client().Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
-					g.Expect(readOnlyShootClient.Client().Update(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
-					g.Expect(readOnlyShootClient.Client().Patch(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}}, client.RawPatch(types.MergePatchType, []byte("{}")))).To(BeForbiddenError())
-					g.Expect(readOnlyShootClient.Client().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
-				}).Should(Succeed())
-			}, SpecTimeout(time.Minute))
+			verifyViewerKubeconfigShootAccess(s)
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				It("Verify worker node labels", func(ctx SpecContext) {
@@ -92,7 +79,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					commonNodeLabels["networking.gardener.cloud/node-local-dns-enabled"] = "false"
 					commonNodeLabels["node.kubernetes.io/role"] = "node"
 
-					Eventually(func(g Gomega) {
+					Eventually(ctx, func(g Gomega) {
 						for _, workerPool := range s.Shoot.Spec.Provider.Workers {
 							expectedNodeLabels := utils.MergeStringMaps(commonNodeLabels)
 							expectedNodeLabels["worker.gardener.cloud/pool"] = workerPool.Name
@@ -120,8 +107,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 				It("Verify reported CIDRs", func(ctx SpecContext) {
 					// For workerless shoots, the status.networking section is not reported. Skip its verification accordingly.
-					Eventually(func(g Gomega) {
-						g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Shoot), s.Shoot)).To(Succeed())
+					Eventually(ctx, func(g Gomega) {
+						g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
 
 						networking := ptr.Deref(s.Shoot.Status.Networking, gardencorev1beta1.NetworkingStatus{})
 						if nodes := s.Shoot.Spec.Networking.Nodes; nodes != nil {
@@ -150,29 +137,41 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			)
 
 			if v1beta1helper.IsHAControlPlaneConfigured(s.Shoot) {
-				It("Deploy zero-downtime validator job to ensure no gardener downtime while running subsequent operations", func(ctx SpecContext) {
-					var err error
-					controlPlaneNamespace := s.Shoot.Status.TechnicalID
-					zeroDowntimeJob, err = highavailability.DeployZeroDownTimeValidatorJob(
-						ctx,
-						s.SeedClient, "update", controlPlaneNamespace,
-						shootupdatesuite.GetKubeAPIServerAuthToken(
+				It("Deploy zero-downtime validator job to ensure no kube-apiserver downtime while running subsequent operations", func(ctx SpecContext) {
+					Eventually(ctx, func(g Gomega) {
+						var err error
+						controlPlaneNamespace := s.Shoot.Status.TechnicalID
+						zeroDowntimeJob, err = highavailability.DeployZeroDownTimeValidatorJob(
 							ctx,
-							s.SeedClientSet,
-							controlPlaneNamespace,
-						),
-					)
-					Expect(err).NotTo(HaveOccurred())
+							s.SeedClient, "update", controlPlaneNamespace,
+							shootupdatesuite.GetKubeAPIServerAuthToken(
+								ctx,
+								s.SeedClientSet,
+								controlPlaneNamespace,
+							),
+						)
+						g.Expect(err).NotTo(HaveOccurred())
+					}).Should(Succeed())
+				}, SpecTimeout(time.Minute))
+
+				It("Wait for zero-downtime validator job to be ready", func(ctx SpecContext) {
 					shootupdatesuite.WaitForJobToBeReady(ctx, s.SeedClient, zeroDowntimeJob)
-				}, SpecTimeout(5*time.Minute))
+				}, SpecTimeout(time.Minute))
+
+				AfterAll(func(ctx SpecContext) {
+					Expect(s.SeedClient.Delete(ctx, zeroDowntimeJob, client.PropagationPolicy(metav1.DeletePropagationForeground))).
+						To(Or(Succeed(), BeNotFoundError()))
+				}, NodeTimeout(time.Minute))
 			}
 
 			verifyNodeKubernetesVersions(s)
 
 			It("Get CloudProfile", func(ctx SpecContext) {
-				var err error
-				cloudProfile, err = gardener.GetCloudProfile(ctx, s.GardenClient, s.Shoot)
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(ctx, func() error {
+					var err error
+					cloudProfile, err = gardener.GetCloudProfile(ctx, s.GardenClient, s.Shoot)
+					return err
+				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
 			It("Compute new Kubernetes version for control plane and worker pools", func() {
@@ -204,12 +203,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			if zeroDowntimeJob != nil {
 				It("Ensure there was no downtime while upgrading shoot", func(ctx SpecContext) {
-					Eventually(ctx, func(g Gomega) {
-						g.Expect(s.SeedClient.Get(ctx, client.ObjectKeyFromObject(zeroDowntimeJob), zeroDowntimeJob)).To(Succeed())
-						g.Expect(zeroDowntimeJob.Status.Failed).To(BeZero())
-						g.Expect(s.SeedClient.Delete(ctx, zeroDowntimeJob, client.PropagationPolicy(metav1.DeletePropagationForeground))).
-							To(Or(Succeed(), BeNotFoundError()))
-					}).Should(Succeed())
+					Eventually(ctx, s.SeedKomega.Get(zeroDowntimeJob)).Should(Succeed())
+					Expect(zeroDowntimeJob.Status.Failed).To(BeZero())
 				}, SpecTimeout(time.Minute))
 			}
 
@@ -217,15 +212,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
 			}
 
-			It("Add skip-readiness and maintain annotations", func(ctx SpecContext) {
-				patch := client.StrategicMergeFrom(s.Shoot.DeepCopy())
-				metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, "shoot.gardener.cloud/skip-readiness", "")
-				// Use maintain operation to also execute tasks in the reconcile flow which are only performed during maintenance.
-				metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, "gardener.cloud/operation", "maintain")
-				Eventually(ctx, func() error {
-					return s.GardenClient.Patch(ctx, s.Shoot, patch)
-				}).Should(Succeed())
-			}, SpecTimeout(time.Minute))
+			ItShouldAnnotateShoot(s, map[string]string{
+				"shoot.gardener.cloud/skip-readiness": "",
+				"gardener.cloud/operation":            "maintain",
+			})
 
 			It("Wait for operation annotation to be gone (meaning controller picked up reconciliation request)", func(ctx SpecContext) {
 				Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(
@@ -243,15 +233,15 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 			ItShouldDeleteShoot(s)
 			ItShouldWaitForShootToBeDeleted(s)
+		}
+
+		Context("Shoot with workers", Label("basic"), Ordered, func() {
+			test(NewTestContext().ForShoot(DefaultShoot("e2e-default")))
 		})
-	}
 
-	Context("Shoot with workers", Label("basic"), Ordered, func() {
-		test(NewTestContext().ForShoot(DefaultShoot("e2e-default")))
-	})
-
-	Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-		test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-default")))
+		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-default")))
+		})
 	})
 })
 
@@ -259,6 +249,28 @@ func verifyNodeKubernetesVersions(s *ShootContext) {
 	GinkgoHelper()
 
 	It("Verify that the Kubernetes versions for all existing nodes match the versions defined in the Shoot spec", func(ctx SpecContext) {
-		Expect(shootupdatesuite.VerifyKubernetesVersions(ctx, s.ShootClientSet, s.Shoot)).To(Succeed())
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(shootupdatesuite.VerifyKubernetesVersions(ctx, s.ShootClientSet, s.Shoot)).To(Succeed())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+func verifyViewerKubeconfigShootAccess(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Verify shoot access using viewer kubeconfig", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			readOnlyShootClient, err := access.CreateShootClientFromViewerKubeconfig(ctx, s.GardenClientSet, s.Shoot)
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.ConfigMapList{})).To(Succeed())
+			g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.SecretList{})).To(BeForbiddenError())
+			g.Expect(readOnlyShootClient.Client().List(ctx, &corev1.ServiceList{})).To(BeForbiddenError())
+			g.Expect(readOnlyShootClient.Client().List(ctx, &rbacv1.ClusterRoleList{})).To(BeForbiddenError())
+			g.Expect(readOnlyShootClient.Client().Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
+			g.Expect(readOnlyShootClient.Client().Update(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
+			g.Expect(readOnlyShootClient.Client().Patch(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}}, client.RawPatch(types.MergePatchType, []byte("{}")))).To(BeForbiddenError())
+			g.Expect(readOnlyShootClient.Client().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: metav1.NamespaceDefault}})).To(BeForbiddenError())
+		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
