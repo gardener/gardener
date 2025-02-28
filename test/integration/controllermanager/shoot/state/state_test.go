@@ -121,7 +121,7 @@ var _ = Describe("ShootState controller test", func() {
 				defer ctxCancel()
 
 				Eventually(func(g Gomega) []string {
-					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 					return shootState.Finalizers
 				}).WithContext(ctxTimeOut).Should(ConsistOf(finalizer.FinalizerName))
 			})
@@ -143,7 +143,7 @@ var _ = Describe("ShootState controller test", func() {
 				defer ctxCancel()
 
 				Eventually(func(g Gomega) []string {
-					Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 					return shootState.Finalizers
 				}).WithContext(ctxTimeOut).ShouldNot(ConsistOf(finalizer.FinalizerName))
 			})
