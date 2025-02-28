@@ -940,6 +940,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		err                error
 		apiServerConfig    *operatorv1alpha1.GardenerAPIServerConfig
 		auditWebhookConfig *apiserver.AuditWebhook
+		goAwayChance       *float64
 	)
 
 	if apiServer := garden.Spec.VirtualCluster.Gardener.APIServer; apiServer != nil {
@@ -949,6 +950,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		if err != nil {
 			return nil, err
 		}
+		goAwayChance = apiServer.GoAwayChance
 	}
 
 	return sharedcomponent.NewGardenerAPIServer(
@@ -964,6 +966,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		garden.Spec.VirtualCluster.Gardener.ClusterIdentity,
 		workloadIdentityTokenIssuer,
+		goAwayChance,
 	)
 }
 
