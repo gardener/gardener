@@ -123,6 +123,8 @@ spec:
         dnsConfig:
 {{ toYaml .Values.dnsConfig | indent 10 }}
         {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
