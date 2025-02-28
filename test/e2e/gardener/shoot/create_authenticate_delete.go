@@ -92,7 +92,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		Eventually(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1ClientAPIServerProxy, shoot1, true)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2ClientAPIServerProxy, shoot2, true)).To(Succeed())
-		}).WithTimeout(time.Minute).Should(Succeed())
+		}).WithTimeout(10 * time.Second).Should(Succeed())
 
 		By("Verify a shoot cannot be accessed with a client certificate from another shoot by manipulating the apiserver-proxy header")
 		shoot1NoAccessClientAPIServerProxy, err := getAPIServerProxyClient(shoot1NoAccessRestConfig, shoot1)
@@ -107,16 +107,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 		}).WithTimeout(10 * time.Second).Should(Succeed())
 
 		By("Verify shoot access using service account token kubeconfig")
-		shoot1TokenClient, err := access.CreateShootClientFromStaticServiceAccountToken(ctx, shoot1Client, "shoot-one")
+		shoot1TokenClient, err := access.CreateTargetClientFromDynamicServiceAccountToken(ctx, shoot1Client, "shoot-one")
 		Expect(err).NotTo(HaveOccurred())
 
-		shoot2TokenClient, err := access.CreateShootClientFromStaticServiceAccountToken(ctx, shoot2Client, "shoot-two")
+		shoot2TokenClient, err := access.CreateTargetClientFromDynamicServiceAccountToken(ctx, shoot2Client, "shoot-two")
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func(g Gomega) {
 			g.Expect(validateShootAccess(ctx, shoot1TokenClient.Client(), shoot1, true)).To(Succeed())
 			g.Expect(validateShootAccess(ctx, shoot2TokenClient.Client(), shoot2, true)).To(Succeed())
-		}).WithTimeout(time.Minute).Should(Succeed())
+		}).WithTimeout(10 * time.Second).Should(Succeed())
 
 		By("Verify a shoot cannot be accessed with a service account token from another shoot")
 		shoot1NoAccessTokenRestConfig := copyRESTConfigAndInjectAuthorization(shoot1TokenClient.RESTConfig(), shoot2TokenClient.RESTConfig())
