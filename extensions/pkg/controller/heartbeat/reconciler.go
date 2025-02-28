@@ -12,11 +12,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 )
 
@@ -54,7 +54,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.client, lease, func() error {
+	op, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.client, lease, func() error {
 		lease.Spec.RenewTime = &metav1.MicroTime{Time: r.clock.Now().UTC()}
 		return nil
 	})
