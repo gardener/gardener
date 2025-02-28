@@ -361,36 +361,9 @@ EOF
     done
 fi
 
-# TODO(LucaBernstein): Remove once containerd v2.0.3 is released and included in the kindest/node image.
-"$(dirname "$0")/../pkg/provider-local/node/get-containerd.sh"
-
-# workarounds for KinD issues
-# TODO(marc1404): Remove once kindest/node uses runc >= v1.2.4
-if [[ -n "${CI:-}" ]]; then
-  cp /get-runc/runc "$(dirname "$0")/../pkg/provider-local/node/runc"
-else
-  "$(dirname "$0")/../pkg/provider-local/node/get-runc.sh"
-fi
-
 for node in $nodes; do
   # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
   docker exec "$node" sh -c "sysctl fs.inotify.max_user_instances=8192"
-
-  # TODO(LucaBernstein): Remove once containerd v2.0.3 is released and included in the kindest/node image.
-  echo "Installing containerd on node $node from local filesystem"
-  docker cp "$(dirname "$0")/../pkg/provider-local/node/containerd/bin/containerd" "$node":/usr/local/bin/containerd
-  docker cp "$(dirname "$0")/../pkg/provider-local/node/containerd/bin/ctr" "$node":/usr/local/bin/ctr
-  docker cp "$(dirname "$0")/../pkg/provider-local/node/containerd/bin/containerd-shim-runc-v2" "$node":/usr/local/bin/containerd-shim-runc-v2
-
-  # TODO(marc1404): Remove once kindest/node uses runc >= v1.2.4
-  # workaround issue with runc v1.2.3 provided by kindest/node:v1.32.0 by installing runc v1.2.4 manually (https://github.com/opencontainers/runc/pull/4555)
-  if [ -n "${CI:-}" ]; then
-    echo "Installing runc on node $node from container filesystem"
-    docker cp /get-runc/runc "$node":/usr/local/sbin/runc
-  else
-    echo "Installing runc on node $node from local filesystem"
-    docker cp "$(dirname "$0")/../pkg/provider-local/node/runc" "$node":/usr/local/sbin/runc
-  fi
 done
 
 if [[ "$KUBECONFIG" != "$PATH_KUBECONFIG" ]]; then
