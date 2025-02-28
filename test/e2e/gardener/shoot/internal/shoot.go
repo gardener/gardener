@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -95,6 +96,36 @@ func ItShouldUpdateShootToHighAvailability(s *ShootContext, failureToleranceType
 						Type: failureToleranceType,
 					},
 				},
+			}
+		})).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldHibernateShoot hibernates the shoot.
+func ItShouldHibernateShoot(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Hibernate Shoot", func(ctx SpecContext) {
+		s.Log.Info("Hibernating Shoot")
+
+		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
+			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+				Enabled: ptr.To(true),
+			}
+		})).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldWakeUpShoot wakes up the shoot.
+func ItShouldWakeUpShoot(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Wake Up Shoot", func(ctx SpecContext) {
+		s.Log.Info("Waking up Shoot")
+
+		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
+			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+				Enabled: ptr.To(false),
 			}
 		})).Should(Succeed())
 	}, SpecTimeout(time.Minute))
