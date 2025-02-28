@@ -48,14 +48,14 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 			Name:      extensions.HeartBeatResourceName,
 			Namespace: r.namespace,
 		},
-		Spec: coordinationv1.LeaseSpec{
-			HolderIdentity:       &r.extensionName,
-			LeaseDurationSeconds: &r.renewIntervalSeconds,
-		},
 	}
 
 	op, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.client, lease, func() error {
-		lease.Spec.RenewTime = &metav1.MicroTime{Time: r.clock.Now().UTC()}
+		lease.Spec = coordinationv1.LeaseSpec{
+			HolderIdentity:       &r.extensionName,
+			LeaseDurationSeconds: &r.renewIntervalSeconds,
+			RenewTime:            &metav1.MicroTime{Time: r.clock.Now().UTC()},
+		}
 		return nil
 	})
 	if err != nil {
