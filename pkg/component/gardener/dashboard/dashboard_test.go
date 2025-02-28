@@ -435,6 +435,9 @@ frontend:
 										SuccessThreshold:    1,
 										PeriodSeconds:       10,
 									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
+									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											Name:      "gardener-dashboard-sessionsecret",
