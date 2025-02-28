@@ -64,5 +64,5 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 
 	log.V(1).Info("Heartbeat Lease", "lease", client.ObjectKeyFromObject(lease), "operation", op)
 	// Ensure we update the lease much sooner to account for possible controller lag
-	return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second / 4}, nil
+	return reconcile.Result{RequeueAfter: time.Duration(r.renewIntervalSeconds) * time.Second}, nil
 }
