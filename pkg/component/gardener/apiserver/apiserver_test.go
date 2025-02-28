@@ -134,6 +134,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			Image:                       image,
 			LogFormat:                   logFormat,
 			LogLevel:                    logLevel,
+			GoAwayChance:                ptr.To(0.0015),
 			TopologyAwareRoutingEnabled: true,
 			WorkloadIdentityTokenIssuer: workloadIdentityIssuer,
 		}
@@ -402,6 +403,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								"--log-level=" + logLevel,
 								"--log-format=" + logFormat,
 								"--secure-port=8443",
+								"--goaway-chance=0.001500",
 								"--workload-identity-token-issuer=" + workloadIdentityIssuer,
 								"--workload-identity-signing-key-file=/etc/gardener-apiserver/workload-identity/signing/key.pem",
 								"--http2-max-streams-per-connection=1000",
