@@ -39,7 +39,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if err := r.Client.Get(ctx, request.NamespacedName, shootState); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.V(1).Info("Did not manage to retrieve ShootState object")
-			return reconcile.Result{}, fmt.Errorf("error retrieving ShootState from store: %w", err)
+			// Since reconciliation runs on Shoot update, we should not
+			// flood the logs with errors when a migration is not initiated
+			// and the `ShootState` is not supposed to exist.
+			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
