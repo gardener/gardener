@@ -607,6 +607,9 @@ func deployment(namespace, configSecretName, serverCertSecretName string, testVa
 								InitialDelaySeconds: 10,
 								TimeoutSeconds:      5,
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "gardener-admission-controller-cert",
