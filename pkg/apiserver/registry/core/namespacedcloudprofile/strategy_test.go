@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	namespacedcloudprofileregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/namespacedcloudprofile"
@@ -126,7 +127,7 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 					namespacedCloudProfile.Spec.MachineImages = machineImages
 				}
 
-				namespacedcloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), namespacedCloudProfile)
+				namespacedcloudprofileregistry.Strategy.PrepareForCreate(ctx, namespacedCloudProfile)
 
 				if useKubernetesSettings {
 					Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(ConsistOf(
@@ -183,12 +184,35 @@ var _ = Describe("NamespacedCloudProfile Strategy", func() {
 				}},
 			}
 
-			namespacedcloudprofileregistry.Strategy.PrepareForCreate(context.TODO(), namespacedCloudProfile)
+			namespacedcloudprofileregistry.Strategy.PrepareForCreate(ctx, namespacedCloudProfile)
 
 			Expect(namespacedCloudProfile.Spec.MachineImages).To(Equal([]core.MachineImage{
 				{Name: "machineImage2", Versions: []core.MachineImageVersion{
 					{ExpirableVersion: core.ExpirableVersion{Version: "1.2.0"}},
 				}},
+			}))
+		})
+
+		It("should not drop a machine image entry from NamespacedCloudProfile if the updateStrategy is set", func() {
+			namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
+				{
+					Name:           "machineImage1",
+					UpdateStrategy: ptr.To(core.UpdateStrategyMajor),
+					Versions: []core.MachineImageVersion{
+						{ExpirableVersion: core.ExpirableVersion{Version: "1.0.0", ExpirationDate: expiredExpirationDate1}},
+					},
+				},
+				{
+					Name:           "machineImage2",
+					UpdateStrategy: ptr.To(core.UpdateStrategyMajor),
+				},
+			}
+
+			namespacedcloudprofileregistry.Strategy.PrepareForCreate(ctx, namespacedCloudProfile)
+
+			Expect(namespacedCloudProfile.Spec.MachineImages).To(Equal([]core.MachineImage{
+				{Name: "machineImage1", UpdateStrategy: ptr.To(core.UpdateStrategyMajor)},
+				{Name: "machineImage2", UpdateStrategy: ptr.To(core.UpdateStrategyMajor)},
 			}))
 		})
 
