@@ -42,7 +42,10 @@ func (p *prometheus) cortexContainer() corev1.Container {
 			ContainerPort: portCortex,
 			Protocol:      corev1.ProtocolTCP,
 		}},
-		SecurityContext: &corev1.SecurityContext{ReadOnlyRootFilesystem: ptr.To(true)},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+			ReadOnlyRootFilesystem:   ptr.To(true),
+		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("100m"),
