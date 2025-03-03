@@ -71,7 +71,7 @@ func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) 
 		}
 	} else {
 		// If the feature gate is disabled, the capabilitiesDefinition must not be set.
-		if IsDefined(spec.CapabilitiesDefinition) {
+		if AreCapabilitiesDefined(spec.CapabilitiesDefinition) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("capabilitiesDefinition"), "must not be defined as the CloudProfile Capabilities Feature is disabled."))
 		}
 	}
@@ -189,7 +189,7 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, capabi
 			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 			allErrs = append(allErrs, validateSupportedVersionsConfiguration(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
 
-			if !IsDefined(capabilitiesDefinition) && len(machineVersion.Architectures) == 0 {
+			if !AreCapabilitiesDefined(capabilitiesDefinition) && len(machineVersion.Architectures) == 0 {
 				allErrs = append(allErrs, field.Required(versionsPath.Child("architectures"), "must provide at least one architecture"))
 			}
 		}
@@ -408,4 +408,11 @@ func validateCloudProfileLimitsUpdate(newLimits, oldLimits *core.Limits, fldPath
 	}
 
 	return allErrs
+}
+
+// AreCapabilitiesDefined checks if the capabilitiesDefinition is set and not empty
+// it is intended to be used only during the transition period to capabilities and should be removed after capabilitiesDefinition is required
+// then only validateCapabilitiesDefinition should be used
+func AreCapabilitiesDefined(capabilitiesDefinition core.Capabilities) bool {
+	return len(capabilitiesDefinition) != 0
 }

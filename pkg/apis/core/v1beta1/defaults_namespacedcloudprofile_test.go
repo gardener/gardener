@@ -16,7 +16,6 @@ var _ = Describe("NamespacedCloudProfile defaulting", func() {
 	var obj *NamespacedCloudProfile
 
 	BeforeEach(func() {
-
 		obj = &NamespacedCloudProfile{
 			Spec: NamespacedCloudProfileSpec{
 				MachineImages: []MachineImage{{

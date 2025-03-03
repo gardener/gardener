@@ -21,7 +21,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	apiserverfeatures "github.com/gardener/gardener/pkg/apiserver/features"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/namespacedcloudprofile/validator"
 )
@@ -29,8 +28,6 @@ import (
 var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", func(useCapabilitiesDefinition bool) {
 
 	Describe("Admission", func() {
-		apiserverfeatures.RegisterFeatureGates()
-
 		Describe("#Validate", func() {
 			var (
 				ctx                 context.Context
@@ -62,7 +59,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 						"hypervisorType": "gen1, gen2",
 					}
 					machineCapabilities = map[string]string{"architecture": "amd64"}
-					capabilitiesSet = []apiextensionsv1.JSON{{Raw: []byte(`{"architecture":"amd64", "hypervisorType":"gen1"}`)}}
+					capabilitiesSet = []apiextensionsv1.JSON{{Raw: []byte(`{"` + v1beta1constants.ArchitectureKey + `":"amd64", "hypervisorType":"gen1"}`)}}
 				} else {
 					machineArchitecture = "amd64"
 					imageArchitectures = []string{"amd64", "arm64"}

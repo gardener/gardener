@@ -17,13 +17,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-// IsDefined checks if the capabilitiesDefinition is set and not empty
-// it is intended to be used only during the transition period to capabilities and should be removed after capabilitiesDefinition is required
-// then only validateCapabilitiesDefinition should be used
-func IsDefined(capabilitiesDefinition core.Capabilities) bool {
-	return len(capabilitiesDefinition) != 0
-}
-
 // ValidateMachineImageCapabilities validates the given list of machine images for valid capabilities and architecture values.
 func ValidateMachineImageCapabilities(machineImages []core.MachineImage, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -32,7 +25,7 @@ func ValidateMachineImageCapabilities(machineImages []core.MachineImage, capabil
 		idxPath := fldPath.Index(i)
 		for index, machineVersion := range image.Versions {
 			versionsPath := idxPath.Child("versions").Index(index)
-			if IsDefined(capabilitiesDefinition) {
+			if AreCapabilitiesDefined(capabilitiesDefinition) {
 				allErrs = append(allErrs, validateMachineImageVersionCapabilities(machineVersion, capabilitiesDefinition, versionsPath)...)
 			} else {
 				allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child(v1beta1constants.ArchitectureKey))...)
@@ -50,7 +43,7 @@ func validateMachineImageVersionCapabilities(machineImageVersion core.MachineIma
 	errList := field.ErrorList{}
 
 	if machineImageVersion.Architectures != nil {
-		errList = append(errList, field.Invalid(path.Child("architectures"), machineImageVersion.Architectures, "must not be set when capabilitiesSet are used and capabilitiesDefinition is set"))
+		errList = append(errList, field.Forbidden(path.Child("architectures"), "must not be set when capabilities are defined"))
 	}
 
 	capabilitiesSet, unmarshalErrorList := UnmarshalCapabilitiesSet(machineImageVersion.CapabilitiesSet, path)
@@ -73,7 +66,7 @@ func validateMachineTypesCapabilities(machineTypes []core.MachineType, capabilit
 		idxPath := fldPath.Index(i)
 		archPath := idxPath.Child(v1beta1constants.ArchitectureKey)
 
-		if IsDefined(capabilitiesDefinition) {
+		if AreCapabilitiesDefined(capabilitiesDefinition) {
 			allErrs = append(allErrs, ValidateMachineTypeCapabilities(machineType, capabilitiesDefinition, idxPath)...)
 		} else {
 			allErrs = append(allErrs, validateMachineTypeArchitecture(machineType.Architecture, archPath)...)
@@ -103,7 +96,7 @@ func ValidateMachineTypeCapabilities(machineType core.MachineType, capabilitiesD
 	errList = append(errList, validateMachineTypeArchitectureCapability(machineType, capabilitiesDefinition, path)...)
 
 	if len(ptr.Deref(machineType.Architecture, "")) > 0 {
-		errList = append(errList, field.Invalid(path.Child(v1beta1constants.ArchitectureKey), machineType.Architecture, "must not be set when capabilities are used and capabilitiesDefinition is set"))
+		errList = append(errList, field.Forbidden(path.Child(v1beta1constants.ArchitectureKey), "must not be set when capabilities are defined"))
 	}
 
 	return errList
@@ -116,10 +109,12 @@ func validateMachineTypeArchitectureCapability(machineType core.MachineType, cap
 	parsedCapabilitiesDefinition := ParseCapabilities(capabilitiesDefinition)
 	parsedCapabilities := ParseCapabilities(machineType.Capabilities)
 
-	allowedArchitectures := parsedCapabilitiesDefinition[v1beta1constants.ArchitectureKey].Values()
+	allowedArchitectures := parsedCapabilitiesDefinition[v1beta1constants.ArchitectureKey]
 	if len(allowedArchitectures) > 1 {
-		if value, ok := parsedCapabilities[v1beta1constants.ArchitectureKey]; !ok || len(value) != 1 {
+		if value, ok := parsedCapabilities[v1beta1constants.ArchitectureKey]; !ok {
 			errList = append(errList, field.Required(path.Child("capabilities", v1beta1constants.ArchitectureKey), fmt.Sprintf("multiple architectures are supported in the cloud profile. So it must be defined and contain exactly one of: %+v", allowedArchitectures)))
+		} else if len(value) != 1 {
+			errList = append(errList, field.Invalid(path.Child("capabilities", v1beta1constants.ArchitectureKey), value, fmt.Sprintf("must contain exactly one of: %+v", allowedArchitectures)))
 		}
 	}
 	return errList
@@ -130,7 +125,7 @@ func validateCapabilitiesAgainstDefinition(capabilities core.Capabilities, capab
 	parsedCapabilitiesDefinition := ParseCapabilities(capabilitiesDefinition)
 	var errList field.ErrorList
 
-	if !IsDefined(capabilitiesDefinition) {
+	if !AreCapabilitiesDefined(capabilitiesDefinition) {
 		//  do not create errors if capabilitiesDefinition is not set, as it would pollute the error list
 		//  capabilitiesDefinition must be checked before calling this function
 		return errList
@@ -142,7 +137,7 @@ func validateCapabilitiesAgainstDefinition(capabilities core.Capabilities, capab
 			continue
 		}
 		if !capabilityValues.IsSubsetOf(parsedCapabilitiesDefinition[capabilityName]) {
-			errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues.Values(), "must be a subset of spec.capabilitiesDefinition of the provider's cloudProfile"))
+			errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues, "must be a subset of spec.capabilitiesDefinition of the provider's cloudProfile"))
 		}
 	}
 
@@ -161,7 +156,7 @@ func validateCapabilitiesDefinition(definition ParsedCapabilities, path *field.P
 	// architecture is a required capability
 	val, ok := definition[v1beta1constants.ArchitectureKey]
 	if ok {
-		errList = append(errList, validateMachineImageVersionArchitecture(val.Values(), path.Child(v1beta1constants.ArchitectureKey))...)
+		errList = append(errList, validateMachineImageVersionArchitecture(val, path.Child(v1beta1constants.ArchitectureKey))...)
 	} else {
 		errList = append(errList, field.Required(path.Child(v1beta1constants.ArchitectureKey),
 			"allowed architectures are: "+strings.Join(v1beta1constants.ValidArchitectures, ", ")))
@@ -174,6 +169,12 @@ func validateCapabilitiesDefinition(definition ParsedCapabilities, path *field.P
 		}
 		if len(capabilityValues) == 0 {
 			errList = append(errList, field.Required(path.Child(capabilityName), "must not be empty"))
+		} else {
+			for _, capabilityValue := range capabilityValues {
+				if len(capabilityValue) == 0 {
+					errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues, "must not contain empty capability values"))
+				}
+			}
 		}
 	}
 	return errList
@@ -234,8 +235,7 @@ func ParseCapabilitiesSet(capabilitiesSet []core.Capabilities) []ParsedCapabilit
 func ParseCapabilities(capabilities core.Capabilities) ParsedCapabilities {
 	parsedCapabilities := make(ParsedCapabilities)
 	for capabilityName, capabilityValuesString := range capabilities {
-		capabilityValues := splitAndSanitize(capabilityValuesString)
-		parsedCapabilities[capabilityName] = CreateCapabilityValueSet(capabilityValues)
+		parsedCapabilities[capabilityName] = splitAndSanitize(capabilityValuesString)
 	}
 	return parsedCapabilities
 }
@@ -245,28 +245,22 @@ func ParseCapabilities(capabilities core.Capabilities) ParsedCapabilities {
 func splitAndSanitize(valueString string) []string {
 	values := strings.Split(valueString, ",")
 	for i := 0; i < len(values); i++ {
-		// strip leading and trailing whitespaces, single quotes & double quotes
-		values[i] = strings.Trim(values[i], "' \"")
-
-		if len(strings.TrimSpace(values[i])) == 0 {
-			values = append(values[:i], values[i+1:]...)
-			i--
-		}
+		values[i] = strings.TrimSpace(values[i])
 	}
 	return values
 }
 
 // ParsedCapabilities is the internal runtime representation of Capabilities
-type ParsedCapabilities map[string]CapabilityValueSet
+type ParsedCapabilities map[string]CapabilityValues
 
-// CapabilityValueSet is a set of capability values
-type CapabilityValueSet map[string]bool
+// CapabilityValues is a set of capability values
+type CapabilityValues []string
 
 // DeepCopy creates a deep copy of the ParsedCapabilities
 func (c ParsedCapabilities) DeepCopy() ParsedCapabilities {
 	capabilities := make(ParsedCapabilities)
-	for capabilityName, capabilityValueSet := range c {
-		capabilities[capabilityName] = CreateCapabilityValueSet(capabilityValueSet.Values())
+	for capabilityName, capabilityValues := range c {
+		capabilities[capabilityName] = append(CapabilityValues{}, capabilityValues...)
 	}
 	return capabilities
 }
@@ -275,7 +269,7 @@ func (c ParsedCapabilities) DeepCopy() ParsedCapabilities {
 func (c ParsedCapabilities) ToCapabilities() core.Capabilities {
 	var capabilities = core.Capabilities{}
 	for capabilityName, capabilityValueSet := range c {
-		capabilities[capabilityName] = strings.Join(capabilityValueSet.Values(), ",")
+		capabilities[capabilityName] = strings.Join(capabilityValueSet, ",")
 	}
 	return capabilities
 }
@@ -290,60 +284,68 @@ func (c ParsedCapabilities) HasEmptyCapabilityValue() bool {
 	return false
 }
 
-// CreateCapabilityValueSet creates a new CapabilityValueSet from a list of values
-func CreateCapabilityValueSet(values []string) CapabilityValueSet {
-	capabilityValueSet := make(CapabilityValueSet)
-	for _, value := range values {
-		capabilityValueSet[value] = true
+// Intersection creates the intersection of two ParsedCapabilities
+func (c ParsedCapabilities) Intersection(other ParsedCapabilities) ParsedCapabilities {
+	intersection := make(ParsedCapabilities)
+	for capabilityName, capabilityValues := range c {
+		intersection[capabilityName] = capabilityValues.Intersection(other[capabilityName])
 	}
-	return capabilityValueSet
+	return intersection
 }
 
-// Add adds values to the CapabilityValueSet
-func (c CapabilityValueSet) Add(values ...string) {
+// Add adds values to the CapabilityValues
+func (c *CapabilityValues) Add(values ...string) {
 	for _, value := range values {
-		c[value] = true
+		if !contains(*c, value) {
+			*c = append(*c, value)
+		}
 	}
 }
 
-// Contains checks if the CapabilityValueSet contains all values
-func (c CapabilityValueSet) Contains(values ...string) bool {
+// contains checks if an array contains a specific element
+func contains(arr []string, target string) bool {
+	for _, element := range arr {
+		if element == target {
+			return true
+		}
+	}
+	return false
+}
+
+// Contains checks if the CapabilityValues contains all values
+func (c *CapabilityValues) Contains(values ...string) bool {
 	for _, value := range values {
-		if !c[value] {
+		if !contains(*c, value) {
 			return false
 		}
 	}
 	return true
 }
 
-// Remove removes values from the CapabilityValueSet
-func (c CapabilityValueSet) Remove(value string) {
-	delete(c, value)
-}
-
-// Values returns the values of the CapabilityValueSet as a slice
-func (c CapabilityValueSet) Values() []string {
-	values := make([]string, 0, len(c))
-	for value := range c {
-		values = append(values, value)
+// Remove removes values from the CapabilityValues
+func (c *CapabilityValues) Remove(value string) {
+	for i, v := range *c {
+		if v == value {
+			*c = append((*c)[:i], (*c)[i+1:]...)
+			return
+		}
 	}
-	return values
 }
 
 // Intersection creates the intersection of two CapabilityValueSets
-func (c CapabilityValueSet) Intersection(other CapabilityValueSet) CapabilityValueSet {
-	intersection := make(CapabilityValueSet)
-	for value := range c {
+func (c *CapabilityValues) Intersection(other CapabilityValues) CapabilityValues {
+	intersection := CapabilityValues{}
+	for _, value := range *c {
 		if other.Contains(value) {
-			intersection.Add(value)
+			intersection = append(intersection, value)
 		}
 	}
 	return intersection
 }
 
-// IsSubsetOf checks if the CapabilityValueSet is a subset of another CapabilityValueSet
-func (c CapabilityValueSet) IsSubsetOf(other CapabilityValueSet) bool {
-	for value := range c {
+// IsSubsetOf checks if the CapabilityValues is a subset of another CapabilityValues
+func (c *CapabilityValues) IsSubsetOf(other CapabilityValues) bool {
+	for _, value := range *c {
 		if !other.Contains(value) {
 			return false
 		}

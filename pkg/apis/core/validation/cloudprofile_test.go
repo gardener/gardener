@@ -1545,9 +1545,9 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.capabilitiesDefinition"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
+					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.machineTypes[0].architecture"),
-					"Detail": Equal("must not be set when capabilities are used and capabilitiesDefinition is set"),
+					"Detail": Equal("must not be set when capabilities are defined"),
 				})),
 			}))
 
@@ -1633,7 +1633,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			cp.Spec.MachineTypes[0].Capabilities = map[string]string{v1beta1constants.ArchitectureKey: "arm64,amd64"}
 			errorList := ValidateCloudProfile(cp)
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
+				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.machineTypes[0].capabilities.architecture"),
 			}))))
 		})
@@ -1641,10 +1641,10 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 
 	var (
 		CapabilitiesTestData = []TableEntry{
-			Entry("accept capabilitiesDefinition without explicit capabilities on machineImage and machineType", cloudProfile, nil, nil, capabilitiesDefinition, nil, nil, nil),
-			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType", cloudProfile, nil, nil, capabilitiesDefinition, machineCapabilities, nil, nil),
-			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType and machineImage", cloudProfile, nil, nil, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, nil),
-			Entry("reject when CapabilitiesDefinition is missing", cloudProfile, nil, nil, nil, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
+			Entry("accept capabilitiesDefinition without explicit capabilities on machineImage and machineType", cloudProfile, ptr.To(""), nil, capabilitiesDefinition, nil, nil, nil),
+			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType", cloudProfile, ptr.To(""), nil, capabilitiesDefinition, machineCapabilities, nil, nil),
+			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType and machineImage", cloudProfile, ptr.To(""), nil, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, nil),
+			Entry("reject when CapabilitiesDefinition is missing", cloudProfile, ptr.To(""), nil, nil, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet"),
@@ -1668,7 +1668,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
 				})),
 			}),
-			Entry("reject missing architecture on machineType", cloudProfile, nil, imageArchitecture, nil, nil, nil, []gomegatypes.GomegaMatcher{
+			Entry("reject missing architecture on machineType", cloudProfile, ptr.To(""), imageArchitecture, nil, nil, nil, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.machineTypes[0].architecture"),
@@ -1676,7 +1676,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			}),
 		}
 		MixedUsageTestData = []TableEntry{
-			Entry("reject no architecture defined in capabilities and dedicated field", cloudProfile, nil, nil, nil, nil, nil, []gomegatypes.GomegaMatcher{
+			Entry("reject no architecture defined in capabilities and dedicated field", cloudProfile, ptr.To(""), nil, nil, nil, nil, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
@@ -1687,11 +1687,11 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			}),
 			Entry("reject mixed usage of architecture and capabilitiesDefinition", cloudProfile, machineArchitecture, imageArchitecture, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.machineTypes[0].architecture"),
 				}))}),
 		}
@@ -1723,7 +1723,6 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			if expectedError == nil {
 				Expect(errorList).To(BeEmpty())
 			} else {
-				//
 				Expect(errorList).NotTo(BeEmpty())
 				Expect(errorList).To(ConsistOf(expectedError))
 			}

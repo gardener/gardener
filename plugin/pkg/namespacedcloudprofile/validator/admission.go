@@ -180,13 +180,13 @@ func (c *validationContext) validateMachineTypes(a admission.Attributes) error {
 			}
 			return apierrors.NewBadRequest(fmt.Sprintf("NamespacedCloudProfile attempts to overwrite parent CloudProfile with machineType: %+v", machineType))
 		}
-		if validation.IsDefined(capabilitiesDefinition) {
+		if validation.AreCapabilitiesDefined(capabilitiesDefinition) {
 			errorList := validation.ValidateMachineTypeCapabilities(machineType, capabilitiesDefinition, field.NewPath("spec", "machineTypes"))
 			if len(errorList) != 0 {
 				return apierrors.NewBadRequest(fmt.Sprintf("Parent CloudProfile defines CapabilitiesDefinition. NamespacedCloudProfile machineTypes must define capabilities according to its definition: %+v", machineType))
 			}
 		} else {
-			if validation.IsDefined(machineType.Capabilities) {
+			if validation.AreCapabilitiesDefined(machineType.Capabilities) {
 				return apierrors.NewBadRequest(fmt.Sprintf("Parent CloudProfile does not define CapabilitiesDefinition. NamespacedCloudProfile machineTypes must not define capabilities: %+v", machineType))
 			}
 		}

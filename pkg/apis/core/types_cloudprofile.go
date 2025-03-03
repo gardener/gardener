@@ -65,9 +65,9 @@ type CloudProfileSpec struct {
 	// Limits configures operational limits for Shoot clusters using this CloudProfile.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 	Limits *Limits
-	// CapabilitiesDefinition contains the definition of all possible capabilities of the CloudProfile.
+	// CapabilitiesDefinition contains the definition of all possible capabilities in the CloudProfile.
 	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
-	// The order of values for a given capability is relevant. To the left is the most important value.
+	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that enables the most important capabilities will be selected.
 	CapabilitiesDefinition Capabilities
 }
@@ -116,8 +116,8 @@ type MachineImageVersion struct {
 	KubeletVersionConstraint *string
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	InPlaceUpdates *InPlaceUpdates
-	// CapabilitiesSet contains the set of capabilities of a MachineImage version. There is exactly one capabilities entry
-	// per resource of a version the infrastructure provider serves.
+	// CapabilitiesSet is an array of capabilities. Each entry represents a combination of capabilities that is provided by
+	// the machine image version.
 	CapabilitiesSet []apiextensionsv1.JSON
 }
 
