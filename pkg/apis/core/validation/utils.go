@@ -351,11 +351,6 @@ func validateMachineImageVersionArchitecture(archs []string, fldPath *field.Path
 func validateMachineTypeArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Safeguard against nil pointer in case defaulting did not run correctly
-	if arch == nil {
-		arch = new(string)
-	}
-
 	if !slices.Contains(v1beta1constants.ValidArchitectures, *arch) {
 		allErrs = append(allErrs, field.NotSupported(fldPath, *arch, v1beta1constants.ValidArchitectures))
 	}

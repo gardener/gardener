@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -24,11 +24,11 @@ var _ = Describe("Capabilities utility tests", func() {
 			"hypervisorType": "gen1,gen2,gen3",
 		}
 	)
+
 	Describe("#ValidateCapabilities", func() {
 		It("should accept a capabilitiesDefinition with architecture as capability", func() {
 			errorList := ValidateCapabilitiesDefinition(capabilities, dummyPath)
 			Expect(errorList).To(BeEmpty())
-
 		})
 
 		DescribeTable("should reject invalid capabilitiesDefinition",
@@ -44,7 +44,7 @@ var _ = Describe("Capabilities utility tests", func() {
 			}),
 			Entry("empty capability values", core.Capabilities{"architecture": "amd64", "hypervisorType": ""}, []gomegatypes.GomegaMatcher{
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(dummyPath.Child("hypervisorType").String()),
 				})),
 			}),
@@ -57,7 +57,8 @@ var _ = Describe("Capabilities utility tests", func() {
 		)
 
 	})
-	Describe("#ParsedCapabilities", func() {
+
+	Describe("#UnmarshalCapabilities", func() {
 		It("should unmarshal correct CapabilitiesSet", func() {
 			var CapabilitiesSet = []v1.JSON{
 				{Raw: []byte(`{"architecture":"amd64","hypervisorType":"gen2"}`)},
@@ -140,18 +141,31 @@ var _ = Describe("Capabilities utility tests", func() {
 			}))
 			Expect(capabilitiesSet).To(HaveLen(3))
 		})
+	})
 
+	Describe("#ParsedCapabilities", func() {
+		It("should retain the order of the CapabilityValues after parsing", func() {
+			parsedCapabilities := ParseCapabilities(capabilities)
+			architectureValues := parsedCapabilities["architecture"]
+			Expect(architectureValues).To(Equal(CapabilityValues{"amd64", "arm64"}))
+			Expect(architectureValues).NotTo(Equal(CapabilityValues{"arm64", "amd64"}))
+
+			hypervisorValues := parsedCapabilities["hypervisorType"]
+			Expect(hypervisorValues).To(Equal(CapabilityValues{"gen1", "gen2", "gen3"}))
+		})
 		It("should sanitize capability values on parsing", func() {
-			var capabilities2 core.Capabilities = map[string]string{
-				"architecture":   "  amd64 ,arm64 ,amd32, , 'asap   '    , I look weird  ",
-				"hypervisorType": `"gen1", "gen4"`,
+			var capabilities2 = core.Capabilities{
+				"architecture":   "  amd64 ,arm64 ,amd32,  asap       , I look weird  ",
+				"hypervisorType": "gen1, gen4",
 			}
 			parsedCapabilities := ParseCapabilities(capabilities2)
 
-			Expect(parsedCapabilities["architecture"].Values()).To(ConsistOf("amd64", "arm64", "amd32", "asap", "I look weird"))
-			Expect(parsedCapabilities["architecture"].Contains("amd64", "I look weird")).To(BeTrue())
-			Expect(parsedCapabilities["hypervisorType"].Values()).To(ConsistOf("gen1", "gen4"))
-			Expect(parsedCapabilities["hypervisorType"].Contains("gen1", "gen4")).To(BeTrue())
+			architectureValues := parsedCapabilities["architecture"]
+			Expect(architectureValues).To(ConsistOf("amd64", "arm64", "amd32", "asap", "I look weird"))
+			Expect(architectureValues.Contains("amd64", "I look weird")).To(BeTrue())
+			hypervisorValues := parsedCapabilities["hypervisorType"]
+			Expect(hypervisorValues).To(ConsistOf("gen1", "gen4"))
+			Expect(hypervisorValues.Contains("gen1", "gen4")).To(BeTrue())
 		})
 
 		It("should create intersection of capabilities", func() {
@@ -161,9 +175,12 @@ var _ = Describe("Capabilities utility tests", func() {
 				"notIntersect":   "value",
 			}
 			intersection := GetCapabilitiesIntersection(ParseCapabilities(capabilities), ParseCapabilities(capabilities2))
-			Expect(intersection["architecture"].Contains("amd64", "arm64")).To(BeTrue())
-			Expect(intersection["hypervisorType"].Contains("gen1")).To(BeTrue())
-			Expect(intersection["notIntersect"].Contains("value")).To(BeFalse())
+			architectureValues := intersection["architecture"]
+			Expect(architectureValues.Contains("amd64", "arm64")).To(BeTrue())
+			hypervisorValues := intersection["hypervisorType"]
+			Expect(hypervisorValues.Contains("gen1")).To(BeTrue())
+			noIntersectValues := intersection["notIntersect"]
+			Expect(noIntersectValues.Contains("value")).To(BeFalse())
 			Expect(intersection).To(HaveLen(2))
 		})
 	})

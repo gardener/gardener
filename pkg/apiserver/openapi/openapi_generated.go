@@ -2211,7 +2211,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 					},
 					"capabilitiesDefinition": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CapabilitiesDefinition contains the definition of all possible capabilities of the CloudProfile. Only capabilities and values defined here can be used to describe MachineImages and MachineTypes. The order values for a given capability is relevant. To the left is the most important value. During maintenance upgrades, the image that enables the most important capabilities will be selected.",
+							Description: "CapabilitiesDefinition contains the definition of all possible capabilities in the CloudProfile. Only capabilities and values defined here can be used to describe MachineImages and MachineTypes. The order of values for a given capability is relevant. The most important value is listed first. During maintenance upgrades, the image that enables the most important capabilities will be selected.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -5609,7 +5609,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 					},
 					"capabilitiesSet": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CapabilitiesSet contains the set of capabilities of a MachineImage version. There is exactly one capabilities entry per resource of a version the infrastructure provider serves.",
+							Description: "CapabilitiesSet is an array of capabilities. Each entry represents a combination of capabilities that is provided by the machine image version.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
