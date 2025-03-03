@@ -32,179 +32,193 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	e2e "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/framework"
+	. "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 	"github.com/gardener/gardener/test/utils/access"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
-	f := framework.NewGardenerFramework(e2e.DefaultGardenConfig("garden-local"))
+	Describe("Create, Authenticate, Delete", Ordered, Label("authentication"), func() {
+		shoot1 := NewTestContext().ForShoot(DefaultShoot("e2e-auth-one"))
+		shoot2 := NewTestContext().ForShoot(DefaultShoot("e2e-auth-two"))
 
-	It("Create, Authenticate, Delete", Label("authentication"), func() {
-		shoot1 := e2e.DefaultShoot("e2e-auth-one")
-		shoot1.Namespace = f.ProjectNamespace
-		shoot2 := e2e.DefaultShoot("e2e-auth-two")
-		shoot2.Namespace = f.ProjectNamespace
+		ItShouldCreateShoot(shoot1)
+		ItShouldCreateShoot(shoot2)
 
-		By("Create Shoots")
-		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
-		defer cancel()
+		ItShouldWaitForShootToBeReconciledAndHealthy(shoot1)
+		ItShouldGetResponsibleSeed(shoot1)
+		ItShouldInitializeSeedClient(shoot1)
 
-		Expect(f.CreateShoot(ctx, shoot1, false)).To(Succeed())
-		Expect(f.CreateShoot(ctx, shoot2, false)).To(Succeed())
+		ItShouldWaitForShootToBeReconciledAndHealthy(shoot2)
+		ItShouldGetResponsibleSeed(shoot2)
+		ItShouldInitializeSeedClient(shoot2)
 
-		Expect(f.WaitForShootToBeCreated(ctx, shoot1)).To(Succeed())
-		Expect(f.WaitForShootToBeCreated(ctx, shoot2)).To(Succeed())
+		var shoot1Client, shoot2Client, shoot1TokenClient, shoot2TokenClient kubernetes.Interface
 
-		By("Verify shoot access using admin kubeconfig")
-		shoot1Client, err := access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, shoot1)
-		Expect(err).NotTo(HaveOccurred())
-
-		shoot2Client, err := access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, shoot2)
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(func(g Gomega) {
-			g.Expect(validateShootAccess(ctx, shoot1Client.Client(), shoot1, true)).To(Succeed())
-			g.Expect(validateShootAccess(ctx, shoot2Client.Client(), shoot2, true)).To(Succeed())
-		}).WithTimeout(time.Minute).Should(Succeed())
-
-		By("Verify a shoot cannot be accessed with a client certificate from another shoot")
-		shoot1NoAccessRestConfig := copyRESTConfigAndInjectAuthorization(shoot1Client.RESTConfig(), shoot2Client.RESTConfig())
-		shoot1NoAccessClient, err := client.New(shoot1NoAccessRestConfig, client.Options{})
-		Expect(err).NotTo(HaveOccurred())
-
-		shoot2NoAccessRestConfig := copyRESTConfigAndInjectAuthorization(shoot2Client.RESTConfig(), shoot1Client.RESTConfig())
-		shoot2NoAccessClient, err := client.New(shoot2NoAccessRestConfig, client.Options{})
-		Expect(err).NotTo(HaveOccurred())
-
-		Consistently(func(g Gomega) {
-			g.Expect(validateShootAccess(ctx, shoot1NoAccessClient, shoot1, false)).To(Succeed())
-			g.Expect(validateShootAccess(ctx, shoot2NoAccessClient, shoot2, false)).To(Succeed())
-		}).WithTimeout(10 * time.Second).Should(Succeed())
-
-		By("Verify shoot access via apiserver-proxy endpoint")
-		shoot1ClientAPIServerProxy, err := getAPIServerProxyClient(shoot1Client.RESTConfig(), shoot1)
-		Expect(err).NotTo(HaveOccurred())
-
-		shoot2ClientAPIServerProxy, err := getAPIServerProxyClient(shoot2Client.RESTConfig(), shoot2)
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(func(g Gomega) {
-			g.Expect(validateShootAccess(ctx, shoot1ClientAPIServerProxy, shoot1, true)).To(Succeed())
-			g.Expect(validateShootAccess(ctx, shoot2ClientAPIServerProxy, shoot2, true)).To(Succeed())
-		}).WithTimeout(10 * time.Second).Should(Succeed())
-
-		By("Verify a shoot cannot be accessed with a client certificate from another shoot by manipulating the apiserver-proxy header")
-		shoot1NoAccessClientAPIServerProxy, err := getAPIServerProxyClient(shoot1NoAccessRestConfig, shoot1)
-		Expect(err).NotTo(HaveOccurred())
-
-		shoot2NoAccessClientAPIServerProxy, err := getAPIServerProxyClient(shoot2NoAccessRestConfig, shoot2)
-		Expect(err).NotTo(HaveOccurred())
-
-		Consistently(func(g Gomega) {
-			g.Expect(validateShootAccess(ctx, shoot1NoAccessClientAPIServerProxy, shoot1, false)).To(Succeed())
-			g.Expect(validateShootAccess(ctx, shoot2NoAccessClientAPIServerProxy, shoot2, false)).To(Succeed())
-		}).WithTimeout(10 * time.Second).Should(Succeed())
-
-		By("Verify shoot access using service account token kubeconfig")
-		shoot1TokenClient, err := access.CreateTargetClientFromDynamicServiceAccountToken(ctx, shoot1Client, "shoot-one")
-		Expect(err).NotTo(HaveOccurred())
-
-		shoot2TokenClient, err := access.CreateTargetClientFromDynamicServiceAccountToken(ctx, shoot2Client, "shoot-two")
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(func(g Gomega) {
-			g.Expect(validateShootAccess(ctx, shoot1TokenClient.Client(), shoot1, true)).To(Succeed())
-			g.Expect(validateShootAccess(ctx, shoot2TokenClient.Client(), shoot2, true)).To(Succeed())
-		}).WithTimeout(10 * time.Second).Should(Succeed())
-
-		By("Verify a shoot cannot be accessed with a service account token from another shoot")
-		shoot1NoAccessTokenRestConfig := copyRESTConfigAndInjectAuthorization(shoot1TokenClient.RESTConfig(), shoot2TokenClient.RESTConfig())
-		shoot1NoAccessTokenClient, err := client.New(shoot1NoAccessTokenRestConfig, client.Options{})
-		Expect(err).NotTo(HaveOccurred())
-
-		shoot2NoAccessTokenRestConfig := copyRESTConfigAndInjectAuthorization(shoot2TokenClient.RESTConfig(), shoot1TokenClient.RESTConfig())
-		shoot2NoAccessTokenClient, err := client.New(shoot2NoAccessTokenRestConfig, client.Options{})
-		Expect(err).NotTo(HaveOccurred())
-
-		Consistently(func(g Gomega) {
-			g.Expect(validateShootAccess(ctx, shoot1NoAccessTokenClient, shoot1, false)).To(Succeed())
-			g.Expect(validateShootAccess(ctx, shoot2NoAccessTokenClient, shoot2, false)).To(Succeed())
-		}).WithTimeout(10 * time.Second).Should(Succeed())
-
-		By("Verify shoot access using service account token kubeconfig via apiserver-proxy endpoint")
-		shoot1TokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot1TokenClient.RESTConfig(), shoot1)
-		Expect(err).NotTo(HaveOccurred())
-
-		shoot2TokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot2TokenClient.RESTConfig(), shoot2)
-		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(func(g Gomega) {
-			g.Expect(validateShootAccess(ctx, shoot1TokenClientAPIServerProxy, shoot1, true)).To(Succeed())
-			g.Expect(validateShootAccess(ctx, shoot2TokenClientAPIServerProxy, shoot2, true)).To(Succeed())
-		}).WithTimeout(time.Minute).Should(Succeed())
-
-		By("Verify a shoot cannot be accessed with a service account token from another shoot by manipulating the apiserver-proxy header")
-		shoot1NoAccessTokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot1NoAccessTokenRestConfig, shoot1)
-		Expect(err).NotTo(HaveOccurred())
-
-		shoot2NoAccessTokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot2NoAccessTokenRestConfig, shoot2)
-		Expect(err).NotTo(HaveOccurred())
-
-		Consistently(func(g Gomega) {
-			g.Expect(validateShootAccess(ctx, shoot1NoAccessTokenClientAPIServerProxy, shoot1, false)).To(Succeed())
-			g.Expect(validateShootAccess(ctx, shoot2NoAccessTokenClientAPIServerProxy, shoot2, false)).To(Succeed())
-		}).WithTimeout(10 * time.Second).Should(Succeed())
-
-		By("Verify that authentication with istio tls termination cannot be bypassed")
-		externalAddress, httpClient, err := httpClientForRESTConfig(shoot1Client.RESTConfig())
-		Expect(err).To(Succeed())
-
-		httpRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, externalAddress, http.NoBody)
-		Expect(err).To(Succeed())
-		httpRequest.Header = map[string][]string{
-			"X-Remote-User":  {"kubernetes-admin"},
-			"X-Remote-Group": {"system:masters"},
-		}
-
-		var httpResponse *http.Response
-		Eventually(func(g Gomega) {
+		It("should verify shoot access using admin kubeconfig", func(ctx SpecContext) {
 			var err error
-			httpResponse, err = httpClient.Do(httpRequest)
-			g.Expect(err).To(Succeed())
-		}).Should(Succeed())
 
-		Expect(httpResponse.StatusCode).To(Equal(http.StatusUnauthorized))
+			shoot1Client, err = access.CreateShootClientFromAdminKubeconfig(ctx, shoot1.GardenClientSet, shoot1.Shoot)
+			Expect(err).NotTo(HaveOccurred())
 
-		By("Verify that users cannot escalate their privileges with istio tls termination")
-		customClient, err := viewerClientWithCustomTransport(ctx, f.GardenClient, shoot1, &injectHeaderTransport{
-			Headers: map[string]string{
-				"X-Remote-User":  "fake-kubernetes-admin",
-				"X-Remote-Group": "system:masters",
-			},
+			shoot2Client, err = access.CreateShootClientFromAdminKubeconfig(ctx, shoot2.GardenClientSet, shoot2.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func(g Gomega) {
+				g.Expect(validateShootAccess(ctx, shoot1Client.Client(), shoot1.Shoot, true)).To(Succeed())
+				g.Expect(validateShootAccess(ctx, shoot2Client.Client(), shoot2.Shoot, true)).To(Succeed())
+			}).WithTimeout(time.Minute).Should(Succeed())
 		})
-		Expect(err).ToNot(HaveOccurred())
 
-		var selfSubjectReview *authenticationv1.SelfSubjectReview
-		Eventually(func(g Gomega) {
+		It("should verify shoot access using service account token kubeconfig", func(ctx SpecContext) {
 			var err error
-			selfSubjectReview, err = customClient.Kubernetes().AuthenticationV1().SelfSubjectReviews().
-				Create(context.TODO(), &authenticationv1.SelfSubjectReview{}, metav1.CreateOptions{})
-			g.Expect(err).ToNot(HaveOccurred())
-		}).Should(Succeed())
 
-		Expect(selfSubjectReview.Status.UserInfo.Username).To(Equal("kubernetes-admin"))
-		Expect(selfSubjectReview.Status.UserInfo.Groups).To(Equal([]string{"gardener.cloud:system:viewers", "system:authenticated"}))
+			shoot1TokenClient, err = access.CreateTargetClientFromDynamicServiceAccountToken(ctx, shoot1Client, "shoot-one")
+			Expect(err).NotTo(HaveOccurred())
 
-		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
-		defer cancel()
+			shoot2TokenClient, err = access.CreateTargetClientFromDynamicServiceAccountToken(ctx, shoot2Client, "shoot-two")
+			Expect(err).NotTo(HaveOccurred())
 
-		Expect(f.DeleteShoot(ctx, shoot1)).To(Succeed())
-		Expect(f.DeleteShoot(ctx, shoot2)).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(validateShootAccess(ctx, shoot1TokenClient.Client(), shoot1.Shoot, true)).To(Succeed())
+				g.Expect(validateShootAccess(ctx, shoot2TokenClient.Client(), shoot2.Shoot, true)).To(Succeed())
+			}).WithTimeout(10 * time.Second).Should(Succeed())
+		})
 
-		Expect(f.WaitForShootToBeDeleted(ctx, shoot1)).To(Succeed())
-		Expect(f.WaitForShootToBeDeleted(ctx, shoot2)).To(Succeed())
+		It("should verify shoot access via apiserver-proxy endpoint", func(ctx SpecContext) {
+			shoot1ClientAPIServerProxy, err := getAPIServerProxyClient(shoot1Client.RESTConfig(), shoot1.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			shoot2ClientAPIServerProxy, err := getAPIServerProxyClient(shoot2Client.RESTConfig(), shoot2.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func(g Gomega) {
+				g.Expect(validateShootAccess(ctx, shoot1ClientAPIServerProxy, shoot1.Shoot, true)).To(Succeed())
+				g.Expect(validateShootAccess(ctx, shoot2ClientAPIServerProxy, shoot2.Shoot, true)).To(Succeed())
+			}).WithTimeout(10 * time.Second).Should(Succeed())
+		})
+
+		It("should verify shoot access using service account token kubeconfig via apiserver-proxy endpoint", func(ctx SpecContext) {
+			shoot1TokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot1TokenClient.RESTConfig(), shoot1.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			shoot2TokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot2TokenClient.RESTConfig(), shoot2.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func(g Gomega) {
+				g.Expect(validateShootAccess(ctx, shoot1TokenClientAPIServerProxy, shoot1.Shoot, true)).To(Succeed())
+				g.Expect(validateShootAccess(ctx, shoot2TokenClientAPIServerProxy, shoot2.Shoot, true)).To(Succeed())
+			}).WithTimeout(time.Minute).Should(Succeed())
+		})
+
+		It("should verify a shoot cannot be accessed with a client certificate from another shoot", func(ctx SpecContext) {
+			shoot1NoAccessRestConfig := copyRESTConfigAndInjectAuthorization(shoot1Client.RESTConfig(), shoot2Client.RESTConfig())
+			shoot1NoAccessClient, err := client.New(shoot1NoAccessRestConfig, client.Options{})
+			Expect(err).NotTo(HaveOccurred())
+
+			shoot2NoAccessRestConfig := copyRESTConfigAndInjectAuthorization(shoot2Client.RESTConfig(), shoot1Client.RESTConfig())
+			shoot2NoAccessClient, err := client.New(shoot2NoAccessRestConfig, client.Options{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Consistently(func(g Gomega) {
+				g.Expect(validateShootAccess(ctx, shoot1NoAccessClient, shoot1.Shoot, false)).To(Succeed())
+				g.Expect(validateShootAccess(ctx, shoot2NoAccessClient, shoot2.Shoot, false)).To(Succeed())
+			}).WithTimeout(10 * time.Second).Should(Succeed())
+		})
+
+		It("should verify a shoot cannot be accessed with a client certificate from another shoot by manipulating the apiserver-proxy header", func(ctx SpecContext) {
+			shoot1NoAccessRestConfig := copyRESTConfigAndInjectAuthorization(shoot1Client.RESTConfig(), shoot2Client.RESTConfig())
+			shoot1NoAccessClientAPIServerProxy, err := getAPIServerProxyClient(shoot1NoAccessRestConfig, shoot1.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			shoot2NoAccessRestConfig := copyRESTConfigAndInjectAuthorization(shoot2Client.RESTConfig(), shoot1Client.RESTConfig())
+			shoot2NoAccessClientAPIServerProxy, err := getAPIServerProxyClient(shoot2NoAccessRestConfig, shoot2.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			Consistently(func(g Gomega) {
+				g.Expect(validateShootAccess(ctx, shoot1NoAccessClientAPIServerProxy, shoot1.Shoot, false)).To(Succeed())
+				g.Expect(validateShootAccess(ctx, shoot2NoAccessClientAPIServerProxy, shoot2.Shoot, false)).To(Succeed())
+			}).WithTimeout(10 * time.Second).Should(Succeed())
+		})
+
+		It("Verify a shoot cannot be accessed with a service account token from another shoot", func(ctx SpecContext) {
+			shoot1NoAccessTokenRestConfig := copyRESTConfigAndInjectAuthorization(shoot1TokenClient.RESTConfig(), shoot2TokenClient.RESTConfig())
+			shoot1NoAccessTokenClient, err := client.New(shoot1NoAccessTokenRestConfig, client.Options{})
+			Expect(err).NotTo(HaveOccurred())
+
+			shoot2NoAccessTokenRestConfig := copyRESTConfigAndInjectAuthorization(shoot2TokenClient.RESTConfig(), shoot1TokenClient.RESTConfig())
+			shoot2NoAccessTokenClient, err := client.New(shoot2NoAccessTokenRestConfig, client.Options{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Consistently(func(g Gomega) {
+				g.Expect(validateShootAccess(ctx, shoot1NoAccessTokenClient, shoot1.Shoot, false)).To(Succeed())
+				g.Expect(validateShootAccess(ctx, shoot2NoAccessTokenClient, shoot2.Shoot, false)).To(Succeed())
+			}).WithTimeout(10 * time.Second).Should(Succeed())
+		})
+
+		It("should verify a shoot cannot be accessed with a service account token from another shoot by manipulating the apiserver-proxy header", func(ctx SpecContext) {
+			shoot1NoAccessTokenRestConfig := copyRESTConfigAndInjectAuthorization(shoot1TokenClient.RESTConfig(), shoot2TokenClient.RESTConfig())
+			shoot1NoAccessTokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot1NoAccessTokenRestConfig, shoot1.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			shoot2NoAccessTokenRestConfig := copyRESTConfigAndInjectAuthorization(shoot2TokenClient.RESTConfig(), shoot1TokenClient.RESTConfig())
+			shoot2NoAccessTokenClientAPIServerProxy, err := getAPIServerProxyClient(shoot2NoAccessTokenRestConfig, shoot2.Shoot)
+			Expect(err).NotTo(HaveOccurred())
+
+			Consistently(func(g Gomega) {
+				g.Expect(validateShootAccess(ctx, shoot1NoAccessTokenClientAPIServerProxy, shoot1.Shoot, false)).To(Succeed())
+				g.Expect(validateShootAccess(ctx, shoot2NoAccessTokenClientAPIServerProxy, shoot2.Shoot, false)).To(Succeed())
+			}).WithTimeout(10 * time.Second).Should(Succeed())
+		})
+
+		It("should verify that authentication with istio tls termination cannot be bypassed", func(ctx SpecContext) {
+			externalAddress, httpClient, err := httpClientForRESTConfig(shoot1Client.RESTConfig())
+			Expect(err).To(Succeed())
+
+			httpRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, externalAddress, http.NoBody)
+			Expect(err).To(Succeed())
+			httpRequest.Header = map[string][]string{
+				"X-Remote-User":  {"kubernetes-admin"},
+				"X-Remote-Group": {"system:masters"},
+			}
+
+			var httpResponse *http.Response
+			Eventually(func(g Gomega) {
+				var err error
+				httpResponse, err = httpClient.Do(httpRequest)
+				g.Expect(err).To(Succeed())
+			}).Should(Succeed())
+
+			Expect(httpResponse.StatusCode).To(Equal(http.StatusUnauthorized))
+		})
+
+		It("Verify that users cannot escalate their privileges with istio tls termination", func(ctx SpecContext) {
+			customClient, err := viewerClientWithCustomTransport(ctx, shoot1.GardenClientSet, shoot1.Shoot, &injectHeaderTransport{
+				Headers: map[string]string{
+					"X-Remote-User":  "fake-kubernetes-admin",
+					"X-Remote-Group": "system:masters",
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			var selfSubjectReview *authenticationv1.SelfSubjectReview
+			Eventually(func(g Gomega) {
+				var err error
+				selfSubjectReview, err = customClient.Kubernetes().AuthenticationV1().SelfSubjectReviews().
+					Create(context.TODO(), &authenticationv1.SelfSubjectReview{}, metav1.CreateOptions{})
+				g.Expect(err).ToNot(HaveOccurred())
+			}).Should(Succeed())
+
+			Expect(selfSubjectReview.Status.UserInfo.Username).To(Equal("kubernetes-admin"))
+			Expect(selfSubjectReview.Status.UserInfo.Groups).To(Equal([]string{"gardener.cloud:system:viewers", "system:authenticated"}))
+
+		})
+
+		ItShouldDeleteShoot(shoot1)
+		ItShouldDeleteShoot(shoot2)
+
+		ItShouldWaitForShootToBeDeleted(shoot1)
+		ItShouldWaitForShootToBeDeleted(shoot2)
 	})
 })
 
