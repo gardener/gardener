@@ -121,10 +121,6 @@ subjects:
 data:
   Corefile: |
     .:8053 {
-      errors
-      log . {
-          class error
-      }
       health {
           lameduck 15s
       }
