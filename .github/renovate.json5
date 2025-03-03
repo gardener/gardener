@@ -2,6 +2,9 @@
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   extends: [
     'config:recommended',
+    ':semanticCommitsDisabled',
+    'github>gardener/ci-infra//config/renovate/makefile-versions.json5',
+    'github>gardener/ci-infra//config/renovate/imagevector.json5(^imagevector/containers.yaml$)',
   ],
   labels: [
     'kind/enhancement',
@@ -12,19 +15,6 @@
   // Add PR footer with empty release note by default.
   prFooter: '**Release note**:\n```other dependency\nNONE\n```',
   customManagers: [
-    {
-      // Update `_VERSION` and `_version` variables in Makefiles and scripts.
-      // Inspired by `regexManagers:dockerfileVersions` preset.
-      customType: 'regex',
-      fileMatch: [
-        'Makefile$',
-        '\\.mk$',
-        '\\.sh$',
-      ],
-      matchStrings: [
-        '# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s.+?_(VERSION|version) *[?:]?= *"?(?<currentValue>.+?)"?\\s',
-      ],
-    },
     {
       // Generic detection for pod-like image specifications.
       customType: 'regex',
@@ -61,28 +51,6 @@
         '--image[=| ]["|\']?(?<depName>.*?):(?<currentValue>.*?)["|\']?\\s',
       ],
       datasourceTemplate: 'docker',
-    },
-    {
-      // Generic detection of container images in containers.yaml via container registry.
-      customType: 'regex',
-      fileMatch: [
-        '^imagevector/containers.yaml$',
-      ],
-      matchStrings: [
-        '\\s+repository:\\s+(?<depName>.*?)\\n\\s+tag:\\s+["]?(?<currentValue>.*?)["]?\\n',
-      ],
-      datasourceTemplate: 'docker',
-    },
-    {
-      // Generic detection of container images in containers.yaml via github releases.
-      customType: 'regex',
-      fileMatch: [
-        '^imagevector/containers.yaml$',
-      ],
-      matchStrings: [
-        '\\s+sourceRepository:\\s+github.com/(?<depName>.*?)\\n\\s+repository:\\s+.*\\n\\s+tag:\\s+["]?(?<currentValue>.*?)["]?\\n',
-      ],
-      datasourceTemplate: 'github-releases',
     },
     {
       // Detection for images with prow like tags (e.g. v20240213-749005b2).
