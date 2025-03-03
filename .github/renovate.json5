@@ -425,6 +425,34 @@
       ],
     },
     {
+      // TODO(marc1404): Remove when the NewVPN feature gate is removed.
+      // Ignore dependency updates of gardener/vpn2@0.26.0 which is used when the NewVPN feature gate is disabled.
+      matchFileNames: [
+        'imagevector/containers.yaml',
+      ],
+      matchPackageNames: [
+        'gardener/vpn2',
+      ],
+      matchCurrentVersion: [
+        '0.26.0'
+      ],
+      enabled: false
+    },
+    {
+      // TODO(marc1404): Remove when support for Kubernetes v1.27 is dropped.
+      // Ignore dependency updates of ingress-nginx/controller-chroot@v1.11.4 for Kubernetes v1.27.
+      matchFileNames: [
+        'imagevector/containers.yaml',
+      ],
+      matchPackageNames: [
+        'registry.k8s.io/ingress-nginx/controller-chroot',
+      ],
+      matchCurrentVersion: [
+        'v1.11.4'
+      ],
+      enabled: false
+    },
+    {
       // Ignore paths which most likely create false positives.
       matchFileNames: [
         'cmd/**',
