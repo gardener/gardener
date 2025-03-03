@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -97,7 +97,7 @@ var _ = Describe("#Wait", func() {
 
 		expected = &druidv1alpha1.Etcd{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: druidv1alpha1.GroupVersion.String(),
+				APIVersion: druidv1alpha1.SchemeGroupVersion.String(),
 				Kind:       "Etcd",
 			},
 			ObjectMeta: metav1.ObjectMeta{
