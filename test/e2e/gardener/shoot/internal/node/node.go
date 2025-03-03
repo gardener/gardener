@@ -167,8 +167,13 @@ func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, 
 	secretName, secret := managedresources.NewSecret(seedClient, namespace, name, data, true)
 	managedResource := managedresources.NewForShoot(seedClient, namespace, name, managedresources.LabelValueGardener, false).WithSecretRef(secretName)
 
-	Expect(secret.AddLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
-	Expect(managedResource.WithLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
+	Eventually(ctx, func(g Gomega) {
+		g.Expect(secret.AddLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
+	}).Should(Succeed())
+
+	Eventually(ctx, func(g Gomega) {
+		g.Expect(managedResource.WithLabels(getLabels(name)).Reconcile(ctx)).To(Succeed())
+	}).Should(Succeed())
 
 	By("Wait for DaemonSet to be applied in shoot")
 	Eventually(ctx, func(g Gomega) string {
