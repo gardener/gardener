@@ -421,9 +421,9 @@
         'gardener/vpn2',
       ],
       matchCurrentVersion: [
-        '0.26.0'
+        '0.26.0',
       ],
-      enabled: false
+      enabled: false,
     },
     {
       // TODO(marc1404): Remove when support for Kubernetes v1.27 is dropped.
@@ -435,9 +435,9 @@
         'registry.k8s.io/ingress-nginx/controller-chroot',
       ],
       matchCurrentVersion: [
-        'v1.11.4'
+        'v1.11.4',
       ],
-      enabled: false
+      enabled: false,
     },
     {
       // Ignore paths which most likely create false positives.
