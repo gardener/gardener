@@ -305,11 +305,11 @@
       matchDatasources: [
         'docker',
       ],
-      matchUpdateTypes: [
-        'major',
-        'minor',
-        'patch', // TODO(marc1404): Remove this line once kindest/node ships with runc >= v1.2.4 and containerd >= v2.0.3
-      ],
+      // TODO(marc1404): Enable the code below once kindest/node ships with runc >= v1.2.4 and containerd >= v2.0.3
+//      matchUpdateTypes: [
+//        'major',
+//        'minor',
+//      ],
       dependencyDashboardApproval: true,
       matchPackageNames: [
         '/kindest/node/',
