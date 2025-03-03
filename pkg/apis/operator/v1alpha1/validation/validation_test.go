@@ -1283,6 +1283,57 @@ var _ = Describe("Validation Tests", func() {
 						})),
 					))
 				})
+
+				It("should complain if invalid autoscaling resource is configured", func() {
+					garden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"storage": {},
+								},
+							},
+						},
+						Events: &operatorv1alpha1.ETCDEvents{
+							Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"storage": {},
+								},
+							},
+						},
+					}
+
+					Expect(ValidateGarden(garden)).To(ContainElements(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeNotSupported),
+							"Field": Equal("spec.virtualCluster.etcd.main.autoscaling.minAllowed.storage"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeNotSupported),
+							"Field": Equal("spec.virtualCluster.etcd.events.autoscaling.minAllowed.storage"),
+						})),
+					))
+				})
+
+				It("should succeed if valid autoscaling resource is configured", func() {
+					garden.Spec.VirtualCluster.ETCD = &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"memory": resource.MustParse("300M"),
+								},
+							},
+						},
+						Events: &operatorv1alpha1.ETCDEvents{
+							Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"memory": resource.MustParse("60M"),
+								},
+							},
+						},
+					}
+
+					Expect(ValidateGarden(garden)).To(BeEmpty())
+				})
 			})
 
 			Context("Networking", func() {

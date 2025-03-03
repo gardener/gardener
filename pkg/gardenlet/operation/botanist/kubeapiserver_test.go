@@ -281,6 +281,33 @@ var _ = Describe("KubeAPIServer", func() {
 						ScaleDownDisabled: false,
 					},
 				),
+				Entry("shoot configured min allowed",
+					func() {
+						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+							Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"cpu":    resource.MustParse("200m"),
+									"memory": resource.MustParse("2Gi"),
+								},
+							},
+						}
+					},
+					apiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("2Gi"),
+							},
+						},
+						MinReplicas:       2,
+						MaxReplicas:       6,
+						ScaleDownDisabled: false,
+						MinAllowed: corev1.ResourceList{
+							"cpu":    resource.MustParse("200m"),
+							"memory": resource.MustParse("2Gi"),
+						},
+					},
+				),
 			)
 		})
 	})

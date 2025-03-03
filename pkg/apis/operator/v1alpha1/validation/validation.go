@@ -10,7 +10,9 @@ import (
 	"slices"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -258,12 +260,20 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 
 	allErrs = validateDomains(dns, virtualCluster.DNS.Domains, fldPath.Child("dns", "domains"), allErrs)
 
-	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil && virtualCluster.ETCD.Main.Backup != nil {
-		if virtualCluster.ETCD.Main.Backup.BucketName != nil {
-			if virtualCluster.ETCD.Main.Backup.ProviderConfig != nil {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("etcd", "main", "backup", "providerConfig"), "provider must not be set when bucket name is set"))
+	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil {
+		etcdMainFldPath := fldPath.Child("etcd", "main")
+
+		if virtualCluster.ETCD.Main.Backup != nil {
+			if virtualCluster.ETCD.Main.Backup.BucketName != nil && virtualCluster.ETCD.Main.Backup.ProviderConfig != nil {
+				allErrs = append(allErrs, field.Forbidden(etcdMainFldPath.Child("backup", "providerConfig"), "provider must not be set when bucket name is set"))
 			}
 		}
+
+		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, etcdMainFldPath.Child("autoscaling"))...)
+	}
+
+	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Events != nil {
+		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Events.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}, fldPath.Child("etcd", "events", "autoscaling"))...)
 	}
 
 	if err := kubernetesversion.CheckIfSupported(virtualCluster.Kubernetes.Version); err != nil {
@@ -324,6 +334,21 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 		if firstCIDR.IsIPv4() && secondCIDR.IsIPv4() || firstCIDR.IsIPv6() && secondCIDR.IsIPv6() {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("networking", "services"), fmt.Sprintf("service ranges must be of different IP families: %s", virtualCluster.Networking.Services)))
 		}
+	}
+
+	return allErrs
+}
+
+func validateETCDAutoscaling(autoscaling *gardencorev1beta1.ControlPlaneAutoscaling, minRequired corev1.ResourceList, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if autoscaling != nil {
+		coreAutoscaling := &gardencore.ControlPlaneAutoscaling{}
+		if err := gardenCoreScheme.Convert(autoscaling, coreAutoscaling, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(fldPath, err))
+		}
+
+		allErrs = append(allErrs, gardencorevalidation.ValidateControlPlaneAutoscaling(coreAutoscaling, minRequired, fldPath)...)
 	}
 
 	return allErrs

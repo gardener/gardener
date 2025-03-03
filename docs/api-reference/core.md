@@ -4095,6 +4095,41 @@ control plane of a shoot.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ControlPlaneAutoscaling">ControlPlaneAutoscaling
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ETCDConfig">ETCDConfig</a>, 
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>minAllowed</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<p>MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+Default values are not applied to this field.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">ControllerDeploymentPolicy
 (<code>string</code> alias)</p></h3>
 <p>
@@ -4969,6 +5004,86 @@ bool
 <em>(Optional)</em>
 <p>IncludeServiceAccounts specifies whether the concept also applies when deletion is triggered by ServiceAccounts.
 Defaults to true.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ETCD">ETCD
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
+</p>
+<p>
+<p>ETCD contains configuration for etcds of the shoot cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>main</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ETCDConfig">
+ETCDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Main contains configuration for the main etcd.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>events</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ETCDConfig">
+ETCDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Events contains configuration for the events etcd.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ETCDConfig">ETCDConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ETCD">ETCD</a>)
+</p>
+<p>
+<p>ETCDConfig contains etcd configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControlPlaneAutoscaling">
+ControlPlaneAutoscaling
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for etcd.</p>
 </td>
 </tr>
 </tbody>
@@ -6214,6 +6329,20 @@ StructuredAuthorization
 This field is only available for Kubernetes v1.30 or later.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControlPlaneAutoscaling">
+ControlPlaneAutoscaling
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for the kube-apiserver.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeControllerManagerConfig">KubeControllerManagerConfig
@@ -7293,6 +7422,20 @@ bool
 <p>EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for the Shoot cluster.
 Setting this field to true is not supported.</p>
 <p>Deprecated: This field is deprecated and will be removed in gardener v1.120</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>etcd</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ETCD">
+ETCD
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCD contains configuration for etcds of the shoot cluster.</p>
 </td>
 </tr>
 </tbody>

@@ -41,6 +41,19 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
 
+	var minAllowed corev1.ResourceList
+
+	switch role {
+	case v1beta1constants.ETCDRoleMain:
+		if etcd := b.Shoot.GetInfo().Spec.Kubernetes.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
+			minAllowed = etcd.Main.Autoscaling.MinAllowed
+		}
+	case v1beta1constants.ETCDRoleEvents:
+		if etcd := b.Shoot.GetInfo().Spec.Kubernetes.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
+			minAllowed = etcd.Events.Autoscaling.MinAllowed
+		}
+	}
+
 	e := NewEtcd(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -50,6 +63,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			Role:                        role,
 			Class:                       class,
 			Replicas:                    replicas,
+			Autoscaling:                 etcd.AutoscalingConfig{MinAllowed: minAllowed},
 			StorageCapacity:             b.Seed.GetValidVolumeSize("10Gi"),
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),

@@ -426,6 +426,7 @@ func (r *Reconciler) newEtcd(
 		defragmentationScheduleFormat string
 		storageClassName              *string
 		storageCapacity               string
+		minAllowed                    corev1.ResourceList
 	)
 
 	switch role {
@@ -433,6 +434,9 @@ func (r *Reconciler) newEtcd(
 		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementNever)
 		defragmentationScheduleFormat = "%d %d * * *" // defrag main etcd daily in the maintenance window
 		storageCapacity = "25Gi"
+		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
+			minAllowed = etcd.Main.Autoscaling.MinAllowed
+		}
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Storage != nil {
 			storageClassName = etcd.Main.Storage.ClassName
 			if etcd.Main.Storage.Capacity != nil {
@@ -444,6 +448,9 @@ func (r *Reconciler) newEtcd(
 		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 		defragmentationScheduleFormat = "%d %d */3 * *"
 		storageCapacity = "10Gi"
+		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
+			minAllowed = etcd.Events.Autoscaling.MinAllowed
+		}
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Storage != nil {
 			storageClassName = etcd.Events.Storage.ClassName
 			if etcd.Events.Storage.Capacity != nil {
@@ -481,6 +488,7 @@ func (r *Reconciler) newEtcd(
 			Role:                        role,
 			Class:                       class,
 			Replicas:                    replicas,
+			Autoscaling:                 etcd.AutoscalingConfig{MinAllowed: minAllowed},
 			StorageCapacity:             storageCapacity,
 			StorageClassName:            storageClassName,
 			DefragmentationSchedule:     &defragmentationSchedule,
@@ -640,16 +648,24 @@ func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserve
 		minReplicas = 3
 	}
 
+	var minAllowed corev1.ResourceList
+	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil && kubeAPIServer.Autoscaling != nil {
+		minAllowed = kubeAPIServer.Autoscaling.MinAllowed
+	}
+
 	return apiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
+			Requests: kubernetesutils.MaximumResourcesFromResourceList(corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("600m"),
 				corev1.ResourceMemory: resource.MustParse("512Mi"),
 			},
+				minAllowed,
+			),
 		},
 		MinReplicas:       minReplicas,
 		MaxReplicas:       6,
 		ScaleDownDisabled: false,
+		MinAllowed:        minAllowed,
 	}
 }
 

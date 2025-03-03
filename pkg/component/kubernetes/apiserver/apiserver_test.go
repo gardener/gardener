@@ -411,6 +411,22 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 				),
+				Entry("minAllowed configured",
+					apiserver.AutoscalingConfig{MinAllowed: corev1.ResourceList{"memory": resource.MustParse("2Gi")}},
+					false,
+					nil,
+					nil,
+					[]vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "kube-apiserver",
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("2Gi"),
+							},
+						},
+					},
+				),
 			)
 		})
 
