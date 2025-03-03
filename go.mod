@@ -10,6 +10,7 @@ require (
 	github.com/containerd/containerd v1.7.26
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/distribution/distribution/v3 v3.0.0-rc.3
+	github.com/docker/cli v27.1.1+incompatible
 	github.com/fluent/fluent-operator/v2 v2.9.0
 	github.com/gardener/cert-management v0.17.5
 	github.com/gardener/dependency-watchdog v1.4.0
@@ -120,7 +121,6 @@ require (
 	github.com/dgryski/go-jump v0.0.0-20211018200510-ba001c3ffce0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v27.1.1+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker v27.1.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
