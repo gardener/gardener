@@ -149,12 +149,16 @@ data:
           ttl 30
       }
       prometheus :9153
+      loop
+      import custom/*.override
+      errors
+      log . {
+          class error
+      }
       forward . /etc/resolv.conf
       cache 30
-      loop
       reload
       loadbalance round_robin
-      import custom/*.override
     }
     import custom/*.server
 kind: ConfigMap

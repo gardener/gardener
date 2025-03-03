@@ -289,7 +289,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 			},
 			Data: map[string]string{
-				configDataKey: `.:` + strconv.Itoa(corednsconstants.PortServer) + ` {  
+				configDataKey: `.:` + strconv.Itoa(corednsconstants.PortServer) + ` {
   health {
       lameduck 15s
   }
