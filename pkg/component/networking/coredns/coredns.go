@@ -300,18 +300,16 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
       ttl 30
   }
   prometheus :` + strconv.Itoa(portMetrics) + `
-
+  loop
   import custom/*.override
-
   errors
   log . {
       class error
   }
   forward . /etc/resolv.conf
-  loop
+  cache 30
   reload
   loadbalance round_robin
-  cache 30
 }
 import custom/*.server
 `,
