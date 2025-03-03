@@ -456,6 +456,9 @@ var _ = Describe("GardenerAPIServer", func() {
 								PeriodSeconds:       10,
 								TimeoutSeconds:      15,
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "gardener-apiserver-workload-identity",
