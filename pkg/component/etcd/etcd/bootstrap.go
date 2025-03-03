@@ -461,6 +461,9 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Ports: []corev1.ContainerPort{{
 									ContainerPort: metricsPort,
 								}},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      webhookServerTLSCertVolumeName,
