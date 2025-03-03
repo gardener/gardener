@@ -68,6 +68,18 @@
   separateMinorPatch: true,
   packageRules: [
     {
+      // automerge patch updates
+      matchUpdateTypes: ['patch'],
+      automerge: true,
+    },
+    {
+      // automerge k8s.io/utils updates
+      matchDatasources: ['go'],
+      matchPackageNames: ['k8s.io/utils'],
+      matchUpdateTypes: ['digest'],
+      automerge: true,
+    },
+    {
       // Run make generate when Go API packages have been changed because CRDs might have changed.
       matchDatasources: [
         'go',
