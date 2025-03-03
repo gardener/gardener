@@ -5,6 +5,7 @@
     ':semanticCommitsDisabled',
     'github>gardener/ci-infra//config/renovate/makefile-versions.json5',
     'github>gardener/ci-infra//config/renovate/imagevector.json5(^imagevector/containers.yaml$)',
+    'github>gardener/ci-infra//config/renovate/automerge-with-tide.json5',
   ],
   labels: [
     'kind/enhancement',
@@ -66,6 +67,18 @@
   ],
   separateMinorPatch: true,
   packageRules: [
+    {
+      // automerge patch updates
+      matchUpdateTypes: ['patch'],
+      automerge: true,
+    },
+    {
+      // automerge k8s.io/utils updates
+      matchDatasources: ['go'],
+      matchPackageNames: ['k8s.io/utils'],
+      matchUpdateTypes: ['digest'],
+      automerge: true,
+    },
     {
       // Run make generate when Go API packages have been changed because CRDs might have changed.
       matchDatasources: [
