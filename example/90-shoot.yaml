@@ -152,6 +152,17 @@ spec:
   kubernetes:
   # version: 1.27.3
   # enableStaticTokenKubeconfig: false # Deprecated, will be removed in gardener v1.120
+  # etcd:
+  #   main:
+  #     autoscaling:
+  #       minAllowed:
+  #         cpu: "2"
+  #         memory: 6Gi
+  #   events:
+  #     autoscaling:
+  #       minAllowed:
+  #         cpu: "1"
+  #         memory: 3Gi
   # kubeAPIServer:
   #   eventTTL: 1h
   #   featureGates:
@@ -223,6 +234,10 @@ spec:
   #     resources: # secrets are always encrypted
   #     - configmaps
   #     - customresource.fancyoperator.io
+  #   autoscaling:
+  #     minAllowed:
+  #       cpu: "1"
+  #       memory: 3Gi
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s # This field is no-op and will be removed in gardener v1.120

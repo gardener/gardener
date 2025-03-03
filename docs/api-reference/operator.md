@@ -1010,6 +1010,18 @@ ETCDEvents
 <tbody>
 <tr>
 <td>
+<code>autoscaling</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for etcd.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>storage</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.Storage">
@@ -1041,6 +1053,18 @@ Storage
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for etcd.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>backup</code></br>

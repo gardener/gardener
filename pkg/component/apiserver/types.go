@@ -88,6 +88,8 @@ type AutoscalingConfig struct {
 	MaxReplicas int32
 	// ScaleDownDisabled states whether scale-down shall be disabled.
 	ScaleDownDisabled bool
+	// MinAllowed are the minimum allowed resources for vertical autoscaling.
+	MinAllowed corev1.ResourceList
 }
 
 // ETCDEncryptionConfig contains configuration for the encryption of resources in etcd.
