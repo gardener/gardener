@@ -24,6 +24,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
@@ -358,14 +359,19 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false)
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, func() {
-				shoot := DefaultShoot("e2e-rotate")
-				shoot.Name = "e2e-rot-noroll"
-				// Add a second worker pool when worker rollout should not be performed such that we can make proper
-				// assertions of the shoot status
-				shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
-				shoot.Spec.Provider.Workers[len(shoot.Spec.Provider.Workers)-1].Name += "2"
+				var s *ShootContext
+				BeforeTestSetup(func() {
+					shoot := DefaultShoot("e2e-rotate")
+					shoot.Name = "e2e-rot-noroll"
+					// Add a second worker pool when worker rollout should not be performed such that we can make proper
+					// assertions of the shoot status
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
+					shoot.Spec.Provider.Workers[len(shoot.Spec.Provider.Workers)-1].Name += "2"
 
-				test(NewTestContext().ForShoot(shoot), true)
+					s = NewTestContext().ForShoot(shoot)
+				})
+
+				test(s, true)
 			})
 
 		})
