@@ -89,8 +89,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 						},
 					},
 				}
-				DefaultBasedOnCapabilitiesDefinition(parentCloudProfile)
-
+				gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 				namespacedCloudProfileParent = gardencore.CloudProfileReference{
 					Kind: "CloudProfile",
 					Name: parentCloudProfile.Name,
@@ -339,7 +338,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 					parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{Name: imageName, Versions: []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}}}},
 					}
-					DefaultBasedOnCapabilitiesDefinition(parentCloudProfile)
+					gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
@@ -355,7 +354,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 					parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{Name: imageName, Versions: []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}}}},
 					}
-					DefaultBasedOnCapabilitiesDefinition(parentCloudProfile)
+					gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
@@ -377,7 +376,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 					parentCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 						{Name: imageName, Versions: []gardencorev1beta1.MachineImageVersion{{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.0.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}}}},
 					}
-					DefaultBasedOnCapabilitiesDefinition(parentCloudProfile)
+					gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 					machineImage := gardencore.MachineImage{Name: imageName, Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.2.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: imageArchitectures, CapabilitiesSet: capabilitiesSet}}}
@@ -435,7 +434,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.2.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
 						}},
 					}
-					DefaultBasedOnCapabilitiesDefinition(parentCloudProfile)
+					gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
@@ -455,7 +454,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
 						}},
 					}
-					DefaultBasedOnCapabilitiesDefinition(parentCloudProfile)
+					gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
@@ -477,7 +476,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 							{ExpirableVersion: gardencorev1beta1.ExpirableVersion{Version: "1.1.0"}, CRI: []gardencorev1beta1.CRI{{Name: "containerd"}}},
 						}},
 					}
-					DefaultBasedOnCapabilitiesDefinition(parentCloudProfile)
+					gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
@@ -564,7 +563,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 							},
 						},
 					}
-					DefaultBasedOnCapabilitiesDefinition(parentCloudProfile)
+					gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 
 					namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{
 						ObjectMeta: metav1.ObjectMeta{
@@ -778,32 +777,3 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 	Entry("CapabilitiesDefinition is used", true),
 	Entry("CapabilitiesDefinition is NOT used", false),
 )
-
-// DefaultBasedOnCapabilitiesDefinition sets default values for the CloudProfile based on the CapabilitiesDefinition.
-func DefaultBasedOnCapabilitiesDefinition(in *gardencorev1beta1.CloudProfile) {
-	gardencorev1beta1.SetObjectDefaults_CloudProfile(in)
-
-	// TODO(Roncossek): Remove this function after Architecture(s) field is removed from MachineType and MachineImageVersion
-	// with CapabilitiesDefinition no defaulting for Architecture is required
-	// as the default is defined in the CloudProfile itself in Spec.CapabilitiesDefinition.architecture
-	if len(in.Spec.CapabilitiesDefinition) > 0 {
-		return
-	}
-
-	for i := range in.Spec.MachineImages {
-		machineImage := &in.Spec.MachineImages[i]
-
-		for j := range machineImage.Versions {
-			b := &machineImage.Versions[j]
-			if len(b.Architectures) == 0 {
-				b.Architectures = []string{v1beta1constants.ArchitectureAMD64}
-			}
-		}
-	}
-	for i := range in.Spec.MachineTypes {
-		machineType := &in.Spec.MachineTypes[i]
-		if machineType.Architecture == nil {
-			machineType.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
-		}
-	}
-}

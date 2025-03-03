@@ -58,7 +58,7 @@ var _ = Describe("Capabilities utility tests", func() {
 
 	})
 
-	Describe("#UnmarshalCapabilities", func() {
+	Describe("#UnmarshalCapabilitiesSet", func() {
 		It("should unmarshal correct CapabilitiesSet", func() {
 			var CapabilitiesSet = []v1.JSON{
 				{Raw: []byte(`{"architecture":"amd64","hypervisorType":"gen2"}`)},
@@ -143,7 +143,7 @@ var _ = Describe("Capabilities utility tests", func() {
 		})
 	})
 
-	Describe("#ParsedCapabilities", func() {
+	Describe("#ParseCapabilities", func() {
 		It("should retain the order of the CapabilityValues after parsing", func() {
 			parsedCapabilities := ParseCapabilities(capabilities)
 			architectureValues := parsedCapabilities["architecture"]
@@ -153,6 +153,7 @@ var _ = Describe("Capabilities utility tests", func() {
 			hypervisorValues := parsedCapabilities["hypervisorType"]
 			Expect(hypervisorValues).To(Equal(CapabilityValues{"gen1", "gen2", "gen3"}))
 		})
+
 		It("should sanitize capability values on parsing", func() {
 			var capabilities2 = core.Capabilities{
 				"architecture":   "  amd64 ,arm64 ,amd32,  asap       , I look weird  ",

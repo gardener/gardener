@@ -6,7 +6,35 @@ package v1beta1
 
 import (
 	"k8s.io/utils/ptr"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
+
+// SetDefaults_CloudProfile sets default values for CloudProfile objects.
+func SetDefaults_CloudProfile(cloudProfile *CloudProfile) {
+	// If CapabilitiesDefinition is defined no defaulting for Architecture is required
+	// as the default is defined in the CloudProfile itself in Spec.CapabilitiesDefinition.architecture
+	if len(cloudProfile.Spec.CapabilitiesDefinition) > 0 {
+		return
+	}
+
+	for i := range cloudProfile.Spec.MachineImages {
+		machineImage := &cloudProfile.Spec.MachineImages[i]
+
+		for j := range machineImage.Versions {
+			b := &machineImage.Versions[j]
+			if len(b.Architectures) == 0 {
+				b.Architectures = []string{v1beta1constants.ArchitectureAMD64}
+			}
+		}
+	}
+	for i := range cloudProfile.Spec.MachineTypes {
+		machineType := &cloudProfile.Spec.MachineTypes[i]
+		if machineType.Architecture == nil {
+			machineType.Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+		}
+	}
+}
 
 // SetDefaults_MachineImage sets default values for MachineImage objects.
 func SetDefaults_MachineImage(obj *MachineImage) {

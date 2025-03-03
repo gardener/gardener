@@ -180,7 +180,7 @@ func validateCapabilitiesDefinition(definition ParsedCapabilities, path *field.P
 	return errList
 }
 
-// UnmarshalCapabilitiesSet unmarshal the raw JSON capabilities set into a list of capabilities
+// UnmarshalCapabilitiesSet unmarshals the raw JSON capabilities set into a list of capabilities.
 func UnmarshalCapabilitiesSet(rawCapabilitiesSet []apiextensionsv1.JSON, path *field.Path) ([]core.Capabilities, field.ErrorList) {
 	var allErrs field.ErrorList
 	capabilitiesSet := make([]core.Capabilities, len(rawCapabilitiesSet))
@@ -241,7 +241,7 @@ func ParseCapabilities(capabilities core.Capabilities) ParsedCapabilities {
 }
 
 // function to return sanitized values of a comma separated string
-// e.g. ",a ,'b', c" -> ["a", "b", "c"]
+// e.g. ",a ,b, c" -> ["a", "b", "c"]
 func splitAndSanitize(valueString string) []string {
 	values := strings.Split(valueString, ",")
 	for i := 0; i < len(values); i++ {
@@ -265,7 +265,7 @@ func (c ParsedCapabilities) DeepCopy() ParsedCapabilities {
 	return capabilities
 }
 
-// ToCapabilities converts the ParsedCapabilities to a Capabilities
+// ToCapabilities converts the ParsedCapabilities to a Capabilities object.
 func (c ParsedCapabilities) ToCapabilities() core.Capabilities {
 	var capabilities = core.Capabilities{}
 	for capabilityName, capabilityValueSet := range c {
