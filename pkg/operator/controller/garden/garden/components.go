@@ -159,12 +159,18 @@ func (r *Reconciler) instantiateComponents(
 	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
 	c.vpaCRD = vpa.NewCRD(applier, nil)
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
-	c.fluentCRD = fluentoperator.NewCRDs(applier)
+	c.fluentCRD, err = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	if err != nil {
+		return
+	}
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
 	if err != nil {
 		return
 	}
-	c.extensionCRD = extensioncrds.NewCRD(applier, true, false)
+	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
+	if err != nil {
+		return
+	}
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
