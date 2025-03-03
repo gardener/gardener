@@ -45,7 +45,7 @@ var _ = Describe("Shoot Care Control", func() {
 	var (
 		ctx           context.Context
 		gardenClient  client.Client
-		reconciler    reconcile.Reconciler
+		reconciler    reconcile.TypedReconciler[Request]
 		gardenletConf gardenletconfigv1alpha1.GardenletConfiguration
 		fakeClock     *testclock.FakeClock
 
@@ -93,7 +93,7 @@ var _ = Describe("Shoot Care Control", func() {
 			careSyncPeriod time.Duration
 
 			gardenSecrets []corev1.Secret
-			req           reconcile.Request
+			req           Request
 		)
 
 		BeforeEach(func() {
@@ -108,7 +108,7 @@ var _ = Describe("Shoot Care Control", func() {
 				},
 			}}
 
-			req = reconcile.Request{NamespacedName: client.ObjectKey{Namespace: shootNamespace, Name: shootName}}
+			req = Request{NamespacedName: client.ObjectKey{Namespace: shootNamespace, Name: shootName}}
 
 			gardenletConf = gardenletconfigv1alpha1.GardenletConfiguration{
 				Controllers: &gardenletconfigv1alpha1.GardenletControllerConfiguration{
