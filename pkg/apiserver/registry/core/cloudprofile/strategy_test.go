@@ -230,4 +230,5 @@ var _ = Describe("Strategy", func() {
 			Expect(cloudProfile.Spec.Regions[0].Labels).To(BeEmpty())
 		})
 	})
+
 })

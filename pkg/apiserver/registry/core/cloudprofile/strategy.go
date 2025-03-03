@@ -54,7 +54,6 @@ func (cloudProfileStrategy) AllowCreateOnUpdate() bool {
 func (cloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj runtime.Object) {
 	oldCloudProfile := oldObj.(*core.CloudProfile)
 	newCloudProfile := newObj.(*core.CloudProfile)
-
 	syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(newCloudProfile, oldCloudProfile)
 }
 

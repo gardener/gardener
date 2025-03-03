@@ -19,8 +19,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
@@ -110,9 +112,26 @@ func mergeAndPatchCloudProfile(ctx context.Context, c client.Client, namespacedC
 	return c.Status().Patch(ctx, namespacedCloudProfile, patch)
 }
 
+func defaultArchitecture(machineTypes []gardencorev1beta1.MachineType, coreCapabilitiesDefinition gardencorev1beta1.Capabilities) {
+	var capabilitiesDefinition = (gardencore.Capabilities)(coreCapabilitiesDefinition)
+	if validation.AreCapabilitiesDefined(capabilitiesDefinition) {
+		return
+	}
+
+	for i, machineType := range machineTypes {
+		if ptr.Deref(machineType.Architecture, "") == "" {
+			machineTypes[i].Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+		}
+	}
+}
+
 // MergeCloudProfiles merges the cloud profile spec from a base CloudProfile and a NamespacedCloudProfile
 // into the NamespacedCloudProfile.Status.CloudProfileSpec.
 func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile, cloudProfile *gardencorev1beta1.CloudProfile) {
+	// The Architecture defaulting of machineTypes depends on the CapabilitiesDefinition of its ParentCloudProfile
+	// it cannot be done within: pkg/apis/core/v1beta1/defaults_namespacedcloudprofile.go as context is missing
+	defaultArchitecture(namespacedCloudProfile.Spec.MachineTypes, cloudProfile.Spec.CapabilitiesDefinition)
+
 	namespacedCloudProfile.Status.CloudProfileSpec = cloudProfile.Spec
 
 	if namespacedCloudProfile.Spec.Kubernetes != nil {
@@ -120,6 +139,7 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 	}
 	namespacedCloudProfile.Status.CloudProfileSpec.MachineImages = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages, namespacedCloudProfile.Spec.MachineImages, machineImageKeyFunc, mergeMachineImages, true)
 	namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.MachineTypes, namespacedCloudProfile.Spec.MachineTypes, machineTypeKeyFunc, nil, true)
+
 	namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes = mergeDeep(namespacedCloudProfile.Status.CloudProfileSpec.VolumeTypes, namespacedCloudProfile.Spec.VolumeTypes, volumeTypeKeyFunc, nil, true)
 	if namespacedCloudProfile.Spec.CABundle != nil {
 		mergedCABundles := fmt.Sprintf("%s%s", ptr.Deref(namespacedCloudProfile.Status.CloudProfileSpec.CABundle, ""), ptr.Deref(namespacedCloudProfile.Spec.CABundle, ""))
