@@ -53,48 +53,48 @@ The Gardener API server's autoscaling is the same as the Shoot Kubernetes API se
 It is possible to configure minimum allowed resources (`minAllowed`) for CPU/memory for ETCD instances and the Kubernetes API server.
 This configuration is available for both Shoot clusters and the Garden cluster, see examples below:
 - `Shoot`
-```yaml
-spec:
-  kubernetes:
-    etcd:
-      main:
-        autoscaling:
-          minAllowed:
-            cpu: "2"
-            memory: 6Gi
-      events:
-        autoscaling:
-          minAllowed:
-            cpu: "1"
-            memory: 3Gi
-    kubeAPIServer:
-      autoscaling:
-        minAllowed:
-          cpu: "1"
-          memory: 3Gi
-```
-- `Garden`
-```yaml
-spec:
-  virtualCluster:
-    etcd:
-      main:
-        autoscaling:
-          minAllowed:
-            cpu: "2"
-            memory: 6Gi
-      events:
-        autoscaling:
-          minAllowed:
-            cpu: "1"
-            memory: 3Gi
+  ```yaml
+  spec:
     kubernetes:
+      etcd:
+        main:
+          autoscaling:
+            minAllowed:
+              cpu: "2"
+              memory: 6Gi
+        events:
+          autoscaling:
+            minAllowed:
+              cpu: "1"
+              memory: 3Gi
       kubeAPIServer:
         autoscaling:
           minAllowed:
             cpu: "1"
             memory: 3Gi
-```
+  ```
+- `Garden`
+  ```yaml
+  spec:
+    virtualCluster:
+      etcd:
+        main:
+          autoscaling:
+            minAllowed:
+              cpu: "2"
+              memory: 6Gi
+        events:
+          autoscaling:
+            minAllowed:
+              cpu: "1"
+              memory: 3Gi
+      kubernetes:
+        kubeAPIServer:
+          autoscaling:
+            minAllowed:
+              cpu: "1"
+              memory: 3Gi
+  ```
 
 A primary use-case for configuring `minAllowed` resources arises from the need to alleviate delays during consecutive scale-up activities.
 Typically, in longer-running clusters, resource usage patterns evolve gradually, and the control plane can scale vertically in an adequate manner.
