@@ -49,13 +49,13 @@ import (
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	utilsnet "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/oci"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const finalizerName = "core.gardener.cloud/controllerinstallation"
 
-const usablePortsStart = 10101
 const usablePortsRangeSize = 5
 
 // RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeuing when owned resources are still in
@@ -77,7 +77,6 @@ type Reconciler struct {
 	// to nodes even when they are not ready yet. Furthermore, the replicas are set to 1 and a usable port range is
 	// provided.
 	BootstrapControlPlaneNode bool
-	nextUsablePort            *int
 }
 
 // Reconcile reconciles ControllerInstallations and deploys them into the seed cluster.
@@ -269,7 +268,11 @@ func (r *Reconciler) reconcile(
 	}
 
 	if r.BootstrapControlPlaneNode {
-		gardenerValues["usablePorts"] = r.CalculateNextUsablePorts()
+		ports, err := r.CalculateNextUsablePorts()
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to calculate usable port range: %w", err)
+		}
+		gardenerValues["usablePorts"] = ports
 	}
 
 	archive := controllerDeployment.Helm.RawChart
@@ -590,14 +593,14 @@ func (r *Reconciler) BootstrapControlPlaneNodeFunc(obj runtime.Object) error {
 }
 
 // CalculateNextUsablePorts returns the next usable port range for the next controller installation.
-func (r *Reconciler) CalculateNextUsablePorts() []int {
-	if r.nextUsablePort == nil {
-		start := usablePortsStart
-		r.nextUsablePort = ptr.To(start)
-	}
+func (r *Reconciler) CalculateNextUsablePorts() ([]int, error) {
 	var ports []int
-	for endPort := *r.nextUsablePort + usablePortsRangeSize; *r.nextUsablePort < endPort; *r.nextUsablePort++ {
-		ports = append(ports, *r.nextUsablePort)
+	for i := 0; i < usablePortsRangeSize; i++ {
+		p, _, err := utilsnet.SuggestPort("")
+		if err != nil {
+			return nil, err
+		}
+		ports = append(ports, p)
 	}
-	return ports
+	return ports, nil
 }
