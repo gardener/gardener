@@ -16,7 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 	helmregistry "helm.sh/helm/v3/pkg/registry"
 
-	utilsnet "github.com/gardener/gardener/pkg/utils/net"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 )
 
 func TestOCI(t *testing.T) {
@@ -52,7 +52,7 @@ func startTestRegistry(ctx context.Context) (string, error) {
 	config := &configuration.Configuration{}
 	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
 
-	port, host, err := utilsnet.SuggestPort("")
+	port, host, err := netutils.SuggestPort("")
 	if err != nil {
 		return "", err
 	}
