@@ -46,7 +46,7 @@ It is important to have the `ConfigMap` keys ending with `*.server` (if you woul
 if you want to customize the current server configuration (it is optional setting both).
 
 ## Warning
-Be careful when overriding plugins log, forward or cache. 
+Be careful when overriding plugins `log`, `forward` or `cache`.
 - Increasing log level can lead to increased load/reduced throughput. 
 - Changing the forward target may lead to unexpected results. 
 - Playing with the cache settings can impact the timeframe how long it takes for changes to become visible.
