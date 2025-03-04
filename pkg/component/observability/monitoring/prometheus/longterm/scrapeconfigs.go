@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 )
 
@@ -65,12 +67,24 @@ func CentralScrapeConfigs() []*monitoringv1alpha1.ScrapeConfig {
 						`{__name__="apiserver_request_total", job="virtual-garden-kube-apiserver"}`,
 					},
 				},
-				StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: []monitoringv1alpha1.Target{"prometheus-" + garden.Label}}},
-				RelabelConfigs: []monitoringv1.RelabelConfig{{
-					Action:      "replace",
-					Replacement: ptr.To("prometheus-" + garden.Label),
-					TargetLabel: "job",
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:       monitoringv1alpha1.KubernetesRoleService,
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{v1beta1constants.GardenNamespace}},
 				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{
+							"__meta_kubernetes_service_name",
+							"__meta_kubernetes_service_port_name",
+						},
+						Regex:  "prometheus-garden;" + prometheus.ServicePortName,
+						Action: "keep",
+					},
+					{
+						Action:      "replace",
+						Replacement: ptr.To("prometheus-" + garden.Label),
+						TargetLabel: "job",
+					}},
 			},
 		},
 	}

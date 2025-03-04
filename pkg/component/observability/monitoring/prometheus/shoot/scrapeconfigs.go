@@ -32,8 +32,9 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 			Spec: monitoringv1alpha1.ScrapeConfigSpec{
 				HonorTimestamps: ptr.To(false),
 				MetricsPath:     ptr.To("/federate"),
-				StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-					Targets: []monitoringv1alpha1.Target{"prometheus-cache.garden.svc"},
+				KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+					Role:       monitoringv1alpha1.KubernetesRoleService,
+					Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"garden"}},
 				}},
 				Params: map[string][]string{
 					"match[]": {
@@ -43,11 +44,21 @@ func CentralScrapeConfigs(namespace, clusterCASecretName string, isWorkerless bo
 						`{job="etcd-druid",etcd_namespace="` + namespace + `"}`,
 					},
 				},
-				RelabelConfigs: []monitoringv1.RelabelConfig{{
-					Action:      "replace",
-					Replacement: ptr.To("kube-kubelet-seed"),
-					TargetLabel: "job",
-				}},
+				RelabelConfigs: []monitoringv1.RelabelConfig{
+					{
+						SourceLabels: []monitoringv1.LabelName{
+							"__meta_kubernetes_service_name",
+							"__meta_kubernetes_service_port_name",
+						},
+						Regex:  "prometheus-cache;web",
+						Action: "keep",
+					},
+					{
+						Action:      "replace",
+						Replacement: ptr.To("kube-kubelet-seed"),
+						TargetLabel: "job",
+					},
+				},
 				MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 					// "shoot-control-plane" references the namespace of the shoot control-plane pods in the seed
 					Replacement: ptr.To("shoot-control-plane"),
