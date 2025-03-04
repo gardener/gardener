@@ -26,7 +26,7 @@ import (
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
-// ValidateName is a helper function for validating that a name is a DNS sub domain.
+// ValidateName is a helper function for validating that a name is a DNS subdomain.
 func ValidateName(name string, prefix bool) []string {
 	return apivalidation.NameIsDNSSubdomain(name, prefix)
 }
@@ -258,8 +258,6 @@ func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 				allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
 			}
 
-			allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion.Architectures, versionsPath.Child("architecture"))...)
-
 			if machineVersion.KubeletVersionConstraint != nil {
 				if _, err := semver.NewConstraint(*machineVersion.KubeletVersionConstraint); err != nil {
 					allErrs = append(allErrs, field.Invalid(versionsPath.Child("kubeletVersionConstraint"), machineVersion.KubeletVersionConstraint, fmt.Sprintf("cannot parse the kubeletVersionConstraint: %s", err.Error())))
@@ -283,7 +281,6 @@ func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) 
 		cpuPath := idxPath.Child("cpu")
 		gpuPath := idxPath.Child("gpu")
 		memoryPath := idxPath.Child("memory")
-		archPath := idxPath.Child("architecture")
 
 		if len(machineType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
@@ -298,7 +295,6 @@ func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) 
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
-		allErrs = append(allErrs, validateMachineTypeArchitecture(machineType.Architecture, archPath)...)
 
 		if machineType.Storage != nil {
 			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)

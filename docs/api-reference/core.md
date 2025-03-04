@@ -483,6 +483,23 @@ Limits
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>capabilitiesDefinition</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Capabilities">
+Capabilities
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CapabilitiesDefinition contains the definition of all possible capabilities in the CloudProfile.
+Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+The order of values for a given capability is relevant. The most important value is listed first.
+During maintenance upgrades, the image that enables the most important capabilities will be selected.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3361,6 +3378,16 @@ CRIName
 <p>
 <p>CRIName is a type alias for the CRI name string.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.Capabilities">Capabilities
+(<code>map[string]string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.MachineType">MachineType</a>)
+</p>
+<p>
+<p>Capabilities is a series of features that a machine image or type supports.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.CloudProfileReference">CloudProfileReference
 </h3>
 <p>
@@ -3570,6 +3597,23 @@ Limits
 <em>(Optional)</em>
 <p>Limits configures operational limits for Shoot clusters using this CloudProfile.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>capabilitiesDefinition</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Capabilities">
+Capabilities
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CapabilitiesDefinition contains the definition of all possible capabilities in the CloudProfile.
+Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+The order of values for a given capability is relevant. The most important value is listed first.
+During maintenance upgrades, the image that enables the most important capabilities will be selected.</p>
 </td>
 </tr>
 </tbody>
@@ -8165,6 +8209,21 @@ InPlaceUpdates
 <p>InPlaceUpdates contains the configuration for in-place updates for this machine image version.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>capabilitiesSet</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#json-v1-apiextensions-k8s-io">
+[]Kubernetes apiextensions/v1.JSON
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CapabilitiesSet is an array of capabilities. Each entry represents a combination of capabilities that is provided by
+the machine image version.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MachineType">MachineType
@@ -8271,6 +8330,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>Architecture is the CPU architecture of this machine type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>capabilities</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Capabilities">
+Capabilities
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Capabilities contains the capabilities of the machine type.</p>
 </td>
 </tr>
 </tbody>

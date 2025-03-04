@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var _ = Describe("CloudProfile defaulting", func() {
@@ -36,17 +37,24 @@ var _ = Describe("CloudProfile defaulting", func() {
 		})
 	})
 
-	Describe("MachineImageVersion defaulting", func() {
-		It("should correctly default MachineImageVersion", func() {
+	Describe("VolumeType defaulting", func() {
+		It("should correctly default VolumeType", func() {
 			SetObjectDefaults_CloudProfile(obj)
 
+			volumeType := obj.Spec.VolumeTypes[0]
+			Expect(volumeType.Usable).To(PointTo(BeTrue()))
+		})
+	})
+
+	Describe("MachineImageVersion defaulting ", func() {
+		It("should correctly default MachineImageVersion", func() {
+			SetObjectDefaults_CloudProfile(obj)
 			machineImageVersion := obj.Spec.MachineImages[0].Versions[0]
 			Expect(machineImageVersion.CRI).To(ConsistOf(
 				CRI{Name: "containerd"},
 			))
-			Expect(machineImageVersion.Architectures).To(ConsistOf(
-				"amd64",
-			))
+			Expect(machineImageVersion.Architectures).To(ConsistOf("amd64"))
+			Expect(machineImageVersion.CapabilitiesSet).To(BeNil())
 		})
 	})
 
@@ -56,16 +64,33 @@ var _ = Describe("CloudProfile defaulting", func() {
 
 			machineType := obj.Spec.MachineTypes[0]
 			Expect(machineType.Architecture).To(PointTo(Equal("amd64")))
+			Expect(machineType.Capabilities).To(BeNil())
 			Expect(machineType.Usable).To(PointTo(BeTrue()))
 		})
 	})
+	Describe("Architecture defaulting", func() {
+		Context("CloudProfile HAS NO capabilitiesDefinition", func() {
+			It("should default the architecture for MachineImageVersion and MachineType", func() {
+				SetObjectDefaults_CloudProfile(obj)
 
-	Describe("VolumeType defaulting", func() {
-		It("should correctly default VolumeType", func() {
-			SetObjectDefaults_CloudProfile(obj)
+				images := obj.Spec.MachineImages
+				Expect(images[0].Versions[0].Architectures).To(ConsistOf("amd64"))
 
-			volumeType := obj.Spec.VolumeTypes[0]
-			Expect(volumeType.Usable).To(PointTo(BeTrue()))
+				Expect(obj.Spec.MachineTypes[0].Architecture).To(PointTo(Equal("amd64")))
+			})
+		})
+
+		Context("cloudProfile HAS capabilitiesDefinition", func() {
+			It("should NOT default the architecture for MachineImageVersion and MachineType", func() {
+				obj.Spec.CapabilitiesDefinition = Capabilities{v1beta1constants.ArchitectureKey: "arm64"}
+				SetObjectDefaults_CloudProfile(obj)
+
+				images := obj.Spec.MachineImages
+				Expect(images[0].Versions[0].Architectures).To(BeEmpty())
+
+				Expect(obj.Spec.MachineTypes[0].Architecture).To(BeNil())
+			})
 		})
 	})
+
 })
