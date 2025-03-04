@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener"
@@ -237,6 +238,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		Context("Shoot with workers", Label("basic"), Ordered, func() {
 			test(NewTestContext().ForShoot(DefaultShoot("e2e-default")))
+		})
+
+		Context("Shoot with workers and layer 4 load balancing", Ordered, Label("basic"), func() {
+			shoot := DefaultShoot("e2e-layer4-lb")
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootDisableIstioTLSTermination, "true")
+			test(NewTestContext().ForShoot(shoot))
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
