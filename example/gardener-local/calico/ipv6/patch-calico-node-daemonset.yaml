@@ -17,5 +17,3 @@ spec:
           value: "true"
         - name: FELIX_IPV6SUPPORT
           value: "true"
-        securityContext:
-          allowPrivilegeEscalation: false
