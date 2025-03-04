@@ -102,9 +102,6 @@ global:
         enabled: false
       # concurrentSyncs: 5
       # backoff: 10s
-      tokenInvalidator:
-        enabled: false
-      # concurrentSyncs: 5
       tokenRequestor:
         enabled: false
       # concurrentSyncs: 5
@@ -142,8 +139,6 @@ global:
       #   value: someValue
       #   effect: NoSchedule
       #   tolerationSeconds: 300
-      tokenInvalidator:
-        enabled: false
       nodeAgentAuthorizer:
         enabled: false
       # machineNamespace: shoot--foo--bar

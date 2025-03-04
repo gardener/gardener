@@ -129,11 +129,6 @@ data:
         {{- if .Values.global.config.controllers.node.backoff }}
         backoff: {{ .Values.global.config.controllers.node.backoff }}
         {{- end }}
-      tokenInvalidator:
-        enabled: {{ .Values.global.config.controllers.tokenInvalidator.enabled }}
-        {{- if .Values.global.config.controllers.tokenInvalidator.concurrentSyncs }}
-        concurrentSyncs: {{ .Values.global.config.controllers.tokenInvalidator.concurrentSyncs }}
-        {{- end }}
       tokenRequestor:
         enabled: {{ .Values.global.config.controllers.tokenRequestor.enabled }}
         {{- if .Values.global.config.controllers.tokenRequestor.concurrentSyncs }}
@@ -187,8 +182,6 @@ data:
         podTolerations:
 {{ toYaml .Values.global.config.webhooks.systemComponentsConfig.podTolerations | indent 8 }}
         {{- end }}
-      tokenInvalidator:
-        enabled: {{ .Values.global.config.webhooks.tokenInvalidator.enabled }}
       nodeAgentAuthorizer:
         enabled: {{ .Values.global.config.webhooks.nodeAgentAuthorizer.enabled }}
         {{- if .Values.global.config.webhooks.nodeAgentAuthorizer.machineNamespace }}

@@ -42,10 +42,6 @@ func ValidateResourceManagerConfiguration(conf *resourcemanagerconfigv1alpha1.Re
 	allErrs = append(allErrs, validateResourceManagerControllerConfiguration(conf.Controllers, field.NewPath("controllers"))...)
 	allErrs = append(allErrs, validateResourceManagerWebhookConfiguration(conf.Webhooks, field.NewPath("webhooks"))...)
 
-	if conf.Controllers.TokenInvalidator.Enabled != conf.Webhooks.TokenInvalidator.Enabled {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("controllers", "tokenInvalidator"), "controller and webhook for TokenInvalidator must either be both disabled or enabled"))
-	}
-
 	return allErrs
 }
 
