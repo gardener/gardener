@@ -20,7 +20,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -120,16 +119,10 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Setup manager")
-	httpClient, err := rest.HTTPClientFor(restConfig)
-	Expect(err).NotTo(HaveOccurred())
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
-	Expect(err).NotTo(HaveOccurred())
-
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  operatorclient.RuntimeScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
-			Mapper: mapper,
 			ByObject: map[client.Object]cache.ByObject{
 				&operatorv1alpha1.Garden{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
