@@ -45,6 +45,21 @@ func (g *gardenerAPIServer) deployment(
 	configMapAuditPolicy *corev1.ConfigMap,
 	configMapAdmissionConfigs *corev1.ConfigMap,
 ) *appsv1.Deployment {
+	args := []string{
+		"--authorization-always-allow-paths=/healthz",
+		"--cluster-identity=" + g.values.ClusterIdentity,
+		"--authentication-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+		"--authorization-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+		"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+		"--log-level=" + g.values.LogLevel,
+		"--log-format=" + g.values.LogFormat,
+		fmt.Sprintf("--secure-port=%d", port),
+	}
+
+	if g.values.GoAwayChance != nil {
+		args = append(args, fmt.Sprintf("--goaway-chance=%f", *g.values.GoAwayChance))
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName,
@@ -91,16 +106,7 @@ func (g *gardenerAPIServer) deployment(
 						Name:            containerName,
 						Image:           g.values.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						Args: []string{
-							"--authorization-always-allow-paths=/healthz",
-							"--cluster-identity=" + g.values.ClusterIdentity,
-							"--authentication-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
-							"--authorization-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
-							"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
-							"--log-level=" + g.values.LogLevel,
-							"--log-format=" + g.values.LogFormat,
-							fmt.Sprintf("--secure-port=%d", port),
-						},
+						Args:            args,
 						Ports: []corev1.ContainerPort{{
 							Name:          "https",
 							ContainerPort: port,

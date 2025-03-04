@@ -215,6 +215,7 @@ spec:
     #     version: audit.k8s.io/v1
     #   featureGates:
     #     SomeGardenerFeature: true
+    #   goAwayChance: 0.001
     #   logging:
     #     verbosity: 2
     #     httpAccessVerbosity: 3

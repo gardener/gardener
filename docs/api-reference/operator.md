@@ -1963,6 +1963,23 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig
 <p>EncryptionConfig contains customizable encryption configuration of the Gardener API server.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>goAwayChance</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>GoAwayChance can be used to prevent HTTP/2 clients from getting stuck on a single apiserver, randomly close a
+connection (GOAWAY). The client&rsquo;s other in-flight requests won&rsquo;t be affected, and the client will reconnect,
+likely landing on a different apiserver after going through the load balancer again. This field sets the fraction
+of requests that will be sent a GOAWAY. Clusters with single apiservers, or which don&rsquo;t use a load balancer,
+should NOT enable this. Min is 0 (off), Max is .02 (<sup>1</sup>&frasl;<sub>50</sub> requests); .001 (<sup>1</sup>&frasl;<sub>1000</sub>) is a recommended starting
+point.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">GardenerAdmissionControllerConfig

@@ -62,6 +62,9 @@ type Values struct {
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string
+	// GoAwayChance can be used to prevent HTTP/2 clients from getting stuck on a single apiserver, randomly close a
+	// connection (GOAWAY).
+	GoAwayChance *float64
 	// TopologyAwareRoutingEnabled specifies where the topology-aware feature is enabled.
 	TopologyAwareRoutingEnabled bool
 	// WorkloadIdentityTokenIssuer is the issuer identifier of the workload identity tokens set in the 'iss' claim.

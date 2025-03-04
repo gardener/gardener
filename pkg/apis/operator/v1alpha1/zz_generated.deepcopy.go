@@ -971,6 +971,11 @@ func (in *GardenerAPIServerConfig) DeepCopyInto(out *GardenerAPIServerConfig) {
 		*out = new(v1beta1.EncryptionConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.GoAwayChance != nil {
+		in, out := &in.GoAwayChance, &out.GoAwayChance
+		*out = new(float64)
+		**out = **in
+	}
 	return
 }
 
