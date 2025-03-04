@@ -14,6 +14,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -146,7 +147,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleAdmissionController         *rbacv1.ClusterRole
 		clusterRoleBindingAdmissionController  *rbacv1.ClusterRoleBinding
 		shootAccessSecretAdmissionController   *corev1.Secret
-		serviceAdmissionControllerFor          func(component.ClusterType, bool, bool) *corev1.Service
+		serviceAdmissionControllerFor          func(component.ClusterType, bool) *corev1.Service
 		deploymentAdmissionControllerFor       func(bool) *appsv1.Deployment
 		podDisruptionBudgetAdmissionController *policyv1.PodDisruptionBudget
 		vpaAdmissionController                 *vpaautoscalingv1.VerticalPodAutoscaler
@@ -969,7 +970,7 @@ var _ = Describe("VPA", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
-		serviceAdmissionControllerFor = func(clusterType component.ClusterType, topologyAwareRoutingEnabled bool, isGardenCluster bool) *corev1.Service {
+		serviceAdmissionControllerFor = func(clusterType component.ClusterType, isGardenCluster bool) *corev1.Service {
 			obj := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "vpa-webhook",
@@ -1013,11 +1014,6 @@ var _ = Describe("VPA", func() {
 			if clusterType == "shoot" {
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports", `[{"protocol":"TCP","port":10250}]`)
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports", `[{"protocol":"TCP","port":8944}]`)
-			}
-
-			if topologyAwareRoutingEnabled {
-				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
-				metav1.SetMetaDataLabel(&obj.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
 			}
 
 			return obj
@@ -1448,7 +1444,7 @@ var _ = Describe("VPA", func() {
 					})
 
 					It("should annotate vpa-admission-controller Service with `garden` cluster metrics scrape network policy", func() {
-						serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeSeed, false, true)
+						serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeSeed, true)
 						Expect(managedResource).To(contain(serviceAdmissionController))
 					})
 
@@ -1463,7 +1459,7 @@ var _ = Describe("VPA", func() {
 						Expect(vpa.Deploy(ctx)).To(Succeed())
 					})
 					It("should annotate vpa-admission-controller Service with `seed` cluster metrics scrape network policy", func() {
-						serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeSeed, false, false)
+						serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeSeed, false)
 						Expect(managedResource).To(contain(serviceAdmissionController))
 					})
 
@@ -1610,7 +1606,7 @@ var _ = Describe("VPA", func() {
 						serviceAccountAdmissionController,
 						clusterRoleAdmissionController,
 						clusterRoleBindingAdmissionController,
-						serviceAdmissionControllerFor(component.ClusterTypeSeed, false, false),
+						serviceAdmissionControllerFor(component.ClusterTypeSeed, false),
 						deploymentAdmissionController,
 						vpaAdmissionController,
 						serviceMonitorAdmissionControllerFor(component.ClusterTypeSeed, false),
@@ -1964,7 +1960,7 @@ var _ = Describe("VPA", func() {
 
 				service = &corev1.Service{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, service)).To(Succeed())
-				serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, false, false)
+				serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, false)
 				serviceAdmissionController.ResourceVersion = "1"
 				Expect(service).To(Equal(serviceAdmissionController))
 
@@ -2009,25 +2005,82 @@ var _ = Describe("VPA", func() {
 			})
 
 			Context("when TopologyAwareRoutingEnabled=true", func() {
-				It("should successfully deploy with expected vpa-webhook service annotations and labels", func() {
+				BeforeEach(func() {
 					valuesAdmissionController.TopologyAwareRoutingEnabled = true
-					vpa = New(c, namespace, sm, Values{
-						ClusterType:              component.ClusterTypeShoot,
-						Enabled:                  true,
-						SecretNameServerCA:       secretNameCA,
-						RuntimeKubernetesVersion: runtimeKubernetesVersion,
-						AdmissionController:      valuesAdmissionController,
-						Recommender:              valuesRecommender,
-						Updater:                  valuesUpdater,
+				})
+
+				When("runtime Kubernetes version is >= 1.32", func() {
+					BeforeEach(func() {
+						runtimeKubernetesVersion = semver.MustParse("1.32.1")
 					})
 
-					Expect(vpa.Deploy(ctx)).To(Succeed())
+					It("should successfully deploy with expected vpa-webhook service annotation, label and spec field", func() {
+						vpa = New(c, namespace, sm, Values{
+							ClusterType:              component.ClusterTypeShoot,
+							Enabled:                  true,
+							SecretNameServerCA:       secretNameCA,
+							RuntimeKubernetesVersion: runtimeKubernetesVersion,
+							AdmissionController:      valuesAdmissionController,
+							Recommender:              valuesRecommender,
+							Updater:                  valuesUpdater,
+						})
+						Expect(vpa.Deploy(ctx)).To(Succeed())
 
-					service := &corev1.Service{}
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, service)).To(Succeed())
-					serviceAdmissionController := serviceAdmissionControllerFor(component.ClusterTypeShoot, true, false)
-					serviceAdmissionController.ResourceVersion = "1"
-					Expect(service).To(Equal(serviceAdmissionController))
+						actual := &corev1.Service{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, actual)).To(Succeed())
+
+						Expect(actual.Spec.TrafficDistribution).To(PointTo(Equal(corev1.ServiceTrafficDistributionPreferClose)))
+					})
+				})
+
+				When("runtime Kubernetes version is 1.31", func() {
+					BeforeEach(func() {
+						runtimeKubernetesVersion = semver.MustParse("1.31.2")
+					})
+
+					It("should successfully deploy with expected vpa-webhook service annotation, label and spec field", func() {
+						vpa = New(c, namespace, sm, Values{
+							ClusterType:              component.ClusterTypeShoot,
+							Enabled:                  true,
+							SecretNameServerCA:       secretNameCA,
+							RuntimeKubernetesVersion: runtimeKubernetesVersion,
+							AdmissionController:      valuesAdmissionController,
+							Recommender:              valuesRecommender,
+							Updater:                  valuesUpdater,
+						})
+						Expect(vpa.Deploy(ctx)).To(Succeed())
+
+						actual := &corev1.Service{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, actual)).To(Succeed())
+
+						Expect(actual.Spec.TrafficDistribution).To(PointTo(Equal(corev1.ServiceTrafficDistributionPreferClose)))
+						Expect(actual.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
+					})
+				})
+
+				When("runtime Kubernetes version is < 1.31", func() {
+					BeforeEach(func() {
+						runtimeKubernetesVersion = semver.MustParse("1.30.3")
+					})
+
+					It("should successfully deploy with expected vpa-webhook service annotation, label and spec field", func() {
+						vpa = New(c, namespace, sm, Values{
+							ClusterType:              component.ClusterTypeShoot,
+							Enabled:                  true,
+							SecretNameServerCA:       secretNameCA,
+							RuntimeKubernetesVersion: runtimeKubernetesVersion,
+							AdmissionController:      valuesAdmissionController,
+							Recommender:              valuesRecommender,
+							Updater:                  valuesUpdater,
+						})
+						Expect(vpa.Deploy(ctx)).To(Succeed())
+
+						actual := &corev1.Service{}
+						Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpa-webhook"}, actual)).To(Succeed())
+
+						Expect(actual.Annotations).To(HaveKeyWithValue("service.kubernetes.io/topology-mode", "auto"))
+						Expect(actual.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
+					})
 				})
 			})
 		})
@@ -2074,7 +2127,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, serviceMonitorRecommenderFor(component.ClusterTypeShoot, false))).To(Succeed())
 
 				By("Create vpa-admission-controller runtime resources")
-				Expect(c.Create(ctx, serviceAdmissionControllerFor(component.ClusterTypeSeed, false, false))).To(Succeed())
+				Expect(c.Create(ctx, serviceAdmissionControllerFor(component.ClusterTypeSeed, false))).To(Succeed())
 				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true))).To(Succeed())
 				Expect(c.Create(ctx, podDisruptionBudgetAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, vpaAdmissionController)).To(Succeed())
@@ -2097,7 +2150,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceMonitorRecommenderFor(component.ClusterTypeShoot, false)), &monitoringv1.ServiceMonitor{})).To(BeNotFoundError())
 
 				By("Verify vpa-admission-controller runtime resources")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionControllerFor(component.ClusterTypeSeed, false, false)), &corev1.Service{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionControllerFor(component.ClusterTypeSeed, false)), &corev1.Service{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentAdmissionControllerFor(true)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudgetAdmissionController), &policyv1.PodDisruptionBudget{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaAdmissionController), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
