@@ -445,14 +445,13 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					errorList := ValidateCloudProfile(cloudProfile)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.machineImages[0].versions"),
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.machineImages[0].versions"),
+						"Detail": ContainSubstring("must provide at least one version for the machine image 'some-machine-image'"),
 					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.machineImages"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.machineImages[0].updateStrategy"),
+						"Type":   Equal(field.ErrorTypeRequired),
+						"Field":  Equal("spec.machineImages[0].updateStrategy"),
+						"Detail": ContainSubstring("must provide an update strategy"),
 					}))))
 				})
 

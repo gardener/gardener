@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/api"
@@ -131,7 +132,7 @@ func dropExpiredMachineImageVersions(newProfile, oldProfile *core.NamespacedClou
 		existingMachineImages = oldProfile.Spec.MachineImages
 	}
 	existingMachineImageVersions := util.NewCoreImagesContext(existingMachineImages)
-	validMachineImages := []core.MachineImage{}
+	var validMachineImages []core.MachineImage
 	for i, machineImage := range newProfile.Spec.MachineImages {
 		var validMachineImageVersions []core.MachineImageVersion
 
@@ -142,7 +143,7 @@ func dropExpiredMachineImageVersions(newProfile, oldProfile *core.NamespacedClou
 			}
 			validMachineImageVersions = append(validMachineImageVersions, version)
 		}
-		if len(validMachineImageVersions) > 0 {
+		if len(validMachineImageVersions) > 0 || ptr.Deref(machineImage.UpdateStrategy, "") != "" {
 			newProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
 			validMachineImages = append(validMachineImages, newProfile.Spec.MachineImages[i])
 		}

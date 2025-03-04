@@ -154,7 +154,7 @@ func ValidateCloudProfileMachineImages(machineImages []core.MachineImage, fldPat
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
 	}
 
-	allErrs = append(allErrs, ValidateMachineImages(machineImages, fldPath)...)
+	allErrs = append(allErrs, ValidateMachineImages(machineImages, fldPath, false)...)
 
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)

@@ -197,7 +197,7 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 }
 
 // ValidateMachineImages validates the given list of machine images for valid values and combinations.
-func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Path, allowEmptyVersions bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {
@@ -222,7 +222,7 @@ func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
 		}
 
-		if len(image.Versions) == 0 {
+		if len(image.Versions) == 0 && !allowEmptyVersions {
 			allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for the machine image '%s'", image.Name)))
 		}
 
