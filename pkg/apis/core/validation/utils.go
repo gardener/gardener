@@ -204,7 +204,7 @@ func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 		return allErrs
 	}
 
-	latestMachineImages, err := helper.DetermineLatestMachineImageVersions(machineImages, allowEmptyVersions)
+	latestMachineImages, err := helper.DetermineLatestMachineImageVersions(machineImages)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, err.Error()))
 	}

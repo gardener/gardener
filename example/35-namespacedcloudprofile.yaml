@@ -21,7 +21,7 @@ spec:
     usable: true
   machineImages:
   - name: local
-    # updateStrategy: minor
+  # updateStrategy: minor
     versions:
     - version: 1.0.1-dev
       architectures:

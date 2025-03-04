@@ -130,7 +130,7 @@ var _ = Describe("Helper", func() {
 
 	DescribeTable("#DetermineLatestMachineImageVersions",
 		func(versions []core.MachineImage, expectation map[string]core.MachineImageVersion, expectError bool) {
-			result, err := DetermineLatestMachineImageVersions(versions, false)
+			result, err := DetermineLatestMachineImageVersions(versions)
 			if expectError {
 				Expect(err).To(HaveOccurred())
 				return
