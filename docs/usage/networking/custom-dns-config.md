@@ -45,6 +45,41 @@ In order for the destination DNS server to be reachable, it must listen on port 
 It is important to have the `ConfigMap` keys ending with `*.server` (if you would like to add a new server) or `*.override`
 if you want to customize the current server configuration (it is optional setting both).
 
+## Warning
+Be careful when overriding plugins `log`, `forward` or `cache`.
+- Increasing log level can lead to increased load/reduced throughput. 
+- Changing the forward target may lead to unexpected results. 
+- Playing with the cache settings can impact the timeframe how long it takes for changes to become visible.
+
+`*.override` and `*.server` data points from `coredns-custom` `ConfigMap` are imported into Corefile as follows.
+Please consult `coredns` [plugin documentation](https://coredns.io/plugins/) for potential side-effects.
+```yaml
+.:8053 {
+  health {
+      lameduck 15s
+  }
+  ready
+  [search-rewrites]
+  kubernetes[clusterDomain]in-addr.arpa ip6.arpa {
+      pods insecure
+      fallthrough in-addr.arpa ip6.arpa
+      ttl 30
+  }
+  prometheus :9153
+  loop
+  import custom/*.override
+  errors
+  log . {
+      class error
+  }
+  forward . /etc/resolv.conf
+  cache 30
+  reload
+  loadbalance round_robin
+}
+import custom/*.server
+```
+
 ## [Optional] Reload CoreDNS
 
 As Gardener is configuring the `reload` [plugin](https://coredns.io/plugins/reload/) of CoreDNS a restart of the CoreDNS components is typically not necessary to propagate `ConfigMap` changes. However, if you don't want to wait for the default (30s) to kick in, you can roll-out your CoreDNS deployment using:
