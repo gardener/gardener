@@ -187,15 +187,48 @@ func verifyEnvoyFilterInIstioNamespace(ctx context.Context, seedClient kubernete
 			}
 			filteredList = append(filteredList, filter)
 		}
-		// We expect 2 envoy filters when Istio TLS termination is active and 1 if it is not.
-		// It is considered to be active when `kube-apiserver-mtls` service exists in the shoot namespace.
-		expectedEnvoyFilters := 2
+
+		// TODO: Change or remove this once the feature gates "IstioTLSTermination" or "RemoveAPIServerProxyLegacyPort" are removed
+		// We can have the following scenarios:
+		// - Feature Gate "IstioTLSTermination" enabled, "RemoveAPIServerProxyLegacyPort" disabled = 2 envoy filters
+		// - Feature Gate "IstioTLSTermination" enabled, "RemoveAPIServerProxyLegacyPort" enabled = 2 envoy filter
+		// - Feature Gate "IstioTLSTermination" disabled, "RemoveAPIServerProxyLegacyPort" disabled = 1 envoy filter
+		// - Feature Gate "IstioTLSTermination" disabled, "RemoveAPIServerProxyLegacyPort" enabled = 0 envoy filters
+
+		// Istio TLS termination is considered to be active when `kube-apiserver-mtls` service exists in the shoot namespace.
+		istioTlsTerminationEnabled := true
 		err := seedClient.Client().Get(ctx, client.ObjectKey{Name: "kube-apiserver-mtls", Namespace: shootName}, &corev1.Service{})
 		if errors.IsNotFound(err) {
-			expectedEnvoyFilters = 1
+			istioTlsTerminationEnabled = false
 		} else {
 			g.Expect(err).To(Not(HaveOccurred()))
 		}
+
+		// "RemoveAPIServerProxyLegacyPort" is considered to be active when the "istio-ingressgateway" has no 8443 port open
+		removeAPIServerProxyLegacyPortEnabled := true
+		istioIngressGateway := &corev1.Service{}
+		if err := seedClient.Client().Get(ctx, client.ObjectKey{Name: v1beta1constants.DefaultSNIIngressServiceName, Namespace: v1beta1constants.DefaultSNIIngressNamespace}, istioIngressGateway); err != nil {
+			g.Expect(err).To(Not(HaveOccurred()))
+		}
+
+		for _, k := range istioIngressGateway.Spec.Ports {
+			if k.Port == 8443 {
+				removeAPIServerProxyLegacyPortEnabled = false
+			}
+		}
+
+		// assume that "IstioTLSTermination" is enabled, default expected envoy filters to 2
+		expectedEnvoyFilters := 2
+
+		// the number of envoy filters can only change if "IstioTLSTermination" is disabled
+		if !istioTlsTerminationEnabled {
+			if !removeAPIServerProxyLegacyPortEnabled {
+				expectedEnvoyFilters = 1
+			} else {
+				expectedEnvoyFilters = 0
+			}
+		}
+
 		g.Expect(filteredList).To(HaveLen(expectedEnvoyFilters))
 	}).Should(Succeed())
 	Expect(filteredList[0].Namespace).To(HavePrefix("istio-ingress"))
