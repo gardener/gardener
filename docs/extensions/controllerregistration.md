@@ -119,6 +119,33 @@ helm:
     digest: sha256:abc
 ```
 
+If needed, a pull secret can be referenced in the `ControllerDeployment.helm.ociRepository.pullSecretRef` field.
+
+```yaml
+helm:
+  ociRepository:
+    repository: registry.example.com
+    tag: 1.0.0
+    pullSecretRef:
+      name: my-pull-secret
+```
+
+The pull secret must be available in the `garden` namespace of the cluster where the `ControllerDeployment` is created and must contain the data key `.dockerconfigjson` with the base64-encoded Docker configuration JSON.
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-pull-secret
+  namespace: garden
+  labels:
+    gardener.cloud/role: helm-pull-secret
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: <base64-encoded-docker-config-json>
+```
+
 Gardenlet caches the downloaded chart in memory. It is recommended to always specify a digest, because if it is not specified, gardenlet needs to fetch the manifest in every reconciliation to compare the digest with the local cache.
 
 No matter where the chart originates from, gardenlet deploys it with the provided static configuration (`.helm.values`).
