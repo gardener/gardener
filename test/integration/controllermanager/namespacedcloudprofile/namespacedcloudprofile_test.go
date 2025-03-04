@@ -341,10 +341,6 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		It("should merge the NamespacedCloudProfile correctly", func() {
 			Eventually(func(g Gomega) {
 				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
-				// print merged cloud profile spec for debugging
-				log.Info("Merged CloudProfileSpec", "mergedCloudProfileSpec", withSortedArrays(namespacedCloudProfile.Status.CloudProfileSpec))
-				// print expected merged cloud profile spec for debugging
-				log.Info("Expected Merged CloudProfileSpec", "expectedMergedCloudProfileSpec", withSortedArrays(*mergedCloudProfileSpec))
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(withSortedArrays(namespacedCloudProfile.Status.CloudProfileSpec)).To(Equal(*mergedCloudProfileSpec))
 				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))

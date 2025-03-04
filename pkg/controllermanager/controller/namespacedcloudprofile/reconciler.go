@@ -22,10 +22,10 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	utilcore "github.com/gardener/gardener/pkg/utils/validation/gardener/core"
 )
 
 // Reconciler reconciles NamespacedCloudProfiles.
@@ -114,7 +114,7 @@ func mergeAndPatchCloudProfile(ctx context.Context, c client.Client, namespacedC
 
 func defaultArchitecture(machineTypes []gardencorev1beta1.MachineType, coreCapabilitiesDefinition gardencorev1beta1.Capabilities) {
 	var capabilitiesDefinition = (gardencore.Capabilities)(coreCapabilitiesDefinition)
-	if validation.AreCapabilitiesDefined(capabilitiesDefinition) {
+	if utilcore.AreCapabilitiesDefined(capabilitiesDefinition) {
 		return
 	}
 

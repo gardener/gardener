@@ -116,7 +116,7 @@ var (
 // This ensures cloudProfiles without capabilities are still validated correctly independent of the feature gate state.
 // These tests must be rewritten once the architecture field is moved completely to capabilities.
 var _ = DescribeTableSubtree("CloudProfileCapabilities feature gate ", func(enabled bool) {
-	var _ = Describe("CloudProfile Validation Tests ", func() {
+	Describe("CloudProfile Validation Tests ", func() {
 		BeforeEach(func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, enabled))
 		})
@@ -1639,99 +1639,227 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 		})
 	})
 
-	var (
-		CapabilitiesTestData = []TableEntry{
-			Entry("accept capabilitiesDefinition without explicit capabilities on machineImage and machineType", cloudProfile, ptr.To(""), nil, capabilitiesDefinition, nil, nil, nil),
-			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType", cloudProfile, ptr.To(""), nil, capabilitiesDefinition, machineCapabilities, nil, nil),
-			Entry("accept capabilitiesDefinition and dedicated capabilities on machineType and machineImage", cloudProfile, ptr.To(""), nil, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, nil),
-			Entry("reject when CapabilitiesDefinition is missing", cloudProfile, ptr.To(""), nil, nil, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.machineTypes[0].architecture"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.machineTypes[0].capabilities"),
-				})),
-			}),
-		}
-		ArchitectureTestData = []TableEntry{
-			Entry("accept architecture in machineType and machineImage", cloudProfile, machineArchitecture, imageArchitecture, nil, nil, nil, nil),
-			Entry("reject missing architecture on machineImage", cloudProfile, machineArchitecture, nil, nil, nil, nil, []gomegatypes.GomegaMatcher{
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
-				})),
-			}),
-			Entry("reject missing architecture on machineType", cloudProfile, ptr.To(""), imageArchitecture, nil, nil, nil, []gomegatypes.GomegaMatcher{
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.machineTypes[0].architecture"),
-				})),
-			}),
-		}
-		MixedUsageTestData = []TableEntry{
-			Entry("reject no architecture defined in capabilities and dedicated field", cloudProfile, ptr.To(""), nil, nil, nil, nil, []gomegatypes.GomegaMatcher{
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.machineTypes[0].architecture"),
-				})),
-			}),
-			Entry("reject mixed usage of architecture and capabilitiesDefinition", cloudProfile, machineArchitecture, imageArchitecture, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.machineImages[0].versions[0].architectures"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.machineTypes[0].architecture"),
-				}))}),
-		}
-	)
-
-	DescribeTable("should define architecture in capabilitiesDefinition or dedicated field",
-		func(
-			cloudProfile core.CloudProfile,
-			machineArchitecture *string,
-			imageArchitecture []string,
-			capabilitiesDefinition core.Capabilities,
-			machineCapabilities core.Capabilities,
-			imageCapabilitiesSet []v1.JSON,
-			expectedError []gomegatypes.GomegaMatcher,
-		) {
-
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
-
-			cp := cloudProfile.DeepCopy()
-
-			cp.Spec.MachineTypes[0].Architecture = machineArchitecture
-			cp.Spec.MachineImages[0].Versions[0].Architectures = imageArchitecture
-
-			cp.Spec.CapabilitiesDefinition = capabilitiesDefinition
-			cp.Spec.MachineTypes[0].Capabilities = machineCapabilities
-			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = imageCapabilitiesSet
-
-			errorList := ValidateCloudProfile(cp)
-			if expectedError == nil {
-				Expect(errorList).To(BeEmpty())
-			} else {
-				Expect(errorList).NotTo(BeEmpty())
-				Expect(errorList).To(ConsistOf(expectedError))
+	Describe("Capabilities tests", func() {
+		var (
+			CapabilitiesTestData = []TableEntry{
+				Entry("accept capabilitiesDefinition without explicit capabilities on machineImage and machineType", cloudProfile, ptr.To(""), nil, capabilitiesDefinition, nil, nil, nil),
+				Entry("accept capabilitiesDefinition and dedicated capabilities on machineType", cloudProfile, ptr.To(""), nil, capabilitiesDefinition, machineCapabilities, nil, nil),
+				Entry("accept capabilitiesDefinition and dedicated capabilities on machineType and machineImage", cloudProfile, ptr.To(""), nil, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, nil),
+				Entry("reject when CapabilitiesDefinition is missing", cloudProfile, ptr.To(""), nil, nil, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineImages[0].versions[0].architectures"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.machineTypes[0].architecture"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.machineTypes[0].capabilities"),
+					})),
+				}),
 			}
+			ArchitectureTestData = []TableEntry{
+				Entry("accept architecture in machineType and machineImage", cloudProfile, machineArchitecture, imageArchitecture, nil, nil, nil, nil),
+				Entry("reject missing architecture on machineImage", cloudProfile, machineArchitecture, nil, nil, nil, nil, []gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineImages[0].versions[0].architectures"),
+					})),
+				}),
+				Entry("reject missing architecture on machineType", cloudProfile, ptr.To(""), imageArchitecture, nil, nil, nil, []gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.machineTypes[0].architecture"),
+					})),
+				}),
+			}
+			MixedUsageTestData = []TableEntry{
+				Entry("reject no architecture defined in capabilities and dedicated field", cloudProfile, ptr.To(""), nil, nil, nil, nil, []gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineImages[0].versions[0].architectures"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("spec.machineTypes[0].architecture"),
+					})),
+				}),
+				Entry("reject mixed usage of architecture and capabilitiesDefinition", cloudProfile, machineArchitecture, imageArchitecture, capabilitiesDefinition, machineCapabilities, imageCapabilitiesSet, []gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.machineImages[0].versions[0].architectures"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.machineTypes[0].architecture"),
+					}))}),
+			}
+		)
 
-		},
-		CapabilitiesTestData,
-		MixedUsageTestData,
-		ArchitectureTestData,
-	)
+		DescribeTable("should define architecture in capabilitiesDefinition or dedicated field",
+			func(
+				cloudProfile core.CloudProfile,
+				machineArchitecture *string,
+				imageArchitecture []string,
+				capabilitiesDefinition core.Capabilities,
+				machineCapabilities core.Capabilities,
+				imageCapabilitiesSet []v1.JSON,
+				expectedError []gomegatypes.GomegaMatcher,
+			) {
+
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+
+				cp := cloudProfile.DeepCopy()
+
+				cp.Spec.MachineTypes[0].Architecture = machineArchitecture
+				cp.Spec.MachineImages[0].Versions[0].Architectures = imageArchitecture
+
+				cp.Spec.CapabilitiesDefinition = capabilitiesDefinition
+				cp.Spec.MachineTypes[0].Capabilities = machineCapabilities
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = imageCapabilitiesSet
+
+				errorList := ValidateCloudProfile(cp)
+				if expectedError == nil {
+					Expect(errorList).To(BeEmpty())
+				} else {
+					Expect(errorList).NotTo(BeEmpty())
+					Expect(errorList).To(ConsistOf(expectedError))
+				}
+
+			},
+			CapabilitiesTestData,
+			MixedUsageTestData,
+			ArchitectureTestData,
+		)
+
+		var (
+			dummyPath                      = field.NewPath("dummy")
+			capabilities core.Capabilities = map[string]string{
+				"architecture":   "amd64,arm64",
+				"hypervisorType": "gen1,gen2,gen3",
+			}
+		)
+
+		Describe("#ValidateCapabilitiesDefinition", func() {
+			It("should accept a capabilitiesDefinition with architecture as capability", func() {
+				errorList := ValidateCapabilitiesDefinition(capabilities, dummyPath)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			DescribeTable("should reject invalid capabilitiesDefinition",
+				func(capabilities core.Capabilities, expectedError []gomegatypes.GomegaMatcher) {
+					errorList := ValidateCapabilitiesDefinition(capabilities, dummyPath)
+					Expect(errorList).To(ConsistOf(expectedError))
+				},
+				Entry("reject empty capability name", core.Capabilities{"architecture": "amd64", "": "gen1,gen2,gen3"}, []gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(dummyPath.String()),
+					})),
+				}),
+				Entry("empty capability values", core.Capabilities{"architecture": "amd64", "hypervisorType": ""}, []gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(dummyPath.Child("hypervisorType").String()),
+					})),
+				}),
+				Entry("missing architecture capability", core.Capabilities{"hypervisorType": "gen1,gen2,gen3"}, []gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(dummyPath.Child("architecture").String()),
+					})),
+				}),
+			)
+
+		})
+
+		Describe("#UnmarshalCapabilitiesSet", func() {
+			It("should unmarshal correct CapabilitiesSet", func() {
+				var CapabilitiesSet = []v1.JSON{
+					{Raw: []byte(`{"architecture":"amd64","hypervisorType":"gen2"}`)},
+					{Raw: []byte(`{"architecture":"amd64","hypervisorType":"gen2"}`)},
+					{Raw: []byte(`{"architecture":"arm64","hypervisorType":"gen1"}`)},
+					{Raw: []byte(`{"architecture":"arm64","hypervisorType":"gen2,gen3"}`)},
+				}
+				capabilitiesSet, err := UnmarshalCapabilitiesSet(CapabilitiesSet, dummyPath)
+
+				Expect(err).To(BeNil())
+				Expect(capabilitiesSet).To(HaveLen(4))
+				Expect(capabilitiesSet[0]).To(Equal(core.Capabilities{"architecture": "amd64", "hypervisorType": "gen2"}))
+			})
+
+			It("should error on unparsable CapabilitiesSet", func() {
+				var rawCapabilitiesSet = []v1.JSON{
+					{Raw: []byte(`{"architecture":"amd64","hypervisorType":"gen2"}`)},
+					// invalid JSON
+					{Raw: []byte(`{"architecture":"amd64","hype....🆘`)},
+					// number cannot be unmarshalled as string
+					{Raw: []byte(`{"invalid":12}`)},
+					// array cannot be unmarshalled as string
+					{Raw: []byte(`{"invalid":["a","b"]}`)},
+					// object cannot be unmarshalled as string
+					{Raw: []byte(`{"invalid":{"a":"b"}}`)},
+					// boolean cannot be unmarshalled as string
+					{Raw: []byte(`{"invalid":true}`)},
+					// empty object cannot be unmarshalled as string
+					{Raw: []byte(`{"invalid":{}}`)},
+					// empty array cannot be unmarshalled as string
+					{Raw: []byte(`{"invalid":[]}`)},
+				}
+
+				_, err := UnmarshalCapabilitiesSet(rawCapabilitiesSet, dummyPath)
+
+				Expect(err).To(ConsistOf([]gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("dummy[1]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("dummy[2]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("dummy[3]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("dummy[4]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("dummy[5]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("dummy[6]"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("dummy[7]"),
+					})),
+				}))
+			})
+
+			It("should reject when the RAW CapabilitiesSet is not Unmarshalled completely", func() {
+				var rawCapabilitiesSet = []v1.JSON{
+					{Raw: []byte(`{"architecture":"amd64","hypervisorType":"gen2"}`)},
+					{Raw: []byte(`{"architecture": "amd64",  "hypervisorType": "gen2",  "extraField": {"a": "b"}`)},
+					{Raw: []byte(`{"architecture":"arm64","hypervisorType":"gen1"}`)},
+				}
+				capabilitiesSet, err := UnmarshalCapabilitiesSet(rawCapabilitiesSet, dummyPath)
+				Expect(err).To(ConsistOf([]gomegatypes.GomegaMatcher{
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("dummy[1]"),
+					})),
+				}))
+				Expect(capabilitiesSet).To(HaveLen(3))
+			})
+		})
+	})
 })
 
 // GetV1JsonCapabilities transforms the given keys and values into a JSON-string and returns it as v1.JSON object.
