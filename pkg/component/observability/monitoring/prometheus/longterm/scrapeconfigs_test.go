@@ -66,12 +66,24 @@ var _ = Describe("PrometheusRules", func() {
 								`{__name__="apiserver_request_total", job="virtual-garden-kube-apiserver"}`,
 							},
 						},
-						StaticConfigs: []monitoringv1alpha1.StaticConfig{{Targets: []monitoringv1alpha1.Target{"prometheus-garden"}}},
-						RelabelConfigs: []monitoringv1.RelabelConfig{{
-							Action:      "replace",
-							Replacement: ptr.To("prometheus-garden"),
-							TargetLabel: "job",
+						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+							Role:       monitoringv1alpha1.KubernetesRoleService,
+							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"garden"}},
 						}},
+						RelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{
+									"__meta_kubernetes_service_name",
+									"__meta_kubernetes_service_port_name",
+								},
+								Regex:  "prometheus-garden;web",
+								Action: "keep",
+							},
+							{
+								Action:      "replace",
+								Replacement: ptr.To("prometheus-garden"),
+								TargetLabel: "job",
+							}},
 					},
 				},
 			))
