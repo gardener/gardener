@@ -52,7 +52,7 @@ Be careful when overriding plugins `log`, `forward` or `cache`.
 - Playing with the cache settings can impact the timeframe how long it takes for changes to become visible.
 
 `*.override` and `*.server` data points from `coredns-custom` `ConfigMap` are imported into Corefile as follows.
-Consult plugin specifications from https://coredns.io/plugins/ for potential side-effects.
+Please consult `coredns` [plugin documentation](https://coredns.io/plugins/) for potential side-effects.
 ```yaml
 .:8053 {
   health {
