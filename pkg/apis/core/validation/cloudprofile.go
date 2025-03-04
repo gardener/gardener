@@ -484,13 +484,21 @@ func validateMachineImageVersionCapabilities(machineImageVersion core.MachineIma
 
 	capabilitiesSet, unmarshalErrorList := UnmarshalCapabilitiesSet(machineImageVersion.CapabilitiesSet, path)
 	if unmarshalErrorList != nil {
-		errList = append(errList, unmarshalErrorList...)
-	} else {
-		parsedCapabilitiesSet := utilcore.ParseCapabilitiesSet(capabilitiesSet)
-		for i, parsedCapabilities := range parsedCapabilitiesSet {
-			errList = append(errList, utilcore.ValidateCapabilitiesAgainstDefinition(parsedCapabilities.ToCapabilities(), capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
-		}
+		return append(errList, unmarshalErrorList...)
 	}
+
+	parsedCapabilitiesSet := utilcore.ParseCapabilitiesSet(capabilitiesSet)
+	parsedCapabilitiesDefinition := utilcore.ParseCapabilities(capabilitiesDefinition)
+
+	if len(parsedCapabilitiesDefinition[v1beta1constants.ArchitectureKey]) > 1 && len(parsedCapabilitiesSet) == 0 {
+		errList = append(errList, field.Required(path.Child("capabilitiesSet"), "must be provided when multiple architectures are supported in the cloud profile"))
+	}
+
+	for i, parsedCapabilities := range parsedCapabilitiesSet {
+		errList = append(errList, utilcore.ValidateCapabilitiesAgainstDefinition(parsedCapabilities.ToCapabilities(), capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
+		errList = append(errList, validateArchitectureCapability(parsedCapabilities.ToCapabilities(), capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
+	}
+
 	return errList
 }
 
@@ -518,8 +526,8 @@ func validateMachineTypesCapabilities(machineTypes []core.MachineType, capabilit
 func ValidateMachineTypeCapabilities(machineType core.MachineType, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
 	errList := field.ErrorList{}
 
-	errList = append(errList, utilcore.ValidateCapabilitiesAgainstDefinition(machineType.Capabilities, capabilitiesDefinition, path)...)
-	errList = append(errList, validateMachineTypeArchitectureCapability(machineType, capabilitiesDefinition, path)...)
+	errList = append(errList, utilcore.ValidateCapabilitiesAgainstDefinition(machineType.Capabilities, capabilitiesDefinition, path.Child("capabilities"))...)
+	errList = append(errList, validateArchitectureCapability(machineType.Capabilities, capabilitiesDefinition, path.Child("capabilities"))...)
 
 	if len(ptr.Deref(machineType.Architecture, "")) > 0 {
 		errList = append(errList, field.Forbidden(path.Child(v1beta1constants.ArchitectureKey), "must not be set when capabilities are defined"))
@@ -528,19 +536,19 @@ func ValidateMachineTypeCapabilities(machineType core.MachineType, capabilitiesD
 	return errList
 }
 
-func validateMachineTypeArchitectureCapability(machineType core.MachineType, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
+func validateArchitectureCapability(capabilities core.Capabilities, capabilitiesDefinition core.Capabilities, path *field.Path) field.ErrorList {
 	errList := field.ErrorList{}
 
-	// if there are multiple values for architecture, the architecture for machineTypes must be set and must contain exactly one value
+	// if there are multiple values for architecture, the architecture capability must be set and must contain exactly one value
 	parsedCapabilitiesDefinition := utilcore.ParseCapabilities(capabilitiesDefinition)
-	parsedCapabilities := utilcore.ParseCapabilities(machineType.Capabilities)
+	parsedCapabilities := utilcore.ParseCapabilities(capabilities)
 
 	allowedArchitectures := parsedCapabilitiesDefinition[v1beta1constants.ArchitectureKey]
 	if len(allowedArchitectures) > 1 {
 		if value, ok := parsedCapabilities[v1beta1constants.ArchitectureKey]; !ok {
-			errList = append(errList, field.Required(path.Child("capabilities", v1beta1constants.ArchitectureKey), fmt.Sprintf("multiple architectures are supported in the cloud profile. So it must be defined and contain exactly one of: %+v", allowedArchitectures)))
+			errList = append(errList, field.Required(path.Child(v1beta1constants.ArchitectureKey), fmt.Sprintf("multiple architectures are supported in the cloud profile. So it must be defined and contain exactly one of: %+v", allowedArchitectures)))
 		} else if len(value) != 1 {
-			errList = append(errList, field.Invalid(path.Child("capabilities", v1beta1constants.ArchitectureKey), value, fmt.Sprintf("must contain exactly one of: %+v", allowedArchitectures)))
+			errList = append(errList, field.Invalid(path.Child(v1beta1constants.ArchitectureKey), value.ToSlice(), fmt.Sprintf("must contain exactly one of: %+v", allowedArchitectures)))
 		}
 	}
 	return errList

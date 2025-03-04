@@ -55,14 +55,14 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 
 				if useCapabilitiesDefinition {
 					capabilitiesDefinition = map[string]string{
-						"architecture":   "amd64, arm64",
+						"architecture":   "amd64",
 						"hypervisorType": "gen1, gen2",
 					}
 					machineCapabilities = map[string]string{"architecture": "amd64"}
 					capabilitiesSet = []apiextensionsv1.JSON{{Raw: []byte(`{"` + v1beta1constants.ArchitectureKey + `":"amd64", "hypervisorType":"gen1"}`)}}
 				} else {
 					machineArchitecture = "amd64"
-					imageArchitectures = []string{"amd64", "arm64"}
+					imageArchitectures = []string{"amd64"}
 				}
 
 				parentCloudProfile = &gardencorev1beta1.CloudProfile{

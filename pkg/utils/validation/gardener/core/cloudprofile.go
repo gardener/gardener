@@ -33,11 +33,11 @@ func ValidateCapabilitiesAgainstDefinition(capabilities core.Capabilities, capab
 
 	for capabilityName, capabilityValues := range parsedCapabilities {
 		if len(capabilityValues) == 0 {
-			errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues, "must not be empty"))
+			errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues.ToSlice(), "must not be empty"))
 			continue
 		}
 		if !capabilityValues.IsSubsetOf(parsedCapabilitiesDefinition[capabilityName]) {
-			errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues, "must be a subset of spec.capabilitiesDefinition of the provider's cloudProfile"))
+			errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues.ToSlice(), "must be a subset of spec.capabilitiesDefinition of the provider's cloudProfile"))
 		}
 	}
 
@@ -115,4 +115,9 @@ func (c *CapabilityValues) IsSubsetOf(other CapabilityValues) bool {
 		}
 	}
 	return true
+}
+
+// ToSlice returns a copy of the CapabilityValues as a slice
+func (c *CapabilityValues) ToSlice() []string {
+	return append([]string{}, *c...)
 }

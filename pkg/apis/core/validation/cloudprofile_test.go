@@ -1553,89 +1553,152 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 
 		})
 	})
-
-	Context("MachineImageVersion validation", func() {
+	Context("Multiple machine architecture CloudProfile: Special cases only", func() {
 		var cp *core.CloudProfile
+
 		BeforeEach(func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+			// Define valid CloudProfile with capabilities
 			cp = cloudProfile.DeepCopy()
+			cp.Spec.CapabilitiesDefinition = core.Capabilities{v1beta1constants.ArchitectureKey: "amd64,arm64", "hypervisorType": "gen1,gen2,gen3"}
 			cp.Spec.MachineTypes[0].Capabilities = machineCapabilities
-			cp.Spec.CapabilitiesDefinition = core.Capabilities{v1beta1constants.ArchitectureKey: "arm64,amd64", "hypervisorType": "gen1,gen2,gen3"}
-		})
-		It("should allow minimal capabilitiesSet of key architecture with one value", func() {
-
-			capabilitiesSet := []v1.JSON{getV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey}, []string{v1beta1constants.ArchitectureAMD64})}
-			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = capabilitiesSet
-
-			errorList := ValidateCloudProfile(cp)
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should allow capabilitiesSet with multiple keys and multiple values for architecture", func() {
-			cp.Spec.CapabilitiesDefinition[v1beta1constants.ArchitectureKey] = "arm64,amd64"
-
 			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = imageCapabilitiesSet
-			v1JSON := getV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey}, []string{"arm64,amd64"})
-			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = append(cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet, v1JSON)
-
-			errorList := ValidateCloudProfile(cp)
-			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should allow capabilitiesSet without architecture key", func() {
-			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{"hypervisorType"}, []string{"gen1"})}
-			errorList := ValidateCloudProfile(cp)
-			Expect(errorList).To(BeEmpty())
+		Context("MachineImageVersion validation", func() {
+			It("should allow minimal capabilitiesSet of key architecture with one value", func() {
+				capabilitiesSet := []v1.JSON{getV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey}, []string{v1beta1constants.ArchitectureAMD64})}
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = capabilitiesSet
+
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should reject empty capabilitiesSet, as architecture cant be determined", func() {
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{}
+
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet"),
+					}))))
+			})
+
+			It("should reject capabilitiesSet with multiple values for architecture", func() {
+				v1JSON := getV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey}, []string{"arm64,amd64"})
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = append(cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet, v1JSON)
+
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet[2].architecture"),
+					}))))
+			})
+
+			It("should reject capabilitiesSet without architecture key", func() {
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{"hypervisorType"}, []string{"gen1"})}
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet[0].architecture"),
+				}))))
+			})
+
+			It("should reject capabilitiesSet with unsupported value", func() {
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{"architecture", "hypervisorType"}, []string{"arm64", "unsupportedValue"})}
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet[0].hypervisorType"),
+				}))))
+			})
 		})
 
-		It("should reject capabilitiesSet with unsupported key", func() {
-			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{""}, []string{"unsupportedValue"})}
-			errorList := ValidateCloudProfile(cp)
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet[0][]"),
-			}))))
+		Context("MachineType validation", func() {
+			It("should allow one architecture value", func() {
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should reject no architecture", func() {
+				cp.Spec.MachineTypes[0].Capabilities = map[string]string{}
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.machineTypes[0].capabilities.architecture"),
+				}))))
+			})
+
+			It("should reject two architectures", func() {
+				cp.Spec.MachineTypes[0].Capabilities = map[string]string{v1beta1constants.ArchitectureKey: "arm64,amd64"}
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.machineTypes[0].capabilities.architecture"),
+				}))))
+			})
 		})
-		It("should reject capabilitiesSet with unsupported value", func() {
-			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{"hypervisorType"}, []string{"unsupportedValue"})}
-			errorList := ValidateCloudProfile(cp)
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet[0].hypervisorType"),
-			}))))
-		})
+
 	})
 
-	Context("MachineType validation", func() {
+	Context("One machine architecture CloudProfile", func() {
 		var cp *core.CloudProfile
+
 		BeforeEach(func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+			// Define valid CloudProfile with capabilities
 			cp = cloudProfile.DeepCopy()
-			cp.Spec.CapabilitiesDefinition = map[string]string{v1beta1constants.ArchitectureKey: "arm64,amd64"}
+			cp.Spec.CapabilitiesDefinition = core.Capabilities{v1beta1constants.ArchitectureKey: "amd64", "hypervisorType": "gen1,gen2,gen3"}
+			cp.Spec.MachineTypes[0].Capabilities = machineCapabilities
+			cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = imageCapabilitiesSet
 		})
 
-		It("should allow one architecture value", func() {
-			cp.Spec.MachineTypes[0].Capabilities = map[string]string{v1beta1constants.ArchitectureKey: "amd64"}
-			errorList := ValidateCloudProfile(cp)
-			Expect(errorList).To(BeEmpty())
+		Context("MachineImageVersion validation", func() {
+			It("should allow capabilitiesSet with multiple capabilities", func() {
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should allow minimal capabilitiesSet of key architecture with one value", func() {
+				capabilitiesSet := []v1.JSON{getV1JsonCapabilities([]string{v1beta1constants.ArchitectureKey}, []string{v1beta1constants.ArchitectureAMD64})}
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = capabilitiesSet
+
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should accept capabilitiesSet without architecture key", func() {
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{"hypervisorType"}, []string{"gen1"})}
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should reject capabilitiesSet with unsupported key", func() {
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{"", v1beta1constants.ArchitectureKey}, []string{"unsupportedValue", "amd64"})}
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet[0][]"),
+				}))))
+			})
+
+			It("should reject capabilitiesSet with unsupported value", func() {
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []v1.JSON{getV1JsonCapabilities([]string{"hypervisorType"}, []string{"unsupportedValue"})}
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.machineImages[0].versions[0].capabilitiesSet[0].hypervisorType"),
+				}))))
+			})
 		})
 
-		It("should reject no architecture", func() {
-			cp.Spec.MachineTypes[0].Capabilities = map[string]string{}
-			errorList := ValidateCloudProfile(cp)
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.machineTypes[0].capabilities.architecture"),
-			}))))
-		})
-
-		It("should reject two architectures", func() {
-			cp.Spec.MachineTypes[0].Capabilities = map[string]string{v1beta1constants.ArchitectureKey: "arm64,amd64"}
-			errorList := ValidateCloudProfile(cp)
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.machineTypes[0].capabilities.architecture"),
-			}))))
+		Context("MachineType validation", func() {
+			It("should allow one architecture value", func() {
+				errorList := ValidateCloudProfile(cp)
+				Expect(errorList).To(BeEmpty())
+			})
 		})
 	})
 
