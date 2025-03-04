@@ -55,7 +55,6 @@ type Interface interface {
 // Actuator is a concrete implementation of Interface.
 type Actuator struct {
 	GardenConfig            *rest.Config
-	GardenAPIReader         client.Reader
 	GardenClient            client.Client
 	GetTargetClientFunc     func(ctx context.Context) (kubernetes.Interface, error)
 	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)

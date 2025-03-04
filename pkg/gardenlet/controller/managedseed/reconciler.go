@@ -91,9 +91,8 @@ func (r *Reconciler) newActuator(shoot *gardencorev1beta1.Shoot) gardenletdeploy
 	}
 
 	return &gardenletdeployer.Actuator{
-		GardenConfig:    r.GardenConfig,
-		GardenAPIReader: r.GardenAPIReader,
-		GardenClient:    r.GardenClient,
+		GardenConfig: r.GardenConfig,
+		GardenClient: r.GardenClient,
 		GetTargetClientFunc: func(ctx context.Context) (kubernetes.Interface, error) {
 			return r.ShootClientMap.GetClient(ctx, keys.ForShoot(shoot))
 		},
