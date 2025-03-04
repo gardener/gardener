@@ -49,7 +49,7 @@ import (
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	utilsnet "github.com/gardener/gardener/pkg/utils/net"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/oci"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -596,7 +596,7 @@ func (r *Reconciler) BootstrapControlPlaneNodeFunc(obj runtime.Object) error {
 func (r *Reconciler) CalculateNextUsablePorts() ([]int, error) {
 	var ports []int
 	for i := 0; i < usablePortsRangeSize; i++ {
-		p, _, err := utilsnet.SuggestPort("")
+		p, _, err := netutils.SuggestPort("")
 		if err != nil {
 			return nil, err
 		}
