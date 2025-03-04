@@ -205,11 +205,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 		deployMachineCRD = g.Add(flow.Task{
 			Name: "Deploying machine-related custom resource definitions",
-			Fn:   c.machineCRD.Deploy,
+			Fn:   component.OpWait(c.machineCRD).Deploy,
 		})
 		deployExtensionCRD = g.Add(flow.Task{
 			Name: "Deploying extensions-related custom resource definitions",
-			Fn:   c.extensionCRD.Deploy,
+			Fn:   component.OpWait(c.extensionCRD).Deploy,
 		})
 		deployEtcdCRD = g.Add(flow.Task{
 			Name:   "Deploying ETCD-related custom resource definitions",
@@ -228,7 +228,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		deployFluentCRD = g.Add(flow.Task{
 			Name:   "Deploying logging-related custom resource definitions",
-			Fn:     c.fluentCRD.Deploy,
+			Fn:     component.OpWait(c.fluentCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		deployPrometheusCRD = g.Add(flow.Task{
