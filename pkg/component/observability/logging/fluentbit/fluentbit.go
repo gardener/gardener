@@ -371,6 +371,9 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 				"-c",
 				"/fluent-bit/config/fluent-bit.conf",
 			},
+			ContainerSecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
+			},
 			PriorityClassName: f.values.PriorityClassName,
 			Ports: []corev1.ContainerPort{
 				{
@@ -463,6 +466,9 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 						"cp",
 						"/source/plugins/.",
 						"/plugins",
+					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
 					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
