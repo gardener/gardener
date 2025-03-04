@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -22,7 +21,6 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/go-logr/logr"
-	"github.com/pelletier/go-toml"
 	"github.com/spf13/afero"
 	"k8s.io/utils/ptr"
 
@@ -31,7 +29,6 @@ import (
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/pkg/utils/structuredmap"
 )
 
 // ReconcileContainerdConfig sets required values of the given containerd configuration.
@@ -112,6 +109,8 @@ const (
 	baseDir   = "/etc/containerd"
 	certsDir  = baseDir + "/certs.d"
 	configDir = baseDir + "/conf.d"
+
+	cniPluginDir = "/opt/cni/bin"
 )
 
 func (r *Reconciler) ensureContainerdConfigDirectories() error {
@@ -134,156 +133,6 @@ const configFile = baseDir + "/config.toml"
 // Exec is the execution function to invoke outside binaries. Exposed for testing.
 var Exec = func(ctx context.Context, command string, arg ...string) ([]byte, error) {
 	return exec.CommandContext(ctx, command, arg...).Output()
-}
-
-// ensureContainerdDefaultConfig invokes the 'containerd' and saves the resulting default configuration.
-func (r *Reconciler) ensureContainerdDefaultConfig(ctx context.Context) error {
-	exists, err := r.FS.Exists(configFile)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		return nil
-	}
-
-	output, err := Exec(ctx, "containerd", "config", "default")
-	if err != nil {
-		return err
-	}
-
-	return r.FS.WriteFile(configFile, output, 0644)
-}
-
-// ensureContainerdConfiguration sets the configuration for containerd.
-func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *extensionsv1alpha1.CRIConfig) error {
-	config, err := r.FS.ReadFile(configFile)
-	if err != nil {
-		return fmt.Errorf("unable to read containerd config.toml: %w", err)
-	}
-
-	content := map[string]any{}
-
-	if err = toml.Unmarshal(config, &content); err != nil {
-		return fmt.Errorf("unable to decode containerd default config: %w", err)
-	}
-
-	type (
-		patch struct {
-			name  string
-			path  structuredmap.Path
-			setFn structuredmap.SetFn
-		}
-	)
-
-	patches := []patch{
-		{
-			name: "registry config path",
-			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "registry", "config_path"},
-			setFn: func(_ any) (any, error) {
-				return certsDir, nil
-			},
-		},
-		{
-			name: "imports paths",
-			path: structuredmap.Path{"imports"},
-			setFn: func(value any) (any, error) {
-				importPath := path.Join(configDir, "*.toml")
-
-				imports, ok := value.([]any)
-				if !ok {
-					return []string{importPath}, nil
-				}
-
-				for _, imp := range imports {
-					path, ok := imp.(string)
-					if !ok {
-						continue
-					}
-
-					if path == importPath {
-						return value, nil
-					}
-				}
-
-				return append(imports, importPath), nil
-			},
-		},
-		{
-			name: "sandbox image",
-			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "sandbox_image"},
-			setFn: func(value any) (any, error) {
-				if criConfig.Containerd == nil {
-					return value, nil
-				}
-
-				return criConfig.Containerd.SandboxImage, nil
-			},
-		},
-	}
-
-	if criConfig.CgroupDriver != nil {
-		patches = append(patches, patch{
-			name: "cgroup driver",
-			path: structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
-			setFn: func(_ any) (any, error) {
-				return *criConfig.CgroupDriver == extensionsv1alpha1.CgroupDriverSystemd, nil
-			},
-		})
-	}
-
-	if criConfig.Containerd != nil {
-		for _, pluginConfig := range criConfig.Containerd.Plugins {
-			patches = append(patches, patch{
-				name: "plugin configuration",
-				path: append(structuredmap.Path{"plugins"}, pluginConfig.Path...),
-				setFn: func(val any) (any, error) {
-					switch op := ptr.Deref(pluginConfig.Op, extensionsv1alpha1.AddPluginPathOperation); op {
-					case extensionsv1alpha1.AddPluginPathOperation:
-						values, ok := val.(map[string]any)
-						if !ok || values == nil {
-							values = map[string]any{}
-						}
-
-						pluginValues := pluginConfig.Values
-						// Return unchanged values if plugin values is not set, i.e. only create table.
-						if pluginValues == nil {
-							return values, nil
-						}
-
-						if err := json.Unmarshal(pluginValues.Raw, &values); err != nil {
-							return nil, err
-						}
-
-						return values, nil
-					case extensionsv1alpha1.RemovePluginPathOperation:
-						// Return nil if operation is remove, to delete the entire sub-tree.
-						return nil, nil
-					default:
-						return nil, fmt.Errorf("operation %q is not supported", op)
-					}
-				},
-			})
-		}
-	}
-
-	for _, p := range patches {
-		if err := structuredmap.SetMapEntry(content, p.path, p.setFn); err != nil {
-			return fmt.Errorf("unable setting %q in containerd config.toml: %w", p.name, err)
-		}
-	}
-
-	f, err := r.FS.OpenFile(configFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return fmt.Errorf("unable to open containerd config.toml: %w", err)
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.Error(err, "Failed closing file", "file", f.Name())
-		}
-	}()
-
-	return toml.NewEncoder(f).Encode(content)
 }
 
 // ensureContainerdRegistries configures containerd to use the desired image registries.
