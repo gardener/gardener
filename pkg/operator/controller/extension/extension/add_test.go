@@ -120,13 +120,13 @@ var _ = Describe("Add", func() {
 
 	Describe("#MapSecretToExtensions", func() {
 		It("should map to extension referencing pull secret for extension deployment", func() {
-			Expect((&Reconciler{RuntimeClientSet: kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()}).MapSecretToExtensions(log)(ctx, secret1)).To(ConsistOf(
+			Expect((&Reconciler{RuntimeClientSet: fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()}).MapSecretToExtensions(log)(ctx, secret1)).To(ConsistOf(
 				reconcile.Request{NamespacedName: types.NamespacedName{Name: "extension3"}},
 			))
 		})
 
 		It("should ignore pull secrets for admission deployment", func() {
-			Expect((&Reconciler{RuntimeClientSet: kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()}).MapSecretToExtensions(log)(ctx, secret2)).To(BeEmpty())
+			Expect((&Reconciler{RuntimeClientSet: fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()}).MapSecretToExtensions(log)(ctx, secret2)).To(BeEmpty())
 		})
 	})
 })
