@@ -89,7 +89,7 @@ func (r *Reconciler) newActuator(gardenlet *seedmanagementv1alpha1.Gardenlet) ga
 			}
 			return kubernetes.NewClientFromSecret(
 				ctx,
-				r.RuntimeClient,
+				r.VirtualClient,
 				gardenlet.Namespace,
 				gardenlet.Spec.KubeconfigSecretRef.Name,
 				kubernetes.WithDisabledCachedClient(),
