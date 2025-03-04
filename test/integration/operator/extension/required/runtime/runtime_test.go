@@ -20,23 +20,21 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
-var _ = Describe("Extension Required Runtime controller tests", func() {
+var _ = Describe("Extension Required Runtime controller tests", Ordered, func() {
 	var (
-		providerExtension, dnsExtension *operatorv1alpha1.Extension
-
-		backupBucket *extensionsv1alpha1.BackupBucket
-		dnsRecord    *extensionsv1alpha1.DNSRecord
-		extension    *extensionsv1alpha1.Extension
+		providerExtension, dnsExtension, extension *operatorv1alpha1.Extension
 
 		backupBucketProvider string
 		dnsProvider          string
 		extensionProvider    string
+
+		garden *operatorv1alpha1.Garden
 	)
 
-	BeforeEach(func() {
+	BeforeAll(func() {
 		backupBucketProvider = "local"
-		extensionProvider = "ext-local"
 		dnsProvider = "dns-local"
+		extensionProvider = "ext-local"
 
 		providerExtension = &operatorv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{
@@ -50,10 +48,6 @@ var _ = Describe("Extension Required Runtime controller tests", func() {
 					{
 						Kind: "BackupBucket",
 						Type: backupBucketProvider,
-					},
-					{
-						Kind: "Extension",
-						Type: extensionProvider,
 					},
 				},
 			},
@@ -76,7 +70,166 @@ var _ = Describe("Extension Required Runtime controller tests", func() {
 			},
 		}
 
-		backupBucket = &extensionsv1alpha1.BackupBucket{
+		extension = &operatorv1alpha1.Extension{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: extensionPrefix + "-generic",
+				Labels: map[string]string{
+					testID: testRunID,
+				},
+			},
+			Spec: operatorv1alpha1.ExtensionSpec{
+				Resources: []gardencorev1beta1.ControllerResource{
+					{
+						Kind: "Extension",
+						Type: extensionProvider,
+					},
+				},
+			},
+		}
+
+		garden = &operatorv1alpha1.Garden{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: testNamespace.Name,
+				Labels: map[string]string{
+					testID: testRunID,
+				},
+				Finalizers: []string{"gardener"},
+			},
+			Spec: operatorv1alpha1.GardenSpec{
+				DNS: &operatorv1alpha1.DNSManagement{
+					Providers: []operatorv1alpha1.DNSProvider{
+						{Type: dnsProvider, Name: dnsProvider},
+					},
+				},
+				VirtualCluster: operatorv1alpha1.VirtualCluster{
+					Gardener: operatorv1alpha1.Gardener{
+						ClusterIdentity: testRunID,
+					},
+					Kubernetes: operatorv1alpha1.Kubernetes{
+						Version: "1.32.0",
+					},
+					Networking: operatorv1alpha1.Networking{
+						Services: []string{"172.0.0.0/16"},
+					},
+					Maintenance: operatorv1alpha1.Maintenance{
+						TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
+							Begin: "220000+0100",
+							End:   "230000+0100",
+						},
+					},
+					ETCD: &operatorv1alpha1.ETCD{
+						Main: &operatorv1alpha1.ETCDMain{
+							Backup: &operatorv1alpha1.Backup{
+								Provider: backupBucketProvider,
+							},
+						},
+					},
+				},
+				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
+					Networking: operatorv1alpha1.RuntimeNetworking{
+						Pods:     []string{"10.0.0.0/16"},
+						Nodes:    []string{"10.1.0.0/16"},
+						Services: []string{"10.2.0.0/16"},
+					},
+					Ingress: operatorv1alpha1.Ingress{
+						Controller: gardencorev1beta1.IngressController{
+							Kind: "nginx",
+						},
+					},
+				},
+			},
+		}
+
+		DeferCleanup(func() {
+			for _, ext := range []client.Object{providerExtension, dnsExtension, extension} {
+				Expect(client.IgnoreNotFound(testClient.Delete(ctx, ext))).To(Succeed(), fmt.Sprintf("failed to delete extension %s", ext.GetName()))
+			}
+
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
+			garden.Finalizers = nil
+			Expect(testClient.Update(ctx, garden)).To(Succeed())
+			Expect(testClient.Delete(ctx, garden)).To(Or(Succeed(), BeNotFoundError()))
+		})
+	})
+
+	It("should successfully create extension resources", func() {
+		for _, ext := range []client.Object{providerExtension, dnsExtension, extension} {
+			Expect(testClient.Create(ctx, ext)).To(Succeed())
+			log.Info("Created extension", "garden", ext.GetName())
+		}
+	})
+
+	It("should ensure extensions are not reported as required", func() {
+		for _, ext := range []*operatorv1alpha1.Extension{providerExtension, dnsExtension, extension} {
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ext), ext)).To(Succeed())
+				return ext.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ExtensionRequiredRuntime),
+				WithStatus(gardencorev1beta1.ConditionFalse),
+				WithReason("ExtensionNotRequired"),
+			), fmt.Sprintf("extension %s is expected to be reported as not required", ext.GetName()))
+		}
+	})
+
+	It("should report extensions as required after garden was created", func() {
+		Expect(testClient.Create(ctx, garden)).To(Succeed())
+
+		for _, ext := range []client.Object{providerExtension, dnsExtension} {
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ext), ext)).To(Succeed())
+				return providerExtension.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ExtensionRequiredRuntime),
+				WithStatus(gardencorev1beta1.ConditionTrue),
+				WithReason("ExtensionRequired"),
+			), fmt.Sprintf("extension %s/%s is expected to be reported as required", ext.GetNamespace(), ext.GetName()))
+		}
+
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+		Expect(extension.Status.Conditions).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
+			WithStatus(gardencorev1beta1.ConditionFalse),
+			WithReason("ExtensionNotRequired"),
+		))
+	})
+
+	It("should report generic extension as required after garden spec was changed", func() {
+		garden.Spec.Extensions = []operatorv1alpha1.GardenExtension{
+			{Type: extensionProvider},
+		}
+
+		Expect(testClient.Update(ctx, garden)).To(Succeed())
+
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+			return extension.Status.Conditions
+		}).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
+			WithStatus(gardencorev1beta1.ConditionTrue),
+			WithReason("ExtensionRequired"),
+		))
+	})
+
+	It("should report generic extension as not required after garden removed it", func() {
+		garden.Spec.Extensions = []operatorv1alpha1.GardenExtension{
+			{Type: extensionProvider + "-1"},
+		}
+
+		Expect(testClient.Update(ctx, garden)).To(Succeed())
+
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+			return extension.Status.Conditions
+		}).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
+			WithStatus(gardencorev1beta1.ConditionFalse),
+			WithReason("ExtensionNotRequired"),
+		))
+	})
+
+	It("should report dns extension as not required during garden deletion", func() {
+		backupBucket := &extensionsv1alpha1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: extensionPrefix + "-bucket",
 			},
@@ -92,95 +245,14 @@ var _ = Describe("Extension Required Runtime controller tests", func() {
 			},
 		}
 
-		dnsRecord = &extensionsv1alpha1.DNSRecord{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      extensionPrefix + "-record",
-				Namespace: testNamespace.Name,
-			},
-			Spec: extensionsv1alpha1.DNSRecordSpec{
-				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
-					Type:  dnsProvider + "-foo",
-				},
-				SecretRef: corev1.SecretReference{
-					Name: "test-foo-dns",
-				},
-				Name:       "test.example.com",
-				RecordType: extensionsv1alpha1.DNSRecordTypeA,
-				Values:     []string{"1.2.3.4"},
-			},
-		}
-
-		extension = &extensionsv1alpha1.Extension{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      extensionPrefix + "-record",
-				Namespace: testNamespace.Name,
-			},
-			Spec: extensionsv1alpha1.ExtensionSpec{
-				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Class: ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
-					Type:  extensionProvider,
-				},
-			},
-		}
-	})
-
-	It("should reconcile the extensions and calculate the expected required status", func() {
-		By("Create extensions")
-		for _, ext := range []client.Object{providerExtension, dnsExtension} {
-			Expect(testClient.Create(ctx, ext)).To(Succeed())
-			log.Info("Created extension", "garden", ext.GetName())
-			DeferCleanup(func() {
-				By("Delete extension")
-				Expect(client.IgnoreNotFound(testClient.Delete(ctx, ext))).To(Succeed())
-				By("Ensure extension is gone")
-				Eventually(func() error {
-					return mgrClient.Get(ctx, client.ObjectKeyFromObject(ext), ext)
-				}).Should(BeNotFoundError(), fmt.Sprintf("extension %s/%s is expected to be gone", ext.GetNamespace(), ext.GetName()))
-			})
-		}
-
-		By("Ensure provider extension is reported as not required")
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(providerExtension), providerExtension)).To(Succeed())
-			return providerExtension.Status.Conditions
-		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
-			WithStatus(gardencorev1beta1.ConditionFalse),
-			WithReason("ExtensionNotRequired"),
-		))
-
-		By("Ensure dns extension is reported as not required")
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(providerExtension), providerExtension)).To(Succeed())
-			return providerExtension.Status.Conditions
-		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
-			WithStatus(gardencorev1beta1.ConditionFalse),
-			WithReason("ExtensionNotRequired"),
-		))
-
-		By("Deploy BackupBucket for provider extension")
 		Expect(testClient.Create(ctx, backupBucket)).To(Succeed())
-
-		By("Check provider extension is reported as required")
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(providerExtension), providerExtension)).To(Succeed())
-			return providerExtension.Status.Conditions
-		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
-			WithStatus(gardencorev1beta1.ConditionTrue),
-			WithReason("ExtensionRequired"),
-		))
-
-		By("Deploy DNSRecord with different type")
-		Expect(testClient.Create(ctx, dnsRecord)).To(Succeed())
 		DeferCleanup(func() {
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, dnsRecord))).To(Succeed())
+			Expect(testClient.Delete(ctx, backupBucket)).To(Succeed())
 		})
 
-		By("Check DNS extension is still not reported as required")
-		Consistently(func(g Gomega) []gardencorev1beta1.Condition {
+		Expect(testClient.Delete(ctx, garden)).To(Succeed())
+
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(dnsExtension), dnsExtension)).To(Succeed())
 			return dnsExtension.Status.Conditions
 		}).Should(ContainCondition(
@@ -189,19 +261,7 @@ var _ = Describe("Extension Required Runtime controller tests", func() {
 			WithReason("ExtensionNotRequired"),
 		))
 
-		By("Deploy Extension for provider extension")
-		Expect(testClient.Create(ctx, extension)).To(Succeed())
-		DeferCleanup(func() {
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, extension))).To(Succeed())
-		})
-		Eventually(func() error {
-			return mgrClient.Get(ctx, client.ObjectKeyFromObject(extension), &extensionsv1alpha1.Extension{})
-		}).Should(Succeed())
-
-		By("Delete BackupBucket for provider extension and check extension is still required")
-		Expect(testClient.Delete(ctx, backupBucket)).To(Succeed())
-
-		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+		Consistently(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(providerExtension), providerExtension)).To(Succeed())
 			return providerExtension.Status.Conditions
 		}).Should(ContainCondition(
@@ -209,10 +269,9 @@ var _ = Describe("Extension Required Runtime controller tests", func() {
 			WithStatus(gardencorev1beta1.ConditionTrue),
 			WithReason("ExtensionRequired"),
 		))
+	})
 
-		By("Delete Extension for provider extension and check extension is not required anymore")
-		Expect(testClient.Delete(ctx, extension)).To(Succeed())
-
+	It("should report provider extension as not required during garden deletion after backupbucket is gone", func() {
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(providerExtension), providerExtension)).To(Succeed())
 			return providerExtension.Status.Conditions
