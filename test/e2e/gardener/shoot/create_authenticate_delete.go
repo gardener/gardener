@@ -67,7 +67,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Eventually(func(g Gomega) {
 				g.Expect(validateShootAccess(ctx, shoot1Client.Client(), shoot1.Shoot, true)).To(Succeed())
 				g.Expect(validateShootAccess(ctx, shoot2Client.Client(), shoot2.Shoot, true)).To(Succeed())
-			}).WithTimeout(time.Minute).Should(Succeed())
+			}).WithTimeout(10 * time.Second).Should(Succeed())
 		})
 
 		It("should verify shoot access using service account token kubeconfig", func(ctx SpecContext) {
@@ -108,7 +108,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Eventually(func(g Gomega) {
 				g.Expect(validateShootAccess(ctx, shoot1TokenClientAPIServerProxy, shoot1.Shoot, true)).To(Succeed())
 				g.Expect(validateShootAccess(ctx, shoot2TokenClientAPIServerProxy, shoot2.Shoot, true)).To(Succeed())
-			}).WithTimeout(time.Minute).Should(Succeed())
+			}).WithTimeout(10 * time.Second).Should(Succeed())
 		})
 
 		It("should verify a shoot cannot be accessed with a client certificate from another shoot", func(ctx SpecContext) {
