@@ -62,7 +62,7 @@ const usablePortsRangeSize = 5
 // the process of being deleted when deleting a ControllerInstallation.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 
-// Reconciler reconciles ControllerInstallations and deploys them into the seed cluster.
+// Reconciler reconciles ControllerInstallations and deploys them into the seed cluster or the autonomous shoot cluster.
 type Reconciler struct {
 	GardenClient          client.Client
 	GardenConfig          *rest.Config
@@ -79,7 +79,7 @@ type Reconciler struct {
 	BootstrapControlPlaneNode bool
 }
 
-// Reconcile reconciles ControllerInstallations and deploys them into the seed cluster.
+// Reconcile reconciles ControllerInstallations and deploys them into the seed cluster or the autonomous shoot cluster.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
