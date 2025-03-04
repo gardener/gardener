@@ -652,7 +652,8 @@ func deployment(namespace string, testValues Values) *appsv1.Deployment {
 								"--port=2718",
 							},
 							SecurityContext: &corev1.SecurityContext{
-								ReadOnlyRootFilesystem: ptr.To(true),
+								AllowPrivilegeEscalation: ptr.To(false),
+								ReadOnlyRootFilesystem:   ptr.To(true),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{

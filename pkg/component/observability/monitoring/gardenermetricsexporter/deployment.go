@@ -57,7 +57,8 @@ func (g *gardenerMetricsExporter) deployment(secretGenericTokenKubeconfig, secre
 								"--port=" + strconv.Itoa(probePort),
 							},
 							SecurityContext: &corev1.SecurityContext{
-								ReadOnlyRootFilesystem: ptr.To(true),
+								AllowPrivilegeEscalation: ptr.To(false),
+								ReadOnlyRootFilesystem:   ptr.To(true),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: map[corev1.ResourceName]resource.Quantity{
