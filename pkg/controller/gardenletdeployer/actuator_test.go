@@ -53,7 +53,6 @@ var _ = Describe("Interface", func() {
 		ctrl *gomock.Controller
 
 		gardenClient      *mockclient.MockClient
-		gardenAPIReader   *mockclient.MockReader
 		seedClient        *mockclient.MockClient
 		shootClientSet    *kubernetesmock.MockInterface
 		vh                *mockgardenletdepoyer.MockValuesHelper
@@ -87,7 +86,6 @@ var _ = Describe("Interface", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		gardenClient = mockclient.NewMockClient(ctrl)
-		gardenAPIReader = mockclient.NewMockReader(ctrl)
 		seedClient = mockclient.NewMockClient(ctrl)
 		shootClient = mockclient.NewMockClient(ctrl)
 		shootClientSet = kubernetesmock.NewMockInterface(ctrl)
@@ -100,9 +98,8 @@ var _ = Describe("Interface", func() {
 
 		log = logr.Discard()
 		actuator = &Actuator{
-			GardenConfig:    &rest.Config{},
-			GardenAPIReader: gardenAPIReader,
-			GardenClient:    gardenClient,
+			GardenConfig: &rest.Config{},
+			GardenClient: gardenClient,
 			GetTargetClientFunc: func(_ context.Context) (kubernetes.Interface, error) {
 				return shootClientSet, nil
 			},

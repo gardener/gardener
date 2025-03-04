@@ -40,9 +40,7 @@ var RequeueDurationSeedIsNotYetRegistered = 30 * time.Second
 // Reconciler reconciles the Gardenlet.
 type Reconciler struct {
 	RuntimeCluster        cluster.Cluster
-	RuntimeClient         client.Client
 	VirtualConfig         *rest.Config
-	VirtualAPIReader      client.Reader
 	VirtualClient         client.Client
 	Config                operatorconfigv1alpha1.GardenletDeployerControllerConfig
 	Clock                 clock.Clock
@@ -74,9 +72,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 func (r *Reconciler) newActuator(gardenlet *seedmanagementv1alpha1.Gardenlet) gardenletdeployer.Interface {
 	return &gardenletdeployer.Actuator{
-		GardenConfig:    r.VirtualConfig,
-		GardenAPIReader: r.VirtualAPIReader,
-		GardenClient:    r.VirtualClient,
+		GardenConfig: r.VirtualConfig,
+		GardenClient: r.VirtualClient,
 		GetTargetClientFunc: func(ctx context.Context) (kubernetes.Interface, error) {
 			if gardenlet.Spec.KubeconfigSecretRef == nil {
 				return kubernetes.NewWithConfig(

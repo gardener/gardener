@@ -35,14 +35,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 	if r.RuntimeCluster == nil {
 		r.RuntimeCluster = mgr
 	}
-	if r.RuntimeClient == nil {
-		r.RuntimeClient = mgr.GetClient()
-	}
 	if r.VirtualConfig == nil {
 		r.VirtualConfig = virtualCluster.GetConfig()
-	}
-	if r.VirtualAPIReader == nil {
-		r.VirtualAPIReader = virtualCluster.GetAPIReader()
 	}
 	if r.VirtualClient == nil {
 		r.VirtualClient = virtualCluster.GetClient()
