@@ -17,7 +17,7 @@
 //
 // Modifications Copyright 2024 SAP SE or an SAP affiliate company and Gardener contributors
 
-package port
+package net
 
 import (
 	"fmt"
