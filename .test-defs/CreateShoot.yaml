@@ -42,4 +42,4 @@ spec:
 #    -machine-type=$MACHINE_TYPE
 #    -external-domain=
 
-  image: golang:1.24.0
+  image: golang:1.24.1
