@@ -16,7 +16,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -55,7 +54,6 @@ var _ = Describe("Seed Care controller tests", func() {
 			Controller: controllerconfig.Controller{
 				SkipNameValidation: ptr.To(true),
 			},
-			MapperProvider: apiutil.NewDynamicRESTMapper,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		mgrClient = mgr.GetClient()

@@ -19,11 +19,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -81,16 +79,10 @@ var _ = Describe("Seed controller tests", func() {
 		})
 
 		By("Setup manager")
-		httpClient, err := rest.HTTPClientFor(restConfig)
-		Expect(err).NotTo(HaveOccurred())
-		mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
-		Expect(err).NotTo(HaveOccurred())
-
 		mgr, err := manager.New(restConfig, manager.Options{
 			Scheme:  testScheme,
 			Metrics: metricsserver.Options{BindAddress: "0"},
 			Cache: cache.Options{
-				Mapper: mapper,
 				ByObject: map[client.Object]cache.ByObject{
 					&gardencorev1beta1.Seed{}: {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
