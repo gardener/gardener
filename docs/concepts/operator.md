@@ -576,8 +576,8 @@ Currently, this logic handles the following scenarios:
 
 #### [`Required Runtime` Reconciler](../../pkg/operator/controller/extension/required/runtime)
 
-This reconciler reacts on events from `BackupBucket`, `DNSRecord` and `Extension` resources.
-Based on these resources and the related `Extension` specification, it is checked if the extension deployment is required in the garden runtime cluster.
+This reconciler reacts on `Garden` and `Extension` events.
+It is checked if the extension deployment is required in the garden runtime cluster based on the existing `Garden` specification.
 The result is then put into the `RequiredRuntime` condition and added to the `Extension` status.
 
 #### [`Required Virtual` Reconciler](../../pkg/operator/controller/extension/required/virtual)

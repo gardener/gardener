@@ -8,11 +8,11 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,21 +21,28 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// RequeueExtensionKindNotCalculated is the time after which an extension will be requeued if the extension kind has not been processed yet. Exposed for testing.
-var RequeueExtensionKindNotCalculated = 2 * time.Second
+var extensionKindToObjectList = map[string]client.ObjectList{
+	extensionsv1alpha1.BackupBucketResource: &extensionsv1alpha1.BackupBucketList{},
+	extensionsv1alpha1.DNSRecordResource:    &extensionsv1alpha1.DNSRecordList{},
+	extensionsv1alpha1.ExtensionResource:    &extensionsv1alpha1.ExtensionList{},
+}
+
+// RequeueDurationWhenGardenIsBeingDeleted is the duration after the request will be requeued when the Garden is being deleted.
+// Exposed for testing.
+var RequeueDurationWhenGardenIsBeingDeleted = 2 * time.Second
 
 // Reconciler reconciles Extensions to determine their required state.
 type Reconciler struct {
 	Client client.Client
 	Config operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration
-
-	Lock                *sync.RWMutex
-	KindToRequiredTypes map[string]sets.Set[string]
 
 	clock clock.Clock
 }
@@ -47,18 +54,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	ctx, cancel := controllerutils.GetMainReconciliationContext(ctx, controllerutils.DefaultReconciliationTimeout)
 	defer cancel()
 
-	for _, ext := range runtimeClusterExtensions {
-		r.Lock.RLock()
-		_, kindProcessed := r.KindToRequiredTypes[ext.objectKind]
-		r.Lock.RUnlock()
-		if !kindProcessed {
-			// The object kind in question has not yet been processed.
-			// Hence, it's not possible to determine if the extension is required or not.
-			log.Info("Kind is not yet calculated. Request is re-queued", "kind", ext.objectKind)
-			return reconcile.Result{RequeueAfter: RequeueExtensionKindNotCalculated}, nil
-		}
-	}
-
 	extension := &operatorv1alpha1.Extension{}
 	if err := r.Client.Get(ctx, request.NamespacedName, extension); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -68,25 +63,70 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	requiredExtensionKinds := sets.New[string]()
-	for _, resource := range extension.Spec.Resources {
-		r.Lock.RLock()
-		requiredTypes, ok := r.KindToRequiredTypes[resource.Kind]
-		r.Lock.RUnlock()
-		if !ok {
-			continue
-		}
+	gardenList := &operatorv1alpha1.GardenList{}
+	if err := r.Client.List(ctx, gardenList, client.Limit(1)); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error retrieving Garden: %w", err)
+	}
 
-		if requiredTypes.Has(resource.Type) {
-			requiredExtensionKinds.Insert(resource.Kind)
-		}
+	garden := &operatorv1alpha1.Garden{}
+	if len(gardenList.Items) > 0 {
+		garden = &gardenList.Items[0]
+	} else {
+		log.Info("No Garden found")
+	}
+
+	requiredExtensionKinds, err := r.calculateRequiredResourceKinds(ctx, log, r.Client, garden, extension)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	if err := r.updateCondition(ctx, log, extension, requiredExtensionKinds); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update extension status: %w", err)
 	}
 
+	if len(requiredExtensionKinds) > 0 && garden.DeletionTimestamp != nil {
+		return reconcile.Result{RequeueAfter: RequeueDurationWhenGardenIsBeingDeleted}, nil
+	}
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) calculateRequiredResourceKinds(ctx context.Context, log logr.Logger, c client.Client, garden *operatorv1alpha1.Garden, extension *operatorv1alpha1.Extension) (sets.Set[string], error) {
+	var (
+		requiredExtensionKinds = sets.New[string]()
+		requiredExtensions     = gardenerutils.ComputeRequiredExtensionsForGarden(garden)
+	)
+
+	for _, kindType := range requiredExtensions.UnsortedList() {
+		extensionKind, extensionType, err := gardenerutils.ExtensionKindAndTypeForID(kindType)
+		if err != nil {
+			return nil, err
+		}
+
+		if v1beta1helper.IsResourceSupported(extension.Spec.Resources, extensionKind, extensionType) {
+			// The extension is not required anymore if the Garden is in deletion and resources are gone.
+			if garden.DeletionTimestamp != nil {
+				objList, ok := extensionKindToObjectList[extensionKind].DeepCopyObject().(client.ObjectList)
+				if !ok {
+					return nil, fmt.Errorf("extension kind %s unknown", extensionKind)
+				}
+
+				resourcesExist, err := kubernetesutils.ResourcesExist(ctx, c, objList, c.Scheme())
+				if meta.IsNoMatchError(err) {
+					continue
+				} else if err != nil {
+					return nil, err
+				}
+
+				if !resourcesExist {
+					continue
+				} else {
+					log.Info("At least one extension is still present", "kind", extensionKind)
+				}
+			}
+			requiredExtensionKinds.Insert(extensionKind)
+		}
+	}
+	return requiredExtensionKinds, nil
 }
 
 func (r *Reconciler) updateCondition(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, kinds sets.Set[string]) error {

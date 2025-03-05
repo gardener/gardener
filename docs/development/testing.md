@@ -32,7 +32,9 @@ Ideally though, you would add the missing test cases for the current code as wel
   - Consider using `ExpectWithOffset` if the test uses assertions made in a helper function, among other assertions defined directly in the test (e.g. `expectSomethingWasCreated`): [example test](https://github.com/gardener/gardener/blob/2eb54485231408cbdbabaa49812572a07124364f/extensions/pkg/controller/controlplane/genericactuator/actuator_test.go#L732-L736)
   - Make sure to add additional descriptions to Gomega matchers if necessary (e.g. in a loop): [example test](https://github.com/gardener/gardener/blob/2eb54485231408cbdbabaa49812572a07124364f/test/e2e/shoot/internal/rotation/certificate_authorities.go#L89-L93)
 - Introduce helper functions for assertions to make test more readable where applicable: [example test](https://github.com/gardener/gardener/blob/2eb54485231408cbdbabaa49812572a07124364f/test/integration/gardenlet/shootsecret/controller_test.go#L323-L331)
-- Introduce custom matchers to make tests more readable where applicable: [example matcher](https://github.com/gardener/gardener/blob/2eb54485231408cbdbabaa49812572a07124364f/pkg/utils/test/matchers/matchers.go#L51-L57)
+- Keep test code and output readable:
+  - Introduce custom matchers where applicable: [example matcher](https://github.com/gardener/gardener/blob/2eb54485231408cbdbabaa49812572a07124364f/pkg/utils/test/matchers/matchers.go#L51-L57)
+  - Prevent [gstruct matchers](https://pkg.go.dev/github.com/onsi/gomega/gstruct) on larger object list: [example test](https://github.com/gardener/gardener/blob/882c00c2c5835324f41a0ebde8c81f5ec6050074/test/integration/operator/garden/garden/garden_test.go#L415-L465). The failure output is often truncated and unclear.
 - Don't rely on accurate timing of `time.Sleep` and friends.
   - If doing so, CPU throttling in CI will make tests flaky, [example flake](https://github.com/gardener/gardener/issues/5410)
   - Use fake clocks instead, [example PR](https://github.com/gardener/gardener/pull/4569)

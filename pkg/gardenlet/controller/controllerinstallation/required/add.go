@@ -106,7 +106,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 
 // MapObjectKindToControllerInstallations returns a mapper function for the given extension kind that lists all existing
 // extension resources of the given kind and stores the respective types in the `KindToRequiredTypes` map. Afterwards,
-// it enqueue all ControllerInstallations for the seed that are referring to ControllerRegistrations responsible for
+// it enqueues all ControllerInstallations for the seed that are referring to ControllerRegistrations responsible for
 // the given kind.
 // The returned reconciler doesn't care about which object was created/updated/deleted, it just cares about being
 // triggered when some object of the kind, it is responsible for, is created/updated/deleted.

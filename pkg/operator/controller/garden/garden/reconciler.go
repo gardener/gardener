@@ -137,15 +137,17 @@ func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
 	return fmt.Errorf("there can be at most one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time")
 }
 
-func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Garden) flow.ProgressReporter {
+func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Garden, reportProgress bool) flow.ProgressReporter {
 	return flow.NewDelayingProgressReporter(clock.RealClock{}, func(ctx context.Context, stats *flow.Stats) {
 		patch := client.MergeFrom(garden.DeepCopy())
 
 		if garden.Status.LastOperation == nil {
 			garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
 		}
+		if reportProgress {
+			garden.Status.LastOperation.Progress = stats.ProgressPercent()
+		}
 		garden.Status.LastOperation.Description = flow.MakeDescription(stats)
-		garden.Status.LastOperation.Progress = stats.ProgressPercent()
 		garden.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
 
 		if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
