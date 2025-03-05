@@ -190,11 +190,19 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	if values.APIServerProxy != nil {
+	if values.APIServerProxy != nil || values.IstioTLSTermination {
 		envoyFilter := s.emptyEnvoyFilterAPIServerProxy()
-		apiServerClusterIPPrefixLen, err := netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
-		if err != nil {
-			return err
+
+		var (
+			apiServerClusterIPPrefixLen int
+			err                         error
+		)
+
+		if values.APIServerProxy != nil {
+			apiServerClusterIPPrefixLen, err = netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
+			if err != nil {
+				return err
+			}
 		}
 		targetClusterProxyProtocol := fmt.Sprintf("outbound|%d||%s", kubeapiserverconstants.Port, hostName)
 		if values.IstioTLSTermination {
