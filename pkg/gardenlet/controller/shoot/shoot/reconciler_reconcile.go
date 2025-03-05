@@ -293,7 +293,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
 			Fn:           botanist.WaitUntilEtcdsReady,
-			SkipIf:       !isRestoringHAControlPlane && o.Shoot.HibernationEnabled || skipReadiness,
+			SkipIf:       (!isRestoringHAControlPlane && o.Shoot.HibernationEnabled) || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		deployExtensionResourcesBeforeKAPI = g.Add(flow.Task{
