@@ -80,6 +80,13 @@
       automerge: true,
     },
     {
+      // automerge non-major golang.org/x updates
+      matchDatasources: ['go'],
+      matchPackageNames: ['golang.org/x/*'],
+      matchUpdateTypes: ['minor', 'patch', 'digest'],
+      automerge: true,
+    },
+    {
       // Run make generate when Go API packages have been changed because CRDs might have changed.
       matchDatasources: [
         'go',
