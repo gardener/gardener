@@ -17,6 +17,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/webhook/defaulting"
 	"github.com/gardener/gardener/pkg/operator/webhook/validation"
+	extensionvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/extension"
 	gardenvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/garden"
 )
 
@@ -49,7 +50,7 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 		},
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
-				Name:                    "validation.operator.gardener.cloud",
+				Name:                    "garden-validation.operator.gardener.cloud",
 				ClientConfig:            getClientConfig(gardenvalidation.WebhookPath, mode, url),
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -61,6 +62,25 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 					Operations: []admissionregistrationv1.OperationType{
 						admissionregistrationv1.Create,
 						admissionregistrationv1.Update,
+						admissionregistrationv1.Delete,
+					},
+				}},
+				SideEffects:    &sideEffects,
+				FailurePolicy:  &failurePolicy,
+				MatchPolicy:    &matchPolicy,
+				TimeoutSeconds: ptr.To[int32](10),
+			},
+			{
+				Name:                    "extension-validation.operator.gardener.cloud",
+				ClientConfig:            getClientConfig(extensionvalidation.WebhookPath, mode, url),
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{operatorv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{operatorv1alpha1.SchemeGroupVersion.Version},
+						Resources:   []string{"extensions"},
+					},
+					Operations: []admissionregistrationv1.OperationType{
 						admissionregistrationv1.Delete,
 					},
 				}},

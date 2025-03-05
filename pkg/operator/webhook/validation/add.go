@@ -5,8 +5,11 @@
 package validation
 
 import (
+	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/pkg/operator/webhook/validation/extension"
 	"github.com/gardener/gardener/pkg/operator/webhook/validation/garden"
 )
 
@@ -15,7 +18,11 @@ func AddToManager(mgr manager.Manager) error {
 	if err := (&garden.Handler{
 		Logger: mgr.GetLogger().WithName("webhook").WithName(garden.HandlerName),
 	}).AddToManager(mgr); err != nil {
-		return err
+		return fmt.Errorf("failed adding %s webhook handler: %w", garden.HandlerName, err)
+	}
+
+	if err := (&extension.Handler{}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", extension.HandlerName, err)
 	}
 
 	return nil
