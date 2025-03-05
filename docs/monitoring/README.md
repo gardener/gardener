@@ -55,6 +55,28 @@ Deployed in the shoot control plane namespace. Important scrape targets:
 
 **Purpose**: Monitor all relevant components belonging to a shoot cluster managed by Gardener. Shoot owners can view the metrics in Plutono dashboards and receive alerts based on these metrics. For alerting internals refer to [this](alerting.md) document.
 
+#### Federate from the shoot Prometheus
+
+Shoot owners that are interested in collecting metrics for their shoot's kube API servers can deploy their own Prometheus and federate metrics from the shoot Prometheus. Scraping the shoot's kube API server directly from within the shoot, while technically possible, will only result in meaningless metrics because the shoot's API server pods are behind a Load Balancer, and it is impossible to control which API server pod is targeted.
+
+The following snippet is a configuration example to federate shoot's kube API server metrics from the shoot Prometheus. The federated metrics will have a `pod` label to distinguish between the different API server pods. The credentials and endpoint for the shoot Prometheus are exposed via the dashboard, or programmatically in the shoot's project namespace in the garden virtual cluster as a secret:<br/>`<shoot-name>.monitoring`.
+
+```yaml
+scrape_configs:
+- job_name: "prometheus"
+  scheme: https
+  basic_auth:
+    username: admin
+    password: <password>
+  metrics_path: /federate
+  params:
+    match[]:
+    - '{job="kube-apiserver"}'
+  static_configs:
+  - targets:
+    - p-<project-name>--<shoot-name>.ingress.<domain>
+```
+
 ## Collect all shoot Prometheus with remote write
 
 An optional collection of all shoot Prometheus metrics to a central Prometheus (or cortex) instance is possible with the `monitoring.shoot` setting in `GardenletConfiguration`:
