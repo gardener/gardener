@@ -48,7 +48,7 @@ require (
 	golang.org/x/crypto v0.35.0
 	golang.org/x/exp v0.0.0-20250228200357-dead58393ab7
 	golang.org/x/text v0.22.0
-	golang.org/x/time v0.10.0
+	golang.org/x/time v0.11.0
 	golang.org/x/tools v0.30.0
 	gomodules.xyz/jsonpatch/v2 v2.4.0
 	gonum.org/v1/gonum v0.15.0
