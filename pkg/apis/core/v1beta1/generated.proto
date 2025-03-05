@@ -1132,6 +1132,17 @@ message HorizontalPodAutoscalerConfig {
   optional double tolerance = 6;
 }
 
+// InPlaceUpdatePendingWorkers contains information about a worker pool pending in-place update.
+message InPlaceUpdatePendingWorkers {
+  // AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.
+  // +optional
+  repeated string autoInPlaceUpdate = 1;
+
+  // ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.
+  // +optional
+  repeated string manualInPlaceUpdate = 2;
+}
+
 // InPlaceUpdates contains the configuration for in-place updates for a machine image version.
 message InPlaceUpdates {
   // Supported indicates whether in-place updates are supported for this machine image version.
@@ -1140,6 +1151,13 @@ message InPlaceUpdates {
   // MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
   // +optional
   optional string minVersionForUpdate = 2;
+}
+
+// InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.
+message InPlaceUpdatesStatus {
+  // PendingWorkersRollouts contains information about worker pools pending in-place updates.
+  // +optional
+  optional InPlaceUpdatePendingWorkers pendingWorkersRollouts = 1;
 }
 
 // Ingress configures the Ingress specific settings of the cluster
@@ -3305,6 +3323,10 @@ message ShootStatus {
   // Networking contains information about cluster networking such as CIDRs.
   // +optional
   optional NetworkingStatus networking = 19;
+
+  // InPlaceUpdates contains information about in-place updates for the Shoot workers.
+  // +optional
+  optional InPlaceUpdatesStatus inPlaceUpdates = 20;
 }
 
 // ShootTemplate is a template for creating a Shoot object.
