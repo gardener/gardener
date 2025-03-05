@@ -786,6 +786,17 @@ spec:
                   - type
                   type: object
                 type: array
+              inPlaceUpdates:
+                description: InPlaceUpdates contains the configuration for in-place
+                  updates.
+                properties:
+                  workerPoolHash:
+                    additionalProperties:
+                      type: string
+                    description: WorkerPoolHash is a map of worker pool names to their
+                      corresponding hash.
+                    type: object
+                type: object
               lastError:
                 description: LastError holds information about the last occurred error
                   during an operation.

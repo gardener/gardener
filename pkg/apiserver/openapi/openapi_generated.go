@@ -106,7 +106,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                        schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability":                           schema_pkg_apis_core_v1beta1_HighAvailability(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig":              schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatePendingWorkers":                schema_pkg_apis_core_v1beta1_InPlaceUpdatePendingWorkers(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates":                             schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus":                       schema_pkg_apis_core_v1beta1_InPlaceUpdatesStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress":                                    schema_pkg_apis_core_v1beta1_Ingress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController":                          schema_pkg_apis_core_v1beta1_IngressController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InternalSecret":                             schema_pkg_apis_core_v1beta1_InternalSecret(ref),
@@ -4138,6 +4140,49 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_InPlaceUpdatePendingWorkers(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "InPlaceUpdatePendingWorkers contains information about a worker pool pending in-place update.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"autoInPlaceUpdate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"manualInPlaceUpdate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4164,6 +4209,27 @@ func schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref common.ReferenceCallback) c
 				Required: []string{"supported"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_InPlaceUpdatesStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"pendingWorkersRollouts": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PendingWorkersRollouts contains information about worker pools pending in-place updates.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatePendingWorkers"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatePendingWorkers"},
 	}
 }
 
@@ -9619,12 +9685,18 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NetworkingStatus"),
 						},
 					},
+					"inPlaceUpdates": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InPlaceUpdates contains information about in-place updates for the Shoot workers.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus"),
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NetworkingStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NetworkingStatus", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
