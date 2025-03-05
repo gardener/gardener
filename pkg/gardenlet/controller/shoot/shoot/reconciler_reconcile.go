@@ -102,6 +102,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		kubeProxyEnabled               = v1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 		deployKubeAPIServerTaskTimeout = defaultTimeout
 		shootSSHAccessEnabled          = v1beta1helper.ShootEnablesSSHAccess(o.Shoot.GetInfo())
+		isRestoringHAControlPlane      = botanist.IsRestorePhase() && v1beta1helper.IsHAControlPlaneConfigured(o.Shoot.GetInfo())
 	)
 
 	// During the 'Preparing' phase of different rotation operations, components are deployed twice. Also, the
@@ -295,7 +296,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
 			Fn:           botanist.WaitUntilEtcdsReady,
-			SkipIf:       o.Shoot.HibernationEnabled || skipReadiness,
+			SkipIf:       !isRestoringHAControlPlane && o.Shoot.HibernationEnabled || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		deployExtensionResourcesBeforeKAPI = g.Add(flow.Task{
@@ -332,13 +333,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		scaleEtcdAfterRestore = g.Add(flow.Task{
 			Name:         "Scaling main and events etcd after kube-apiserver is ready",
 			Fn:           flow.TaskFn(botanist.ScaleUpETCD).RetryUntilTimeout(defaultInterval, helper.GetEtcdDeployTimeout(o.Shoot, defaultTimeout)),
-			SkipIf:       !v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo()) || !botanist.IsRestorePhase() || o.Shoot.HibernationEnabled || skipReadiness,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+			SkipIf:       !isRestoringHAControlPlane,
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdReady, waitUntilKubeAPIServerIsReady),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilEtcdScaledAfterRestore = g.Add(flow.Task{
 			Name:         "Waiting until main and events etcd scaled up after kube-apiserver is ready",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady),
-			SkipIf:       !v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo()) || !botanist.IsRestorePhase() || o.Shoot.HibernationEnabled || skipReadiness,
+			SkipIf:       !isRestoringHAControlPlane || skipReadiness,
 			Dependencies: flow.NewTaskIDs(scaleEtcdAfterRestore),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
@@ -886,7 +887,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Name:         "Hibernating control plane",
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       !o.Shoot.HibernationEnabled,
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deployPrometheus, deployAlertmanager, deploySeedLogging, deployClusterAutoscaler, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deployPrometheus, deployAlertmanager, deploySeedLogging, deployClusterAutoscaler, waitUntilWorkerReady, waitUntilExtensionResourcesAfterKAPIReady, waitUntilEtcdScaledAfterRestore),
 		})
 
 		// logic is inverted here
