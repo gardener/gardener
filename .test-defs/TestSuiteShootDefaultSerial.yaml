@@ -25,4 +25,4 @@ spec:
       -ginkgo.skip="\[DISRUPTIVE\]"
       -ginkgo.timeout=2h
 
-  image: golang:1.24.0
+  image: golang:1.24.1
