@@ -46,7 +46,8 @@ func validateOverlapWithSeed(fldPath *field.Path, shootNetwork []string, network
 	allErrs := field.ErrorList{}
 
 	for _, network := range shootNetwork {
-		if haVPN {
+		// we allow overlapping with seed networks for non-haVPN, IPv4 shoots
+		if haVPN || NewCIDR(network, fldPath).IsIPv6() {
 			if NetworksIntersect(seedServices, network) {
 				allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with seed service network", networkType)))
 			}
