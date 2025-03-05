@@ -38,6 +38,7 @@ func NewGardenerAPIServer(
 	topologyAwareRoutingEnabled bool,
 	clusterIdentity,
 	workloadIdentityTokenIssuer string,
+	goAwayChance *float64,
 ) (
 	gardenerapiserver.Interface,
 	error,
@@ -102,6 +103,7 @@ func NewGardenerAPIServer(
 			Image:                       image.String(),
 			LogLevel:                    logLevel,
 			LogFormat:                   logger.FormatJSON,
+			GoAwayChance:                goAwayChance,
 			TopologyAwareRoutingEnabled: topologyAwareRoutingEnabled,
 			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
 		},

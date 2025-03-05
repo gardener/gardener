@@ -488,6 +488,15 @@ type GardenerAPIServerConfig struct {
 	// EncryptionConfig contains customizable encryption configuration of the Gardener API server.
 	// +optional
 	EncryptionConfig *gardencorev1beta1.EncryptionConfig `json:"encryptionConfig,omitempty"`
+	// GoAwayChance can be used to prevent HTTP/2 clients from getting stuck on a single apiserver, randomly close a
+	// connection (GOAWAY). The client's other in-flight requests won't be affected, and the client will reconnect,
+	// likely landing on a different apiserver after going through the load balancer again. This field sets the fraction
+	// of requests that will be sent a GOAWAY. Min is 0 (off), Max is 0.02 (1/50 requests); 0.001 (1/1000) is a
+	// recommended starting point.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=0.02
+	// +optional
+	GoAwayChance *float64 `json:"goAwayChance,omitempty"`
 }
 
 // GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.

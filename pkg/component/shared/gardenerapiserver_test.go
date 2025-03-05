@@ -41,6 +41,7 @@ var _ = Describe("GardenerAPIServer", func() {
 		clusterIdentity             = "cluster-id"
 		workloadIdentityTokenIssuer = "https://issuer.gardener.cloud.local"
 		topologyAwareRoutingEnabled = false
+		goAwayChance                = 0.001337
 		apiServerConfig             *operatorv1alpha1.GardenerAPIServerConfig
 	)
 
@@ -88,7 +89,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				func(configuredPlugins []gardencorev1beta1.AdmissionPlugin, expectedPlugins []apiserver.AdmissionPluginConfig) {
 					apiServerConfig.AdmissionPlugins = configuredPlugins
 
-					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer)
+					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(gardenerAPIServer.GetValues().EnabledAdmissionPlugins).To(Equal(expectedPlugins))
 				},
@@ -125,7 +126,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				var expectedDisabledPlugins []gardencorev1beta1.AdmissionPlugin
 
 				AfterEach(func() {
-					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer)
+					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(gardenerAPIServer.GetValues().DisabledAdmissionPlugins).To(Equal(expectedDisabledPlugins))
 				})
@@ -192,7 +193,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						prepTest()
 					}
 
-					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer)
+					gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 					Expect(err).To(errMatcher)
 					if gardenerAPIServer != nil {
 						Expect(gardenerAPIServer.GetValues().Audit).To(Equal(expectedConfig))
@@ -325,7 +326,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		Describe("FeatureGates", func() {
 			It("should set the field to nil by default", func() {
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().FeatureGates).To(BeNil())
 			})
@@ -339,7 +340,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					},
 				}
 
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().FeatureGates).To(Equal(featureGates))
 			})
@@ -347,7 +348,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		Describe("Requests", func() {
 			It("should set the field to nil by default", func() {
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().Requests).To(BeNil())
 			})
@@ -359,7 +360,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				}
 				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{Requests: requests}
 
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().Requests).To(Equal(requests))
 			})
@@ -367,7 +368,7 @@ var _ = Describe("GardenerAPIServer", func() {
 
 		Describe("WatchCacheSizes", func() {
 			It("should set the field to nil by default", func() {
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().WatchCacheSizes).To(BeNil())
 			})
@@ -379,7 +380,7 @@ var _ = Describe("GardenerAPIServer", func() {
 				}
 				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{WatchCacheSizes: watchCacheSizes}
 
-				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer)
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().WatchCacheSizes).To(Equal(watchCacheSizes))
 			})
