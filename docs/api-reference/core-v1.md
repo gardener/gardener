@@ -71,6 +71,19 @@ HelmControllerDeployment
 <p>Helm configures that an extension controller is deployed using helm.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>injectGardenKubeconfig</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+resources.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1.HelmControllerDeployment">HelmControllerDeployment

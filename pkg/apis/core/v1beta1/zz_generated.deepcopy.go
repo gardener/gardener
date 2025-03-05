@@ -1048,6 +1048,11 @@ func (in *ControllerDeployment) DeepCopyInto(out *ControllerDeployment) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.ProviderConfig.DeepCopyInto(&out.ProviderConfig)
+	if in.InjectGardenKubeconfig != nil {
+		in, out := &in.InjectGardenKubeconfig, &out.InjectGardenKubeconfig
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

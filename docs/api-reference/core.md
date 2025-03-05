@@ -557,6 +557,19 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <p>ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>injectGardenKubeconfig</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+resources.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerInstallation">ControllerInstallation

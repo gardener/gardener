@@ -71,6 +71,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 func autoConvert_v1_ControllerDeployment_To_core_ControllerDeployment(in *ControllerDeployment, out *core.ControllerDeployment, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Helm = (*core.HelmControllerDeployment)(unsafe.Pointer(in.Helm))
+	out.InjectGardenKubeconfig = (*bool)(unsafe.Pointer(in.InjectGardenKubeconfig))
 	return nil
 }
 
@@ -79,6 +80,7 @@ func autoConvert_core_ControllerDeployment_To_v1_ControllerDeployment(in *core.C
 	// WARNING: in.Type requires manual conversion: does not exist in peer-type
 	// WARNING: in.ProviderConfig requires manual conversion: does not exist in peer-type
 	out.Helm = (*HelmControllerDeployment)(unsafe.Pointer(in.Helm))
+	out.InjectGardenKubeconfig = (*bool)(unsafe.Pointer(in.InjectGardenKubeconfig))
 	return nil
 }
 
