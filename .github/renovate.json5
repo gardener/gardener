@@ -446,7 +446,7 @@
         'registry.k8s.io/ingress-nginx/controller-chroot'
       ],
       matchCurrentValue: 'v1.11.*',
-      allowedVersions: "<v1.12.0"
+      allowedVersions: '<v1.12.0',
     },
     {
       // Ignore paths which most likely create false positives.
