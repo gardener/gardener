@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
@@ -118,7 +119,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		shoot,
 	)
 	if err != nil {
-		if err := r.patchStatusToUnknown(ctx, shoot, "Precondition failed: operation could not be initialized", shootConditions.ConvertToSlice(), shootConstraints.ConvertToSlice()); err != nil {
+		updatedConditions, updatedConstraints := r.setStatusToUnknown("Precondition failed: operation could not be initialized", shootConditions.ConvertToSlice(), shootConstraints.ConvertToSlice())
+		if err := r.patchStatus(ctx, log, shoot, shootConditions, updatedConditions, shootConstraints, updatedConstraints); err != nil {
 			log.Error(err, "Error when trying to update the shoot status after failed operation initialization")
 		}
 		return reconcile.Result{}, err
@@ -182,19 +184,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	// Update Shoot status (conditions, constraints) if necessary
-	if v1beta1helper.ConditionsNeedUpdate(shootConditions.ConvertToSlice(), updatedConditions) ||
-		v1beta1helper.ConditionsNeedUpdate(shootConstraints.ConvertToSlice(), updatedConstraints) {
-		log.V(1).Info("Updating status conditions and constraints")
-		// Rebuild shoot conditions and constraints to ensure that only the conditions and constraints with the
-		// correct types will be updated, and any other conditions will remain intact
-		conditions := v1beta1helper.BuildConditions(shoot.Status.Conditions, updatedConditions, shootConditions.ConditionTypes())
-		constraints := v1beta1helper.BuildConditions(shoot.Status.Constraints, updatedConstraints, shootConstraints.ConstraintTypes())
-
-		if err := r.patchStatus(ctx, shoot, conditions, constraints); err != nil {
-			log.Error(err, "Error when trying to update the shoot status")
-			return reconcile.Result{}, err
-		}
+	if err := r.patchStatus(ctx, log, shoot, shootConditions, updatedConditions, shootConstraints, updatedConstraints); err != nil {
+		log.Error(err, "Error when trying to update the shoot status")
+		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{RequeueAfter: r.Config.Controllers.ShootCare.SyncPeriod.Duration}, nil
@@ -208,14 +200,26 @@ func (r *Reconciler) conditionThresholdsToProgressingMapping() map[gardencorev1b
 	return out
 }
 
-func (r *Reconciler) patchStatus(ctx context.Context, shoot *gardencorev1beta1.Shoot, conditions, constraints []gardencorev1beta1.Condition) error {
+func (r *Reconciler) patchStatus(ctx context.Context, log logr.Logger, shoot *gardencorev1beta1.Shoot, existingConditions ShootConditions, updatedConditions []gardencorev1beta1.Condition, existingConstraints ShootConstraints, updatedConstraints []gardencorev1beta1.Condition) error {
+	// Update Shoot status (conditions, constraints) only if necessary
+	if !v1beta1helper.ConditionsNeedUpdate(existingConditions.ConvertToSlice(), updatedConditions) && !v1beta1helper.ConditionsNeedUpdate(existingConstraints.ConvertToSlice(), updatedConstraints) {
+		return nil
+	}
+
+	// Rebuild shoot conditions and constraints to ensure that only the conditions and constraints with the
+	// correct types will be updated, and any other conditions will remain intact
+	mergedConditions := v1beta1helper.BuildConditions(shoot.Status.Conditions, updatedConditions, existingConditions.ConditionTypes())
+	mergedConstraints := v1beta1helper.BuildConditions(shoot.Status.Constraints, updatedConstraints, existingConstraints.ConstraintTypes())
+
+	log.V(1).Info("Updating status conditions and constraints")
+
 	patch := client.StrategicMergeFrom(shoot.DeepCopy())
-	shoot.Status.Conditions = conditions
-	shoot.Status.Constraints = constraints
+	shoot.Status.Conditions = mergedConditions
+	shoot.Status.Constraints = mergedConstraints
 	return r.GardenClient.Status().Patch(ctx, shoot, patch)
 }
 
-func (r *Reconciler) patchStatusToUnknown(ctx context.Context, shoot *gardencorev1beta1.Shoot, message string, conditions, constraints []gardencorev1beta1.Condition) error {
+func (r *Reconciler) setStatusToUnknown(message string, conditions []gardencorev1beta1.Condition, constraints []gardencorev1beta1.Condition) ([]gardencorev1beta1.Condition, []gardencorev1beta1.Condition) {
 	updatedConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
 		updatedConditions = append(updatedConditions, v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(r.Clock, cond, message))
@@ -226,11 +230,7 @@ func (r *Reconciler) patchStatusToUnknown(ctx context.Context, shoot *gardencore
 		updatedConstraints = append(updatedConstraints, v1beta1helper.UpdatedConditionUnknownErrorMessageWithClock(r.Clock, constr, message))
 	}
 
-	if !v1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) && !v1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
-		return nil
-	}
-
-	return r.patchStatus(ctx, shoot, updatedConditions, updatedConstraints)
+	return updatedConditions, updatedConstraints
 }
 
 func shootClientInitializer(ctx context.Context, o *operation.Operation) func() (kubernetes.Interface, bool, error) {
