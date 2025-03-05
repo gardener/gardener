@@ -185,6 +185,9 @@ type GardenletControllerConfiguration struct {
 	// ShootState defines the configuration of the ShootState controller.
 	// +optional
 	ShootState *ShootStateControllerConfiguration `json:"shootState,omitempty"`
+	// ShootStatus defines the configuration of the ShootStatus controller.
+	// +optional
+	ShootStatus *ShootStatusControllerConfiguration `json:"shootStatus,omitempty"`
 	// NetworkPolicy defines the configuration of the NetworkPolicy controller
 	// +optional
 	NetworkPolicy *NetworkPolicyControllerConfiguration `json:"networkPolicy,omitempty"`
@@ -366,6 +369,13 @@ type ShootStateControllerConfiguration struct {
 	// often the health check of Seed clusters is performed
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+}
+
+// ShootStatusControllerConfiguration defines the configuration of the ShootStatus controller.
+type ShootStatusControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
