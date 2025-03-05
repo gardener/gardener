@@ -11,6 +11,7 @@ spec:
       {{ $k }}: {{ $v }}
 {{- end }}
   configPatches:
+  {{- if .APIServerProxy }}
   - applyTo: FILTER_CHAIN
     match:
       context: ANY
@@ -41,6 +42,7 @@ spec:
           prefix_ranges:
           - address_prefix: {{ .APIServerClusterIP }}
             prefix_len: {{ .APIServerClusterIPPrefixLen }}
+  {{- end }}
   {{- if .IstioTLSTermination }}
   - applyTo: LISTENER
     match:
