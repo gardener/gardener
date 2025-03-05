@@ -2894,6 +2894,7 @@ func autoConvert_v1beta1_ControllerDeployment_To_core_ControllerDeployment(in *C
 	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.ProviderConfig, &out.ProviderConfig, s); err != nil {
 		return err
 	}
+	out.InjectGardenKubeconfig = (*bool)(unsafe.Pointer(in.InjectGardenKubeconfig))
 	return nil
 }
 
@@ -2904,6 +2905,7 @@ func autoConvert_core_ControllerDeployment_To_v1beta1_ControllerDeployment(in *c
 		return err
 	}
 	// WARNING: in.Helm requires manual conversion: does not exist in peer-type
+	out.InjectGardenKubeconfig = (*bool)(unsafe.Pointer(in.InjectGardenKubeconfig))
 	return nil
 }
 

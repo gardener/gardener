@@ -24,6 +24,11 @@ message ControllerDeployment {
   // Helm configures that an extension controller is deployed using helm.
   // +optional
   optional HelmControllerDeployment helm = 2;
+
+  // InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+  // resources.
+  // +optional
+  optional bool injectGardenKubeconfig = 3;
 }
 
 // ControllerDeploymentList is a collection of ControllerDeployments.

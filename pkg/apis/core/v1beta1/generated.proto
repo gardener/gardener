@@ -583,6 +583,11 @@ message ControllerDeployment {
 
   // ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
   optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 3;
+
+  // InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+  // resources.
+  // +optional
+  optional bool injectGardenKubeconfig = 4;
 }
 
 // ControllerDeploymentList is a collection of ControllerDeployments.
