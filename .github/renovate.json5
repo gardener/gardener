@@ -433,24 +433,20 @@
       matchPackageNames: [
         'gardener/vpn2',
       ],
-      matchCurrentVersion: [
-        '0.26.0',
-      ],
+      matchCurrentVersion: '0.26.0',
       enabled: false,
     },
     {
       // TODO(marc1404): Remove when support for Kubernetes v1.27 is dropped.
-      // Ignore dependency updates of ingress-nginx/controller-chroot@v1.11.4 for Kubernetes v1.27.
+      // Restrict updates of ingress-nginx/controller-chroot@v1.11.x for Kubernetes v1.27 to stay below v1.12.0.
       matchFileNames: [
-        'imagevector/containers.yaml',
+        'imagevector/containers.yaml'
       ],
       matchPackageNames: [
-        'registry.k8s.io/ingress-nginx/controller-chroot',
+        'registry.k8s.io/ingress-nginx/controller-chroot'
       ],
-      matchCurrentVersion: [
-        'v1.11.4',
-      ],
-      enabled: false,
+      matchCurrentValue: 'v1.11.*',
+      allowedVersions: "<v1.12.0"
     },
     {
       // Ignore paths which most likely create false positives.
