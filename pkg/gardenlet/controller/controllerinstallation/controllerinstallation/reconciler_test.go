@@ -78,6 +78,7 @@ var _ = Describe("Reconciler", func() {
 			reconciler.BootstrapControlPlaneNode = true
 
 			checkHostNetworkAndTolerations := func(podSpec *corev1.PodSpec) {
+				GinkgoHelper()
 				Expect(podSpec.HostNetwork).To(BeTrue())
 				Expect(podSpec.Tolerations).To(Equal([]corev1.Toleration{
 					{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
@@ -109,7 +110,7 @@ var _ = Describe("Reconciler", func() {
 					checkHostNetworkAndTolerations(&cronJob.Spec.JobTemplate.Spec.Template.Spec)
 				}},
 			} {
-				Expect(reconciler.BootstrapControlPlaneNodeFunc(obj.object)).To(Succeed())
+				Expect(reconciler.BootstrapControlPlaneNodeFunc(obj.object)).To(Succeed(), "for %T", obj.object)
 				obj.checkFunc()
 			}
 		})
@@ -121,10 +122,10 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).To(Succeed())
 			Expect(ports).To(HaveLen(5))
 			allocatedPorts := map[int]struct{}{}
-			for i, p := range ports {
-				ExpectWithOffset(i, p).To(BeNumerically(">", 0))
-				ExpectWithOffset(i, p).To(BeNumerically("<", math.MaxUint16+1))
-				ExpectWithOffset(i, allocatedPorts).NotTo(HaveKey(p))
+			for _, p := range ports {
+				Expect(p).To(BeNumerically(">", 0))
+				Expect(p).To(BeNumerically("<", math.MaxUint16+1))
+				Expect(allocatedPorts).NotTo(HaveKey(p))
 				allocatedPorts[p] = struct{}{}
 			}
 		})
@@ -133,14 +134,14 @@ var _ = Describe("Reconciler", func() {
 			ports, err := reconciler.CalculateNextUsablePorts()
 			Expect(err).To(Succeed())
 			allocatedPorts := map[int]struct{}{}
-			for i, p := range ports {
-				ExpectWithOffset(i, allocatedPorts).NotTo(HaveKey(p))
+			for _, p := range ports {
+				Expect(allocatedPorts).NotTo(HaveKey(p))
 				allocatedPorts[p] = struct{}{}
 			}
 			ports, err = reconciler.CalculateNextUsablePorts()
 			Expect(err).To(Succeed())
-			for i, p := range ports {
-				ExpectWithOffset(i, allocatedPorts).NotTo(HaveKey(p))
+			for _, p := range ports {
+				Expect(allocatedPorts).NotTo(HaveKey(p))
 			}
 		})
 	})
