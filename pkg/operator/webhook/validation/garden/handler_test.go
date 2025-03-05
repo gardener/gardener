@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package validation_test
+package garden_test
 
 import (
 	"context"
@@ -19,12 +19,12 @@ import (
 
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
-	. "github.com/gardener/gardener/pkg/operator/webhook/validation"
+	. "github.com/gardener/gardener/pkg/operator/webhook/validation/garden"
 )
 
 var _ = Describe("Handler", func() {
 	var (
-		ctx = context.TODO()
+		ctx = context.Background()
 		log = logr.Discard()
 
 		fakeClient client.Client

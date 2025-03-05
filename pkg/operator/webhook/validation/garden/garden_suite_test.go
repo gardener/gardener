@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package validation_test
+package garden_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestValidation(t *testing.T) {
+func TestGarden(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Operator Webhook Validation Suite")
+	RunSpecs(t, "Operator Webhook Validation Garden Suite")
 }
