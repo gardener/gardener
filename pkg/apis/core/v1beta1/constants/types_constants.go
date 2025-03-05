@@ -973,4 +973,8 @@ const (
 
 	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
 	GardenPurposeMachineClass = "machineclass"
+
+	// LabelInjectGardenKubeconfig is a constant for a label on workload resources that indicates that a kubeconfig to
+	// the garden cluster should be injected.
+	LabelInjectGardenKubeconfig = "extensions.gardener.cloud/inject-garden-kubeconfig"
 )

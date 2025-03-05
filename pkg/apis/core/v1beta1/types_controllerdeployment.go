@@ -23,6 +23,10 @@ type ControllerDeployment struct {
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
 	ProviderConfig runtime.RawExtension `json:"providerConfig" protobuf:"bytes,3,opt,name=providerConfig"`
+	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+	// resources.
+	// +optional
+	InjectGardenKubeconfig *bool `json:"injectGardenKubeconfig,omitempty" protobuf:"varint,4,opt,name=injectGardenKubeconfig"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

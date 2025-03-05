@@ -14,7 +14,12 @@ The path to this kubeconfig is revealed under the `GARDEN_KUBECONFIG` environmen
 
 ## Extensions on `Seed` Clusters
 
-Extensions that are installed on seed clusters via a `ControllerInstallation` can simply read the kubeconfig file specified by the `GARDEN_KUBECONFIG` environment variable to create a garden cluster client.
+Extensions that are installed on seed clusters via a `ControllerInstallation` can request `gardenlet` to inject a kubeconfig and a token for the garden cluster.
+
+In order to do so, `injectGardenKubeconfig` must be set to `true` in the referenced `ControllerDeployment`.
+If it should still be disabled for an individual workload resource (`Deployment`, `StatefulSet`, etc.), they must be labeled with `extensions.gardener.cloud/inject-garden-kubeconfig=false`.
+
+When enabled, extensions can then simply read the kubeconfig file specified by the `GARDEN_KUBECONFIG` environment variable to create a garden cluster client.
 With this, they use a short-lived token (valid for `12h`) associated with a dedicated `ServiceAccount` in the `seed-<seed-name>` namespace to securely access the garden cluster.
 The used `ServiceAccounts` are granted permissions in the garden cluster similar to gardenlet clients.
 
