@@ -213,6 +213,9 @@ type ShootStatus struct {
 	// Networking contains information about cluster networking such as CIDRs.
 	// +optional
 	Networking *NetworkingStatus `json:"networking,omitempty" protobuf:"bytes,19,opt,name=networking"`
+	// InPlaceUpdates contains information about in-place updates for the Shoot workers.
+	// +optional
+	InPlaceUpdates *InPlaceUpdatesStatus `json:"inPlaceUpdates,omitempty" protobuf:"bytes,20,opt,name=inPlaceUpdates"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -244,6 +247,23 @@ type NetworkingStatus struct {
 	// extension controller may opt to not populate this field.
 	// +optional
 	EgressCIDRs []string `json:"egressCIDRs,omitempty" protobuf:"bytes,4,rep,name=egressCIDRs"`
+}
+
+// InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.
+type InPlaceUpdatesStatus struct {
+	// PendingWorkerUpdates contains information about worker pools pending in-place updates.
+	// +optional
+	PendingWorkerUpdates *PendingWorkerUpdates `json:"pendingWorkerUpdates,omitempty" protobuf:"bytes,1,opt,name=pendingWorkerUpdates"`
+}
+
+// PendingWorkerUpdates contains information about worker pools pending in-place update.
+type PendingWorkerUpdates struct {
+	// AutoInPlaceUpdate contains the names of the pending worker pools with strategy AutoInPlaceUpdate.
+	// +optional
+	AutoInPlaceUpdate []string `json:"autoInPlaceUpdate,omitempty" protobuf:"bytes,1,rep,name=autoInPlaceUpdate"`
+	// ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate..
+	// +optional
+	ManualInPlaceUpdate []string `json:"manualInPlaceUpdate,omitempty" protobuf:"bytes,2,rep,name=manualInPlaceUpdate"`
 }
 
 // ShootCredentials contains information about the shoot credentials.
