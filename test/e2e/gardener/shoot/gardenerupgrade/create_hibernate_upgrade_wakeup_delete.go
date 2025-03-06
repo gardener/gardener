@@ -5,12 +5,8 @@
 package gardenerupgrade
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
-	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 )
@@ -27,22 +23,13 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 			})
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
-				BeforeTestSetup(func() {
-					It("Read Shoot from API server", func(ctx SpecContext) {
-						Eventually(ctx, s.GardenKomega.Get(s.Shoot)).Should(Succeed())
-					}, SpecTimeout(time.Minute))
-				})
+				ItShouldReadShootFromAPIServer(s)
 
-				It("should ensure Shoot was hibernated with previous Gardener version", func() {
-					Expect(s.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
-				})
-
+				// This tests that we can wake-up a Shoot which was hibernated with the previous Gardener version.
+				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s)
 				ItShouldWakeUpShoot(s)
 				ItShouldWaitForShootToBeReconciledAndHealthy(s)
-
-				It("should ensure Shoot was woken up with current Gardener version", func() {
-					Expect(s.Shoot.Status.Gardener.Version).Should(Equal(gardenerCurrentVersion))
-				})
+				itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(s)
 
 				ItShouldDeleteShoot(s)
 				ItShouldWaitForShootToBeDeleted(s)

@@ -32,7 +32,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 
 			ItShouldUpdateShootToHighAvailability(s, failureToleranceType)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
-			highavailability.VerifyHighAvailabilityUpdate(s)
+			highavailability.VerifyHighAvailability(s)
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
@@ -51,11 +51,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "high-availability"), func() {
 		})
 	}
 
-	Describe("Update from non-HA to HA with failure tolerance type 'node'", Label("upgrade-to-node"), func() {
+	Describe("Update from non-HA to HA with failure tolerance type 'node'", Label("update-to-node"), func() {
 		container("e2e-upd-node", gardencorev1beta1.FailureToleranceTypeNode)
 	})
 
-	Describe("Update from non-HA to HA with failure tolerance type 'zone'", Label("upgrade-to-zone"), func() {
+	Describe("Update from non-HA to HA with failure tolerance type 'zone'", Label("update-to-zone"), func() {
 		container("e2e-upd-zone", gardencorev1beta1.FailureToleranceTypeZone)
 	})
 })

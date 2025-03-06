@@ -58,15 +58,8 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 			})
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
-				BeforeTestSetup(func() {
-					It("Read Shoot from API server", func(ctx SpecContext) {
-						Eventually(ctx, s.GardenKomega.Get(s.Shoot)).Should(Succeed())
-					}, SpecTimeout(time.Minute))
-				})
-
-				It("should ensure Shoot was hibernated with previous Gardener version", func() {
-					Expect(s.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
-				})
+				ItShouldReadShootFromAPIServer(s)
+				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s)
 
 				// TODO(rfranzke): Make this 'It' reusable for the default Shoot create_update_delete test after
 				//  https://github.com/gardener/gardener/pull/11540 has been merged.
@@ -76,9 +69,7 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 					Expect(zeroDowntimeJob.Status.Failed).Should(BeZero())
 				}, SpecTimeout(time.Minute))
 
-				It("should ensure Shoot was woken up with current Gardener version", func() {
-					Expect(s.Shoot.Status.Gardener.Version).Should(Equal(gardenerCurrentVersion))
-				})
+				itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(s)
 
 				ItShouldDeleteShoot(s)
 				ItShouldWaitForShootToBeDeleted(s)

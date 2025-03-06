@@ -20,21 +20,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
-// VerifyHighAvailabilityUpdate verifies the high-availability update of a shoot cluster. It checks the topology
-// spread constraints, ETCD affinity, and envoy filters to ensure the shoot cluster is correctly upgraded to
-// high-availability configuration.
-func VerifyHighAvailabilityUpdate(s *ShootContext) {
+// VerifyHighAvailability verifies the high-availability settings of a shoot cluster. It checks the topology spread
+// constraints, ETCD affinity, and envoy filters to ensure the shoot cluster is correctly updated to high-availability
+// configuration.
+func VerifyHighAvailability(s *ShootContext) {
 	GinkgoHelper()
 
-	Describe("high-availability upgrade", func() {
+	Describe("verify high-availability", func() {
 		It("should verify the topology spread constraints", func(ctx SpecContext) {
-			verifyTopologySpreadConstraints(ctx, s.SeedClient, s.Shoot.Status.TechnicalID, s.Shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
+			verifyTopologySpreadConstraints(ctx, s.SeedKomega, s.Shoot.Status.TechnicalID, s.Shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type)
 		}, SpecTimeout(time.Minute))
 
 		It("should verify the ETCD affinity", func(ctx SpecContext) {
@@ -47,7 +48,7 @@ func VerifyHighAvailabilityUpdate(s *ShootContext) {
 	})
 }
 
-func verifyTopologySpreadConstraints(ctx context.Context, seedClient client.Client, shootTechnicalID string, failureToleranceType gardencorev1beta1.FailureToleranceType) {
+func verifyTopologySpreadConstraints(ctx context.Context, seedKomega komega.Komega, shootTechnicalID string, failureToleranceType gardencorev1beta1.FailureToleranceType) {
 	GinkgoHelper()
 
 	var (
@@ -73,12 +74,8 @@ func verifyTopologySpreadConstraints(ctx context.Context, seedClient client.Clie
 		matcher = BeNil()
 	}
 
-	Eventually(ctx, func(g Gomega) {
-		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: shootTechnicalID}}
-		g.Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-		g.Expect(deployment.Spec.Template.Spec.TopologySpreadConstraints).To(matcher)
-	}).Should(Succeed())
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: shootTechnicalID}}
+	Eventually(ctx, seedKomega.Object(deployment)).Should(HaveField("Spec.Template.Spec.TopologySpreadConstraints", matcher))
 }
 
 func verifyETCDAffinity(ctx context.Context, seedClient client.Client, shootTechnicalID string, failureToleranceType gardencorev1beta1.FailureToleranceType) {
@@ -105,7 +102,7 @@ func verifyETCDAffinity(ctx context.Context, seedClient client.Client, shootTech
 				"Values":   HaveLen(numberOfZones),
 			}))
 			g.Expect(statefulSet.Spec.Template.Spec.Affinity.PodAntiAffinity).To(BeNil())
-		}).Should(Succeed(), " for etcd "+name)
+		}).Should(Succeed(), "etcd %s should have node affinity to %d zones", name, numberOfZones)
 	}
 }
 
@@ -167,9 +164,8 @@ func verifyEnvoyFilters(ctx context.Context, seedClient client.Client, shootTech
 		}
 
 		g.Expect(envoyFilterList.Items).To(HaveLen(expectedEnvoyFilters))
-
 		for _, envoyFilter := range envoyFilterList.Items {
-			g.Expect(envoyFilter.Namespace).To(HavePrefix("istio-ingress"), "for EnvoyFilter "+client.ObjectKeyFromObject(envoyFilter).String())
+			g.Expect(envoyFilter.Namespace).To(HavePrefix("istio-ingress"), "for envoy filter %s", client.ObjectKeyFromObject(envoyFilter))
 		}
 	}).Should(Succeed())
 }
