@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package finalizer_test
+package shootstate_test
 
 import (
 	"context"
@@ -15,19 +15,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/state/finalizer"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shootstate"
 )
 
 var _ = Describe("AddToManager", func() {
 	Describe("#MapShootToShootState", func() {
 		var (
 			ctx        context.Context
-			reconciler *finalizer.Reconciler
+			reconciler *shootstate.Reconciler
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
-			reconciler = &finalizer.Reconciler{}
+			reconciler = &shootstate.Reconciler{}
 		})
 
 		It("should return reconciliation request matching the shoot name", func() {

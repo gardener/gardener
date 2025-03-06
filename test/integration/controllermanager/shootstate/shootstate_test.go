@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package state_test
+package shootstate_test
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/state/finalizer"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shootstate"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -123,7 +123,7 @@ var _ = Describe("ShootState controller test", func() {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 					return shootState.Finalizers
-				}).WithContext(ctxTimeOut).Should(ConsistOf(finalizer.FinalizerName))
+				}).WithContext(ctxTimeOut).Should(ConsistOf(shootstate.FinalizerName))
 			})
 
 			It("should remove finalizer when Shoot restores successfully", func() {
@@ -135,7 +135,7 @@ var _ = Describe("ShootState controller test", func() {
 				}
 				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
-				shootState.Finalizers = append(shoot.Finalizers, finalizer.FinalizerName)
+				shootState.Finalizers = append(shoot.Finalizers, shootstate.FinalizerName)
 				Expect(testClient.Update(ctx, shootState)).To(Succeed())
 
 				By("Should remove finalizer")
@@ -145,7 +145,7 @@ var _ = Describe("ShootState controller test", func() {
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 					return shootState.Finalizers
-				}).WithContext(ctxTimeOut).ShouldNot(ConsistOf(finalizer.FinalizerName))
+				}).WithContext(ctxTimeOut).ShouldNot(ConsistOf(shootstate.FinalizerName))
 			})
 		})
 	})
