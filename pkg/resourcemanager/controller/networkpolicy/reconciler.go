@@ -118,8 +118,23 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 		}
 	}
 
-	namespaceNames := sets.New(service.Namespace)
+	var (
+		namespaceNames                    = sets.New[string]()
+		considerNamespaceIfNotTerminating = func(namespaces ...metav1.PartialObjectMetadata) {
+			for _, namespace := range namespaces {
+				if namespace.DeletionTimestamp == nil {
+					namespaceNames.Insert(namespace.Name)
+				}
+			}
+		}
+	)
 
+	namespace := &metav1.PartialObjectMetadata{}
+	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
+	if err := r.TargetClient.Get(ctx, client.ObjectKey{Name: service.Namespace}, namespace); err != nil {
+		return nil, fmt.Errorf("failed fetching service namespace %s: %w", service.Namespace, err)
+	}
+	considerNamespaceIfNotTerminating(*namespace)
 
 	for _, namespaceSelector := range namespaceSelectors {
 		selector, err := metav1.LabelSelectorAsSelector(&namespaceSelector)
@@ -132,12 +147,7 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 		if err := r.TargetClient.List(ctx, namespaceList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
 			return nil, fmt.Errorf("failed listing namespaces with selector %s: %w", selector.String(), err)
 		}
-
-		for _, namespace := range namespaceList.Items {
-			if namespace.DeletionTimestamp == nil {
-				namespaceNames.Insert(namespace.Name)
-			}
-		}
+		considerNamespaceIfNotTerminating(namespaceList.Items...)
 	}
 
 	return namespaceNames, nil
