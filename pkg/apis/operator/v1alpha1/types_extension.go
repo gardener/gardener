@@ -16,6 +16,9 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:resource:scope=Cluster,shortName="extop"
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Installed",type=string,JSONPath=`.status.conditions[?(@.type=="Installed")].status`,description="Indicates whether the extension has been reconciled successfully."
+// +kubebuilder:printcolumn:name="Required Runtime",type=string,JSONPath=`.status.conditions[?(@.type=="RequiredRuntime")].status`,description="Indicates whether the extension is required in the runtime cluster."
+// +kubebuilder:printcolumn:name="Required Virtual",type=string,JSONPath=`.status.conditions[?(@.type=="RequiredVirtual")].status`,description="Indicates whether the extension is required in the virtual cluster."
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="creation timestamp"
 
 // Extension describes a Gardener extension.
