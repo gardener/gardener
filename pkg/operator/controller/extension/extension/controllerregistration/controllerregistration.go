@@ -72,6 +72,7 @@ func (r *registration) createOrUpdateControllerRegistration(ctx context.Context,
 				Values:        extension.Spec.Deployment.ExtensionDeployment.Values,
 				OCIRepository: extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository,
 			},
+			InjectGardenKubeconfig: extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig,
 		}
 
 		controllerRegistration = &gardencorev1beta1.ControllerRegistration{

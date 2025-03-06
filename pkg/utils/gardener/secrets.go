@@ -151,6 +151,34 @@ func mutateObjects(secretData map[string][]byte, mutate func(obj *unstructured.U
 	return nil
 }
 
+// ObjectsInSecretData reads the given secret data and returns the objects contained in it.
+func ObjectsInSecretData(secretData map[string][]byte) ([]runtime.Object, error) {
+	var objects []runtime.Object
+
+	for _, data := range secretData {
+		buffer := &bytes.Buffer{}
+		manifestReader := kubernetes.NewManifestReader(data)
+
+		for {
+			_, _ = buffer.WriteString("\n---\n")
+			obj, err := manifestReader.Read()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			if obj == nil {
+				continue
+			}
+
+			objects = append(objects, obj)
+		}
+	}
+
+	return objects, nil
+}
+
 // mutateTypedObject converts the given object to a typed object, calls the mutator, and converts the object back to the
 // original type.
 func mutateTypedObject(obj runtime.Object, mutate func(obj runtime.Object) error) error {

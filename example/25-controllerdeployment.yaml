@@ -10,3 +10,4 @@ helm:
     ref: registry.example.com/foo:1.0.0@sha256:abc
   values:
     foo: bar
+injectGardenKubeconfig: false

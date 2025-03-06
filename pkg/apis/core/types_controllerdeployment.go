@@ -35,6 +35,9 @@ type ControllerDeployment struct {
 	ProviderConfig runtime.Object
 	// Helm configures that an extension controller is deployed using helm.
 	Helm *HelmControllerDeployment
+	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+	// resources.
+	InjectGardenKubeconfig *bool
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

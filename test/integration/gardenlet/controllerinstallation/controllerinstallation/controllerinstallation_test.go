@@ -11,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +39,8 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 		controllerDeployment   *gardencorev1.ControllerDeployment
 		controllerInstallation *gardencorev1beta1.ControllerInstallation
 
-		rawChart []byte
+		chartWithGardenKubeconfig    []byte
+		chartWithoutGardenKubeconfig []byte
 	)
 
 	BeforeEach(func() {
@@ -49,11 +51,13 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			},
 		}
 
-		// created via the following commands in the ./testdata/chart directory:
+		// created via the following commands in the ./testdata/chart-* directories:
 		//   helm package . --version 0.1.0 --app-version 0.1.0 --destination /tmp/chart
 		//   cat /tmp/chart/test-0.1.0.tgz | base64 | tr -d '\n'
 		var err error
-		rawChart, err = base64.StdEncoding.DecodeString(`H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOyUz2rDMAzGc/ZT6AkcOXHb4WvP22GMwo6i0RbT/DGxWhhp3300XQcLjB22rozldxGSkW2Z77NwlHRZUif6heoquQSIiHNrh4iI44jGLhJjc5PnmZkvbIImM7N5AniR24zYRqEuwW+fNR7uj0DBr7iLvm0c7IyiEN5T1EajKjiuOx9kKD1wFFW2NTsoRUJ0abq5idq3aclVrRo6rhwlpXYfd7n2mBOfMPhfuA4VCcd03TZP/vmHv4Kv/J9lOPK/zWc4+f83GPl/45vCwXJQwS0FVbNQQUJOAZzcfVLIWxoDrdlB34O+54opsr47l+FwUOfWHVVbjg72qu9B2keqK9CroQh78E3BjYA9dlz7PSYmJib+C68BAAD//6xO2UUADAAA`)
+		chartWithGardenKubeconfig, err = base64.StdEncoding.DecodeString(`H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOyWX2uzMBSHvc6nOF/g1cRG++Jtd7tdjFHY5UHPZqjGYNJCsf3uQzu7TjY6WP+wzecmzSlRE37PIY6sC2Y51s5fY1l454BzzmMpu5FzPhy5kFNPyGkc8ngiYulxEYp44gE/y9cMWFqHtce//a7h5n4IaNScaqsqncBKMDRmP+W+8DnLyKa1Mq4rPZB1LK9KSiB3ztgkCBb/ra+qIKeiZBrbf9pIsdX7p1x7myOf0PnvqDQFOrJBWukn9XziVnDM/zDkA//lJIpG/y/BwP+F0lkCsy4Ft2hYSQ4zdJgwgJ3du4S8Tq3BlBJoGvDvqSC05N/1ZdhuWb90hcWSbAIb1jTgqkcsC/DnXRE2oHRG2oFsV1z7PP4aA/8zMkW1Lkmf8jpw1P9IDPyPwqkc/b8Eh/6jMTbYN4GbfRQ+6AJvOfliJ7CG0nZ5H7X2N0BfbUkr7VBpqm1f+QcHF4prH9TIyMjIL+MlAAD//xIdYCMAEAAA`)
+		Expect(err).NotTo(HaveOccurred())
+		chartWithoutGardenKubeconfig, err = base64.StdEncoding.DecodeString(`H4sIFAAAAAAA/ykAK2FIUjBjSE02THk5NWIzVjBkUzVpWlM5Nk9WVjZNV2xqYW5keVRRbz1IZWxtAOyWQW+cMBCFOftXjHJfYxYKFdf02h6qKlKPE5hk3TXGYmZXjTb57xVQtilqlUpNdluF72L5IY+x9d7IQizx5QY70XfYuOglMMaYPMuG0RgzH02SFVGSFfna5GlSFJFJ1kleRGBe5G9m7Fiwi8xf7zU/3H8CBntFHdvWl7BPFIZwnBqdaKNq4qqzQQbpE7GoTdtQCRuRwGUcb9+ytm28Idcoj/2X3lJq/3OVcx9z4TcM+RdqgkMhjqvW39jbZ24FT+V/vTaz/Gdpniz5PwWz/G+tr0u4HFzwHoNqSLBGwVIBjOkeHfJ9ygErKuFwAP2RHCGT/jDJ8PCgpqV7dDviEu7V4QDSfsbGgb4aRLgH62vyAlm/4tz38dqY5b+m4Nq7hvxzPgeeyn+ap7P8v0lNtuT/FDzOP4bA8bEJvDta4Rdd4IdP/rATADi8Jsd9CQD6KuT7TVnfYleTp05Xrt3VsfVfqJLVqK62u2saG04JFzfomC4UB6r6KpNpx4qT2lO1XtB66nhSVvDoaXLuK19YWFj4J/gWAAD//1y8BI4AEAAA`)
 		Expect(err).NotTo(HaveOccurred())
 
 		controllerDeployment = &gardencorev1.ControllerDeployment{
@@ -62,8 +66,9 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				Labels:       map[string]string{testID: testRunID},
 			},
 			Helm: &gardencorev1.HelmControllerDeployment{
-				RawChart: rawChart,
+				RawChart: chartWithGardenKubeconfig,
 			},
+			InjectGardenKubeconfig: ptr.To(true),
 		}
 		controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 			ObjectMeta: metav1.ObjectMeta{
@@ -157,7 +162,7 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 			controllerDeployment.Helm = &gardencorev1.HelmControllerDeployment{
 				OCIRepository: oci,
 			}
-			fakeRegistry.AddArtifact(oci, rawChart)
+			fakeRegistry.AddArtifact(oci, chartWithGardenKubeconfig)
 		})
 
 		It("should deploy the chart", func() {
@@ -173,6 +178,10 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				configMap := &corev1.ConfigMap{}
 				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
 				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+
+				deployment := &appsv1.Deployment{}
+				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
+				Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
 			}).Should(Succeed())
 
 			By("Ensure conditions are maintained correctly")
@@ -256,6 +265,14 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				configMap := &corev1.ConfigMap{}
 				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
 				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+
+				deployment := &appsv1.Deployment{}
+				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
+				Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
+				Expect(deployment.Spec.Template.Spec.Containers[0].Env).To(HaveExactElements(
+					corev1.EnvVar{Name: "GARDEN_KUBECONFIG", Value: "/var/run/secrets/gardener.cloud/garden/generic-kubeconfig/kubeconfig"},
+					corev1.EnvVar{Name: "SEED_NAME", Value: seed.Name},
+				))
 			}).Should(Succeed())
 
 			// Our envtest setup starts gardener-apiserver in-process which adds its own feature gates as well as the default
@@ -355,6 +372,140 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
 				ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
 			))
+		})
+
+		When("garden kubeconfig injection is undesired", func() {
+			var namespace *corev1.Namespace
+
+			JustBeforeEach(func() {
+				By("Ensure namespace was created")
+				namespace = &corev1.Namespace{}
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Name: "extension-" + controllerInstallation.Name}, namespace)).To(Succeed())
+					g.Expect(namespace.Labels).To(And(
+						HaveKeyWithValue("gardener.cloud/role", "extension"),
+						HaveKeyWithValue("controllerregistration.core.gardener.cloud/name", controllerRegistration.Name),
+						HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"),
+						HaveKeyWithValue("high-availability-config.resources.gardener.cloud/consider", "true"),
+					))
+					g.Expect(namespace.Annotations).To(And(
+						HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b,c"),
+					))
+				}).Should(Succeed())
+
+				By("Ensure generic garden kubeconfig was created")
+				var genericKubeconfigSecret *corev1.Secret
+				Eventually(func(g Gomega) {
+					secretList := &corev1.SecretList{}
+					g.Expect(testClient.List(ctx, secretList, client.InNamespace(namespace.Name))).To(Succeed())
+
+					for _, secret := range secretList.Items {
+						if strings.HasPrefix(secret.Name, "generic-garden-kubeconfig-") {
+							genericKubeconfigSecret = secret.DeepCopy()
+							break
+						}
+					}
+					g.Expect(genericKubeconfigSecret).NotTo(BeNil())
+					g.Expect(genericKubeconfigSecret.Data).To(HaveKeyWithValue("kubeconfig", Not(BeEmpty())))
+				}).Should(Succeed())
+
+				By("Ensure garden access secret was created")
+				Eventually(func(g Gomega) {
+					secret := &corev1.Secret{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: "garden-access-extension"}, secret)).To(Succeed())
+					g.Expect(secret.Labels).To(And(
+						HaveKeyWithValue("resources.gardener.cloud/class", "garden"),
+						HaveKeyWithValue("resources.gardener.cloud/purpose", "token-requestor"),
+					))
+					g.Expect(secret.Annotations).To(
+						HaveKeyWithValue("serviceaccount.resources.gardener.cloud/name", "extension-"+controllerInstallation.Name),
+					)
+				}).Should(Succeed())
+
+				By("Ensure chart was deployed correctly")
+				values := make(map[string]any)
+				Eventually(func(g Gomega) {
+					managedResource := &resourcesv1alpha1.ManagedResource{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
+
+					secret := &corev1.Secret{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
+
+					configMap := &corev1.ConfigMap{}
+					Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+					Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+
+					deployment := &appsv1.Deployment{}
+					Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
+					Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Env).To(HaveExactElements(
+						corev1.EnvVar{Name: "GARDEN_KUBECONFIG", Value: "/var/run/secrets/gardener.cloud/garden/generic-kubeconfig/kubeconfig"},
+						corev1.EnvVar{Name: "SEED_NAME", Value: seed.Name},
+					))
+				}).Should(Succeed())
+
+				By("Ensure conditions are maintained correctly")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+					return controllerInstallation.Status.Conditions
+				}).Should(And(
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
+				))
+			})
+
+			test := func() {
+				By("Retrigger reconciliation")
+				patch := client.MergeFrom(controllerInstallation.DeepCopy())
+				controllerInstallation.Spec.DeploymentRef.ResourceVersion = "reconcile-again-please"
+				Expect(testClient.Patch(ctx, controllerInstallation, patch)).To(Succeed())
+
+				By("Ensure garden access secret was deleted")
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKey{Namespace: namespace.Name, Name: "garden-access-extension"}, &corev1.Secret{})
+				}).Should(BeNotFoundError())
+
+				By("Ensure chart was redeployed without kubeconfig injection")
+				Eventually(func(g Gomega) {
+					managedResource := &resourcesv1alpha1.ManagedResource{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: "garden", Name: controllerInstallation.Name}, managedResource)).To(Succeed())
+
+					secret := &corev1.Secret{}
+					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
+
+					deployment := &appsv1.Deployment{}
+					Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
+					Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
+					Expect(deployment.Spec.Template.Spec.Containers[0].Env).To(HaveExactElements(
+						corev1.EnvVar{Name: "SEED_NAME", Value: seed.Name},
+					))
+				}).Should(Succeed())
+
+				By("Ensure conditions are maintained correctly")
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+					return controllerInstallation.Status.Conditions
+				}).Should(And(
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationValid), WithStatus(gardencorev1beta1.ConditionTrue), WithReason("RegistrationValid")),
+					ContainCondition(OfType(gardencorev1beta1.ControllerInstallationInstalled), WithStatus(gardencorev1beta1.ConditionFalse), WithReason("InstallationPending")),
+				))
+			}
+
+			It("should remove the garden access secret and kubeconfig injection when disabled via ControllerDeployment", func() {
+				By("Disable garden kubeconfig injection")
+				controllerDeployment.InjectGardenKubeconfig = ptr.To(false)
+				Expect(testClient.Update(ctx, controllerDeployment)).To(Succeed())
+
+				test()
+			})
+
+			It("should remove the garden access secret and kubeconfig injection when disabled via label", func() {
+				By("Disable garden kubeconfig injection")
+				controllerDeployment.Helm.RawChart = chartWithoutGardenKubeconfig
+				Expect(testClient.Update(ctx, controllerDeployment)).To(Succeed())
+
+				test()
+			})
 		})
 
 		It("should properly clean up on ControllerInstallation deletion", func() {

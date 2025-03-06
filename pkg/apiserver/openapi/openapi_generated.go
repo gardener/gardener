@@ -882,6 +882,13 @@ func schema_pkg_apis_core_v1_ControllerDeployment(ref common.ReferenceCallback) 
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1.HelmControllerDeployment"),
 						},
 					},
+					"injectGardenKubeconfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload resources.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -2605,6 +2612,13 @@ func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallb
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.",
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+					"injectGardenKubeconfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload resources.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
