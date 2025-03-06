@@ -81,20 +81,29 @@ func ItShouldCreateShoot(s *ShootContext) {
 	}, SpecTimeout(time.Minute))
 }
 
+// ItShouldReadShootFromAPIServer reads the Shoot from the API server.
+func ItShouldReadShootFromAPIServer(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Hibernate Shoot", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Get(s.Shoot)).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
 // ItShouldUpdateShootToHighAvailability updates shoot to high availability configuration with the given failure
 // tolerance type.
 func ItShouldUpdateShootToHighAvailability(s *ShootContext, failureToleranceType gardencorev1beta1.FailureToleranceType) {
 	GinkgoHelper()
 
 	It("Update Shoot to High Availability", func(ctx SpecContext) {
-		s.Log.Info("Updating Shoot to High Availability")
-
 		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
-			s.Shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
-				HighAvailability: &gardencorev1beta1.HighAvailability{
-					FailureTolerance: gardencorev1beta1.FailureTolerance{
-						Type: failureToleranceType,
-					},
+			if s.Shoot.Spec.ControlPlane == nil {
+				s.Shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+			}
+
+			s.Shoot.Spec.ControlPlane.HighAvailability = &gardencorev1beta1.HighAvailability{
+				FailureTolerance: gardencorev1beta1.FailureTolerance{
+					Type: failureToleranceType,
 				},
 			}
 		})).Should(Succeed())
@@ -106,8 +115,6 @@ func ItShouldHibernateShoot(s *ShootContext) {
 	GinkgoHelper()
 
 	It("Hibernate Shoot", func(ctx SpecContext) {
-		s.Log.Info("Hibernating Shoot")
-
 		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
 			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 				Enabled: ptr.To(true),
@@ -121,8 +128,6 @@ func ItShouldWakeUpShoot(s *ShootContext) {
 	GinkgoHelper()
 
 	It("Wake Up Shoot", func(ctx SpecContext) {
-		s.Log.Info("Waking up Shoot")
-
 		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
 			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 				Enabled: ptr.To(false),

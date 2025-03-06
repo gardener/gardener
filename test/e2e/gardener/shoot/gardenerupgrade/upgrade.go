@@ -7,6 +7,11 @@ package gardenerupgrade
 import (
 	"fmt"
 	"os"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
 var (
@@ -18,3 +23,19 @@ var (
 	gardenerInfoPreUpgrade  = fmt.Sprintf(" (Gardener version: %s, Git version: %s)", gardenerPreviousVersion, gardenerPreviousGitVersion)
 	gardenerInfoPostUpgrade = fmt.Sprintf(" (Gardener version: %s, Git version: %s)", gardenerCurrentVersion, gardenerCurrentGitVersion)
 )
+
+func itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Ensure Shoot was reconciled with previous Gardener version", func() {
+		Expect(s.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
+	})
+}
+
+func itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Ensure Shoot was reconciled with current Gardener version", func() {
+		Expect(s.Shoot.Status.Gardener.Version).Should(Equal(gardenerCurrentVersion))
+	})
+}
