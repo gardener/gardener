@@ -16,6 +16,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/webhook/defaulting"
+	gardendefaulting "github.com/gardener/gardener/pkg/operator/webhook/defaulting/garden"
 	"github.com/gardener/gardener/pkg/operator/webhook/validation"
 	extensionvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/extension"
 	gardenvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/garden"
@@ -23,14 +24,12 @@ import (
 
 // AddToManager adds all webhook handlers to the given manager.
 func AddToManager(mgr manager.Manager) error {
-	if err := (&defaulting.Handler{
-		Logger: mgr.GetLogger().WithName("webhook").WithName(defaulting.HandlerName),
-	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding %s webhook handler: %w", defaulting.HandlerName, err)
+	if err := defaulting.AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding defaulting webhook handlers: %w", err)
 	}
 
 	if err := validation.AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding webhook handlers: %w", err)
+		return fmt.Errorf("failed adding validating webhook handlers: %w", err)
 	}
 
 	return nil
@@ -107,8 +106,8 @@ func GetMutatingWebhookConfiguration(mode, url string) *admissionregistrationv1.
 		},
 		Webhooks: []admissionregistrationv1.MutatingWebhook{
 			{
-				Name:                    "defaulting.operator.gardener.cloud",
-				ClientConfig:            getClientConfig(defaulting.WebhookPath, mode, url),
+				Name:                    "garden-defaulting.operator.gardener.cloud",
+				ClientConfig:            getClientConfig(gardendefaulting.WebhookPath, mode, url),
 				AdmissionReviewVersions: []string{"v1", "v1beta1"},
 				Rules: []admissionregistrationv1.RuleWithOperations{{
 					Rule: admissionregistrationv1.Rule{

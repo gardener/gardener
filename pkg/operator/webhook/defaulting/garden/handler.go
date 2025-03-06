@@ -1,6 +1,6 @@
-//  SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
 //
-//  SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0
 
 package garden
 
@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -16,9 +15,7 @@ import (
 )
 
 // Handler performs defaulting.
-type Handler struct {
-	Logger logr.Logger
-}
+type Handler struct{}
 
 // Default performs the defaulting.
 func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
