@@ -17,6 +17,18 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: Indicates whether the extension has been reconciled successfully.
+      jsonPath: .status.conditions[?(@.type=="Installed")].status
+      name: Installed
+      type: string
+    - description: Indicates whether the extension is required in the runtime cluster.
+      jsonPath: .status.conditions[?(@.type=="RequiredRuntime")].status
+      name: Required Runtime
+      type: string
+    - description: Indicates whether the extension is required in the virtual cluster.
+      jsonPath: .status.conditions[?(@.type=="RequiredVirtual")].status
+      name: Required Virtual
+      type: string
     - description: creation timestamp
       jsonPath: .metadata.creationTimestamp
       name: Age
