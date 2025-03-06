@@ -108,6 +108,12 @@ kubectl create \
 
 The examples for other programming languages are similar to [the above](#shootsadminkubeconfig-subresource) and can be adapted accordingly.
 
+> [!TIP]
+> If the Gardener operator has configured a ["control plane wildcard certificate"](../../operations/trusted-tls-for-control-planes.md#register-a-trusted-wildcard-certificate), the issued kubeconfigs have a dedicated `Cluster` entry containing an endpoint that is served with this wildcard certificate.
+> Typically, this is a [Let's Encrypt](https://letsencrypt.org) certificate, i.e., it does not require you to specify the certificate authority bundle.
+>
+> ⚠️ This endpoint is specific to the seed cluster your `Shoot` is scheduled to, i.e., if the seed cluster changes (`.spec.seedName`, for example because of a [control plane migration](../../operations/control_plane_migration.md)), the endpoint changes as well. Have this in mind in case you consider using it!
+
 ## OpenID Connect
 
 > **Note:** OpenID Connect is deprecated in favor of [Structured Authentication configuration](#structured-authentication). Setting OpenID Connect configurations is forbidden for clusters with Kubernetes version `>= 1.32`
