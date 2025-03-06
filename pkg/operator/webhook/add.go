@@ -25,11 +25,11 @@ import (
 // AddToManager adds all webhook handlers to the given manager.
 func AddToManager(mgr manager.Manager) error {
 	if err := defaulting.AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding defaulting webhook handlers: %w", err)
+		return fmt.Errorf("failed adding defaulting webhook handlers to manager: %w", err)
 	}
 
 	if err := validation.AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding validating webhook handlers: %w", err)
+		return fmt.Errorf("failed adding validating webhook handlers to manager: %w", err)
 	}
 
 	return nil

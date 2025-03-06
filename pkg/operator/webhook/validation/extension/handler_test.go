@@ -34,48 +34,48 @@ var _ = Describe("Handler", func() {
 			Expect(warning).To(BeNil())
 			Expect(err).To(Succeed())
 		})
-	})
 
-	It("should return success if there are no required conditions", func() {
-		extension.Status.Conditions = []gardencorev1beta1.Condition{
-			{Type: "foo", Status: gardencorev1beta1.ConditionTrue},
-		}
+		It("should return success if there are no required conditions", func() {
+			extension.Status.Conditions = []gardencorev1beta1.Condition{
+				{Type: "foo", Status: gardencorev1beta1.ConditionTrue},
+			}
 
-		warning, err := handler.ValidateDelete(ctx, extension)
-		Expect(warning).To(BeNil())
-		Expect(err).To(Succeed())
-	})
+			warning, err := handler.ValidateDelete(ctx, extension)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
+		})
 
-	It("should return success if there are no required conditions set to True", func() {
-		extension.Status.Conditions = []gardencorev1beta1.Condition{
-			{Type: "RequiredRuntime", Status: gardencorev1beta1.ConditionFalse},
-			{Type: "RequiredVirtual", Status: gardencorev1beta1.ConditionFalse},
-		}
+		It("should return success if there are no required conditions set to True", func() {
+			extension.Status.Conditions = []gardencorev1beta1.Condition{
+				{Type: "RequiredRuntime", Status: gardencorev1beta1.ConditionFalse},
+				{Type: "RequiredVirtual", Status: gardencorev1beta1.ConditionFalse},
+			}
 
-		warning, err := handler.ValidateDelete(ctx, extension)
-		Expect(warning).To(BeNil())
-		Expect(err).To(Succeed())
-	})
+			warning, err := handler.ValidateDelete(ctx, extension)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
+		})
 
-	It("should prevent deletion if required runtime is set to True", func() {
-		extension.Status.Conditions = []gardencorev1beta1.Condition{
-			{Type: "RequiredRuntime", Status: gardencorev1beta1.ConditionTrue, Message: "required for testing"},
-			{Type: "RequiredVirtual", Status: gardencorev1beta1.ConditionFalse},
-		}
+		It("should prevent deletion if required runtime is set to True", func() {
+			extension.Status.Conditions = []gardencorev1beta1.Condition{
+				{Type: "RequiredRuntime", Status: gardencorev1beta1.ConditionTrue, Message: "required for testing"},
+				{Type: "RequiredVirtual", Status: gardencorev1beta1.ConditionFalse},
+			}
 
-		warning, err := handler.ValidateDelete(ctx, extension)
-		Expect(warning).To(BeNil())
-		Expect(err).To(MatchError(`extension is still being required: "required for testing"`))
-	})
+			warning, err := handler.ValidateDelete(ctx, extension)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(`extension is still being required: "required for testing"`))
+		})
 
-	It("should prevent deletion if required virtual is set to True", func() {
-		extension.Status.Conditions = []gardencorev1beta1.Condition{
-			{Type: "RequiredRuntime", Status: gardencorev1beta1.ConditionFalse},
-			{Type: "RequiredVirtual", Status: gardencorev1beta1.ConditionTrue, Message: "required for testing"},
-		}
+		It("should prevent deletion if required virtual is set to True", func() {
+			extension.Status.Conditions = []gardencorev1beta1.Condition{
+				{Type: "RequiredRuntime", Status: gardencorev1beta1.ConditionFalse},
+				{Type: "RequiredVirtual", Status: gardencorev1beta1.ConditionTrue, Message: "required for testing"},
+			}
 
-		warning, err := handler.ValidateDelete(ctx, extension)
-		Expect(warning).To(BeNil())
-		Expect(err).To(MatchError(`extension is still being required: "required for testing"`))
+			warning, err := handler.ValidateDelete(ctx, extension)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(`extension is still being required: "required for testing"`))
+		})
 	})
 })

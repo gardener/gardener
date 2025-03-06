@@ -19,7 +19,13 @@ import (
 // Handler performs validation.
 type Handler struct{}
 
-func validateDelete(extension *operatorv1alpha1.Extension) (admission.Warnings, error) {
+// ValidateDelete performs the validation.
+func (h *Handler) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	extension, ok := obj.(*operatorv1alpha1.Extension)
+	if !ok {
+		return nil, fmt.Errorf("expected *operatorv1alpha1.Extension but got %T", obj)
+	}
+
 	for _, conditionType := range []gardencorev1beta1.ConditionType{
 		operatorv1alpha1.ExtensionRequiredRuntime,
 		operatorv1alpha1.ExtensionRequiredVirtual,
@@ -31,16 +37,6 @@ func validateDelete(extension *operatorv1alpha1.Extension) (admission.Warnings, 
 	}
 
 	return nil, nil
-}
-
-// ValidateDelete performs the validation.
-func (h *Handler) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	extension, ok := obj.(*operatorv1alpha1.Extension)
-	if !ok {
-		return nil, fmt.Errorf("expected *operatorv1alpha1.Extension but got %T", obj)
-	}
-
-	return validateDelete(extension)
 }
 
 // ValidateCreate performs the validation.
