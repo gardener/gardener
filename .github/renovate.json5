@@ -16,7 +16,7 @@
   // Add PR footer with empty release note by default.
   prFooter: '**Release note**:\n```other dependency\nNONE\n```',
   // Only rebase when there are conflicts. Prow tests against the latest state of master branch anyway before merging the PR.
-  rebaseWhen: "conflicted",
+  rebaseWhen: 'conflicted',
   customManagers: [
     {
       // Generic detection for pod-like image specifications.
