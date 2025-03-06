@@ -49,17 +49,20 @@ import (
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/oci"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const finalizerName = "core.gardener.cloud/controllerinstallation"
 
+const usablePortsRangeSize = 5
+
 // RequeueDurationWhenResourceDeletionStillPresent is the duration used for requeuing when owned resources are still in
 // the process of being deleted when deleting a ControllerInstallation.
 var RequeueDurationWhenResourceDeletionStillPresent = 5 * time.Second
 
-// Reconciler reconciles ControllerInstallations and deploys them into the seed cluster.
+// Reconciler reconciles ControllerInstallations and deploys them into the seed cluster or the autonomous shoot cluster.
 type Reconciler struct {
 	GardenClient          client.Client
 	GardenConfig          *rest.Config
@@ -69,9 +72,14 @@ type Reconciler struct {
 	Clock                 clock.Clock
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
+	// BootstrapControlPlaneNode controls whether the pods are used to bootstrap a control plane node. If set to true,
+	// they are deployed to the host network. In addition, all taints are tolerated to make sure they can get deployed
+	// to nodes even when they are not ready yet. Furthermore, the replicas are set to 1 and a usable port range is
+	// provided.
+	BootstrapControlPlaneNode bool
 }
 
-// Reconcile reconciles ControllerInstallations and deploys them into the seed cluster.
+// Reconcile reconciles ControllerInstallations and deploys them into the seed cluster or the autonomous shoot cluster.
 func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -259,6 +267,14 @@ func (r *Reconciler) reconcile(
 		gardenerValues["gardener"].(map[string]any)["garden"].(map[string]any)["genericKubeconfigSecretName"] = genericGardenKubeconfigSecretName
 	}
 
+	if r.BootstrapControlPlaneNode {
+		ports, err := r.CalculateUsablePorts()
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to calculate usable ports: %w", err)
+		}
+		gardenerValues["usablePorts"] = ports
+	}
+
 	archive := controllerDeployment.Helm.RawChart
 	if len(archive) == 0 {
 		var err error
@@ -324,6 +340,7 @@ func (r *Reconciler) reconcile(
 				})
 			})
 		},
+		r.MutateSpecForControlPlaneNodeBootstrapping,
 	); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
 	}
@@ -554,4 +571,36 @@ func objectEnablesGardenKubeconfig(o runtime.Object) bool {
 
 	v, ok := obj.GetLabels()[v1beta1constants.LabelInjectGardenKubeconfig]
 	return !ok || v == "true"
+}
+
+// MutateSpecForControlPlaneNodeBootstrapping adapts host network, replicas, tolerations and usable ports range for
+// autonomous shoot clusters if necessary.
+func (r *Reconciler) MutateSpecForControlPlaneNodeBootstrapping(obj runtime.Object) error {
+	if !r.BootstrapControlPlaneNode {
+		return nil
+	}
+
+	if deployment, ok := obj.(*appsv1.Deployment); ok {
+		deployment.Spec.Replicas = ptr.To(int32(1))
+	}
+	return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
+		podSpec.HostNetwork = r.BootstrapControlPlaneNode
+		podSpec.Tolerations = append(podSpec.Tolerations,
+			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
+			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
+		)
+	})
+}
+
+// CalculateUsablePorts returns the next usable port range for the next controller installation.
+func (r *Reconciler) CalculateUsablePorts() ([]int, error) {
+	var ports []int
+	for i := 0; i < usablePortsRangeSize; i++ {
+		p, _, err := netutils.SuggestPort("")
+		if err != nil {
+			return nil, fmt.Errorf("failed to find a usable port: %w", err)
+		}
+		ports = append(ports, p)
+	}
+	return ports, nil
 }
