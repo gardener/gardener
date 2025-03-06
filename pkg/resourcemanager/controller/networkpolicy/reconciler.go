@@ -120,9 +120,8 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 
 	namespaceNames := sets.New(service.Namespace)
 
-	for _, n := range namespaceSelectors {
-		namespaceSelector := n
 
+	for _, namespaceSelector := range namespaceSelectors {
 		selector, err := metav1.LabelSelectorAsSelector(&namespaceSelector)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing %s to labels.Selector: %w", namespaceSelector, err)
