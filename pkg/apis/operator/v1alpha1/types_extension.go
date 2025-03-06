@@ -83,6 +83,10 @@ type ExtensionDeploymentSpec struct {
 	// An empty list means that all seeds are selected.
 	// +optional
 	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty"`
+	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+	// resources.
+	// +optional
+	InjectGardenKubeconfig *bool `json:"injectGardenKubeconfig,omitempty"`
 }
 
 // AdmissionDeploymentSpec contains the deployment specification for the admission controller of an extension.

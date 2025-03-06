@@ -152,6 +152,11 @@ spec:
                                 type: string
                             type: object
                         type: object
+                      injectGardenKubeconfig:
+                        description: |-
+                          InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+                          resources.
+                        type: boolean
                       policy:
                         description: Policy controls how the controller is deployed.
                           It defaults to 'OnDemand'.
