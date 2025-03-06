@@ -81,6 +81,7 @@ var _ = Describe("ControllerRegistration", func() {
 								},
 							},
 						},
+						InjectGardenKubeconfig: ptr.To(true),
 					},
 				},
 			},
@@ -106,6 +107,7 @@ var _ = Describe("ControllerRegistration", func() {
 							Ref: ptr.To(ociRef),
 						},
 					},
+					InjectGardenKubeconfig: ptr.To(true),
 				},
 				&gardencorev1beta1.ControllerRegistration{
 					ObjectMeta: metav1.ObjectMeta{

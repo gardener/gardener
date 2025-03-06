@@ -27,4 +27,4 @@ metadata:
 #        ociRepository: {}
 #      policy: OnDemand|Always
 #      seedSelector: {}
-
+#      injectGardenKubeconfig: true

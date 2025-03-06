@@ -1270,6 +1270,19 @@ considered for a deployment.
 An empty list means that all seeds are selected.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>injectGardenKubeconfig</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+resources.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.ExtensionHelm">ExtensionHelm
