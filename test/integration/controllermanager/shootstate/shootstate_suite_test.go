@@ -2,11 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package state_test
+package shootstate_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -26,7 +25,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/state/finalizer"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shootstate"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
@@ -104,7 +103,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Setup finalizer reconciler")
-	Expect((&finalizer.Reconciler{
+	Expect((&shootstate.Reconciler{
 		Config: controllermanagerconfigv1alpha1.ShootStateControllerConfiguration{
 			ConcurrentSyncs: ptr.To(5),
 		},
@@ -113,7 +112,6 @@ var _ = BeforeSuite(func() {
 	mgrContext, mgrCancel = context.WithCancel(ctx)
 	go func() {
 		defer GinkgoRecover()
-		fmt.Println("STARTING THE CONTROLLER MANAGER")
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 })
