@@ -27,7 +27,7 @@ var _ = Describe("Reconciler", func() {
 		reconciler = &Reconciler{}
 	})
 
-	Describe("#BootstrapControlPlaneNodeFunc", func() {
+	Describe("#MutateSpecForControlPlaneNodeBootstrapping", func() {
 		var (
 			pod         *corev1.Pod
 			deployment  *appsv1.Deployment
@@ -50,27 +50,27 @@ var _ = Describe("Reconciler", func() {
 			reconciler.BootstrapControlPlaneNode = false
 
 			p := pod.DeepCopy()
-			Expect(reconciler.BootstrapControlPlaneNodeFunc(p)).To(Succeed())
+			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(p)).To(Succeed())
 			Expect(p).To(Equal(pod))
 
 			d := deployment.DeepCopy()
-			Expect(reconciler.BootstrapControlPlaneNodeFunc(d)).To(Succeed())
+			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(d)).To(Succeed())
 			Expect(d).To(Equal(deployment))
 
 			s := statefulSet.DeepCopy()
-			Expect(reconciler.BootstrapControlPlaneNodeFunc(s)).To(Succeed())
+			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(s)).To(Succeed())
 			Expect(s).To(Equal(statefulSet))
 
 			ds := daemonSet.DeepCopy()
-			Expect(reconciler.BootstrapControlPlaneNodeFunc(ds)).To(Succeed())
+			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(ds)).To(Succeed())
 			Expect(ds).To(Equal(daemonSet))
 
 			j := job.DeepCopy()
-			Expect(reconciler.BootstrapControlPlaneNodeFunc(j)).To(Succeed())
+			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(j)).To(Succeed())
 			Expect(j).To(Equal(job))
 
 			c := cronJob.DeepCopy()
-			Expect(reconciler.BootstrapControlPlaneNodeFunc(c)).To(Succeed())
+			Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(c)).To(Succeed())
 			Expect(c).To(Equal(cronJob))
 		})
 
@@ -110,15 +110,15 @@ var _ = Describe("Reconciler", func() {
 					checkHostNetworkAndTolerations(&cronJob.Spec.JobTemplate.Spec.Template.Spec)
 				}},
 			} {
-				Expect(reconciler.BootstrapControlPlaneNodeFunc(obj.object)).To(Succeed(), "for %T", obj.object)
+				Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(obj.object)).To(Succeed(), "for %T", obj.object)
 				obj.checkFunc()
 			}
 		})
 	})
 
-	Describe("#CalculateNextUsablePorts", func() {
+	Describe("#CalculateUsablePorts", func() {
 		It("should calculate usable ports range", func() {
-			ports, err := reconciler.CalculateNextUsablePorts()
+			ports, err := reconciler.CalculateUsablePorts()
 			Expect(err).To(Succeed())
 			Expect(ports).To(HaveLen(5))
 			allocatedPorts := map[int]struct{}{}
@@ -131,14 +131,14 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should not have any overlap between two calls", func() {
-			ports, err := reconciler.CalculateNextUsablePorts()
+			ports, err := reconciler.CalculateUsablePorts()
 			Expect(err).To(Succeed())
 			allocatedPorts := map[int]struct{}{}
 			for _, p := range ports {
 				Expect(allocatedPorts).NotTo(HaveKey(p))
 				allocatedPorts[p] = struct{}{}
 			}
-			ports, err = reconciler.CalculateNextUsablePorts()
+			ports, err = reconciler.CalculateUsablePorts()
 			Expect(err).To(Succeed())
 			for _, p := range ports {
 				Expect(allocatedPorts).NotTo(HaveKey(p))

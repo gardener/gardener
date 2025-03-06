@@ -268,9 +268,9 @@ func (r *Reconciler) reconcile(
 	}
 
 	if r.BootstrapControlPlaneNode {
-		ports, err := r.CalculateNextUsablePorts()
+		ports, err := r.CalculateUsablePorts()
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to calculate usable port range: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to calculate usable ports: %w", err)
 		}
 		gardenerValues["usablePorts"] = ports
 	}
@@ -340,7 +340,7 @@ func (r *Reconciler) reconcile(
 				})
 			})
 		},
-		r.BootstrapControlPlaneNodeFunc,
+		r.MutateSpecForControlPlaneNodeBootstrapping,
 	); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
 	}
@@ -573,9 +573,9 @@ func objectEnablesGardenKubeconfig(o runtime.Object) bool {
 	return !ok || v == "true"
 }
 
-// BootstrapControlPlaneNodeFunc adapts host network, replicas, tolerations and usable ports range for autonomous shoot
-// clusters if necessary.
-func (r *Reconciler) BootstrapControlPlaneNodeFunc(obj runtime.Object) error {
+// MutateSpecForControlPlaneNodeBootstrapping adapts host network, replicas, tolerations and usable ports range for
+// autonomous shoot clusters if necessary.
+func (r *Reconciler) MutateSpecForControlPlaneNodeBootstrapping(obj runtime.Object) error {
 	if !r.BootstrapControlPlaneNode {
 		return nil
 	}
@@ -592,13 +592,13 @@ func (r *Reconciler) BootstrapControlPlaneNodeFunc(obj runtime.Object) error {
 	})
 }
 
-// CalculateNextUsablePorts returns the next usable port range for the next controller installation.
-func (r *Reconciler) CalculateNextUsablePorts() ([]int, error) {
+// CalculateUsablePorts returns the next usable port range for the next controller installation.
+func (r *Reconciler) CalculateUsablePorts() ([]int, error) {
 	var ports []int
 	for i := 0; i < usablePortsRangeSize; i++ {
 		p, _, err := netutils.SuggestPort("")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to find a usable port: %w", err)
 		}
 		ports = append(ports, p)
 	}
