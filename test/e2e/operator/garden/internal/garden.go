@@ -120,6 +120,24 @@ func ItShouldWaitForGardenToBeReconciledAndHealthy(s *GardenContext) {
 	}, SpecTimeout(15*time.Minute))
 }
 
+// ItShouldAnnotateGarden sets the given annotation within the garden metadata to the specified value and patches the garden object
+func ItShouldAnnotateGarden(s *GardenContext, annotations map[string]string) {
+	GinkgoHelper()
+
+	It("Annotate Garden", func(ctx SpecContext) {
+		patch := client.MergeFrom(s.Garden.DeepCopy())
+
+		for annotationKey, annotationValue := range annotations {
+			s.Log.Info("Setting annotation", "annotation", annotationKey, "value", annotationValue)
+			metav1.SetMetaDataAnnotation(&s.Garden.ObjectMeta, annotationKey, annotationValue)
+		}
+
+		Eventually(ctx, func() error {
+			return s.GardenClient.Patch(ctx, s.Garden, patch)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
 // ItShouldInitializeVirtualClusterClient initialized the contexts virtual cluster client from the "gardener" secret in the garden namespace
 func ItShouldInitializeVirtualClusterClient(s *GardenContext) {
 	GinkgoHelper()
