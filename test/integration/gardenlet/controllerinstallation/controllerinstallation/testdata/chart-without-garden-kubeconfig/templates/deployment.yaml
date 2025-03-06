@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment
+  namespace: {{ .Release.Namespace }}
+  labels:
+    extensions.gardener.cloud/inject-garden-kubeconfig: "false"
+spec:
+  template:
+    spec:
+      containers:
+      - name: test

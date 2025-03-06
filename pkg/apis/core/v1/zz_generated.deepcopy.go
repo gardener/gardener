@@ -24,6 +24,11 @@ func (in *ControllerDeployment) DeepCopyInto(out *ControllerDeployment) {
 		*out = new(HelmControllerDeployment)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.InjectGardenKubeconfig != nil {
+		in, out := &in.InjectGardenKubeconfig, &out.InjectGardenKubeconfig
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

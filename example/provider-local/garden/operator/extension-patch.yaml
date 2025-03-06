@@ -15,6 +15,7 @@ spec:
           images:
           - name: machine-controller-manager-provider-local
             ref: local-skaffold/machine-controller-manager-provider-local
+      injectGardenKubeconfig: true
     admission:
       values:
         logLevel: debug

@@ -149,6 +149,7 @@ spec:
           requests:
             cpu: 30m
             memory: 256Mi
+      injectGardenKubeconfig: true
   resources:
   - kind: BackupBucket
     type: openstack

@@ -606,6 +606,11 @@ func (in *ExtensionDeploymentSpec) DeepCopyInto(out *ExtensionDeploymentSpec) {
 		*out = new(metav1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.InjectGardenKubeconfig != nil {
+		in, out := &in.InjectGardenKubeconfig, &out.InjectGardenKubeconfig
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

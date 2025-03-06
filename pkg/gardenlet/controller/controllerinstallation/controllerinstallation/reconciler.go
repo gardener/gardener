@@ -13,7 +13,10 @@ import (
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +28,7 @@ import (
 	"k8s.io/component-base/featuregate"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -139,21 +143,19 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	var helmDeployment *gardencorev1.HelmControllerDeployment
+	controllerDeployment := &gardencorev1.ControllerDeployment{}
 	if deploymentRef := controllerInstallation.Spec.DeploymentRef; deploymentRef != nil {
-		controllerDeployment := &gardencorev1.ControllerDeployment{}
 		if err := r.GardenClient.Get(gardenCtx, client.ObjectKey{Name: deploymentRef.Name}, controllerDeployment); err != nil {
 			return reconcile.Result{}, err
 		}
 		if controllerDeployment.Helm == nil {
 			return reconcile.Result{}, nil
 		}
-		helmDeployment = controllerDeployment.Helm
 	}
 
 	var helmValues map[string]interface{}
-	if helmDeployment != nil && helmDeployment.Values != nil {
-		if err := json.Unmarshal(helmDeployment.Values.Raw, &helmValues); err != nil {
+	if controllerDeployment.Helm != nil && controllerDeployment.Helm.Values != nil {
+		if err := json.Unmarshal(controllerDeployment.Helm.Values.Raw, &helmValues); err != nil {
 			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("chart values cannot be unmarshalled: %+v", err))
 			return reconcile.Result{}, err
 		}
@@ -190,17 +192,23 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, fmt.Errorf("cluster-identity of seed '%s' not set", seed.Name)
 	}
 
-	genericGardenKubeconfigSecretName, err := r.reconcileGenericGardenKubeconfig(seedCtx, namespace.Name)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to reconcile generic garden kubeconfig: %w", err)
-	}
+	var (
+		injectGardenKubeconfig            = ptr.Deref(controllerDeployment.InjectGardenKubeconfig, false)
+		genericGardenKubeconfigSecretName string
+	)
 
-	gardenAccessSecret, err := r.reconcileGardenAccessSecret(seedCtx, controllerRegistration.Name, controllerInstallation.Name, namespace.Name)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to reconcile garden access secret: %w", err)
+	if injectGardenKubeconfig {
+		genericGardenKubeconfigSecretName, err = r.reconcileGenericGardenKubeconfig(seedCtx, namespace.Name)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to reconcile generic garden kubeconfig: %w", err)
+		}
 	}
 
 	var (
+		gardenAccessSecret = gardenerutils.NewGardenAccessSecret("extension", namespace.Name).
+					WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name).
+					WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
+
 		volumeProvider  string
 		volumeProviders []gardencorev1beta1.SeedVolumeProvider
 	)
@@ -222,8 +230,7 @@ func (r *Reconciler) reconcile(
 		"gardener": map[string]any{
 			"version": r.Identity.Version,
 			"garden": map[string]any{
-				"clusterIdentity":             r.GardenClusterIdentity,
-				"genericKubeconfigSecretName": genericGardenKubeconfigSecretName,
+				"clusterIdentity": r.GardenClusterIdentity,
 			},
 			"seed": map[string]any{
 				"name":            seed.Name,
@@ -248,10 +255,14 @@ func (r *Reconciler) reconcile(
 		},
 	}
 
-	archive := helmDeployment.RawChart
+	if genericGardenKubeconfigSecretName != "" {
+		gardenerValues["gardener"].(map[string]any)["garden"].(map[string]any)["genericKubeconfigSecretName"] = genericGardenKubeconfigSecretName
+	}
+
+	archive := controllerDeployment.Helm.RawChart
 	if len(archive) == 0 {
 		var err error
-		archive, err = r.HelmRegistry.Pull(seedCtx, helmDeployment.OCIRepository)
+		archive, err = r.HelmRegistry.Pull(seedCtx, controllerDeployment.Helm.OCIRepository)
 		if err != nil {
 			conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionFalse, "OCIChartCannotBePulled", fmt.Sprintf("chart pulling process failed: %+v", err))
 			return reconcile.Result{}, err
@@ -266,14 +277,42 @@ func (r *Reconciler) reconcile(
 	conditionValid = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditionValid, gardencorev1beta1.ConditionTrue, "RegistrationValid", "chart could be rendered successfully.")
 	secretData := release.AsSecretData()
 
+	mustInjectGardenKubeconfig, err := needsGardenKubeconfig(injectGardenKubeconfig, secretData)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to check whether garden kubeconfig injection is needed: %w", err)
+	}
+
+	if mustInjectGardenKubeconfig {
+		log.Info("Reconciling garden access secret")
+		if err := gardenAccessSecret.Reconcile(seedCtx, r.SeedClientSet.Client()); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to reconcile garden access secret: %w", err)
+		}
+
+		if err := gardenerutils.MutateObjectsInSecretData(
+			secretData,
+			namespace.Name,
+			[]string{appsv1.GroupName, batchv1.GroupName},
+			// Inject generic kubeconfig
+			func(obj runtime.Object) error {
+				if !objectEnablesGardenKubeconfig(obj) {
+					return nil
+				}
+				return gardenerutils.InjectGenericGardenKubeconfig(obj, genericGardenKubeconfigSecretName, gardenAccessSecret.Secret.Name, gardenerutils.VolumeMountPathGenericGardenKubeconfig)
+			},
+		); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
+		}
+	} else {
+		log.Info("Deleting garden access secret")
+		if err := r.SeedClientSet.Client().Delete(seedCtx, gardenAccessSecret.Secret); client.IgnoreNotFound(err) != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to delete garden access secret: %w", err)
+		}
+	}
+
 	if err := gardenerutils.MutateObjectsInSecretData(
 		secretData,
 		namespace.Name,
 		[]string{appsv1.GroupName, batchv1.GroupName},
-		// Inject generic kubeconfig
-		func(obj runtime.Object) error {
-			return gardenerutils.InjectGenericGardenKubeconfig(obj, genericGardenKubeconfigSecretName, gardenAccessSecret.Secret.Name, gardenerutils.VolumeMountPathGenericGardenKubeconfig)
-		},
 		// Set seed name
 		func(obj runtime.Object) error {
 			return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
@@ -284,7 +323,8 @@ func (r *Reconciler) reconcile(
 					}, true)
 				})
 			})
-		}); err != nil {
+		},
+	); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to inject garden access secrets: %w", err)
 	}
 
@@ -462,10 +502,56 @@ func (r *Reconciler) reconcileGenericGardenKubeconfig(ctx context.Context, names
 	return kubeconfigSecret.Name, client.IgnoreAlreadyExists(r.SeedClientSet.Client().Create(ctx, kubeconfigSecret))
 }
 
-func (r *Reconciler) reconcileGardenAccessSecret(ctx context.Context, controllerRegistrationName, controllerInstallationName string, namespace string) (*gardenerutils.AccessSecret, error) {
-	accessSecret := gardenerutils.NewGardenAccessSecret("extension", namespace).
-		WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallationName).
-		WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistrationName})
+func needsGardenKubeconfig(injectGardenKubeconfig bool, secretData map[string][]byte) (bool, error) {
+	if !injectGardenKubeconfig {
+		return false, nil
+	}
 
-	return accessSecret, accessSecret.Reconcile(ctx, r.SeedClientSet.Client())
+	objects, err := gardenerutils.ObjectsInSecretData(secretData)
+	if err != nil {
+		return false, fmt.Errorf("failed reading objects in secret data: %w", err)
+	}
+
+	for _, o := range objects {
+		switch o.GetObjectKind().GroupVersionKind() {
+		case corev1.SchemeGroupVersion.WithKind("Pod"):
+			fallthrough
+		case appsv1.SchemeGroupVersion.WithKind("Deployment"):
+			fallthrough
+		case appsv1beta2.SchemeGroupVersion.WithKind("Deployment"):
+			fallthrough
+		case appsv1beta1.SchemeGroupVersion.WithKind("Deployment"):
+			fallthrough
+		case appsv1.SchemeGroupVersion.WithKind("StatefulSet"):
+			fallthrough
+		case appsv1beta2.SchemeGroupVersion.WithKind("StatefulSet"):
+			fallthrough
+		case appsv1beta1.SchemeGroupVersion.WithKind("StatefulSet"):
+			fallthrough
+		case appsv1.SchemeGroupVersion.WithKind("DaemonSet"):
+			fallthrough
+		case appsv1beta2.SchemeGroupVersion.WithKind("DaemonSet"):
+			fallthrough
+		case batchv1.SchemeGroupVersion.WithKind("Job"):
+			fallthrough
+		case batchv1.SchemeGroupVersion.WithKind("CronJob"):
+			fallthrough
+		case batchv1beta1.SchemeGroupVersion.WithKind("CronJob"):
+			if objectEnablesGardenKubeconfig(o) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
+}
+
+func objectEnablesGardenKubeconfig(o runtime.Object) bool {
+	obj, ok := o.(client.Object)
+	if !ok {
+		return false
+	}
+
+	v, ok := obj.GetLabels()[v1beta1constants.LabelInjectGardenKubeconfig]
+	return !ok || v == "true"
 }

@@ -23,6 +23,10 @@ type ControllerDeployment struct {
 	// Helm configures that an extension controller is deployed using helm.
 	// +optional
 	Helm *HelmControllerDeployment `json:"helm,omitempty" protobuf:"bytes,2,opt,name=helm"`
+	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+	// resources.
+	// +optional
+	InjectGardenKubeconfig *bool `json:"injectGardenKubeconfig,omitempty" protobuf:"varint,3,opt,name=injectGardenKubeconfig"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
