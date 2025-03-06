@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package finalizer_test
+package shootstate_test
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/state/finalizer"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shootstate"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -33,7 +33,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 
 		shoot      *gardencorev1beta1.Shoot
 		shootState *gardencorev1beta1.ShootState
-		reconciler *finalizer.Reconciler
+		reconciler *shootstate.Reconciler
 
 		lastOpMigrateProcessing   func() *gardencorev1beta1.LastOperation
 		lastOpRestoreProcessing   func() *gardencorev1beta1.LastOperation
@@ -50,7 +50,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-		reconciler = &finalizer.Reconciler{
+		reconciler = &shootstate.Reconciler{
 			Client: c,
 		}
 
@@ -123,13 +123,13 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			createDefaultShootState()
 
 			By("Add finalizer to the default ShootState")
-			err := controllerutils.AddFinalizers(ctx, c, shootState, finalizer.FinalizerName)
+			err := controllerutils.AddFinalizers(ctx, c, shootState, shootstate.FinalizerName)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Verify that finalizer is added")
 			shootStateWithFinalizer := &gardencorev1beta1.ShootState{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), shootStateWithFinalizer)).To(Succeed())
-			Expect(shootStateWithFinalizer.GetFinalizers()).To(ConsistOf(finalizer.FinalizerName))
+			Expect(shootStateWithFinalizer.GetFinalizers()).To(ConsistOf(shootstate.FinalizerName))
 
 			return shootStateWithFinalizer
 		}
@@ -163,7 +163,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			By("Verify that finalizer is present")
 			actualShootState := &gardencorev1beta1.ShootState{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
-			Expect(actualShootState.GetFinalizers()).To(ConsistOf(finalizer.FinalizerName))
+			Expect(actualShootState.GetFinalizers()).To(ConsistOf(shootstate.FinalizerName))
 		})
 
 		It("should not add/duplicate finalizer if already present", func() {
@@ -178,7 +178,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			actualShootState := &gardencorev1beta1.ShootState{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
 			Expect(actualShootState.GetFinalizers()).To(HaveLen(1))
-			Expect(actualShootState.GetFinalizers()).To(ConsistOf(finalizer.FinalizerName))
+			Expect(actualShootState.GetFinalizers()).To(ConsistOf(shootstate.FinalizerName))
 		})
 	})
 
@@ -200,7 +200,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 				By("Verify that finalizer is removed")
 				actualShootState := &gardencorev1beta1.ShootState{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
-				Expect(actualShootState.GetFinalizers()).NotTo(ConsistOf(finalizer.FinalizerName))
+				Expect(actualShootState.GetFinalizers()).NotTo(ConsistOf(shootstate.FinalizerName))
 			})
 
 			It("should not fail if finalizer is not present", func() {
@@ -214,7 +214,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 				By("Verify that finalizer is not present")
 				actualShootState := &gardencorev1beta1.ShootState{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
-				Expect(actualShootState.GetFinalizers()).NotTo(ConsistOf(finalizer.FinalizerName))
+				Expect(actualShootState.GetFinalizers()).NotTo(ConsistOf(shootstate.FinalizerName))
 			})
 		})
 
@@ -235,7 +235,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 				By("Verify that finalizer is present")
 				actualShootState := &gardencorev1beta1.ShootState{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
-				Expect(actualShootState.GetFinalizers()).To(ConsistOf(finalizer.FinalizerName))
+				Expect(actualShootState.GetFinalizers()).To(ConsistOf(shootstate.FinalizerName))
 			})
 
 			It("should not remove finalizer", func() {
@@ -249,7 +249,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 				By("Verify that finalizer is present")
 				actualShootState := &gardencorev1beta1.ShootState{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
-				Expect(actualShootState.GetFinalizers()).To(ConsistOf(finalizer.FinalizerName))
+				Expect(actualShootState.GetFinalizers()).To(ConsistOf(shootstate.FinalizerName))
 			})
 		})
 	})
@@ -271,7 +271,7 @@ var _ = Describe("ShootState Finalizer Reconciler", func() {
 			By("Verify that finalizer is not present")
 			actualShootState := &gardencorev1beta1.ShootState{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), actualShootState)).To(Succeed())
-			Expect(actualShootState.GetFinalizers()).NotTo(ConsistOf(finalizer.FinalizerName))
+			Expect(actualShootState.GetFinalizers()).NotTo(ConsistOf(shootstate.FinalizerName))
 		})
 	})
 })
