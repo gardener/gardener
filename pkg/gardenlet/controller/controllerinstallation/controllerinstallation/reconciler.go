@@ -214,8 +214,8 @@ func (r *Reconciler) reconcile(
 
 	var (
 		gardenAccessSecret = gardenerutils.NewGardenAccessSecret("extension", namespace.Name).
-			WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name).
-			WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
+					WithServiceAccountName(v1beta1constants.ExtensionGardenServiceAccountPrefix + controllerInstallation.Name).
+					WithServiceAccountLabels(map[string]string{v1beta1constants.LabelControllerRegistrationName: controllerRegistration.Name})
 
 		volumeProvider  string
 		volumeProviders []gardencorev1beta1.SeedVolumeProvider
