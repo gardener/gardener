@@ -28,6 +28,7 @@ const FinalizerName = "core.gardener.cloud/shootstate"
 type Reconciler struct {
 	// Client is the API Server client used by the Reconciler.
 	Client client.Client
+	// Config is the configuration used by the Reconciler.
 	Config controllermanagerconfigv1alpha1.ShootStateControllerConfiguration
 }
 
@@ -38,18 +39,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	shootState := &gardencorev1beta1.ShootState{}
 	if err := r.Client.Get(ctx, request.NamespacedName, shootState); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.V(1).Info("Did not manage to retrieve ShootState object")
+			log.V(1).Info("Object is gone, stop reconciling")
 			// Since reconciliation runs on Shoot update, we should not
 			// flood the logs with errors when a migration is not initiated
 			// and the `ShootState` is not supposed to exist.
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.Client.Get(ctx, request.NamespacedName, shoot); err != nil {
-		log.Info("Did not manage to retrieve Shoot for the given ShootState")
 		return reconcile.Result{}, fmt.Errorf("error retrieving Shoot from store: %w", err)
 	}
 
@@ -84,7 +84,5 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 		return reconcile.Result{}, nil
 	}
-
-	log.Info("No changes applied to the ShootState")
 	return reconcile.Result{}, nil
 }
