@@ -377,9 +377,6 @@ The main purpose of this constraint is to allow the `gardenlet` running in the s
 
 #### ["ShootState Finalizer" Reconciler](../../pkg/controllermanager/controller/shoot/state/finalizer)
 
-This reconciler is responsible for managing a `ShootState` finalizer that
-ensures the object existence during migration of `Shoot`s control plane
-to another `Seed`.
+This reconciler is responsible for managing a `ShootState` finalizer that ensures the object existence during migration of `Shoot`s control plane to another `Seed`.
 
-The main goal is to keep the `ShootState` present during the `Migrate` and
-`Restore` operations that are not yet finished successfully.
+The main goal is to keep the `ShootState` present during the `Migrate` and `Restore` operations that are not yet finished successfully.
