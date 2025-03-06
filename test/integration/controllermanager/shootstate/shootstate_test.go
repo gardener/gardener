@@ -16,6 +16,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shootstate"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -54,7 +55,7 @@ var _ = Describe("ShootState controller test", func() {
 					Domain: ptr.To("some-domain.example.com"),
 				},
 				Kubernetes: gardencorev1beta1.Kubernetes{
-					Version: "1.25.1",
+					Version: "1.32.0",
 				},
 				Networking: &gardencorev1beta1.Networking{
 					Type: ptr.To("foo-networking"),
@@ -71,13 +72,10 @@ var _ = Describe("ShootState controller test", func() {
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
 		By("Create ShootState")
-		shootPersisted := &gardencorev1beta1.Shoot{}
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shootPersisted)).To(Succeed())
-
 		shootState = &gardencorev1beta1.ShootState{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: testNamespace.Name,
-				Name:      shootPersisted.Name,
+				Name:      shoot.Name,
 				Labels:    map[string]string{testID: testRunID},
 			},
 		}
@@ -88,7 +86,13 @@ var _ = Describe("ShootState controller test", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 
 			By("Delete ShootState")
+			Expect(controllerutils.RemoveFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootState))).To(Succeed())
+
+			By("Ensure ShootState is gone")
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)
+			}).Should(BeNotFoundError())
 
 			By("Ensure Shoot is gone")
 			Eventually(func() error {

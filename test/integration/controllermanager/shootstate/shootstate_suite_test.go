@@ -33,7 +33,7 @@ import (
 
 func TestState(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "State Suite")
+	RunSpecs(t, "Shoot State Suite")
 }
 
 const (
