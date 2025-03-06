@@ -501,6 +501,43 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
 		})
+
+		It("should merge MachineImages with overridden updateStrategy correctly", func() {
+			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+				{
+					Name:           "test-image",
+					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMinor),
+				},
+			}
+
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
+				namespacedCloudProfile.DeepCopyInto(obj)
+				return nil
+			})
+
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
+
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+				cloudProfile.DeepCopyInto(obj)
+				return nil
+			})
+
+			gomock.InOrder(
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(And(
+						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"minor","versions":[`),
+						ContainSubstring(`{"architectures":["amd64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}`),
+						ContainSubstring(`]}],"machineTypes":[]}}}`),
+					))
+					return nil
+				}),
+			)
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).ToNot(HaveOccurred())
+		})
 	})
 
 	Context("merge machine types", func() {

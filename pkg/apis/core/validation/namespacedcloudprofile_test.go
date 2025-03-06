@@ -296,20 +296,12 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					}))))
 				})
 
-				It("should forbid machine images with no version", func() {
+				It("should allow machine images that only override the update strategy", func() {
 					namespacedCloudProfile.Spec.MachineImages = []core.MachineImage{
-						{Name: machineImageName},
+						{Name: machineImageName, UpdateStrategy: ptr.To(core.UpdateStrategyMajor)},
 					}
 
-					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.machineImages[0].versions"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.machineImages"),
-					}))))
+					Expect(ValidateNamespacedCloudProfile(namespacedCloudProfile)).To(BeEmpty())
 				})
 
 				It("should allow providing new machine image versions with all fields filled out", func() {
