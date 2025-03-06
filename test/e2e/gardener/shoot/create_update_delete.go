@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,15 +21,15 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/zerodowntimevalidator"
 	"github.com/gardener/gardener/test/utils/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
-	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
 )
 
 const (
@@ -128,49 +127,25 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
 			}
 
-			var (
-				zeroDowntimeJob *batchv1.Job
-
-				cloudProfile *gardencorev1beta1.CloudProfile
-
-				controlPlaneKubernetesVersion string
-				poolNameToKubernetesVersion   map[string]string
-			)
-
+			zeroDowntimeValidatorJob := &zerodowntimevalidator.Job{}
 			if v1beta1helper.IsHAControlPlaneConfigured(s.Shoot) {
-				It("Deploy zero-downtime validator job to ensure no kube-apiserver downtime while running subsequent operations", func(ctx SpecContext) {
-					Eventually(ctx, func(g Gomega) {
-						var err error
-						controlPlaneNamespace := s.Shoot.Status.TechnicalID
-						zeroDowntimeJob, err = highavailability.DeployZeroDownTimeValidatorJob(
-							ctx,
-							s.SeedClient, "update", controlPlaneNamespace,
-							shootupdatesuite.GetKubeAPIServerAuthToken(
-								ctx,
-								s.SeedClientSet,
-								controlPlaneNamespace,
-							),
-						)
-						g.Expect(err).NotTo(HaveOccurred())
-					}).Should(Succeed())
-				}, SpecTimeout(time.Minute))
-
-				It("Wait for zero-downtime validator job to be ready", func(ctx SpecContext) {
-					shootupdatesuite.WaitForJobToBeReady(ctx, s.SeedClient, zeroDowntimeJob)
-				}, SpecTimeout(time.Minute))
-
-				AfterAll(func(ctx SpecContext) {
-					Expect(s.SeedClient.Delete(ctx, zeroDowntimeJob, client.PropagationPolicy(metav1.DeletePropagationForeground))).
-						To(Or(Succeed(), BeNotFoundError()))
-				}, NodeTimeout(time.Minute))
+				zeroDowntimeValidatorJob.ItShouldDeployJob(s)
+				zeroDowntimeValidatorJob.ItShouldWaitForJobToBeReady(s)
+				zeroDowntimeValidatorJob.AfterAllDeleteJob(s)
 			}
 
 			verifyNodeKubernetesVersions(s)
 
+			var (
+				cloudProfile                  *gardencorev1beta1.CloudProfile
+				controlPlaneKubernetesVersion string
+				poolNameToKubernetesVersion   map[string]string
+			)
+
 			It("Get CloudProfile", func(ctx SpecContext) {
 				Eventually(ctx, func() error {
 					var err error
-					cloudProfile, err = gardener.GetCloudProfile(ctx, s.GardenClient, s.Shoot)
+					cloudProfile, err = gardenerutils.GetCloudProfile(ctx, s.GardenClient, s.Shoot)
 					return err
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
@@ -202,11 +177,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldInitializeShootClient(s)
 			verifyNodeKubernetesVersions(s)
 
-			if zeroDowntimeJob != nil {
-				It("Ensure there was no downtime while upgrading shoot", func(ctx SpecContext) {
-					Eventually(ctx, s.SeedKomega.Get(zeroDowntimeJob)).Should(Succeed())
-					Expect(zeroDowntimeJob.Status.Failed).To(BeZero())
-				}, SpecTimeout(time.Minute))
+			if v1beta1helper.IsHAControlPlaneConfigured(s.Shoot) {
+				zeroDowntimeValidatorJob.ItShouldEnsureThereWasNoDowntime(s)
 			}
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
