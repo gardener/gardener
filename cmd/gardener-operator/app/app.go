@@ -180,7 +180,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *o
 
 	log.Info("Adding webhook handlers to manager")
 	if err := webhook.AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding webhook handlers to manager: %w", err)
+		return err
 	}
 
 	gardenClientMap, err := clientmapbuilder.

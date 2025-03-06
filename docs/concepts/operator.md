@@ -627,6 +627,10 @@ As of today, the `gardener-operator` only has one webhook handler which is now d
 
 ### Validation
 
+The validation webhook consists of the following handlers.
+
+#### `Garden`
+
 This webhook handler validates `CREATE`/`UPDATE`/`DELETE` operations on `Garden` resources.
 Simple validation is performed via [standard CRD validation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation).
 However, more advanced validation is hard to express via these means and is performed by this webhook handler.
@@ -637,6 +641,11 @@ This prevents users from accidental/undesired deletions.
 
 Another validation is to check that there is only one `Garden` resource at a time.
 It prevents creating a second `Garden` when there is already one in the system.
+
+#### `Extension`
+
+This webhook handler denies `DELETE` requests for `Extension` resources that are reported as required (also see [required-runtime](#required-runtime-reconciler) and [required-virtual](#required-virtual-reconciler)).
+These deletions often happen accidentally, and this handler safeguards the system from such actions.
 
 ### Defaulting
 

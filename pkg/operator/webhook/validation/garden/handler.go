@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package validation
+package garden
 
 import (
 	"context"
@@ -28,33 +28,8 @@ type Handler struct {
 	RuntimeClient client.Client
 }
 
-func validate(garden *operatorv1alpha1.Garden) (admission.Warnings, error) {
-	if errs := validation.ValidateGarden(garden); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), garden.Name, errs)
-	}
-
-	return nil, nil
-}
-
-func validateUpdate(oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	oldGarden, ok := oldObj.(*operatorv1alpha1.Garden)
-	if !ok {
-		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", oldObj)
-	}
-	newGarden, ok := newObj.(*operatorv1alpha1.Garden)
-	if !ok {
-		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", newObj)
-	}
-
-	if errs := validation.ValidateGardenUpdate(oldGarden, newGarden); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), newGarden.Name, errs)
-	}
-
-	return nil, nil
-}
-
-// ForbiddenFinalizersOnCreation is a list of finalizers which are forbidden to be specified on Garden creation.
-var ForbiddenFinalizersOnCreation = sets.New(
+// forbiddenFinalizersOnCreation is a list of finalizers which are forbidden to be specified on Garden creation.
+var forbiddenFinalizersOnCreation = sets.New(
 	operatorv1alpha1.FinalizerName,
 	v1beta1constants.ReferenceProtectionFinalizerName,
 )
@@ -75,17 +50,34 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admis
 	}
 
 	for _, finalizer := range garden.Finalizers {
-		if ForbiddenFinalizersOnCreation.Has(finalizer) {
+		if forbiddenFinalizersOnCreation.Has(finalizer) {
 			return nil, apierrors.NewBadRequest(fmt.Sprintf("finalizer %q cannot be added on creation", finalizer))
 		}
 	}
 
-	return validate(garden)
+	if errs := validation.ValidateGarden(garden); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), garden.Name, errs)
+	}
+
+	return nil, nil
 }
 
 // ValidateUpdate performs the validation.
 func (h *Handler) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	return validateUpdate(oldObj, newObj)
+	oldGarden, ok := oldObj.(*operatorv1alpha1.Garden)
+	if !ok {
+		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", oldObj)
+	}
+	newGarden, ok := newObj.(*operatorv1alpha1.Garden)
+	if !ok {
+		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", newObj)
+	}
+
+	if errs := validation.ValidateGardenUpdate(oldGarden, newGarden); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), newGarden.Name, errs)
+	}
+
+	return nil, nil
 }
 
 // ValidateDelete performs the validation.
