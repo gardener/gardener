@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -1423,8 +1423,8 @@ func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
-						APIVersions: []string{druidv1alpha1.GroupVersion.Version},
+						APIGroups:   []string{druidv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{druidv1alpha1.SchemeGroupVersion.Version},
 						Resources: []string{
 							"etcds",
 						},
@@ -1535,8 +1535,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 		{
 			resource: "etcds",
 			rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
-				APIVersions: []string{druidv1alpha1.GroupVersion.Version},
+				APIGroups:   []string{druidv1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{druidv1alpha1.SchemeGroupVersion.Version},
 				Resources:   []string{"etcds"},
 			},
 			path: extensionvalidation.WebhookPathEtcd,
