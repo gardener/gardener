@@ -228,28 +228,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
 	}
 
-	etcdCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
-	}
-
-	serverSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNamePrefixServer + e.values.Role,
-		CommonName:                  "etcd-server",
-		DNSNames:                    e.clientServiceDNSNames(),
-		CertType:                    secretsutils.ServerClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return err
-	}
-
-	clientSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        SecretNameClient,
-		CommonName:                  "etcd-client",
-		CertType:                    secretsutils.ClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	etcdCASecret, serverSecret, clientSecret, err := GenerateClientServerCertificates(
+		ctx,
+		e.secretsManager,
+		e.values.Role,
+		e.clientServiceDNSNames(),
+	)
 	if err != nil {
 		return err
 	}
@@ -1042,25 +1026,67 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 		return
 	}
 
-	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
+	return GeneratePeerCertificates(ctx, e.secretsManager, e.values.Role, e.peerServiceDNSNames())
+}
+
+// GeneratePeerCertificates generates the peer certificates for the etcd cluster.
+func GeneratePeerCertificates(
+	ctx context.Context,
+	secretsManager secretsmanager.Interface,
+	role string,
+	dnsNames []string,
+) (string, string, error) {
+	etcdPeerCASecret, found := secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
-		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
-		return
+		return "", "", fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 	}
 
-	peerServerSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNamePrefixPeerServer + e.values.Role,
+	peerServerSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:                        secretNamePrefixPeerServer + role,
 		CommonName:                  "etcd-server",
-		DNSNames:                    e.peerServiceDNSNames(),
+		DNSNames:                    dnsNames,
 		CertType:                    secretsutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
-		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
-		return
+		return "", "", fmt.Errorf("failed to generate secret %q: %w", secretNamePrefixPeerServer+role, err)
 	}
 
-	caSecretName = etcdPeerCASecret.Name
-	peerSecretName = peerServerSecret.Name
-	return
+	return etcdPeerCASecret.Name, peerServerSecret.Name, nil
+}
+
+// GenerateClientServerCertificates generates client and server certificates for the etcd cluster.
+func GenerateClientServerCertificates(
+	ctx context.Context,
+	secretsManager secretsmanager.Interface,
+	role string,
+	dnsNames []string,
+) (*corev1.Secret, *corev1.Secret, *corev1.Secret, error) {
+	etcdCASecret, found := secretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	if !found {
+		return nil, nil, nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
+	}
+
+	serverSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:                        secretNamePrefixServer + role,
+		CommonName:                  "etcd-server",
+		DNSNames:                    dnsNames,
+		CertType:                    secretsutils.ServerClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to generate secret %q: %w", secretNamePrefixServer+role, err)
+	}
+
+	clientSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:                        SecretNameClient,
+		CommonName:                  "etcd-client",
+		CertType:                    secretsutils.ClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to generate secret %q: %w", SecretNameClient, err)
+	}
+
+	return etcdCASecret, serverSecret, clientSecret, nil
 }
