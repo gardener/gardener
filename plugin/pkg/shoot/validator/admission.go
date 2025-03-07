@@ -1009,6 +1009,7 @@ func (c *validationContext) validateKubernetes(a admission.Attributes) field.Err
 
 	return allErrs
 }
+
 func (c *validationContext) validateProvider(a admission.Attributes) field.ErrorList {
 	var (
 		allErrs       field.ErrorList
