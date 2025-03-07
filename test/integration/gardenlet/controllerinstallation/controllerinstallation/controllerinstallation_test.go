@@ -176,12 +176,12 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
 
 				configMap := &corev1.ConfigMap{}
-				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
-				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+				g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+				g.Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
 
 				deployment := &appsv1.Deployment{}
-				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
-				Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
+				g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
+				g.Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
 			}).Should(Succeed())
 
 			By("Ensure conditions are maintained correctly")
@@ -263,13 +263,13 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
 
 				configMap := &corev1.ConfigMap{}
-				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
-				Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
+				g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_config.yaml"], configMap)).To(Succeed())
+				g.Expect(yaml.Unmarshal([]byte(configMap.Data["values"]), &values)).To(Succeed())
 
 				deployment := &appsv1.Deployment{}
-				Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
-				Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
-				Expect(deployment.Spec.Template.Spec.Containers[0].Env).To(HaveExactElements(
+				g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
+				g.Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
+				g.Expect(deployment.Spec.Template.Spec.Containers[0].Env).To(HaveExactElements(
 					corev1.EnvVar{Name: "GARDEN_KUBECONFIG", Value: "/var/run/secrets/gardener.cloud/garden/generic-kubeconfig/kubeconfig"},
 					corev1.EnvVar{Name: "SEED_NAME", Value: seed.Name},
 				))
@@ -474,9 +474,9 @@ var _ = Describe("ControllerInstallation controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKey{Namespace: managedResource.Namespace, Name: managedResource.Spec.SecretRefs[0].Name}, secret)).To(Succeed())
 
 					deployment := &appsv1.Deployment{}
-					Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
-					Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
-					Expect(deployment.Spec.Template.Spec.Containers[0].Env).To(HaveExactElements(
+					g.Expect(runtime.DecodeInto(newCodec(), secret.Data["test_templates_deployment.yaml"], deployment)).To(Succeed())
+					g.Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("test"))
+					g.Expect(deployment.Spec.Template.Spec.Containers[0].Env).To(HaveExactElements(
 						corev1.EnvVar{Name: "SEED_NAME", Value: seed.Name},
 					))
 				}).Should(Succeed())
