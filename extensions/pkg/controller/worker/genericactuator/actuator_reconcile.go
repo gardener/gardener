@@ -246,8 +246,10 @@ func deployMachineDeployments(
 				Strategy: machinev1alpha1.MachineDeploymentStrategy{
 					Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
 					RollingUpdate: &machinev1alpha1.RollingUpdateMachineDeployment{
-						MaxSurge:       &deployment.MaxSurge,
-						MaxUnavailable: &deployment.MaxUnavailable,
+						UpdateConfiguration: machinev1alpha1.UpdateConfiguration{
+							MaxSurge:       &deployment.MaxSurge,
+							MaxUnavailable: &deployment.MaxUnavailable,
+						},
 					},
 				},
 				Selector: &metav1.LabelSelector{
