@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 // ControllerName is the name of the controller.
@@ -34,7 +35,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		Named(ControllerName).
 		For(
 			&gardencorev1beta1.ShootState{},
-			builder.WithPredicates(r.ShootStatePredicates()),
+			builder.WithPredicates(predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
 		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
@@ -60,17 +61,55 @@ func (r *Reconciler) MapShootToShootState(_ context.Context, obj client.Object) 
 	return []reconcile.Request{{NamespacedName: namespacedName}}
 }
 
-// ShootStatePredicates returns predicates for ShootState requests acceptance.
-func (r *Reconciler) ShootStatePredicates() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(event.CreateEvent) bool { return true },
-		UpdateFunc: func(event.UpdateEvent) bool { return true },
-	}
-}
-
 // ShootPredicates returns predicates for Shoot requests acceptance.
 func (r *Reconciler) ShootPredicates() predicate.Predicate {
 	return predicate.Funcs{
-		UpdateFunc: func(event.UpdateEvent) bool { return true },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			shoot, ok := e.ObjectNew.(*gardencorev1beta1.Shoot)
+			if !ok || shoot.Status.LastOperation == nil {
+				return false
+			}
+
+			shootOld, ok := e.ObjectOld.(*gardencorev1beta1.Shoot)
+			if !ok || shootOld.Status.LastOperation == nil {
+				return false
+			}
+
+			oldLastOpType := shootOld.Status.LastOperation.Type
+			newLastOpType := shoot.Status.LastOperation.Type
+			newLastOpState := shoot.Status.LastOperation.State
+
+			isOldLastOpReconcile := oldLastOpType == gardencorev1beta1.LastOperationTypeReconcile
+			isOldLastOpMigrate := oldLastOpType == gardencorev1beta1.LastOperationTypeMigrate
+			isOldLastOpRestore := oldLastOpType == gardencorev1beta1.LastOperationTypeRestore
+
+			isNewLastOpReconcile := newLastOpType == gardencorev1beta1.LastOperationTypeReconcile
+			isNewLastOpMigrate := newLastOpType == gardencorev1beta1.LastOperationTypeMigrate
+			isNewLastOpRestore := newLastOpType == gardencorev1beta1.LastOperationTypeRestore
+			isNewLastOpSucceeded := newLastOpState == gardencorev1beta1.LastOperationStateSucceeded
+
+			isMigrating := false
+			if isOldLastOpReconcile && isNewLastOpMigrate {
+				// Shoot last operation gets updated from Reconcile to Migrate type.
+				isMigrating = true
+			} else if isOldLastOpMigrate && isNewLastOpRestore {
+				// Shoot last operation gets updated from Migrate to Restore type.
+				isMigrating = true
+			} else if isOldLastOpRestore && isNewLastOpRestore && isNewLastOpSucceeded {
+				// Shoot last operation gets updated from Restore to Restore type with Succeeded state.
+				isMigrating = true
+			} else if isOldLastOpRestore && isNewLastOpReconcile {
+				// Shoot last operation gets updated from Restore to Reconcile.
+				isMigrating = true
+			}
+
+			isShootStatePresent := true
+			shootState := &gardencorev1beta1.ShootState{}
+			ctx := context.Background()
+			if err := r.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shootState); err != nil {
+				isShootStatePresent = false
+			}
+			return isMigrating && isShootStatePresent
+		},
 	}
 }
