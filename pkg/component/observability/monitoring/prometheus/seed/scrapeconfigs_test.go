@@ -50,14 +50,24 @@ var _ = Describe("ScrapeConfigs", func() {
 								`{job="cadvisor",namespace="kube-system"}`,
 							},
 						},
-						StaticConfigs: []monitoringv1alpha1.StaticConfig{{
-							Targets: []monitoringv1alpha1.Target{"prometheus-cache.garden.svc"},
+						KubernetesSDConfigs: []monitoringv1alpha1.KubernetesSDConfig{{
+							Role:       monitoringv1alpha1.KubernetesRoleService,
+							Namespaces: &monitoringv1alpha1.NamespaceDiscovery{Names: []string{"garden"}},
 						}},
-						RelabelConfigs: []monitoringv1.RelabelConfig{{
-							Action:      "replace",
-							Replacement: ptr.To("cadvisor"),
-							TargetLabel: "job",
-						}},
+						RelabelConfigs: []monitoringv1.RelabelConfig{
+							{
+								SourceLabels: []monitoringv1.LabelName{
+									"__meta_kubernetes_service_name",
+									"__meta_kubernetes_service_port_name",
+								},
+								Regex:  "prometheus-cache;web",
+								Action: "keep",
+							},
+							{
+								Action:      "replace",
+								Replacement: ptr.To("cadvisor"),
+								TargetLabel: "job",
+							}},
 						MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 							SourceLabels: []monitoringv1.LabelName{"__name__"},
 							Action:       "keep",
