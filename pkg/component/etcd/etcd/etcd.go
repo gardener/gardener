@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -233,6 +234,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		e.secretsManager,
 		e.values.Role,
 		e.clientServiceDNSNames(),
+		nil,
 	)
 	if err != nil {
 		return err
@@ -1026,7 +1028,7 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 		return
 	}
 
-	return GeneratePeerCertificates(ctx, e.secretsManager, e.values.Role, e.peerServiceDNSNames())
+	return GeneratePeerCertificates(ctx, e.secretsManager, e.values.Role, e.peerServiceDNSNames(), nil)
 }
 
 // GeneratePeerCertificates generates the peer certificates for the etcd cluster.
@@ -1035,6 +1037,7 @@ func GeneratePeerCertificates(
 	secretsManager secretsmanager.Interface,
 	role string,
 	dnsNames []string,
+	ipAddresses []net.IP,
 ) (string, string, error) {
 	etcdPeerCASecret, found := secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
@@ -1045,6 +1048,7 @@ func GeneratePeerCertificates(
 		Name:                        secretNamePrefixPeerServer + role,
 		CommonName:                  "etcd-server",
 		DNSNames:                    dnsNames,
+		IPAddresses:                 ipAddresses,
 		CertType:                    secretsutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -1061,6 +1065,7 @@ func GenerateClientServerCertificates(
 	secretsManager secretsmanager.Interface,
 	role string,
 	dnsNames []string,
+	ipAddresses []net.IP,
 ) (*corev1.Secret, *corev1.Secret, *corev1.Secret, error) {
 	etcdCASecret, found := secretsManager.Get(v1beta1constants.SecretNameCAETCD)
 	if !found {
@@ -1071,6 +1076,7 @@ func GenerateClientServerCertificates(
 		Name:                        secretNamePrefixServer + role,
 		CommonName:                  "etcd-server",
 		DNSNames:                    dnsNames,
+		IPAddresses:                 ipAddresses,
 		CertType:                    secretsutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
