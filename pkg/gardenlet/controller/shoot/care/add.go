@@ -139,7 +139,9 @@ func seedGotAssigned(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
 func (r *Reconciler) MapManagedResource(_ context.Context, mr client.Object) []Request {
 	return []Request{{
 		NamespacedName: types.NamespacedName{
-			Name:      mr.GetName(),
+			// avoid duplicate triggers by letting all managed resources of a shoot use the same
+			// reconcile key
+			Name:      "unused",
 			Namespace: mr.GetNamespace(),
 		},
 		IsManagedResource: true,
