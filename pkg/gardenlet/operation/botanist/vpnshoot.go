@@ -38,13 +38,13 @@ func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		DisableNewVPN:                        !b.Shoot.UsesNewVPN,
-		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
+		SeedPodNetworkV4:                     b.Seed.GetInfo().Spec.Networks.Pods,
 	}
 
 	if !gardencorev1beta1.IsIPv6SingleStack(b.Shoot.GetInfo().Spec.Networking.IPFamilies) {
-		values.ShootPodNetwork = *b.Shoot.GetInfo().Spec.Networking.Pods
-		values.ShootServiceNetwork = *b.Shoot.GetInfo().Spec.Networking.Services
-		values.ShootNodeNetwork = *b.Shoot.GetInfo().Spec.Networking.Nodes
+		values.ShootPodNetworkV4 = b.Shoot.Networks.PodsV4String()
+		values.ShootServiceNetworkV4 = b.Shoot.Networks.ServicesV4String()
+		values.ShootNodeNetworkV4 = b.Shoot.Networks.NodesV4String()
 	}
 
 	return vpnshoot.New(
