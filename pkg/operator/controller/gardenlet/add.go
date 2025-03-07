@@ -52,7 +52,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 	}
 	if r.HelmRegistry == nil {
 		var err error
-		r.HelmRegistry, err = oci.NewHelmRegistry(r.RuntimeClient)
+		r.HelmRegistry, err = oci.NewHelmRegistry(r.RuntimeCluster.GetClient())
 		if err != nil {
 			return fmt.Errorf("failed creating new Helm registry: %w", err)
 		}

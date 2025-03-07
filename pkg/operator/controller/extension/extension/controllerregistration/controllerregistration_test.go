@@ -166,6 +166,7 @@ var _ = Describe("ControllerRegistration", func() {
 							},
 						},
 					},
+					InjectGardenKubeconfig: ptr.To(true),
 				},
 				&gardencorev1beta1.ControllerRegistration{
 					ObjectMeta: metav1.ObjectMeta{
