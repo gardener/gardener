@@ -22,6 +22,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -78,7 +79,17 @@ var _ = Describe("Shoot Care Control", func() {
 			},
 		}
 
-		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).WithStatusSubresource(&gardencorev1beta1.Shoot{}).Build()
+		gardenClient = fakeclient.NewClientBuilder().
+			WithScheme(kubernetes.GardenScheme).
+			WithStatusSubresource(&gardencorev1beta1.Shoot{}).
+			WithIndex(&gardencorev1beta1.Shoot{}, gardencore.ShootStatusTechnicalID, func(obj client.Object) []string {
+				shoot, ok := obj.(*gardencorev1beta1.Shoot)
+				if !ok {
+					return []string{""}
+				}
+				return []string{shoot.Status.TechnicalID}
+			}).
+			Build()
 
 		fakeClock = testclock.NewFakeClock(time.Now())
 	})
@@ -516,20 +527,51 @@ var _ = Describe("Shoot Care Control", func() {
 					))
 				})
 
+				setSuccessStatus := func() {
+					shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+						Type:  gardencorev1beta1.LastOperationTypeReconcile,
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+					}
+				}
+				expectHealthyShoot := func() {
+					GinkgoHelper()
+					updatedShoot := &gardencorev1beta1.Shoot{}
+					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
+					Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
+				}
+
 				Context("when shoot has a successful last operation", func() {
 					BeforeEach(func() {
-						shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-							Type:  gardencorev1beta1.LastOperationTypeReconcile,
-							State: gardencorev1beta1.LastOperationStateSucceeded,
-						}
+						setSuccessStatus()
 					})
 
 					It("should set shoot to healthy", func() {
 						Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+						expectHealthyShoot()
+					})
+				})
 
-						updatedShoot := &gardencorev1beta1.Shoot{}
-						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
-						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
+				Context("when shoot has a successful last operation and is triggered by managed resource", func() {
+					BeforeEach(func() {
+						setSuccessStatus()
+						shoot.Status.TechnicalID = "shoot--" + shootNamespace + "--" + shootName
+					})
+
+					It("should stop reconcile if no shoot is found for the technical id", func() {
+						req = Request{
+							NamespacedName:    client.ObjectKey{Namespace: "invalid", Name: "ignored-by-reconcile"},
+							IsManagedResource: true,
+						}
+						Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
+					})
+
+					It("should set shoot to healthy", func() {
+						req = Request{
+							NamespacedName:    client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: "ignored-by-reconcile"},
+							IsManagedResource: true,
+						}
+						Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+						expectHealthyShoot()
 					})
 				})
 			})
