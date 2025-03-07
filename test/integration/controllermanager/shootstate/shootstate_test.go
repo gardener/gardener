@@ -5,9 +5,6 @@
 package shootstate_test
 
 import (
-	"context"
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +22,8 @@ var _ = Describe("ShootState controller test", func() {
 		shoot          *gardencorev1beta1.Shoot
 		shootState     *gardencorev1beta1.ShootState
 		targetSeedName = "target-seed"
+
+		addFinalizer func(shootState *gardencorev1beta1.ShootState)
 	)
 
 	BeforeEach(func() {
@@ -62,6 +61,12 @@ var _ = Describe("ShootState controller test", func() {
 				},
 				SeedName: ptr.To("source-seed"),
 			},
+		}
+
+		addFinalizer = func(shootState *gardencorev1beta1.ShootState) {
+			By("Add ShootState finalizer")
+			shootState.Finalizers = append(shoot.Finalizers, shootstate.FinalizerName)
+			Expect(testClient.Update(ctx, shootState)).To(Succeed())
 		}
 
 		By("Create Shoot")
@@ -103,53 +108,132 @@ var _ = Describe("ShootState controller test", func() {
 	})
 
 	When("migrating Shoot to another Seed", func() {
-		Context("should reconcile ShootState object", func() {
-			BeforeEach(func() {
-				By("Mark Shoot for migration")
-				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Spec.SeedName = &targetSeedName
-				Expect(testClient.SubResource("binding").Patch(ctx, shoot, patch)).To(Succeed())
-			})
+		var (
+			patch client.Patch
+		)
 
-			It("should add finalizer if not present", func() {
-				patch := client.MergeFrom(shoot.DeepCopy())
+		BeforeEach(func() {
+			By("Mark Shoot for migration")
+			patch = client.MergeFrom(shoot.DeepCopy())
+			shoot.Spec.SeedName = &targetSeedName
+			Expect(testClient.SubResource("binding").Patch(ctx, shoot, patch)).To(Succeed())
+		})
+
+		When("Shoot last operation has Migrate type", func() {
+			BeforeEach(func() {
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type:     gardencorev1beta1.LastOperationTypeMigrate,
 					State:    gardencorev1beta1.LastOperationStateProcessing,
 					Progress: 0,
 				}
-				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
-
-				By("Should attach finalizer")
-				ctxTimeOut, ctxCancel := context.WithTimeout(ctx, 60*5*time.Second)
-				defer ctxCancel()
-
-				Eventually(func(g Gomega) []string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-					return shootState.Finalizers
-				}).WithContext(ctxTimeOut).Should(ConsistOf(shootstate.FinalizerName))
 			})
 
-			It("should remove finalizer when Shoot restores successfully", func() {
-				patch := client.MergeFrom(shoot.DeepCopy())
-				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-					Type:     gardencorev1beta1.LastOperationTypeRestore,
-					State:    gardencorev1beta1.LastOperationStateSucceeded,
-					Progress: 100,
-				}
+			It("should add finalizer if not present", func() {
+				By("Update the Shoot's last operation")
 				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
-				shootState.Finalizers = append(shoot.Finalizers, shootstate.FinalizerName)
-				Expect(testClient.Update(ctx, shootState)).To(Succeed())
-
-				By("Should remove finalizer")
-				ctxTimeOut, ctxCancel := context.WithTimeout(ctx, 60*5*time.Second)
-				defer ctxCancel()
-
+				By("Verify the finalizer is present")
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 					return shootState.Finalizers
-				}).WithContext(ctxTimeOut).ShouldNot(ConsistOf(shootstate.FinalizerName))
+				}).Should(ConsistOf(shootstate.FinalizerName))
+			})
+
+			It("should not add/duplicate finalizer if already present", func() {
+				addFinalizer(shootState)
+
+				By("Update the Shoot's last operation")
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+				By("Verify the finalizer is present")
+				Consistently(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+					return shootState.Finalizers
+				}).Should(Equal([]string{shootstate.FinalizerName}))
+			})
+		})
+
+		When("Shoot last operation has Restore type", func() {
+			BeforeEach(func() {
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:     gardencorev1beta1.LastOperationTypeRestore,
+					State:    gardencorev1beta1.LastOperationStateProcessing,
+					Progress: 0,
+				}
+			})
+
+			It("should add finalizer if not present and operation has not succeeded", func() {
+				By("Update the Shoot's last operation")
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+				By("Verify the finalizer is present")
+				Eventually(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+					return shootState.Finalizers
+				}).Should(ConsistOf(shootstate.FinalizerName))
+			})
+
+			It("should not duplicate finalizer if already present", func() {
+				addFinalizer(shootState)
+
+				By("Update the Shoot's last operation")
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+				By("Verify the finalizer is present")
+				Consistently(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+					return shootState.Finalizers
+				}).Should(Equal([]string{shootstate.FinalizerName}))
+			})
+
+			It("should remove finalizer if present and operation has succeeded", func() {
+				addFinalizer(shootState)
+
+				By("Update the Shoot's last operation")
+				shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+				By("Verify the finalizer is removed")
+				Eventually(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+					return shootState.Finalizers
+				}).ShouldNot(ConsistOf(shootstate.FinalizerName))
+			})
+
+			It("should not remove finalizer if present and operation has not succeeded ", func() {
+				addFinalizer(shootState)
+
+				By("Update the Shoot's last operation")
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+				By("Verify the finalizer is present")
+				Consistently(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+					return shootState.Finalizers
+				}).Should(Equal([]string{shootstate.FinalizerName}))
+			})
+		})
+
+		When("Shoot last operation has Reconcile type", func() {
+			BeforeEach(func() {
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:     gardencorev1beta1.LastOperationTypeReconcile,
+					State:    gardencorev1beta1.LastOperationStateProcessing,
+					Progress: 0,
+				}
+			})
+
+			It("should remove finalizer if present", func() {
+				addFinalizer(shootState)
+
+				By("Update the Shoot's last operation")
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+				By("Verify the finalizer is removed")
+				Eventually(func(g Gomega) []string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+					return shootState.Finalizers
+				}).ShouldNot(ConsistOf(shootstate.FinalizerName))
 			})
 		})
 	})
