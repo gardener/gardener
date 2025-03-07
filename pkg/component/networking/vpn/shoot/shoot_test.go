@@ -76,7 +76,7 @@ var _ = Describe("VPNShoot", func() {
 				Header:      reversedVPNHeader,
 				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
-			SeedPodNetwork: "10.1.0.0/16",
+			SeedPodNetworkV4: "10.1.0.0/16",
 		}
 
 		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
@@ -454,7 +454,7 @@ var _ = Describe("VPNShoot", func() {
 						Value: "true",
 					},
 					corev1.EnvVar{
-						Name:  "SEED_POD_NETWORK",
+						Name:  "SEED_POD_NETWORK_V4",
 						Value: "10.1.0.0/16",
 					},
 				)

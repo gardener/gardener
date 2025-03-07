@@ -39,7 +39,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		VPAUpdateDisabled:                    b.Shoot.VPNVPAUpdateDisabled,
-		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
+		SeedPodNetworkV4:                     b.Seed.GetInfo().Spec.Networks.Pods,
 	}
 
 	if b.ShootUsesDNS() {

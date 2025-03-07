@@ -87,14 +87,14 @@ type Values struct {
 	VPAUpdateDisabled bool
 	// ReversedVPN contains the configuration values for the ReversedVPN.
 	ReversedVPN ReversedVPNValues
-	// SeedPodNetwork is the pod CIDR of the seed.
-	SeedPodNetwork string
-	// ShootPodNetwork is the pod CIDR of the shoot.
-	ShootPodNetwork string
-	// ShootServiceNetwork is the service CIDR of the shoot.
-	ShootServiceNetwork string
-	// ShootNodeNetwork is the node CIDR of the shoot.
-	ShootNodeNetwork string
+	// SeedPodNetworkV4 is the v4 pod CIDR of the seed.
+	SeedPodNetworkV4 string
+	// ShootPodNetworkV4 is the v4 pod CIDR of the shoot.
+	ShootPodNetworkV4 string
+	// ShootServiceNetworkV4 is the v4 service CIDR of the shoot.
+	ShootServiceNetworkV4 string
+	// ShootNodeNetworkV4 is the v4 node CIDR of the shoot.
+	ShootNodeNetworkV4 string
 	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
 	HighAvailabilityEnabled bool
 	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA.
@@ -739,24 +739,24 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			Value: "true",
 		},
 		corev1.EnvVar{
-			Name:  "SEED_POD_NETWORK",
-			Value: v.values.SeedPodNetwork,
+			Name:  "SEED_POD_NETWORK_V4",
+			Value: v.values.SeedPodNetworkV4,
 		},
 	)
 
 	if !gardencorev1beta1.IsIPv6SingleStack(v.values.ReversedVPN.IPFamilies) {
 		envVariables = append(envVariables,
 			corev1.EnvVar{
-				Name:  "SHOOT_POD_NETWORK",
-				Value: v.values.ShootPodNetwork,
+				Name:  "SHOOT_POD_NETWORK_V4",
+				Value: v.values.ShootPodNetworkV4,
 			},
 			corev1.EnvVar{
-				Name:  "SHOOT_SERVICE_NETWORK",
-				Value: v.values.ShootServiceNetwork,
+				Name:  "SHOOT_SERVICE_NETWORK_V4",
+				Value: v.values.ShootServiceNetworkV4,
 			},
 			corev1.EnvVar{
-				Name:  "SHOOT_NODE_NETWORK",
-				Value: v.values.ShootNodeNetwork,
+				Name:  "SHOOT_NODE_NETWORK_V4",
+				Value: v.values.ShootNodeNetworkV4,
 			},
 		)
 	}

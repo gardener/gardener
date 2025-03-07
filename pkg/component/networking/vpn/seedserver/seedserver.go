@@ -127,8 +127,8 @@ type Values struct {
 	KubeAPIServerHost *string
 	// Network contains the configuration values for the network.
 	Network NetworkValues
-	// SeedPodNetwork is the pod network of the seed.
-	SeedPodNetwork string
+	// SeedPodNetworkV4 is the v4 pod network of the seed.
+	SeedPodNetworkV4 string
 	// Replicas is the number of deployment replicas.
 	Replicas int32
 	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
@@ -365,8 +365,8 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 							Value: strings.Join(nodeCIDRs, ","),
 						},
 						{
-							Name:  "SEED_POD_NETWORK",
-							Value: v.values.SeedPodNetwork,
+							Name:  "SEED_POD_NETWORK_V4",
+							Value: v.values.SeedPodNetworkV4,
 						},
 						{
 							Name: "LOCAL_NODE_IP",
