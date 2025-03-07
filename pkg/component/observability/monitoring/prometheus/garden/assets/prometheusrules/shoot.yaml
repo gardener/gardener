@@ -117,6 +117,9 @@ spec:
           count(
             count by (cluster) (ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="shoot", alertstate="firing"})
           )
+      labels:
+        severity: warning
+        topology: garden
       annotations:
         summary: >-
           A VPA recommendation in a shoot is capped.
