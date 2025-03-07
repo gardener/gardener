@@ -81,13 +81,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req Request) (reconcile.Resu
 	}
 
 	if len(shoots.Items) == 0 {
-		log.V(1).Info("No shoot found for managed resource, stop reconciling")
+		log.V(1).Info("No shoot found for managed resource, ignoring it")
 		return reconcile.Result{}, nil
 	} else {
-		return r.reconcileShoot(ctx, log, types.NamespacedName{
+		result, err := r.reconcileShoot(ctx, log, types.NamespacedName{
 			Name:      shoots.Items[0].Name,
 			Namespace: shoots.Items[0].Namespace,
 		})
+		if err != nil {
+			return result, err
+		}
+		// Reconciles triggered due to a changed managed resource are one time checks.
+		// Periodic checks are already performed based on the existing shoot objects.
+		return reconcile.Result{}, nil
 	}
 }
 

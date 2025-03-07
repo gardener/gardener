@@ -570,7 +570,8 @@ var _ = Describe("Shoot Care Control", func() {
 							NamespacedName:    client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: "ignored-by-reconcile"},
 							IsManagedResource: true,
 						}
-						Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+						// reconciles for a managed resource must not be requeued
+						Expect(reconciler.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
 						expectHealthyShoot()
 					})
 				})
