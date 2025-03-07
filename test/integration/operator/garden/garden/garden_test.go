@@ -7,7 +7,6 @@ package garden_test
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/gardener/test/utils/matchers"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -62,6 +61,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/utils/matchers"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 	"github.com/gardener/gardener/test/utils/operationannotation"
 )

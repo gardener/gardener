@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package matchers
 
 import (
@@ -8,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// ObjectNames takes an ObjectList and returns a list of the objects within this list.
 func ObjectNames(list client.ObjectList) []string {
 	GinkgoHelper()
 

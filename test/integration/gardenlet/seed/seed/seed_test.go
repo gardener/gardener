@@ -6,7 +6,6 @@ package seed_test
 
 import (
 	"context"
-	"github.com/gardener/gardener/test/utils/matchers"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -47,6 +46,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/test/utils/matchers"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
