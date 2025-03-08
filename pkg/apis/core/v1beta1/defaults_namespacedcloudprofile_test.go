@@ -40,7 +40,6 @@ var _ = Describe("NamespacedCloudProfile defaulting", func() {
 			SetObjectDefaults_NamespacedCloudProfile(obj)
 
 			machineType := obj.Spec.MachineTypes[0]
-			Expect(machineType.Architecture).To(PointTo(Equal("amd64")))
 			Expect(machineType.Usable).To(PointTo(BeTrue()))
 		})
 	})

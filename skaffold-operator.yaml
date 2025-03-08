@@ -298,6 +298,7 @@ build:
             - pkg/utils/validation/apigroups
             - pkg/utils/validation/cidr
             - pkg/utils/validation/features
+            - pkg/utils/validation/gardener/core
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
@@ -593,6 +594,7 @@ build:
             - pkg/utils/validation/apigroups
             - pkg/utils/validation/cidr
             - pkg/utils/validation/features
+            - pkg/utils/validation/gardener/core
             - pkg/utils/validation/kubernetes/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
@@ -751,6 +753,7 @@ build:
             - pkg/utils/validation
             - pkg/utils/validation/admissionplugins
             - pkg/utils/validation/features
+            - pkg/utils/validation/gardener/core
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
             - third_party/gopkg.in/yaml.v2
