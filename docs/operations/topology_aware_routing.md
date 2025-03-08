@@ -6,7 +6,15 @@ The enablement of [highly available shoot control-planes](../usage/high-availabi
 
 ## How it works
 
-The topology-aware routing feature relies on the Kubernetes feature [`TopologyAwareHints`](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/).
+The topology-aware routing feature relies on the Kubernetes features [`TopologyAwareHints`](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/) or [`ServiceTrafficDistribution`](https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution) based on the runtime cluster's Kubernetes versions.
+
+For Kubernetes versions < 1.31, the `TopologyAwareHints` feature is being used on in combination with the [EndpointSlice hints mutating webhook](#endpointslice-hints-mutating-webhook).
+
+For Kubernetes versions >= 1.31, the `ServiceTrafficDistribution` feature is being used on. The [EndpointSlice hints mutating webhook](#endpointslice-hints-mutating-webhook) is enabled for Kubernetes 1.31 to allow graceful migration from `TopologyAwareHints` to `ServiceTrafficDistribution`.
+
+### How `TopologyAwareHints` works
+
+The [EndpointSlice hints mutating webhook](#endpointslice-hints-mutating-webhook) and [kube-proxy](#kube-proxy) sections reveal the implementation details (and the drawbacks) of the `TopologyAwareHints` feature. For more details, see [upstream documentation](https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/) of the feature.
 
 ##### EndpointSlice Hints Mutating Webhook
 
@@ -30,9 +38,20 @@ To circumvent these issues with the EndpointSlice controller, a mutating webhook
 By default, with kube-proxy running in `iptables` mode, traffic is distributed randomly across all endpoints, regardless of where it originates from. In a cluster with 3 zones, traffic is more likely to go to another zone than to stay in the current zone.
 With the topology-aware routing feature, kube-proxy filters the endpoints it routes to based on the hints in the EndpointSlice resource. In most of the cases, kube-proxy will prefer the endpoint(s) in the same zone. For more details, see the [Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/topology-aware-hints/#implementation-kube-proxy).
 
-## How to make a Service topology-aware?
+### How `ServiceTrafficDistribution` works
 
-To make a Service topology-aware, the following annotation and label have to be added to the Service:
+We reported the drawbacks related to the `TopologyAwareHints` feature in [kubernetes/kubernetes#113731](https://github.com/kubernetes/kubernetes/issues/113731). As result, the Kubernetes community implemented the `ServiceTrafficDistribution` feature.
+
+The `ServiceTrafficDistribution` allows expressing preferences for how traffic should be routed to Service endpoints. For more details, see [upstream documentation](https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution) of the feature.
+
+The `PreferClose` strategy with kube-proxy of `ServiceTrafficDistribution` allows traffic to be routed to Service endpoints in topology-aware and predictable manner.
+It is simpler than `service.kubernetes.io/topology-mode: auto` - if there are Service endpoints which reside in the same zone as the client, traffic is routed to one of the endpoints within the same zone as the client. If the client's zone does not have any available Service endpoints, traffic is routed to any available endpoint within the cluster.
+
+## How to make a Service topology-aware
+
+### How to make a Service topology-aware using `TopologyAwareHints` (Kubernetes < 1.31)
+
+In Kubernetes < 1.31, to make a Service topology-aware the following annotation and label have to be added to the Service:
 
 ```yaml
 apiVersion: v1
@@ -49,7 +68,32 @@ The `endpoint-slice-hints.resources.gardener.cloud/consider=true` label is neede
 
 The Gardener extensions can use this approach to make a Service they deploy topology-aware.
 
-Prerequisites for making a Service topology-aware:
+### How to make a Service topology-aware using `ServiceTrafficDistribution` (Kubernetes == 1.31)
+
+In Kubernetes 1.31, to make a Service topology-aware the `.spec.trafficDistribution` field has to be set to `PreferClose` and the label `endpoint-slice-hints.resources.gardener.cloud/consider=true` needs to be added:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    endpoint-slice-hints.resources.gardener.cloud/consider: "true"
+spec:
+  trafficDistribution: PreferClose
+```
+
+### How to make a Service topology-aware using `ServiceTrafficDistribution` (Kubernetes >= 1.31)
+
+In Kubernetes >= 1.31, to make a Service topology-aware the `.spec.trafficDistribution` field has to be set to `PreferClose`:
+
+```yaml
+apiVersion: v1
+kind: Service
+spec:
+  trafficDistribution: PreferClose
+```
+
+## Prerequisites for making a Service topology-aware
 
 1. The Pods backing the Service should be spread on most of the available zones. This constraint should be ensured with appropriate scheduling constraints (topology spread constraints, (anti-)affinity). Enabling the feature for a Service with a single backing Pod or Pods all located in the same zone does not lead to a benefit.
 1. The component should be scaled up by `VerticalPodAutoscaler`. In case of an overload (a large portion of the of the traffic is originating from a given zone), the `VerticalPodAutoscaler` should provide better resource recommendations for the overloaded backing Pods.

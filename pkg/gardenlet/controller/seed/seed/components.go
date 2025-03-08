@@ -70,6 +70,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 type components struct {
@@ -257,11 +258,13 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 		additionalNetworkPolicyNamespaceSelectors = config.AdditionalNamespaceSelectors
 	}
 
+	endpointSliceHintsEnabled := v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.Spec.Settings) && versionutils.ConstraintK8sLess132.Check(r.SeedVersion)
+
 	return sharedcomponent.NewRuntimeGardenerResourceManager(r.SeedClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
-		EndpointSliceHintsEnabled:                 v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.Spec.Settings),
+		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
 		LogLevel:                                  r.Config.LogLevel,
 		LogFormat:                                 r.Config.LogFormat,
 		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
