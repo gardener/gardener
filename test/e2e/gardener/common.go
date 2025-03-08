@@ -131,6 +131,21 @@ func DefaultNamespacedCloudProfile() *gardencorev1beta1.NamespacedCloudProfile {
 
 // getShootControlPlane returns a ControlPlane object based on env variable SHOOT_FAILURE_TOLERANCE_TYPE value
 func getShootControlPlane() *gardencorev1beta1.ControlPlane {
+	if os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") == "" {
+		return nil
+	}
+
+	return &gardencorev1beta1.ControlPlane{
+		HighAvailability: &gardencorev1beta1.HighAvailability{
+			FailureTolerance: gardencorev1beta1.FailureTolerance{
+				Type: GetFailureToleranceType(),
+			},
+		},
+	}
+}
+
+// GetFailureToleranceType returns a failureToleranceType based on env variable SHOOT_FAILURE_TOLERANCE_TYPE value
+func GetFailureToleranceType() gardencorev1beta1.FailureToleranceType {
 	var failureToleranceType gardencorev1beta1.FailureToleranceType
 
 	switch os.Getenv("SHOOT_FAILURE_TOLERANCE_TYPE") {
@@ -138,17 +153,8 @@ func getShootControlPlane() *gardencorev1beta1.ControlPlane {
 		failureToleranceType = gardencorev1beta1.FailureToleranceTypeZone
 	case "node":
 		failureToleranceType = gardencorev1beta1.FailureToleranceTypeNode
-	default:
-		return nil
 	}
-
-	return &gardencorev1beta1.ControlPlane{
-		HighAvailability: &gardencorev1beta1.HighAvailability{
-			FailureTolerance: gardencorev1beta1.FailureTolerance{
-				Type: failureToleranceType,
-			},
-		},
-	}
+	return failureToleranceType
 }
 
 // This computes a time window for Shoot maintenance which is ensured to be at least 2 hours in the future.
