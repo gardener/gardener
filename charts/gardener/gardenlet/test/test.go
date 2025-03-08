@@ -1066,6 +1066,8 @@ func ComputeExpectedGardenletDeploymentSpec(
 				nil,
 				false,
 			)
+
+			kubernetesutils.MutateMatchLabelKeys(deployment.Template.Spec.TopologySpreadConstraints)
 		}
 
 		if deploymentConfiguration.Env != nil {

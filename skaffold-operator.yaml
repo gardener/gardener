@@ -268,7 +268,6 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
-            - pkg/resourcemanager/webhook/tokeninvalidator
             - pkg/scheduler/apis/config/v1alpha1
             - pkg/utils
             - pkg/utils/chart
@@ -376,7 +375,6 @@ build:
             - pkg/resourcemanager/controller/node/agentreconciliationdelay
             - pkg/resourcemanager/controller/node/criticalcomponents
             - pkg/resourcemanager/controller/node/criticalcomponents/helper
-            - pkg/resourcemanager/controller/tokeninvalidator
             - pkg/resourcemanager/predicate
             - pkg/resourcemanager/webhook
             - pkg/resourcemanager/webhook/crddeletionprotection
@@ -390,7 +388,6 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
-            - pkg/resourcemanager/webhook/tokeninvalidator
             - pkg/utils
             - pkg/utils/context
             - pkg/utils/errors
