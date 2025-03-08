@@ -39,6 +39,7 @@ var _ = Describe("utils", func() {
 					KubeConfigRequests: []KubeConfigRequest{{
 						ClusterName:   clusterName,
 						APIServerHost: apiServerURL,
+						CAData:        []byte(caCert),
 					}},
 				}
 
@@ -101,8 +102,7 @@ var _ = Describe("utils", func() {
 							{
 								Name: "foo",
 								Cluster: clientcmdv1.Cluster{
-									Server:                   "https://foo.bar",
-									CertificateAuthorityData: []byte(caCert),
+									Server: "https://foo.bar",
 								},
 							},
 						},
@@ -181,8 +181,7 @@ var _ = Describe("utils", func() {
 						{
 							Name: "foo",
 							Cluster: clientcmdv1.Cluster{
-								Server:                   "https://foo.bar",
-								CertificateAuthorityData: []byte(caCert),
+								Server: "https://foo.bar",
 							},
 						},
 					},

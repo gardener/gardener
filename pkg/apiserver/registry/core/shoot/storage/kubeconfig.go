@@ -101,6 +101,7 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 	for _, addr := range shoot.Status.AdvertisedAddresses {
 		if addr.Name == v1beta1constants.AdvertisedAddressExternal ||
 			addr.Name == v1beta1constants.AdvertisedAddressInternal ||
+			addr.Name == v1beta1constants.AdvertisedAddressWildcardTLSSeedBound ||
 			addr.Name == v1beta1constants.AdvertisedAddressUnmanaged {
 			kubeAPIServerAddresses = append(kubeAPIServerAddresses, addr)
 		}
@@ -166,11 +167,16 @@ func (r *KubeconfigREST) Create(ctx context.Context, name string, obj runtime.Ob
 			return nil, err
 		}
 
-		cpsc.KubeConfigRequests = append(cpsc.KubeConfigRequests, secrets.KubeConfigRequest{
+		request := secrets.KubeConfigRequest{
 			ClusterName:   fmt.Sprintf("%s-%s", authName, address.Name),
 			APIServerHost: u.Host,
-			CAData:        clusterCABundle,
-		})
+		}
+
+		if address.Name != v1beta1constants.AdvertisedAddressWildcardTLSSeedBound {
+			request.CAData = clusterCABundle
+		}
+
+		cpsc.KubeConfigRequests = append(cpsc.KubeConfigRequests, request)
 	}
 
 	cp, err := cpsc.Generate()

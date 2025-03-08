@@ -41,6 +41,13 @@ func (b *Botanist) ToAdvertisedAddresses() ([]gardencorev1beta1.ShootAdvertisedA
 		})
 	}
 
+	if b.ControlPlaneWildcardCert != nil {
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
+			Name: v1beta1constants.AdvertisedAddressWildcardTLSSeedBound,
+			URL:  "https://" + b.ComputeKubeAPIServerHost(),
+		})
+	}
+
 	if len(b.Shoot.InternalClusterDomain) > 0 {
 		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
 			Name: v1beta1constants.AdvertisedAddressInternal,

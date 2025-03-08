@@ -149,6 +149,10 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 						URL:  "https://foo.bar.external:9443",
 					},
 					{
+						Name: "wildcard-tls-seed-bound",
+						URL:  "https://foo.bar.seed.specific.but.with.wildcard.tls:9443",
+					},
+					{
 						Name: "internal",
 						URL:  "https://foo.bar.internal:9443",
 					},
@@ -274,6 +278,12 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 					},
 				},
 				clientcmdv1.NamedCluster{
+					Name: "baz--test-wildcard-tls-seed-bound",
+					Cluster: clientcmdv1.Cluster{
+						Server: "https://foo.bar.seed.specific.but.with.wildcard.tls:9443",
+					},
+				},
+				clientcmdv1.NamedCluster{
 					Name: "baz--test-internal",
 					Cluster: clientcmdv1.Cluster{
 						Server:                   "https://foo.bar.internal:9443",
@@ -287,6 +297,13 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 					Name: "baz--test-external",
 					Context: clientcmdv1.Context{
 						Cluster:  "baz--test-external",
+						AuthInfo: "baz--test-external",
+					},
+				},
+				clientcmdv1.NamedContext{
+					Name: "baz--test-wildcard-tls-seed-bound",
+					Context: clientcmdv1.Context{
+						Cluster:  "baz--test-wildcard-tls-seed-bound",
 						AuthInfo: "baz--test-external",
 					},
 				},

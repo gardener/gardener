@@ -857,9 +857,12 @@ const (
 	AdvertisedAddressInternal = "internal"
 	// AdvertisedAddressUnmanaged is a constant that represents the name of the unmanaged kube-apiserver address.
 	AdvertisedAddressUnmanaged = "unmanaged"
-	// AdvertisedAddressServiceAccountIssuer is a constant that represents the name of the address
-	// that is used as a service account issuer for the kube-apiserver.
+	// AdvertisedAddressServiceAccountIssuer is a constant that represents the name of the address that is used as a
+	// service account issuer for the kube-apiserver.
 	AdvertisedAddressServiceAccountIssuer = "service-account-issuer"
+	// AdvertisedAddressWildcardTLSSeedBound is a constant that represents the name of the address that is
+	// seed-specific (i.e., changes when the Seed changes) and backed by a central wildcard TLS certificate.
+	AdvertisedAddressWildcardTLSSeedBound = "wildcard-tls-seed-bound"
 
 	// CloudProfileReferenceKindCloudProfile is a constant for the CloudProfile kind reference.
 	CloudProfileReferenceKindCloudProfile = "CloudProfile"
