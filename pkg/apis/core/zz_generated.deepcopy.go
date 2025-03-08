@@ -3610,6 +3610,11 @@ func (in *OCIRepository) DeepCopyInto(out *OCIRepository) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.PullSecretRef != nil {
+		in, out := &in.PullSecretRef, &out.PullSecretRef
+		*out = new(v1.LocalObjectReference)
+		**out = **in
+	}
 	return
 }
 

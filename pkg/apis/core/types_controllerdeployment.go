@@ -7,6 +7,7 @@ package core
 import (
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -72,6 +73,9 @@ type OCIRepository struct {
 	// Digest of the image to pull, takes precedence over tag.
 	// The value should be in the format 'sha256:<HASH>'.
 	Digest *string
+	// PullSecretRef is a reference to a secret containing the pull secret.
+	// The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+	PullSecretRef *corev1.LocalObjectReference
 }
 
 // GetURL returns the fully-qualified OCIRepository URL of the artifact.
