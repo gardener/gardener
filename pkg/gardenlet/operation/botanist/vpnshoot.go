@@ -6,6 +6,7 @@ package botanist
 
 import (
 	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/component"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
@@ -37,7 +38,13 @@ func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		DisableNewVPN:                        !b.Shoot.UsesNewVPN,
-		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
+		SeedPodNetworkV4:                     b.Seed.GetInfo().Spec.Networks.Pods,
+	}
+
+	if !gardencorev1beta1.IsIPv6SingleStack(b.Shoot.GetInfo().Spec.Networking.IPFamilies) {
+		values.ShootPodNetworkV4 = b.Shoot.Networks.PodsV4String()
+		values.ShootServiceNetworkV4 = b.Shoot.Networks.ServicesV4String()
+		values.ShootNodeNetworkV4 = b.Shoot.Networks.NodesV4String()
 	}
 
 	return vpnshoot.New(

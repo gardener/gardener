@@ -266,10 +266,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 
 	shoot.IsWorkerless = v1beta1helper.IsWorkerless(shoot.GetInfo())
 
-	shoot.VPNHighAvailabilityEnabled = v1beta1helper.IsHAControlPlaneConfigured(shoot.GetInfo())
-	if haVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneHAVPN]); err == nil {
-		shoot.VPNHighAvailabilityEnabled = haVPNEnabled
-	}
+	shoot.VPNHighAvailabilityEnabled = v1beta1helper.IsHAVPN(shoot.GetInfo())
 	shoot.VPNHighAvailabilityNumberOfSeedServers = vpnseedserver.HighAvailabilityReplicaCount
 	shoot.VPNHighAvailabilityNumberOfShootClients = vpnseedserver.HighAvailabilityReplicaCount
 	if vpnVPAUpdateDisabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneVPNVPAUpdateDisabled]); err == nil {
@@ -639,4 +636,58 @@ func copyUniqueCIDRs(src []string, dst []net.IPNet, networkType string) ([]net.I
 		}
 	}
 	return dst, nil
+}
+
+func (networks Networks) PodsV4() []net.IPNet {
+	var podsV4 []net.IPNet
+	for _, nw := range networks.Pods {
+		if nw.IP.To4() != nil {
+			podsV4 = append(podsV4, nw)
+		}
+	}
+	return podsV4
+}
+
+func (networks Networks) PodsV4String() string {
+	var podsV4 []string
+	for _, nw := range networks.PodsV4() {
+		podsV4 = append(podsV4, nw.String())
+	}
+	return strings.Join(podsV4, ",")
+}
+
+func (networks Networks) ServicesV4() []net.IPNet {
+	var servicesV4 []net.IPNet
+	for _, nw := range networks.Services {
+		if nw.IP.To4() != nil {
+			servicesV4 = append(servicesV4, nw)
+		}
+	}
+	return servicesV4
+}
+
+func (networks Networks) ServicesV4String() string {
+	var servicesV4 []string
+	for _, nw := range networks.ServicesV4() {
+		servicesV4 = append(servicesV4, nw.String())
+	}
+	return strings.Join(servicesV4, ",")
+}
+
+func (networks Networks) NodesV4() []net.IPNet {
+	var nodesV4 []net.IPNet
+	for _, nw := range networks.Nodes {
+		if nw.IP.To4() != nil {
+			nodesV4 = append(nodesV4, nw)
+		}
+	}
+	return nodesV4
+}
+
+func (networks Networks) NodesV4String() string {
+	var nodesV4 []string
+	for _, nw := range networks.NodesV4() {
+		nodesV4 = append(nodesV4, nw.String())
+	}
+	return strings.Join(nodesV4, ",")
 }
