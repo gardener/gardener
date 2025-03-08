@@ -473,6 +473,9 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 						}},
 						TerminationGracePeriodSeconds: ptr.To[int64](60),
 					},

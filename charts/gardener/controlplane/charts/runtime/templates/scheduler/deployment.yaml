@@ -93,6 +93,8 @@ spec:
           initialDelaySeconds: 10
           timeoutSeconds: 5
         {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:

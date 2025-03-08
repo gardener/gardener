@@ -593,6 +593,9 @@ var _ = Describe("ResourceManager", func() {
 											corev1.ResourceMemory: resource.MustParse("30M"),
 										},
 									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
+									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											MountPath: secretMountPathAPIAccess,
