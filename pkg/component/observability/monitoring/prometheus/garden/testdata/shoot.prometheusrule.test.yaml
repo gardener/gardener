@@ -53,6 +53,8 @@ tests:
       eval_time: 0m # test the alert fires immediately
       exp_alerts:
         - exp_labels:
+            severity: warning
+            topology: garden
           exp_annotations:
             summary: >-
               A VPA recommendation in a shoot is capped.
