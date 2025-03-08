@@ -17,54 +17,58 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/test/framework"
+	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
 // SSHKeypairVerifier verifies the ssh keypair rotation.
 type SSHKeypairVerifier struct {
-	*framework.ShootCreationFramework
+	*ShootContext
 
 	oldKeypairData  map[string][]byte
 	old2KeypairData map[string][]byte
 }
 
 // Before is called before the rotation is started.
-func (v *SSHKeypairVerifier) Before(ctx context.Context) {
-	By("Verify old ssh-keypair secret")
-	Eventually(func(g Gomega) {
-		secret := &corev1.Secret{}
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
-		g.Expect(secret.Data).To(And(
-			HaveKeyWithValue("id_rsa", Not(BeEmpty())),
-			HaveKeyWithValue("id_rsa.pub", Not(BeEmpty())),
-		))
-		v.oldKeypairData = secret.Data
-	}).Should(Succeed(), "current ssh-keypair secret should be present")
+func (v *SSHKeypairVerifier) Before(_ context.Context) {
+	It("Verify current ssh-keypair secret is present", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			secret := &corev1.Secret{}
+			g.Expect(v.GardenClient.Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
+			g.Expect(secret.Data).To(And(
+				HaveKeyWithValue("id_rsa", Not(BeEmpty())),
+				HaveKeyWithValue("id_rsa.pub", Not(BeEmpty())),
+			))
+			v.oldKeypairData = secret.Data
+		}).Should(Succeed(), "current ssh-keypair secret should be present")
+	}, SpecTimeout(time.Minute))
 
-	Eventually(func(g Gomega) {
-		secret := &corev1.Secret{}
-		err := v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret)
-		if apierrors.IsNotFound(err) {
-			return
-		}
-		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(secret.Data).To(And(
-			HaveKeyWithValue("id_rsa", Not(Equal(v.oldKeypairData["id_rsa"]))),
-			HaveKeyWithValue("id_rsa.pub", Not(Equal(v.oldKeypairData["id_rsa.pub"]))),
-		))
-		v.old2KeypairData = secret.Data
-	}).Should(Succeed(), "old ssh-keypair secret should not be present or different from current")
+	It("Verify old ssh-keypair secret is gone", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			secret := &corev1.Secret{}
+			err := v.GardenClient.Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret)
+			if apierrors.IsNotFound(err) {
+				return
+			}
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(secret.Data).To(And(
+				HaveKeyWithValue("id_rsa", Not(Equal(v.oldKeypairData["id_rsa"]))),
+				HaveKeyWithValue("id_rsa.pub", Not(Equal(v.oldKeypairData["id_rsa.pub"]))),
+			))
+			v.old2KeypairData = secret.Data
+		}).Should(Succeed(), "old ssh-keypair secret should not be present or different from current")
+	}, SpecTimeout(time.Minute))
 
-	By("Verify that old SSH key(s) are accepted")
-	Eventually(func(_ Gomega) {
-		authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
-		Expect(err).NotTo(HaveOccurred())
+	It("Verify that old SSH key(s) are accepted", func(ctx SpecContext) {
+		Eventually(ctx, func(_ Gomega) {
+			authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
+			Expect(err).NotTo(HaveOccurred())
 
-		Expect(authorizedKeys).To(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
-		if v.old2KeypairData != nil {
-			Expect(authorizedKeys).To(ContainSubstring(string(v.old2KeypairData["id_rsa.pub"])))
-		}
-	}).Should(Succeed())
+			Expect(authorizedKeys).To(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
+			if v.old2KeypairData != nil {
+				Expect(authorizedKeys).To(ContainSubstring(string(v.old2KeypairData["id_rsa.pub"])))
+			}
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 }
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
@@ -79,34 +83,38 @@ func (v *SSHKeypairVerifier) ExpectPreparingWithoutWorkersRolloutStatus(_ Gomega
 func (v *SSHKeypairVerifier) ExpectWaitingForWorkersRolloutStatus(_ Gomega) {}
 
 // AfterPrepared is called when the Shoot is in Prepared status.
-func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
-	sshKeypairRotation := v.Shoot.Status.Credentials.Rotation.SSHKeypair
-	Expect(sshKeypairRotation.LastCompletionTime.Time.UTC().After(sshKeypairRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
+func (v *SSHKeypairVerifier) AfterPrepared(_ context.Context) {
+	It("rotation should be prepared", func() {
+		sshKeypairRotation := v.Shoot.Status.Credentials.Rotation.SSHKeypair
+		Expect(sshKeypairRotation.LastCompletionTime.Time.UTC().After(sshKeypairRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
+	})
 
-	By("Verify new ssh-keypair secret")
 	secret := &corev1.Secret{}
-	Eventually(func(g Gomega) {
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
-		g.Expect(secret.Data).To(And(
-			HaveKeyWithValue("id_rsa", Not(Equal(v.oldKeypairData["id_rsa"]))),
-			HaveKeyWithValue("id_rsa.pub", Not(Equal(v.oldKeypairData["id_rsa.pub"]))),
-		))
+	It("Verify new ssh-keypair secret", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(v.GardenClient.Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
+			g.Expect(secret.Data).To(And(
+				HaveKeyWithValue("id_rsa", Not(Equal(v.oldKeypairData["id_rsa"]))),
+				HaveKeyWithValue("id_rsa.pub", Not(Equal(v.oldKeypairData["id_rsa.pub"]))),
+			))
 
-		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret)).To(Succeed())
-		g.Expect(secret.Data).To(Equal(v.oldKeypairData))
-	}).Should(Succeed(), "ssh-keypair secret should have been rotated")
+			g.Expect(v.GardenClient.Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gardenerutils.ComputeShootProjectResourceName(v.Shoot.Name, "ssh-keypair.old")}, secret)).To(Succeed())
+			g.Expect(secret.Data).To(Equal(v.oldKeypairData))
+		}).Should(Succeed(), "ssh-keypair secret should have been rotated")
+	}, SpecTimeout(time.Minute))
 
-	By("Verify that new SSH keys are accepted")
-	Eventually(func(_ Gomega) {
-		authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
-		Expect(err).NotTo(HaveOccurred())
+	It("Verify that new SSH keys are accepted", func(ctx SpecContext) {
+		Eventually(ctx, func(_ Gomega) {
+			authorizedKeys, err := v.readAuthorizedKeysFile(ctx)
+			Expect(err).NotTo(HaveOccurred())
 
-		Expect(authorizedKeys).To(ContainSubstring(string(secret.Data["id_rsa.pub"])))
-		Expect(authorizedKeys).To(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
-		if v.old2KeypairData != nil {
-			Expect(authorizedKeys).NotTo(ContainSubstring(string(v.old2KeypairData["id_rsa.pub"])))
-		}
-	}).Should(Succeed())
+			Expect(authorizedKeys).To(ContainSubstring(string(secret.Data["id_rsa.pub"])))
+			Expect(authorizedKeys).To(ContainSubstring(string(v.oldKeypairData["id_rsa.pub"])))
+			if v.old2KeypairData != nil {
+				Expect(authorizedKeys).NotTo(ContainSubstring(string(v.old2KeypairData["id_rsa.pub"])))
+			}
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 }
 
 // ssh-keypair rotation is completed after one reconciliation (there is no second phase)
@@ -122,7 +130,7 @@ func (v *SSHKeypairVerifier) AfterCompleted(_ context.Context) {}
 // only check whether the `.ssh/authorized_keys` file on the worker nodes has the expected content.
 func (v *SSHKeypairVerifier) readAuthorizedKeysFile(ctx context.Context) (string, error) {
 	podList := &corev1.PodList{}
-	if err := v.ShootFramework.SeedClient.Client().List(ctx, podList, client.InNamespace(v.Shoot.Status.TechnicalID), client.MatchingLabels{
+	if err := v.SeedClient.List(ctx, podList, client.InNamespace(v.Shoot.Status.TechnicalID), client.MatchingLabels{
 		"app":              "machine",
 		"machine-provider": "local",
 	}); err != nil {
@@ -133,7 +141,7 @@ func (v *SSHKeypairVerifier) readAuthorizedKeysFile(ctx context.Context) (string
 		return "", fmt.Errorf("expected exactly one result when listing all machine pods: %+v", podList.Items)
 	}
 
-	stdout, _, err := v.ShootFramework.SeedClient.PodExecutor().Execute(
+	stdout, _, err := v.SeedClientSet.PodExecutor().Execute(
 		ctx,
 		v.Shoot.Status.TechnicalID,
 		podList.Items[0].Name,
