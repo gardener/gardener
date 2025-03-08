@@ -1021,145 +1021,46 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		return nil
 	}
 
-	if c.shoot.Spec.Provider.Type != c.cloudProfileSpec.Type {
-		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfileSpec.Type)))
-		// exit early, all other validation errors will be misleading
-		return allErrs
-	}
-
-	if c.secretBinding != nil && !v1beta1helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
-		var secretBindingProviderType string
-		if c.secretBinding.Provider != nil {
-			secretBindingProviderType = c.secretBinding.Provider.Type
-		}
-
-		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must match provider type of referenced SecretBinding: %q", secretBindingProviderType)))
-		// exit early, all other validation errors will be misleading
-		return allErrs
-	}
-
-	if c.credentialsBinding != nil && c.credentialsBinding.Provider.Type != c.shoot.Spec.Provider.Type {
-		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must match provider type of referenced CredentialsBinding: %q", c.credentialsBinding.Provider.Type)))
-		// exit early, all other validation errors will be misleading
-		return allErrs
+	if err := c.validateProviderType(path); err != nil {
+		return append(allErrs, err)
 	}
 
 	controlPlaneVersion, err := semver.NewVersion(c.shoot.Spec.Kubernetes.Version)
 	if err != nil {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, fmt.Sprintf("cannot parse the kubernetes version: %s", err.Error())))
-		// exit early, all other validation errors will be misleading
-		return allErrs
+		return append(allErrs, field.Invalid(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, fmt.Sprintf("cannot parse the kubernetes version: %v", err)))
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
-		var oldWorker = core.Worker{Machine: core.Machine{Image: &core.ShootMachineImage{}}}
-		isNewWorkerPool := true
-		isUpdateStrategyInPlace := helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
-		for _, ow := range c.oldShoot.Spec.Provider.Workers {
-			if ow.Name == worker.Name {
-				oldWorker = ow
-				isNewWorkerPool = false
-
-				break
-			}
-		}
-
 		idxPath := path.Child("workers").Index(i)
-		if worker.Machine.Architecture != nil && !slices.Contains(v1beta1constants.ValidArchitectures, *worker.Machine.Architecture) {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "architecture"), *worker.Machine.Architecture, v1beta1constants.ValidArchitectures))
+		oldWorker, isNewWorkerPool := c.getOldWorker(worker.Name)
+
+		workerErr := c.validateWorkerMachine(idxPath, worker, oldWorker, isNewWorkerPool, a)
+		if workerErr != nil {
+			allErrs = append(allErrs, workerErr)
 		} else {
-			var (
-				isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes = validateMachineTypes(c.cloudProfileSpec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones)
-				detail                                                                                                             = fmt.Sprintf("machine type %q ", worker.Machine.Type)
-			)
-
-			if !isMachinePresentInCloudprofile {
-				allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "type"), worker.Machine.Type, supportedMachineTypes))
-			} else if !architectureSupported || !availableInAllZones || !isUsableMachine {
-				if !isUsableMachine {
-					detail += "is unusable, "
-				}
-				if !availableInAllZones {
-					detail += "is unavailable in at least one zone, "
-				}
-				if !architectureSupported {
-					detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
-				}
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes)))
+			allErrs = append(allErrs, validateContainerRuntimeInterface(c.cloudProfileSpec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
+			kubeletVersion, err := helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
+			if err != nil {
+				// exit early, all other validation errors will be misleading
+				return append(allErrs, field.Invalid(idxPath.Child("kubernetes", "version"), worker.Kubernetes.Version, "cannot determine effective Kubernetes version for worker pool"))
 			}
-
-			isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine)
-			if !isMachineImagePresentInCloudprofile {
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageVersions)))
-			} else if !architectureSupported || !activeMachineImageVersion || (isUpdateStrategyInPlace && !inPlaceUpdateSupported) {
-				detail := fmt.Sprintf("machine image version '%s:%s' ", worker.Machine.Image.Name, worker.Machine.Image.Version)
-				if !architectureSupported {
-					detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
-				}
-				if !activeMachineImageVersion {
-					detail += "is expired, "
-				}
-				if isUpdateStrategyInPlace && !inPlaceUpdateSupported {
-					if a.GetOperation() == admission.Update && !isNewWorkerPool {
-						detail += "cannot be in-place updated from the current version, "
-					} else {
-						detail += "does not support in-place updates, "
-					}
-				}
-				allErrs = append(allErrs, field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("%ssupported machine image versions are: %+v", detail, validMachineImageVersions)))
-			} else {
-				allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfileSpec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
-
-				kubeletVersion, err := helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, worker.Kubernetes)
-				if err != nil {
-					allErrs = append(allErrs, field.Invalid(idxPath.Child("kubernetes", "version"), worker.Kubernetes.Version, "cannot determine effective Kubernetes version for worker pool"))
-					// exit early, all other validation errors will be misleading
-					return allErrs
-				}
-				if err := validateKubeletVersionConstraint(c.cloudProfileSpec.MachineImages, worker, kubeletVersion, idxPath); err != nil {
-					allErrs = append(allErrs, err)
-				}
+			if err := validateKubeletVersion(c.cloudProfileSpec.MachineImages, worker, kubeletVersion, idxPath); err != nil {
+				allErrs = append(allErrs, err)
 			}
 		}
-		isVolumePresentInCloudprofile, availableInAllZones, isUsableVolume, supportedVolumeTypes := validateVolumeTypes(c.cloudProfileSpec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones)
-		if !isVolumePresentInCloudprofile {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), ptr.Deref(worker.Volume.Type, ""), supportedVolumeTypes))
-		} else if !availableInAllZones || !isUsableVolume {
-			detail := fmt.Sprintf("volume type %q ", *worker.Volume.Type)
-			if !isUsableVolume {
-				detail += "is unusable, "
-			}
-			if !availableInAllZones {
-				detail += "is unavailable in at least one zone, "
-			}
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "type"), *worker.Volume.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedVolumeTypes)))
+
+		if err := c.validateWorkerVolume(idxPath, worker, oldWorker); err != nil {
+			allErrs = append(allErrs, err)
 		}
-		if ok, minSize := validateVolumeSize(c.cloudProfileSpec.VolumeTypes, c.cloudProfileSpec.MachineTypes, worker.Machine.Type, worker.Volume); !ok {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("size must be >= %s", minSize)))
-		}
+
 		if worker.Kubernetes != nil {
 			if worker.Kubernetes.Kubelet != nil {
 				kubeletConfig = worker.Kubernetes.Kubelet
 			}
 			allErrs = append(allErrs, validateKubeletConfig(idxPath.Child("kubernetes").Child("kubelet"), c.cloudProfileSpec.MachineTypes, worker.Machine.Type, kubeletConfig)...)
 
-			if worker.Kubernetes.Version != nil {
-				oldWorkerKubernetesVersion := c.oldShoot.Spec.Kubernetes.Version
-				if oldWorker.Kubernetes != nil && oldWorker.Kubernetes.Version != nil {
-					oldWorkerKubernetesVersion = *oldWorker.Kubernetes.Version
-				}
-
-				defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, idxPath.Child("kubernetes", "version"))
-				if len(errList) > 0 {
-					allErrs = append(allErrs, errList...)
-				}
-
-				if defaultVersion != nil {
-					worker.Kubernetes.Version = defaultVersion
-				} else {
-					// We assume that the 'defaultVersion' is already calculated correctly, so only run validation if the version was not defaulted.
-					allErrs = append(allErrs, validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion, isNewWorkerPool, idxPath.Child("kubernetes", "version"))...)
-				}
+			if errList := c.validateWorkerKubernetesVersion(idxPath, worker, oldWorker, isNewWorkerPool, a); len(errList) > 0 {
+				allErrs = append(allErrs, errList...)
 			}
 		}
 
@@ -1167,6 +1068,131 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	}
 
 	return allErrs
+}
+
+func (c *validationContext) validateProviderType(path *field.Path) *field.Error {
+	if c.shoot.Spec.Provider.Type != c.cloudProfileSpec.Type {
+		return field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfileSpec.Type))
+	}
+
+	if c.secretBinding != nil && !v1beta1helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
+		var secretBindingProviderType string
+		if c.secretBinding.Provider != nil {
+			secretBindingProviderType = c.secretBinding.Provider.Type
+		}
+		return field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must match provider type of referenced SecretBinding: %q", secretBindingProviderType))
+	}
+
+	if c.credentialsBinding != nil && c.credentialsBinding.Provider.Type != c.shoot.Spec.Provider.Type {
+		return field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must match provider type of referenced CredentialsBinding: %q", c.credentialsBinding.Provider.Type))
+	}
+
+	return nil
+}
+
+func (c *validationContext) getOldWorker(workerName string) (core.Worker, bool) {
+	for _, ow := range c.oldShoot.Spec.Provider.Workers {
+		if ow.Name == workerName {
+			return ow, false
+		}
+	}
+	return core.Worker{Machine: core.Machine{Image: &core.ShootMachineImage{}}}, true
+}
+
+func (c *validationContext) validateWorkerMachine(idxPath *field.Path, worker, oldWorker core.Worker, isNewWorkerPool bool, a admission.Attributes) *field.Error {
+	if worker.Machine.Architecture != nil && !slices.Contains(v1beta1constants.ValidArchitectures, *worker.Machine.Architecture) {
+		return field.NotSupported(idxPath.Child("machine", "architecture"), *worker.Machine.Architecture, v1beta1constants.ValidArchitectures)
+	}
+
+	isMachinePresentInCloudprofile, architectureSupported, availableInAllZones, isUsableMachine, supportedMachineTypes := validateMachineTypes(c.cloudProfileSpec.MachineTypes, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones)
+	if !isMachinePresentInCloudprofile {
+		return field.NotSupported(idxPath.Child("machine", "type"), worker.Machine.Type, supportedMachineTypes)
+	}
+
+	if !architectureSupported || !availableInAllZones || !isUsableMachine {
+		detail := fmt.Sprintf("machine type %q ", worker.Machine.Type)
+		if !isUsableMachine {
+			detail += "is unusable, "
+		}
+		if !availableInAllZones {
+			detail += "is unavailable in at least one zone, "
+		}
+		if !architectureSupported {
+			detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
+		}
+		return field.Invalid(idxPath.Child("machine", "type"), worker.Machine.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedMachineTypes))
+	}
+
+	isUpdateStrategyInPlace := helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
+	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine)
+	if !isMachineImagePresentInCloudprofile {
+		return field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageVersions))
+	}
+
+	if !architectureSupported || !activeMachineImageVersion || (isUpdateStrategyInPlace && !inPlaceUpdateSupported) {
+		detail := fmt.Sprintf("machine image version '%s:%s' ", worker.Machine.Image.Name, worker.Machine.Image.Version)
+		if !architectureSupported {
+			detail += fmt.Sprintf("does not support CPU architecture %q, ", *worker.Machine.Architecture)
+		}
+		if !activeMachineImageVersion {
+			detail += "is expired, "
+		}
+		if isUpdateStrategyInPlace && !inPlaceUpdateSupported {
+			if a.GetOperation() == admission.Update && !isNewWorkerPool {
+				detail += "cannot be in-place updated from the current version, "
+			} else {
+				detail += "does not support in-place updates, "
+			}
+		}
+		return field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("%ssupported machine image versions are: %+v", detail, validMachineImageVersions))
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateWorkerVolume(idxPath *field.Path, worker, oldWorker core.Worker) *field.Error {
+	isVolumePresentInCloudprofile, availableInAllZones, isUsableVolume, supportedVolumeTypes := validateVolumeTypes(c.cloudProfileSpec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfileSpec.Regions, c.shoot.Spec.Region, worker.Zones)
+	if !isVolumePresentInCloudprofile {
+		return field.NotSupported(idxPath.Child("volume", "type"), ptr.Deref(worker.Volume.Type, ""), supportedVolumeTypes)
+	}
+
+	if !availableInAllZones || !isUsableVolume {
+		detail := fmt.Sprintf("volume type %q ", *worker.Volume.Type)
+		if !isUsableVolume {
+			detail += "is unusable, "
+		}
+		if !availableInAllZones {
+			detail += "is unavailable in at least one zone, "
+		}
+		return field.Invalid(idxPath.Child("volume", "type"), *worker.Volume.Type, fmt.Sprintf("%ssupported types are %+v", detail, supportedVolumeTypes))
+	}
+
+	if ok, minSize := validateVolumeSize(c.cloudProfileSpec.VolumeTypes, c.cloudProfileSpec.MachineTypes, worker.Machine.Type, worker.Volume); !ok {
+		return field.Invalid(idxPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("size must be >= %s", minSize))
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateWorkerKubernetesVersion(idxPath *field.Path, worker, oldWorker core.Worker, isNewWorkerPool bool, a admission.Attributes) field.ErrorList {
+	if worker.Kubernetes.Version == nil {
+		return nil
+	}
+	oldWorkerKubernetesVersion := c.oldShoot.Spec.Kubernetes.Version
+	if oldWorker.Kubernetes != nil && oldWorker.Kubernetes.Version != nil {
+		oldWorkerKubernetesVersion = *oldWorker.Kubernetes.Version
+	}
+
+	defaultVersion, errList := defaultKubernetesVersion(c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, idxPath.Child("kubernetes", "version"))
+	if len(errList) > 0 {
+		return errList
+	}
+
+	if defaultVersion == nil {
+		return validateKubernetesVersionConstraints(a, c.cloudProfileSpec.Kubernetes.Versions, *worker.Kubernetes.Version, oldWorkerKubernetesVersion, isNewWorkerPool, idxPath.Child("kubernetes", "version"))
+	}
+	worker.Kubernetes.Version = defaultVersion
+	return nil
 }
 
 func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList {
@@ -1885,7 +1911,7 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 		sets.List(validMachineImageVersions)
 }
 
-func validateContainerRuntimeConstraints(constraints []gardencorev1beta1.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
+func validateContainerRuntimeInterface(constraints []gardencorev1beta1.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
 	if worker.CRI == nil || worker.Machine.Image == nil {
 		return nil
 	}
@@ -1956,7 +1982,7 @@ func validateCRMembership(constraints []core.ContainerRuntime, cr string) (bool,
 	return false, validValues
 }
 
-func validateKubeletVersionConstraint(constraints []gardencorev1beta1.MachineImage, worker core.Worker, kubeletVersion *semver.Version, fldPath *field.Path) *field.Error {
+func validateKubeletVersion(constraints []gardencorev1beta1.MachineImage, worker core.Worker, kubeletVersion *semver.Version, fldPath *field.Path) *field.Error {
 	if worker.Machine.Image == nil {
 		return nil
 	}
