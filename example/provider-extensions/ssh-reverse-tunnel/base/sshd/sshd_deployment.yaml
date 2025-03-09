@@ -16,6 +16,8 @@ spec:
         app: gardener-apiserver-tunnel-sshd
         projected-token-mount.resources.gardener.cloud/skip: "true"
         seccompprofile.resources.gardener.cloud/skip: "true"
+        # TODO(shafeeqes): Remove this label in gardener v1.116.0
+        topology-spread-constraints.resources.gardener.cloud/skip: "true"
     spec:
       # Relay should not be evicted for gardener pods because gardenlet does not work when it cannot reach the gardener-apiserver
       priorityClassName: system-cluster-critical

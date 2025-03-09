@@ -54,6 +54,8 @@ spec:
 {{ include "operator.deployment.labels" . | indent 8 }}
         projected-token-mount.resources.gardener.cloud/skip: "true"
         seccompprofile.resources.gardener.cloud/skip: "true"
+        # TODO(shafeeqes): Remove this label in gardener v1.116.0
+        topology-spread-constraints.resources.gardener.cloud/skip: "true"
         networking.resources.gardener.cloud/to-virtual-garden-etcd-main-client-tcp-8080: allowed
         networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
         networking.resources.gardener.cloud/to-gardener-apiserver-tcp-8443: allowed
