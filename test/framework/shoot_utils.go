@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -155,6 +156,8 @@ func CreateShootTestArtifacts(cfg *ShootCreationConfig, projectNamespace string,
 	setShootTolerations(shoot)
 
 	setShootControlPlaneHighAvailability(shoot, cfg)
+
+	setShootControlPlaneAutoscaling(shoot, cfg)
 
 	return shoot.Name, shoot, nil
 }
@@ -388,5 +391,44 @@ func setShootControlPlaneHighAvailability(shoot *gardencorev1beta1.Shoot, cfg *S
 			}
 		}
 		shoot.Spec.ControlPlane.HighAvailability.FailureTolerance.Type = gardencorev1beta1.FailureToleranceType(cfg.controlPlaneFailureTolerance)
+	}
+}
+
+// setShootControlPlaneAutoscaling sets autoscaling settings for kube API server and etcd
+func setShootControlPlaneAutoscaling(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig) {
+	if StringSet(cfg.kubeApiserverMinAllowedCPU) || StringSet(cfg.kubeApiserverMinAllowedMemory) {
+		minAllowed := make(map[corev1.ResourceName]resource.Quantity)
+		if StringSet(cfg.kubeApiserverMinAllowedCPU) {
+			minAllowed[corev1.ResourceCPU] = resource.MustParse(cfg.kubeApiserverMinAllowedCPU)
+		}
+		if StringSet(cfg.kubeApiserverMinAllowedMemory) {
+			minAllowed[corev1.ResourceMemory] = resource.MustParse(cfg.kubeApiserverMinAllowedMemory)
+		}
+
+		if shoot.Spec.Kubernetes.KubeAPIServer == nil {
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{}
+		}
+		shoot.Spec.Kubernetes.KubeAPIServer.Autoscaling = &gardencorev1beta1.ControlPlaneAutoscaling{MinAllowed: minAllowed}
+	}
+	if StringSet(cfg.etcdMinAllowedCPU) || StringSet(cfg.etcdMinAllowedMemory) {
+		minAllowed := make(map[corev1.ResourceName]resource.Quantity)
+		if StringSet(cfg.etcdMinAllowedCPU) {
+			minAllowed[corev1.ResourceCPU] = resource.MustParse(cfg.etcdMinAllowedCPU)
+		}
+		if StringSet(cfg.etcdMinAllowedMemory) {
+			minAllowed[corev1.ResourceMemory] = resource.MustParse(cfg.etcdMinAllowedMemory)
+		}
+
+		if shoot.Spec.Kubernetes.ETCD == nil {
+			shoot.Spec.Kubernetes.ETCD = &gardencorev1beta1.ETCD{}
+		}
+		if shoot.Spec.Kubernetes.ETCD.Events == nil {
+			shoot.Spec.Kubernetes.ETCD.Events = &gardencorev1beta1.ETCDConfig{}
+		}
+		if shoot.Spec.Kubernetes.ETCD.Main == nil {
+			shoot.Spec.Kubernetes.ETCD.Main = &gardencorev1beta1.ETCDConfig{}
+		}
+		shoot.Spec.Kubernetes.ETCD.Events.Autoscaling = &gardencorev1beta1.ControlPlaneAutoscaling{MinAllowed: minAllowed}
+		shoot.Spec.Kubernetes.ETCD.Main.Autoscaling = &gardencorev1beta1.ControlPlaneAutoscaling{MinAllowed: minAllowed}
 	}
 }
