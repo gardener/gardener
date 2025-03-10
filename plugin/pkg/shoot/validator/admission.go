@@ -333,7 +333,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	validationContext.addMetadataAnnotations(a)
 
 	allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
-	allErrs = append(allErrs, validationContext.validateShootNetworks(a, helper.IsWorkerless(shoot), helper.IsHAVPN(shoot))...)
+	allErrs = append(allErrs, validationContext.validateShootNetworks(a, helper.IsWorkerless(shoot), helper.IsHAVPNEnabled(shoot))...)
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateAccessRestrictions()...)

@@ -265,7 +265,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 
 	shoot.IsWorkerless = v1beta1helper.IsWorkerless(shoot.GetInfo())
 
-	shoot.VPNHighAvailabilityEnabled = v1beta1helper.IsHAVPN(shoot.GetInfo())
+	shoot.VPNHighAvailabilityEnabled = v1beta1helper.IsHAVPNEnabled(shoot.GetInfo())
 	shoot.VPNHighAvailabilityNumberOfSeedServers = vpnseedserver.HighAvailabilityReplicaCount
 	shoot.VPNHighAvailabilityNumberOfShootClients = vpnseedserver.HighAvailabilityReplicaCount
 	if vpnVPAUpdateDisabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneVPNVPAUpdateDisabled]); err == nil {

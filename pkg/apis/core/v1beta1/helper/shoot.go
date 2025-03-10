@@ -89,8 +89,8 @@ func IsHAControlPlaneConfigured(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
 }
 
-// IsHAVPN checks if the shoot has HA VPN enabled.
-func IsHAVPN(shoot *gardencorev1beta1.Shoot) bool {
+// IsHAVPNEnabled checks if the shoot has HA VPN enabled.
+func IsHAVPNEnabled(shoot *gardencorev1beta1.Shoot) bool {
 	if shoot == nil {
 		return false
 	}
