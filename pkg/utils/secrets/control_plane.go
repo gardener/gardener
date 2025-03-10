@@ -177,15 +177,10 @@ func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certifica
 	}
 
 	for _, req := range secret.KubeConfigRequests {
-		caData := req.CAData
-		if caData == nil && certificate != nil && certificate.CA != nil {
-			caData = certificate.CA.CertificatePEM
-		}
-
 		config.Clusters = append(config.Clusters, clientcmdv1.NamedCluster{
 			Name: req.ClusterName,
 			Cluster: clientcmdv1.Cluster{
-				CertificateAuthorityData: caData,
+				CertificateAuthorityData: req.CAData,
 				Server:                   fmt.Sprintf("https://%s", req.APIServerHost),
 			},
 		})
