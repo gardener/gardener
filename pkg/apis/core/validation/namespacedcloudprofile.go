@@ -30,6 +30,7 @@ func ValidateNamespacedCloudProfile(namespacedCloudProfile *core.NamespacedCloud
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec.caBundle"), *(namespacedCloudProfile.Spec.CABundle), "caBundle is not a valid PEM-encoded certificate"))
 		}
 	}
+	allErrs = append(allErrs, validateCloudProfileLimits(namespacedCloudProfile.Spec.Limits, field.NewPath("spec.limits"))...)
 
 	return allErrs
 }
@@ -50,6 +51,7 @@ func ValidateNamespacedCloudProfileSpecUpdate(newProfile, oldProfile *core.Names
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProfile.Parent, oldProfile.Parent, fldPath.Child("parent"))...)
+	allErrs = append(allErrs, validateCloudProfileLimitsUpdate(newProfile.Limits, oldProfile.Limits, fldPath.Child("limits"))...)
 
 	return allErrs
 }
