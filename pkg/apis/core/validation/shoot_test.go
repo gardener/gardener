@@ -6612,6 +6612,73 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 		})
+
+		Describe("machine controller manager settings validation", func() {
+			var (
+				worker  core.Worker
+				fldPath *field.Path
+			)
+
+			BeforeEach(func() {
+				worker = core.Worker{
+					Name: "worker-1",
+					Machine: core.Machine{
+						Type: "xlarge",
+					},
+				}
+
+				fldPath = field.NewPath("workers").Index(0)
+			})
+
+			It("should succeed if MachineControllerManagerSettings is nil", func() {
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should allow setting DisableHealthTimeout to false for update strategy AutoRollingUpdate", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					DisableHealthTimeout: ptr.To(false),
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should forbid setting DisableHealthTimeout to true for update strategy AutoRollingUpdate", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					DisableHealthTimeout: ptr.To(true),
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.disableHealthTimeout"),
+					"Detail": Equal("can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"),
+				}))))
+			})
+
+			It("should allow setting DisableHealthTimeout to false for update strategy AutoInPlaceUpdate", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					DisableHealthTimeout: ptr.To(false),
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should allow setting DisableHealthTimeout to true for update strategy AutoInPlaceUpdate", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					DisableHealthTimeout: ptr.To(true),
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+		})
 	})
 
 	Describe("#ValidateWorkers", func() {

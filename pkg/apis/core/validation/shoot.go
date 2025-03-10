@@ -1864,6 +1864,12 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		allErrs = append(allErrs, ValidateClusterAutoscalerOptions(worker.ClusterAutoscaler, fldPath.Child("autoscaler"))...)
 	}
 
+	if worker.MachineControllerManagerSettings != nil {
+		if worker.MachineControllerManagerSettings.DisableHealthTimeout != nil && *worker.MachineControllerManagerSettings.DisableHealthTimeout && !helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("machineControllerManagerSettings", "disableHealthTimeout"), "can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
+		}
+	}
+
 	if worker.UpdateStrategy != nil {
 		if !availableUpdateStrategies.Has(*worker.UpdateStrategy) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, sets.List(availableUpdateStrategies)))
