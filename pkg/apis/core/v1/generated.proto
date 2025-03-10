@@ -20,7 +20,7 @@ option go_package = "github.com/gardener/gardener/pkg/apis/core/v1";
 // ControllerDeployment contains information about how this controller is deployed.
 message ControllerDeployment {
   // Standard object metadata.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Helm configures that an extension controller is deployed using helm.
   // +optional
@@ -36,7 +36,7 @@ message ControllerDeployment {
 message ControllerDeploymentList {
   // Standard list object metadata.
   // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   // Items is the list of ControllerDeployments.
   repeated ControllerDeployment items = 2;
@@ -50,7 +50,7 @@ message HelmControllerDeployment {
 
   // Values are the chart values.
   // +optional
-  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON values = 2;
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON values = 2;
 
   // OCIRepository defines where to pull the chart.
   // +optional
@@ -80,6 +80,6 @@ message OCIRepository {
   // The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
   // For usage in the gardenlet, the secret must have the label `gardener.cloud/role=helm-pull-secret`.
   // +optional
-  optional .k8s.io.api.core.v1.LocalObjectReference pullSecretRef = 5;
+  optional k8s.io.api.core.v1.LocalObjectReference pullSecretRef = 5;
 }
 

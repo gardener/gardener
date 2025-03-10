@@ -8018,6 +8018,33 @@ int32
 <p>NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>inPlaceUpdateTimeout</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>disableHealthTimeout</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+This is intended to be used only for in-place updates.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MachineImage">MachineImage

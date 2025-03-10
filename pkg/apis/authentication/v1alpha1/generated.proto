@@ -19,7 +19,7 @@ option go_package = "github.com/gardener/gardener/pkg/apis/authentication/v1alph
 // for a Shoot cluster.
 message AdminKubeconfigRequest {
   // Standard object metadata.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec is the specification of the AdminKubeconfigRequest.
   optional AdminKubeconfigRequestSpec spec = 2;
@@ -45,14 +45,14 @@ message AdminKubeconfigRequestStatus {
   optional bytes kubeconfig = 1;
 
   // ExpirationTimestamp is the expiration timestamp of the returned credential.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
 }
 
 // ViewerKubeconfigRequest can be used to request a kubeconfig with viewer credentials (excluding Secrets)
 // for a Shoot cluster.
 message ViewerKubeconfigRequest {
   // Standard object metadata.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec is the specification of the ViewerKubeconfigRequest.
   optional ViewerKubeconfigRequestSpec spec = 2;
@@ -78,6 +78,6 @@ message ViewerKubeconfigRequestStatus {
   optional bytes kubeconfig = 1;
 
   // ExpirationTimestamp is the expiration timestamp of the returned credential.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 2;
 }
 
