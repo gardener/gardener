@@ -810,7 +810,7 @@ var _ = Describe("Shoot defaulting", func() {
 					MaxSurge:         &maxSurge,
 					MaxUnavailable:   &maxUnavailable,
 					SystemComponents: &WorkerSystemComponents{Allow: false},
-					UpdateStrategy:   ptr.To(ManualInPlaceUpdate),
+					UpdateStrategy:   ptr.To(AutoInPlaceUpdate),
 				},
 			}
 
@@ -821,18 +821,33 @@ var _ = Describe("Shoot defaulting", func() {
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(2))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.SystemComponents.Allow).To(BeFalse())
-				Expect(worker.UpdateStrategy).To(PointTo(Equal(ManualInPlaceUpdate)))
+				Expect(worker.UpdateStrategy).To(PointTo(Equal(AutoInPlaceUpdate)))
 			}
 		})
 
-		It("should default the worker MachineControllerManagerSettings field also if update strategy is in-place update", func() {
-			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(ManualInPlaceUpdate)
+		It("should default the worker MachineControllerManagerSettings field also if update strategy is auto in-place update", func() {
+			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(AutoInPlaceUpdate)
 			SetObjectDefaults_Shoot(obj)
 
 			for i := range obj.Spec.Provider.Workers {
 				worker := &obj.Spec.Provider.Workers[i]
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
+				Expect(worker.SystemComponents.Allow).To(BeTrue())
+				Expect(worker.UpdateStrategy).To(PointTo(Equal(AutoInPlaceUpdate)))
+				Expect(worker.MachineControllerManagerSettings).To(Not(BeNil()))
+				Expect(worker.MachineControllerManagerSettings.DisableHealthTimeout).To(PointTo(Equal(true)))
+			}
+		})
+
+		It("should default the worker MachineControllerManagerSettings field also if update strategy is manual in-place update", func() {
+			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(ManualInPlaceUpdate)
+			SetObjectDefaults_Shoot(obj)
+
+			for i := range obj.Spec.Provider.Workers {
+				worker := &obj.Spec.Provider.Workers[i]
+				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(0))))
+				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.SystemComponents.Allow).To(BeTrue())
 				Expect(worker.UpdateStrategy).To(PointTo(Equal(ManualInPlaceUpdate)))
 				Expect(worker.MachineControllerManagerSettings).To(Not(BeNil()))
@@ -841,7 +856,7 @@ var _ = Describe("Shoot defaulting", func() {
 		})
 
 		It("should not overwrite the already set worker MachineControllerManagerSettings field", func() {
-			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(ManualInPlaceUpdate)
+			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(AutoInPlaceUpdate)
 			obj.Spec.Provider.Workers[0].MachineControllerManagerSettings = &MachineControllerManagerSettings{DisableHealthTimeout: ptr.To(false)}
 			SetObjectDefaults_Shoot(obj)
 
@@ -850,7 +865,7 @@ var _ = Describe("Shoot defaulting", func() {
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
 				Expect(worker.SystemComponents.Allow).To(BeTrue())
-				Expect(worker.UpdateStrategy).To(PointTo(Equal(ManualInPlaceUpdate)))
+				Expect(worker.UpdateStrategy).To(PointTo(Equal(AutoInPlaceUpdate)))
 				Expect(worker.MachineControllerManagerSettings).To(Not(BeNil()))
 				Expect(worker.MachineControllerManagerSettings.DisableHealthTimeout).To(PointTo(Equal(false)))
 			}
