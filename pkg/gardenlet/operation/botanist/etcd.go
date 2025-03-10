@@ -124,7 +124,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	// Roll out the new peer CA first so that every member in the cluster trusts the old and the new CA.
 	// This is required because peer certificates which are used for client and server authentication at the same time,
 	// are re-created with the new CA in the `Deploy` step.
-	if sets.New[gardencorev1beta1.CredentialsRotationPhase](
+	if sets.New(
 		gardencorev1beta1.RotationPreparing,
 		gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
 	).Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials)) {

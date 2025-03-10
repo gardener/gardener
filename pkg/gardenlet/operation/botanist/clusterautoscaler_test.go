@@ -225,12 +225,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 		})
 
 		It("should return the CloudProfile limit if it is lower than the network limit", func() {
-			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To[int32](maxNetworks - 10)
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks - 10)
 			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(*botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal))
 		})
 
 		It("should return the network limit if it is lower than the CloudProfile limit", func() {
-			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To[int32](maxNetworks + 10)
+			botanist.Shoot.CloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(maxNetworks + 10)
 			Expect(botanist.CalculateMaxNodesTotal(shoot)).To(BeEquivalentTo(maxNetworks))
 		})
 	})
