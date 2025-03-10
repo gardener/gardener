@@ -346,7 +346,7 @@ images:
 - name: plutono-dashboard-refresher
   sourceRepository: github.com/kiwigrid/k8s-sidecar
   repository: quay.io/kiwigrid/k8s-sidecar
-  tag: "1.30.0"
+  tag: "1.30.2"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
