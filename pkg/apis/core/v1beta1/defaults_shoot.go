@@ -295,6 +295,15 @@ func SetDefaults_Worker(obj *Worker) {
 	if obj.UpdateStrategy == nil {
 		obj.UpdateStrategy = ptr.To(AutoRollingUpdate)
 	}
+
+	if obj.UpdateStrategy != nil && (*obj.UpdateStrategy == AutoInPlaceUpdate || *obj.UpdateStrategy == ManualInPlaceUpdate) {
+		if obj.MachineControllerManagerSettings == nil {
+			obj.MachineControllerManagerSettings = &MachineControllerManagerSettings{}
+		}
+		if obj.MachineControllerManagerSettings.DisableHealthTimeout == nil {
+			obj.MachineControllerManagerSettings.DisableHealthTimeout = ptr.To(true)
+		}
+	}
 }
 
 // SetDefaults_ClusterAutoscaler sets default values for ClusterAutoscaler object.

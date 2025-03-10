@@ -800,6 +800,7 @@ var _ = Describe("Shoot defaulting", func() {
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
 				Expect(worker.SystemComponents.Allow).To(BeTrue())
 				Expect(worker.UpdateStrategy).To(PointTo(Equal(AutoRollingUpdate)))
+				Expect(worker.MachineControllerManagerSettings).To(BeNil())
 			}
 		})
 
@@ -821,6 +822,37 @@ var _ = Describe("Shoot defaulting", func() {
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.SystemComponents.Allow).To(BeFalse())
 				Expect(worker.UpdateStrategy).To(PointTo(Equal(ManualInPlaceUpdate)))
+			}
+		})
+
+		It("should default the worker MachineControllerManagerSettings field also if update strategy is in-place update", func() {
+			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(ManualInPlaceUpdate)
+			SetObjectDefaults_Shoot(obj)
+
+			for i := range obj.Spec.Provider.Workers {
+				worker := &obj.Spec.Provider.Workers[i]
+				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
+				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
+				Expect(worker.SystemComponents.Allow).To(BeTrue())
+				Expect(worker.UpdateStrategy).To(PointTo(Equal(ManualInPlaceUpdate)))
+				Expect(worker.MachineControllerManagerSettings).To(Not(BeNil()))
+				Expect(worker.MachineControllerManagerSettings.DisableHealthTimeout).To(PointTo(Equal(true)))
+			}
+		})
+
+		It("should not overwrite the already set worker MachineControllerManagerSettings field", func() {
+			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(ManualInPlaceUpdate)
+			obj.Spec.Provider.Workers[0].MachineControllerManagerSettings = &MachineControllerManagerSettings{DisableHealthTimeout: ptr.To(false)}
+			SetObjectDefaults_Shoot(obj)
+
+			for i := range obj.Spec.Provider.Workers {
+				worker := &obj.Spec.Provider.Workers[i]
+				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
+				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
+				Expect(worker.SystemComponents.Allow).To(BeTrue())
+				Expect(worker.UpdateStrategy).To(PointTo(Equal(ManualInPlaceUpdate)))
+				Expect(worker.MachineControllerManagerSettings).To(Not(BeNil()))
+				Expect(worker.MachineControllerManagerSettings.DisableHealthTimeout).To(PointTo(Equal(false)))
 			}
 		})
 	})
