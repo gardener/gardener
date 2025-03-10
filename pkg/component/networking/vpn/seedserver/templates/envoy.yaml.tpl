@@ -85,8 +85,13 @@ static_resources:
   - name: metrics_listener
     address:
       socket_address:
-        address: {{ .listenAddress }}
+        address: "{{ .listenAddress }}"
         port_value: {{ .metricsPort }}
+    additional_addresses:
+    - address:
+        socket_address:
+          address: "{{ .listenAddressV6 }}"
+          port_value: {{ .metricsPort }}
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
