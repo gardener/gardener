@@ -87,9 +87,19 @@ const (
 )
 
 var (
+	tplNameEnvoy = "envoy.yaml.tpl"
 	//go:embed templates/envoy.yaml.tpl
 	tplContentEnvoy string
+	tplEnvoy        *template.Template
 )
+
+func init() {
+	var err error
+	tplEnvoy, err = template.
+		New(tplNameEnvoy).
+		Parse(tplContentEnvoy)
+	utilruntime.Must(err)
+}
 
 // Interface contains functions for a vpn-seed-server deployer.
 type Interface interface {
@@ -1091,11 +1101,7 @@ func (v *vpnSeedServer) getEnvoyConfig() (string, error) {
 	}
 
 	var envoyConfig strings.Builder
-	tmpl, err := template.New("envoy.yaml.tpl").Parse(tplContentEnvoy)
-	if err != nil {
-		return "", err
-	}
-	err = tmpl.Execute(&envoyConfig, values)
+	err := tplEnvoy.Execute(&envoyConfig, values)
 	if err != nil {
 		return "", err
 	}
