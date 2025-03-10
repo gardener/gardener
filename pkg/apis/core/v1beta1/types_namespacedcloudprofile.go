@@ -63,6 +63,11 @@ type NamespacedCloudProfileSpec struct {
 	// ProviderConfig contains provider-specific configuration for the profile.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,8,opt,name=providerConfig"`
+	// Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
+	// If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
+	// +optional
+	Limits *Limits `json:"limits,omitempty" protobuf:"bytes,9,opt,name=limits"`
 }
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.
