@@ -434,6 +434,18 @@
       ],
     },
     {
+      // Limit updates of jsonpatch/v2 to stay below v3.0.0.
+      // The major version of this dependency should be kept in sync with controller-runtime:
+      // https://github.com/kubernetes-sigs/controller-runtime/blob/main/go.mod
+      matchDatasources: [
+        'go',
+      ],
+      matchPackageNames: [
+        'gomodules.xyz/jsonpatch/v2',
+      ],
+      allowedVersions: '<v3.0.0', // Should be updated when controller-runtime uses a new major version.
+    },
+    {
       // TODO(marc1404): Remove when the NewVPN feature gate is removed.
       // Ignore dependency updates of gardener/vpn2@0.26.0 which is used when the NewVPN feature gate is disabled.
       matchFileNames: [
@@ -449,10 +461,10 @@
       // TODO(marc1404): Remove when support for Kubernetes v1.27 is dropped.
       // Restrict updates of ingress-nginx/controller-chroot@v1.11.x for Kubernetes v1.27 to stay below v1.12.0.
       matchFileNames: [
-        'imagevector/containers.yaml'
+        'imagevector/containers.yaml',
       ],
       matchPackageNames: [
-        'registry.k8s.io/ingress-nginx/controller-chroot'
+        'registry.k8s.io/ingress-nginx/controller-chroot',
       ],
       matchCurrentValue: 'v1.11.*',
       allowedVersions: '<v1.12.0',
