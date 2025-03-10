@@ -27,8 +27,8 @@ v1.115  | Week 11-12 | March 10, 2025         | March 23, 2025     | [@ialidzhik
 v1.116  | Week 13-14 | March 24, 2025         | April 6, 2025      | [@Kostov6](https://github.com/Kostov6)             |
 v1.117  | Week 15-16 | April 7, 2025          | April 20, 2025     | [@marc1404](https://github.com/marc1404)           |
 v1.118  | Week 17-18 | April 21, 2025         | May 4, 2025        | [@acumino](https://github.com/acumino)             |
-v1.119  | Week 19-20 | May 5, 2025            | May 18, 2025       | [@timuthy](https://github.com/timuthy)             |
-v1.120  | Week 21-22 | May 19, 2025           | June 1, 2025       | [@LucaBernstein](https://github.com/LucaBernstein) |
+v1.119  | Week 19-20 | May 5, 2025            | May 18, 2025       | [@LucaBernstein](https://github.com/LucaBernstein) |
+v1.120  | Week 21-22 | May 19, 2025           | June 1, 2025       | [@timuthy](https://github.com/timuthy)             |
 v1.121  | Week 23-24 | June 2, 2025           | June 15, 2025      | [@shafeeqes](https://github.com/shafeeqes)         |
 v1.122  | Week 25-26 | June 16, 2025          | June 29, 2025      | [@ary1992](https://github.com/ary1992)             |
 v1.123  | Week 27-28 | June 30, 2025          | July 13, 2025      | [@ScheererJ](https://github.com/ScheererJ)         |
