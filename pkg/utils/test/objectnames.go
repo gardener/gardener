@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package matchers
+package test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ObjectNames takes an ObjectList and returns a list of the objects within this list.
+// ObjectNames takes an ObjectList and returns the corresponding names of the objects.
 func ObjectNames(list client.ObjectList) []string {
 	GinkgoHelper()
 

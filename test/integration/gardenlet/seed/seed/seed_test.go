@@ -46,7 +46,6 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/test/utils/matchers"
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
@@ -563,7 +562,7 @@ var _ = Describe("Seed controller tests", func() {
 					Eventually(func(g Gomega) []string {
 						crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 						g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-						return matchers.ObjectNames(crdList)
+						return test.ObjectNames(crdList)
 					}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(crdsOnlyForSeedClusters))
 
 					By("Verify that VPA was created for gardenlet")
@@ -576,7 +575,7 @@ var _ = Describe("Seed controller tests", func() {
 						Eventually(func(g Gomega) []string {
 							crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 							g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-							return matchers.ObjectNames(crdList)
+							return test.ObjectNames(crdList)
 						}).Should(ContainElements(crdsSharedWithGardenCluster))
 
 						// The seed controller waits for the gardener-resource-manager Deployment to be healthy, so
@@ -596,7 +595,7 @@ var _ = Describe("Seed controller tests", func() {
 						Eventually(func(g Gomega) []string {
 							crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 							g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-							return matchers.ObjectNames(crdList)
+							return test.ObjectNames(crdList)
 						}).ShouldNot(ContainElements(crdsSharedWithGardenCluster))
 
 						// Usually, the gardener-operator deploys and manages the following resources.
@@ -667,7 +666,7 @@ var _ = Describe("Seed controller tests", func() {
 					Eventually(func(g Gomega) []string {
 						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
-						return matchers.ObjectNames(managedResourceList)
+						return test.ObjectNames(managedResourceList)
 					}).Should(ConsistOf(expectedManagedResources))
 
 					expectedIstioManagedResources := []string{
@@ -680,7 +679,7 @@ var _ = Describe("Seed controller tests", func() {
 					Eventually(func(g Gomega) []string {
 						managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
-						return matchers.ObjectNames(managedResourceList)
+						return test.ObjectNames(managedResourceList)
 					}).Should(ConsistOf(expectedIstioManagedResources))
 
 					By("Wait for 'last operation' state to be set to Succeeded")
