@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -124,6 +125,20 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 	if namespacedCloudProfile.Spec.CABundle != nil {
 		mergedCABundles := fmt.Sprintf("%s%s", ptr.Deref(namespacedCloudProfile.Status.CloudProfileSpec.CABundle, ""), ptr.Deref(namespacedCloudProfile.Spec.CABundle, ""))
 		namespacedCloudProfile.Status.CloudProfileSpec.CABundle = &mergedCABundles
+	}
+	if namespacedCloudProfile.Spec.Limits != nil {
+		if namespacedCloudProfile.Status.CloudProfileSpec.Limits == nil {
+			namespacedCloudProfile.Status.CloudProfileSpec.Limits = &gardencorev1beta1.Limits{}
+		}
+
+		maxNodesTotalOverride := ptr.Deref(namespacedCloudProfile.Spec.Limits.MaxNodesTotal, 0)
+		var maxNodesTotalParent int32
+		if cloudProfile.Spec.Limits != nil {
+			maxNodesTotalParent = ptr.Deref(cloudProfile.Spec.Limits.MaxNodesTotal, 0)
+		}
+		if maxNodesTotal := botanist.MinGreaterThanZero(maxNodesTotalOverride, maxNodesTotalParent); maxNodesTotal > 0 {
+			namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal = ptr.To(maxNodesTotal)
+		}
 	}
 }
 
