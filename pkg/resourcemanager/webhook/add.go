@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 )
 
 // AddToManager adds all webhook handlers to the given manager.
@@ -124,14 +123,6 @@ func AddToManager(mgr manager.Manager, sourceCluster, targetCluster cluster.Clus
 			Logger: mgr.GetLogger().WithName("webhook").WithName(seccompprofile.HandlerName),
 		}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding %s webhook handler: %w", seccompprofile.HandlerName, err)
-		}
-	}
-
-	if cfg.Webhooks.TokenInvalidator.Enabled {
-		if err := (&tokeninvalidator.Handler{
-			Logger: mgr.GetLogger().WithName("webhook").WithName(tokeninvalidator.HandlerName),
-		}).AddToManager(mgr); err != nil {
-			return fmt.Errorf("failed adding %s webhook handler: %w", tokeninvalidator.HandlerName, err)
 		}
 	}
 

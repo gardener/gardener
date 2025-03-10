@@ -249,7 +249,6 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
-            - pkg/resourcemanager/webhook/tokeninvalidator
             - pkg/utils
             - pkg/utils/chart
             - pkg/utils/context
