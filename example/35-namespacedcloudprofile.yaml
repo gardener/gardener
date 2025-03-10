@@ -4,7 +4,8 @@ metadata:
   name: custom-cloudprofile-1
   namespace: garden-local
 spec:
-  # Specifies a parent CloudProfile from which the NamespacedCloudProfile inherits, the result will be written into the status of the NamespacedCloudProfile.
+  # Specifies a parent CloudProfile from which the NamespacedCloudProfile inherits,
+  # the merged result will be written into the status of the NamespacedCloudProfile.
   # Every other field is optional in a NamespacedCloudProfile.
   parent:
     kind: CloudProfile
@@ -38,6 +39,8 @@ spec:
       - amd64
       cri:
       - name: containerd
+# limits: # optional
+#   maxNodesTotal: 1000
   providerConfig:
     apiVersion: local.provider.extensions.gardener.cloud/v1alpha1
     kind: CloudProfileConfig
