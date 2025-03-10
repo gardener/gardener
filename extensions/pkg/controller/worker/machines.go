@@ -36,8 +36,7 @@ type MachineDeployment struct {
 	Minimum                      int32
 	Maximum                      int32
 	Priority                     *int32
-	MaxSurge                     intstr.IntOrString
-	MaxUnavailable               intstr.IntOrString
+	Strategy                     machinev1alpha1.MachineDeploymentStrategy
 	Labels                       map[string]string
 	Annotations                  map[string]string
 	Taints                       []corev1.Taint
