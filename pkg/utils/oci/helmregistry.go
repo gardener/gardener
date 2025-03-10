@@ -14,31 +14,44 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	gcrv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 const (
 	mediaTypeHelm = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
 
-	localRegistry        = "localhost:5001"
 	inKubernetesRegistry = "garden.local.gardener.cloud:5001"
 )
 
+type pullSecretNamespace struct{}
+
+// ContextKeyPullSecretNamespace is the key to use to pass the pull secret namespace in the context.
+var ContextKeyPullSecretNamespace = pullSecretNamespace{}
+
 // Interface represents an OCI compatible registry.
 type Interface interface {
+	// Pull from the repository and return the Helm chart.
+	// The context can be used to pass the pull secret namespace with the key ContextKeyPullSecretNamespace.
 	Pull(ctx context.Context, oci *gardencorev1.OCIRepository) ([]byte, error)
 }
 
 // HelmRegistry can pull OCI Helm Charts.
 type HelmRegistry struct {
-	cache cacher
+	cache  cacher
+	client client.Client
 }
 
 // NewHelmRegistry creates a new HelmRegistry.
-func NewHelmRegistry() (*HelmRegistry, error) {
+// The client is used to get pull secrets if needed.
+func NewHelmRegistry(c client.Client) (*HelmRegistry, error) {
 	return &HelmRegistry{
-		cache: defaultCache,
+		cache:  defaultCache,
+		client: c,
 	}, nil
 }
 
@@ -50,6 +63,25 @@ func (r *HelmRegistry) Pull(ctx context.Context, oci *gardencorev1.OCIRepository
 	}
 	remoteOpts := []remote.Option{
 		remote.WithContext(ctx),
+	}
+
+	if oci.PullSecretRef != nil {
+		namespace := v1beta1constants.GardenNamespace
+		if v := ctx.Value(ContextKeyPullSecretNamespace); v != nil {
+			s, ok := v.(string)
+			if !ok {
+				return nil, errors.New("pull secret namespace must be a string")
+			}
+			namespace = s
+		}
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: oci.PullSecretRef.Name}}
+		if err := r.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return nil, fmt.Errorf("failed to get pull secret %s: %w", client.ObjectKeyFromObject(secret), err)
+		}
+		if secret.Data[corev1.DockerConfigJsonKey] == nil {
+			return nil, fmt.Errorf("pull secret %s is missing the data key %s", client.ObjectKeyFromObject(secret), corev1.DockerConfigJsonKey)
+		}
+		remoteOpts = append(remoteOpts, remote.WithAuthFromKeychain(&keychain{pullSecret: string(secret.Data[corev1.DockerConfigJsonKey])}))
 	}
 
 	key, err := cacheKeyFromRef(ref, remoteOpts...)

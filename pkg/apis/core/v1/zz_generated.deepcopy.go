@@ -10,6 +10,7 @@
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -135,6 +136,11 @@ func (in *OCIRepository) DeepCopyInto(out *OCIRepository) {
 	if in.Digest != nil {
 		in, out := &in.Digest, &out.Digest
 		*out = new(string)
+		**out = **in
+	}
+	if in.PullSecretRef != nil {
+		in, out := &in.PullSecretRef, &out.PullSecretRef
+		*out = new(corev1.LocalObjectReference)
 		**out = **in
 	}
 	return

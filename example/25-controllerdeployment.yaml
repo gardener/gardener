@@ -8,6 +8,8 @@ metadata:
 helm:
   ociRepository:
     ref: registry.example.com/foo:1.0.0@sha256:abc
+#   pullSecretRef:
+#     name: <pull-secret-name> # located in garden namespace
   values:
     foo: bar
 injectGardenKubeconfig: false

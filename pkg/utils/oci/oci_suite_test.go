@@ -6,12 +6,15 @@ package oci
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
+	"github.com/distribution/distribution/v3/registry/auth"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	helmregistry "helm.sh/helm/v3/pkg/registry"
@@ -28,6 +31,7 @@ var (
 	registryAddress    string
 	exampleChartDigest string
 	rawChart           []byte
+	authProvider       *testAuthProvider
 )
 
 var _ = BeforeSuite(func() {
@@ -64,6 +68,15 @@ func startTestRegistry(ctx context.Context) (string, error) {
 	config.Log.AccessLog.Disabled = true
 	config.Log.Level = "error"
 
+	// register a test auth provider
+	authProvider = &testAuthProvider{}
+	config.Auth = configuration.Auth{"oci-suite-test": map[string]any{}}
+	if err := auth.Register("oci-suite-test", func(_ map[string]interface{}) (auth.AccessController, error) {
+		return authProvider, nil
+	}); err != nil {
+		return "", err
+	}
+
 	reg, err := registry.NewRegistry(ctx, config)
 	if err != nil {
 		return "", err
@@ -72,4 +85,17 @@ func startTestRegistry(ctx context.Context) (string, error) {
 		_ = reg.ListenAndServe()
 	}()
 	return addr, nil
+}
+
+type testAuthProvider struct {
+	receivedAuthorization string
+}
+
+var _ auth.AccessController = &testAuthProvider{}
+
+func (a *testAuthProvider) Authorized(r *http.Request, _ ...auth.Access) (*auth.Grant, error) {
+	if r.Method == "GET" && strings.Contains(r.URL.Path, "/blobs/") {
+		a.receivedAuthorization = r.Header.Get("Authorization")
+	}
+	return &auth.Grant{User: auth.UserInfo{Name: "dummy"}}, nil
 }

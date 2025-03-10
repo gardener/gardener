@@ -1017,9 +1017,17 @@ func schema_pkg_apis_core_v1_OCIRepository(ref common.ReferenceCallback) common.
 							Format:      "",
 						},
 					},
+					"pullSecretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PullSecretRef is a reference to a secret containing the pull secret. The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace. For usage in the gardenlet, the secret must have the label `gardener.cloud/role=helm-pull-secret`.",
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 
@@ -6393,9 +6401,17 @@ func schema_pkg_apis_core_v1beta1_OCIRepository(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"pullSecretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PullSecretRef is a reference to a secret containing the pull secret. The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.",
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 
