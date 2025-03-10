@@ -17,7 +17,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -408,7 +407,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-			return objectNames(crdList)
+			return test.ObjectNames(crdList)
 		}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(
 			"etcds.druid.gardener.cloud",
 			"etcdcopybackupstasks.druid.gardener.cloud",
@@ -518,7 +517,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 			g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(managedResourceList)
+			return test.ObjectNames(managedResourceList)
 		}).Should(ContainElements(
 			"garden-system",
 			"vpa",
@@ -549,7 +548,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			etcdList := &druidv1alpha1.EtcdList{}
 			g.Expect(testClient.List(ctx, etcdList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(etcdList)
+			return test.ObjectNames(etcdList)
 		}).Should(ConsistOf(
 			"virtual-garden-etcd-main",
 			"virtual-garden-etcd-events",
@@ -613,7 +612,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			deploymentList := &appsv1.DeploymentList{}
 			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(deploymentList)
+			return test.ObjectNames(deploymentList)
 		}).Should(ContainElements(
 			"virtual-garden-kube-apiserver",
 		))
@@ -652,7 +651,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			deploymentList := &appsv1.DeploymentList{}
 			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(deploymentList)
+			return test.ObjectNames(deploymentList)
 		}).Should(ContainElements(
 			"virtual-garden-gardener-resource-manager",
 		))
@@ -661,7 +660,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(secretList)
+			return test.ObjectNames(secretList)
 		}).Should(ContainElements(
 			ContainSubstring("shoot-access-gardener-resource-manager-bootstrap-"),
 		))
@@ -680,7 +679,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 			g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(managedResourceList)
+			return test.ObjectNames(managedResourceList)
 		}).Should(ContainElements(
 			"shoot-core-gardener-resource-manager",
 		))
@@ -694,7 +693,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(secretList)
+			return test.ObjectNames(secretList)
 		}).ShouldNot(ContainElements(
 			ContainSubstring("shoot-access-gardener-resource-manager-bootstrap-"),
 		))
@@ -768,7 +767,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			deploymentList := &appsv1.DeploymentList{}
 			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(deploymentList)
+			return test.ObjectNames(deploymentList)
 		}).Should(ContainElements(
 			"virtual-garden-kube-controller-manager",
 		))
@@ -830,7 +829,7 @@ spec:
 			Eventually(func(g Gomega) []string {
 				managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 				g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
-				return objectNames(managedResourceList)
+				return test.ObjectNames(managedResourceList)
 			}).Should(ContainElements(
 				"gardener-"+name+"-runtime",
 				"gardener-"+name+"-virtual",
@@ -847,7 +846,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
 			g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(managedResourceList)
+			return test.ObjectNames(managedResourceList)
 		}).Should(ContainElements(
 			"terminal-runtime",
 			"terminal-virtual",
@@ -896,7 +895,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			deploymentList := &appsv1.DeploymentList{}
 			g.Expect(testClient.List(ctx, deploymentList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(deploymentList)
+			return test.ObjectNames(deploymentList)
 		}).ShouldNot(ContainElements(
 			"virtual-garden-kube-apiserver",
 			"virtual-garden-kube-controller-manager",
@@ -906,7 +905,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			etcdList := &druidv1alpha1.EtcdList{}
 			g.Expect(testClient.List(ctx, etcdList, client.InNamespace(testNamespace.Name))).To(Succeed())
-			return objectNames(etcdList)
+			return test.ObjectNames(etcdList)
 		}).ShouldNot(ContainElements(
 			"virtual-garden-etcd-main",
 			"virtual-garden-etcd-events",
@@ -923,7 +922,7 @@ spec:
 		Eventually(func(g Gomega) []string {
 			crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
-			return objectNames(crdList)
+			return test.ObjectNames(crdList)
 		}).ShouldNot(ContainElements(
 			"etcds.druid.gardener.cloud",
 			"etcdcopybackupstasks.druid.gardener.cloud",
@@ -1083,17 +1082,4 @@ func patchExtensionStatus(cl client.Client, name, namespace string, lastOp garde
 		},
 	}
 	ExpectWithOffset(1, cl.Status().Patch(ctx, ext, patch)).To(Succeed())
-}
-
-func objectNames(list client.ObjectList) []string {
-	GinkgoHelper()
-
-	names := make([]string, 0, meta.LenList(list))
-	err := meta.EachListItem(list, func(o runtime.Object) error {
-		names = append(names, o.(client.Object).GetName())
-		return nil
-	})
-
-	Expect(err).NotTo(HaveOccurred())
-	return names
 }
