@@ -54,19 +54,15 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 		DeferCleanup(func(ctx SpecContext) {
 			Eventually(func(g Gomega) {
 				if testEndpoint != nil {
-					g.Expect(s.GardenClient.Delete(ctx, testEndpoint)).To(BeNotFoundError())
-
+					g.Expect(client.IgnoreNotFound(s.GardenClient.Delete(ctx, testEndpoint))).To(Succeed())
 				}
 
 				if extensionClusterRole != nil {
-					g.Expect(s.GardenClient.Delete(ctx, extensionClusterRole)).To(BeNotFoundError())
+					g.Expect(client.IgnoreNotFound(s.GardenClient.Delete(ctx, extensionClusterRole))).To(Succeed())
 				}
 
-				if s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Project), s.Project) == nil {
-					g.Expect(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Project)).To(Succeed())
-				}
-
-				g.Expect(s.GardenClient.Delete(ctx, s.Project)).To(BeNotFoundError())
+				g.Expect(client.IgnoreNotFound(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Project))).To(Succeed())
+				g.Expect(client.IgnoreNotFound(s.GardenClient.Delete(ctx, s.Project))).To(Succeed())
 			}).Should(Succeed())
 		}, NodeTimeout(time.Minute))
 	})
