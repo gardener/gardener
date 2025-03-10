@@ -1715,6 +1715,13 @@ type MachineControllerManagerSettings struct {
 	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
 	// +optional
 	NodeConditions []string `json:"nodeConditions,omitempty" protobuf:"bytes,5,name=nodeConditions"`
+	// MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.
+	// +optional
+	MachineInPlaceUpdateTimeout *metav1.Duration `json:"inPlaceUpdateTimeout,omitempty" protobuf:"bytes,6,opt,name=inPlaceUpdateTimeout"`
+	// DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+	// This is intended to be used only for in-place updates.
+	// +optional
+	DisableHealthTimeout *bool `json:"disableHealthTimeout,omitempty" protobuf:"varint,7,opt,name=disableHealthTimeout"`
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool
