@@ -159,15 +159,15 @@ func itShouldVerifyManagedResourcesAndAwaitHealthiness(s *GardenContext, namespa
 		})
 	}
 
-	equalsManagedResourcesInNamespace(s, namespace, managedResourceList)
+	equalsManagedResourcesInNamespace(s, namespace, managedResourceList...)
 	waitForManagedResourcesToBeHealthy(s, managedResourceList)
 }
 
-func equalsManagedResourcesInNamespace(s *GardenContext, namespace string, managedResourceList []resourcesv1alpha1.ManagedResource) {
+func equalsManagedResourcesInNamespace(s *GardenContext, namespace string, expectedManagedResources ...resourcesv1alpha1.ManagedResource) {
 	It(fmt.Sprintf("Verify ManagedResources in namespace %s equal expected resources", namespace), func(ctx SpecContext) {
-		managedResourcesInNamespace := &resourcesv1alpha1.ManagedResourceList{}
-		Eventually(ctx, s.GardenKomega.List(managedResourcesInNamespace, client.InNamespace(namespace))).Should(Succeed())
-		Expect(managedResourcesInNamespace.Items).To(ConsistOf(managedResourceNames(managedResourceList)))
+		managedResourceList := &resourcesv1alpha1.ManagedResourceList{}
+		Eventually(ctx, s.GardenKomega.List(managedResourceList, client.InNamespace(namespace))).Should(Succeed())
+		Expect(managedResourceList.Items).To(ConsistOf(managedResourceNames(expectedManagedResources)))
 	}, SpecTimeout(time.Minute))
 }
 
