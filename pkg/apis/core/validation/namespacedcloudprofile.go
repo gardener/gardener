@@ -46,10 +46,10 @@ func ValidateNamespacedCloudProfileUpdate(newProfile, oldProfile *core.Namespace
 }
 
 // ValidateNamespacedCloudProfileSpecUpdate validates the spec update of a NamespacedCloudProfile.
-func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
+func ValidateNamespacedCloudProfileSpecUpdate(newProfile, oldProfile *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldProfile.Parent, newProfile.Parent, fldPath.Child("parent"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProfile.Parent, oldProfile.Parent, fldPath.Child("parent"))...)
 
 	return allErrs
 }
