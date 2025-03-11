@@ -434,7 +434,7 @@
       ],
     },
     {
-      // Limit updates of jsonpatch/v2 to stay below v3.0.0.
+      // Disable major updates of jsonpatch/v2.
       // The major version of this dependency should be kept in sync with controller-runtime:
       // https://github.com/kubernetes-sigs/controller-runtime/blob/main/go.mod
       matchDatasources: [
@@ -443,7 +443,10 @@
       matchPackageNames: [
         'gomodules.xyz/jsonpatch/v2',
       ],
-      allowedVersions: '<v3.0.0', // Should be updated when controller-runtime uses a new major version.
+      matchUpdateTypes: [
+        'major'
+      ],
+      enabled: false,
     },
     {
       // TODO(marc1404): Remove when the NewVPN feature gate is removed.
