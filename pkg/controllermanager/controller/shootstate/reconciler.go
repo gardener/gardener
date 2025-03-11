@@ -53,6 +53,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving Shoot from store: %w", err)
 	}
 
+	if shoot.Status.LastOperation == nil {
+		return reconcile.Result{}, fmt.Errorf("last operation of Shoot '%s' is not set", request.NamespacedName)
+	}
+
 	shootLastOperationType := shoot.Status.LastOperation.Type
 	shootLastOperationState := shoot.Status.LastOperation.State
 
