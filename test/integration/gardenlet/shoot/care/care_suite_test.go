@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -124,7 +124,7 @@ var _ = BeforeSuite(func() {
 		kubernetes.AddGardenSchemeToScheme,
 		extensionsv1alpha1.AddToScheme,
 		resourcesv1alpha1.AddToScheme,
-		druidv1alpha1.AddToScheme,
+		druidcorev1alpha1.AddToScheme,
 	)
 	testScheme := runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())

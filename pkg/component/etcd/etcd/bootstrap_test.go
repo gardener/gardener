@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -178,12 +178,12 @@ var _ = Describe("Etcd", func() {
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{druidv1alpha1.GroupName},
+						APIGroups: []string{druidcorev1alpha1.GroupName},
 						Resources: []string{"etcds", "etcdcopybackupstasks"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{druidv1alpha1.GroupName},
+						APIGroups: []string{druidcorev1alpha1.GroupName},
 						Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers"},
 						Verbs:     []string{"get", "update", "patch", "create"},
 					},

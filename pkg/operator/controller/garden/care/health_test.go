@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -696,14 +696,14 @@ func newDeployment(namespace, name string, healthy bool) *appsv1.Deployment {
 	return deployment
 }
 
-func newEtcd(namespace, name string, healthy bool) *druidv1alpha1.Etcd {
-	return &druidv1alpha1.Etcd{
+func newEtcd(namespace, name string, healthy bool) *druidcorev1alpha1.Etcd {
+	return &druidcorev1alpha1.Etcd{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
 			Labels:    roleLabels("controlplane"),
 		},
-		Status: druidv1alpha1.EtcdStatus{
+		Status: druidcorev1alpha1.EtcdStatus{
 			Ready: ptr.To(healthy),
 		},
 	}
