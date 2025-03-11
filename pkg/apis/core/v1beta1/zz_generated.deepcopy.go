@@ -3420,6 +3420,11 @@ func (in *NamespacedCloudProfileSpec) DeepCopyInto(out *NamespacedCloudProfileSp
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Limits != nil {
+		in, out := &in.Limits, &out.Limits
+		*out = new(Limits)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

@@ -4955,6 +4955,7 @@ func autoConvert_v1beta1_NamespacedCloudProfileSpec_To_core_NamespacedCloudProfi
 		return err
 	}
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
+	out.Limits = (*core.Limits)(unsafe.Pointer(in.Limits))
 	return nil
 }
 
@@ -4973,6 +4974,7 @@ func autoConvert_core_NamespacedCloudProfileSpec_To_v1beta1_NamespacedCloudProfi
 		return err
 	}
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
+	out.Limits = (*Limits)(unsafe.Pointer(in.Limits))
 	return nil
 }
 

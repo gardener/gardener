@@ -2009,6 +2009,12 @@ message NamespacedCloudProfileSpec {
   // ProviderConfig contains provider-specific configuration for the profile.
   // +optional
   optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 8;
+
+  // Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
+  // If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
+  // +optional
+  optional Limits limits = 9;
 }
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.
