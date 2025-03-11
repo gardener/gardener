@@ -96,7 +96,7 @@ const (
 	// machineTypes and machineImages. It allows to validate worker groups of a shoot ensuring the selected image and machine combination
 	// will boot up successfully. Capabilities are also used to determine valid upgrade paths during automated maintenance operations.
 	// owner: @roncossek
-	// alpha: v1.114.0
+	// alpha: v1.115.0
 	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 )
 
