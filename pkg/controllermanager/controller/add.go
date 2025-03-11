@@ -117,7 +117,7 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *controllermanag
 	if err := (&shootstate.Reconciler{
 		Config: *cfg.Controllers.ShootState,
 	}).AddToManager(mgr); err != nil {
-		return fmt.Errorf("failed adding shootState finalizer reconciler: %w", err)
+		return fmt.Errorf("failed adding ShootState controller : %w", err)
 	}
 
 	if err := seed.AddToManager(mgr, *cfg); err != nil {
