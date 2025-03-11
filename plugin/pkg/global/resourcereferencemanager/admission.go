@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -498,7 +499,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			// getting Machine image versions that have been removed from or added to the CloudProfile
 			removedMachineImages, removedMachineImageVersions, addedMachineImages, addedMachineImageVersions := helper.GetMachineImageDiff(oldCloudProfile.Spec.MachineImages, cloudProfile.Spec.MachineImages)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 {
+			hasDecreasedLimits := hasDecreasedNodeLimits(cloudProfile.Spec.Limits, oldCloudProfile.Spec.Limits)
+
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 || hasDecreasedLimits {
 				shootList, err1 := r.shootLister.List(labels.Everything())
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
@@ -584,6 +587,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 							if removedMachineImageVersions[worker.Machine.Image.Name].Has(*worker.Machine.Image.Version) {
 								channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from CloudProfile %q - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, *worker.Machine.Image.Version, cloudProfile.Name, shoot.Namespace, shoot.Name, worker.Name)
 							}
+						}
+						if hasDecreasedLimits {
+							validateShootWorkerLimits(channel, shoot, cloudProfile.Spec.Limits)
 						}
 					}(s)
 				}
@@ -1275,4 +1281,34 @@ func (r *ReferenceManager) lookupResource(ctx context.Context, resource schema.G
 		return err
 	}
 	return nil
+}
+
+func hasDecreasedNodeLimits(limits, oldLimits *core.Limits) bool {
+	if limits == nil || apiequality.Semantic.DeepEqual(limits, oldLimits) {
+		// limits have been removed or were not changed.
+		return false
+	}
+	return oldLimits == nil || validation.IsDecreasedMaxNodesTotal(limits.MaxNodesTotal, oldLimits.MaxNodesTotal)
+}
+
+func validateShootWorkerLimits(channel chan error, shoot *gardencorev1beta1.Shoot, limits *core.Limits) {
+	if limits == nil || limits.MaxNodesTotal == nil {
+		return
+	}
+
+	var (
+		maxNodesTotal = *limits.MaxNodesTotal
+		totalMinimum  int32
+	)
+
+	for _, worker := range shoot.Spec.Provider.Workers {
+		totalMinimum += worker.Minimum
+		if worker.Maximum > maxNodesTotal {
+			channel <- fmt.Errorf("the maximum node count of worker pool %q in shoot \"%s/%s\" exceeds the limit of %d total nodes configured in the cloud profile", worker.Name, shoot.Namespace, shoot.Name, maxNodesTotal)
+		}
+	}
+
+	if totalMinimum > maxNodesTotal {
+		channel <- fmt.Errorf("the total minimum node count of all worker pools of shoot \"%s/%s\" must not exceed the limit of %d configured in the cloud profile", shoot.Namespace, shoot.Name, maxNodesTotal)
+	}
 }
