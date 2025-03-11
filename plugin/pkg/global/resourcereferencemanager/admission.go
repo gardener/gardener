@@ -623,16 +623,19 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			removedKubernetesVersions := getRemovedKubernetesVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 			removedMachineImageVersions := getRemovedMachineImageVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 {
+			hasDecreasedLimits := hasDecreasedNodeLimits(namespacedCloudProfile.Spec.Limits, oldNamespacedCloudProfile.Spec.Limits)
+
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || hasDecreasedLimits {
 				shootList, err1 := r.shootLister.Shoots(namespacedCloudProfile.Namespace).List(labels.Everything())
 				if err1 != nil {
-					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
+					return apierrors.NewInternalError(fmt.Errorf("could not list Shoots to validate NamespacedCloudProfile changes: %v", err1))
 				}
 
 				parentCloudProfile, err1 := r.cloudProfileLister.Get(namespacedCloudProfile.Spec.Parent.Name)
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not get parent CloudProfile: %v", err1))
 				}
+
 				parentCloudProfileKubernetesVersions := gardenerutils.CreateMapFromSlice(parentCloudProfile.Spec.Kubernetes.Versions, func(v gardencorev1beta1.ExpirableVersion) string { return v.Version })
 				parentCloudProfileMachineImageVersions := make(map[string]map[string]gardencorev1beta1.MachineImageVersion)
 				for _, image := range parentCloudProfile.Spec.MachineImages {
@@ -659,6 +662,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 						defer wg.Done()
 						validateShootForRemovedKubernetesVersions(channel, shoot, removedKubernetesVersions, parentCloudProfileKubernetesVersions, namespacedCloudProfile)
 						validateShootWorkersForRemovedMachineImageVersions(channel, shoot, removedMachineImageVersions, parentCloudProfileMachineImageVersions, namespacedCloudProfile)
+						if hasDecreasedLimits {
+							validateShootWorkerLimits(channel, shoot, namespacedCloudProfile.Spec.Limits)
+						}
 					}(s)
 				}
 
