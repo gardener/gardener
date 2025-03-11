@@ -8,7 +8,6 @@ import (
 	"context"
 	"net"
 
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -77,10 +76,10 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
-			var wildcardHost *string
+			var wildcardHosts []string
 
 			if b.ControlPlaneWildcardCert != nil {
-				wildcardHost = ptr.To(b.ComputeKubeAPIServerHost())
+				wildcardHosts = []string{b.ComputeKubeAPIServerHost()}
 			}
 
 			return &kubeapiserverexposure.SNIValues{
@@ -89,7 +88,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 					Labels:    b.IstioLabels(),
 				},
 				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
-				WildcardHost:        wildcardHost,
+				WildcardHosts:       wildcardHosts,
 				WildcardTLSSecret:   b.ControlPlaneWildcardCert,
 			}
 		},
@@ -127,10 +126,10 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
-			var wildcardHost *string
+			var wildcardHosts []string
 
 			if b.ControlPlaneWildcardCert != nil {
-				wildcardHost = ptr.To(b.ComputeKubeAPIServerHost())
+				wildcardHosts = []string{b.ComputeKubeAPIServerHost()}
 			}
 
 			values := &kubeapiserverexposure.SNIValues{
@@ -146,7 +145,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					Labels:    b.IstioLabels(),
 				},
 				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
-				WildcardHost:        wildcardHost,
+				WildcardHosts:       wildcardHosts,
 				WildcardTLSSecret:   b.ControlPlaneWildcardCert,
 			}
 
