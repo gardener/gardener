@@ -77,7 +77,7 @@ if which git &>/dev/null; then
   git commit -q --allow-empty -m 'checkpoint'
 
   old_status="$(git status -s)"
-  if ! out=$(make -f "$makefile" tools-for-generate 2>&1); then
+  if $(make -f "$makefile" -n tools-for-generate  &> /dev/null) && ! out=$(make -f "$makefile" tools-for-generate 2>&1); then
     echo "Error during calling make tools-for-generate: $out"
     exit 1
   fi
