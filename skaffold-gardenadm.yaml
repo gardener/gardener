@@ -65,8 +65,6 @@ build:
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
-            - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
-            - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcds.yaml
             - pkg/component/extensions/containerruntime
             - pkg/component/extensions/controlplane
             - pkg/component/extensions/dnsrecord

@@ -1034,8 +1034,6 @@ build:
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
-            - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
-            - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcds.yaml
             - pkg/component/extensions
             - pkg/component/extensions/backupentry
             - pkg/component/extensions/containerruntime
@@ -1419,7 +1417,6 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
-            - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client
             - pkg/utils/kubernetes/health
