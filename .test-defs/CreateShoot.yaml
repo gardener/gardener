@@ -37,6 +37,10 @@ spec:
     -start-hibernated=$START_HIBERNATED
     -annotations=$SHOOT_ANNOTATIONS
     -control-plane-failure-tolerance=$CONTROL_PLANE_FAILURE_TOLERANCE
+    -kube-apiserver-min-allowed-cpu=$KUBE_APISERVER_MIN_ALLOWED_CPU
+    -kube-apiserver-min-allowed-memory=$KUBE_APISERVER_MIN_ALLOWED_MEMORY
+    -etcd-min-allowed-cpu=$ETCD_MIN_ALLOWED_CPU
+    -etcd-min-allowed-memory=$ETCD_MIN_ALLOWED_MEMORY
 #    -machine-image-name=$MACHINE_IMAGE
 #    -machine-image-version=$MACHINE_IMAGE_VERSION
 #    -machine-type=$MACHINE_TYPE
