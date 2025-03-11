@@ -829,6 +829,44 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("ShootStateControllerConfiguration defaulting", func() {
+		It("should default ShootStateControllerConfiguration correctly if nil", func() {
+			expected := &ShootStateControllerConfiguration{
+				ConcurrentSyncs: ptr.To(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootState).To(Equal(expected))
+		})
+
+		It("should default ShootStateControllerConfiguration correctly if not nil", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootState: &ShootStateControllerConfiguration{},
+				},
+			}
+			expected := &ShootStateControllerConfiguration{
+				ConcurrentSyncs: ptr.To(DefaultControllerConcurrentSyncs),
+			}
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootState).To(Equal(expected))
+		})
+
+		It("should not default fields that are set", func() {
+			obj = &ControllerManagerConfiguration{
+				Controllers: ControllerManagerControllerConfiguration{
+					ShootState: &ShootStateControllerConfiguration{
+						ConcurrentSyncs: ptr.To(10),
+					},
+				},
+			}
+			expected := obj.Controllers.ShootState.DeepCopy()
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.ShootState).To(Equal(expected))
+		})
+	})
 })
 
 var _ = Describe("Constants", func() {
