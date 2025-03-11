@@ -26,6 +26,22 @@ var _ = Describe("utils", func() {
 			Expect(result).To(Equal(emptyMap))
 		})
 
+		It("should return nil if both maps are nil", func() {
+			result := MergeStringMaps[string](nil, nil)
+			Expect(result).To(BeNil())
+		})
+
+		It("should return the new map if old map is nil", func() {
+			newMap := map[string]string{
+				"b": "20",
+				"c": "3",
+			}
+
+			result := MergeStringMaps(nil, newMap)
+
+			Expect(result).To(Equal(newMap))
+		})
+
 		It("should return a merged map (string value)", func() {
 			var (
 				oldMap = map[string]string{

@@ -28,10 +28,14 @@ import (
 
 var diskSizeRegex = regexp.MustCompile(`^(\d+)`)
 
+// LabelKeyMachineDeploymentName is the label key for the name of the MachineDeployment.
+const LabelKeyMachineDeploymentName = "name"
+
 // MachineDeployment holds information about the name, class, replicas of a MachineDeployment
 // managed by the machine-controller-manager.
 type MachineDeployment struct {
 	Name                         string
+	PoolName                     string
 	ClassName                    string
 	SecretName                   string
 	Minimum                      int32
@@ -288,4 +292,14 @@ func FetchUserData(ctx context.Context, c client.Client, namespace string, pool 
 	}
 
 	return userData, nil
+}
+
+// GetMachineCondition returns a condition matching the type from the machines's status
+func GetMachineCondition(machine *machinev1alpha1.Machine, conditionType corev1.NodeConditionType) *corev1.NodeCondition {
+	for _, cond := range machine.Status.Conditions {
+		if cond.Type == conditionType {
+			return &cond
+		}
+	}
+	return nil
 }
