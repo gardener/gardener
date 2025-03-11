@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -53,7 +53,7 @@ var _ = Describe("#Wait", func() {
 		name = "etcd-" + testRole
 
 		etcd     Interface
-		expected *druidv1alpha1.Etcd
+		expected *druidcorev1alpha1.Etcd
 	)
 
 	BeforeEach(func() {
@@ -66,7 +66,7 @@ var _ = Describe("#Wait", func() {
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		Expect(networkingv1.AddToScheme(s)).To(Succeed())
 		Expect(vpaautoscalingv1.AddToScheme(s)).To(Succeed())
-		Expect(druidv1alpha1.AddToScheme(s)).To(Succeed())
+		Expect(druidcorev1alpha1.AddToScheme(s)).To(Succeed())
 		Expect(monitoringv1alpha1.AddToScheme(s)).To(Succeed())
 		Expect(monitoringv1.AddToScheme(s)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
@@ -95,9 +95,9 @@ var _ = Describe("#Wait", func() {
 			EvictionRequirement: ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly),
 		})
 
-		expected = &druidv1alpha1.Etcd{
+		expected = &druidcorev1alpha1.Etcd{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: druidv1alpha1.SchemeGroupVersion.String(),
+				APIVersion: druidcorev1alpha1.SchemeGroupVersion.String(),
 				Kind:       "Etcd",
 			},
 			ObjectMeta: metav1.ObjectMeta{
@@ -108,7 +108,7 @@ var _ = Describe("#Wait", func() {
 					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				},
 			},
-			Spec: druidv1alpha1.EtcdSpec{
+			Spec: druidcorev1alpha1.EtcdSpec{
 				Replicas: 3,
 			},
 		}
@@ -129,12 +129,12 @@ var _ = Describe("#Wait", func() {
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 		delete(expected.Annotations, v1beta1constants.GardenerOperation)
-		expected.Status.LastErrors = []druidv1alpha1.LastError{}
+		expected.Status.LastErrors = []druidcorev1alpha1.LastError{}
 		expected.Status.ObservedGeneration = ptr.To[int64](expected.Generation)
-		expected.Status.Conditions = []druidv1alpha1.Condition{
+		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
-				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
-				Status: druidv1alpha1.ConditionTrue,
+				Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
 		expected.Status.Ready = ptr.To(false)
@@ -160,10 +160,10 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Conditions = []druidv1alpha1.Condition{
+		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
-				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
-				Status: druidv1alpha1.ConditionTrue,
+				Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
 		expected.Status.Ready = ptr.To(true)
@@ -192,10 +192,10 @@ var _ = Describe("#Wait", func() {
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
 		// assume that condition checks and readiness are false, to show that these don't matter when replicas is 0
-		expected.Status.Conditions = []druidv1alpha1.Condition{
+		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
-				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
-				Status: druidv1alpha1.ConditionUnknown,
+				Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidcorev1alpha1.ConditionUnknown,
 			},
 		}
 		expected.Status.Ready = ptr.To(false)
@@ -248,10 +248,10 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Conditions = []druidv1alpha1.Condition{
+		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
-				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
-				Status: druidv1alpha1.ConditionFalse,
+				Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidcorev1alpha1.ConditionFalse,
 			},
 		}
 		expected.Status.Ready = ptr.To(true)
@@ -279,10 +279,10 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Conditions = []druidv1alpha1.Condition{
+		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
-				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
-				Status: druidv1alpha1.ConditionTrue,
+				Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
 		expected.Status.Ready = ptr.To(false)
@@ -311,10 +311,10 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
-		expected.Status.Conditions = []druidv1alpha1.Condition{
+		expected.Status.Conditions = []druidcorev1alpha1.Condition{
 			{
-				Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
-				Status: druidv1alpha1.ConditionTrue,
+				Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
+				Status: druidcorev1alpha1.ConditionTrue,
 			},
 		}
 		expected.Status.Ready = ptr.To(true)
@@ -327,12 +327,12 @@ var _ = Describe("#Wait", func() {
 
 var _ = Describe("#CheckEtcdObject", func() {
 	var (
-		obj *druidv1alpha1.Etcd
+		obj *druidcorev1alpha1.Etcd
 	)
 
 	BeforeEach(func() {
-		obj = &druidv1alpha1.Etcd{
-			Spec: druidv1alpha1.EtcdSpec{Replicas: 3},
+		obj = &druidcorev1alpha1.Etcd{
+			Spec: druidcorev1alpha1.EtcdSpec{Replicas: 3},
 		}
 	})
 
@@ -341,7 +341,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 	})
 
 	It("should return error if reconciliation failed", func() {
-		obj.Status.LastErrors = []druidv1alpha1.LastError{{Code: "ERROR_FOO", Description: "foo", ObservedAt: metav1.Now()}}
+		obj.Status.LastErrors = []druidcorev1alpha1.LastError{{Code: "ERROR_FOO", Description: "foo", ObservedAt: metav1.Now()}}
 		err := CheckEtcdObject(obj)
 		Expect(err).To(MatchError(fmt.Sprintf("errors during reconciliation: %+v", obj.Status.LastErrors)))
 		Expect(retry.IsRetriable(err)).To(BeTrue())
@@ -374,7 +374,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 		obj.SetGeneration(1)
 		obj.Spec.Replicas = 0
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
-		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionFalse}}
+		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
 		obj.Status.Ready = ptr.To(false)
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})
@@ -388,21 +388,21 @@ var _ = Describe("#CheckEtcdObject", func() {
 	It("should return error if condition AllMembersUpdated is not true", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
-		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionFalse}}
+		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionFalse}}
 		Expect(CheckEtcdObject(obj)).To(MatchError(ContainSubstring("condition AllMembersUpdated is False")))
 	})
 
 	It("should return error if status.ready==nil", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
-		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue}}
+		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue}}
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
 	It("should return error if status.ready==false", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
-		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue}}
+		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue}}
 		obj.Status.Ready = ptr.To(false)
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
@@ -410,7 +410,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 	It("should not return error if object is ready", func() {
 		obj.SetGeneration(1)
 		obj.Status.ObservedGeneration = ptr.To[int64](1)
-		obj.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue}}
+		obj.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue}}
 		obj.Status.Ready = ptr.To(true)
 		obj.Status.Replicas = 3
 		Expect(CheckEtcdObject(obj)).To(Succeed())

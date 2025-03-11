@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
@@ -423,9 +423,9 @@ var _ = Describe("Etcd", func() {
 				})
 
 				It("should properly restore multi-node etcd from backup if it is deployed with 1 replica", func() {
-					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
-						return &druidv1alpha1.Etcd{
-							Spec: druidv1alpha1.EtcdSpec{
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidcorev1alpha1.Etcd, error) {
+						return &druidcorev1alpha1.Etcd{
+							Spec: druidcorev1alpha1.EtcdSpec{
 								Replicas: 1,
 							},
 						}, nil
@@ -444,9 +444,9 @@ var _ = Describe("Etcd", func() {
 				})
 
 				It("should not try to restore multi-node etcd from backup if it has already been scaled up", func() {
-					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
-						return &druidv1alpha1.Etcd{
-							Spec: druidv1alpha1.EtcdSpec{
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidcorev1alpha1.Etcd, error) {
+						return &druidcorev1alpha1.Etcd{
+							Spec: druidcorev1alpha1.EtcdSpec{
 								Replicas: 3,
 							},
 						}, nil
@@ -460,9 +460,9 @@ var _ = Describe("Etcd", func() {
 				It("should not try to restore multi-node etcd from backup if it has already been scaled down and the shoot is hibernated", func() {
 					botanist.Shoot.HibernationEnabled = true
 
-					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
-						return &druidv1alpha1.Etcd{
-							Spec: druidv1alpha1.EtcdSpec{
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidcorev1alpha1.Etcd, error) {
+						return &druidcorev1alpha1.Etcd{
+							Spec: druidcorev1alpha1.EtcdSpec{
 								Replicas: 0,
 							},
 						}, nil

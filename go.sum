@@ -188,10 +188,8 @@ github.com/gardener/cert-management v0.17.5 h1:feqNpdgkF2RJP5xPidbkUx2MS15m4mBWG
 github.com/gardener/cert-management v0.17.5/go.mod h1:jazLDc7bcJ0T8axC96A52X7AqeIYsEyALpYsuTFuhbw=
 github.com/gardener/dependency-watchdog v1.4.0 h1:RKsjOSS41cR2kjbacWsrVlyhpV71PZhAiaB49D821UM=
 github.com/gardener/dependency-watchdog v1.4.0/go.mod h1:B5OYoELKMn8D28OFU4ZMSQFv+RD4mSLV0rvXMEhp4KI=
-github.com/gardener/etcd-druid v0.26.1 h1:x8mZfcIkZS29bJKupy0PVTsIrPUNVxvcJlLAXKb0agw=
-github.com/gardener/etcd-druid v0.26.1/go.mod h1:SKjfV8bvdLGF1ynFbWF4ioK2a6M33g7N6lct45p50J8=
-github.com/gardener/etcd-druid/api v0.28.0-rc2 h1:D8nvEbrbUCkHmhFoG3gNbPU9KDcJ64NG+PcRgp0T+8w=
-github.com/gardener/etcd-druid/api v0.28.0-rc2/go.mod h1:dGJ4sxpMLaQKnze5hHzHQu+l2Aqdo8mKVfvrjVicNg8=
+github.com/gardener/etcd-druid/api v0.28.0-rc4 h1:YuNM5SzK4FdQhnTI+4C3kjV3BMvvMFU6LN5USYXuXgM=
+github.com/gardener/etcd-druid/api v0.28.0-rc4/go.mod h1:dGJ4sxpMLaQKnze5hHzHQu+l2Aqdo8mKVfvrjVicNg8=
 github.com/gardener/machine-controller-manager v0.57.1 h1:RN7KOS1qUdnt3xLjHtlBJoYEehfeg7mu/83BaONkLjg=
 github.com/gardener/machine-controller-manager v0.57.1/go.mod h1:eCng7De6OE15rndmMm6Q1fwMQI39esASCd3WKZ/lLmY=
 github.com/gardener/terminal-controller-manager v0.34.0 h1:qE8xIKsOFnVr1yZ2meesRR0q65uZ1Nyf5oSluAiLTeM=
@@ -578,7 +576,6 @@ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.etcd.io/bbolt v1.3.11 h1:yGEzV1wPz2yVCLsD8ZAiGHhHVlczyC9d1rP43/VCRJ0=
 go.etcd.io/bbolt v1.3.11/go.mod h1:dksAq7YMXoljX0xu6VF5DMZGbhYYoLUalEiSySYAS4I=
-go.etcd.io/etcd v0.0.0-20240911181550-c123b3ea3db3 h1:Gaf7SDXngBwsrA//y4Bc1ADj2z4dShObCgrMkA9ugKs=
 go.etcd.io/etcd/api/v3 v3.5.16 h1:WvmyJVbjWqK4R1E+B12RRHz3bRGy9XVfh++MgbN+6n0=
 go.etcd.io/etcd/api/v3 v3.5.16/go.mod h1:1P4SlIP/VwkDmGo3OlOD7faPeP8KDIFhqvciH5EfN28=
 go.etcd.io/etcd/client/pkg/v3 v3.5.16 h1:ZgY48uH6UvB+/7R9Yf4x574uCO3jIx0TRDyetSfId3Q=
