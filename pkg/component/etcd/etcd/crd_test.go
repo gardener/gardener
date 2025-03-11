@@ -6,6 +6,7 @@ package etcd_test
 
 import (
 	"context"
+	"github.com/Masterminds/semver/v3"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,6 +28,8 @@ var _ = Describe("CRD", func() {
 		c           client.Client
 		ctx         = context.TODO()
 		crdDeployer component.Deployer
+		err         error
+		k8sVersion  = semver.MustParse("1.30")
 	)
 
 	BeforeEach(func() {
@@ -36,7 +39,8 @@ var _ = Describe("CRD", func() {
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(c, mapper)
 
-		crdDeployer = NewCRD(c, applier)
+		crdDeployer, err = NewCRD(c, applier, k8sVersion)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	JustBeforeEach(func() {
