@@ -444,7 +444,7 @@
         'gomodules.xyz/jsonpatch/v2',
       ],
       matchUpdateTypes: [
-        'major'
+        'major',
       ],
       enabled: false,
     },
