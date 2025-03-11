@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shootstate"
 )
 
-var _ = Describe("AddToManager", func() {
+var _ = Describe("Add", func() {
 	var (
 		ctx        context.Context
 		c          client.Client

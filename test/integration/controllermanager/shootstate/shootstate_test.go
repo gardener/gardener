@@ -65,8 +65,7 @@ var _ = Describe("ShootState controller test", func() {
 
 		addFinalizer = func(shootState *gardencorev1beta1.ShootState) {
 			By("Add ShootState finalizer")
-			shootState.Finalizers = append(shoot.Finalizers, shootstate.FinalizerName)
-			Expect(testClient.Update(ctx, shootState)).To(Succeed())
+			Expect(controllerutils.AddFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
 		}
 
 		By("Create Shoot")
@@ -119,7 +118,7 @@ var _ = Describe("ShootState controller test", func() {
 			Expect(testClient.SubResource("binding").Patch(ctx, shoot, patch)).To(Succeed())
 		})
 
-		When("Shoot last operation has Migrate type", func() {
+		When("Shoot last operation is Migrate", func() {
 			BeforeEach(func() {
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type:     gardencorev1beta1.LastOperationTypeMigrate,
@@ -153,7 +152,7 @@ var _ = Describe("ShootState controller test", func() {
 			})
 		})
 
-		When("Shoot last operation has Restore type", func() {
+		When("Shoot last operation is Restore", func() {
 			BeforeEach(func() {
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type:     gardencorev1beta1.LastOperationTypeRestore,
@@ -214,7 +213,7 @@ var _ = Describe("ShootState controller test", func() {
 			})
 		})
 
-		When("Shoot last operation has Reconcile type", func() {
+		When("Shoot last operation is Reconcile", func() {
 			BeforeEach(func() {
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type:     gardencorev1beta1.LastOperationTypeReconcile,
