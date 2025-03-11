@@ -92,7 +92,7 @@ type SNIValues struct {
 	APIServerProxy      *APIServerProxy
 	IstioIngressGateway IstioIngressGateway
 	IstioTLSTermination bool
-	WildcardHost        *string
+	WildcardHosts       []string
 	WildcardTLSSecret   *corev1.Secret
 }
 
@@ -185,10 +185,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		envoyFilterIstioTLSTermination bytes.Buffer
 	)
 
-	allHosts := values.Hosts
-	if values.WildcardHost != nil {
-		allHosts = append(allHosts, *values.WildcardHost)
-	}
+	allHosts := append(values.Hosts, values.WildcardHosts...)
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -242,15 +239,10 @@ func (s *sni) Deploy(ctx context.Context) error {
 	if values.IstioTLSTermination {
 		envoyFilter := s.emptyEnvoyFilterIstioTLSTermination()
 
-		var wildcardHosts []string
-		if values.WildcardHost != nil {
-			wildcardHosts = append(wildcardHosts, *values.WildcardHost)
-		}
-
 		if err := envoyFilterIstioTLSTerminationTemplate.Execute(&envoyFilterIstioTLSTermination, envoyFilterIstioTLSTerminationTemplateValues{
 			AuthenticationDynamicMetadataKey: AuthenticationDynamicMetadataKey,
 			Hosts:                            values.Hosts,
-			WildcardHosts:                    wildcardHosts,
+			WildcardHosts:                    values.WildcardHosts,
 			IngressGatewayLabels:             values.IstioIngressGateway.Labels,
 			Name:                             envoyFilter.Name,
 			Namespace:                        envoyFilter.Namespace,
@@ -304,8 +296,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 	gatewayMutateFn := istio.GatewayWithTLSPassthrough(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, allHosts, kubeapiserverconstants.Port)
 	if values.IstioTLSTermination {
 		serverConfigs := []istio.ServerConfig{{Hosts: values.Hosts, Port: kubeapiserverconstants.Port, PortName: portNameTLS, TLSSecret: s.namespace + istioTLSSecretSuffix}}
-		if values.WildcardHost != nil && values.WildcardTLSSecret != nil {
-			serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: []string{*values.WildcardHost}, Port: kubeapiserverconstants.Port, PortName: portNameWildcardTLS, TLSSecret: s.emptyIstioWildcardTLSSecret().Name})
+		if len(values.WildcardHosts) > 0 && values.WildcardTLSSecret != nil {
+			serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: values.WildcardHosts, Port: kubeapiserverconstants.Port, PortName: portNameWildcardTLS, TLSSecret: s.emptyIstioWildcardTLSSecret().Name})
 		}
 		gatewayMutateFn = istio.GatewayWithMutualTLS(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, serverConfigs)
 	}

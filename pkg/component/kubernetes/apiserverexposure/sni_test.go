@@ -42,15 +42,17 @@ var _ = Describe("#SNI", func() {
 		c   client.Client
 		sm  secretsmanager.Interface
 
-		defaultDepWaiter    component.DeployWaiter
-		namespace           = "test-namespace"
-		istioLabels         = map[string]string{"foo": "bar"}
-		istioNamespace      = "istio-foo"
-		istioTLSTermination = false
-		hosts               = []string{"foo.bar"}
-		hostName            = "kube-apiserver." + namespace + ".svc.cluster.local"
+		defaultDepWaiter component.DeployWaiter
 
 		apiServerProxyValues *APIServerProxy
+		namespace            string
+		istioLabels          map[string]string
+		istioNamespace       string
+		istioTLSTermination  bool
+		hosts                []string
+		hostName             string
+		wildcardHosts        []string
+		wildcardTLSSecret    *corev1.Secret
 
 		expectedDestinationRule                          *istionetworkingv1beta1.DestinationRule
 		expectedGateway                                  *istionetworkingv1beta1.Gateway
@@ -72,9 +74,18 @@ var _ = Describe("#SNI", func() {
 		Expect(istionetworkingv1beta1.AddToScheme(s)).To(Succeed())
 		Expect(istionetworkingv1alpha3.AddToScheme(s)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
+
 		apiServerProxyValues = &APIServerProxy{
 			APIServerClusterIP: "1.1.1.1",
 		}
+		namespace = "test-namespace"
+		istioLabels = map[string]string{"foo": "bar"}
+		istioNamespace = "istio-foo"
+		istioTLSTermination = false
+		hosts = []string{"foo.bar"}
+		hostName = "kube-apiserver." + namespace + ".svc.cluster.local"
+		wildcardHosts = []string{}
+		wildcardTLSSecret = nil
 
 		sm = fakesecretsmanager.New(c, namespace)
 
@@ -227,6 +238,8 @@ var _ = Describe("#SNI", func() {
 					Labels:    istioLabels,
 				},
 				IstioTLSTermination: istioTLSTermination,
+				WildcardHosts:       wildcardHosts,
+				WildcardTLSSecret:   wildcardTLSSecret,
 			}
 			return val
 		})
@@ -335,6 +348,26 @@ var _ = Describe("#SNI", func() {
 			})
 		})
 
+		Context("when wildcard certificate is configured", func() {
+			BeforeEach(func() {
+				wildcardHosts = []string{"foo.wildcard", "bar.wildcard"}
+				wildcardTLSSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "wildcard-tls-secret",
+						Namespace: namespace,
+					},
+				}
+
+				expectedGateway.Spec.Servers[0].Hosts = append(expectedGateway.Spec.Servers[0].Hosts, wildcardHosts...)
+				expectedVirtualService.Spec.Hosts = append(expectedVirtualService.Spec.Hosts, wildcardHosts...)
+				expectedVirtualService.Spec.Tls[0].Match[0].SniHosts = append(expectedVirtualService.Spec.Tls[0].Match[0].SniHosts, wildcardHosts...)
+			})
+
+			It("should succeed deploying", func() {
+				testFunc()
+			})
+		})
+
 		Context("when IstioTLSTermination feature gate is true", func() {
 			BeforeEach(func() {
 				istioTLSTermination = true
@@ -370,6 +403,71 @@ var _ = Describe("#SNI", func() {
 						},
 					},
 				}
+			})
+
+			It("should succeed deploying", func() {
+				testFunc()
+			})
+		})
+
+		Context("when IstioTLSTermination feature gate is true and wildcard certificate is configured", func() {
+			BeforeEach(func() {
+				istioTLSTermination = true
+				wildcardHosts = []string{"foo.wildcard", "bar.wildcard"}
+				wildcardTLSSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "wildcard-tls-secret",
+						Namespace: namespace,
+					},
+				}
+
+				expectedDestinationRule.Spec.TrafficPolicy.LoadBalancer = &istioapinetworkingv1beta1.LoadBalancerSettings{
+					LbPolicy: &istioapinetworkingv1beta1.LoadBalancerSettings_Simple{
+						Simple: istioapinetworkingv1beta1.LoadBalancerSettings_LEAST_REQUEST,
+					},
+				}
+				expectedDestinationRule.Spec.TrafficPolicy.OutlierDetection = nil
+				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
+					CredentialName: namespace + "-kube-apiserver-istio-mtls",
+					Sni:            expectedDestinationRule.Spec.Host,
+				}
+
+				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
+				expectedGateway.Spec.Servers[0].Tls = &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode:           istioapinetworkingv1beta1.ServerTLSSettings_OPTIONAL_MUTUAL,
+					CredentialName: namespace + "-kube-apiserver-tls",
+				}
+
+				expectedGateway.Spec.Servers = append(expectedGateway.Spec.Servers, &istioapinetworkingv1beta1.Server{
+					Hosts: wildcardHosts,
+					Port: &istioapinetworkingv1beta1.Port{
+						Number:   443,
+						Name:     "wildcard-tls",
+						Protocol: "HTTPS",
+					},
+					Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
+						Mode:           istioapinetworkingv1beta1.ServerTLSSettings_OPTIONAL_MUTUAL,
+						CredentialName: namespace + "-kube-apiserver-wildcard-tls",
+					},
+				})
+
+				expectedVirtualService.Spec.Tls = nil
+				expectedVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+					{
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: hostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
+				}
+
+				expectedVirtualService.Spec.Hosts = append(expectedVirtualService.Spec.Hosts, wildcardHosts...)
+
 			})
 
 			It("should succeed deploying", func() {
