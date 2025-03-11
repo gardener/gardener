@@ -1116,6 +1116,9 @@ endpoints:
 The webhook aims to circumvent issues with the Kubernetes `TopologyAwareHints` feature that currently does not allow to achieve a deterministic topology-aware traffic routing. For more details, see the following issue [kubernetes/kubernetes#113731](https://github.com/kubernetes/kubernetes/issues/113731) that describes drawbacks of the `TopologyAwareHints` feature for our use case.
 If the above-mentioned issue gets resolved and there is a native support for deterministic topology-aware traffic routing in Kubernetes, then this webhook can be dropped in favor of the native Kubernetes feature.
 
+> [!NOTE]  
+> The EndpointSlice Hints webhook is disabled when the runtime Kubernetes version is >= 1.32. Instead, the `ServiceTrafficDistribution` feature is used. See more details in [Topology-Aware Traffic Routing](../operations/topology_aware_routing.md).
+
 ### Validating Webhooks
 
 #### Unconfirmed Deletion Prevention For Custom Resources And Definitions

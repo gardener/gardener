@@ -44,14 +44,14 @@ We reported the drawbacks related to the `TopologyAwareHints` feature in [kubern
 
 The `ServiceTrafficDistribution` allows expressing preferences for how traffic should be routed to Service endpoints. For more details, see [upstream documentation](https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution) of the feature.
 
-The `PreferClose` strategy with kube-proxy of `ServiceTrafficDistribution` allows traffic to be routed to Service endpoints in topology-aware and predictable manner.
+The `PreferClose` strategy allows traffic to be routed to Service endpoints in topology-aware and predictable manner.
 It is simpler than `service.kubernetes.io/topology-mode: auto` - if there are Service endpoints which reside in the same zone as the client, traffic is routed to one of the endpoints within the same zone as the client. If the client's zone does not have any available Service endpoints, traffic is routed to any available endpoint within the cluster.
 
 ## How to make a Service topology-aware
 
-### How to make a Service topology-aware using `TopologyAwareHints` (Kubernetes < 1.31)
+### How to make a Service topology-aware in Kubernetes < 1.31
 
-In Kubernetes < 1.31, to make a Service topology-aware the following annotation and label have to be added to the Service:
+In Kubernetes < 1.31, `TopologyAwareHints` and EndpointSlice Hints mutating webhook are being used to make a Service topology-aware. The following annotation and label have to be added to the Service:
 
 ```yaml
 apiVersion: v1
@@ -68,9 +68,9 @@ The `endpoint-slice-hints.resources.gardener.cloud/consider=true` label is neede
 
 The Gardener extensions can use this approach to make a Service they deploy topology-aware.
 
-### How to make a Service topology-aware using `ServiceTrafficDistribution` (Kubernetes == 1.31)
+### How to make a Service topology-aware in Kubernetes 1.31
 
-In Kubernetes 1.31, to make a Service topology-aware the `.spec.trafficDistribution` field has to be set to `PreferClose` and the label `endpoint-slice-hints.resources.gardener.cloud/consider=true` needs to be added:
+In Kubernetes 1.31, `ServiceTrafficDistribution` and EndpointSlice Hints mutating webhook are being used to make a Service topology-aware. The `.spec.trafficDistribution` field has to be set to `PreferClose` and the label `endpoint-slice-hints.resources.gardener.cloud/consider=true` needs to be added:
 
 ```yaml
 apiVersion: v1
@@ -82,9 +82,9 @@ spec:
   trafficDistribution: PreferClose
 ```
 
-### How to make a Service topology-aware using `ServiceTrafficDistribution` (Kubernetes >= 1.31)
+### How to make a Service topology-aware in Kubernetes >= 1.32
 
-In Kubernetes >= 1.31, to make a Service topology-aware the `.spec.trafficDistribution` field has to be set to `PreferClose`:
+In Kubernetes >= 1.32, `ServiceTrafficDistribution` is being used to make a Service topology-aware. The `.spec.trafficDistribution` field has to be set to `PreferClose`:
 
 ```yaml
 apiVersion: v1

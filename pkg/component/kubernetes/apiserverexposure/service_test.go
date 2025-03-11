@@ -223,7 +223,7 @@ var _ = Describe("#Service", func() {
 			})
 		})
 
-		Context("when K8s version < 1.31", func() {
+		When("runtime Kubernetes version < 1.31", func() {
 			BeforeEach(func() {
 				values.RuntimeKubernetesVersion = semver.MustParse("1.30.3")
 			})

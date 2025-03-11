@@ -17,7 +17,7 @@ import (
 
 var _ = Describe("TopologyAwareRouting", func() {
 	Describe("#ReconcileTopologyAwareRoutingSettings", func() {
-		Context("when K8s version >= 1.32", func() {
+		When("K8s version >= 1.32", func() {
 			It("should set traffic distribution field when topology-aware routing is enabled", func() {
 				service := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
@@ -38,7 +38,7 @@ var _ = Describe("TopologyAwareRouting", func() {
 			})
 		})
 
-		Context("when K8s version = 1.31", func() {
+		When("K8s version = 1.31", func() {
 			It("should set traffic distribution field and add label when topology-aware routing is enabled", func() {
 				service := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
@@ -58,7 +58,7 @@ var _ = Describe("TopologyAwareRouting", func() {
 			})
 		})
 
-		Context("when K8s version < 1.31", func() {
+		When("K8s version < 1.31", func() {
 			It("should add the required annotation and label when topology-aware routing is enabled", func() {
 				service := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
