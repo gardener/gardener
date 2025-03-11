@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -94,10 +94,10 @@ var _ = Describe("Etcd", func() {
 		backupConfig            *BackupConfig
 		now                     = time.Time{}
 		quota                   = resource.MustParse("8Gi")
-		garbageCollectionPolicy = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
+		garbageCollectionPolicy = druidcorev1alpha1.GarbageCollectionPolicy(druidcorev1alpha1.GarbageCollectionPolicyExponential)
 		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
-		compressionPolicy       = druidv1alpha1.GzipCompression
-		compressionSpec         = druidv1alpha1.CompressionSpec{
+		compressionPolicy       = druidcorev1alpha1.GzipCompression
+		compressionSpec         = druidcorev1alpha1.CompressionSpec{
 			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
@@ -108,8 +108,8 @@ var _ = Describe("Etcd", func() {
 		containerPolicyOff  = vpaautoscalingv1.ContainerScalingModeOff
 		containerPolicyAuto = vpaautoscalingv1.ContainerScalingModeAuto
 		controlledValues    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		metricsBasic        = druidv1alpha1.Basic
-		metricsExtensive    = druidv1alpha1.Extensive
+		metricsBasic        = druidcorev1alpha1.Basic
+		metricsExtensive    = druidcorev1alpha1.Extensive
 
 		etcdName = "etcd-" + testRole
 		vpaName  = etcdName
@@ -129,7 +129,7 @@ var _ = Describe("Etcd", func() {
 			peerServerSecretName *string,
 			topologyAwareRoutingEnabled bool,
 			runtimeKubernetesVersion *semver.Version,
-		) *druidv1alpha1.Etcd {
+		) *druidcorev1alpha1.Etcd {
 			defragSchedule := defragmentationSchedule
 			if existingDefragmentationSchedule != "" {
 				defragSchedule = existingDefragmentationSchedule
@@ -183,7 +183,7 @@ var _ = Describe("Etcd", func() {
 				}
 			}
 
-			obj := &druidv1alpha1.Etcd{
+			obj := &druidcorev1alpha1.Etcd{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      etcdName,
 					Namespace: testNamespace,
@@ -196,7 +196,7 @@ var _ = Describe("Etcd", func() {
 						"role":                testRole,
 					},
 				},
-				Spec: druidv1alpha1.EtcdSpec{
+				Spec: druidcorev1alpha1.EtcdSpec{
 					Replicas:          replicas,
 					PriorityClassName: &priorityClassName,
 					Labels: map[string]string{
@@ -215,10 +215,10 @@ var _ = Describe("Etcd", func() {
 							"app":                 "etcd-statefulset",
 						},
 					},
-					Etcd: druidv1alpha1.EtcdConfig{
+					Etcd: druidcorev1alpha1.EtcdConfig{
 						Resources: resourcesContainerEtcd,
-						ClientUrlTLS: &druidv1alpha1.TLSConfig{
-							TLSCASecretRef: druidv1alpha1.SecretReference{
+						ClientUrlTLS: &druidcorev1alpha1.TLSConfig{
+							TLSCASecretRef: druidcorev1alpha1.SecretReference{
 								SecretReference: corev1.SecretReference{
 									Name:      caSecretName,
 									Namespace: testNamespace,
@@ -239,15 +239,15 @@ var _ = Describe("Etcd", func() {
 						Metrics:                 &metricsBasic,
 						DefragmentationSchedule: &defragSchedule,
 						Quota:                   &quota,
-						ClientService: &druidv1alpha1.ClientService{
+						ClientService: &druidcorev1alpha1.ClientService{
 							Annotations:         clientService.Annotations,
 							Labels:              clientService.Labels,
 							TrafficDistribution: clientService.Spec.TrafficDistribution,
 						},
 					},
-					Backup: druidv1alpha1.BackupSpec{
-						TLS: &druidv1alpha1.TLSConfig{
-							TLSCASecretRef: druidv1alpha1.SecretReference{
+					Backup: druidcorev1alpha1.BackupSpec{
+						TLS: &druidcorev1alpha1.TLSConfig{
+							TLSCASecretRef: druidcorev1alpha1.SecretReference{
 								SecretReference: corev1.SecretReference{
 									Name:      caSecretName,
 									Namespace: testNamespace,
@@ -298,12 +298,12 @@ var _ = Describe("Etcd", func() {
 					"networking.resources.gardener.cloud/to-etcd-" + testRole + "-client-tcp-2380": "allowed",
 					"networking.resources.gardener.cloud/to-etcd-" + testRole + "-client-tcp-8080": "allowed",
 				})
-				obj.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
+				obj.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.TLSConfig{
 					ServerTLSSecretRef: corev1.SecretReference{
 						Name:      secretNameServerPeer,
 						Namespace: testNamespace,
 					},
-					TLSCASecretRef: druidv1alpha1.SecretReference{
+					TLSCASecretRef: druidcorev1alpha1.SecretReference{
 						SecretReference: corev1.SecretReference{
 							Name:      secretNamePeerCA,
 							Namespace: testNamespace,
@@ -321,7 +321,7 @@ var _ = Describe("Etcd", func() {
 			}
 
 			if ptr.Deref(peerCASecretName, "") != "" {
-				obj.Spec.Etcd.PeerUrlTLS.TLSCASecretRef = druidv1alpha1.SecretReference{
+				obj.Spec.Etcd.PeerUrlTLS.TLSCASecretRef = druidcorev1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
 						Name:      *peerCASecretName,
 						Namespace: testNamespace,
@@ -336,11 +336,11 @@ var _ = Describe("Etcd", func() {
 					fullSnapshotSchedule = existingBackupSchedule
 				}
 
-				provider := druidv1alpha1.StorageProvider(backupConfig.Provider)
+				provider := druidcorev1alpha1.StorageProvider(backupConfig.Provider)
 				deltaSnapshotPeriod := metav1.Duration{Duration: 5 * time.Minute}
 				deltaSnapshotMemoryLimit := resource.MustParse("100Mi")
 
-				obj.Spec.Backup.Store = &druidv1alpha1.StoreSpec{
+				obj.Spec.Backup.Store = &druidcorev1alpha1.StoreSpec{
 					SecretRef: &corev1.SecretReference{Name: backupConfig.SecretRefName},
 					Container: &backupConfig.Container,
 					Provider:  &provider,
@@ -352,7 +352,7 @@ var _ = Describe("Etcd", func() {
 				obj.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
 
 				if backupConfig.LeaderElection != nil {
-					obj.Spec.Backup.LeaderElection = &druidv1alpha1.LeaderElectionSpec{
+					obj.Spec.Backup.LeaderElection = &druidcorev1alpha1.LeaderElectionSpec{
 						EtcdConnectionTimeout: backupLeaderElectionEtcdConnectionTimeout,
 						ReelectionPeriod:      backupLeaderElectionReelectionPeriod,
 					}
@@ -437,8 +437,8 @@ var _ = Describe("Etcd", func() {
 				},
 				Spec: monitoringv1.ServiceMonitorSpec{
 					Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-						druidv1alpha1.LabelAppNameKey: fmt.Sprintf("%s-client", etcdName),
-						druidv1alpha1.LabelPartOfKey:  etcdName,
+						druidcorev1alpha1.LabelAppNameKey: fmt.Sprintf("%s-client", etcdName),
+						druidcorev1alpha1.LabelPartOfKey:  etcdName,
 					}},
 					Endpoints: []monitoringv1.Endpoint{
 						{
@@ -722,16 +722,16 @@ var _ = Describe("Etcd", func() {
 
 	Describe("#Deploy", func() {
 		It("should fail because the etcd object retrieval fails", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(fakeErr)
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(fakeErr)
 
 			Expect(etcd.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("should fail because the etcd cannot be created", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Return(fakeErr),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Return(fakeErr),
 			)
 
 			Expect(etcd.Deploy(ctx)).To(MatchError(fakeErr))
@@ -743,9 +743,9 @@ var _ = Describe("Etcd", func() {
 			TimeNow = func() time.Time { return now }
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(etcdObjFor(
 						class,
 						1,
@@ -801,22 +801,22 @@ var _ = Describe("Etcd", func() {
 			})
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					(&druidv1alpha1.Etcd{
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					(&druidcorev1alpha1.Etcd{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      etcdName,
 							Namespace: testNamespace,
 						},
-						Spec: druidv1alpha1.EtcdSpec{
+						Spec: druidcorev1alpha1.EtcdSpec{
 							Replicas: existingReplicas,
 						},
-					}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+					}).DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
 					return nil
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj *druidv1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj *druidcorev1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
 					// ignore status when comparing
-					obj.Status = druidv1alpha1.EtcdStatus{}
+					obj.Status = druidcorev1alpha1.EtcdStatus{}
 
 					Expect(obj).To(DeepEqual(etcdObjFor(
 						class,
@@ -873,27 +873,27 @@ var _ = Describe("Etcd", func() {
 			})
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					(&druidv1alpha1.Etcd{
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					(&druidcorev1alpha1.Etcd{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      etcdName,
 							Namespace: testNamespace,
 						},
-						Spec: druidv1alpha1.EtcdSpec{
+						Spec: druidcorev1alpha1.EtcdSpec{
 							Replicas: existingReplicas,
 						},
-						Status: druidv1alpha1.EtcdStatus{
-							Etcd: &druidv1alpha1.CrossVersionObjectReference{
+						Status: druidcorev1alpha1.EtcdStatus{
+							Etcd: &druidcorev1alpha1.CrossVersionObjectReference{
 								Name: etcdName,
 							},
 						},
-					}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+					}).DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
 					return nil
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj *druidv1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj *druidcorev1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
 					// ignore status when comparing
-					obj.Status = druidv1alpha1.EtcdStatus{}
+					obj.Status = druidcorev1alpha1.EtcdStatus{}
 
 					Expect(obj).To(DeepEqual(etcdObjFor(
 						class,
@@ -934,8 +934,8 @@ var _ = Describe("Etcd", func() {
 			TimeNow = func() time.Time { return now }
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					(&druidv1alpha1.Etcd{
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					(&druidcorev1alpha1.Etcd{
 						ObjectMeta: metav1.ObjectMeta{
 							Annotations: map[string]string{
 								"foo": "bar",
@@ -943,18 +943,18 @@ var _ = Describe("Etcd", func() {
 							Name:      etcdName,
 							Namespace: testNamespace,
 						},
-						Status: druidv1alpha1.EtcdStatus{
-							Etcd: &druidv1alpha1.CrossVersionObjectReference{
+						Status: druidcorev1alpha1.EtcdStatus{
+							Etcd: &druidcorev1alpha1.CrossVersionObjectReference{
 								Name: etcdName,
 							},
 						},
-					}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+					}).DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
 					return nil
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj *druidv1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj *druidcorev1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
 					// ignore status when comparing
-					obj.Status = druidv1alpha1.EtcdStatus{}
+					obj.Status = druidcorev1alpha1.EtcdStatus{}
 
 					expectedObj := etcdObjFor(
 						class,
@@ -1002,29 +1002,29 @@ var _ = Describe("Etcd", func() {
 			existingDefragmentationSchedule := "foobardefragexisting"
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					(&druidv1alpha1.Etcd{
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					(&druidcorev1alpha1.Etcd{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      etcdName,
 							Namespace: testNamespace,
 						},
-						Spec: druidv1alpha1.EtcdSpec{
-							Etcd: druidv1alpha1.EtcdConfig{
+						Spec: druidcorev1alpha1.EtcdSpec{
+							Etcd: druidcorev1alpha1.EtcdConfig{
 								DefragmentationSchedule: &existingDefragmentationSchedule,
 							},
 						},
-						Status: druidv1alpha1.EtcdStatus{
-							Etcd: &druidv1alpha1.CrossVersionObjectReference{
+						Status: druidcorev1alpha1.EtcdStatus{
+							Etcd: &druidcorev1alpha1.CrossVersionObjectReference{
 								Name: etcdName,
 							},
 						},
-					}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+					}).DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
 					return nil
 				}),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj *druidv1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj *druidcorev1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
 					// ignore status when comparing
-					obj.Status = druidv1alpha1.EtcdStatus{}
+					obj.Status = druidcorev1alpha1.EtcdStatus{}
 
 					Expect(obj).To(DeepEqual(etcdObjFor(
 						class,
@@ -1065,9 +1065,9 @@ var _ = Describe("Etcd", func() {
 			TimeNow = func() time.Time { return now }
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(etcdObjFor(
 						class,
 						1,
@@ -1130,9 +1130,9 @@ var _ = Describe("Etcd", func() {
 				})
 
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(etcdObjFor(
 							class,
 							1,
@@ -1187,9 +1187,9 @@ var _ = Describe("Etcd", func() {
 				TimeNow = func() time.Time { return now }
 
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(etcdObjFor(
 							class,
 							1,
@@ -1231,27 +1231,27 @@ var _ = Describe("Etcd", func() {
 				existingBackupSchedule := "foobarbackupexisting"
 
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-						(&druidv1alpha1.Etcd{
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+						(&druidcorev1alpha1.Etcd{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      etcdName,
 								Namespace: testNamespace,
 							},
-							Spec: druidv1alpha1.EtcdSpec{
-								Backup: druidv1alpha1.BackupSpec{
+							Spec: druidcorev1alpha1.EtcdSpec{
+								Backup: druidcorev1alpha1.BackupSpec{
 									FullSnapshotSchedule: &existingBackupSchedule,
 								},
 							},
-							Status: druidv1alpha1.EtcdStatus{
-								Etcd: &druidv1alpha1.CrossVersionObjectReference{
+							Status: druidcorev1alpha1.EtcdStatus{
+								Etcd: &druidcorev1alpha1.CrossVersionObjectReference{
 									Name: "",
 								},
 							},
-						}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+						}).DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
 						return nil
 					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						expobj := etcdObjFor(
 							class,
 							1,
@@ -1267,7 +1267,7 @@ var _ = Describe("Etcd", func() {
 							nil,
 							false,
 							nil)
-						expobj.Status.Etcd = &druidv1alpha1.CrossVersionObjectReference{}
+						expobj.Status.Etcd = &druidcorev1alpha1.CrossVersionObjectReference{}
 
 						Expect(obj).To(DeepEqual(expobj))
 					}),
@@ -1298,11 +1298,11 @@ var _ = Describe("Etcd", func() {
 
 			createExpectations := func(caSecretName, clientSecretName, serverSecretName, peerCASecretName, peerServerSecretName string) {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-						func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(
+						func(_ context.Context, _ client.ObjectKey, etcd *druidcorev1alpha1.Etcd, _ ...client.GetOption) error {
 							if peerServerSecretName != "" {
-								etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
+								etcd.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.TLSConfig{
 									ServerTLSSecretRef: corev1.SecretReference{
 										Name:      peerServerSecretName,
 										Namespace: testNamespace,
@@ -1311,7 +1311,7 @@ var _ = Describe("Etcd", func() {
 							}
 							return nil
 						}),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(etcdObjFor(
 							class,
 							3,
@@ -1495,16 +1495,16 @@ var _ = Describe("Etcd", func() {
 					var clientSecretName string
 
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-							(&druidv1alpha1.Etcd{
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+							(&druidcorev1alpha1.Etcd{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      etcdName,
 									Namespace: testNamespace,
 								},
-								Spec: druidv1alpha1.EtcdSpec{
+								Spec: druidcorev1alpha1.EtcdSpec{
 									Replicas: 3,
-									Etcd: druidv1alpha1.EtcdConfig{
-										PeerUrlTLS: &druidv1alpha1.TLSConfig{
+									Etcd: druidcorev1alpha1.EtcdConfig{
+										PeerUrlTLS: &druidcorev1alpha1.TLSConfig{
 											ServerTLSSecretRef: corev1.SecretReference{
 												Name:      "peerServerSecretName",
 												Namespace: testNamespace,
@@ -1512,12 +1512,12 @@ var _ = Describe("Etcd", func() {
 										},
 									},
 								},
-							}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+							}).DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
 							return nil
 						}),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-							func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
-								etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(
+							func(_ context.Context, _ client.ObjectKey, etcd *druidcorev1alpha1.Etcd, _ ...client.GetOption) error {
+								etcd.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.TLSConfig{
 									ServerTLSSecretRef: corev1.SecretReference{
 										Name:      "peerServerSecretName",
 										Namespace: testNamespace,
@@ -1525,10 +1525,10 @@ var _ = Describe("Etcd", func() {
 								}
 								return nil
 							}),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj.(*druidv1alpha1.Etcd).Spec.Replicas).To(Equal(int32(0)))
-							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
-							clientSecretName = obj.(*druidv1alpha1.Etcd).Spec.Etcd.ClientUrlTLS.ClientTLSSecretRef.Name
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj.(*druidcorev1alpha1.Etcd).Spec.Replicas).To(Equal(int32(0)))
+							Expect(obj.(*druidcorev1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
+							clientSecretName = obj.(*druidcorev1alpha1.Etcd).Spec.Etcd.ClientUrlTLS.ClientTLSSecretRef.Name
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
@@ -1557,29 +1557,29 @@ var _ = Describe("Etcd", func() {
 					var clientSecretName string
 
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-							(&druidv1alpha1.Etcd{
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+							(&druidcorev1alpha1.Etcd{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      etcdName,
 									Namespace: testNamespace,
 								},
-								Spec: druidv1alpha1.EtcdSpec{
+								Spec: druidcorev1alpha1.EtcdSpec{
 									Replicas: 3,
-									Etcd: druidv1alpha1.EtcdConfig{
+									Etcd: druidcorev1alpha1.EtcdConfig{
 										PeerUrlTLS: nil,
 									},
 								},
-							}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+							}).DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
 							return nil
 						}),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-							func(_ context.Context, _ client.ObjectKey, _ *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(
+							func(_ context.Context, _ client.ObjectKey, _ *druidcorev1alpha1.Etcd, _ ...client.GetOption) error {
 								return nil
 							}),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj.(*druidv1alpha1.Etcd).Spec.Replicas).To(Equal(int32(0)))
-							Expect(obj.(*druidv1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
-							clientSecretName = obj.(*druidv1alpha1.Etcd).Spec.Etcd.ClientUrlTLS.ClientTLSSecretRef.Name
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj.(*druidcorev1alpha1.Etcd).Spec.Replicas).To(Equal(int32(0)))
+							Expect(obj.(*druidcorev1alpha1.Etcd).Spec.Etcd.PeerUrlTLS).NotTo(BeNil())
+							clientSecretName = obj.(*druidcorev1alpha1.Etcd).Spec.Etcd.ClientUrlTLS.ClientTLSSecretRef.Name
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
@@ -1626,9 +1626,9 @@ var _ = Describe("Etcd", func() {
 					})
 
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(etcdObjFor(
 								class,
 								1,
@@ -1658,7 +1658,6 @@ var _ = Describe("Etcd", func() {
 							Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
 						}),
 					)
-
 					Expect(etcd.Deploy(ctx)).To(Succeed())
 				},
 
@@ -1717,9 +1716,9 @@ var _ = Describe("Etcd", func() {
 				delete(etcdObj.Spec.Etcd.ClientService.Annotations, "networking.resources.gardener.cloud/pod-label-selector-namespace-alias")
 
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(etcdObj))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1754,9 +1753,9 @@ var _ = Describe("Etcd", func() {
 				TimeNow = func() time.Time { return now }
 
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(etcdObjFor(
 							class,
 							1,
@@ -1813,7 +1812,7 @@ var _ = Describe("Etcd", func() {
 
 	Describe("#Destroy", func() {
 		var (
-			etcdRes *druidv1alpha1.Etcd
+			etcdRes *druidcorev1alpha1.Etcd
 			nowFunc func() time.Time
 		)
 
@@ -1834,7 +1833,7 @@ var _ = Describe("Etcd", func() {
 			nowFunc = func() time.Time {
 				return time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)
 			}
-			etcdRes = &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
+			etcdRes = &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
 				Name:      "etcd-" + testRole,
 				Namespace: testNamespace,
 				Annotations: map[string]string{
@@ -1960,10 +1959,10 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#Scale", func() {
-		var etcdObj *druidv1alpha1.Etcd
+		var etcdObj *druidcorev1alpha1.Etcd
 
 		BeforeEach(func() {
-			etcdObj = &druidv1alpha1.Etcd{
+			etcdObj = &druidcorev1alpha1.Etcd{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "etcd-" + testRole,
 					Namespace: testNamespace,
@@ -1979,15 +1978,15 @@ var _ = Describe("Etcd", func() {
 			}
 			defer test.WithVar(&TimeNow, nowFunc)()
 
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, etcd *druidcorev1alpha1.Etcd, _ ...client.GetOption) error {
 					*etcd = *etcdObj
 					return nil
 				},
 			)
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, etcd *druidcorev1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 					data, err := patch.Data(etcd)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(data)).To(Equal(fmt.Sprintf(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"%s"}},"spec":{"replicas":1}}`, now.Format(time.RFC3339Nano))))
@@ -2005,15 +2004,15 @@ var _ = Describe("Etcd", func() {
 			}
 			defer test.WithVar(&TimeNow, nowFunc)()
 
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, etcd *druidcorev1alpha1.Etcd, _ ...client.GetOption) error {
 					*etcd = *etcdObj
 					return nil
 				},
 			)
 
-			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, etcd *druidcorev1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 					data, err := patch.Data(etcd)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(data)).To(Equal(fmt.Sprintf(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"%s"}}}`, now.Format(time.RFC3339Nano))))
@@ -2030,15 +2029,15 @@ var _ = Describe("Etcd", func() {
 			defer test.WithVar(&TimeNow, nowFunc)()
 
 			gomock.InOrder(
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, etcd *druidcorev1alpha1.Etcd, _ ...client.GetOption) error {
 						*etcd = *etcdObj
 						return nil
 					},
 				),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()),
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()),
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, etcd *druidcorev1alpha1.Etcd, _ ...client.GetOption) error {
 						etcdObj.Annotations = map[string]string{
 							v1beta1constants.GardenerTimestamp: "foo",
 						}
@@ -2053,8 +2052,8 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should fail because operation annotation is set", func() {
-			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd, _ ...client.GetOption) error {
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, etcd *druidcorev1alpha1.Etcd, _ ...client.GetOption) error {
 					etcdObj.Annotations = map[string]string{
 						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 					}
@@ -2099,17 +2098,17 @@ var _ = Describe("Etcd", func() {
 				highAvailability = true
 			})
 
-			createEtcdObj := func(caName string) *druidv1alpha1.Etcd {
-				return &druidv1alpha1.Etcd{
+			createEtcdObj := func(caName string) *druidcorev1alpha1.Etcd {
+				return &druidcorev1alpha1.Etcd{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       etcdName,
 						Namespace:  testNamespace,
 						Generation: 1,
 					},
-					Spec: druidv1alpha1.EtcdSpec{
-						Etcd: druidv1alpha1.EtcdConfig{
-							PeerUrlTLS: &druidv1alpha1.TLSConfig{
-								TLSCASecretRef: druidv1alpha1.SecretReference{
+					Spec: druidcorev1alpha1.EtcdSpec{
+						Etcd: druidcorev1alpha1.EtcdConfig{
+							PeerUrlTLS: &druidcorev1alpha1.TLSConfig{
+								TLSCASecretRef: druidcorev1alpha1.SecretReference{
 									SecretReference: corev1.SecretReference{
 										Name:      caName,
 										Namespace: testNamespace,
@@ -2119,13 +2118,13 @@ var _ = Describe("Etcd", func() {
 							},
 						},
 					},
-					Status: druidv1alpha1.EtcdStatus{
+					Status: druidcorev1alpha1.EtcdStatus{
 						ObservedGeneration: ptr.To[int64](1),
 						Ready:              ptr.To(true),
-						Conditions: []druidv1alpha1.Condition{
+						Conditions: []druidcorev1alpha1.Condition{
 							{
-								Type:   druidv1alpha1.ConditionTypeAllMembersUpdated,
-								Status: druidv1alpha1.ConditionTrue,
+								Type:   druidcorev1alpha1.ConditionTypeAllMembersUpdated,
+								Status: druidcorev1alpha1.ConditionTrue,
 							},
 						},
 					},
@@ -2140,22 +2139,22 @@ var _ = Describe("Etcd", func() {
 			It("should patch the etcd resource with the new peer CA secret name", func() {
 				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
 
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					createEtcdObj("old-ca").DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					createEtcdObj("old-ca").DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
 					return nil
 				})
 
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, obj *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
+					func(_ context.Context, obj *druidcorev1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 						data, err := patch.Data(obj)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(data).To(MatchJSON("{\"metadata\":{\"annotations\":{\"gardener.cloud/operation\":\"reconcile\",\"gardener.cloud/timestamp\":\"0001-01-01T00:00:00Z\"}},\"spec\":{\"etcd\":{\"peerUrlTls\":{\"tlsCASecretRef\":{\"name\":\"ca-etcd-peer\"}}}}}"))
 						return nil
 					})
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					createEtcdObj("old-ca").DeepCopyInto(obj.(*druidv1alpha1.Etcd))
-					obj.(*druidv1alpha1.Etcd).ObjectMeta.Annotations = map[string]string{"gardener.cloud/timestamp": "0001-01-01T00:00:00Z"}
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					createEtcdObj("old-ca").DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
+					obj.(*druidcorev1alpha1.Etcd).ObjectMeta.Annotations = map[string]string{"gardener.cloud/timestamp": "0001-01-01T00:00:00Z"}
 					return nil
 				}).AnyTimes()
 
@@ -2167,22 +2166,22 @@ var _ = Describe("Etcd", func() {
 
 				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: peerCAName, Namespace: testNamespace}})).To(Succeed())
 
-				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					createEtcdObj(peerCAName).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					createEtcdObj(peerCAName).DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
 					return nil
 				})
 
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, obj *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
+					func(_ context.Context, obj *druidcorev1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 						data, err := patch.Data(obj)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(data).To(MatchJSON("{\"metadata\":{\"annotations\":{\"gardener.cloud/operation\":\"reconcile\",\"gardener.cloud/timestamp\":\"0001-01-01T00:00:00Z\"}}}"))
 						return nil
 					})
 
-				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					createEtcdObj(peerCAName).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
-					obj.(*druidv1alpha1.Etcd).ObjectMeta.Annotations = map[string]string{"gardener.cloud/timestamp": "0001-01-01T00:00:00Z"}
+				c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidcorev1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					createEtcdObj(peerCAName).DeepCopyInto(obj.(*druidcorev1alpha1.Etcd))
+					obj.(*druidcorev1alpha1.Etcd).ObjectMeta.Annotations = map[string]string{"gardener.cloud/timestamp": "0001-01-01T00:00:00Z"}
 					return nil
 				}).AnyTimes()
 

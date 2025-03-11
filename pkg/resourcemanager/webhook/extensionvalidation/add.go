@@ -5,7 +5,7 @@
 package extensionvalidation
 
 import (
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -52,7 +52,7 @@ func AddToManager(mgr manager.Manager) error {
 		&extensionsv1alpha1.ContainerRuntime{}:      &containerRuntimeValidator{},
 		&extensionsv1alpha1.ControlPlane{}:          &controlPlaneValidator{},
 		&extensionsv1alpha1.DNSRecord{}:             &dnsRecordValidator{},
-		&druidv1alpha1.Etcd{}:                       &etcdValidator{},
+		&druidcorev1alpha1.Etcd{}:                   &etcdValidator{},
 		&extensionsv1alpha1.Extension{}:             &extensionValidator{},
 		&extensionsv1alpha1.Infrastructure{}:        &infrastructureValidator{},
 		&extensionsv1alpha1.Network{}:               &networkValidator{},

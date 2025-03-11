@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -215,7 +215,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			if err := machinev1alpha1.AddToScheme(scheme); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
-			if err := druidv1alpha1.AddToScheme(scheme); err != nil {
+			if err := druidcorev1alpha1.AddToScheme(scheme); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 			if err := monitoringv1.AddToScheme(scheme); err != nil {

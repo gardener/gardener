@@ -9,7 +9,7 @@ import (
 	"errors"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -99,7 +99,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 				expectedValues: Equal(&etcdcopybackupstask.Values{
 					Name:      botanist.Shoot.GetInfo().Name,
 					Namespace: botanist.Shoot.ControlPlaneNamespace,
-					WaitForFinalSnapshot: &druidv1alpha1.WaitForFinalSnapshotSpec{
+					WaitForFinalSnapshot: &druidcorev1alpha1.WaitForFinalSnapshotSpec{
 						Enabled: true,
 						Timeout: &metav1.Duration{Duration: etcdcopybackupstask.DefaultTimeout},
 					},
@@ -171,8 +171,8 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdBackupSecret), gomock.AssignableToTypeOf(etcdBackupSecret))
-			etcdCopyBackupsTask.EXPECT().SetSourceStore(gomock.AssignableToTypeOf(druidv1alpha1.StoreSpec{}))
-			etcdCopyBackupsTask.EXPECT().SetTargetStore(gomock.AssignableToTypeOf(druidv1alpha1.StoreSpec{}))
+			etcdCopyBackupsTask.EXPECT().SetSourceStore(gomock.AssignableToTypeOf(druidcorev1alpha1.StoreSpec{}))
+			etcdCopyBackupsTask.EXPECT().SetTargetStore(gomock.AssignableToTypeOf(druidcorev1alpha1.StoreSpec{}))
 			etcdCopyBackupsTask.EXPECT().Deploy(ctx)
 			Expect(botanist.DeployEtcdCopyBackupsTask(ctx)).To(Succeed())
 		})
@@ -218,8 +218,8 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdBackupSecret), gomock.AssignableToTypeOf(etcdBackupSecret))
-			etcdCopyBackupsTask.EXPECT().SetSourceStore(gomock.AssignableToTypeOf(druidv1alpha1.StoreSpec{}))
-			etcdCopyBackupsTask.EXPECT().SetTargetStore(gomock.AssignableToTypeOf(druidv1alpha1.StoreSpec{}))
+			etcdCopyBackupsTask.EXPECT().SetSourceStore(gomock.AssignableToTypeOf(druidcorev1alpha1.StoreSpec{}))
+			etcdCopyBackupsTask.EXPECT().SetTargetStore(gomock.AssignableToTypeOf(druidcorev1alpha1.StoreSpec{}))
 			etcdCopyBackupsTask.EXPECT().Deploy(ctx).Return(fakeErr)
 			Expect(botanist.DeployEtcdCopyBackupsTask(ctx)).To(MatchError(fakeErr))
 		})

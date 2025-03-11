@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -47,7 +47,7 @@ func (e *etcd) WaitCleanup(_ context.Context) error { return nil }
 
 // CheckEtcdObject checks if the given Etcd object was reconciled successfully.
 func CheckEtcdObject(obj client.Object) error {
-	e, ok := obj.(*druidv1alpha1.Etcd)
+	e, ok := obj.(*druidcorev1alpha1.Etcd)
 	if !ok {
 		return fmt.Errorf("expected *duridv1alpha1.Etcd but got %T", obj)
 	}
@@ -84,16 +84,16 @@ func CheckEtcdObject(obj client.Object) error {
 	// so the Waiter can wait for operations such etcd CA rotation to be completed.
 	conditionAllMembersUpdatedExists := false
 	for _, cond := range e.Status.Conditions {
-		if cond.Type == druidv1alpha1.ConditionTypeAllMembersUpdated {
+		if cond.Type == druidcorev1alpha1.ConditionTypeAllMembersUpdated {
 			conditionAllMembersUpdatedExists = true
-			if cond.Status != druidv1alpha1.ConditionTrue {
+			if cond.Status != druidcorev1alpha1.ConditionTrue {
 				return fmt.Errorf("condition %s is %s: %s", cond.Type, cond.Status, cond.Message)
 			}
 			break
 		}
 	}
 	if !conditionAllMembersUpdatedExists {
-		return fmt.Errorf("condition %s is not present", druidv1alpha1.ConditionTypeAllMembersUpdated)
+		return fmt.Errorf("condition %s is not present", druidcorev1alpha1.ConditionTypeAllMembersUpdated)
 	}
 
 	if !ptr.Deref(e.Status.Ready, false) {

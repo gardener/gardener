@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -151,7 +151,7 @@ var _ = Describe("Garden controller tests", func() {
 
 		// The controller waits for the operation annotation to be removed from certain resources, so we need to add a
 		// reconciler for it since envtest does not run the responsible controller (e.g. etcd-druid).
-		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidv1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
+		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &druidcorev1alpha1.Etcd{} }}).AddToManager(mgr)).To(Succeed())
 		Expect((&operationannotation.Reconciler{ForObject: func() client.Object { return &extensionsv1alpha1.Extension{} }}).AddToManager(mgr)).To(Succeed())
 
 		Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
@@ -545,7 +545,7 @@ spec:
 
 		By("Verify that the virtual garden control plane components have been deployed")
 		Eventually(func(g Gomega) []string {
-			etcdList := &druidv1alpha1.EtcdList{}
+			etcdList := &druidcorev1alpha1.EtcdList{}
 			g.Expect(testClient.List(ctx, etcdList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return test.ObjectNames(etcdList)
 		}).Should(ConsistOf(
@@ -568,12 +568,12 @@ spec:
 		By("Patch Etcd resources to report healthiness")
 		Eventually(func(g Gomega) {
 			for _, suffix := range []string{"main", "events"} {
-				etcd := &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-etcd-" + suffix, Namespace: testNamespace.Name}}
+				etcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-etcd-" + suffix, Namespace: testNamespace.Name}}
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)).To(Succeed(), "for "+etcd.Name)
 
 				patch := client.MergeFrom(etcd.DeepCopy())
 				etcd.Status.ObservedGeneration = &etcd.Generation
-				etcd.Status.Conditions = []druidv1alpha1.Condition{{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue, LastUpdateTime: metav1.Now(), LastTransitionTime: metav1.Now()}}
+				etcd.Status.Conditions = []druidcorev1alpha1.Condition{{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue, LastUpdateTime: metav1.Now(), LastTransitionTime: metav1.Now()}}
 				etcd.Status.Ready = ptr.To(true)
 				g.Expect(testClient.Status().Patch(ctx, etcd, patch)).To(Succeed(), "for "+etcd.Name)
 			}
@@ -902,7 +902,7 @@ spec:
 		))
 
 		Eventually(func(g Gomega) []string {
-			etcdList := &druidv1alpha1.EtcdList{}
+			etcdList := &druidcorev1alpha1.EtcdList{}
 			g.Expect(testClient.List(ctx, etcdList, client.InNamespace(testNamespace.Name))).To(Succeed())
 			return test.ObjectNames(etcdList)
 		}).ShouldNot(ContainElements(
