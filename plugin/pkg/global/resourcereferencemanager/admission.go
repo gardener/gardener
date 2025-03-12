@@ -1294,7 +1294,7 @@ func hasDecreasedNodeLimits(limits, oldLimits *core.Limits) bool {
 		// limits have been removed or were not changed.
 		return false
 	}
-	return oldLimits == nil || validation.IsDecreasedMaxNodesTotal(limits.MaxNodesTotal, oldLimits.MaxNodesTotal)
+	return oldLimits == nil || validation.HasDecreasedMaxNodesTotal(limits.MaxNodesTotal, oldLimits.MaxNodesTotal)
 }
 
 func validateShootWorkerLimits(channel chan error, shoot *gardencorev1beta1.Shoot, limits *core.Limits) {
@@ -1315,6 +1315,6 @@ func validateShootWorkerLimits(channel chan error, shoot *gardencorev1beta1.Shoo
 	}
 
 	if totalMinimum > maxNodesTotal {
-		channel <- fmt.Errorf("the total minimum node count of all worker pools of shoot \"%s/%s\" must not exceed the limit of %d configured in the cloud profile", shoot.Namespace, shoot.Name, maxNodesTotal)
+		channel <- fmt.Errorf("the total minimum node count of all worker pools of shoot \"%s/%s\" must not exceed the limit of %d total nodes configured in the cloud profile", shoot.Namespace, shoot.Name, maxNodesTotal)
 	}
 }
