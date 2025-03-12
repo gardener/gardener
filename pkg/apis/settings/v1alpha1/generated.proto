@@ -19,7 +19,7 @@ option go_package = "github.com/gardener/gardener/pkg/apis/settings/v1alpha1";
 // to a Shoot objects cluster-wide.
 message ClusterOpenIDConnectPreset {
   // Standard object metadata.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec is the specification of this OpenIDConnect preset.
   optional ClusterOpenIDConnectPresetSpec spec = 2;
@@ -29,7 +29,7 @@ message ClusterOpenIDConnectPreset {
 message ClusterOpenIDConnectPresetList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   // Items is the list of ClusterOpenIDConnectPresets.
   repeated ClusterOpenIDConnectPreset items = 2;
@@ -46,7 +46,7 @@ message ClusterOpenIDConnectPresetSpec {
   // users may skip the admission by setting the labels.
   // Defaults to the empty LabelSelector, which matches everything.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector projectSelector = 2;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector projectSelector = 2;
 }
 
 // KubeAPIServerOpenIDConnect contains configuration settings for the OIDC provider.
@@ -107,7 +107,7 @@ message OpenIDConnectClientAuthentication {
 // to a Shoot in a namespace.
 message OpenIDConnectPreset {
   // Standard object metadata.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec is the specification of this OpenIDConnect preset.
   optional OpenIDConnectPresetSpec spec = 2;
@@ -117,7 +117,7 @@ message OpenIDConnectPreset {
 message OpenIDConnectPresetList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   // Items is the list of OpenIDConnectPresets.
   repeated OpenIDConnectPreset items = 2;
@@ -148,7 +148,7 @@ message OpenIDConnectPresetSpec {
   // users may skip the admission by setting the labels.
   // Default to the empty LabelSelector, which matches everything.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector shootSelector = 3;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector shootSelector = 3;
 
   // Weight associated with matching the corresponding preset,
   // in the range 1-100.

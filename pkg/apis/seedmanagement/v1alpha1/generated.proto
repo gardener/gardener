@@ -22,7 +22,7 @@ option go_package = "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alph
 message Gardenlet {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Specification of the Gardenlet.
   // +optional
@@ -42,7 +42,7 @@ message GardenletConfig {
 
   // Config is the GardenletConfiguration used to configure gardenlet.
   // +optional
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
+  optional .k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
 
   // Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None.
   // If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
@@ -78,7 +78,7 @@ message GardenletDeployment {
 
   // Resources are the compute resources required by the gardenlet container.
   // +optional
-  optional k8s.io.api.core.v1.ResourceRequirements resources = 5;
+  optional .k8s.io.api.core.v1.ResourceRequirements resources = 5;
 
   // PodLabels are the labels on gardenlet pods.
   // +optional
@@ -90,28 +90,28 @@ message GardenletDeployment {
 
   // AdditionalVolumes is the list of additional volumes that should be mounted by gardenlet containers.
   // +optional
-  repeated k8s.io.api.core.v1.Volume additionalVolumes = 8;
+  repeated .k8s.io.api.core.v1.Volume additionalVolumes = 8;
 
   // AdditionalVolumeMounts is the list of additional pod volumes to mount into the gardenlet container's filesystem.
   // +optional
-  repeated k8s.io.api.core.v1.VolumeMount additionalVolumeMounts = 9;
+  repeated .k8s.io.api.core.v1.VolumeMount additionalVolumeMounts = 9;
 
   // Env is the list of environment variables to set in the gardenlet container.
   // +optional
-  repeated k8s.io.api.core.v1.EnvVar env = 10;
+  repeated .k8s.io.api.core.v1.EnvVar env = 10;
 }
 
 // GardenletHelm is the Helm deployment configuration for gardenlet.
 message GardenletHelm {
   // OCIRepository defines where to pull the chart.
-  optional github.com.gardener.gardener.pkg.apis.core.v1.OCIRepository ociRepository = 1;
+  optional .github.com.gardener.gardener.pkg.apis.core.v1.OCIRepository ociRepository = 1;
 }
 
 // GardenletList is a list of Gardenlet objects.
 message GardenletList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   // Items is the list of Gardenlets.
   repeated Gardenlet items = 2;
@@ -145,14 +145,14 @@ message GardenletSpec {
 
   // Config is the GardenletConfiguration used to configure gardenlet.
   // +optional
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
+  optional .k8s.io.apimachinery.pkg.runtime.RawExtension config = 2;
 
   // KubeconfigSecretRef is a reference to a secret containing a kubeconfig for the cluster to which gardenlet should
   // be deployed. This is only used by gardener-operator for a very first gardenlet deployment. After that, gardenlet
   // will continuously upgrade itself. If this field is empty, gardener-operator deploys it into its own runtime
   // cluster.
   // +optional
-  optional k8s.io.api.core.v1.LocalObjectReference kubeconfigSecretRef = 3;
+  optional .k8s.io.api.core.v1.LocalObjectReference kubeconfigSecretRef = 3;
 }
 
 // GardenletStatus is the status of a Gardenlet.
@@ -161,7 +161,7 @@ message GardenletStatus {
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional
-  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1;
+  repeated .github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1;
 
   // ObservedGeneration is the most recent generation observed for this Gardenlet. It corresponds to the Gardenlet's
   // generation, which is updated on mutation by the API Server.
@@ -189,7 +189,7 @@ message Image {
 message ManagedSeed {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Specification of the ManagedSeed.
   // +optional
@@ -204,7 +204,7 @@ message ManagedSeed {
 message ManagedSeedList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   // Items is the list of ManagedSeeds.
   repeated ManagedSeed items = 2;
@@ -214,7 +214,7 @@ message ManagedSeedList {
 message ManagedSeedSet {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec defines the desired identities of ManagedSeeds and Shoots in this set.
   // +optional
@@ -229,7 +229,7 @@ message ManagedSeedSet {
 message ManagedSeedSetList {
   // Standard list object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   // Items is the list of ManagedSeedSets.
   repeated ManagedSeedSet items = 2;
@@ -243,7 +243,7 @@ message ManagedSeedSetSpec {
 
   // Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
   // It must match the ManagedSeeds and Shoots template's labels. This field is immutable.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2;
 
   // Template describes the ManagedSeed that will be created if insufficient replicas are detected.
   // Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.
@@ -251,7 +251,7 @@ message ManagedSeedSetSpec {
 
   // ShootTemplate describes the Shoot that will be created if insufficient replicas are detected for hosting the corresponding ManagedSeed.
   // Each Shoot created / updated by the ManagedSeedSet will fulfill this template.
-  optional github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootTemplate shootTemplate = 4;
+  optional .github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootTemplate shootTemplate = 4;
 
   // UpdateStrategy specifies the UpdateStrategy that will be
   // employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
@@ -306,7 +306,7 @@ message ManagedSeedSetStatus {
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional
-  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 10;
+  repeated .github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 10;
 
   // PendingReplica, if not empty, indicates the replica that is currently pending creation, update, or deletion.
   // This replica is in a state that requires the controller to wait for it to change before advancing to the next replica.
@@ -332,7 +332,7 @@ message ManagedSeedStatus {
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +optional
-  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1;
+  repeated .github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 1;
 
   // ObservedGeneration is the most recent generation observed for this ManagedSeed. It corresponds to the
   // ManagedSeed's generation, which is updated on mutation by the API Server.
@@ -343,7 +343,7 @@ message ManagedSeedStatus {
 message ManagedSeedTemplate {
   // Standard object metadata.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Specification of the desired behavior of the ManagedSeed.
   // +optional
@@ -359,7 +359,7 @@ message PendingReplica {
   optional string reason = 2;
 
   // Since is the moment in time since the replica is pending with the specified reason.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 3;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 3;
 
   // Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
   // Only applicable if Reason is ShootReconciling or ShootDeleting.
