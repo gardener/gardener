@@ -111,7 +111,7 @@ var _ = Describe("Etcd", func() {
 				expectedRole:                    Equal(role),
 				expectedClass:                   Equal(class),
 				expectedReplicas:                PointTo(Equal(int32(1))),
-				expectedStorageCapacity:         Equal("10Gi"),
+				expectedStorageCapacity:         Equal("25Gi"),
 				expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
 				expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
 				expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
