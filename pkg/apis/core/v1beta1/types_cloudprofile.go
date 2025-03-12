@@ -86,7 +86,7 @@ type CloudProfileSpec struct {
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that enables the most important capabilities will be selected.
 	// +optional
-	CapabilitiesDefinition Capabilities `json:"capabilitiesDefinition,omitempty" protobuf:"bytes,12,opt,name=capabilitiesDefinition,casttype=Capabilities,castkey=CapabilityName"`
+	CapabilitiesDefinition Capabilities `json:"capabilitiesDefinition,omitempty" protobuf:"bytes,12,opt,name=capabilitiesDefinition,casttype=Capabilities"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -146,7 +146,7 @@ type MachineImageVersion struct {
 	// CapabilitiesSet is an array of capabilities. Each entry represents a combination of capabilities that is provided by
 	// the machine image version.
 	// +optional
-	CapabilitiesSet CapabilitiesSet `json:"capabilitiesSet,omitempty" protobuf:"bytes,6,rep,name=capabilitiesSet"`
+	CapabilitiesSet []CapabilitiesSetCapabilities `json:"capabilitiesSet,omitempty" protobuf:"bytes,6,rep,name=capabilitiesSet"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -182,7 +182,7 @@ type MachineType struct {
 	Architecture *string `json:"architecture,omitempty" protobuf:"bytes,7,opt,name=architecture"`
 	// Capabilities contains the capabilities of the machine type.
 	// +optional
-	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,8,rep,name=capabilities,casttype=Capabilities,castkey=CapabilityName"`
+	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,8,rep,name=capabilities,casttype=Capabilities"`
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.

@@ -57,6 +57,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BastionMachineType":                         schema_pkg_apis_core_v1beta1_BastionMachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation":                                 schema_pkg_apis_core_v1beta1_CARotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI":                                        schema_pkg_apis_core_v1beta1_CRI(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilitiesSetCapabilities":                schema_pkg_apis_core_v1beta1_CapabilitiesSetCapabilities(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues":                           schema_pkg_apis_core_v1beta1_CapabilityValues(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile":                               schema_pkg_apis_core_v1beta1_CloudProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileList":                           schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
@@ -1968,11 +1969,22 @@ func schema_pkg_apis_core_v1beta1_CRI(ref common.ReferenceCallback) common.OpenA
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_CapabilitiesSetCapabilities(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CapabilitiesSetCapabilities is a wrapper for Capabilities this is a workaround as we cannot define a slice of maps in protobuf we define custom marshal/unmarshal functions to get around this l If there is a way to avoid this, we should do it.",
+				Type:        []string{"object"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_CapabilityValues(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "CapabilityValues is a list of values for a capability.",
+				Description: "CapabilityValues is a list of values for a capability. The type is wrapped to represent the values as a comma-separated string in JSON.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"Values": {
@@ -5663,7 +5675,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilitiesSetCapabilities"),
 									},
 								},
 							},
@@ -5674,7 +5686,7 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilitiesSetCapabilities", "github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

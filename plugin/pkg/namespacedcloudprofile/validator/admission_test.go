@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -46,7 +45,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 				capabilitiesDefinition  gardencorev1beta1.Capabilities
 				machineCapabilitiesCore gardencore.Capabilities
 				machineCapabilities     gardencorev1beta1.Capabilities
-				capabilitiesSet         []apiextensionsv1.JSON
+				capabilitiesSet         []gardencorev1beta1.CapabilitiesSetCapabilities
 				machineArchitecture     string
 				imageArchitectures      []string
 			)
@@ -73,7 +72,9 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 							Values: []string{"amd64"},
 						},
 					}
-					capabilitiesSet = []apiextensionsv1.JSON{{Raw: []byte(`{"` + v1beta1constants.ArchitectureKey + `":"amd64", "hypervisorType":"gen1"}`)}}
+					capabilitiesSet = []gardencorev1beta1.CapabilitiesSetCapabilities{
+						{Capabilities: gardencorev1beta1.Capabilities{v1beta1constants.ArchitectureKey: {Values: []string{"amd64"}}, "hypervisorType": {Values: []string{"gen1"}}}},
+					}
 				} else {
 					machineArchitecture = "amd64"
 					imageArchitectures = []string{"amd64"}
@@ -378,7 +379,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 						{
 							Name: "another-image",
 							Versions: []gardencore.MachineImageVersion{
-								{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: imageArchitectures, CapabilitiesSet: capabilitiesSet},
+								{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.0.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: imageArchitectures, CapabilitiesSet: convertCapabilitiesSetToCore(capabilitiesSet)},
 							},
 							UpdateStrategy: ptr.To(gardencore.UpdateStrategyMajor),
 						},
@@ -416,7 +417,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 					gardencorev1beta1.SetObjectDefaults_CloudProfile(parentCloudProfile)
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 
-					machineImage := gardencore.MachineImage{Name: imageName, Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.2.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: imageArchitectures, CapabilitiesSet: capabilitiesSet}}}
+					machineImage := gardencore.MachineImage{Name: imageName, Versions: []gardencore.MachineImageVersion{{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.2.0", ExpirationDate: ptr.To(metav1.Now())}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: imageArchitectures, CapabilitiesSet: convertCapabilitiesSetToCore(capabilitiesSet)}}}
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{machineImage}
 
@@ -496,7 +497,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 
 					namespacedCloudProfile.Spec.MachineImages = []gardencore.MachineImage{
 						{Name: imageName, Versions: []gardencore.MachineImageVersion{
-							{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.1.0"}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: imageArchitectures, CapabilitiesSet: capabilitiesSet},
+							{ExpirableVersion: gardencore.ExpirableVersion{Version: "1.1.0"}, CRI: []gardencore.CRI{{Name: "containerd"}}, Architectures: imageArchitectures, CapabilitiesSet: convertCapabilitiesSetToCore(capabilitiesSet)},
 						}},
 					}
 					oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
@@ -524,7 +525,7 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 					oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
 					namespacedCloudProfile.Spec.MachineImages[0].UpdateStrategy = ptr.To(gardencore.UpdateStrategyMajor)
 					namespacedCloudProfile.Spec.MachineImages[0].Versions[0].Architectures = imageArchitectures
-					namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilitiesSet = capabilitiesSet
+					namespacedCloudProfile.Spec.MachineImages[0].Versions[0].CapabilitiesSet = convertCapabilitiesSetToCore(capabilitiesSet)
 
 					attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), "", namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
@@ -814,3 +815,17 @@ var _ = DescribeTableSubtree("ParentCloudProfile has CapabilitiesDefinition", fu
 	Entry("CapabilitiesDefinition is used", true),
 	Entry("CapabilitiesDefinition is NOT used", false),
 )
+
+func convertCapabilitiesSetToCore(input []gardencorev1beta1.CapabilitiesSetCapabilities) []gardencore.CapabilitiesSetCapabilities {
+	output := make([]gardencore.CapabilitiesSetCapabilities, len(input))
+	for i, v := range input {
+		capabilities := make(gardencore.Capabilities)
+		for key, values := range v.Capabilities {
+			capabilities[key] = gardencore.CapabilityValues{
+				Values: append([]string(nil), values.Values...),
+			}
+		}
+		output[i] = gardencore.CapabilitiesSetCapabilities{Capabilities: capabilities}
+	}
+	return output
+}

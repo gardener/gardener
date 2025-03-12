@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -1483,9 +1482,9 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 		machineCapabilities = core.Capabilities{
 			v1beta1constants.ArchitectureKey: {Values: []string{"amd64"}},
 		}
-		imageCapabilitiesSet = []apiextensionsv1.JSON{
-			{Raw: []byte(`{"` + v1beta1constants.ArchitectureKey + `":"amd64", "hypervisorType":"gen1"}`)},
-			{Raw: []byte(`{"` + v1beta1constants.ArchitectureKey + `":"amd64", "hypervisorType":"gen2"}`)},
+		imageCapabilitiesSet = []core.CapabilitiesSetCapabilities{
+			{Capabilities: core.Capabilities{v1beta1constants.ArchitectureKey: {Values: []string{"amd64"}}, "hypervisorType": {Values: []string{"gen1"}}}},
+			{Capabilities: core.Capabilities{v1beta1constants.ArchitectureKey: {Values: []string{"amd64"}}, "hypervisorType": {Values: []string{"gen2"}}}},
 		}
 		cloudProfile = core.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1569,7 +1568,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 
 		Context("MachineImageVersion validation", func() {
 			It("should allow minimal capabilitiesSet of key architecture with one value", func() {
-				capabilitiesSet := []apiextensionsv1.JSON{{Raw: []byte(`{"` + v1beta1constants.ArchitectureKey + `":"amd64"}`)}}
+				capabilitiesSet := []core.CapabilitiesSetCapabilities{{Capabilities: core.Capabilities{v1beta1constants.ArchitectureKey: {Values: []string{"amd64"}}}}}
 				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = capabilitiesSet
 
 				errorList := ValidateCloudProfile(cp)
@@ -1577,7 +1576,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			})
 
 			It("should reject empty capabilitiesSet, as architecture cant be determined", func() {
-				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []apiextensionsv1.JSON{}
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []core.CapabilitiesSetCapabilities{}
 
 				errorList := ValidateCloudProfile(cp)
 				Expect(errorList).To(
@@ -1588,7 +1587,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			})
 
 			It("should reject capabilitiesSet with multiple values for architecture", func() {
-				v1JSON := apiextensionsv1.JSON{Raw: []byte(`{"` + v1beta1constants.ArchitectureKey + `":"arm64,amd64"}`)}
+				v1JSON := core.CapabilitiesSetCapabilities{Capabilities: core.Capabilities{v1beta1constants.ArchitectureKey: {Values: []string{"arm64", "amd64"}}}}
 				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = append(cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet, v1JSON)
 
 				errorList := ValidateCloudProfile(cp)
@@ -1600,7 +1599,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			})
 
 			It("should reject capabilitiesSet without architecture key", func() {
-				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []apiextensionsv1.JSON{{Raw: []byte(`{"hypervisorType":"gen1"}`)}}
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []core.CapabilitiesSetCapabilities{{Capabilities: core.Capabilities{"hypervisorType": {Values: []string{"gen1"}}}}}
 				errorList := ValidateCloudProfile(cp)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -1609,7 +1608,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			})
 
 			It("should reject capabilitiesSet with unsupported value", func() {
-				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []apiextensionsv1.JSON{{Raw: []byte(`{"` + v1beta1constants.ArchitectureKey + `":"arm64", "hypervisorType":"unsupportedValue"}`)}}
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []core.CapabilitiesSetCapabilities{{Capabilities: core.Capabilities{v1beta1constants.ArchitectureKey: {Values: []string{"arm64"}}, "hypervisorType": {Values: []string{"unsupportedValue"}}}}}
 				errorList := ValidateCloudProfile(cp)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -1671,7 +1670,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			})
 
 			It("should allow minimal capabilitiesSet of key architecture with one value", func() {
-				capabilitiesSet := []apiextensionsv1.JSON{{Raw: []byte(`{"` + v1beta1constants.ArchitectureKey + `":"amd64"}`)}}
+				capabilitiesSet := []core.CapabilitiesSetCapabilities{{Capabilities: core.Capabilities{v1beta1constants.ArchitectureKey: {Values: []string{"amd64"}}}}}
 
 				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = capabilitiesSet
 
@@ -1680,13 +1679,15 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			})
 
 			It("should accept capabilitiesSet without architecture key", func() {
-				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []apiextensionsv1.JSON{{Raw: []byte(`{"hypervisorType":"gen1"}`)}}
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []core.CapabilitiesSetCapabilities{{Capabilities: core.Capabilities{"hypervisorType": {Values: []string{"gen1"}}}}}
+
 				errorList := ValidateCloudProfile(cp)
 				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should reject capabilitiesSet with unsupported key", func() {
-				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []apiextensionsv1.JSON{{Raw: []byte(`{"":"amd64"}`)}}
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []core.CapabilitiesSetCapabilities{{Capabilities: core.Capabilities{"": {Values: []string{"amd64"}}}}}
+
 				errorList := ValidateCloudProfile(cp)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -1695,7 +1696,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 			})
 
 			It("should reject capabilitiesSet with unsupported value", func() {
-				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []apiextensionsv1.JSON{{Raw: []byte(`{"hypervisorType":"unsupportedValue"}`)}}
+				cp.Spec.MachineImages[0].Versions[0].CapabilitiesSet = []core.CapabilitiesSetCapabilities{{Capabilities: core.Capabilities{"hypervisorType": {Values: []string{"unsupportedValue"}}}}}
 				errorList := ValidateCloudProfile(cp)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -1778,7 +1779,7 @@ var _ = Describe("CloudProfile with capabilities specific features", func() {
 				imageArchitecture []string,
 				capabilitiesDefinition core.Capabilities,
 				machineCapabilities core.Capabilities,
-				imageCapabilitiesSet core.CapabilitiesSet,
+				imageCapabilitiesSet []core.CapabilitiesSetCapabilities,
 				expectedError []gomegatypes.GomegaMatcher,
 			) {
 

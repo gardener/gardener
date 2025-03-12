@@ -5,7 +5,6 @@
 package core
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,19 +62,22 @@ type AccessRestrictionWithOptions struct {
 	Options map[string]string
 }
 
-// CapabilityName is the name of a capability.
-type CapabilityName string
-
 // CapabilityValues is a list of values for a capability.
+// The type is wrapped to represent the values as a comma-separated string in JSON.
 type CapabilityValues struct {
 	Values []string
 }
 
 // Capabilities of a machine type or machine image.
-type Capabilities map[CapabilityName]CapabilityValues
+type Capabilities map[string]CapabilityValues
 
-// CapabilitiesSet is a set of multiple capabilities.
-type CapabilitiesSet []apiextensionsv1.JSON
+// CapabilitiesSetCapabilities is a wrapper for Capabilities
+// this is a workaround as we cannot define a slice of maps in protobuf
+// we define custom marshal/unmarshal functions to get around this l
+// If there is a way to avoid this, we should do it.
+type CapabilitiesSetCapabilities struct {
+	Capabilities Capabilities `json:"-"`
+}
 
 // Contains checks if the CapabilityValues contains all values
 func (c *CapabilityValues) Contains(values ...string) bool {

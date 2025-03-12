@@ -117,7 +117,7 @@ type MachineImageVersion struct {
 	InPlaceUpdates *InPlaceUpdates
 	// CapabilitiesSet is an array of capabilities. Each entry represents a combination of capabilities that is provided by
 	// the machine image version.
-	CapabilitiesSet CapabilitiesSet
+	CapabilitiesSet []CapabilitiesSetCapabilities
 }
 
 // ExpirableVersion contains a version and an expiration date.

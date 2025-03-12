@@ -318,21 +318,18 @@ func Convert_core_HelmControllerDeployment_To_v1beta1_HelmControllerDeployment(i
 
 func Convert_v1beta1_Capabilities_To_core_Capabilities(in *Capabilities, out *core.Capabilities, s conversion.Scope) error {
 	for capabilityName, capabilityValues := range *in {
-		coreCapabilityValues := core.CapabilityValues{
-			Values: capabilityValues.Values,
+		(*out)[capabilityName] = core.CapabilityValues{
+			Values: append([]string(nil), capabilityValues.Values...),
 		}
-		(*out)[core.CapabilityName(capabilityName)] = coreCapabilityValues
 	}
 	return nil
 }
 
 func Convert_core_Capabilities_To_v1beta1_Capabilities(in *core.Capabilities, out *Capabilities, s conversion.Scope) error {
 	for capabilityName, capabilityValues := range *in {
-		v1betaCapabilityValues := CapabilityValues{
-			Values: capabilityValues.Values,
+		(*out)[capabilityName] = CapabilityValues{
+			Values: append([]string(nil), capabilityValues.Values...),
 		}
-		(*out)[CapabilityName(capabilityName)] = v1betaCapabilityValues
 	}
-
 	return nil
 }

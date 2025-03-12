@@ -438,11 +438,11 @@ func ValidateCapabilitiesDefinition(capabilitiesDefinition core.Capabilities, pa
 			errList = append(errList, field.Invalid(path, "", "empty capability name is not allowed"))
 		}
 		if len(capabilityValues.Values) == 0 {
-			errList = append(errList, field.Required(path.Child(string(capabilityName)), "must not be empty"))
+			errList = append(errList, field.Required(path.Child(capabilityName), "must not be empty"))
 		} else {
 			for _, capabilityValue := range capabilityValues.Values {
 				if len(capabilityValue) == 0 {
-					errList = append(errList, field.Invalid(path.Child(string(capabilityName)), capabilityValues, "must not contain empty capability values"))
+					errList = append(errList, field.Invalid(path.Child(capabilityName), capabilityValues, "must not contain empty capability values"))
 				}
 			}
 		}
@@ -479,18 +479,13 @@ func validateMachineImageVersionCapabilities(machineImageVersion core.MachineIma
 		errList = append(errList, field.Forbidden(path.Child("architectures"), "must not be set when capabilities are defined"))
 	}
 
-	capabilitiesSet, unmarshalErrorList := utilcore.UnmarshalCapabilitiesSet(machineImageVersion.CapabilitiesSet, path)
-	if unmarshalErrorList != nil {
-		return append(errList, unmarshalErrorList...)
-	}
-
-	if len(capabilitiesDefinition[v1beta1constants.ArchitectureKey].Values) > 1 && len(capabilitiesSet) == 0 {
+	if len(capabilitiesDefinition[v1beta1constants.ArchitectureKey].Values) > 1 && len(machineImageVersion.CapabilitiesSet) == 0 {
 		errList = append(errList, field.Required(path.Child("capabilitiesSet"), "must be provided when multiple architectures are supported in the cloud profile"))
 	}
 
-	for i, capabilities := range capabilitiesSet {
-		errList = append(errList, utilcore.ValidateCapabilitiesAgainstDefinition(capabilities, capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
-		errList = append(errList, validateArchitectureCapability(capabilities, capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
+	for i, capabilities := range machineImageVersion.CapabilitiesSet {
+		errList = append(errList, utilcore.ValidateCapabilitiesAgainstDefinition(capabilities.Capabilities, capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
+		errList = append(errList, validateArchitectureCapability(capabilities.Capabilities, capabilitiesDefinition, path.Child("capabilitiesSet").Index(i))...)
 	}
 
 	return errList

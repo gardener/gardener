@@ -32,7 +32,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
 | RemoveAPIServerProxyLegacyPort           | `false` | `Alpha` | `1.113` |         |
 | IstioTLSTermination                      | `false` | `Alpha` | `1.114` |         |
-| CloudProfileCapabilities                 | `false` | `Alpha` | `1.114` |         |
+| CloudProfileCapabilities                 | `false` | `Alpha` | `1.115` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
 

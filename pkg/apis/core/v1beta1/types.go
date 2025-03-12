@@ -7,8 +7,6 @@ package v1beta1
 import (
 	"encoding/json"
 	"strings"
-
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 const (
@@ -60,19 +58,32 @@ type AccessRestrictionWithOptions struct {
 	Options map[string]string `json:"options,omitempty" protobuf:"bytes,2,rep,name=options"`
 }
 
-// CapabilityName is the name of a capability.
-type CapabilityName string
-
 // CapabilityValues is a list of values for a capability.
+// The type is wrapped to represent the values as a comma-separated string in JSON.
 type CapabilityValues struct {
 	Values []string `protobuf:"bytes,1,rep,name=values"`
 }
 
 // Capabilities of a machine type or machine image.
-type Capabilities map[CapabilityName]CapabilityValues
+type Capabilities map[string]CapabilityValues
 
-// CapabilitiesSet is a set of multiple capabilities.
-type CapabilitiesSet []apiextensionsv1.JSON
+// CapabilitiesSetCapabilities is a wrapper for Capabilities
+// this is a workaround as we cannot define a slice of maps in protobuf
+// we define custom marshal/unmarshal functions to get around this l
+// If there is a way to avoid this, we should do it.
+type CapabilitiesSetCapabilities struct {
+	Capabilities Capabilities `json:"-"`
+}
+
+// MarshalJSON marshals the CapabilitiesSetCapabilities object to JSON.
+func (c *CapabilitiesSetCapabilities) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.Capabilities)
+}
+
+// UnmarshalJSON unmarshals the CapabilitiesSetCapabilities object from JSON.
+func (c *CapabilitiesSetCapabilities) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &c.Capabilities)
+}
 
 // UnmarshalJSON unmarshals the CapabilityValues object from JSON.
 func (c *CapabilityValues) UnmarshalJSON(bytes []byte) error {

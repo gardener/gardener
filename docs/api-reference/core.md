@@ -3392,33 +3392,55 @@ CRIName
 <p>CRIName is a type alias for the CRI name string.</p>
 </p>
 <h3 id="core.gardener.cloud/v1beta1.Capabilities">Capabilities
-(<code>map[github.com/Roncossek/gardener/pkg/apis/core/v1beta1.CapabilityName]github.com/Roncossek/gardener/pkg/apis/core/v1beta1.CapabilityValues</code> alias)</p></h3>
+(<code>map[string]github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CapabilitiesSetCapabilities">CapabilitiesSetCapabilities</a>, 
 <a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.MachineType">MachineType</a>)
 </p>
 <p>
 <p>Capabilities of a machine type or machine image.</p>
 </p>
-<h3 id="core.gardener.cloud/v1beta1.CapabilitiesSet">CapabilitiesSet
-(<code>[]k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON</code> alias)</p></h3>
+<h3 id="core.gardener.cloud/v1beta1.CapabilitiesSetCapabilities">CapabilitiesSetCapabilities
+</h3>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
 </p>
 <p>
-<p>CapabilitiesSet is a set of multiple capabilities.</p>
+<p>CapabilitiesSetCapabilities is a wrapper for Capabilities
+this is a workaround as we cannot define a slice of maps in protobuf
+we define custom marshal/unmarshal functions to get around this l
+If there is a way to avoid this, we should do it.</p>
 </p>
-<h3 id="core.gardener.cloud/v1beta1.CapabilityName">CapabilityName
-(<code>string</code> alias)</p></h3>
-<p>
-<p>CapabilityName is the name of a capability.</p>
-</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>-</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Capabilities">
+Capabilities
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.CapabilityValues">CapabilityValues
 </h3>
 <p>
-<p>CapabilityValues is a list of values for a capability.</p>
+<p>CapabilityValues is a list of values for a capability.
+The type is wrapped to represent the values as a comma-separated string in JSON.</p>
 </p>
 <table>
 <thead>
@@ -8265,8 +8287,8 @@ InPlaceUpdates
 <td>
 <code>capabilitiesSet</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.CapabilitiesSet">
-CapabilitiesSet
+<a href="#core.gardener.cloud/v1beta1.CapabilitiesSetCapabilities">
+[]CapabilitiesSetCapabilities
 </a>
 </em>
 </td>

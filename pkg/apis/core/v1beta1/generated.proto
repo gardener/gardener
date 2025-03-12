@@ -342,7 +342,15 @@ message CRI {
   repeated ContainerRuntime containerRuntimes = 2;
 }
 
+// CapabilitiesSetCapabilities is a wrapper for Capabilities
+// this is a workaround as we cannot define a slice of maps in protobuf
+// we define custom marshal/unmarshal functions to get around this l
+// If there is a way to avoid this, we should do it.
+message CapabilitiesSetCapabilities {
+}
+
 // CapabilityValues is a list of values for a capability.
+// The type is wrapped to represent the values as a comma-separated string in JSON.
 message CapabilityValues {
   repeated string values = 1;
 }
@@ -1845,7 +1853,7 @@ message MachineImageVersion {
   // CapabilitiesSet is an array of capabilities. Each entry represents a combination of capabilities that is provided by
   // the machine image version.
   // +optional
-  repeated .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON capabilitiesSet = 6;
+  repeated CapabilitiesSetCapabilities capabilitiesSet = 6;
 }
 
 // MachineType contains certain properties of a machine type.
