@@ -6,6 +6,7 @@ package etcd_test
 
 import (
 	"context"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/Masterminds/semver/v3"
 	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
@@ -50,7 +51,7 @@ var _ = Describe("CRD", func() {
 
 	DescribeTable("CRD is deployed",
 		func(crdName string) {
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			verifyDeployedCRD(ctx, crdName, c)
 		},
 
 		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
@@ -62,10 +63,19 @@ var _ = Describe("CRD", func() {
 			Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			verifyDeployedCRD(ctx, crdName, c)
 		},
 
 		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
 		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
 	)
 })
+
+func verifyDeployedCRD(ctx context.Context, crdName string, c client.Client) {
+	crd := &apiextensionsv1.CustomResourceDefinition{}
+	err := c.Get(ctx, client.ObjectKey{Name: crdName}, crd)
+	Expect(err).NotTo(HaveOccurred())
+	deletionProtectedVal, ok := crd.GetLabels()[gardenerutils.DeletionProtected]
+	Expect(ok).To(BeTrue())
+	Expect(deletionProtectedVal).To(Equal("true"))
+}
