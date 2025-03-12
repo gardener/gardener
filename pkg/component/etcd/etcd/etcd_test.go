@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -47,6 +48,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/third_party/mock/client-go/rest"
 	mockclient "github.com/gardener/gardener/third_party/mock/controller-runtime/client"
 )
@@ -126,6 +128,7 @@ var _ = Describe("Etcd", func() {
 			peerCASecretName *string,
 			peerServerSecretName *string,
 			topologyAwareRoutingEnabled bool,
+			runtimeKubernetesVersion *semver.Version,
 		) *druidv1alpha1.Etcd {
 			defragSchedule := defragmentationSchedule
 			if existingDefragmentationSchedule != "" {
@@ -169,8 +172,15 @@ var _ = Describe("Etcd", func() {
 				},
 			}
 			if topologyAwareRoutingEnabled {
-				metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
-				metav1.SetMetaDataLabel(&clientService.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+				if versionutils.ConstraintK8sGreaterEqual132.Check(runtimeKubernetesVersion) {
+					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+				} else if versionutils.ConstraintK8sEqual131.Check(runtimeKubernetesVersion) {
+					clientService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+					metav1.SetMetaDataLabel(&clientService.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+				} else {
+					metav1.SetMetaDataAnnotation(&clientService.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
+					metav1.SetMetaDataLabel(&clientService.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+				}
 			}
 
 			obj := &druidv1alpha1.Etcd{
@@ -230,8 +240,9 @@ var _ = Describe("Etcd", func() {
 						DefragmentationSchedule: &defragSchedule,
 						Quota:                   &quota,
 						ClientService: &druidv1alpha1.ClientService{
-							Annotations: clientService.Annotations,
-							Labels:      clientService.Labels,
+							Annotations:         clientService.Annotations,
+							Labels:              clientService.Labels,
+							TrafficDistribution: clientService.Spec.TrafficDistribution,
 						},
 					},
 					Backup: druidv1alpha1.BackupSpec{
@@ -748,7 +759,8 @@ var _ = Describe("Etcd", func() {
 						secretNameServer,
 						nil,
 						nil,
-						false)))
+						false,
+						nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
@@ -819,7 +831,8 @@ var _ = Describe("Etcd", func() {
 						secretNameServer,
 						nil,
 						nil,
-						false)))
+						false,
+						nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
@@ -895,7 +908,8 @@ var _ = Describe("Etcd", func() {
 						secretNameServer,
 						nil,
 						nil,
-						false)))
+						false,
+						nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
@@ -955,7 +969,8 @@ var _ = Describe("Etcd", func() {
 						secretNameServer,
 						nil,
 						nil,
-						false)
+						false,
+						nil)
 					expectedObj.Annotations = utils.MergeStringMaps(expectedObj.Annotations, map[string]string{
 						"foo": "bar",
 					})
@@ -1024,7 +1039,8 @@ var _ = Describe("Etcd", func() {
 						secretNameServer,
 						nil,
 						nil,
-						false)))
+						false,
+						nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
@@ -1065,7 +1081,8 @@ var _ = Describe("Etcd", func() {
 						secretNameServer,
 						nil,
 						nil,
-						false)))
+						false,
+						nil)))
 				}),
 				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
@@ -1129,7 +1146,8 @@ var _ = Describe("Etcd", func() {
 							secretNameServer,
 							nil,
 							nil,
-							false)))
+							false,
+							nil)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
@@ -1185,7 +1203,8 @@ var _ = Describe("Etcd", func() {
 							secretNameServer,
 							nil,
 							nil,
-							false)))
+							false,
+							nil)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
@@ -1246,7 +1265,8 @@ var _ = Describe("Etcd", func() {
 							secretNameServer,
 							nil,
 							nil,
-							false)
+							false,
+							nil)
 						expobj.Status.Etcd = &druidv1alpha1.CrossVersionObjectReference{}
 
 						Expect(obj).To(DeepEqual(expobj))
@@ -1306,6 +1326,7 @@ var _ = Describe("Etcd", func() {
 							&peerCASecretName,
 							&peerServerSecretName,
 							false,
+							nil,
 						)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
@@ -1580,63 +1601,71 @@ var _ = Describe("Etcd", func() {
 		})
 
 		When("TopologyAwareRoutingEnabled=true", func() {
-			It("should successfully deploy with expected etcd client service annotations and labels", func() {
-				oldTimeNow := TimeNow
-				defer func() { TimeNow = oldTimeNow }()
-				TimeNow = func() time.Time { return now }
+			DescribeTable("should successfully deploy with expected etcd client service annotation, label and spec field",
+				func(runtimeKubernetesVersion *semver.Version) {
+					oldTimeNow := TimeNow
+					defer func() { TimeNow = oldTimeNow }()
+					TimeNow = func() time.Time { return now }
 
-				class := ClassImportant
+					class := ClassImportant
 
-				replicas = ptr.To[int32](1)
+					replicas = ptr.To[int32](1)
 
-				etcd = New(log, c, testNamespace, sm, Values{
-					Role:                        testRole,
-					Class:                       class,
-					Replicas:                    replicas,
-					StorageCapacity:             storageCapacity,
-					StorageClassName:            &storageClassName,
-					DefragmentationSchedule:     &defragmentationSchedule,
-					CARotationPhase:             "",
-					PriorityClassName:           priorityClassName,
-					MaintenanceTimeWindow:       maintenanceTimeWindow,
-					TopologyAwareRoutingEnabled: true,
-				})
+					etcd = New(log, c, testNamespace, sm, Values{
+						Role:                        testRole,
+						Class:                       class,
+						Replicas:                    replicas,
+						StorageCapacity:             storageCapacity,
+						StorageClassName:            &storageClassName,
+						DefragmentationSchedule:     &defragmentationSchedule,
+						CARotationPhase:             "",
+						RuntimeKubernetesVersion:    runtimeKubernetesVersion,
+						PriorityClassName:           priorityClassName,
+						MaintenanceTimeWindow:       maintenanceTimeWindow,
+						TopologyAwareRoutingEnabled: true,
+					})
 
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(etcdObjFor(
-							class,
-							1,
-							nil,
-							"",
-							"",
-							nil,
-							nil,
-							secretNameCA,
-							secretNameClient,
-							secretNameServer,
-							nil,
-							nil,
-							true)))
-					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
-						Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
-					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
-					}),
-					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-						Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
-					}),
-				)
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: etcdName}, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(etcdObjFor(
+								class,
+								1,
+								nil,
+								"",
+								"",
+								nil,
+								nil,
+								secretNameCA,
+								secretNameClient,
+								secretNameServer,
+								nil,
+								nil,
+								true,
+								runtimeKubernetesVersion)))
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(expectedVPAFor(class, "", nil)))
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.ServiceMonitor{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceMonitor("shoot", "etcd-client")))
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: "shoot-etcd-" + testRole}, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&monitoringv1.PrometheusRule{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(prometheusRule("shoot", class, 1, false)))
+						}),
+					)
 
-				Expect(etcd.Deploy(ctx)).To(Succeed())
-			})
+					Expect(etcd.Deploy(ctx)).To(Succeed())
+				},
+
+				Entry("when runtime Kubernetes version is >= 1.32", semver.MustParse("1.32.1")),
+				Entry("when runtime Kubernetes version is 1.31", semver.MustParse("1.31.2")),
+				Entry("when runtime Kubernetes version is < 1.31", semver.MustParse("1.30.3")),
+			)
 		})
 
 		When("name prefix is set", func() {
@@ -1650,16 +1679,15 @@ var _ = Describe("Etcd", func() {
 				replicas = ptr.To[int32](1)
 
 				etcd = New(log, c, testNamespace, sm, Values{
-					Role:                        testRole,
-					Class:                       class,
-					Replicas:                    replicas,
-					StorageCapacity:             storageCapacity,
-					StorageClassName:            &storageClassName,
-					DefragmentationSchedule:     &defragmentationSchedule,
-					CARotationPhase:             "",
-					PriorityClassName:           priorityClassName,
-					TopologyAwareRoutingEnabled: true,
-					NamePrefix:                  "virtual-garden-",
+					Role:                    testRole,
+					Class:                   class,
+					Replicas:                replicas,
+					StorageCapacity:         storageCapacity,
+					StorageClassName:        &storageClassName,
+					DefragmentationSchedule: &defragmentationSchedule,
+					CARotationPhase:         "",
+					PriorityClassName:       priorityClassName,
+					NamePrefix:              "virtual-garden-",
 				})
 
 				DeferCleanup(test.WithVar(&etcdName, "virtual-garden-"+etcdName))
@@ -1678,7 +1706,8 @@ var _ = Describe("Etcd", func() {
 					secretNameServer,
 					nil,
 					nil,
-					true,
+					false,
+					nil,
 				)
 				etcdObj.Name = etcdName
 				etcdObj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-virtual-garden-etcd")
@@ -1746,7 +1775,8 @@ var _ = Describe("Etcd", func() {
 							secretNameServer,
 							nil,
 							nil,
-							false)))
+							false,
+							nil)))
 					}),
 					c.EXPECT().Get(ctx, client.ObjectKey{Namespace: testNamespace, Name: vpaName}, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).Do(func(_ context.Context, obj client.Object, _ ...client.CreateOption) {

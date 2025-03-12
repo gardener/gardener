@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -49,6 +50,7 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -118,7 +120,7 @@ var _ = Describe("GardenerAdmissionController", func() {
 					OperationMode: &blockMode,
 				},
 				SeedRestrictionEnabled:      true,
-				TopologyAwareRoutingEnabled: true,
+				TopologyAwareRoutingEnabled: false,
 			}
 
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-gardener", Namespace: namespace}})).To(Succeed())
@@ -148,9 +150,37 @@ var _ = Describe("GardenerAdmissionController", func() {
 				testValues.TopologyAwareRoutingEnabled = true
 			})
 
-			It("should successfully deploy", func() {
-				Expect(deployer.Deploy(ctx)).To(Succeed())
-				verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
+			When("runtime Kubernetes version is >= 1.32", func() {
+				BeforeEach(func() {
+					testValues.RuntimeVersion = semver.MustParse("1.32.1")
+				})
+
+				It("should successfully deploy", func() {
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+					verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
+				})
+			})
+
+			When("runtime Kubernetes version is 1.31", func() {
+				BeforeEach(func() {
+					testValues.RuntimeVersion = semver.MustParse("1.31.2")
+				})
+
+				It("should successfully deploy", func() {
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+					verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
+				})
+			})
+
+			When("runtime Kubernetes version is < 1.31", func() {
+				BeforeEach(func() {
+					testValues.RuntimeVersion = semver.MustParse("1.30.3")
+				})
+
+				It("should successfully deploy", func() {
+					Expect(deployer.Deploy(ctx)).To(Succeed())
+					verifyExpectations(ctx, fakeClient, consistOf, fakeSecretManager, namespace, "4ef77c17", testValues)
+				})
 			})
 		})
 
@@ -726,8 +756,15 @@ func service(namespace string, testValues Values) *corev1.Service {
 	}
 
 	if testValues.TopologyAwareRoutingEnabled {
-		metav1.SetMetaDataLabel(&svc.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
-		metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
+		if versionutils.ConstraintK8sGreaterEqual132.Check(testValues.RuntimeVersion) {
+			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+		} else if versionutils.ConstraintK8sEqual131.Check(testValues.RuntimeVersion) {
+			svc.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+			metav1.SetMetaDataLabel(&svc.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+		} else {
+			metav1.SetMetaDataAnnotation(&svc.ObjectMeta, "service.kubernetes.io/topology-mode", "auto")
+			metav1.SetMetaDataLabel(&svc.ObjectMeta, "endpoint-slice-hints.resources.gardener.cloud/consider", "true")
+		}
 	}
 
 	return svc

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -52,6 +53,8 @@ type Values struct {
 	Image string
 	// ResourceAdmissionConfiguration is the configuration for gardener-admission-controller's resource-size validator.
 	ResourceAdmissionConfiguration *admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration
+	// RuntimeVersion is the Kubernetes version of the runtime cluster.
+	RuntimeVersion *semver.Version
 	// SeedRestrictionEnabled specifies whether the seed-restriction webhook is enabled.
 	SeedRestrictionEnabled bool
 	// TopologyAwareRoutingEnabled determines whether topology aware hints are intended for the gardener-admission-controller.

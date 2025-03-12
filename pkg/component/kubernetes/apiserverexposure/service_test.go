@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +34,7 @@ var _ = Describe("#Service", func() {
 		c   client.Client
 
 		defaultDepWaiter component.DeployWaiter
+		values           *ServiceValues
 		expected         *corev1.Service
 
 		ingressIP        string
@@ -62,6 +64,10 @@ var _ = Describe("#Service", func() {
 		clusterIPsFunc = func(c []string) { clusterIP = c[0] }
 		ingressIPFunc = func(c string) { ingressIP = c }
 
+		values = &ServiceValues{
+			AnnotationsFunc: func() map[string]string { return map[string]string{"foo": "bar"} },
+			NamePrefix:      namePrefix,
+		}
 		expected = &corev1.Service{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: corev1.SchemeGroupVersion.String(),
@@ -116,10 +122,7 @@ var _ = Describe("#Service", func() {
 			log,
 			c,
 			namespace,
-			&ServiceValues{
-				AnnotationsFunc: func() map[string]string { return map[string]string{"foo": "bar"} },
-				NamePrefix:      namePrefix,
-			},
+			values,
 			func() client.ObjectKey { return sniServiceObjKey },
 			&retryfake.Ops{MaxAttempts: 1},
 			clusterIPsFunc,
@@ -184,44 +187,55 @@ var _ = Describe("#Service", func() {
 		assertService()
 	})
 
-	Describe("#Deploy", func() {
-		Context("when TopologyAwareRoutingEnabled=true", func() {
-			It("should successfully deploy with expected kube-apiserver service annotations and labels", func() {
-				defaultDepWaiter = NewService(
-					log,
-					c,
-					namespace,
-					&ServiceValues{
-						AnnotationsFunc:             func() map[string]string { return map[string]string{"foo": "bar"} },
-						NamePrefix:                  namePrefix,
-						TopologyAwareRoutingEnabled: true,
-						RuntimeKubernetesVersion:    semver.MustParse("1.31.1"),
-					},
-					func() client.ObjectKey { return sniServiceObjKey },
-					&retryfake.Ops{MaxAttempts: 1},
-					clusterIPsFunc,
-					ingressIPFunc,
-				)
+	Context("when TopologyAwareRoutingEnabled=true", func() {
+		BeforeEach(func() {
+			values.TopologyAwareRoutingEnabled = true
+		})
 
+		When("runtime Kubernetes version is >= 1.32", func() {
+			BeforeEach(func() {
+				values.RuntimeKubernetesVersion = semver.MustParse("1.32.1")
+			})
+
+			It("should successfully deploy with expected kube-apiserver service annotation, label and spec field", func() {
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				actual := &corev1.Service{}
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
 
-				expected.Annotations = map[string]string{
-					"foo":                          "bar",
-					"networking.istio.io/exportTo": "*",
-					"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
-					"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
-					"service.kubernetes.io/topology-mode":                                              "auto",
-				}
-				expected.Labels = map[string]string{
-					"app": "kubernetes",
-					"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
-					"role": "apiserver",
-				}
-				expected.Spec.Type = corev1.ServiceTypeClusterIP
-				Expect(actual).To(DeepEqual(expected))
+				Expect(actual.Spec.TrafficDistribution).To(PointTo(Equal(corev1.ServiceTrafficDistributionPreferClose)))
+			})
+		})
+
+		When("runtime Kubernetes version is 1.31", func() {
+			BeforeEach(func() {
+				values.RuntimeKubernetesVersion = semver.MustParse("1.31.1")
+			})
+
+			It("should successfully deploy with expected kube-apiserver service annotation, label and spec field", func() {
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				actual := &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
+
+				Expect(actual.Spec.TrafficDistribution).To(PointTo(Equal(corev1.ServiceTrafficDistributionPreferClose)))
+				Expect(actual.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
+			})
+		})
+
+		When("runtime Kubernetes version < 1.31", func() {
+			BeforeEach(func() {
+				values.RuntimeKubernetesVersion = semver.MustParse("1.30.3")
+			})
+
+			It("should successfully deploy with expected kube-apiserver service annotation, label and spec field", func() {
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				actual := &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: expectedName}, actual)).To(Succeed())
+
+				Expect(actual.Annotations).To(HaveKeyWithValue("service.kubernetes.io/topology-mode", "auto"))
+				Expect(actual.Labels).To(HaveKeyWithValue("endpoint-slice-hints.resources.gardener.cloud/consider", "true"))
 			})
 		})
 	})

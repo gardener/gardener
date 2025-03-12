@@ -61,7 +61,7 @@ func NewBotanist(
 	return botanistpkg.New(ctx, &operation.Operation{
 		Logger:        log,
 		GardenClient:  newFakeGardenClient(),
-		SeedClientSet: newFakeSeedClientSet(),
+		SeedClientSet: newFakeSeedClientSet(seedObj.KubernetesVersion.String()),
 		Garden:        gardenObj,
 		Seed:          seedObj,
 		Shoot:         shootObj,
@@ -117,7 +117,7 @@ func newFakeGardenClient() client.Client {
 		Build()
 }
 
-func newFakeSeedClientSet() kubernetes.Interface {
+func newFakeSeedClientSet(kubernetesVersion string) kubernetes.Interface {
 	return fakekubernetes.
 		NewClientSetBuilder().
 		WithClient(fakeclient.
@@ -126,5 +126,6 @@ func newFakeSeedClientSet() kubernetes.Interface {
 			Build(),
 		).
 		WithRESTConfig(&rest.Config{}).
+		WithVersion(kubernetesVersion).
 		Build()
 }
