@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -197,8 +198,8 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				APIGroups: []string{"apiextensions.k8s.io"},
 				Resources: []string{"customresourcedefinitions"},
 				ResourceNames: []string{
-					"etcds.druid.gardener.cloud",
-					"etcdcopybackupstasks.druid.gardener.cloud",
+					druidcorecrds.ResourceNameEtcd,
+					druidcorecrds.ResourceNameEtcdCopyBackupsTask,
 					"destinationrules.networking.istio.io",
 					"envoyfilters.networking.istio.io",
 					"gateways.networking.istio.io",
