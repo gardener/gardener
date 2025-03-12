@@ -1777,7 +1777,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 	allErrs = append(allErrs, IsNotMoreThan100Percent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 
-	if (worker.MaxSurge != nil && getIntOrPercentValue(*worker.MaxSurge) != 0) && (worker.UpdateStrategy != nil && *worker.UpdateStrategy == core.ManualInPlaceUpdate) {
+	if getIntOrPercentValue(ptr.Deref(worker.MaxSurge, intstr.IntOrString{})) != 0 && ptr.Deref(worker.UpdateStrategy, "") == core.ManualInPlaceUpdate {
 		// MaxSurge must be 0 when update strategy is ManualInPlaceUpdate.
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxSurge"), worker.MaxSurge, "must be 0 when `updateStrategy` is `ManualInPlaceUpdate`"))
 	}
@@ -1869,10 +1869,8 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		allErrs = append(allErrs, ValidateClusterAutoscalerOptions(worker.ClusterAutoscaler, fldPath.Child("autoscaler"))...)
 	}
 
-	if worker.MachineControllerManagerSettings != nil {
-		if worker.MachineControllerManagerSettings.DisableHealthTimeout != nil && *worker.MachineControllerManagerSettings.DisableHealthTimeout && !helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("machineControllerManagerSettings", "disableHealthTimeout"), "can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
-		}
+	if worker.MachineControllerManagerSettings != nil && ptr.Deref(worker.MachineControllerManagerSettings.DisableHealthTimeout, false) && !helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("machineControllerManagerSettings", "disableHealthTimeout"), "can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
 	}
 
 	if worker.UpdateStrategy != nil {

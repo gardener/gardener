@@ -1319,9 +1319,9 @@ type MachineControllerManagerSettings struct {
 	MaxEvictRetries *int32
 	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
 	NodeConditions []string
-	// MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.
+	// MachineInPlaceUpdateTimeout is the timeout after which an in-place update is declared as failed.
 	MachineInPlaceUpdateTimeout *metav1.Duration
-	// DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+	// DisableHealthTimeout if set to true, health timeout will be ignored, leading to machine never being declared as failed.
 	// This is intended to be used only for in-place updates.
 	DisableHealthTimeout *bool
 }
