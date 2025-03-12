@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -45,7 +45,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "containerruntimes.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "controlplanes.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "dnsrecords.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "etcds.druid.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcorecrds.ResourceNameEtcd}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "extensions.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "infrastructures.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "managedresources.resources.gardener.cloud"}},
@@ -68,6 +68,12 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		}
 		objects = append(objects, crdObjects...)
 
+		By("Get ETCD CRD")
+		k8sVersion, err := getEnvTestK8SVersion()
+		Expect(err).NotTo(HaveOccurred())
+		allEtcdCrds, err := druidcorecrds.GetAll(k8sVersion)
+		Expect(err).NotTo(HaveOccurred())
+
 		By("Apply CRDs")
 		applier, err := kubernetes.NewApplierForConfig(restConfig)
 		Expect(err).NotTo(HaveOccurred())
@@ -81,7 +87,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 
 		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
-			etcd.CRD,
+			allEtcdCrds[druidcorecrds.ResourceNameEtcd],
 			resourcemanager.CRD,
 		}, "\n---\n")))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
