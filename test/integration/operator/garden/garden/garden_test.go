@@ -10,6 +10,7 @@ import (
 	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -408,8 +409,8 @@ spec:
 			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
 			return test.ObjectNames(crdList)
 		}).WithTimeout(kubernetesutils.WaitTimeout).Should(ContainElements(
-			"etcds.druid.gardener.cloud",
-			"etcdcopybackupstasks.druid.gardener.cloud",
+			druidcorecrds.ResourceNameEtcd,
+			druidcorecrds.ResourceNameEtcdCopyBackupsTask,
 			"managedresources.resources.gardener.cloud",
 			"verticalpodautoscalers.autoscaling.k8s.io",
 			"verticalpodautoscalercheckpoints.autoscaling.k8s.io",
@@ -923,8 +924,8 @@ spec:
 			g.Expect(testClient.List(ctx, crdList)).To(Succeed())
 			return test.ObjectNames(crdList)
 		}).ShouldNot(ContainElements(
-			"etcds.druid.gardener.cloud",
-			"etcdcopybackupstasks.druid.gardener.cloud",
+			druidcorecrds.ResourceNameEtcd,
+			druidcorecrds.ResourceNameEtcdCopyBackupsTask,
 			"managedresources.resources.gardener.cloud",
 			"verticalpodautoscalers.autoscaling.k8s.io",
 			"verticalpodautoscalercheckpoints.autoscaling.k8s.io",

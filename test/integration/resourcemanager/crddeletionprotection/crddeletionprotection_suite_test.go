@@ -6,7 +6,9 @@ package crddeletionprotection_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -151,4 +153,12 @@ func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConf
 			}
 		}),
 	}
+}
+
+func getEnvTestK8SVersion() (string, error) {
+	k8sVersion, ok := os.LookupEnv("ENVTEST_K8S_VERSION")
+	if !ok {
+		return "", errors.New("error fetching k8s version from environment")
+	}
+	return k8sVersion, nil
 }

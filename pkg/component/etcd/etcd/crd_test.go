@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver/v3"
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -52,8 +53,8 @@ var _ = Describe("CRD", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		},
 
-		Entry("Etcd", "etcds.druid.gardener.cloud"),
-		Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
+		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
 	)
 
 	DescribeTable("should re-create CRD if it is deleted",
@@ -64,7 +65,7 @@ var _ = Describe("CRD", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
 		},
 
-		Entry("Etcd", "etcds.druid.gardener.cloud"),
-		Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
+		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
 	)
 })

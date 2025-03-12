@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -512,8 +513,8 @@ var _ = Describe("Seed controller tests", func() {
 							"dnsrecords.extensions.gardener.cloud",
 							"extensions.extensions.gardener.cloud",
 							// etcd-druid
-							"etcds.druid.gardener.cloud",
-							"etcdcopybackupstasks.druid.gardener.cloud",
+							druidcorecrds.ResourceNameEtcd,
+							druidcorecrds.ResourceNameEtcdCopyBackupsTask,
 							"managedresources.resources.gardener.cloud",
 							// istio
 							"destinationrules.networking.istio.io",

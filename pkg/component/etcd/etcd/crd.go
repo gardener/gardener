@@ -11,7 +11,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
-	druidcrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -32,7 +32,7 @@ type crd struct {
 
 // NewCRD can be used to deploy the CRD definitions for Etcd and EtcdCopyBackupsTask.
 func NewCRD(c client.Client, applier kubernetes.Applier, k8sVersion *semver.Version) (component.Deployer, error) {
-	crdResources, err := druidcrds.GetAll(k8sVersion.String())
+	crdResources, err := druidcorecrds.GetAll(k8sVersion.String())
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot delete etcd CRDs because there are still druidcorev1alpha1.Etcd resources left in the cluster")
 	}
 
-	if err := gardenerutils.ConfirmDeletion(ctx, c.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcrds.ResourceNameEtcd}}); client.IgnoreNotFound(err) != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, c.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcorecrds.ResourceNameEtcd}}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -81,7 +81,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot delete etcd CRDs because there are still druidcorev1alpha1.EtcdCopyBackupsTask resources left in the cluster")
 	}
 
-	if err := gardenerutils.ConfirmDeletion(ctx, c.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcrds.ResourceNameEtcdCopyBackupsTask}}); client.IgnoreNotFound(err) != nil {
+	if err := gardenerutils.ConfirmDeletion(ctx, c.client, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcorecrds.ResourceNameEtcdCopyBackupsTask}}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
