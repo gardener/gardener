@@ -6,48 +6,47 @@ package cidr
 
 import (
 	"fmt"
-
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes *string, seedPods, seedServices string, workerless, haVPN bool) field.ErrorList {
+func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes *string, seedPods, seedServices string, workerless, allowOverlap bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("nodes"), shootNodes, "node", false, haVPN, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("services"), shootServices, "service", true, haVPN, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("pods"), shootPods, "pod", !workerless, haVPN, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("nodes"), shootNodes, "node", false, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("services"), shootServices, "service", true, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("pods"), shootPods, "pod", !workerless, allowOverlap, seedNodes, seedPods, seedServices)...)
 
 	return allErrs
 }
 
 // ValidateMultiNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateMultiNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices []string, seedNodes *string, seedPods, seedServices string, workerless, haVPN bool) field.ErrorList {
+func ValidateMultiNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices []string, seedNodes *string, seedPods, seedServices string, workerless, allowOverlap bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("nodes"), shootNodes, "node", false, haVPN, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("services"), shootServices, "service", true, haVPN, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("pods"), shootPods, "pod", !workerless, haVPN, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("nodes"), shootNodes, "node", false, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("services"), shootServices, "service", true, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("pods"), shootPods, "pod", !workerless, allowOverlap, seedNodes, seedPods, seedServices)...)
 
 	return allErrs
 }
 
-func validateOverlapWithSeedWrapper(fldPath *field.Path, shootNetwork *string, networkType string, networkRequired, haVPN bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
+func validateOverlapWithSeedWrapper(fldPath *field.Path, shootNetwork *string, networkType string, networkRequired, allowOverlap bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
 	var network []string
 	if shootNetwork != nil {
 		network = append(network, *shootNetwork)
 	}
-	return validateOverlapWithSeed(fldPath, network, networkType, networkRequired, haVPN, seedNodes, seedPods, seedServices)
+	return validateOverlapWithSeed(fldPath, network, networkType, networkRequired, allowOverlap, seedNodes, seedPods, seedServices)
 }
 
-func validateOverlapWithSeed(fldPath *field.Path, shootNetwork []string, networkType string, networkRequired, haVPN bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
+func validateOverlapWithSeed(fldPath *field.Path, shootNetwork []string, networkType string, networkRequired, allowOverlap bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for _, network := range shootNetwork {
 		// we allow overlapping with seed networks for non-haVPN, IPv4 shoots
-		if haVPN || NewCIDR(network, fldPath).IsIPv6() {
+		if !allowOverlap || NewCIDR(network, fldPath).IsIPv6() {
 			if NetworksIntersect(seedServices, network) {
 				allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with seed service network", networkType)))
 			}

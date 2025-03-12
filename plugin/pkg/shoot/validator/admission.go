@@ -958,7 +958,7 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 					c.seed.Spec.Networks.Pods,
 					c.seed.Spec.Networks.Services,
 					workerless,
-					haVPN,
+					!haVPN,
 				)...)
 			}
 
@@ -973,7 +973,7 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 					c.seed.Spec.Networks.Pods,
 					c.seed.Spec.Networks.Services,
 					workerless,
-					haVPN,
+					!haVPN,
 				)...)
 
 				// validate network disjointedness with seed networks if networking status is non-empty
@@ -990,7 +990,7 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 							c.seed.Spec.Networks.Pods,
 							c.seed.Spec.Networks.Services,
 							workerless,
-							haVPN,
+							!haVPN,
 						)...)
 					}
 				}
