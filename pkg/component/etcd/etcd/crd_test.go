@@ -6,7 +6,6 @@ package etcd_test
 
 import (
 	"context"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/Masterminds/semver/v3"
 	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
@@ -22,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/etcd/etcd"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
