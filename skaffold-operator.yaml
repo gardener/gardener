@@ -252,6 +252,7 @@ build:
             - pkg/operator/predicate
             - pkg/operator/webhook
             - pkg/operator/webhook/defaulting
+            - pkg/operator/webhook/defaulting/extension
             - pkg/operator/webhook/defaulting/garden
             - pkg/operator/webhook/validation
             - pkg/operator/webhook/validation/extension

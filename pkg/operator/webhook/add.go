@@ -16,6 +16,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/webhook/defaulting"
+	extensiondefaulting "github.com/gardener/gardener/pkg/operator/webhook/defaulting/extension"
 	gardendefaulting "github.com/gardener/gardener/pkg/operator/webhook/defaulting/garden"
 	"github.com/gardener/gardener/pkg/operator/webhook/validation"
 	extensionvalidation "github.com/gardener/gardener/pkg/operator/webhook/validation/extension"
@@ -119,6 +120,26 @@ func GetMutatingWebhookConfiguration(mode, url string) *admissionregistrationv1.
 						admissionregistrationv1.Create,
 						admissionregistrationv1.Update,
 						admissionregistrationv1.Delete,
+					},
+				}},
+				SideEffects:    &sideEffects,
+				FailurePolicy:  &failurePolicy,
+				MatchPolicy:    &matchPolicy,
+				TimeoutSeconds: ptr.To[int32](10),
+			},
+			{
+				Name:                    "extension-defaulting.operator.gardener.cloud",
+				ClientConfig:            getClientConfig(extensiondefaulting.WebhookPath, mode, url),
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{operatorv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{operatorv1alpha1.SchemeGroupVersion.Version},
+						Resources:   []string{"extensions"},
+					},
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Create,
+						admissionregistrationv1.Update,
 					},
 				}},
 				SideEffects:    &sideEffects,
