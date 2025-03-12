@@ -36,7 +36,6 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -97,7 +96,10 @@ func NewKubeAPIServer(
 	}
 
 	var (
-		enabledAdmissionPlugins                  = kubernetesutils.GetAdmissionPluginsForVersion(targetVersion.String())
+		// A list of admission plugins that are not enabled by default by Kubernetes itself.
+		enabledAdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+			{Name: "NodeRestriction"},
+		}
 		disabledAdmissionPlugins                 []gardencorev1beta1.AdmissionPlugin
 		apiAudiences                             = []string{"kubernetes", "gardener"}
 		auditConfig                              *apiserver.AuditConfig
