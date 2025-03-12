@@ -7,11 +7,11 @@ package crddeletionprotection_test
 import (
 	"context"
 	"errors"
-	"github.com/Masterminds/semver/v3"
 	"net/http"
 	"os"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
