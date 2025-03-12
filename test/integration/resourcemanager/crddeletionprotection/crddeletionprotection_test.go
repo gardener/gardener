@@ -7,6 +7,7 @@ package crddeletionprotection_test
 import (
 	"context"
 	"fmt"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"strings"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
@@ -24,7 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/extensions/crds"
+	extensionscrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -46,6 +47,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "controlplanes.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "dnsrecords.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcorecrds.ResourceNameEtcd}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcorecrds.ResourceNameEtcdCopyBackupsTask}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "extensions.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "infrastructures.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "managedresources.resources.gardener.cloud"}},
@@ -68,10 +70,8 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		}
 		objects = append(objects, crdObjects...)
 
-		By("Get ETCD CRD")
+		By("Get Kubernetes Version")
 		k8sVersion, err := getEnvTestK8SVersion()
-		Expect(err).NotTo(HaveOccurred())
-		allEtcdCrds, err := druidcorecrds.GetAll(k8sVersion)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Apply CRDs")
@@ -81,13 +81,15 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		c, err := client.New(restConfig, client.Options{})
 		Expect(err).NotTo(HaveOccurred())
 
-		crdDeployer, err := crds.NewCRD(c, applier, true, true)
+		extensionCRDDeployer, err := extensionscrds.NewCRD(c, applier, true, true)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(extensionCRDDeployer.Deploy(ctx)).To(Succeed())
 
-		Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+		etcdCRDDeployer, err := etcd.NewCRD(c, applier, k8sVersion)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(etcdCRDDeployer.Deploy(ctx)).To(Succeed())
 
 		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
-			allEtcdCrds[druidcorecrds.ResourceNameEtcd],
 			resourcemanager.CRD,
 		}, "\n---\n")))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())

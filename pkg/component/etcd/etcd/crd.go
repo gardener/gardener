@@ -8,7 +8,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-
 	"github.com/Masterminds/semver/v3"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
@@ -17,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
@@ -32,7 +32,7 @@ type crd struct {
 
 // NewCRD can be used to deploy the CRD definitions for Etcd and EtcdCopyBackupsTask.
 func NewCRD(c client.Client, applier kubernetes.Applier, k8sVersion *semver.Version) (component.Deployer, error) {
-	crdResources, err := druidcorecrds.GetAll(k8sVersion.String())
+	crdResources, err := getEtcdCRDS(k8sVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -95,4 +95,32 @@ func (c *crd) Destroy(ctx context.Context) error {
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+func getEtcdCRDS(k8sVersion *semver.Version) (map[string]string, error) {
+	crdYAMLs, err := druidcorecrds.GetAll(k8sVersion.String())
+	if err != nil {
+		return nil, err
+	}
+	var crdResources = make(map[string]string, len(crdYAMLs))
+	for crdName, crdYAML := range crdYAMLs {
+		updatedCrdYamlBytes, err := addDeletionProtectedLabel(crdYAML)
+		if err != nil {
+			return nil, err
+		}
+		crdResources[crdName] = string(updatedCrdYamlBytes)
+	}
+	return crdResources, nil
+}
+
+func addDeletionProtectedLabel(crdYAML string) ([]byte, error) {
+	crdObj := &apiextensionsv1.CustomResourceDefinition{}
+	if err := yaml.Unmarshal([]byte(crdYAML), crdObj); err != nil {
+		return nil, err
+	}
+	if crdObj.Labels == nil {
+		crdObj.Labels = make(map[string]string)
+	}
+	crdObj.Labels[gardenerutils.DeletionProtected] = "true"
+	return yaml.Marshal(crdObj)
 }
