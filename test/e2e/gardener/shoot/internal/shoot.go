@@ -85,7 +85,7 @@ func ItShouldCreateShoot(s *ShootContext) {
 func ItShouldReadShootFromAPIServer(s *ShootContext) {
 	GinkgoHelper()
 
-	It("Hibernate Shoot", func(ctx SpecContext) {
+	It("Read Shoot from API Server", func(ctx SpecContext) {
 		Eventually(ctx, s.GardenKomega.Get(s.Shoot)).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }

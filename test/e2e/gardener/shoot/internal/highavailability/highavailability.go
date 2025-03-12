@@ -110,7 +110,6 @@ func verifyEnvoyFilters(ctx context.Context, seedClient client.Client, shootTech
 	GinkgoHelper()
 
 	shootFilterNames := sets.New(
-		shootTechnicalID, // TODO(oliver-goetz): Remove this entry after Gardener v1.113 is released.
 		shootTechnicalID+"-apiserver-proxy",
 		shootTechnicalID+"-istio-tls-termination",
 	)
