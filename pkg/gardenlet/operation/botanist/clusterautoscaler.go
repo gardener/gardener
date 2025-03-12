@@ -16,6 +16,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/utils"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -75,7 +76,7 @@ func (b *Botanist) CalculateMaxNodesTotal(shoot *gardencorev1beta1.Shoot) (int64
 		maxLimit = int64(*limits.MaxNodesTotal)
 	}
 
-	return MinGreaterThanZero(maxNetworks, maxLimit), nil
+	return utils.MinGreaterThanZero(maxNetworks, maxLimit), nil
 }
 
 // CalculateMaxNodesForShootNetworks returns the maximum number of nodes the shoot networks supports or 0 if there is no limitation.
@@ -92,7 +93,7 @@ func (b *Botanist) CalculateMaxNodesForShootNetworks(shoot *gardencorev1beta1.Sh
 		return 0, err
 	}
 
-	return MinGreaterThanZero(maxNodesForPodsNetwork, maxNodesForNodesNetwork), nil
+	return utils.MinGreaterThanZero(maxNodesForPodsNetwork, maxNodesForNodesNetwork), nil
 }
 
 func (b *Botanist) calculateMaxNodesForPodsNetwork(shoot *gardencorev1beta1.Shoot) (int64, error) {
@@ -176,17 +177,4 @@ func (b *Botanist) calculateMaxNodesForNodesNetwork() (int64, error) {
 		result = min(result, value)
 	}
 	return result, nil
-}
-
-// MinGreaterThanZero returns the minimum of the given two integers that is greater than 0. If both integers are less
-// than or equal to 0, it returns 0.
-// I.e., it works like the min builtin function but any value less than or equal to 0 is ignored.
-func MinGreaterThanZero[T int | int8 | int16 | int32 | int64](a, b T) T {
-	if a <= 0 || b <= 0 {
-		// if one of both is <= 0, return the other one
-		// if bother are <=, return 0
-		return max(a, b, 0)
-	}
-
-	return min(a, b)
 }
