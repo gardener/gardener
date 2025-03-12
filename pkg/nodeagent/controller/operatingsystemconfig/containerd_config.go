@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: 2025 SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	// containerdConfigPaths is a nested map that contains the paths/keys for certain configuration options that change across different config file versions
+	// containerdConfigPaths is a nested map that contains the paths/keys for certain configuration options that change across different config file versions.
 	containerdConfigPaths = containerdConfigPathMapVersions{
 		1: {
 			registryConfigPath: {"plugins", "io.containerd.grpc.v1.cri", "registry", "config_path"},
@@ -70,21 +70,21 @@ var (
 	}
 )
 
-// getContainerdConfigFileVersion obtains the containerd configuration file version from the configuration file
+// getContainerdConfigFileVersion obtains the containerd configuration file version from the configuration file.
 func getContainerdConfigFileVersion(config map[string]any) (containerdConfigFileVersion, error) {
 	version, ok := config["version"]
 	if !ok {
-		// config file versions 2 and 3 must contain a version header
-		// if it cannot be found, it therefore must be version 1
+		// Config file versions 2 and 3 must contain a version header.
+		// If it cannot be found, it therefore must be version 1.
 		return 1, nil
 	}
 
 	i, ok := version.(int64)
 	if !ok {
-		return 0, fmt.Errorf("cannot assert containerd config file version as an int64")
+		return 0, fmt.Errorf("cannot assert containerd config file version \"%v\" as an int64", version)
 	}
 
-	if i > 3 {
+	if i < 1 || i > 3 {
 		return 0, fmt.Errorf("unsupported containerd config file version %d", i)
 	}
 
@@ -123,30 +123,28 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 		return fmt.Errorf("unable to decode containerd default config: %w", err)
 	}
 
-	containerdConfigFileVersion, err := getContainerdConfigFileVersion(content)
+	configFileVersion, err := getContainerdConfigFileVersion(content)
 	if err != nil {
 		return err
 	}
 
-	type (
-		patch struct {
-			name  string
-			path  structuredmap.Path
-			setFn structuredmap.SetFn
-		}
-	)
+	type patch struct {
+		name  string
+		path  structuredmap.Path
+		setFn structuredmap.SetFn
+	}
 
 	patches := []patch{
 		{
 			name: "registry config path",
-			path: containerdConfigPaths[containerdConfigFileVersion][registryConfigPath],
+			path: containerdConfigPaths[configFileVersion][registryConfigPath],
 			setFn: func(_ any) (any, error) {
 				return certsDir, nil
 			},
 		},
 		{
 			name: "imports paths",
-			path: containerdConfigPaths[containerdConfigFileVersion][importsPath],
+			path: containerdConfigPaths[configFileVersion][importsPath],
 			setFn: func(value any) (any, error) {
 				importPath := path.Join(configDir, "*.toml")
 
@@ -171,7 +169,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 		},
 		{
 			name: "sandbox image",
-			path: containerdConfigPaths[containerdConfigFileVersion][sandboxImagePath],
+			path: containerdConfigPaths[configFileVersion][sandboxImagePath],
 			setFn: func(value any) (any, error) {
 				if criConfig.Containerd == nil {
 					return value, nil
@@ -182,7 +180,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 		},
 		{
 			name: "CNI plugin dir",
-			path: containerdConfigPaths[containerdConfigFileVersion][cniPluginPath],
+			path: containerdConfigPaths[configFileVersion][cniPluginPath],
 			setFn: func(_ any) (any, error) {
 				return cniPluginDir, nil
 			},
@@ -192,7 +190,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 	if criConfig.CgroupDriver != nil {
 		patches = append(patches, patch{
 			name: "cgroup driver",
-			path: containerdConfigPaths[containerdConfigFileVersion][cgroupDriverPath],
+			path: containerdConfigPaths[configFileVersion][cgroupDriverPath],
 			setFn: func(_ any) (any, error) {
 				return *criConfig.CgroupDriver == extensionsv1alpha1.CgroupDriverSystemd, nil
 			},
@@ -203,7 +201,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 		for _, pluginConfig := range criConfig.Containerd.Plugins {
 			patches = append(patches, patch{
 				name: "plugin configuration",
-				path: replacePluginPath(append(structuredmap.Path{"plugins"}, pluginConfig.Path...), pluginPathReplacements, containerdConfigFileVersion),
+				path: replacePluginPath(append(structuredmap.Path{"plugins"}, pluginConfig.Path...), pluginPathReplacements, configFileVersion),
 				setFn: func(val any) (any, error) {
 					switch op := ptr.Deref(pluginConfig.Op, extensionsv1alpha1.AddPluginPathOperation); op {
 					case extensionsv1alpha1.AddPluginPathOperation:
@@ -262,6 +260,7 @@ func isConfigPathPrefix(path, prefix structuredmap.Path) bool {
 }
 
 func replaceConfigPathPrefix(path, prefix, replace structuredmap.Path) structuredmap.Path {
+	// do not perform a replace operation if the search and replace term are the same
 	if slices.Equal(replace, prefix) {
 		return path
 	}
@@ -272,7 +271,7 @@ func replaceConfigPathPrefix(path, prefix, replace structuredmap.Path) structure
 
 	pathStripped := path[len(prefix):]
 
-	return slices.Concat(replace, pathStripped)
+	return append(replace, pathStripped...)
 }
 
 func replacePluginPath(path structuredmap.Path, replacementMap replacementMap, version containerdConfigFileVersion) structuredmap.Path {
