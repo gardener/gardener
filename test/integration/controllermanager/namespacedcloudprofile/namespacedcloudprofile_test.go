@@ -414,26 +414,14 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				}
 				Eventually(func() error {
 					return testClient.Patch(ctx, namespacedCloudProfile, namespacedCloudProfilePatch)
-				}).Should(Succeed())
-				waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
-
-				Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+				}).Should(MatchError(ContainSubstring("spec.limits.maxNodesTotal: Invalid value: 24: overriding value must be less than or equal to value set in parent CloudProfile")))
 			})
 
-			It("should update the NamespacedCloudProfile status if a limit from the parent CloudProfile is raised", func() {
-				By("Set limit in parent cloud profile")
-				cloudProfilePatch := client.MergeFrom(parentCloudProfile.DeepCopy())
-				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
-					MaxNodesTotal: ptr.To(int32(10)),
-				}
-				Eventually(func() error {
-					return testClient.Patch(ctx, parentCloudProfile, cloudProfilePatch)
-				}).Should(Succeed())
-
-				By("Patch the NamespacedCloudProfile with an increased limit")
+			It("should update the NamespacedCloudProfile status if a limit from the parent CloudProfile is raised again", func() {
+				By("Set a limit in the NamespacedCloudProfile")
 				namespacedCloudProfilePatch := client.StrategicMergeFrom(namespacedCloudProfile.DeepCopy())
 				namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
-					MaxNodesTotal: ptr.To(int32(24)),
+					MaxNodesTotal: ptr.To(int32(10)),
 				}
 				Eventually(func() error {
 					return testClient.Patch(ctx, namespacedCloudProfile, namespacedCloudProfilePatch)
@@ -441,6 +429,21 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
 
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+
+				By("Set limit in parent cloud profile")
+				cloudProfilePatch := client.MergeFrom(parentCloudProfile.DeepCopy())
+				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(9)),
+				}
+				Eventually(func() error {
+					return testClient.Patch(ctx, parentCloudProfile, cloudProfilePatch)
+				}).Should(Succeed())
+
+				By("Wait for NamespacedCloudProfile status to be updated by the controller")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(9))))
+				}).Should(Succeed())
 
 				By("Increase the limit in the parent cloud profile")
 				cloudProfilePatch = client.StrategicMergeFrom(parentCloudProfile.DeepCopy())
@@ -454,7 +457,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				By("Wait for NamespacedCloudProfile status to be updated by the controller")
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(24))))
+					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
 				}).Should(Succeed())
 			})
 		})
