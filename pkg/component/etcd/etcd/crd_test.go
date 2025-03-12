@@ -6,8 +6,8 @@ package etcd_test
 
 import (
 	"context"
-	"github.com/Masterminds/semver/v3"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
