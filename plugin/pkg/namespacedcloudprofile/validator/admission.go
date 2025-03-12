@@ -11,6 +11,7 @@ import (
 	"io"
 	"reflect"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -149,7 +150,10 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 	if err := validationContext.validateMachineImageOverrides(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateSimulatedCloudProfileStatusMergeResult(a); err != nil {
+	if err := validationContext.validateLimits(field.NewPath("spec", "limits")); err != nil {
+		return err.ToAggregate()
+	}
+	if err := validationContext.validateSimulatedCloudProfileStatusMergeResult(); err != nil {
 		return err
 	}
 
@@ -320,7 +324,28 @@ func validateNamespacedCloudProfileExtendedMachineImages(machineVersion gardenco
 	return allErrs
 }
 
-func (c *validationContext) validateSimulatedCloudProfileStatusMergeResult(_ admission.Attributes) error {
+func (c *validationContext) validateLimits(limitsPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if c.namespacedCloudProfile.Spec.Limits == nil ||
+		c.parentCloudProfile.Spec.Limits == nil {
+		return nil
+	}
+
+	// MaxNodesTotal
+	hasMaxNodesTotalChanged := c.namespacedCloudProfile.Spec.Limits.MaxNodesTotal != nil &&
+		(c.oldNamespacedCloudProfile.Spec.Limits == nil ||
+			!apiequality.Semantic.DeepEqual(c.namespacedCloudProfile.Spec.Limits.MaxNodesTotal, c.oldNamespacedCloudProfile.Spec.Limits.MaxNodesTotal))
+	namespacedCloudProfileMaxNodesTotal := ptr.Deref(c.namespacedCloudProfile.Spec.Limits.MaxNodesTotal, 0)
+	maxNodesTotal := utils.MinGreaterThanZero(namespacedCloudProfileMaxNodesTotal, ptr.Deref(c.parentCloudProfile.Spec.Limits.MaxNodesTotal, 0))
+	if hasMaxNodesTotalChanged && maxNodesTotal < namespacedCloudProfileMaxNodesTotal {
+		allErrs = append(allErrs, field.Invalid(limitsPath.Child("maxNodesTotal"), namespacedCloudProfileMaxNodesTotal, "overriding value must be less than or equal to value set in parent CloudProfile"))
+	}
+
+	return allErrs
+}
+
+func (c *validationContext) validateSimulatedCloudProfileStatusMergeResult() error {
 	namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
 	if err := api.Scheme.Convert(c.namespacedCloudProfile, namespacedCloudProfile, nil); err != nil {
 		return err
