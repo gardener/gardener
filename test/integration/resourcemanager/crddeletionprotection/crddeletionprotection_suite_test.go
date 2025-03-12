@@ -7,6 +7,7 @@ package crddeletionprotection_test
 import (
 	"context"
 	"errors"
+	"github.com/Masterminds/semver/v3"
 	"net/http"
 	"os"
 	"testing"
@@ -155,10 +156,10 @@ func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConf
 	}
 }
 
-func getEnvTestK8SVersion() (string, error) {
+func getEnvTestK8SVersion() (*semver.Version, error) {
 	k8sVersion, ok := os.LookupEnv("ENVTEST_K8S_VERSION")
 	if !ok {
-		return "", errors.New("error fetching k8s version from environment")
+		return nil, errors.New("error fetching k8s version from environment")
 	}
-	return k8sVersion, nil
+	return semver.NewVersion(k8sVersion)
 }
