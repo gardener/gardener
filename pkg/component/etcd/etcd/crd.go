@@ -8,6 +8,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
