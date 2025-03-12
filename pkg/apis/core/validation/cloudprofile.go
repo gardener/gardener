@@ -381,7 +381,7 @@ func validateCloudProfileLimitsUpdate(newLimits, oldLimits *core.Limits, fldPath
 		newMaxNodesTotal = newLimits.MaxNodesTotal
 		oldMaxNodesTotal = oldLimits.MaxNodesTotal
 	)
-	if IsDecreasedMaxNodesTotal(newMaxNodesTotal, oldMaxNodesTotal) {
+	if HasDecreasedMaxNodesTotal(newMaxNodesTotal, oldMaxNodesTotal) {
 		// adding, removing, and increasing maxNodesTotal is allowed, but not decreasing
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNodesTotal"), *newMaxNodesTotal, "maxNodesTotal cannot be decreased"))
 	}
@@ -389,7 +389,7 @@ func validateCloudProfileLimitsUpdate(newLimits, oldLimits *core.Limits, fldPath
 	return allErrs
 }
 
-// IsDecreasedMaxNodesTotal checks whether the new maxNodesTotal has been decreased.
-func IsDecreasedMaxNodesTotal(newMaxNodesTotal, oldMaxNodesTotal *int32) bool {
+// HasDecreasedMaxNodesTotal checks whether the new maxNodesTotal has been decreased.
+func HasDecreasedMaxNodesTotal(newMaxNodesTotal, oldMaxNodesTotal *int32) bool {
 	return newMaxNodesTotal != nil && oldMaxNodesTotal != nil && *newMaxNodesTotal < *oldMaxNodesTotal
 }

@@ -828,7 +828,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits).To(BeNil())
 				})
 
-				It("should apply the only value from the CloudProfile", func() {
+				It("should apply only the value from the CloudProfile", func() {
 					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
 
 					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
@@ -836,7 +836,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
 				})
 
-				It("should apply the only value from the NamespacedCloudProfile", func() {
+				It("should apply only the value from the NamespacedCloudProfile", func() {
 					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
 
 					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
