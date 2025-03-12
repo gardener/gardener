@@ -64,7 +64,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			Class:                       class,
 			Replicas:                    replicas,
 			Autoscaling:                 etcd.AutoscalingConfig{MinAllowed: minAllowed},
-			StorageCapacity:             b.Seed.GetValidVolumeSize("10Gi"),
+			StorageCapacity:             b.Seed.GetValidVolumeSize("25Gi"),
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
