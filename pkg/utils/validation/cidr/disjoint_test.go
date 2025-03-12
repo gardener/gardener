@@ -59,7 +59,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				true,
+				false,
 			)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -90,7 +90,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				false,
+				true,
 			)
 
 			Expect(errorList).To(BeEmpty())
@@ -112,7 +112,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				true,
+				false,
 			)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -141,7 +141,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				false,
+				true,
 			)
 
 			Expect(errorList).To(BeEmpty())
@@ -411,7 +411,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				false,
+				true,
 			)
 
 			Expect(errorList).To(ConsistOf(
@@ -449,7 +449,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				false,
+				true,
 			)
 
 			Expect(errorList).To(ConsistOf(
@@ -477,7 +477,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				true,
+				false,
 			)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -506,7 +506,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				false,
+				true,
 			)
 
 			Expect(errorList).To(BeEmpty())
@@ -528,7 +528,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				true,
+				false,
 			)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -553,7 +553,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				false,
+				true,
 			)
 
 			Expect(errorList).To(BeEmpty())
@@ -575,7 +575,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				true,
+				false,
 			)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -601,7 +601,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				false,
+				true,
 			)
 
 			Expect(errorList).To(BeEmpty())
@@ -1086,7 +1086,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				false,
+				true,
 			)
 
 			Expect(errorList).To(BeEmpty())
@@ -1108,7 +1108,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				true,
+				false,
 			)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1139,7 +1139,7 @@ var _ = Describe("utils", func() {
 				seedPodsCIDR,
 				seedServicesCIDR,
 				false,
-				false,
+				true,
 			)
 
 			Expect(errorList).To(BeEmpty())
