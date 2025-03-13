@@ -136,6 +136,10 @@ var _ = Describe("VpnSeedServer", func() {
 									Value: nodes,
 								},
 								{
+									Name:  "SEED_POD_NETWORK_V4",
+									Value: values.SeedPodNetworkV4,
+								},
+								{
 									Name: "LOCAL_NODE_IP",
 									ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
