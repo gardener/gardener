@@ -37,13 +37,9 @@ func PrepareReferencedResourcesForSeedCopy(ctx context.Context, cl client.Client
 		unstructuredObj.SetNamespace(targetNamespace)
 		unstructuredObj.SetName(v1beta1constants.ReferencedResourcesPrefix + unstructuredObj.GetName())
 
-		// Drop unwanted annotations before copying the resource to the seed.
-		// All annotations contained in the ManagedResource secret will end up in `ManagedResource.status.resources[].annotations`.
-		// We don't want this to happen for the last applied annotation of secrets, which includes the secret data in plain
-		// text. This would put sensitive secret data into the ManagedResource object which is probably unencrypted in etcd.
-		annotations := unstructuredObj.GetAnnotations()
-		delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
-		unstructuredObj.SetAnnotations(annotations)
+		// We don't want to keep user-defined annotations or labels when copying the resource to the seed.
+		unstructuredObj.SetAnnotations(nil)
+		unstructuredObj.SetLabels(nil)
 
 		unstructuredObjs = append(unstructuredObjs, unstructuredObj)
 	}
