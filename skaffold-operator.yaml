@@ -395,6 +395,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client
             - pkg/utils/kubernetes/health
