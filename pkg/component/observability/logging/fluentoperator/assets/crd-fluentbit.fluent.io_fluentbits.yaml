@@ -1305,6 +1305,27 @@ spec:
               fluentBitConfigName:
                 description: Fluentbitconfig object associated with this Fluentbit
                 type: string
+              hostAliases:
+                description: HostAliases is an optional list of IPs and hostnames
+                  that will be injected into the pod's hosts file if specified.
+                items:
+                  description: |-
+                    HostAlias holds the mapping between IP and hostnames that will be injected as an entry in the
+                    pod's hosts file.
+                  properties:
+                    hostnames:
+                      description: Hostnames for the above IP address.
+                      items:
+                        type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    ip:
+                      description: IP address of the host file entry.
+                      type: string
+                  required:
+                  - ip
+                  type: object
+                type: array
               hostNetwork:
                 description: Host networking is requested for this pod. Use the host's
                   network namespace. If this option is set, the ports that will be
@@ -5318,6 +5339,11 @@ spec:
                   type: string
                 description: Annotations to add to the Fluentbit service account
                 type: object
+              terminationGracePeriodSeconds:
+                description: Optional duration in seconds the pod needs to terminate
+                  gracefully. Value must be non-negative integer.
+                format: int64
+                type: integer
               tolerations:
                 description: Tolerations
                 items:
