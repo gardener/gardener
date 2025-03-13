@@ -37,6 +37,10 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, "annotation 'shoot.gardener.cloud/managed-seed-api-server' is deprecated, instead consider enabling high availability for the ManagedSeed's Shoot control plane")
 	}
 
+	if shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig != nil {
+		warnings = append(warnings, "you are setting the spec.kubernetes.enableStaticTokenKubeconfig field. The field is deprecated and will be removed in gardener v1.120. Please set this field to nil in the Shoot and adapt your controllers accordingly")
+	}
+
 	return warnings
 }
 
