@@ -52,7 +52,7 @@ get_group_package () {
     echo "github.com/gardener/etcd-druid/api/v1alpha1"
     ;;
   "fluentbit.fluent.io")
-    echo "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+    echo "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
     ;;
   "monitoring.coreos.com_v1")
     echo "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
