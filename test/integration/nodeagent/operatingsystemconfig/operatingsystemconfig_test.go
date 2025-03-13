@@ -118,6 +118,9 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
   [plugins."io.containerd.grpc.v1.cri"]
     sandbox_image = "registry.k8s.io/pause:latest"
 
+    [plugins."io.containerd.grpc.v1.cri".cni]
+      bin_dir = "/opt/cni/bin"
+
     [plugins."io.containerd.grpc.v1.cri".containerd]
 
       [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
@@ -714,7 +717,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that containerd config was updated properly")
-		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.bar]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".containerd]\n\n      [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]\n\n        [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc]\n\n          [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
+		test.AssertFileOnDisk(fakeFS, "/etc/containerd/config.toml", "imports = [\"/etc/containerd/conf.d/*.toml\"]\n\n[plugins]\n\n  [plugins.bar]\n\n  [plugins.\"io.containerd.grpc.v1.cri\"]\n    sandbox_image = \"registry.k8s.io/pause:latest\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".cni]\n      bin_dir = \"/opt/cni/bin\"\n\n    [plugins.\"io.containerd.grpc.v1.cri\".containerd]\n\n      [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes]\n\n        [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc]\n\n          [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n\n    [plugins.\"io.containerd.grpc.v1.cri\".registry]\n      config_path = \"/etc/containerd/certs.d\"\n", 0644)
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
