@@ -65,6 +65,7 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Seed = &seed.Seed{
 				KubernetesVersion: semver.MustParse("1.31.1"),
 			}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 			botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{
 				SNI: &gardenletconfigv1alpha1.SNI{
 					Ingress: &gardenletconfigv1alpha1.SNIIngress{
