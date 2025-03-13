@@ -7,7 +7,6 @@ package crddeletionprotection_test
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/gardener/test/envtest"
 	"strings"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
@@ -29,6 +28,7 @@ import (
 	extensionscrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/utils/test"
+	"github.com/gardener/gardener/test/envtest"
 )
 
 var _ = Describe("Extension CRDs Webhook Handler", func() {
