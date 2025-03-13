@@ -38,7 +38,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 	}
 
 	if shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig != nil {
-		warnings = append(warnings, "you are setting the spec.kubernetes.enableStaticTokenKubeconfig field. The field is deprecated and will be removed in gardener v1.120. Please set this field to nil in the Shoot and adapt your controllers accordingly")
+		warnings = append(warnings, "you are setting the spec.kubernetes.enableStaticTokenKubeconfig field. The field is deprecated and will be removed in Gardener v1.120. Please adapt your machinery to no longer set this field")
 	}
 
 	return warnings

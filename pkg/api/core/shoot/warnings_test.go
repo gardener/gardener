@@ -266,7 +266,7 @@ var _ = Describe("Warnings", func() {
 
 		It("should return a warning when enableStaticTokenKubeconfig is set", func() {
 			shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
-			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.enableStaticTokenKubeconfig field. The field is deprecated and will be removed in gardener v1.120. Please set this field to nil in the Shoot and adapt your controllers accordingly")))
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.enableStaticTokenKubeconfig field. The field is deprecated and will be removed in Gardener v1.120. Please adapt your machinery to no longer set this field")))
 		})
 	})
 })
