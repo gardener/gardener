@@ -86,7 +86,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	It("should create test endpoint", func(ctx SpecContext) {
+	It("Create test Endpoint", func(ctx SpecContext) {
 		testEndpoint = &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "test-",
 			Namespace:    *s.Project.Spec.Namespace,
@@ -97,7 +97,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	It("verify non-member doesn't have access to endpoints", func(ctx SpecContext) {
+	It("Verify non-member doesn't have access to Endpoints", func(ctx SpecContext) {
 		Consistently(func(g Gomega) {
 			g.Expect(testUserClient.Get(ctx, client.ObjectKeyFromObject(testEndpoint), testEndpoint)).To(BeForbiddenError())
 		}).Should(Succeed())
@@ -137,7 +137,7 @@ var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
 		})).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	It("verify new member has access to endpoints", func(ctx SpecContext) {
+	It("Verify new member has access to Endpoints", func(ctx SpecContext) {
 		Eventually(func(g Gomega) {
 			g.Expect(testUserClient.Get(ctx, client.ObjectKeyFromObject(testEndpoint), testEndpoint)).To(Succeed())
 		}).Should(Succeed())
