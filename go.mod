@@ -35,7 +35,7 @@ require (
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.81.0
 	github.com/prometheus/blackbox_exporter v0.26.0
 	github.com/prometheus/client_golang v1.21.0
-	github.com/prometheus/common v0.62.0
+	github.com/prometheus/common v0.63.0
 	github.com/robfig/cron v1.2.0
 	github.com/spf13/afero v1.12.0
 	github.com/spf13/cobra v1.9.1
@@ -53,7 +53,7 @@ require (
 	golang.org/x/tools v0.31.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.15.0
-	google.golang.org/protobuf v1.36.1
+	google.golang.org/protobuf v1.36.5
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.1
