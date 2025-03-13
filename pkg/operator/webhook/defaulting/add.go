@@ -9,6 +9,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/gardener/gardener/pkg/operator/webhook/defaulting/extension"
 	"github.com/gardener/gardener/pkg/operator/webhook/defaulting/garden"
 )
 
@@ -16,6 +17,10 @@ import (
 func AddToManager(mgr manager.Manager) error {
 	if err := (&garden.Handler{}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding %s webhook handler: %w", garden.HandlerName, err)
+	}
+
+	if err := (&extension.Handler{}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", extension.HandlerName, err)
 	}
 
 	return nil
