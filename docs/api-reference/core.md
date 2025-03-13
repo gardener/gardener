@@ -14157,7 +14157,9 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 <td>
 <em>(Optional)</em>
 <p>MaxSurge is maximum number of machines that are created during an update.
-This value is divided by the number of configured zones for a fair distribution.</p>
+This value is divided by the number of configured zones for a fair distribution.
+Defaults to 0 in case of an in-place update.
+Defaults to 1 in case of a rolling update.</p>
 </td>
 </tr>
 <tr>
@@ -14172,7 +14174,9 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 <td>
 <em>(Optional)</em>
 <p>MaxUnavailable is the maximum number of machines that can be unavailable during an update.
-This value is divided by the number of configured zones for a fair distribution.</p>
+This value is divided by the number of configured zones for a fair distribution.
+Defaults to 1 in case of an in-place update.
+Defaults to 0 in case of a rolling update.</p>
 </td>
 </tr>
 <tr>

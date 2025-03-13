@@ -1612,10 +1612,14 @@ type Worker struct {
 	Minimum int32 `json:"minimum" protobuf:"varint,9,opt,name=minimum"`
 	// MaxSurge is maximum number of machines that are created during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 0 in case of an in-place update.
+	// Defaults to 1 in case of a rolling update.
 	// +optional
 	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty" protobuf:"bytes,10,opt,name=maxSurge"`
 	// MaxUnavailable is the maximum number of machines that can be unavailable during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 1 in case of an in-place update.
+	// Defaults to 0 in case of a rolling update.
 	// +optional
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty" protobuf:"bytes,11,opt,name=maxUnavailable"`
 	// ProviderConfig is the provider-specific configuration for this worker pool.

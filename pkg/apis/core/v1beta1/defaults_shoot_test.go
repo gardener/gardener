@@ -794,8 +794,7 @@ var _ = Describe("Shoot defaulting", func() {
 		It("should default the worker fields", func() {
 			SetObjectDefaults_Shoot(obj)
 
-			for i := range obj.Spec.Provider.Workers {
-				worker := &obj.Spec.Provider.Workers[i]
+			for _, worker := range obj.Spec.Provider.Workers {
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
 				Expect(worker.SystemComponents.Allow).To(BeTrue())
@@ -816,8 +815,7 @@ var _ = Describe("Shoot defaulting", func() {
 
 			SetObjectDefaults_Shoot(obj)
 
-			for i := range obj.Spec.Provider.Workers {
-				worker := &obj.Spec.Provider.Workers[i]
+			for _, worker := range obj.Spec.Provider.Workers {
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(2))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.SystemComponents.Allow).To(BeFalse())
@@ -829,8 +827,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(AutoInPlaceUpdate)
 			SetObjectDefaults_Shoot(obj)
 
-			for i := range obj.Spec.Provider.Workers {
-				worker := &obj.Spec.Provider.Workers[i]
+			for _, worker := range obj.Spec.Provider.Workers {
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
 				Expect(worker.SystemComponents.Allow).To(BeTrue())
@@ -844,8 +841,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(ManualInPlaceUpdate)
 			SetObjectDefaults_Shoot(obj)
 
-			for i := range obj.Spec.Provider.Workers {
-				worker := &obj.Spec.Provider.Workers[i]
+			for _, worker := range obj.Spec.Provider.Workers {
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(0))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.SystemComponents.Allow).To(BeTrue())
@@ -860,8 +856,7 @@ var _ = Describe("Shoot defaulting", func() {
 			obj.Spec.Provider.Workers[0].MachineControllerManagerSettings = &MachineControllerManagerSettings{DisableHealthTimeout: ptr.To(false)}
 			SetObjectDefaults_Shoot(obj)
 
-			for i := range obj.Spec.Provider.Workers {
-				worker := &obj.Spec.Provider.Workers[i]
+			for _, worker := range obj.Spec.Provider.Workers {
 				Expect(worker.MaxSurge).To(PointTo(Equal(intstr.FromInt32(1))))
 				Expect(worker.MaxUnavailable).To(PointTo(Equal(intstr.FromInt32(0))))
 				Expect(worker.SystemComponents.Allow).To(BeTrue())
