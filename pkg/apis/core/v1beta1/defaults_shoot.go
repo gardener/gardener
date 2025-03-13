@@ -297,7 +297,7 @@ func SetDefaults_Worker(obj *Worker) {
 		obj.UpdateStrategy = ptr.To(AutoRollingUpdate)
 	}
 
-	if obj.UpdateStrategy != nil && (*obj.UpdateStrategy == AutoInPlaceUpdate || *obj.UpdateStrategy == ManualInPlaceUpdate) {
+	if *obj.UpdateStrategy == AutoInPlaceUpdate || *obj.UpdateStrategy == ManualInPlaceUpdate {
 		if obj.MachineControllerManagerSettings == nil {
 			obj.MachineControllerManagerSettings = &MachineControllerManagerSettings{}
 		}
