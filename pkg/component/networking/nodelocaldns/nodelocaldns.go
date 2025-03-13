@@ -320,6 +320,7 @@ ip6.arpa:53 {
 						MaxUnavailable: &maxUnavailable,
 					},
 				},
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						labelKey: nodelocaldnsconstants.LabelValue,

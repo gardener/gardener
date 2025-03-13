@@ -556,6 +556,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 						},
 					},
 					Spec: appsv1.DaemonSetSpec{
+						RevisionHistoryLimit: ptr.To[int32](2),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"app":     "kubernetes",

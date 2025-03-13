@@ -218,6 +218,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getPoolLabels(pool),
 				},
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(
