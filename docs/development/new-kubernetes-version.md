@@ -6,7 +6,7 @@ This document describes the steps needed to perform in order to confidently add 
 
 **Tasks:**
 - Ensure Gardener and extensions are updated to support the new Kubernetes version ([example](https://github.com/gardener/gardener/issues/11020))
-- Bump Golang dependencies for `k8s.io/*` and `sigs.k8s.io/controller-runtime` ([example](https://github.com/gardener/gardener/issues/11186))
+- Bump Golang dependencies for `k8s.io/*` and `sigs.k8s.io/controller-runtime` ([example](https://github.com/gardener/gardener/issues/11186)) [[ref](#bump-golang-dependencies-for-k8sio-and-sigsk8siocontroller-runtime)]
 - Prepare a short (~30-60 min) session for a special edition of Gardener's Review Meeting on new key features and changes in the release
 - Check whether old versions can be dropped, and if yes, drive the needed adaptations ([example](https://github.com/gardener/gardener/pull/10664))
 
@@ -56,7 +56,14 @@ As you can see, the task of supporting a new Kubernetes version also includes th
 Generally, the work items can be split into two groups:
 The first group contains tasks specific to the changes in the given Kubernetes release, the second group contains Kubernetes release-independent tasks.
 
-> ℹ️ Upgrading the `k8s.io/*` and `sigs.k8s.io/controller-runtime` Golang dependencies is typically tracked and worked on separately (see e.g. [#4772](https://github.com/gardener/gardener/issues/4772) or [#5282](https://github.com/gardener/gardener/issues/5282)), however, it is in the responsibility of the Kubernetes Release Responsibles to make sure the libraries get updated (see above).
+> ℹ️ Upgrading the `k8s.io/*` and `sigs.k8s.io/controller-runtime` Golang dependencies is typically tracked and worked on separately (see e.g. [#4772](https://github.com/gardener/gardener/issues/4772) or [#5282](https://github.com/gardener/gardener/issues/5282)), however, it is in the responsibility of the Kubernetes Release Responsibles to make sure the libraries get updated (see [the respective section below](#bump-golang-dependencies-for-k8sio-and-sigsk8siocontroller-runtime)).
+
+## Preparation
+
+Once a new Kubernetes version is released, two issues should be created and assigned according to the [release responsible plan](#kubernetes-release-responsible-plan).
+Use the most recent previous issue as a template for the new issue:
+* [☂️-Issue for "Support for Kubernetes v1.xx" ](https://github.com/gardener/gardener/issues?q=sort%3Acreated-desc%20is%3Aissue%20%E2%98%82%EF%B8%8F-Issue%20for%20%22Support%20for%20Kubernetes%20v1.%22%20)
+* [Upgrade `k8s.io/*` to `v0.xx`, `sigs.k8s.io/controller-runtime` to `v0.xx`](https://github.com/gardener/gardener/issues?q=sort%3Acreated-desc%20is%3Aissue%20Upgrade%20%60k8s.io%2F*%60%20to%20%60v0.%60%2C%20%60sigs.k8s.io%2Fcontroller-runtime%60%20to%20%60v0.%60)
 
 ## Deriving Release-Specific Tasks
 
@@ -141,7 +148,7 @@ There is a CI/CD job that runs periodically and releases a new `hyperkube` image
   - The names are maintained in [this](../../pkg/component/shoot/system/system.go) file.
   - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-controllers.sh 1.26 1.27`).
   - It will present 2 lists of controllers: those added and those removed in `<new-version>` compared to `<old-version>`.
-  - Double check whether such `ServiceAccount` indeed appears in the `kube-system` namespace when creating a cluster with `<new-version>`. Note that it sometimes might be hidden behind a default-off feature gate. You can create a local cluster with the new version using the [local provider](getting_started_locally.md). It could so happen that the name of the controller is used in the form of a constant and not a string, see [example](https://github.com/kubernetes/kubernetes/blob/de506ce7ac9981c8253b2f818478bb4093fb7bb6/cmd/kube-controller-manager/app/validatingadmissionpolicystatus.go#L56), In that case not the value of the constant separately. You could also cross check the names with the result of the `compute-k8s-controllers.sh` script used in the previous step.
+  - Double check whether such `ServiceAccount` indeed appears in the `kube-system` namespace when creating a cluster with `<new-version>`. Note that it sometimes might be hidden behind a default-off feature gate. You can create a local cluster with the new version using the [local provider](getting_started_locally.md). It could so happen that the name of the controller is used in the form of a constant and not a string, see [example](https://github.com/kubernetes/kubernetes/blob/de506ce7ac9981c8253b2f818478bb4093fb7bb6/cmd/kube-controller-manager/app/validatingadmissionpolicystatus.go#L56), In that case not the value of the constant separately. You could also cross-check the names with the result of the `compute-k8s-controllers.sh` script used in the previous step.
   - If it appears, add all added controllers to the list based on the Kubernetes version ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/shootsystem/shootsystem.go#L253-L318)).
   - For any removed controllers, add them only to the Kubernetes version if it is low enough.
 - Maintain the names of controllers used for workerless Shoots, [here](https://github.com/gardener/gardener/blob/6988da80bae6ba827d63535655f28885d91b0a23/pkg/component/kubernetes/controllermanager/controllermanager.go#L744-L766) after carefully evaluating whether they are needed if there are no workers.
@@ -202,7 +209,7 @@ The required steps are as follows:
 - Checkout a new `release-vX.Y` branch and release it ([example](https://github.com/gardener/cloud-provider-gcp/commits/release-v1.23))
 
 > As you are already on it, it is great if you also bump the `k8s.io/*` dependencies for the last three minor releases as well.
-In this case, you need to checkout the `release-vX.{Y-{1,2,3}}` branches and only perform the last three steps ([example branch](https://github.com/gardener/cloud-provider-gcp/commits/release-v1.20), [example commit](https://github.com/gardener/cloud-provider-gcp/commit/372aa43fbacdeb76b3da9f6fad6cfd924d916227)).
+In this case, you need to check out the `release-vX.{Y-{1,2,3}}` branches and only perform the last three steps ([example branch](https://github.com/gardener/cloud-provider-gcp/commits/release-v1.20), [example commit](https://github.com/gardener/cloud-provider-gcp/commit/372aa43fbacdeb76b3da9f6fad6cfd924d916227)).
 
 Now you need to update the new releases in the `imagevector/images.yaml` of the respective provider extension so that they are used (see this [example commit](https://github.com/gardener/gardener-extension-provider-aws/pull/942/commits/7e5c0d95ff95d65459d13ae7f79a030049322c71) for reference).
 
@@ -239,3 +246,12 @@ Typically, the following validations should be performed:
 
 If everything looks good, then go ahead and file the PR ([example PR](https://github.com/gardener/gardener-extension-provider-aws/pull/480)).
 Generally, it is again great if you add the PRs also to the umbrella issue so that they can be tracked more easily.
+
+### Bump Golang dependencies for `k8s.io/*` and `sigs.k8s.io/controller-runtime`
+
+The versions of the upstream Go dependencies `k8s.io/*` and `sigs.k8s.io/controller-runtime` should be updated to the latest version that is compatible with the new Kubernetes version.
+This is handled via a separate issue ([example](https://github.com/gardener/gardener/issues/11186)) and pull request ([example](https://github.com/gardener/gardener/pull/11418)).
+
+* Bump the `k8s.io/*` dependencies in the `go.mod` file to the latest version that is compatible with the new Kubernetes version.
+* Bump the `sigs.k8s.io/controller-runtime` dependency in the `go.mod` file to the latest version that is compatible with the new Kubernetes version.
+  * Ensure that the major version of `gomodules.xyz/jsonpatch/v2` that we use ([go.mod](https://github.com/gardener/gardener/blob/master/go.mod)) matches the major version of the same dependency in the updated version of `sigs.k8s.io/controller-runtime` ([go.mod](https://github.com/kubernetes-sigs/controller-runtime/blob/main/go.mod)).
