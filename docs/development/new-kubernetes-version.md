@@ -60,7 +60,7 @@ The first group contains tasks specific to the changes in the given Kubernetes r
 
 ## Preparation
 
-Once a new Kubernetes version is released two issues should be created and assigned according to the [release responsible plan](#kubernetes-release-responsible-plan).
+Once a new Kubernetes version is released, two issues should be created and assigned according to the [release responsible plan](#kubernetes-release-responsible-plan).
 Use the most recent previous issue as a template for the new issue:
 * [☂️-Issue for "Support for Kubernetes v1.xx" ](https://github.com/gardener/gardener/issues?q=sort%3Acreated-desc%20is%3Aissue%20%E2%98%82%EF%B8%8F-Issue%20for%20%22Support%20for%20Kubernetes%20v1.%22%20)
 * [Upgrade `k8s.io/*` to `v0.xx`, `sigs.k8s.io/controller-runtime` to `v0.xx`](https://github.com/gardener/gardener/issues?q=sort%3Acreated-desc%20is%3Aissue%20Upgrade%20%60k8s.io%2F*%60%20to%20%60v0.%60%2C%20%60sigs.k8s.io%2Fcontroller-runtime%60%20to%20%60v0.%60)
