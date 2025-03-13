@@ -47,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutil "github.com/gardener/gardener/pkg/utils/net"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -283,10 +284,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, secretServer, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
 	hostPathCharDev := corev1.HostPathCharDev
 	var (
-		ipFamilies   []string
-		serviceCIDRs []string
-		podCIDRs     []string
-		nodeCIDRs    []string
+		ipFamilies []string
 	)
 
 	for _, v := range v.values.Network.IPFamilies {
@@ -296,18 +294,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 	nodeNetwork := ""
 	if len(v.values.Network.NodeCIDRs) > 0 {
 		nodeNetwork = v.values.Network.NodeCIDRs[0].String()
-	}
-
-	for _, v := range v.values.Network.ServiceCIDRs {
-		serviceCIDRs = append(serviceCIDRs, v.String())
-	}
-
-	for _, v := range v.values.Network.PodCIDRs {
-		podCIDRs = append(podCIDRs, v.String())
-	}
-
-	for _, v := range v.values.Network.NodeCIDRs {
-		nodeCIDRs = append(nodeCIDRs, v.String())
 	}
 
 	template := &corev1.PodTemplateSpec{
@@ -353,15 +339,15 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						},
 						{
 							Name:  "SERVICE_NETWORKS",
-							Value: strings.Join(serviceCIDRs, ","),
+							Value: netutil.JoinByComma(v.values.Network.ServiceCIDRs),
 						},
 						{
 							Name:  "POD_NETWORKS",
-							Value: strings.Join(podCIDRs, ","),
+							Value: netutil.JoinByComma(v.values.Network.PodCIDRs),
 						},
 						{
 							Name:  "NODE_NETWORKS",
-							Value: strings.Join(nodeCIDRs, ","),
+							Value: netutil.JoinByComma(v.values.Network.NodeCIDRs),
 						},
 						{
 							Name:  "SEED_POD_NETWORK_V4",
