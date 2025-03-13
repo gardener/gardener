@@ -7,6 +7,7 @@ package crddeletionprotection_test
 import (
 	"context"
 	"fmt"
+	"github.com/gardener/gardener/test/envtest"
 	"strings"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
@@ -33,9 +34,8 @@ import (
 var _ = Describe("Extension CRDs Webhook Handler", func() {
 	var (
 		deletionConfirmedAnnotations = map[string]string{v1beta1constants.ConfirmationDeletion: "true"}
-
-		crdObjects []client.Object
-		objects    []client.Object
+		crdObjects                   []client.Object
+		objects                      []client.Object
 	)
 
 	BeforeEach(func() {
@@ -47,7 +47,6 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "controlplanes.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "dnsrecords.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcorecrds.ResourceNameEtcd}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcorecrds.ResourceNameEtcdCopyBackupsTask}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "extensions.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "infrastructures.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "managedresources.resources.gardener.cloud"}},
@@ -71,7 +70,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		objects = append(objects, crdObjects...)
 
 		By("Get Kubernetes Version")
-		k8sVersion, err := getEnvTestK8SVersion()
+		k8sVersion, err := envtest.GetK8SVersion()
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Apply CRDs")
@@ -85,11 +84,13 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(extensionCRDDeployer.Deploy(ctx)).To(Succeed())
 
-		etcdCRDDeployer, err := etcd.NewCRD(c, applier, k8sVersion)
+		etcdCRDAccess, err := etcd.NewCRD(c, applier, k8sVersion)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(etcdCRDDeployer.Deploy(ctx)).To(Succeed())
+		etcdCRD, err := etcdCRDAccess.GetCRDYaml(druidcorecrds.ResourceNameEtcd)
+		Expect(err).NotTo(HaveOccurred())
 
 		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
+			etcdCRD,
 			resourcemanager.CRD,
 		}, "\n---\n")))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())

@@ -6,12 +6,9 @@ package crddeletionprotection_test
 
 import (
 	"context"
-	"errors"
 	"net/http"
-	"os"
 	"testing"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -154,12 +151,4 @@ func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConf
 			}
 		}),
 	}
-}
-
-func getEnvTestK8SVersion() (*semver.Version, error) {
-	k8sVersion, ok := os.LookupEnv("ENVTEST_K8S_VERSION")
-	if !ok {
-		return nil, errors.New("error fetching k8s version from environment")
-	}
-	return semver.NewVersion(k8sVersion)
 }
