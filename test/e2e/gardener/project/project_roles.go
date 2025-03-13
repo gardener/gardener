@@ -20,18 +20,25 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/test/e2e"
+	. "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/e2e/gardener/project/internal"
 )
 
-var _ = Describe("Project Tests", Label("Project", "default"), func() {
+var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
+	var s *ProjectContext
+
 	var (
-		project             *gardencorev1beta1.Project
-		projectNamespaceKey client.ObjectKey
+		testUserName         string
+		testUserClient       client.Client
+		testEndpoint         *corev1.Endpoints
+		extensionClusterRole *rbacv1.ClusterRole
 	)
 
-	BeforeEach(func() {
+	BeforeTestSetup(func() {
 		projectName := "test-" + utils.ComputeSHA256Hex([]byte(CurrentSpecReport().LeafNodeLocation.String()))[:5]
 
-		project = &gardencorev1beta1.Project{
+		project := &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: projectName,
 			},
@@ -39,101 +46,87 @@ var _ = Describe("Project Tests", Label("Project", "default"), func() {
 				Namespace: ptr.To("garden-" + projectName),
 			},
 		}
-		projectNamespaceKey = client.ObjectKey{Name: *project.Spec.Namespace}
+
+		s = NewTestContext().ForProject(project)
 	})
 
-	JustBeforeEach(func() {
-		By("Create Project")
-		Expect(testClient.Create(ctx, project)).To(Succeed())
-		log.Info("Created Project", "project", client.ObjectKeyFromObject(project))
+	BeforeAll(func() {
+		DeferCleanup(func(ctx SpecContext) {
+			Eventually(func(g Gomega) {
+				if testEndpoint != nil {
+					g.Expect(client.IgnoreNotFound(s.GardenClient.Delete(ctx, testEndpoint))).To(Succeed())
+				}
 
-		DeferCleanup(func() {
-			By("Delete Project")
-			Expect(client.IgnoreNotFound(gardenerutils.ConfirmDeletion(ctx, testClient, project))).To(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, project))).To(Succeed())
+				if extensionClusterRole != nil {
+					g.Expect(client.IgnoreNotFound(s.GardenClient.Delete(ctx, extensionClusterRole))).To(Succeed())
+				}
 
-			By("Wait for Project to be gone")
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(project), project)
-			}).
-				WithTimeout(2 * time.Minute). // it might take a while for the project namespace to disappear
-				Should(BeNotFoundError())
-		})
+				g.Expect(client.IgnoreNotFound(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Project))).To(Succeed())
+				g.Expect(client.IgnoreNotFound(s.GardenClient.Delete(ctx, s.Project))).To(Succeed())
+			}).Should(Succeed())
+		}, NodeTimeout(time.Minute))
 	})
 
-	waitForProjectPhase := func(phase gardencorev1beta1.ProjectPhase) {
-		By("Wait for Project to be reconciled")
-		Eventually(func(g Gomega) {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(project), project)).To(Succeed())
-			g.Expect(project.Status.ObservedGeneration).To(Equal(project.Generation), "project controller should observe generation %d", project.Generation)
-			g.Expect(project.Status.Phase).To(Equal(phase), "project should transition to phase %s", phase)
-		}).Should(Succeed())
-	}
+	ItShouldCreateProject(s)
+	ItShouldWaitForProjectToBeReconciledAndReady(s)
 
-	Describe("Project Member RBAC", func() {
-		var (
-			testUserName   string
-			testUserClient client.Client
-		)
+	It("Initialize test user", func(ctx SpecContext) {
+		testUserName = s.Project.Name
+		testUserConfig := rest.CopyConfig(s.GardenClientSet.RESTConfig())
+		// use impersonation to simulate different user
+		// TODO: use a ServiceAccount instead
+		testUserConfig.Impersonate = rest.ImpersonationConfig{
+			UserName: testUserName,
+		}
 
-		BeforeEach(func() {
-			testUserName = project.Name
-			testUserConfig := rest.CopyConfig(restConfig)
-			// use impersonation to simulate different user
-			// TODO: use a ServiceAccount instead
-			testUserConfig.Impersonate = rest.ImpersonationConfig{
-				UserName: testUserName,
-			}
-
+		Eventually(ctx, func(g Gomega) {
 			var err error
 			testUserClient, err = client.New(testUserConfig, client.Options{})
-			Expect(err).NotTo(HaveOccurred())
-		})
+			g.Expect(err).NotTo(HaveOccurred())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 
-		JustBeforeEach(func() {
-			waitForProjectPhase(gardencorev1beta1.ProjectReady)
-		})
+	It("Create test Endpoint", func(ctx SpecContext) {
+		testEndpoint = &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "test-",
+			Namespace:    *s.Project.Spec.Namespace,
+		}}
 
-		It("should create and bind extension roles", func() {
-			By("Create test endpoints")
-			testEndpoints := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-",
-				Namespace:    projectNamespaceKey.Name,
-			}}
-			Expect(testClient.Create(ctx, testEndpoints)).To(Succeed())
-			log.Info("Created Endpoints for test", "endpoints", client.ObjectKeyFromObject(testEndpoints))
+		Eventually(ctx, func() error {
+			return s.GardenClient.Create(ctx, testEndpoint)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 
-			By("Ensure non-member doesn't have access to endpoints")
-			Consistently(func(g Gomega) {
-				g.Expect(testUserClient.Get(ctx, client.ObjectKeyFromObject(testEndpoints), testEndpoints)).To(BeForbiddenError())
-			}).Should(Succeed())
+	It("Verify non-member doesn't have access to Endpoints", func(ctx SpecContext) {
+		Consistently(func(g Gomega) {
+			g.Expect(testUserClient.Get(ctx, client.ObjectKeyFromObject(testEndpoint), testEndpoint)).To(BeForbiddenError())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 
-			By("Create Extension Role")
-			// use dedicated role name per test run
-			extensionClusterRole := &rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gardener.cloud:extension:aggregate-to-test",
-					Labels: map[string]string{
-						"rbac.gardener.cloud/aggregate-to-extension-role": "e2e-test",
-					},
+	It("Create Extension Role", func(ctx SpecContext) {
+		// use dedicated role name per test run
+		extensionClusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:extension:aggregate-to-test",
+				Labels: map[string]string{
+					"rbac.gardener.cloud/aggregate-to-extension-role": "e2e-test",
 				},
-				Rules: []rbacv1.PolicyRule{{
-					APIGroups: []string{""},
-					Resources: []string{"endpoints"},
-					Verbs:     []string{"get"},
-				}},
-			}
-			Expect(testClient.Create(ctx, extensionClusterRole)).To(Succeed())
-			log.Info("Created ClusterRole for test", "clusterRole", client.ObjectKeyFromObject(extensionClusterRole))
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups: []string{""},
+				Resources: []string{"endpoints"},
+				Verbs:     []string{"get"},
+			}},
+		}
 
-			DeferCleanup(func() {
-				By("Delete Extension Role")
-				Expect(testClient.Delete(ctx, extensionClusterRole)).To(Or(Succeed(), BeNotFoundError()))
-			})
+		Eventually(ctx, func() error {
+			return s.GardenClient.Create(ctx, extensionClusterRole)
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 
-			By("Add new member with extension role")
-			patch := client.MergeFrom(project.DeepCopy())
-			project.Spec.Members = append(project.Spec.Members, gardencorev1beta1.ProjectMember{
+	It("Add new member with extension role", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Update(s.Project, func() {
+			s.Project.Spec.Members = append(s.Project.Spec.Members, gardencorev1beta1.ProjectMember{
 				Subject: rbacv1.Subject{
 					APIGroup: rbacv1.GroupName,
 					Kind:     rbacv1.UserKind,
@@ -141,12 +134,15 @@ var _ = Describe("Project Tests", Label("Project", "default"), func() {
 				},
 				Role: "extension:e2e-test",
 			})
-			Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
+		})).Should(Succeed())
+	}, SpecTimeout(time.Minute))
 
-			By("Ensure new member has access to endpoints")
-			Eventually(func(g Gomega) {
-				g.Expect(testUserClient.Get(ctx, client.ObjectKeyFromObject(testEndpoints), testEndpoints)).To(Succeed())
-			}).Should(Succeed())
-		})
-	})
+	It("Verify new member has access to Endpoints", func(ctx SpecContext) {
+		Eventually(func(g Gomega) {
+			g.Expect(testUserClient.Get(ctx, client.ObjectKeyFromObject(testEndpoint), testEndpoint)).To(Succeed())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+
+	ItShouldDeleteProject(s)
+	ItShouldWaitForProjectToBeDeleted(s)
 })
