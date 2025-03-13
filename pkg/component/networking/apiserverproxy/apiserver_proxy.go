@@ -275,6 +275,7 @@ func (a *apiserverProxy) computeResourcesData() (map[string][]byte, error) {
 				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
 					Type: appsv1.RollingUpdateDaemonSetStrategyType,
 				},
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getSelector(),
 				},

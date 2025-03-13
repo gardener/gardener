@@ -707,7 +707,7 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas:             ptr.To(v.values.Replicas),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp: deploymentName,
 			}},

@@ -330,6 +330,7 @@ func (n *nodeExporter) computeResourcesData() (map[string][]byte, error) {
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(),
 				},
+				RevisionHistoryLimit: ptr.To[int32](2),
 				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
 					Type: appsv1.RollingUpdateDaemonSetStrategyType,
 				},

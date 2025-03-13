@@ -308,6 +308,7 @@ metadata:
   name: node-exporter
   namespace: kube-system
 spec:
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       component: node-exporter

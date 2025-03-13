@@ -604,6 +604,7 @@ func getDaemonSet(hash string, advertiseIPAddress string) *appsv1.DaemonSet {
 					"role": "apiserver-proxy",
 				},
 			},
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
