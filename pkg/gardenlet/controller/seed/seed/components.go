@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	"github.com/go-logr/logr"

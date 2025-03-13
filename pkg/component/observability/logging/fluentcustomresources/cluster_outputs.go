@@ -5,8 +5,8 @@
 package fluentcustomresources
 
 import (
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
-	"github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2/plugins/custom"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
+	"github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2/plugins/custom"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
