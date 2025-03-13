@@ -18,10 +18,10 @@ import (
 
 // ServiceAccountKeyVerifier verifies the service account key rotation.
 type ServiceAccountKeyVerifier struct {
-	RuntimeClient                client.Client
-	Namespace                    string
-	SecretsManagerLabelSelector  client.MatchingLabels
-	GetServiceAccountKeyRotation func() *gardencorev1beta1.ServiceAccountKeyRotation
+	SecretsManagerLabelSelector         client.MatchingLabels
+	GetServiceAccountKeyRotation        func() *gardencorev1beta1.ServiceAccountKeyRotation
+	ListServiceAccountKeySecretsFunc    func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error)
+	GetServiceAccountKeySecretNamespace func() string
 
 	secretsBefore   SecretConfigNamesToSecrets
 	secretsPrepared SecretConfigNamesToSecrets
@@ -36,8 +36,8 @@ const (
 func (v *ServiceAccountKeyVerifier) Before(ctx context.Context) {
 	By("Verify old service account key secret")
 	Eventually(func(g Gomega) {
-		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
+		secretList, err := v.ListServiceAccountKeySecretsFunc(ctx, client.InNamespace(v.GetServiceAccountKeySecretNamespace()), v.SecretsManagerLabelSelector)
+		g.Expect(err).NotTo(HaveOccurred())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[serviceAccountKey]).To(HaveLen(1), "service account key secret should get created, but not rotated yet")
@@ -82,8 +82,8 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 
 	By("Verify service account key bundle secret")
 	Eventually(func(g Gomega) {
-		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
+		secretList, err := v.ListServiceAccountKeySecretsFunc(ctx, client.InNamespace(v.GetServiceAccountKeySecretNamespace()), v.SecretsManagerLabelSelector)
+		g.Expect(err).NotTo(HaveOccurred())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[serviceAccountKey]).To(HaveLen(2), "service account key secret should get rotated, but old service account key is kept")
@@ -114,8 +114,8 @@ func (v *ServiceAccountKeyVerifier) AfterCompleted(ctx context.Context) {
 
 	By("Verify new service account key secret")
 	Eventually(func(g Gomega) {
-		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
+		secretList, err := v.ListServiceAccountKeySecretsFunc(ctx, client.InNamespace(v.GetServiceAccountKeySecretNamespace()), v.SecretsManagerLabelSelector)
+		g.Expect(err).NotTo(HaveOccurred())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[serviceAccountKey]).To(HaveLen(1), "old service account key secret should get cleaned up")
