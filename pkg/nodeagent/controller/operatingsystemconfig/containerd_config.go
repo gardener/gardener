@@ -43,21 +43,18 @@ var (
 	containerdConfigPaths = containerdConfigPathMapVersions{
 		1: {
 			registryConfigPath: {"plugins", "io.containerd.grpc.v1.cri", "registry", "config_path"},
-			importsPath:        {"imports"},
 			sandboxImagePath:   {"plugins", "io.containerd.grpc.v1.cri", "sandbox_image"},
 			cgroupDriverPath:   {"plugins", "io.containerd.grpc.v1.cri", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
 			cniPluginPath:      {"plugins", "io.containerd.grpc.v1.cri", "cni", "bin_dir"},
 		},
 		2: {
 			registryConfigPath: {"plugins", "io.containerd.grpc.v1.cri", "registry", "config_path"},
-			importsPath:        {"imports"},
 			sandboxImagePath:   {"plugins", "io.containerd.grpc.v1.cri", "sandbox_image"},
 			cgroupDriverPath:   {"plugins", "io.containerd.grpc.v1.cri", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
 			cniPluginPath:      {"plugins", "io.containerd.grpc.v1.cri", "cni", "bin_dir"},
 		},
 		3: {
 			registryConfigPath: {"plugins", "io.containerd.cri.v1.images", "registry", "config_path"},
-			importsPath:        {"imports"},
 			sandboxImagePath:   {"plugins", "io.containerd.cri.v1.runtime", "sandbox_image"},
 			cgroupDriverPath:   {"plugins", "io.containerd.cri.v1.runtime", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
 			cniPluginPath:      {"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"},
@@ -144,7 +141,7 @@ func (r *Reconciler) ensureContainerdConfiguration(log logr.Logger, criConfig *e
 		},
 		{
 			name: "imports paths",
-			path: containerdConfigPaths[configFileVersion][importsPath],
+			path: structuredmap.Path{"imports"},
 			setFn: func(value any) (any, error) {
 				importPath := path.Join(configDir, "*.toml")
 
