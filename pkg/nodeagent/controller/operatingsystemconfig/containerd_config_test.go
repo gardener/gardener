@@ -124,11 +124,10 @@ var _ = Describe("containerd configuration file tests", func() {
 		Expect(r.FS.MkdirAll("/etc/containerd", 0755)).To(Succeed())
 	})
 
-	Describe("static containerd configuration paths set by gardener-node-agent", func() {
-
-		When("containerd configuration file version is v2", func() {
+	DescribeTableSubtree("static containerd configuration paths set by gardener-node-agent",
+		func(testfile string, sandboxImagePath, registryconfigPath, cgroupDriverPath, cniPluginDir structuredmap.Path) {
 			BeforeEach(func() {
-				Expect(loadContainerdConfig("testfiles/containerd-config.toml-v2", r.FS)).To(Succeed())
+				Expect(loadContainerdConfig(testfile, r.FS)).To(Succeed())
 				Expect(r.ReconcileContainerdConfig(ctx, log, osc)).To(Succeed())
 			})
 
@@ -147,8 +146,7 @@ var _ = Describe("containerd configuration file tests", func() {
 			})
 
 			It("should set the sandbox image", func() {
-				path := structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "sandbox_image"}
-				configValue, err := getContainerdConfigValue(r.FS, path)
+				configValue, err := getContainerdConfigValue(r.FS, sandboxImagePath)
 				Expect(err).ToNot(HaveOccurred())
 
 				v, ok := configValue.(string)
@@ -157,8 +155,7 @@ var _ = Describe("containerd configuration file tests", func() {
 			})
 
 			It("should set the registry config path", func() {
-				path := structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "registry", "config_path"}
-				configValue, err := getContainerdConfigValue(r.FS, path)
+				configValue, err := getContainerdConfigValue(r.FS, registryconfigPath)
 				Expect(err).ToNot(HaveOccurred())
 
 				v, ok := configValue.(string)
@@ -167,8 +164,7 @@ var _ = Describe("containerd configuration file tests", func() {
 			})
 
 			It("should set the cgroup driver", func() {
-				path := structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "containerd", "runtimes", "runc", "options", "SystemdCgroup"}
-				configValue, err := getContainerdConfigValue(r.FS, path)
+				configValue, err := getContainerdConfigValue(r.FS, cgroupDriverPath)
 				Expect(err).ToNot(HaveOccurred())
 
 				v, ok := configValue.(bool)
@@ -177,81 +173,32 @@ var _ = Describe("containerd configuration file tests", func() {
 			})
 
 			It("should set the CNI plugin dir", func() {
-				path := structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "cni", "bin_dir"}
-				configValue, err := getContainerdConfigValue(r.FS, path)
+				configValue, err := getContainerdConfigValue(r.FS, cniPluginDir)
 				Expect(err).ToNot(HaveOccurred())
 
 				v, ok := configValue.(string)
 				Expect(ok).To(BeTrue())
 				Expect(v).To(Equal(cniBinDirValue))
 			})
-		})
+		},
 
-		When("containerd configuration file version is v3", func() {
-			BeforeEach(func() {
-				Expect(loadContainerdConfig("testfiles/containerd-config.toml-v3", r.FS)).To(Succeed())
-				Expect(r.ReconcileContainerdConfig(ctx, log, osc)).To(Succeed())
-			})
-
-			It("should set the imports", func() {
-				path := structuredmap.Path{"imports"}
-				configValue, err := getContainerdConfigValue(r.FS, path)
-				Expect(err).ToNot(HaveOccurred())
-
-				rawImports, ok := configValue.([]any)
-				Expect(ok).To(BeTrue())
-				Expect(rawImports).To(HaveLen(1))
-
-				v, ok := rawImports[0].(string)
-				Expect(ok).To(BeTrue())
-				Expect(v).To(Equal(importsValue))
-			})
-
-			It("should set the sandbox image", func() {
-				path := structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "sandbox_image"}
-				configValue, err := getContainerdConfigValue(r.FS, path)
-				Expect(err).ToNot(HaveOccurred())
-
-				v, ok := configValue.(string)
-				Expect(ok).To(BeTrue())
-				Expect(v).To(Equal(sandBoxImageValue))
-			})
-
-			It("should set the registry config path", func() {
-				path := structuredmap.Path{"plugins", "io.containerd.cri.v1.images", "registry", "config_path"}
-				configValue, err := getContainerdConfigValue(r.FS, path)
-				Expect(err).ToNot(HaveOccurred())
-
-				v, ok := configValue.(string)
-				Expect(ok).To(BeTrue())
-				Expect(v).To(Equal(certdsDirValue))
-			})
-
-			It("should set the cgroup driver", func() {
-				path := structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "containerd", "runtimes", "runc", "options", "SystemdCgroup"}
-				configValue, err := getContainerdConfigValue(r.FS, path)
-				Expect(err).ToNot(HaveOccurred())
-
-				v, ok := configValue.(bool)
-				Expect(ok).To(BeTrue())
-				Expect(v).To(BeTrue())
-			})
-
-			It("should set the CNI plugin dir", func() {
-				path := structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"}
-				configValue, err := getContainerdConfigValue(r.FS, path)
-				Expect(err).ToNot(HaveOccurred())
-
-				v, ok := configValue.(string)
-				Expect(ok).To(BeTrue())
-				Expect(v).To(Equal(cniBinDirValue))
-			})
-		})
-	})
+		Entry("for containerd config file v1 or v2", "testfiles/containerd-config.toml-v2",
+			structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "sandbox_image"},
+			structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "registry", "config_path"},
+			structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
+			structuredmap.Path{"plugins", "io.containerd.grpc.v1.cri", "cni", "bin_dir"},
+		),
+		Entry("for containerd config file v3", "testfiles/containerd-config.toml-v3",
+			structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "sandbox_image"},
+			structuredmap.Path{"plugins", "io.containerd.cri.v1.images", "registry", "config_path"},
+			structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "containerd", "runtimes", "runc", "options", "SystemdCgroup"},
+			structuredmap.Path{"plugins", "io.containerd.cri.v1.runtime", "cni", "bin_dir"},
+		),
+	)
 
 	Describe("plugin configuration paths inserted by osc plugin config", func() {
 
-		When("containerd configuration file version is v2", func() {
+		When("containerd configuration file version is not v3", func() {
 			BeforeEach(func() {
 				Expect(loadContainerdConfig("testfiles/containerd-config.toml-v2", r.FS)).To(Succeed())
 			})
