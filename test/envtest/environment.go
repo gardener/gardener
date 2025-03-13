@@ -7,10 +7,10 @@ package envtest
 import (
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
 	"os"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
