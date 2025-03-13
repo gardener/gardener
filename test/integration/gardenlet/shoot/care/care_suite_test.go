@@ -6,6 +6,9 @@ package care_test
 
 import (
 	"context"
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"path/filepath"
 	"testing"
 	"time"
@@ -81,8 +84,17 @@ var (
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
+	var err error
 
 	features.RegisterFeatureGates()
+
+	By("Fetch Etcd CRD")
+	k8sVersion, err := gardenerenvtest.GetK8SVersion()
+	Expect(err).NotTo(HaveOccurred())
+	etcdCRDGetter, err := etcd.NewCRDGetter(k8sVersion)
+	Expect(err).NotTo(HaveOccurred())
+	etcdCRD, err := etcdCRDGetter.GetCRD(druidcorecrds.ResourceNameEtcd)
+	Expect(err).NotTo(HaveOccurred())
 
 	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
@@ -90,7 +102,6 @@ var _ = BeforeSuite(func() {
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{
 					filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-druid.gardener.cloud_etcds.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_containerruntimes.yaml"),
@@ -102,6 +113,7 @@ var _ = BeforeSuite(func() {
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_operatingsystemconfigs.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_workers.yaml"),
 				},
+				CRDs: []*apiextensionsv1.CustomResourceDefinition{etcdCRD},
 			},
 			ErrorIfCRDPathMissing: true,
 		},
@@ -110,7 +122,6 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())

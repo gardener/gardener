@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/etcd/etcd"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -29,7 +28,7 @@ var _ = Describe("CRD", func() {
 	var (
 		c           client.Client
 		ctx         = context.TODO()
-		crdDeployer component.Deployer
+		crdDeployer CRDAccess
 		err         error
 		k8sVersion  = semver.MustParse("1.30")
 	)
@@ -69,6 +68,45 @@ var _ = Describe("CRD", func() {
 		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
 		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
 	)
+
+	Describe("CRD is destroyed", func() {
+		JustBeforeEach(func() {
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+		})
+
+		DescribeTable("CRD is deleted",
+			func(crdName string) {
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			},
+
+			Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+			Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+		)
+	})
+
+	DescribeTable("Get CRD",
+		func(crdName string) {
+			crd, err := crdDeployer.GetCRD(crdName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crd).NotTo(BeNil())
+		},
+
+		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+	)
+
+	DescribeTable("Get CRD YAML",
+		func(crdName string) {
+			crd, err := crdDeployer.GetCRDYaml(crdName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crd).NotTo(BeNil())
+		},
+
+		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+	)
+
 })
 
 func verifyDeployedCRD(ctx context.Context, crdName string, c client.Client) {

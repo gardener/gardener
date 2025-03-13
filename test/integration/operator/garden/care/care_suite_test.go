@@ -6,6 +6,9 @@ package care_test
 
 import (
 	"context"
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"path/filepath"
 	"testing"
 	"time"
@@ -37,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/operator/features"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestGarden(t *testing.T) {
@@ -64,8 +68,17 @@ var (
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
+	var err error
 
 	features.RegisterFeatureGates()
+
+	By("Fetch Etcd CRD")
+	k8sVersion, err := gardenerenvtest.GetK8SVersion()
+	Expect(err).NotTo(HaveOccurred())
+	etcdCRDGetter, err := etcd.NewCRDGetter(k8sVersion)
+	Expect(err).NotTo(HaveOccurred())
+	etcdCRD, err := etcdCRDGetter.GetCRD(druidcorecrds.ResourceNameEtcd)
+	Expect(err).NotTo(HaveOccurred())
 
 	By("Start test environment")
 	testEnv = &envtest.Environment{
@@ -73,13 +86,12 @@ var _ = BeforeSuite(func() {
 			Paths: []string{
 				filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
 				filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
-				filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-druid.gardener.cloud_etcds.yaml"),
 			},
+			CRDs: []*apiextensionsv1.CustomResourceDefinition{etcdCRD},
 		},
 		ErrorIfCRDPathMissing: true,
 	}
 
-	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())

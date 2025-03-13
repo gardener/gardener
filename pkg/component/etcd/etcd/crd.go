@@ -31,8 +31,29 @@ type crd struct {
 	crdResources map[string]string
 }
 
-// NewCRD can be used to deploy the CRD definitions for Etcd and EtcdCopyBackupsTask.
-func NewCRD(c client.Client, applier kubernetes.Applier, k8sVersion *semver.Version) (component.Deployer, error) {
+// CRDAccess provides methods to manage and get CRDs defined in etcd-druid.
+type CRDAccess interface {
+	component.Deployer
+	CRDGetter
+}
+
+// CRDGetter provides methods to get CRDs defined in etcd-druid.
+type CRDGetter interface {
+	// GetCRDYaml returns the YAML of the CRD with the given name.
+	// An error is returned if no CRD is found with the given name.
+	GetCRDYaml(name string) (string, error)
+	// GetCRD returns the CRD with the given name.
+	// An error is returned if no CRD is found with the given name.
+	GetCRD(name string) (*apiextensionsv1.CustomResourceDefinition, error)
+}
+
+// NewCRDGetter creates a new CRDGetter.
+func NewCRDGetter(k8sVersion *semver.Version) (CRDGetter, error) {
+	return NewCRD(nil, nil, k8sVersion)
+}
+
+// NewCRD can be used to deploy and/or retrieve the CRD definitions for all CRDs defined by etcd-druid.
+func NewCRD(c client.Client, applier kubernetes.Applier, k8sVersion *semver.Version) (CRDAccess, error) {
 	crdResources, err := getEtcdCRDS(k8sVersion)
 	if err != nil {
 		return nil, err
@@ -54,7 +75,6 @@ func (c *crd) Deploy(ctx context.Context) error {
 			return c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(r)), kubernetes.DefaultMergeFuncs)
 		})
 	}
-
 	return flow.Parallel(fns...)(ctx)
 }
 
@@ -98,6 +118,22 @@ func (c *crd) Destroy(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
+func (c *crd) GetCRDYaml(name string) (string, error) {
+	crdYAML, ok := c.crdResources[name]
+	if !ok {
+		return "", fmt.Errorf("CRD %q not found", name)
+	}
+	return crdYAML, nil
+}
+
+func (c *crd) GetCRD(name string) (*apiextensionsv1.CustomResourceDefinition, error) {
+	crdYAML, err := c.GetCRDYaml(name)
+	if err != nil {
+		return nil, err
+	}
+	return getCRDFromYAML(crdYAML)
+}
+
 func getEtcdCRDS(k8sVersion *semver.Version) (map[string]string, error) {
 	crdYAMLs, err := druidcorecrds.GetAll(k8sVersion.String())
 	if err != nil {
@@ -115,8 +151,8 @@ func getEtcdCRDS(k8sVersion *semver.Version) (map[string]string, error) {
 }
 
 func addDeletionProtectedLabel(crdYAML string) ([]byte, error) {
-	crdObj := &apiextensionsv1.CustomResourceDefinition{}
-	if err := yaml.Unmarshal([]byte(crdYAML), crdObj); err != nil {
+	crdObj, err := getCRDFromYAML(crdYAML)
+	if err != nil {
 		return nil, err
 	}
 	if crdObj.Labels == nil {
@@ -124,4 +160,12 @@ func addDeletionProtectedLabel(crdYAML string) ([]byte, error) {
 	}
 	crdObj.Labels[gardenerutils.DeletionProtected] = "true"
 	return yaml.Marshal(crdObj)
+}
+
+func getCRDFromYAML(crdYAML string) (*apiextensionsv1.CustomResourceDefinition, error) {
+	crdObj := &apiextensionsv1.CustomResourceDefinition{}
+	if err := yaml.Unmarshal([]byte(crdYAML), crdObj); err != nil {
+		return nil, err
+	}
+	return crdObj, nil
 }
