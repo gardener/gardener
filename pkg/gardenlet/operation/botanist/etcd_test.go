@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"time"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
@@ -104,17 +105,18 @@ var _ = Describe("Etcd", func() {
 			})
 
 			validator = &newEtcdValidator{
-				expectedClient:                  Equal(c),
-				expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
-				expectedNamespace:               Equal(namespace),
-				expectedSecretsManager:          Equal(sm),
-				expectedRole:                    Equal(role),
-				expectedClass:                   Equal(class),
-				expectedReplicas:                PointTo(Equal(int32(1))),
-				expectedStorageCapacity:         Equal("25Gi"),
-				expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
-				expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
-				expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
+				expectedClient:                    Equal(c),
+				expectedLogger:                    BeAssignableToTypeOf(logr.Logger{}),
+				expectedNamespace:                 Equal(namespace),
+				expectedSecretsManager:            Equal(sm),
+				expectedRole:                      Equal(role),
+				expectedClass:                     Equal(class),
+				expectedReplicas:                  PointTo(Equal(int32(1))),
+				expectedETCDMainStorageCapacity:   Equal("25Gi"),
+				expectedETCDEventsStorageCapacity: Equal("10Gi"),
+				expectedDefragmentationSchedule:   Equal(ptr.To("34 12 */3 * *")),
+				expectedMaintenanceTimeWindow:     Equal(maintenanceTimeWindow),
+				expectedHighAvailabilityEnabled:   Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 			}
 		})
 
@@ -526,18 +528,19 @@ var _ = Describe("Etcd", func() {
 type newEtcdValidator struct {
 	etcd.Interface
 
-	expectedClient                   gomegatypes.GomegaMatcher
-	expectedLogger                   gomegatypes.GomegaMatcher
-	expectedNamespace                gomegatypes.GomegaMatcher
-	expectedSecretsManager           gomegatypes.GomegaMatcher
-	expectedRole                     gomegatypes.GomegaMatcher
-	expectedClass                    gomegatypes.GomegaMatcher
-	expectedReplicas                 gomegatypes.GomegaMatcher
-	expectedStorageCapacity          gomegatypes.GomegaMatcher
-	expectedDefragmentationSchedule  gomegatypes.GomegaMatcher
-	expectedHighAvailabilityEnabled  gomegatypes.GomegaMatcher
-	expectedMaintenanceTimeWindow    gomegatypes.GomegaMatcher
-	expectedAutoscalingConfiguration gomegatypes.GomegaMatcher
+	expectedClient                    gomegatypes.GomegaMatcher
+	expectedLogger                    gomegatypes.GomegaMatcher
+	expectedNamespace                 gomegatypes.GomegaMatcher
+	expectedSecretsManager            gomegatypes.GomegaMatcher
+	expectedRole                      gomegatypes.GomegaMatcher
+	expectedClass                     gomegatypes.GomegaMatcher
+	expectedReplicas                  gomegatypes.GomegaMatcher
+	expectedETCDMainStorageCapacity   gomegatypes.GomegaMatcher
+	expectedETCDEventsStorageCapacity gomegatypes.GomegaMatcher
+	expectedDefragmentationSchedule   gomegatypes.GomegaMatcher
+	expectedHighAvailabilityEnabled   gomegatypes.GomegaMatcher
+	expectedMaintenanceTimeWindow     gomegatypes.GomegaMatcher
+	expectedAutoscalingConfiguration  gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
@@ -554,10 +557,13 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(values.Role).To(v.expectedRole)
 	Expect(values.Class).To(v.expectedClass)
 	Expect(values.Replicas).To(v.expectedReplicas)
-	Expect(values.StorageCapacity).To(v.expectedStorageCapacity)
 	Expect(values.DefragmentationSchedule).To(v.expectedDefragmentationSchedule)
 	Expect(values.HighAvailabilityEnabled).To(v.expectedHighAvailabilityEnabled)
-
+	if values.Role == v1beta1constants.ETCDRoleMain {
+		Expect(values.StorageCapacity).To(v.expectedETCDMainStorageCapacity)
+	} else if values.Role == v1beta1constants.ETCDRoleEvents {
+		Expect(values.StorageCapacity).To(v.expectedETCDEventsStorageCapacity)
+	}
 	if v.expectedAutoscalingConfiguration != nil {
 		Expect(values.Autoscaling).To(v.expectedAutoscalingConfiguration)
 	} else {
