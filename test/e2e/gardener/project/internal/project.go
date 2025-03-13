@@ -22,8 +22,6 @@ func ItShouldCreateProject(s *ProjectContext) {
 	GinkgoHelper()
 
 	It("Create Project", func(ctx SpecContext) {
-		s.Log.Info("Creating Project")
-
 		Eventually(ctx, func() error {
 			if err := s.GardenClient.Create(ctx, s.Project); !apierrors.IsAlreadyExists(err) {
 				return err
@@ -39,8 +37,6 @@ func ItShouldDeleteProject(s *ProjectContext) {
 	GinkgoHelper()
 
 	It("Delete Project", func(ctx SpecContext) {
-		s.Log.Info("Deleting Project")
-
 		Eventually(ctx, func(g Gomega) {
 			g.Expect(gardenerutils.ConfirmDeletion(ctx, s.GardenClient, s.Project)).To(Succeed())
 			g.Expect(s.GardenClient.Delete(ctx, s.Project)).To(Succeed())
