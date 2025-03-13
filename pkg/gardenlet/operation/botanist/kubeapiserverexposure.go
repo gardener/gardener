@@ -76,10 +76,22 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
-			var wildcardHosts []string
+			var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
 
 			if b.ControlPlaneWildcardCert != nil {
-				wildcardHosts = []string{b.ComputeKubeAPIServerHost()}
+				wildcardConfiguration = &kubeapiserverexposure.WildcardConfiguration{
+					Hosts:     []string{b.ComputeKubeAPIServerHost()},
+					TLSSecret: *b.ControlPlaneWildcardCert,
+				}
+
+				// Wildcard endpoint must use the default istio ingress gateway if the shoot uses zonal istio ingress gateway.
+				// Otherwise, the wildcard endpoint can share the same istio ingress gateway as the kube-apiserver endpoint.
+				if b.DefaultIstioNamespace() != b.IstioNamespace() {
+					wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
+						Namespace: b.DefaultIstioNamespace(),
+						Labels:    b.DefaultIstioLabels(),
+					}
+				}
 			}
 
 			return &kubeapiserverexposure.SNIValues{
@@ -87,9 +99,8 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
-				WildcardHosts:       wildcardHosts,
-				WildcardTLSSecret:   b.ControlPlaneWildcardCert,
+				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+				WildcardConfiguration: wildcardConfiguration,
 			}
 		},
 	))
@@ -126,10 +137,22 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
-			var wildcardHosts []string
+			var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
 
 			if b.ControlPlaneWildcardCert != nil {
-				wildcardHosts = []string{b.ComputeKubeAPIServerHost()}
+				wildcardConfiguration = &kubeapiserverexposure.WildcardConfiguration{
+					Hosts:     []string{b.ComputeKubeAPIServerHost()},
+					TLSSecret: *b.ControlPlaneWildcardCert,
+				}
+
+				// Wildcard endpoint must use the default istio ingress gateway if the shoot uses zonal istio ingress gateway.
+				// Otherwise, the wildcard endpoint can share the same istio ingress gateway as the kube-apiserver endpoint.
+				if b.DefaultIstioNamespace() != b.IstioNamespace() {
+					wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
+						Namespace: b.DefaultIstioNamespace(),
+						Labels:    b.DefaultIstioLabels(),
+					}
+				}
 			}
 
 			values := &kubeapiserverexposure.SNIValues{
@@ -144,9 +167,8 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
-				IstioTLSTermination: features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
-				WildcardHosts:       wildcardHosts,
-				WildcardTLSSecret:   b.ControlPlaneWildcardCert,
+				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+				WildcardConfiguration: wildcardConfiguration,
 			}
 
 			if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
