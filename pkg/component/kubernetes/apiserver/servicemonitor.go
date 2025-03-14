@@ -42,6 +42,8 @@ func (k *kubeAPIServer) reconcileServiceMonitor(ctx context.Context, serviceMoni
 					Regex:  `__meta_kubernetes_service_label_(.+)`,
 				}},
 				MetricRelabelConfigs: monitoringutils.StandardMetricRelabelConfig(
+					"authentication_attempts",
+					"authenticated_user_requests",
 					"apiserver_admission_controller_admission_duration_seconds_.+",
 					"apiserver_admission_webhook_admission_duration_seconds_.+",
 					"apiserver_admission_step_admission_duration_seconds_.+",
