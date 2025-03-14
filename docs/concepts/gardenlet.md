@@ -494,7 +494,7 @@ Alternatively, it can be disabled by setting the `concurrentSyncs=0` for the con
 
 Please refer to [GEP-22: Improved Usage of the `ShootState` API](../proposals/22-improved-usage-of-shootstate-api.md) for all information.
 
-### [`TokenRequestor` Controller For `ServiceAccount`s](../../pkg/gardenlet/controller/tokenrequestor/serviceaccount)
+### [`TokenRequestor` Controller For `ServiceAccount`s](../../pkg/controller/tokenrequestor)
 
 The `gardenlet` uses an instance of the `TokenRequestor` controller which initially was developed in the context of the `gardener-resource-manager`, please read [this document](resource-manager.md#tokenrequestor-controller) for further information.
 
