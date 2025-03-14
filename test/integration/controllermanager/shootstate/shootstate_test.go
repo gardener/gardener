@@ -107,29 +107,25 @@ var _ = Describe("ShootState controller test", func() {
 	})
 
 	When("migrating Shoot to another Seed", func() {
-		var (
-			patch client.Patch
-		)
-
 		BeforeEach(func() {
 			By("Mark Shoot for migration")
-			patch = client.MergeFrom(shoot.DeepCopy())
+			patch := client.MergeFrom(shoot.DeepCopy())
 			shoot.Spec.SeedName = &targetSeedName
 			Expect(testClient.SubResource("binding").Patch(ctx, shoot, patch)).To(Succeed())
 		})
 
 		When("Shoot last operation is Migrate", func() {
 			BeforeEach(func() {
+				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type:  gardencorev1beta1.LastOperationTypeMigrate,
 					State: gardencorev1beta1.LastOperationStateProcessing,
 				}
+				By("Update the Shoot's last operation")
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 			})
 
 			It("should add finalizer if not present", func() {
-				By("Update the Shoot's last operation")
-				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
-
 				By("Verify the finalizer is present")
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
@@ -139,9 +135,6 @@ var _ = Describe("ShootState controller test", func() {
 
 			It("should not add/duplicate finalizer if already present", func() {
 				addFinalizer(shootState)
-
-				By("Update the Shoot's last operation")
-				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
 				By("Verify the finalizer is present")
 				Consistently(func(g Gomega) []string {
@@ -153,16 +146,17 @@ var _ = Describe("ShootState controller test", func() {
 
 		When("Shoot last operation is Restore", func() {
 			BeforeEach(func() {
+				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type:  gardencorev1beta1.LastOperationTypeRestore,
 					State: gardencorev1beta1.LastOperationStateProcessing,
 				}
-			})
-
-			It("should add finalizer if not present and operation has not succeeded", func() {
 				By("Update the Shoot's last operation")
 				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
+			})
+
+			It("should add finalizer if not present and operation has not succeeded", func() {
 				By("Verify the finalizer is present")
 				Eventually(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
@@ -172,9 +166,6 @@ var _ = Describe("ShootState controller test", func() {
 
 			It("should not duplicate finalizer if already present", func() {
 				addFinalizer(shootState)
-
-				By("Update the Shoot's last operation")
-				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
 				By("Verify the finalizer is present")
 				Consistently(func(g Gomega) []string {
@@ -186,7 +177,8 @@ var _ = Describe("ShootState controller test", func() {
 			It("should remove finalizer if present and operation has succeeded", func() {
 				addFinalizer(shootState)
 
-				By("Update the Shoot's last operation")
+				By("Update the Shoot's last operation State")
+				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateSucceeded
 				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
@@ -200,9 +192,6 @@ var _ = Describe("ShootState controller test", func() {
 			It("should not remove finalizer if present and operation has not succeeded ", func() {
 				addFinalizer(shootState)
 
-				By("Update the Shoot's last operation")
-				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
-
 				By("Verify the finalizer is present")
 				Consistently(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
@@ -213,17 +202,17 @@ var _ = Describe("ShootState controller test", func() {
 
 		When("Shoot last operation is Reconcile", func() {
 			BeforeEach(func() {
+				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type:  gardencorev1beta1.LastOperationTypeReconcile,
 					State: gardencorev1beta1.LastOperationStateProcessing,
 				}
+				By("Update the Shoot's last operation")
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 			})
 
 			It("should remove finalizer if present", func() {
 				addFinalizer(shootState)
-
-				By("Update the Shoot's last operation")
-				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
 
 				By("Verify the finalizer is removed")
 				Eventually(func(g Gomega) []string {
