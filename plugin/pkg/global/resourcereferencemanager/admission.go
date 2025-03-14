@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -499,9 +498,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			// getting Machine image versions that have been removed from or added to the CloudProfile
 			removedMachineImages, removedMachineImageVersions, addedMachineImages, addedMachineImageVersions := helper.GetMachineImageDiff(oldCloudProfile.Spec.MachineImages, cloudProfile.Spec.MachineImages)
 
-			hasDecreasedLimits := hasDecreasedNodeLimits(cloudProfile.Spec.Limits, oldCloudProfile.Spec.Limits)
+			wasLimitAdded := !apiequality.Semantic.DeepEqual(cloudProfile.Spec.Limits, oldCloudProfile.Spec.Limits)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 || hasDecreasedLimits {
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 || wasLimitAdded {
 				shootList, err1 := r.shootLister.List(labels.Everything())
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
@@ -588,7 +587,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 								channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from CloudProfile %q - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, *worker.Machine.Image.Version, cloudProfile.Name, shoot.Namespace, shoot.Name, worker.Name)
 							}
 						}
-						if hasDecreasedLimits {
+						if wasLimitAdded {
 							validateShootWorkerLimits(channel, shoot, cloudProfile.Spec.Limits)
 						}
 					}(s)
@@ -623,9 +622,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			removedKubernetesVersions := getRemovedKubernetesVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 			removedMachineImageVersions := getRemovedMachineImageVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 
-			hasDecreasedLimits := hasDecreasedNodeLimits(namespacedCloudProfile.Spec.Limits, oldNamespacedCloudProfile.Spec.Limits)
+			wasLimitAdded := !apiequality.Semantic.DeepEqual(namespacedCloudProfile.Spec.Limits, oldNamespacedCloudProfile.Spec.Limits)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || hasDecreasedLimits {
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || wasLimitAdded {
 				shootList, err1 := r.shootLister.Shoots(namespacedCloudProfile.Namespace).List(labels.Everything())
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not list Shoots to validate NamespacedCloudProfile changes: %v", err1))
@@ -662,7 +661,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 						defer wg.Done()
 						validateShootForRemovedKubernetesVersions(channel, shoot, removedKubernetesVersions, parentCloudProfileKubernetesVersions, namespacedCloudProfile)
 						validateShootWorkersForRemovedMachineImageVersions(channel, shoot, removedMachineImageVersions, parentCloudProfileMachineImageVersions, namespacedCloudProfile)
-						if hasDecreasedLimits {
+						if wasLimitAdded {
 							validateShootWorkerLimits(channel, shoot, namespacedCloudProfile.Spec.Limits)
 						}
 					}(s)
@@ -1287,14 +1286,6 @@ func (r *ReferenceManager) lookupResource(ctx context.Context, resource schema.G
 		return err
 	}
 	return nil
-}
-
-func hasDecreasedNodeLimits(limits, oldLimits *core.Limits) bool {
-	if limits == nil || apiequality.Semantic.DeepEqual(limits, oldLimits) {
-		// limits have been removed or were not changed.
-		return false
-	}
-	return oldLimits == nil || validation.HasDecreasedMaxNodesTotal(limits.MaxNodesTotal, oldLimits.MaxNodesTotal)
 }
 
 func validateShootWorkerLimits(channel chan error, shoot *gardencorev1beta1.Shoot, limits *core.Limits) {

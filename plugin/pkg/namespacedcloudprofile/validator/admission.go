@@ -327,8 +327,7 @@ func validateNamespacedCloudProfileExtendedMachineImages(machineVersion gardenco
 func (c *validationContext) validateLimits(limitsPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if c.namespacedCloudProfile.Spec.Limits == nil ||
-		c.parentCloudProfile.Spec.Limits == nil {
+	if c.namespacedCloudProfile.Spec.Limits == nil || c.parentCloudProfile.Spec.Limits == nil {
 		return nil
 	}
 
@@ -338,6 +337,7 @@ func (c *validationContext) validateLimits(limitsPath *field.Path) field.ErrorLi
 			!apiequality.Semantic.DeepEqual(c.namespacedCloudProfile.Spec.Limits.MaxNodesTotal, c.oldNamespacedCloudProfile.Spec.Limits.MaxNodesTotal))
 	namespacedCloudProfileMaxNodesTotal := ptr.Deref(c.namespacedCloudProfile.Spec.Limits.MaxNodesTotal, 0)
 	maxNodesTotal := utils.MinGreaterThanZero(namespacedCloudProfileMaxNodesTotal, ptr.Deref(c.parentCloudProfile.Spec.Limits.MaxNodesTotal, 0))
+
 	if hasMaxNodesTotalChanged && maxNodesTotal < namespacedCloudProfileMaxNodesTotal {
 		allErrs = append(allErrs, field.Invalid(limitsPath.Child("maxNodesTotal"), namespacedCloudProfileMaxNodesTotal, "overriding value must be less than or equal to value set in parent CloudProfile"))
 	}
