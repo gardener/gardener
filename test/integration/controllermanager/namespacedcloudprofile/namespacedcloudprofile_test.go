@@ -417,7 +417,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				}).Should(MatchError(ContainSubstring("spec.limits.maxNodesTotal: Invalid value: 24: overriding value must be less than or equal to value set in parent CloudProfile")))
 			})
 
-			It("should update the NamespacedCloudProfile status if a limit from the parent CloudProfile is raised again", func() {
+			It("should update the NamespacedCloudProfile status if a limit from the parent CloudProfile is increased again", func() {
 				By("Set a limit in the NamespacedCloudProfile")
 				namespacedCloudProfilePatch := client.StrategicMergeFrom(namespacedCloudProfile.DeepCopy())
 				namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
