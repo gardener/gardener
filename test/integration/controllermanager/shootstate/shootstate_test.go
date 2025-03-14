@@ -121,9 +121,8 @@ var _ = Describe("ShootState controller test", func() {
 		When("Shoot last operation is Migrate", func() {
 			BeforeEach(func() {
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-					Type:     gardencorev1beta1.LastOperationTypeMigrate,
-					State:    gardencorev1beta1.LastOperationStateProcessing,
-					Progress: 0,
+					Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					State: gardencorev1beta1.LastOperationStateProcessing,
 				}
 			})
 
@@ -148,16 +147,15 @@ var _ = Describe("ShootState controller test", func() {
 				Consistently(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 					return shootState.Finalizers
-				}).Should(Equal([]string{shootstate.FinalizerName}))
+				}).Should(ConsistOf(shootstate.FinalizerName))
 			})
 		})
 
 		When("Shoot last operation is Restore", func() {
 			BeforeEach(func() {
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-					Type:     gardencorev1beta1.LastOperationTypeRestore,
-					State:    gardencorev1beta1.LastOperationStateProcessing,
-					Progress: 0,
+					Type:  gardencorev1beta1.LastOperationTypeRestore,
+					State: gardencorev1beta1.LastOperationStateProcessing,
 				}
 			})
 
@@ -182,7 +180,7 @@ var _ = Describe("ShootState controller test", func() {
 				Consistently(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 					return shootState.Finalizers
-				}).Should(Equal([]string{shootstate.FinalizerName}))
+				}).Should(ConsistOf(shootstate.FinalizerName))
 			})
 
 			It("should remove finalizer if present and operation has succeeded", func() {
@@ -209,16 +207,15 @@ var _ = Describe("ShootState controller test", func() {
 				Consistently(func(g Gomega) []string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 					return shootState.Finalizers
-				}).Should(Equal([]string{shootstate.FinalizerName}))
+				}).Should(ConsistOf(shootstate.FinalizerName))
 			})
 		})
 
 		When("Shoot last operation is Reconcile", func() {
 			BeforeEach(func() {
 				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-					Type:     gardencorev1beta1.LastOperationTypeReconcile,
-					State:    gardencorev1beta1.LastOperationStateProcessing,
-					Progress: 0,
+					Type:  gardencorev1beta1.LastOperationTypeReconcile,
+					State: gardencorev1beta1.LastOperationStateProcessing,
 				}
 			})
 

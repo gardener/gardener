@@ -75,18 +75,20 @@ func (r *Reconciler) ShootPredicates() predicate.Predicate {
 				return false
 			}
 
-			oldLastOpType := shootOld.Status.LastOperation.Type
-			newLastOpType := shoot.Status.LastOperation.Type
-			newLastOpState := shoot.Status.LastOperation.State
+			var (
+				oldLastOpType  = shootOld.Status.LastOperation.Type
+				newLastOpType  = shoot.Status.LastOperation.Type
+				newLastOpState = shoot.Status.LastOperation.State
 
-			isOldLastOpReconcile := oldLastOpType == gardencorev1beta1.LastOperationTypeReconcile
-			isOldLastOpMigrate := oldLastOpType == gardencorev1beta1.LastOperationTypeMigrate
-			isOldLastOpRestore := oldLastOpType == gardencorev1beta1.LastOperationTypeRestore
+				isOldLastOpReconcile = oldLastOpType == gardencorev1beta1.LastOperationTypeReconcile
+				isOldLastOpMigrate   = oldLastOpType == gardencorev1beta1.LastOperationTypeMigrate
+				isOldLastOpRestore   = oldLastOpType == gardencorev1beta1.LastOperationTypeRestore
 
-			isNewLastOpReconcile := newLastOpType == gardencorev1beta1.LastOperationTypeReconcile
-			isNewLastOpMigrate := newLastOpType == gardencorev1beta1.LastOperationTypeMigrate
-			isNewLastOpRestore := newLastOpType == gardencorev1beta1.LastOperationTypeRestore
-			isNewLastOpSucceeded := newLastOpState == gardencorev1beta1.LastOperationStateSucceeded
+				isNewLastOpReconcile = newLastOpType == gardencorev1beta1.LastOperationTypeReconcile
+				isNewLastOpMigrate   = newLastOpType == gardencorev1beta1.LastOperationTypeMigrate
+				isNewLastOpRestore   = newLastOpType == gardencorev1beta1.LastOperationTypeRestore
+				isNewLastOpSucceeded = newLastOpState == gardencorev1beta1.LastOperationStateSucceeded
+			)
 
 			isMigrating := false
 			if isOldLastOpReconcile && isNewLastOpMigrate {

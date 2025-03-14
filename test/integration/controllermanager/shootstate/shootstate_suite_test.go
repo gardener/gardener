@@ -33,12 +33,11 @@ import (
 
 func TestState(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Shoot State Suite")
+	RunSpecs(t, "Test Integration ControllerManager ShootState Suite")
 }
 
 const (
-	testID                     = "shootstate-controller-test"
-	gardenClusterApiServerArgs = `--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ShootDNS`
+	testID = "shootstate-controller-test"
 )
 
 var (
@@ -64,7 +63,7 @@ var _ = BeforeSuite(func() {
 	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{gardenClusterApiServerArgs},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ShootDNS"},
 		},
 	}
 
