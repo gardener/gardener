@@ -57,15 +57,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("last operation of Shoot '%s' is not set", request.NamespacedName)
 	}
 
-	shootLastOperationType := shoot.Status.LastOperation.Type
-	shootLastOperationState := shoot.Status.LastOperation.State
+	var (
+		shootLastOperationType  = shoot.Status.LastOperation.Type
+		shootLastOperationState = shoot.Status.LastOperation.State
 
-	isShootOpMigrate := shootLastOperationType == gardencorev1beta1.LastOperationTypeMigrate
-	isShootOpRestore := shootLastOperationType == gardencorev1beta1.LastOperationTypeRestore
-	isShootOpReconcile := shootLastOperationType == gardencorev1beta1.LastOperationTypeReconcile
+		isShootOpMigrate   = shootLastOperationType == gardencorev1beta1.LastOperationTypeMigrate
+		isShootOpRestore   = shootLastOperationType == gardencorev1beta1.LastOperationTypeRestore
+		isShootOpReconcile = shootLastOperationType == gardencorev1beta1.LastOperationTypeReconcile
 
-	isShootOpSucceeded := shootLastOperationState == gardencorev1beta1.LastOperationStateSucceeded
-	shootStateHasFinalizer := controllerutil.ContainsFinalizer(shootState, FinalizerName)
+		isShootOpSucceeded     = shootLastOperationState == gardencorev1beta1.LastOperationStateSucceeded
+		shootStateHasFinalizer = controllerutil.ContainsFinalizer(shootState, FinalizerName)
+	)
 
 	log = log.
 		WithValues("shootLastOperationType", shootLastOperationType).
