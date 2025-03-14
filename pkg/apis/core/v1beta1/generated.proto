@@ -342,11 +342,12 @@ message CRI {
   repeated ContainerRuntime containerRuntimes = 2;
 }
 
-// CapabilitiesSetCapabilities is a wrapper for Capabilities
-// this is a workaround as we cannot define a slice of maps in protobuf
-// we define custom marshal/unmarshal functions to get around this l
+// CapabilitiesSetCapabilities is a wrapper for Capabilities.
+// This is a workaround as we cannot define a slice of maps in protobuf.
+// We define custom marshal/unmarshal functions to get around this limitation.
 // If there is a way to avoid this, we should do it.
 message CapabilitiesSetCapabilities {
+  map<string, CapabilityValues> capabilities = 1;
 }
 
 // CapabilityValues is a list of values for a capability.

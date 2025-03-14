@@ -92,6 +92,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seed
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,ManagedSeedSetStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1,ManagedSeedStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/settings/v1alpha1,KubeAPIServerOpenIDConnect,SigningAlgs
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,CapabilitiesSetCapabilities,Capabilities
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,CapabilityValues,Values
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,DataVolume,VolumeSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig

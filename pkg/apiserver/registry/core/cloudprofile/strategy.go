@@ -55,6 +55,8 @@ func (cloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj r
 	oldCloudProfile := oldObj.(*core.CloudProfile)
 	newCloudProfile := newObj.(*core.CloudProfile)
 
+	prepareForCapabilitiesUpdate(newCloudProfile, oldCloudProfile)
+
 	syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(newCloudProfile, oldCloudProfile)
 }
 
@@ -100,6 +102,22 @@ func dropExpiredVersions(cloudProfile *core.CloudProfile) {
 		}
 
 		cloudProfile.Spec.MachineImages[i].Versions = validMachineImageVersions
+	}
+}
+
+// TODO(Roncossek): Remove this function after the Architecture field has been removed from the specifications
+func prepareForCapabilitiesUpdate(newCloudProfile *core.CloudProfile, oldCloudProfile *core.CloudProfile) {
+	// remove the defaulted (and possible provided) architecture(s) fields on the upgrade to Capabilities
+	if newCloudProfile.Spec.CapabilitiesDefinition.HasEntries() && !oldCloudProfile.Spec.CapabilitiesDefinition.HasEntries() {
+		for i := range newCloudProfile.Spec.MachineImages {
+			for j := range newCloudProfile.Spec.MachineImages[i].Versions {
+				newCloudProfile.Spec.MachineImages[i].Versions[j].Architectures = nil
+			}
+		}
+
+		for i := range newCloudProfile.Spec.MachineTypes {
+			newCloudProfile.Spec.MachineTypes[i].Architecture = nil
+		}
 	}
 }
 

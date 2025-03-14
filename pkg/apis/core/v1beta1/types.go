@@ -67,12 +67,12 @@ type CapabilityValues struct {
 // Capabilities of a machine type or machine image.
 type Capabilities map[string]CapabilityValues
 
-// CapabilitiesSetCapabilities is a wrapper for Capabilities
-// this is a workaround as we cannot define a slice of maps in protobuf
-// we define custom marshal/unmarshal functions to get around this l
+// CapabilitiesSetCapabilities is a wrapper for Capabilities.
+// This is a workaround as we cannot define a slice of maps in protobuf.
+// We define custom marshal/unmarshal functions to get around this limitation.
 // If there is a way to avoid this, we should do it.
 type CapabilitiesSetCapabilities struct {
-	Capabilities Capabilities `json:"-"`
+	Capabilities `protobuf:"bytes,1,rep,name=capabilities,casttype=Capabilities"`
 }
 
 // MarshalJSON marshals the CapabilitiesSetCapabilities object to JSON.
@@ -105,7 +105,7 @@ func (c CapabilityValues) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + strings.Join(c.Values, ",") + `"`), nil
 }
 
-// HasEntries checks if a Capability is defined.
+// HasEntries checks if any Capability is defined.
 func (capabilities Capabilities) HasEntries() bool {
 	return len(capabilities) != 0
 }

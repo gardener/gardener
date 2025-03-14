@@ -1973,10 +1973,28 @@ func schema_pkg_apis_core_v1beta1_CapabilitiesSetCapabilities(ref common.Referen
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "CapabilitiesSetCapabilities is a wrapper for Capabilities this is a workaround as we cannot define a slice of maps in protobuf we define custom marshal/unmarshal functions to get around this l If there is a way to avoid this, we should do it.",
+				Description: "CapabilitiesSetCapabilities is a wrapper for Capabilities. This is a workaround as we cannot define a slice of maps in protobuf. We define custom marshal/unmarshal functions to get around this limitation. If there is a way to avoid this, we should do it.",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"Capabilities": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"Capabilities"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"},
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	cloudprofileregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/cloudprofile"
@@ -140,6 +141,63 @@ var _ = Describe("Strategy", func() {
 					)),
 				}),
 			))
+		})
+	})
+
+	Describe("#PrepareForUpdate", func() {
+		It("should drop architecture(s) fields on update to Capabilities", func() {
+			newCloudProfile := &core.CloudProfile{
+				Spec: core.CloudProfileSpec{
+					CapabilitiesDefinition: core.Capabilities{
+						"architecture": core.CapabilityValues{Values: []string{"amd64"}},
+					},
+					MachineTypes: []core.MachineType{
+						{
+							Name:         "machineType1",
+							Architecture: pointer.String("amd64"), // gets defaulted and should be removed
+						},
+					},
+					MachineImages: []core.MachineImage{
+						{
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "1.0.0",
+									},
+									Architectures: []string{"amd64"}, // gets defaulted and should be removed
+								},
+							},
+						},
+					},
+				},
+			}
+			oldCloudProfile := &core.CloudProfile{
+				Spec: core.CloudProfileSpec{
+					MachineTypes: []core.MachineType{
+						{
+							Name:         "machineType1",
+							Architecture: pointer.String("amd64"),
+						},
+					},
+					MachineImages: []core.MachineImage{
+						{
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "1.0.0",
+									},
+									Architectures: []string{"amd64"},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)
+
+			Expect(oldCloudProfile.Spec.MachineTypes[0].Architecture).To(BeNil())
+			Expect(oldCloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(BeNil())
 		})
 	})
 
