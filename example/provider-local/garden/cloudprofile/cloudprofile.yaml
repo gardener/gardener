@@ -35,3 +35,49 @@ spec:
       versions:
       - version: 1.0.0
         image: local-skaffold/gardener-extension-provider-local-node:v1.0.0
+
+---
+# If the feature CloudProfileCapabilities is enabled:
+
+#apiVersion: core.gardener.cloud/v1beta1
+#kind: CloudProfile
+#metadata:
+#  name: local
+#spec:
+#  capabilitiesDefinition:
+#    architecture: amd64,arm64
+#    foo: bar,baz,qux
+#  type: local
+#  regions:
+#    - name: local
+#  kubernetes:
+#    versions:
+#      - version: 1.32.0
+#      - version: 1.31.1
+#  machineTypes:
+#    - cpu: "1"
+#      gpu: "0"
+#      memory: 8Gi
+#      name: local
+#      capabilities:
+#        architecture: amd64
+#        foo: bar
+#  machineImages:
+#    - name: local
+#      versions:
+#        - version: 1.0.0
+#          cri:
+#            - name: containerd
+#          capabilitiesSet:
+#            - foo: baz,qux
+#              architecture: amd64
+#            - architecture: arm64
+#              foo: qux,bar
+#  providerConfig:
+#    apiVersion: local.provider.extensions.gardener.cloud/v1alpha1
+#    kind: CloudProfileConfig
+#    machineImages:
+#      - name: local
+#        versions:
+#          - version: 1.0.0
+#            image: local-skaffold/gardener-extension-provider-local-node:v1.0.0

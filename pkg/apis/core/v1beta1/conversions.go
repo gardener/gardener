@@ -315,3 +315,21 @@ func Convert_core_HelmControllerDeployment_To_v1beta1_HelmControllerDeployment(i
 	out.Chart = in.RawChart
 	return nil
 }
+
+func Convert_v1beta1_Capabilities_To_core_Capabilities(in *Capabilities, out *core.Capabilities, s conversion.Scope) error {
+	for capabilityName, capabilityValues := range *in {
+		(*out)[capabilityName] = core.CapabilityValues{
+			Values: append([]string(nil), capabilityValues.Values...),
+		}
+	}
+	return nil
+}
+
+func Convert_core_Capabilities_To_v1beta1_Capabilities(in *core.Capabilities, out *Capabilities, s conversion.Scope) error {
+	for capabilityName, capabilityValues := range *in {
+		(*out)[capabilityName] = CapabilityValues{
+			Values: append([]string(nil), capabilityValues.Values...),
+		}
+	}
+	return nil
+}

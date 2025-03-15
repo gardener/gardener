@@ -4,6 +4,11 @@
 
 package v1beta1
 
+import (
+	"encoding/json"
+	"strings"
+)
+
 const (
 	// GardenerSeedLeaseNamespace is the namespace in which Gardenlet will report Seeds'
 	// status using Lease resources for each Seed
@@ -51,4 +56,56 @@ type AccessRestrictionWithOptions struct {
 	// Options is a map of additional options for the access restriction.
 	// +optional
 	Options map[string]string `json:"options,omitempty" protobuf:"bytes,2,rep,name=options"`
+}
+
+// CapabilityValues is a list of values for a capability.
+// The type is wrapped to represent the values as a comma-separated string in JSON.
+type CapabilityValues struct {
+	Values []string `protobuf:"bytes,1,rep,name=values"`
+}
+
+// Capabilities of a machine type or machine image.
+type Capabilities map[string]CapabilityValues
+
+// CapabilitiesSetCapabilities is a wrapper for Capabilities.
+// This is a workaround as we cannot define a slice of maps in protobuf.
+// We define custom marshal/unmarshal functions to get around this limitation.
+// If there is a way to avoid this, we should do it.
+type CapabilitiesSetCapabilities struct {
+	Capabilities `protobuf:"bytes,1,rep,name=capabilities,casttype=Capabilities"`
+}
+
+// MarshalJSON marshals the CapabilitiesSetCapabilities object to JSON.
+func (c *CapabilitiesSetCapabilities) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.Capabilities)
+}
+
+// UnmarshalJSON unmarshals the CapabilitiesSetCapabilities object from JSON.
+func (c *CapabilitiesSetCapabilities) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &c.Capabilities)
+}
+
+// UnmarshalJSON unmarshals the CapabilityValues object from JSON.
+func (c *CapabilityValues) UnmarshalJSON(bytes []byte) error {
+	var str string
+	if err := json.Unmarshal(bytes, &str); err != nil {
+		return err
+	}
+	rawValues := strings.Split(str, ",")
+
+	for _, value := range rawValues {
+		c.Values = append(c.Values, strings.TrimSpace(value))
+	}
+
+	return nil
+}
+
+// MarshalJSON marshals the CapabilityValues object to JSON.
+func (c CapabilityValues) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + strings.Join(c.Values, ",") + `"`), nil
+}
+
+// HasEntries checks if any Capability is defined.
+func (capabilities Capabilities) HasEntries() bool {
+	return len(capabilities) != 0
 }

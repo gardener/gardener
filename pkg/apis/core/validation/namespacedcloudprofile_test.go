@@ -429,9 +429,6 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 					})), PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.machineTypes[3].storage"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal("spec.machineTypes[3].architecture"),
 					})),
 					))
 				})

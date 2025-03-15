@@ -834,6 +834,8 @@ const (
 	// DNSRecordExternalName is a constant for DNSRecord objects used for the external domain name.
 	DNSRecordExternalName = "external"
 
+	// ArchitectureKey is the key for the architecture in cloud profile capabilities.
+	ArchitectureKey = "architecture"
 	// ArchitectureAMD64 is a constant for the 'amd64' architecture.
 	ArchitectureAMD64 = "amd64"
 	// ArchitectureARM64 is a constant for the 'arm64' architecture.
