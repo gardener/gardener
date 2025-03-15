@@ -300,6 +300,13 @@ func SetDefaults_ManagedSeedSetControllerConfiguration(obj *ManagedSeedSetContro
 	}
 }
 
+// SetDefaults_ShootStateControllerConfiguration sets defaults for the ShootStateControllerConfiguration.
+func SetDefaults_ShootStateControllerConfiguration(obj *ShootStateControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+	}
+}
+
 // SetDefaults_ControllerManagerControllerConfiguration sets defaults for the ControllerManagerControllerConfiguration.
 func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManagerControllerConfiguration) {
 	if obj.Bastion == nil {
@@ -369,5 +376,8 @@ func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManager
 				Duration: 30 * time.Minute,
 			},
 		}
+	}
+	if obj.ShootState == nil {
+		obj.ShootState = &ShootStateControllerConfiguration{}
 	}
 }
