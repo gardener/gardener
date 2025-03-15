@@ -245,7 +245,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		}
 	}
 
-	renderedChart, err := i.generateIstioIngressGatewayChart()
+	renderedChart, err := i.generateIstioIngressGatewayChart(ctx)
 	if err != nil {
 		return err
 	}
