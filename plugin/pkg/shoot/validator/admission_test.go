@@ -2570,7 +2570,23 @@ var _ = Describe("validator", func() {
 					Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
 				})
 
-				It("should reject because the shoot node and the seed node networks intersect", func() {
+				It("should reject because the shoot node and the seed node networks intersect (HA control plane)", func() {
+					shoot.Spec.Networking.Nodes = &seedNodesCIDR
+					shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+				})
+
+				It("should pass when the shoot node and the seed node networks intersect (non-HA control plane)", func() {
 					shoot.Spec.Networking.Nodes = &seedNodesCIDR
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2582,10 +2598,26 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
+					Expect(err).To(Not(HaveOccurred()))
+				})
+
+				It("should reject because the shoot pod and the seed pod networks intersect (HA control plane)", func() {
+					shoot.Spec.Networking.Pods = &seedPodsCIDR
+					shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
 					Expect(err).To(BeForbiddenError())
 				})
 
-				It("should reject because the shoot pod and the seed pod networks intersect", func() {
+				It("should pass when the shoot pod and the seed pod networks intersect (non-HA control plane)", func() {
 					shoot.Spec.Networking.Pods = &seedPodsCIDR
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2597,10 +2629,26 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
+					Expect(err).To(Not(HaveOccurred()))
+				})
+
+				It("should reject because the shoot service and the seed service networks intersect (HA control plane)", func() {
+					shoot.Spec.Networking.Services = &seedServicesCIDR
+					shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
 					Expect(err).To(BeForbiddenError())
 				})
 
-				It("should reject because the shoot service and the seed service networks intersect", func() {
+				It("should pass when the shoot service and the seed service networks intersect (non-HA control plane)", func() {
 					shoot.Spec.Networking.Services = &seedServicesCIDR
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2612,10 +2660,26 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
+					Expect(err).To(Not(HaveOccurred()))
+				})
+
+				It("should reject because the shoot pod and the seed node networks intersect (HA control plane)", func() {
+					shoot.Spec.Networking.Pods = &seedNodesCIDR
+					shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
 					Expect(err).To(BeForbiddenError())
 				})
 
-				It("should reject because the shoot pod and the seed node networks intersect", func() {
+				It("should pass when the shoot pod and the seed node networks intersect (non-HA control plane)", func() {
 					shoot.Spec.Networking.Pods = &seedNodesCIDR
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2627,11 +2691,12 @@ var _ = Describe("validator", func() {
 					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
-					Expect(err).To(BeForbiddenError())
+					Expect(err).To(Not(HaveOccurred()))
 				})
 
-				It("should reject because the shoot service and the seed node networks intersect", func() {
+				It("should reject because the shoot service and the seed node networks intersect (HA control plane)", func() {
 					shoot.Spec.Networking.Services = &seedNodesCIDR
+					shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -2643,6 +2708,21 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
+				})
+
+				It("should pass when the shoot service and the seed node networks intersect (non-HA control plane)", func() {
+					shoot.Spec.Networking.Services = &seedNodesCIDR
+
+					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					err := admissionHandler.Admit(ctx, attrs, nil)
+
+					Expect(err).To(Not(HaveOccurred()))
 				})
 
 				It("should reject because the shoot service and the shoot node networks intersect", func() {
@@ -5640,19 +5720,23 @@ var _ = Describe("validator", func() {
 			})
 
 			DescribeTable("Validating networking status during migration",
-				func(networking *core.NetworkingStatus, matcher types.GomegaMatcher) {
+				func(networking *core.NetworkingStatus, ha bool, matcher types.GomegaMatcher) {
 					shoot.Status.Networking = networking
+					if ha {
+						shoot.Spec.ControlPlane = &core.ControlPlane{HighAvailability: &core.HighAvailability{FailureTolerance: core.FailureTolerance{Type: core.FailureToleranceTypeZone}}}
+					}
 
 					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "binding", admission.Update, &metav1.UpdateOptions{}, false, nil)
 					err := admissionHandler.Admit(ctx, attrs, nil)
 
 					Expect(err).To(matcher)
 				},
-				Entry("should allow nil networking status", nil, Not(HaveOccurred())),
-				Entry("should allow empty networking status", &core.NetworkingStatus{}, Not(HaveOccurred())),
-				Entry("should allow correct networking status", &core.NetworkingStatus{Nodes: []string{nodesCIDR}, Pods: []string{podsCIDR}, Services: []string{servicesCIDR}}, Not(HaveOccurred())),
-				Entry("should reject networking status if it is not disjoint with seed network", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, BeForbiddenError()),
-				Entry("should allow networking status with only egressCIDRs filled", &core.NetworkingStatus{EgressCIDRs: []string{"1.2.3.4/5"}}, Not(HaveOccurred())),
+				Entry("should allow nil networking status", nil, false, Not(HaveOccurred())),
+				Entry("should allow empty networking status", &core.NetworkingStatus{}, false, Not(HaveOccurred())),
+				Entry("should allow correct networking status", &core.NetworkingStatus{Nodes: []string{nodesCIDR}, Pods: []string{podsCIDR}, Services: []string{servicesCIDR}}, false, Not(HaveOccurred())),
+				Entry("should reject networking status if it is not disjoint with seed network (HA control plane)", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, true, BeForbiddenError()),
+				Entry("should pass networking status if it is not disjoint with seed network (non-HA control plane)", &core.NetworkingStatus{Nodes: []string{seedNodesCIDR}, Pods: []string{seedPodsCIDR}, Services: []string{seedServicesCIDR}}, false, Not(HaveOccurred())),
+				Entry("should allow networking status with only egressCIDRs filled", &core.NetworkingStatus{EgressCIDRs: []string{"1.2.3.4/5"}}, false, Not(HaveOccurred())),
 			)
 		})
 
