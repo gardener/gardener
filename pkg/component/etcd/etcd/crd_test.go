@@ -7,6 +7,8 @@ package etcd_test
 import (
 	"context"
 
+	"github.com/Masterminds/semver/v3"
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -17,8 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/etcd/etcd"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -26,7 +28,9 @@ var _ = Describe("CRD", func() {
 	var (
 		c           client.Client
 		ctx         = context.TODO()
-		crdDeployer component.Deployer
+		crdDeployer CRDAccess
+		err         error
+		k8sVersion  = semver.MustParse("1.30")
 	)
 
 	BeforeEach(func() {
@@ -36,7 +40,8 @@ var _ = Describe("CRD", func() {
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(c, mapper)
 
-		crdDeployer = NewCRD(c, applier)
+		crdDeployer, err = NewCRD(c, applier, k8sVersion)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	JustBeforeEach(func() {
@@ -45,11 +50,11 @@ var _ = Describe("CRD", func() {
 
 	DescribeTable("CRD is deployed",
 		func(crdName string) {
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			verifyDeployedCRD(ctx, crdName, c)
 		},
 
-		Entry("Etcd", "etcds.druid.gardener.cloud"),
-		Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
+		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
 	)
 
 	DescribeTable("should re-create CRD if it is deleted",
@@ -57,10 +62,58 @@ var _ = Describe("CRD", func() {
 			Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			verifyDeployedCRD(ctx, crdName, c)
 		},
 
-		Entry("Etcd", "etcds.druid.gardener.cloud"),
-		Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
+		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
 	)
+
+	Describe("CRD is destroyed", func() {
+		JustBeforeEach(func() {
+			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+		})
+
+		DescribeTable("CRD is deleted",
+			func(crdName string) {
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+			},
+
+			Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+			Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+		)
+	})
+
+	DescribeTable("Get CRD",
+		func(crdName string) {
+			crd, err := crdDeployer.GetCRD(crdName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crd).NotTo(BeNil())
+		},
+
+		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+	)
+
+	DescribeTable("Get CRD YAML",
+		func(crdName string) {
+			crd, err := crdDeployer.GetCRDYaml(crdName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(crd).NotTo(BeNil())
+		},
+
+		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
+		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+	)
+
 })
+
+func verifyDeployedCRD(ctx context.Context, crdName string, c client.Client) {
+	crd := &apiextensionsv1.CustomResourceDefinition{}
+	err := c.Get(ctx, client.ObjectKey{Name: crdName}, crd)
+	Expect(err).NotTo(HaveOccurred())
+	deletionProtectedVal, ok := crd.GetLabels()[gardenerutils.DeletionProtected]
+	Expect(ok).To(BeTrue())
+	Expect(deletionProtectedVal).To(Equal("true"))
+}

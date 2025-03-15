@@ -11,7 +11,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/coreos/go-systemd/v22/unit"
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -54,7 +54,7 @@ type Ensurer interface {
 	EnsureMachineControllerManagerVPA(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *vpaautoscalingv1.VerticalPodAutoscaler) error
 	// EnsureETCD ensures that the etcds conform to the respective provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureETCD(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *druidv1alpha1.Etcd) error
+	EnsureETCD(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *druidcorev1alpha1.Etcd) error
 	// EnsureVPNSeedServerDeployment ensures that the vpn-seed-server deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureVPNSeedServerDeployment(ctx context.Context, gctx extensionscontextwebhook.GardenContext, new, old *appsv1.Deployment) error
@@ -169,15 +169,15 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureMachineControllerManagerVPA(ctx, gctx, x, oldVPA)
 		}
-	case *druidv1alpha1.Etcd:
+	case *druidcorev1alpha1.Etcd:
 		switch x.Name {
 		case v1beta1constants.ETCDMain, v1beta1constants.ETCDEvents:
-			var oldEtcd *druidv1alpha1.Etcd
+			var oldEtcd *druidcorev1alpha1.Etcd
 			if old != nil {
 				var ok bool
-				oldEtcd, ok = old.(*druidv1alpha1.Etcd)
+				oldEtcd, ok = old.(*druidcorev1alpha1.Etcd)
 				if !ok {
-					return errors.New("could not cast old object to druidv1alpha1.Etcd")
+					return errors.New("could not cast old object to druidcorev1alpha1.Etcd")
 				}
 			}
 
