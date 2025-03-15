@@ -1241,9 +1241,13 @@ type Worker struct {
 	Minimum int32
 	// MaxSurge is maximum number of machines that are created during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 0 in case of an in-place update.
+	// Defaults to 1 in case of a rolling update.
 	MaxSurge *intstr.IntOrString
 	// MaxUnavailable is the maximum number of machines that can be unavailable during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 1 in case of an in-place update.
+	// Defaults to 0 in case of a rolling update.
 	MaxUnavailable *intstr.IntOrString
 	// ProviderConfig is the provider-specific configuration for this worker pool.
 	ProviderConfig *runtime.RawExtension
@@ -1319,6 +1323,11 @@ type MachineControllerManagerSettings struct {
 	MaxEvictRetries *int32
 	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
 	NodeConditions []string
+	// MachineInPlaceUpdateTimeout is the timeout after which an in-place update is declared as failed.
+	MachineInPlaceUpdateTimeout *metav1.Duration
+	// DisableHealthTimeout if set to true, health timeout will be ignored, leading to machine never being declared as failed.
+	// This is intended to be used only for in-place updates.
+	DisableHealthTimeout *bool
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

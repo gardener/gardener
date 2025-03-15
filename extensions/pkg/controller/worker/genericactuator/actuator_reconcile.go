@@ -243,15 +243,7 @@ func deployMachineDeployments(
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
 				Replicas:        replicas,
 				MinReadySeconds: 500,
-				Strategy: machinev1alpha1.MachineDeploymentStrategy{
-					Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
-					RollingUpdate: &machinev1alpha1.RollingUpdateMachineDeployment{
-						UpdateConfiguration: machinev1alpha1.UpdateConfiguration{
-							MaxSurge:       &deployment.MaxSurge,
-							MaxUnavailable: &deployment.MaxUnavailable,
-						},
-					},
-				},
+				Strategy:        deployment.Strategy,
 				Selector: &metav1.LabelSelector{
 					MatchLabels: labels,
 				},
@@ -501,6 +493,12 @@ func ReadMachineConfiguration(pool extensionsv1alpha1.WorkerPool) *machinev1alph
 		if len(poolSettings.NodeConditions) > 0 {
 			nodeConditions := strings.Join(poolSettings.NodeConditions, ",")
 			machineConfiguration.NodeConditions = &nodeConditions
+		}
+		if poolSettings.MachineInPlaceUpdateTimeout != nil {
+			machineConfiguration.MachineInPlaceUpdateTimeout = poolSettings.MachineInPlaceUpdateTimeout
+		}
+		if poolSettings.DisableHealthTimeout != nil {
+			machineConfiguration.DisableHealthTimeout = poolSettings.DisableHealthTimeout
 		}
 	}
 	return machineConfiguration

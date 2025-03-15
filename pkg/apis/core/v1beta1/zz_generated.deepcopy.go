@@ -3042,6 +3042,16 @@ func (in *MachineControllerManagerSettings) DeepCopyInto(out *MachineControllerM
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.MachineInPlaceUpdateTimeout != nil {
+		in, out := &in.MachineInPlaceUpdateTimeout, &out.MachineInPlaceUpdateTimeout
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.DisableHealthTimeout != nil {
+		in, out := &in.DisableHealthTimeout, &out.DisableHealthTimeout
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

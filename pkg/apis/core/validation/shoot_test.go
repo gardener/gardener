@@ -5538,6 +5538,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 					newShoot := prepareShootForUpdate(shoot)
 
 					newShoot.Spec.Provider.Workers[0].UpdateStrategy = ptr.To(core.ManualInPlaceUpdate)
+					newShoot.Spec.Provider.Workers[0].MaxSurge = ptr.To(intstr.FromInt32(0))
+					newShoot.Spec.Provider.Workers[0].MaxUnavailable = ptr.To(intstr.FromInt32(1))
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
@@ -5979,7 +5981,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		DescribeTable("reject when maxUnavailable and maxSurge are invalid",
-			func(maxUnavailable, maxSurge intstr.IntOrString, expectType field.ErrorType) {
+			func(updateStrategy core.MachineUpdateStrategy, maxUnavailable, maxSurge intstr.IntOrString, expectType field.ErrorType) {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				worker := core.Worker{
 					Name: "worker-name",
 					Machine: core.Machine{
@@ -5992,6 +5995,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
+					UpdateStrategy: &updateStrategy,
 				}
 				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, nil, false)
 
@@ -6001,17 +6005,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 			},
 
 			// double zero values (percent or int)
-			Entry("two zero integers", intstr.FromInt32(0), intstr.FromInt32(0), field.ErrorTypeInvalid),
-			Entry("zero int and zero percent", intstr.FromInt32(0), intstr.FromString("0%"), field.ErrorTypeInvalid),
-			Entry("zero percent and zero int", intstr.FromString("0%"), intstr.FromInt32(0), field.ErrorTypeInvalid),
-			Entry("two zero percents", intstr.FromString("0%"), intstr.FromString("0%"), field.ErrorTypeInvalid),
+			Entry("two zero integers", core.AutoRollingUpdate, intstr.FromInt32(0), intstr.FromInt32(0), field.ErrorTypeInvalid),
+			Entry("zero int and zero percent", core.AutoRollingUpdate, intstr.FromInt32(0), intstr.FromString("0%"), field.ErrorTypeInvalid),
+			Entry("zero percent and zero int", core.AutoRollingUpdate, intstr.FromString("0%"), intstr.FromInt32(0), field.ErrorTypeInvalid),
+			Entry("two zero percents", core.AutoRollingUpdate, intstr.FromString("0%"), intstr.FromString("0%"), field.ErrorTypeInvalid),
 
 			// greater than 100
-			Entry("maxUnavailable greater than 100 percent", intstr.FromString("101%"), intstr.FromString("100%"), field.ErrorTypeInvalid),
+			Entry("maxUnavailable greater than 100 percent", core.AutoRollingUpdate, intstr.FromString("101%"), intstr.FromString("100%"), field.ErrorTypeInvalid),
 
 			// below zero tests
-			Entry("values are not below zero", intstr.FromInt32(-1), intstr.FromInt32(0), field.ErrorTypeInvalid),
-			Entry("percentage is not less than zero", intstr.FromString("-90%"), intstr.FromString("90%"), field.ErrorTypeInvalid),
+			Entry("values are not below zero", core.AutoRollingUpdate, intstr.FromInt32(-1), intstr.FromInt32(0), field.ErrorTypeInvalid),
+			Entry("percentage is not less than zero", core.AutoRollingUpdate, intstr.FromString("-90%"), intstr.FromString("90%"), field.ErrorTypeInvalid),
+
+			// manual in-place update tests
+			Entry("maxSurge must be 0 in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, intstr.FromInt32(1), intstr.FromInt32(1), field.ErrorTypeInvalid),
+			Entry("maxUnavailable should not be 0 in case of ManualInplaceUpdate update strategy", core.ManualInPlaceUpdate, intstr.FromInt32(0), intstr.FromInt32(0), field.ErrorTypeInvalid),
 		)
 
 		DescribeTable("reject when labels are invalid",
@@ -6610,6 +6618,73 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail": Equal("can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."),
 					})),
 				))
+			})
+		})
+
+		Describe("machine controller manager settings validation", func() {
+			var (
+				worker  core.Worker
+				fldPath *field.Path
+			)
+
+			BeforeEach(func() {
+				worker = core.Worker{
+					Name: "worker-1",
+					Machine: core.Machine{
+						Type: "xlarge",
+					},
+				}
+
+				fldPath = field.NewPath("workers").Index(0)
+			})
+
+			It("should succeed if MachineControllerManagerSettings is nil", func() {
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should allow setting DisableHealthTimeout to false for update strategy AutoRollingUpdate", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					DisableHealthTimeout: ptr.To(false),
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should forbid setting DisableHealthTimeout to true for update strategy AutoRollingUpdate", func() {
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					DisableHealthTimeout: ptr.To(true),
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("workers[0].machineControllerManagerSettings.disableHealthTimeout"),
+					"Detail": Equal("can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"),
+				}))))
+			})
+
+			It("should allow setting DisableHealthTimeout to false for update strategy AutoInPlaceUpdate", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					DisableHealthTimeout: ptr.To(false),
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should allow setting DisableHealthTimeout to true for update strategy AutoInPlaceUpdate", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+				worker.MachineControllerManagerSettings = &core.MachineControllerManagerSettings{
+					DisableHealthTimeout: ptr.To(true),
+				}
+
+				errList := ValidateWorker(worker, core.Kubernetes{Version: ""}, fldPath, false)
+				Expect(errList).To(BeEmpty())
 			})
 		})
 	})

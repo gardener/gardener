@@ -4621,6 +4621,8 @@ func autoConvert_v1beta1_MachineControllerManagerSettings_To_core_MachineControl
 	out.MachineCreationTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineCreationTimeout))
 	out.MaxEvictRetries = (*int32)(unsafe.Pointer(in.MaxEvictRetries))
 	out.NodeConditions = *(*[]string)(unsafe.Pointer(&in.NodeConditions))
+	out.MachineInPlaceUpdateTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineInPlaceUpdateTimeout))
+	out.DisableHealthTimeout = (*bool)(unsafe.Pointer(in.DisableHealthTimeout))
 	return nil
 }
 
@@ -4635,6 +4637,8 @@ func autoConvert_core_MachineControllerManagerSettings_To_v1beta1_MachineControl
 	out.MachineCreationTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineCreationTimeout))
 	out.MaxEvictRetries = (*int32)(unsafe.Pointer(in.MaxEvictRetries))
 	out.NodeConditions = *(*[]string)(unsafe.Pointer(&in.NodeConditions))
+	out.MachineInPlaceUpdateTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineInPlaceUpdateTimeout))
+	out.DisableHealthTimeout = (*bool)(unsafe.Pointer(in.DisableHealthTimeout))
 	return nil
 }
 

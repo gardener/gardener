@@ -254,6 +254,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			Architecture:                     workerPool.Machine.Architecture,
 			ClusterAutoscaler:                autoscalerOptions,
 			Priority:                         workerPool.Priority,
+			UpdateStrategy:                   workerPool.UpdateStrategy,
 		})
 	}
 

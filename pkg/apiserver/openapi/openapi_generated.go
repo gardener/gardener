@@ -5484,6 +5484,19 @@ func schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref common.Re
 							},
 						},
 					},
+					"inPlaceUpdateTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"disableHealthTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed. This is intended to be used only for in-place updates.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -10078,13 +10091,13 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"maxSurge": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxSurge is maximum number of machines that are created during an update. This value is divided by the number of configured zones for a fair distribution.",
+							Description: "MaxSurge is maximum number of machines that are created during an update. This value is divided by the number of configured zones for a fair distribution. Defaults to 0 in case of an in-place update. Defaults to 1 in case of a rolling update.",
 							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
 						},
 					},
 					"maxUnavailable": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxUnavailable is the maximum number of machines that can be unavailable during an update. This value is divided by the number of configured zones for a fair distribution.",
+							Description: "MaxUnavailable is the maximum number of machines that can be unavailable during an update. This value is divided by the number of configured zones for a fair distribution. Defaults to 1 in case of an in-place update. Defaults to 0 in case of a rolling update.",
 							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
 						},
 					},

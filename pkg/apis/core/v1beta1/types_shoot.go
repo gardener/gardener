@@ -1612,10 +1612,14 @@ type Worker struct {
 	Minimum int32 `json:"minimum" protobuf:"varint,9,opt,name=minimum"`
 	// MaxSurge is maximum number of machines that are created during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 0 in case of an in-place update.
+	// Defaults to 1 in case of a rolling update.
 	// +optional
 	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty" protobuf:"bytes,10,opt,name=maxSurge"`
 	// MaxUnavailable is the maximum number of machines that can be unavailable during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 1 in case of an in-place update.
+	// Defaults to 0 in case of a rolling update.
 	// +optional
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty" protobuf:"bytes,11,opt,name=maxUnavailable"`
 	// ProviderConfig is the provider-specific configuration for this worker pool.
@@ -1715,6 +1719,13 @@ type MachineControllerManagerSettings struct {
 	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
 	// +optional
 	NodeConditions []string `json:"nodeConditions,omitempty" protobuf:"bytes,5,name=nodeConditions"`
+	// MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.
+	// +optional
+	MachineInPlaceUpdateTimeout *metav1.Duration `json:"inPlaceUpdateTimeout,omitempty" protobuf:"bytes,6,opt,name=inPlaceUpdateTimeout"`
+	// DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+	// This is intended to be used only for in-place updates.
+	// +optional
+	DisableHealthTimeout *bool `json:"disableHealthTimeout,omitempty" protobuf:"varint,7,opt,name=disableHealthTimeout"`
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

@@ -8018,6 +8018,33 @@ int32
 <p>NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>inPlaceUpdateTimeout</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>disableHealthTimeout</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+This is intended to be used only for in-place updates.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MachineImage">MachineImage
@@ -14130,7 +14157,9 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 <td>
 <em>(Optional)</em>
 <p>MaxSurge is maximum number of machines that are created during an update.
-This value is divided by the number of configured zones for a fair distribution.</p>
+This value is divided by the number of configured zones for a fair distribution.
+Defaults to 0 in case of an in-place update.
+Defaults to 1 in case of a rolling update.</p>
 </td>
 </tr>
 <tr>
@@ -14145,7 +14174,9 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 <td>
 <em>(Optional)</em>
 <p>MaxUnavailable is the maximum number of machines that can be unavailable during an update.
-This value is divided by the number of configured zones for a fair distribution.</p>
+This value is divided by the number of configured zones for a fair distribution.
+Defaults to 1 in case of an in-place update.
+Defaults to 0 in case of a rolling update.</p>
 </td>
 </tr>
 <tr>
