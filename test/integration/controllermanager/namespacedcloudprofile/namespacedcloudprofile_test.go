@@ -5,6 +5,7 @@
 package namespacedcloudprofile_test
 
 import (
+	"context"
 	"sort"
 	"strings"
 	"time"
@@ -206,21 +207,14 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		JustBeforeEach(func() {
 			By("Create parent CloudProfile")
 			Expect(testClient.Create(ctx, parentCloudProfile)).To(Succeed())
-			log.Info("Created parent CloudProfile for test", "parentCloudProfile", client.ObjectKeyFromObject(parentCloudProfile))
 
 			By("Create NamespacedCloudProfile")
 			namespacedCloudProfile.Spec.Parent = gardencorev1beta1.CloudProfileReference{
 				Kind: "CloudProfile",
 				Name: parentCloudProfile.Name,
 			}
-			Eventually(func() error {
-				return testClient.Create(ctx, namespacedCloudProfile)
-			}).Should(Succeed())
-			Eventually(func(g Gomega) {
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
-			}).Should(Succeed())
-			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
+			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
 
 			if shoot != nil {
 				By("Create Shoot")
@@ -258,10 +252,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		Context("with shoots referencing the NamespacedCloudProfile", func() {
 			JustBeforeEach(func() {
 				By("Ensure finalizer got added")
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-					g.Expect(namespacedCloudProfile.Finalizers).To(ConsistOf("gardener"))
-				}).Should(Succeed())
+				Expect(namespacedCloudProfile.Finalizers).To(ConsistOf("gardener"))
 
 				By("Delete NamespacedCloudProfile")
 				Expect(testClient.Delete(ctx, namespacedCloudProfile)).To(Succeed())
@@ -292,10 +283,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 
 			It("should add the finalizer and release it on deletion", func() {
 				By("Ensure finalizer got added")
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-					g.Expect(namespacedCloudProfile.Finalizers).To(ConsistOf("gardener"))
-				}).Should(Succeed())
+				Expect(namespacedCloudProfile.Finalizers).To(ConsistOf("gardener"))
 
 				By("Delete NamespacedCloudProfile")
 				Expect(testClient.Delete(ctx, namespacedCloudProfile)).To(Succeed())
@@ -312,22 +300,14 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		JustBeforeEach(func() {
 			By("Create parent CloudProfile")
 			Expect(testClient.Create(ctx, parentCloudProfile)).To(Succeed())
-			log.Info("Created parent CloudProfile for test", "parentCloudProfile", client.ObjectKeyFromObject(parentCloudProfile))
 
 			By("Create NamespacedCloudProfile")
 			namespacedCloudProfile.Spec.Parent = gardencorev1beta1.CloudProfileReference{
 				Kind: "CloudProfile",
 				Name: parentCloudProfile.Name,
 			}
-			Eventually(func() error {
-				return testClient.Create(ctx, namespacedCloudProfile)
-			}).Should(Succeed())
-			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
-
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
-			}).Should(Succeed())
+			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
 
 			DeferCleanup(func() {
 				By("Delete NamespacedCloudProfile")
@@ -339,59 +319,147 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		})
 
 		It("should merge the NamespacedCloudProfile correctly", func() {
-			Eventually(func(g Gomega) {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(withSortedArrays(namespacedCloudProfile.Status.CloudProfileSpec)).To(Equal(*mergedCloudProfileSpec))
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
-			}).Should(Succeed())
+			Expect(withSortedArrays(namespacedCloudProfile.Status.CloudProfileSpec)).To(Equal(*mergedCloudProfileSpec))
 		})
 
 		It("should update the NamespacedCloudProfile status on NamespacedCloudProfile spec update", func() {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+			namespacedCloudProfilePatch := client.StrategicMergeFrom(namespacedCloudProfile.DeepCopy())
 			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{}
-			namespacedCloudProfile.ResourceVersion = ""
-
-			err := testClient.Update(ctx, namespacedCloudProfile)
-			Expect(err).NotTo(HaveOccurred())
-
-			expectedKubernetesVersions := gardencorev1beta1.KubernetesSettings{
-				Versions: []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.2.3"},
-					{Version: "1.3.0"},
-				},
-			}
-
-			Eventually(func(g Gomega) {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElements(expectedKubernetesVersions.Versions))
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+			Eventually(func() error {
+				return testClient.Patch(ctx, namespacedCloudProfile, namespacedCloudProfilePatch)
 			}).Should(Succeed())
+			waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
+
+			Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElements(
+				gardencorev1beta1.ExpirableVersion{Version: "1.2.3"},
+				gardencorev1beta1.ExpirableVersion{Version: "1.3.0"},
+			))
 		})
 
 		It("should update the NamespacedCloudProfile status on CloudProfile spec update", func() {
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(parentCloudProfile), parentCloudProfile)).To(Succeed())
+			cloudProfilePatch := client.StrategicMergeFrom(parentCloudProfile.DeepCopy())
 			parentCloudProfile.Spec.Kubernetes.Versions = append(parentCloudProfile.Spec.Kubernetes.Versions, gardencorev1beta1.ExpirableVersion{Version: "1.4.0"})
-
-			err := testClient.Update(ctx, parentCloudProfile)
-			Expect(err).NotTo(HaveOccurred())
-
-			expectedKubernetesVersions := gardencorev1beta1.KubernetesSettings{
-				Versions: []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.2.3", ExpirationDate: &expirationDateFuture},
-					{Version: "1.3.0"},
-					{Version: "1.4.0"},
-				},
-			}
+			Eventually(func() error {
+				return testClient.Patch(ctx, parentCloudProfile, cloudProfilePatch)
+			}).Should(Succeed())
 
 			Eventually(func(g Gomega) {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElements(expectedKubernetesVersions.Versions))
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).NotTo(BeEquivalentTo(0))
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElements(
+					gardencorev1beta1.ExpirableVersion{Version: "1.2.3", ExpirationDate: &expirationDateFuture},
+					gardencorev1beta1.ExpirableVersion{Version: "1.3.0"},
+					gardencorev1beta1.ExpirableVersion{Version: "1.4.0"},
+				))
 			}).Should(Succeed())
+		})
+
+		Context("limits.maxNodesTotal", func() {
+			It("should update the NamespacedCloudProfile status if the parent CloudProfile sets a limit", func() {
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits).To(BeNil())
+
+				By("Set limit in parent cloud profile")
+				cloudProfilePatch := client.StrategicMergeFrom(parentCloudProfile.DeepCopy())
+				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(10)),
+				}
+				Eventually(func() error {
+					return testClient.Patch(ctx, parentCloudProfile, cloudProfilePatch)
+				}).Should(Succeed())
+
+				By("Wait for NamespacedCloudProfile status to be updated by the controller")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits).To(Not(BeNil()))
+					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+				}).Should(Succeed())
+			})
+
+			It("should update the NamespacedCloudProfile status with a decreased limit", func() {
+				By("Set limit in parent cloud profile")
+				cloudProfilePatch := client.StrategicMergeFrom(parentCloudProfile.DeepCopy())
+				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(10)),
+				}
+				Eventually(func() error {
+					return testClient.Patch(ctx, parentCloudProfile, cloudProfilePatch)
+				}).Should(Succeed())
+
+				By("Patch the NamespacedCloudProfile with a decreased limit")
+				namespacedCloudProfilePatch := client.StrategicMergeFrom(namespacedCloudProfile.DeepCopy())
+				namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(5)),
+				}
+				Eventually(func() error {
+					return testClient.Patch(ctx, namespacedCloudProfile, namespacedCloudProfilePatch)
+				}).Should(Succeed())
+				waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
+
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(5))))
+			})
+
+			It("should not update the NamespacedCloudProfile status with an increased limit", func() {
+				By("Set limit in parent cloud profile")
+				cloudProfilePatch := client.MergeFrom(parentCloudProfile.DeepCopy())
+				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(10)),
+				}
+				Eventually(func() error {
+					return testClient.Patch(ctx, parentCloudProfile, cloudProfilePatch)
+				}).Should(Succeed())
+
+				By("Patch the NamespacedCloudProfile with an increased limit")
+				namespacedCloudProfilePatch := client.StrategicMergeFrom(namespacedCloudProfile.DeepCopy())
+				namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(24)),
+				}
+				Eventually(func() error {
+					return testClient.Patch(ctx, namespacedCloudProfile, namespacedCloudProfilePatch)
+				}).Should(MatchError(ContainSubstring("spec.limits.maxNodesTotal: Invalid value: 24: overriding value must be less than or equal to value set in parent CloudProfile")))
+			})
+
+			It("should update the NamespacedCloudProfile status if a limit from the parent CloudProfile is increased again", func() {
+				By("Set a limit in the NamespacedCloudProfile")
+				namespacedCloudProfilePatch := client.StrategicMergeFrom(namespacedCloudProfile.DeepCopy())
+				namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(10)),
+				}
+				Eventually(func() error {
+					return testClient.Patch(ctx, namespacedCloudProfile, namespacedCloudProfilePatch)
+				}).Should(Succeed())
+				waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
+
+				Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+
+				By("Set limit in parent cloud profile")
+				cloudProfilePatch := client.MergeFrom(parentCloudProfile.DeepCopy())
+				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(9)),
+				}
+				Eventually(func() error {
+					return testClient.Patch(ctx, parentCloudProfile, cloudProfilePatch)
+				}).Should(Succeed())
+
+				By("Wait for NamespacedCloudProfile status to be updated by the controller")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(9))))
+				}).Should(Succeed())
+
+				By("Increase the limit in the parent cloud profile")
+				cloudProfilePatch = client.StrategicMergeFrom(parentCloudProfile.DeepCopy())
+				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(100)),
+				}
+				Eventually(func() error {
+					return testClient.Patch(ctx, parentCloudProfile, cloudProfilePatch)
+				}).Should(Succeed())
+
+				By("Wait for NamespacedCloudProfile status to be updated by the controller")
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+				}).Should(Succeed())
+			})
 		})
 	})
 
@@ -430,21 +498,13 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				return testClient.Create(ctx, namespacedCloudProfile)
 			}).Should(Succeed())
 			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
+			waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
 
-			expectedKubernetesVersions := gardencorev1beta1.KubernetesSettings{
-				Versions: []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.2.3"},
-					{Version: "1.3.0"},
-				},
-			}
-
-			Eventually(func(g Gomega) {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(BeEmpty())
-				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElements(expectedKubernetesVersions.Versions))
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
-			}).Should(Succeed())
+			Expect(namespacedCloudProfile.Spec.Kubernetes.Versions).To(BeEmpty())
+			Expect(namespacedCloudProfile.Status.CloudProfileSpec.Kubernetes.Versions).To(ContainElements(
+				gardencorev1beta1.ExpirableVersion{Version: "1.2.3"},
+				gardencorev1beta1.ExpirableVersion{Version: "1.3.0"},
+			))
 		})
 
 		It("should allow creation with an already expired MachineImage version but remove it from persisted spec and not render it into the status", func() {
@@ -460,7 +520,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			Eventually(func() error {
 				return testClient.Create(ctx, namespacedCloudProfile)
 			}).Should(Succeed())
-			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
+			waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
 
 			expectedMachineImages := []gardencorev1beta1.MachineImage{
 				{
@@ -471,25 +531,15 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 				},
 			}
-
-			Eventually(func(g Gomega) {
-				err := testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(namespacedCloudProfile.Spec.MachineImages).To(BeEmpty())
-				g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(Equal(expectedMachineImages))
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
-			}).Should(Succeed())
+			Expect(namespacedCloudProfile.Spec.MachineImages).To(BeEmpty())
+			Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(Equal(expectedMachineImages))
 		})
 
 		It("should not allow update with an already expired Kubernetes version", func() {
 			Eventually(func() error {
 				return testClient.Create(ctx, namespacedCloudProfile)
 			}).Should(Succeed())
-			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
-			Eventually(func(g Gomega) {
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
-			}).Should(Succeed())
+			waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
 
 			namespacedCloudProfile.Spec.Kubernetes.Versions = []gardencorev1beta1.ExpirableVersion{
 				{Version: "1.2.3", ExpirationDate: &expirationDatePast},
@@ -503,11 +553,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 			Eventually(func() error {
 				return testClient.Create(ctx, namespacedCloudProfile)
 			}).Should(Succeed())
-			log.Info("Created NamespacedCloudProfile for test", "namespacedCloudProfile", client.ObjectKeyFromObject(namespacedCloudProfile))
-			Eventually(func(g Gomega) {
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-				g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
-			}).Should(Succeed())
+			waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
 
 			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
@@ -523,6 +569,15 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 		})
 	})
 })
+
+func waitForNamespacedCloudProfileToBeReconciled(ctx context.Context, namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+		g.Expect(namespacedCloudProfile.Status.ObservedGeneration).To(Equal(namespacedCloudProfile.Generation))
+	}).Should(Succeed())
+}
 
 func withSortedArrays(nscpfl gardencorev1beta1.CloudProfileSpec) gardencorev1beta1.CloudProfileSpec {
 	sort.Slice(nscpfl.MachineTypes, func(i, j int) bool {

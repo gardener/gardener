@@ -498,7 +498,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			// getting Machine image versions that have been removed from or added to the CloudProfile
 			removedMachineImages, removedMachineImageVersions, addedMachineImages, addedMachineImageVersions := helper.GetMachineImageDiff(oldCloudProfile.Spec.MachineImages, cloudProfile.Spec.MachineImages)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 {
+			wasLimitAdded := !apiequality.Semantic.DeepEqual(cloudProfile.Spec.Limits, oldCloudProfile.Spec.Limits)
+
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 || wasLimitAdded {
 				shootList, err1 := r.shootLister.List(labels.Everything())
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
@@ -585,6 +587,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 								channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from CloudProfile %q - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, *worker.Machine.Image.Version, cloudProfile.Name, shoot.Namespace, shoot.Name, worker.Name)
 							}
 						}
+						if wasLimitAdded {
+							validateShootWorkerLimits(channel, shoot, cloudProfile.Spec.Limits)
+						}
 					}(s)
 				}
 
@@ -617,16 +622,19 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			removedKubernetesVersions := getRemovedKubernetesVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 			removedMachineImageVersions := getRemovedMachineImageVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 {
+			wasLimitAdded := !apiequality.Semantic.DeepEqual(namespacedCloudProfile.Spec.Limits, oldNamespacedCloudProfile.Spec.Limits)
+
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || wasLimitAdded {
 				shootList, err1 := r.shootLister.Shoots(namespacedCloudProfile.Namespace).List(labels.Everything())
 				if err1 != nil {
-					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
+					return apierrors.NewInternalError(fmt.Errorf("could not list Shoots to validate NamespacedCloudProfile changes: %v", err1))
 				}
 
 				parentCloudProfile, err1 := r.cloudProfileLister.Get(namespacedCloudProfile.Spec.Parent.Name)
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not get parent CloudProfile: %v", err1))
 				}
+
 				parentCloudProfileKubernetesVersions := gardenerutils.CreateMapFromSlice(parentCloudProfile.Spec.Kubernetes.Versions, func(v gardencorev1beta1.ExpirableVersion) string { return v.Version })
 				parentCloudProfileMachineImageVersions := make(map[string]map[string]gardencorev1beta1.MachineImageVersion)
 				for _, image := range parentCloudProfile.Spec.MachineImages {
@@ -653,6 +661,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 						defer wg.Done()
 						validateShootForRemovedKubernetesVersions(channel, shoot, removedKubernetesVersions, parentCloudProfileKubernetesVersions, namespacedCloudProfile)
 						validateShootWorkersForRemovedMachineImageVersions(channel, shoot, removedMachineImageVersions, parentCloudProfileMachineImageVersions, namespacedCloudProfile)
+						if wasLimitAdded {
+							validateShootWorkerLimits(channel, shoot, namespacedCloudProfile.Spec.Limits)
+						}
 					}(s)
 				}
 
@@ -1275,4 +1286,26 @@ func (r *ReferenceManager) lookupResource(ctx context.Context, resource schema.G
 		return err
 	}
 	return nil
+}
+
+func validateShootWorkerLimits(channel chan error, shoot *gardencorev1beta1.Shoot, limits *core.Limits) {
+	if limits == nil || limits.MaxNodesTotal == nil {
+		return
+	}
+
+	var (
+		maxNodesTotal = *limits.MaxNodesTotal
+		totalMinimum  int32
+	)
+
+	for _, worker := range shoot.Spec.Provider.Workers {
+		totalMinimum += worker.Minimum
+		if worker.Maximum > maxNodesTotal {
+			channel <- fmt.Errorf("the maximum node count of worker pool %q in shoot \"%s/%s\" exceeds the limit of %d total nodes configured in the cloud profile", worker.Name, shoot.Namespace, shoot.Name, maxNodesTotal)
+		}
+	}
+
+	if totalMinimum > maxNodesTotal {
+		channel <- fmt.Errorf("the total minimum node count of all worker pools of shoot \"%s/%s\" must not exceed the limit of %d total nodes configured in the cloud profile", shoot.Namespace, shoot.Name, maxNodesTotal)
+	}
 }
