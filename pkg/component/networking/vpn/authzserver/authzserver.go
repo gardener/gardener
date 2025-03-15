@@ -116,6 +116,9 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 						},
 					},
 				},

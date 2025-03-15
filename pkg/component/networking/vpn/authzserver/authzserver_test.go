@@ -127,6 +127,9 @@ var _ = Describe("ExtAuthzServer", func() {
 										corev1.ResourceMemory: resource.MustParse("100Mi"),
 									},
 								},
+								SecurityContext: &corev1.SecurityContext{
+									AllowPrivilegeEscalation: ptr.To(false),
+								},
 							},
 						},
 					},

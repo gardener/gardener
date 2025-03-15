@@ -900,6 +900,9 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 							},
 							InitialDelaySeconds: 10,
 						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
+						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      volumeNameAPIServerAccess,

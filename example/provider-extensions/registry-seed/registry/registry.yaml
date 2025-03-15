@@ -47,6 +47,8 @@ spec:
         ports:
         - name: registry
           containerPort: 5000
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: registry-volume
           mountPath: /var/lib/registry
