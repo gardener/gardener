@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -178,12 +178,12 @@ var _ = Describe("Etcd", func() {
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{druidcorev1alpha1.GroupName},
+						APIGroups: []string{druidv1alpha1.GroupName},
 						Resources: []string{"etcds", "etcdcopybackupstasks"},
 						Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 					},
 					{
-						APIGroups: []string{druidcorev1alpha1.GroupName},
+						APIGroups: []string{druidv1alpha1.GroupName},
 						Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers"},
 						Verbs:     []string{"get", "update", "patch", "create"},
 					},
@@ -271,103 +271,100 @@ var _ = Describe("Etcd", func() {
 				Immutable: ptr.To(true),
 			}
 
-			deploymentWithoutImageVectorOverwriteFor = func() *appsv1.Deployment {
-				deployment := &appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "etcd-druid",
-						Namespace: namespace,
-						Labels: map[string]string{
+			deploymentWithoutImageVectorOverwriteFor = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "etcd-druid",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"gardener.cloud/role": "etcd-druid",
+						"high-availability-config.resources.gardener.cloud/type": "controller",
+					},
+					Annotations: map[string]string{
+						references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas:             ptr.To[int32](1),
+					RevisionHistoryLimit: ptr.To[int32](1),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
 							"gardener.cloud/role": "etcd-druid",
-							"high-availability-config.resources.gardener.cloud/type": "controller",
-						},
-						Annotations: map[string]string{
-							references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
 						},
 					},
-					Spec: appsv1.DeploymentSpec{
-						Replicas:             ptr.To[int32](1),
-						RevisionHistoryLimit: ptr.To[int32](1),
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"gardener.cloud/role": "etcd-druid",
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"gardener.cloud/role":                            "etcd-druid",
+								"networking.gardener.cloud/to-dns":               "allowed",
+								"networking.gardener.cloud/to-runtime-apiserver": "allowed",
+							},
+							Annotations: map[string]string{
+								references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
 							},
 						},
-						Template: corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									"gardener.cloud/role":                            "etcd-druid",
-									"networking.gardener.cloud/to-dns":               "allowed",
-									"networking.gardener.cloud/to-runtime-apiserver": "allowed",
-								},
-								Annotations: map[string]string{
-									references.AnnotationKey(references.KindSecret, "etcd-druid-webhook"): "etcd-druid-webhook",
-								},
-							},
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{
-										Args: []string{
-											"--enable-leader-election=true",
-											"--disable-etcd-serviceaccount-automount=true",
-											"--etcd-workers=25",
-											"--enable-etcd-spec-auto-reconcile=false",
-											"--webhook-server-port=10250",
-											"--webhook-server-tls-server-cert-dir=/etc/webhook-server-tls",
-											"--enable-etcd-components-webhook=true",
-											"--etcd-components-webhook-exempt-service-accounts=system:serviceaccount:kube-system:generic-garbage-collector",
-											"--enable-backup-compaction=true",
-											"--compaction-workers=3",
-											"--etcd-events-threshold=1000000",
-											"--metrics-scrape-wait-duration=1m0s",
-											"--active-deadline-duration=3h0m0s",
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Args: []string{
+										"--enable-leader-election=true",
+										"--disable-etcd-serviceaccount-automount=true",
+										"--etcd-workers=25",
+										"--enable-etcd-spec-auto-reconcile=false",
+										"--webhook-server-port=10250",
+										"--webhook-server-tls-server-cert-dir=/etc/webhook-server-tls",
+										"--enable-etcd-components-webhook=true",
+										"--etcd-components-webhook-exempt-service-accounts=system:serviceaccount:kube-system:generic-garbage-collector",
+										"--enable-backup-compaction=true",
+										"--compaction-workers=3",
+										"--etcd-events-threshold=1000000",
+										"--metrics-scrape-wait-duration=1m0s",
+										"--active-deadline-duration=3h0m0s",
+									},
+									Image:           etcdDruidImage,
+									ImagePullPolicy: corev1.PullIfNotPresent,
+									Name:            "etcd-druid",
+									Ports: []corev1.ContainerPort{
+										{
+											ContainerPort: 8080,
 										},
-										Image:           etcdDruidImage,
-										ImagePullPolicy: corev1.PullIfNotPresent,
-										Name:            "etcd-druid",
-										Ports: []corev1.ContainerPort{
-											{
-												ContainerPort: 8080,
-											},
+									},
+									Resources: corev1.ResourceRequirements{
+										Limits: corev1.ResourceList{
+											corev1.ResourceMemory: resource.MustParse("512Mi"),
 										},
-										Resources: corev1.ResourceRequirements{
-											Limits: corev1.ResourceList{
-												corev1.ResourceMemory: resource.MustParse("512Mi"),
-											},
-											Requests: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("50m"),
-												corev1.ResourceMemory: resource.MustParse("128Mi"),
-											},
+										Requests: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("50m"),
+											corev1.ResourceMemory: resource.MustParse("128Mi"),
 										},
-										SecurityContext: &corev1.SecurityContext{
-											AllowPrivilegeEscalation: ptr.To(false),
-										},
-										VolumeMounts: []corev1.VolumeMount{
-											{
-												MountPath: "/etc/webhook-server-tls",
-												Name:      "webhook-server-tls-cert",
-												ReadOnly:  true,
-											},
+									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
+									},
+									VolumeMounts: []corev1.VolumeMount{
+										{
+											MountPath: "/etc/webhook-server-tls",
+											Name:      "webhook-server-tls-cert",
+											ReadOnly:  true,
 										},
 									},
 								},
-								PriorityClassName:  priorityClassName,
-								ServiceAccountName: "etcd-druid",
-								Volumes: []corev1.Volume{
-									{
-										Name: "webhook-server-tls-cert",
-										VolumeSource: corev1.VolumeSource{
-											Secret: &corev1.SecretVolumeSource{
-												SecretName:  "etcd-druid-webhook",
-												DefaultMode: ptr.To[int32](420),
-											},
+							},
+							PriorityClassName:  priorityClassName,
+							ServiceAccountName: "etcd-druid",
+							Volumes: []corev1.Volume{
+								{
+									Name: "webhook-server-tls-cert",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName:  "etcd-druid-webhook",
+											DefaultMode: ptr.To[int32](420),
 										},
 									},
 								},
 							},
 						},
 					},
-				}
-				return deployment
+				},
 			}
 
 			deploymentWithImageVectorOverwrite = &appsv1.Deployment{
@@ -759,7 +756,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("w/o image vector overwrite", func() {
 			It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
-				expectedResources = append(expectedResources, deploymentWithoutImageVectorOverwriteFor())
+				expectedResources = append(expectedResources, deploymentWithoutImageVectorOverwriteFor)
 			})
 		})
 
@@ -775,6 +772,18 @@ var _ = Describe("Etcd", func() {
 					deploymentWithImageVectorOverwrite,
 					configMapImageVectorOverwrite,
 				)
+			})
+		})
+
+		Context("w/ feature gates being present in etcd config", func() {
+			BeforeEach(func() {
+				featureGates = map[string]bool{
+					"UseEtcdWrapper": true,
+				}
+			})
+
+			It("should successfully deploy all the resources", func() {
+				expectedResources = append(expectedResources, deploymentWithoutImageVectorOverwriteFor)
 			})
 		})
 	})
