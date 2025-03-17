@@ -594,6 +594,8 @@ deploy:
               - |
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-0:/tmp/.skaffold-image
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-1:/tmp/.skaffold-image
+                kubectl -n $SKAFFOLD_NAMESPACES exec machine-0 -- /bin/sh -c 'rm -rf /gardenadm/resources'
+                kubectl -n $SKAFFOLD_NAMESPACES exec machine-1 -- /bin/sh -c 'rm -rf /gardenadm/resources'
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources machine-0:/gardenadm/resources
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources machine-1:/gardenadm/resources
         - container:
