@@ -1477,6 +1477,22 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
+	Describe("#ControlPlaneWorkerPoolForShoot", func() {
+		It("should return nil because shoot is not autonomous", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			Expect(ControlPlaneWorkerPoolForShoot(shoot)).To(BeNil())
+		})
+
+		It("should return the worker pool", func() {
+			worker := gardencorev1beta1.Worker{
+				ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+				Name:         "cp",
+			}
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{worker}}}}
+			Expect(ControlPlaneWorkerPoolForShoot(shoot)).To(PointTo(Equal(worker)))
+		})
+	})
+
 	Describe("#ControlPlaneNamespaceForShoot", func() {
 		It("should return kube-system for autonomous shoots", func() {
 			shoot := &gardencorev1beta1.Shoot{
