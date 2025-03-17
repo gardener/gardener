@@ -23,7 +23,6 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 			})
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
-				ItShouldReadShootFromAPIServer(s)
 				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s)
 
 				ItShouldGetResponsibleSeed(s)

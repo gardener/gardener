@@ -27,15 +27,15 @@ var (
 func itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s *ShootContext) {
 	GinkgoHelper()
 
-	It("Ensure Shoot was reconciled with previous Gardener version", func() {
-		Expect(s.Shoot.Status.Gardener.Version).Should(Equal(gardenerPreviousVersion))
+	It("Ensure Shoot was reconciled with previous Gardener version", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(HaveField("Status.Gardener.Version", Equal(gardenerPreviousVersion)))
 	})
 }
 
 func itShouldEnsureShootWasReconciledWithCurrentGardenerVersion(s *ShootContext) {
 	GinkgoHelper()
 
-	It("Ensure Shoot was reconciled with current Gardener version", func() {
-		Expect(s.Shoot.Status.Gardener.Version).Should(Equal(gardenerCurrentVersion))
+	It("Ensure Shoot was reconciled with current Gardener version", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Object(s.Shoot)).Should(HaveField("Status.Gardener.Version", Equal(gardenerCurrentVersion)))
 	})
 }

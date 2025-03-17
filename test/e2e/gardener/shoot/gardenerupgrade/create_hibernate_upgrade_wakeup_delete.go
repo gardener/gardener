@@ -23,8 +23,6 @@ var _ = Describe("Gardener Upgrade Tests", func() {
 			})
 
 			Describe("Post-Upgrade"+gardenerInfoPostUpgrade, Label("post-upgrade"), func() {
-				ItShouldReadShootFromAPIServer(s)
-
 				// This tests that we can wake-up a Shoot which was hibernated with the previous Gardener version.
 				itShouldEnsureShootWasReconciledWithPreviousGardenerVersion(s)
 				ItShouldWakeUpShoot(s)

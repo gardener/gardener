@@ -81,15 +81,6 @@ func ItShouldCreateShoot(s *ShootContext) {
 	}, SpecTimeout(time.Minute))
 }
 
-// ItShouldReadShootFromAPIServer reads the Shoot from the API server.
-func ItShouldReadShootFromAPIServer(s *ShootContext) {
-	GinkgoHelper()
-
-	It("Read Shoot from API Server", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Get(s.Shoot)).Should(Succeed())
-	}, SpecTimeout(time.Minute))
-}
-
 // ItShouldUpdateShootToHighAvailability updates shoot to high availability configuration with the given failure
 // tolerance type.
 func ItShouldUpdateShootToHighAvailability(s *ShootContext, failureToleranceType gardencorev1beta1.FailureToleranceType) {
