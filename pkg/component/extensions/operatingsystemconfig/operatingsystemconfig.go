@@ -254,7 +254,34 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 			return err
 		}
 
-		return reconcileFn(d)
+		if err := reconcileFn(d); err != nil {
+			return fmt.Errorf("failed reconciling OperatingSystemConfig %s for worker %s: %w", client.ObjectKeyFromObject(osc), worker.Name, err)
+		}
+
+		oscKey, err := o.calculateKeyForVersion(hashVersion, &worker)
+		if err != nil {
+			return err
+		}
+
+		data := Data{
+			Object:                        osc,
+			IncludeSecretNameInWorkerPool: hashVersion > 1,
+			GardenerNodeAgentSecretName:   oscKey,
+		}
+
+		o.lock.Lock()
+		defer o.lock.Unlock()
+
+		switch purpose {
+		case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
+			o.workerPoolNameToOSCs[worker.Name].Init = data
+		case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
+			o.workerPoolNameToOSCs[worker.Name].Original = data
+		default:
+			return fmt.Errorf("unknown purpose %q", purpose)
+		}
+
+		return nil
 	})
 	if err != nil {
 		return err
@@ -409,7 +436,7 @@ func (o *operatingSystemConfig) hashVersion(workerPoolName string) (int, error) 
 // containing the cloud-config and stores its data which can later be retrieved with the WorkerPoolNameToOperatingSystemConfigsMap
 // method.
 func (o *operatingSystemConfig) Wait(ctx context.Context) error {
-	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, hashVersion int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
+	fns, err := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, _ int, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		return extensions.WaitUntilExtensionObjectReady(ctx,
 			o.client,
 			o.log,
@@ -419,42 +446,23 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 			o.waitSevereThreshold,
 			o.waitTimeout,
 			func() error {
-				oscKey, err := o.calculateKeyForVersion(hashVersion, &worker)
-				if err != nil {
+				if purpose != extensionsv1alpha1.OperatingSystemConfigPurposeProvision {
+					return nil
+				}
+
+				if osc.Status.CloudConfig == nil {
+					return fmt.Errorf("no cloud config information provided in status")
+				}
+
+				secret := &corev1.Secret{}
+				if err := o.client.Get(ctx, client.ObjectKey{Namespace: osc.Status.CloudConfig.SecretRef.Namespace, Name: osc.Status.CloudConfig.SecretRef.Name}, secret); err != nil {
 					return err
-				}
-
-				data := Data{
-					Object:                        osc,
-					IncludeSecretNameInWorkerPool: hashVersion > 1,
-					GardenerNodeAgentSecretName:   oscKey,
-				}
-
-				if purpose == extensionsv1alpha1.OperatingSystemConfigPurposeProvision {
-					if osc.Status.CloudConfig == nil {
-						return fmt.Errorf("no cloud config information provided in status")
-					}
-
-					secret := &corev1.Secret{}
-					if err := o.client.Get(ctx, client.ObjectKey{Namespace: osc.Status.CloudConfig.SecretRef.Namespace, Name: osc.Status.CloudConfig.SecretRef.Name}, secret); err != nil {
-						return err
-					}
-
-					data.SecretName = &secret.Name
 				}
 
 				o.lock.Lock()
 				defer o.lock.Unlock()
 
-				switch purpose {
-				case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-					o.workerPoolNameToOSCs[worker.Name].Init = data
-				case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-					o.workerPoolNameToOSCs[worker.Name].Original = data
-				default:
-					return fmt.Errorf("unknown purpose %q", purpose)
-				}
-
+				o.workerPoolNameToOSCs[worker.Name].Init.SecretName = &secret.Name
 				return nil
 			},
 		)

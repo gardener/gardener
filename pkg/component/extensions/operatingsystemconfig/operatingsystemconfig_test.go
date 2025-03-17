@@ -1053,17 +1053,50 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		Describe("WorkerNameToOperatingSystemConfigsMap", func() {
-			It("should return the correct result from the Wait operation", func() {
-				defer test.WithVars(
+			It("should return the correct result from the Deploy and Wait operations", func() {
+				DeferCleanup(test.WithVars(
 					&TimeNow, mockNow.Do,
-				)()
+					&InitConfigFn, initConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+				))
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				// Deploy should fill internal state with the added timestamp annotation
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				for i := range expected {
-					Expect(c.Delete(ctx, expected[i])).To(Succeed())
+					expected[i].ResourceVersion = "1"
+				}
+
+				worker1OSCDownloader := expected[0]
+				worker1OSCOriginal := expected[1]
+				worker2OSCDownloader := expected[2]
+				worker2OSCOriginal := expected[3]
+
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
+					worker1Name: {
+						Init: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
+							Object:                      worker1OSCDownloader,
+						},
+						Original: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
+							Object:                      worker1OSCOriginal,
+						},
+					},
+					worker2Name: {
+						Init: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
+							Object:                      worker2OSCDownloader,
+						},
+						Original: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
+							Object:                      worker2OSCOriginal,
+						},
+					},
+				}))
+
+				for i := range expected {
 					// remove operation annotation
 					expected[i].ObjectMeta.Annotations = map[string]string{
 						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
@@ -1083,7 +1116,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 							Namespace: expected[i].Name,
 						},
 					}
-					Expect(c.Create(ctx, expected[i])).To(Succeed())
+					Expect(c.Update(ctx, expected[i])).To(Succeed())
 
 					// create cloud-config secret
 					ccSecret := &corev1.Secret{
@@ -1098,15 +1131,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Create(ctx, ccSecret)).To(Succeed())
 				}
 
-				worker1OSCDownloader := expected[0]
-				worker1OSCOriginal := expected[1]
-				worker2OSCDownloader := expected[2]
-				worker2OSCOriginal := expected[3]
-
 				Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
 
-				wn := defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()
-				exp := map[string]*OperatingSystemConfigs{
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
 							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
@@ -1129,8 +1156,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 							Object:                      worker2OSCOriginal,
 						},
 					},
-				}
-				Expect(wn).To(Equal(exp))
+				}))
 			})
 		})
 
