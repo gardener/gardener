@@ -83,7 +83,6 @@ func validateOverlapWithSeed(fldPath *field.Path, shootNetwork []string, network
 		if NetworksIntersect(v1beta1constants.ReservedShootPodNetworkMappedRange, network) {
 			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved shoot pod network mapping range (%s)", networkType, v1beta1constants.ReservedShootPodNetworkMappedRange)))
 		}
-
 	}
 	if len(shootNetwork) == 0 && networkRequired {
 		allErrs = append(allErrs, field.Required(fldPath, networkType+"s is required"))

@@ -1140,9 +1140,7 @@ func seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, volumeMountP
 		"caCert":          volumeMountPathCerts + `/` + fileNameCABundle,
 		"metricsPort":     metricsPort,
 	}
-
-	volumeMountPathCerts = "/srv/secrets/vpn-server"
-
+	
 	var envoyConfig strings.Builder
 	err := tplEnvoy.Execute(&envoyConfig, values)
 	Expect(err).ToNot(HaveOccurred())

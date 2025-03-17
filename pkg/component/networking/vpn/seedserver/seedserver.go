@@ -47,7 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	netutil "github.com/gardener/gardener/pkg/utils/net"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -350,15 +350,15 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						},
 						{
 							Name:  "SERVICE_NETWORKS",
-							Value: netutil.JoinByComma(v.values.Network.ServiceCIDRs),
+							Value: netutils.JoinByComma(v.values.Network.ServiceCIDRs),
 						},
 						{
 							Name:  "POD_NETWORKS",
-							Value: netutil.JoinByComma(v.values.Network.PodCIDRs),
+							Value: netutils.JoinByComma(v.values.Network.PodCIDRs),
 						},
 						{
 							Name:  "NODE_NETWORKS",
-							Value: netutil.JoinByComma(v.values.Network.NodeCIDRs),
+							Value: netutils.JoinByComma(v.values.Network.NodeCIDRs),
 						},
 						{
 							Name:  "SEED_POD_NETWORK_V4",

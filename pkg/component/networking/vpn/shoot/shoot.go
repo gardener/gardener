@@ -41,7 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	netutil "github.com/gardener/gardener/pkg/utils/net"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -111,6 +111,7 @@ type Values struct {
 	HighAvailabilityNumberOfShootClients int
 }
 
+// Interface contains functions for a VPNShoot deployer.
 type Interface interface {
 	component.DeployWaiter
 	SetNodeNetworkCIDRs(nodes []net.IPNet)
@@ -775,15 +776,15 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 		envVariables = append(envVariables,
 			corev1.EnvVar{
 				Name:  "SHOOT_POD_NETWORK_V4",
-				Value: netutil.JoinByComma(netutil.GetByIPFamily(v.values.Network.PodCIDRs, netutil.IPv4Family)),
+				Value: netutils.JoinByComma(netutils.GetByIPFamily(v.values.Network.PodCIDRs, netutils.IPv4Family)),
 			},
 			corev1.EnvVar{
 				Name:  "SHOOT_SERVICE_NETWORK_V4",
-				Value: netutil.JoinByComma(netutil.GetByIPFamily(v.values.Network.ServiceCIDRs, netutil.IPv4Family)),
+				Value: netutils.JoinByComma(netutils.GetByIPFamily(v.values.Network.ServiceCIDRs, netutils.IPv4Family)),
 			},
 			corev1.EnvVar{
 				Name:  "SHOOT_NODE_NETWORK_V4",
-				Value: netutil.JoinByComma(netutil.GetByIPFamily(v.values.Network.NodeCIDRs, netutil.IPv4Family)),
+				Value: netutils.JoinByComma(netutils.GetByIPFamily(v.values.Network.NodeCIDRs, netutils.IPv4Family)),
 			},
 		)
 	}
