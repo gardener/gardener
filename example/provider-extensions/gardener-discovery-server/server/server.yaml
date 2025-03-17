@@ -70,6 +70,8 @@ spec:
           requests:
             cpu: "50m"
             memory: "64Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: gardener-discovery-server-tls
           mountPath: /var/run/secrets/gardener.cloud/gardener-discovery-server/tls

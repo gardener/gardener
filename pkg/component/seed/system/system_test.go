@@ -82,6 +82,8 @@ spec:
           requests:
             cpu: "2"
             memory: 6Gi
+        securityContext:
+          allowPrivilegeEscalation: false
       priorityClassName: gardener-reserve-excess-capacity
       terminationGracePeriodSeconds: 5
 status: {}
@@ -123,6 +125,8 @@ spec:
           requests:
             cpu: "4"
             memory: 8Gi
+        securityContext:
+          allowPrivilegeEscalation: false
       nodeSelector:
         foo: bar
       priorityClassName: gardener-reserve-excess-capacity
