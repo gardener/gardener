@@ -15,6 +15,7 @@ build:
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
+            - pkg/api/extensions
             - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
@@ -60,6 +61,7 @@ build:
             - pkg/component/autoscaling/vpa/templates/crd-autoscaling.k8s.io_verticalpodautoscalers.yaml
             - pkg/component/clusteridentity
             - pkg/component/crddeployer
+            - pkg/component/etcd/bootstrap
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
@@ -213,6 +215,7 @@ build:
             - pkg/component/shoot/namespaces
             - pkg/component/shoot/system
             - pkg/controllerutils
+            - pkg/controllerutils/predicate
             - pkg/extensions
             - pkg/features
             - pkg/gardenadm
@@ -229,6 +232,7 @@ build:
             - pkg/gardenadm/cmd/token/generate
             - pkg/gardenadm/cmd/token/list
             - pkg/gardenadm/cmd/version
+            - pkg/gardenadm/staticpod
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/apis/config/v1alpha1/helper
             - pkg/gardenlet/features
@@ -238,7 +242,13 @@ build:
             - pkg/gardenlet/operation/seed
             - pkg/gardenlet/operation/shoot
             - pkg/logger
+            - pkg/nodeagent
             - pkg/nodeagent/apis/config/v1alpha1
+            - pkg/nodeagent/controller/operatingsystemconfig
+            - pkg/nodeagent/controller/operatingsystemconfig/templates/containerd-hosts.toml.tpl
+            - pkg/nodeagent/dbus
+            - pkg/nodeagent/files
+            - pkg/nodeagent/registry
             - pkg/operator/client
             - pkg/resourcemanager/apis/config/v1alpha1
             - pkg/resourcemanager/controller/garbagecollector/references
@@ -264,6 +274,7 @@ build:
             - pkg/utils/istio
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
+            - pkg/utils/kubernetes/certificatesigningrequest
             - pkg/utils/kubernetes/client
             - pkg/utils/kubernetes/health
             - pkg/utils/kubernetes/unstructured
@@ -273,6 +284,7 @@ build:
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
+            - pkg/utils/structuredmap
             - pkg/utils/time
             - pkg/utils/timewindow
             - pkg/utils/validation/cidr

@@ -29,6 +29,8 @@ const (
 	ContainerImageNameCortex = "cortex"
 	// ContainerImageNameDependencyWatchdog is a constant for an image in the image vector with name 'dependency-watchdog'.
 	ContainerImageNameDependencyWatchdog = "dependency-watchdog"
+	// ContainerImageNameEtcd is a constant for an image in the image vector with name 'etcd'.
+	ContainerImageNameEtcd = "etcd"
 	// ContainerImageNameEtcdDruid is a constant for an image in the image vector with name 'etcd-druid'.
 	ContainerImageNameEtcdDruid = "etcd-druid"
 	// ContainerImageNameEventLogger is a constant for an image in the image vector with name 'event-logger'.
