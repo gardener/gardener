@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/gardener/gardener/pkg/gardenadm"
+	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
@@ -56,7 +57,7 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", opts.ConfigDir, err)
 	}
 
-	b, err := gardenadm.NewBotanist(ctx, opts.Log, project, cloudProfile, shoot)
+	b, err := botanist.NewAutonomousBotanist(ctx, opts.Log, project, cloudProfile, shoot)
 	if err != nil {
 		return fmt.Errorf("failed constructing botanist: %w", err)
 	}
