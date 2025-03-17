@@ -24,6 +24,7 @@ func Join(cidrs []net.IPNet, sep string) string {
 	return strings.TrimSuffix(result, sep)
 }
 
+// GetIPv4CIDRs returns only the IPv4 CIDRs from the given list of networks.
 func GetIPv4CIDRs(cidrs []net.IPNet) []net.IPNet {
 	var result []net.IPNet
 	for _, c := range cidrs {

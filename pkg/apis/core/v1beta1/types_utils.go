@@ -50,11 +50,10 @@ const (
 	// ConditionProgressing means the condition was seen true, failed but stayed within a predefined failure threshold.
 	// In the future, we could add other intermediate conditions, e.g. ConditionDegraded.
 	ConditionProgressing ConditionStatus = "Progressing"
-
+	// ConditionDualStackInfra means infrastructure is ready for dual-stack.
 	ConditionDualStackInfra ConditionStatus = "DualStackInfraReady"
-
+	// ConditionDualStackNodes means nodes are ready for dual-stack.
 	ConditionDualStackNodes ConditionStatus = "DualStackNodesReady"
-
 	// ConditionCheckError is a constant for a reason in condition.
 	ConditionCheckError = "ConditionCheckError"
 	// ManagedResourceMissingConditionError is a constant for a reason in a condition that indicates

@@ -722,9 +722,6 @@ func validateNetworkingUpdate(newNetworking, oldNetworking *core.Networking, fld
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Type, oldNetworking.Type, fldPath.Child("type"))...)
-	if !isValidIPFamiliesUpdate(oldNetworking.IPFamilies, newNetworking.IPFamilies) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("ipFamilies"), newNetworking.IPFamilies, "ipFamilies can only be changed from [IPv4] to [IPv4,IPv6]"))
-	}
 	if oldNetworking.Pods != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newNetworking.Pods, oldNetworking.Pods, fldPath.Child("pods"))...)
 	}
@@ -2847,21 +2844,4 @@ func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, 
 	}
 
 	return allErrs
-}
-
-func isValidIPFamiliesUpdate(oldIPFamilies, newIPFamilies []core.IPFamily) bool {
-	switch {
-	case len(oldIPFamilies) == 0 && len(newIPFamilies) == 0:
-		return true
-	case len(oldIPFamilies) == 0 && len(newIPFamilies) == 1 && newIPFamilies[0] == core.IPFamilyIPv4:
-		return true
-	case len(oldIPFamilies) == 1 && len(newIPFamilies) == 1 && oldIPFamilies[0] == newIPFamilies[0]:
-		return true
-	case len(oldIPFamilies) == 2 && len(newIPFamilies) == 2 && oldIPFamilies[0] == newIPFamilies[0] && oldIPFamilies[1] == newIPFamilies[1]:
-		return true
-	case len(oldIPFamilies) == 1 && oldIPFamilies[0] == core.IPFamilyIPv4 && len(newIPFamilies) == 2 && newIPFamilies[0] == core.IPFamilyIPv4 && newIPFamilies[1] == core.IPFamilyIPv6:
-		return true
-	default:
-		return false
-	}
 }

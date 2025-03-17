@@ -15,6 +15,7 @@ import (
 	reflect "reflect"
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -120,6 +121,15 @@ func (m *MockInterface) SetServiceCIDRs(arg0 []net.IPNet) {
 func (mr *MockInterfaceMockRecorder) SetServiceCIDRs(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetServiceCIDRs", reflect.TypeOf((*MockInterface)(nil).SetServiceCIDRs), arg0)
+}
+
+// Get mocks base method.
+func (m *MockInterface) Get(arg0 context.Context) (*v1alpha1.Network, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*v1alpha1.Network)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Wait mocks base method.

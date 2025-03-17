@@ -556,18 +556,21 @@ func getIPv4CIDRs(cidrs []net.IPNet) []net.IPNet {
 	return result
 }
 
-func (s *Shoot) CheckDualStackMigrateNetworks(ctx context.Context, gardenClient client.Client, clock clock.Clock) bool {
+// CheckDualStackMigrateNetworks checks if the shoot should be migrated to dual-stack networking and sets the shoot status accoridingly.
+func (s *Shoot) CheckDualStackMigrateNetworks(ctx context.Context, gardenClient client.Client, clock clock.Clock) error {
 	shoot := s.GetInfo()
 	if len(shoot.Spec.Networking.IPFamilies) == 2 && shoot.Status.Networking != nil && len(shoot.Status.Networking.Nodes) == 1 {
-		// there is a migration in progress
-		s.UpdateInfoStatus(ctx, gardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+		err := s.UpdateInfoStatus(ctx, gardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
 			condition := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootToDualStackMigration)
 			condition = v1beta1helper.UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionProgressing, "ToDualStackMigration", "The shoot is migrating to dual-stack networking.")
 			shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
-	return false
+	return nil
 }
 
 // ToNetworks return a network with computed cidrs and ClusterIPs
