@@ -141,6 +141,9 @@ func (g *gardenerAPIServer) deployment(
 							PeriodSeconds:       10,
 							TimeoutSeconds:      15,
 						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
+						},
 					}},
 				},
 			},

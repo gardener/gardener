@@ -837,6 +837,9 @@ func deployment(namespace, configSecretName string, testValues Values) *appsv1.D
 								InitialDelaySeconds: 10,
 								TimeoutSeconds:      5,
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "gardener-controller-manager-config",

@@ -143,6 +143,9 @@ func (s *seedSystem) addReserveExcessCapacityDeployment(registry *managedresourc
 								Requests: config.Resources,
 								Limits:   config.Resources,
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 						}},
 						NodeSelector:      config.NodeSelector,
 						PriorityClassName: v1beta1constants.PriorityClassNameReserveExcessCapacity,

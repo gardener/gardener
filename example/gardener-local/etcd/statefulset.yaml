@@ -38,6 +38,8 @@ spec:
           containerPort: 2379
         - name: discovery
           containerPort: 2380
+        securityContext:   
+          allowPrivilegeEscalation: false
       volumes:
       - name: tls
         secret:

@@ -20,6 +20,8 @@ spec:
         env:
         - name: REGISTRY_HTTP_ADDR
           value: :5001
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: cache
           mountPath: /var/lib/registry
