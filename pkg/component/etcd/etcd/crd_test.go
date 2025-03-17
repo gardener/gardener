@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"github.com/Masterminds/semver/v3"
-	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -20,7 +19,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/component/etcd/etcd"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -29,17 +27,15 @@ var _ = Describe("CRD", func() {
 		c           client.Client
 		ctx         = context.TODO()
 		crdDeployer CRDAccess
-		err         error
 		k8sVersion  = semver.MustParse("1.30")
 	)
 
 	BeforeEach(func() {
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 		applier := kubernetes.NewApplier(c, mapper)
-
+		var err error
 		crdDeployer, err = NewCRD(c, applier, k8sVersion)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -53,8 +49,8 @@ var _ = Describe("CRD", func() {
 			verifyDeployedCRD(ctx, crdName, c)
 		},
 
-		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
-		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+		Entry("Etcd", "etcds.druid.gardener.cloud"),
+		Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
 	)
 
 	DescribeTable("should re-create CRD if it is deleted",
@@ -65,8 +61,8 @@ var _ = Describe("CRD", func() {
 			verifyDeployedCRD(ctx, crdName, c)
 		},
 
-		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
-		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+		Entry("Etcd", "etcds.druid.gardener.cloud"),
+		Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
 	)
 
 	Describe("CRD is destroyed", func() {
@@ -80,8 +76,8 @@ var _ = Describe("CRD", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 			},
 
-			Entry("Etcd", druidcorecrds.ResourceNameEtcd),
-			Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+			Entry("Etcd", "etcds.druid.gardener.cloud"),
+			Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
 		)
 	})
 
@@ -92,8 +88,8 @@ var _ = Describe("CRD", func() {
 			Expect(crd).NotTo(BeNil())
 		},
 
-		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
-		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+		Entry("Etcd", "etcds.druid.gardener.cloud"),
+		Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
 	)
 
 	DescribeTable("Get CRD YAML",
@@ -103,17 +99,14 @@ var _ = Describe("CRD", func() {
 			Expect(crd).NotTo(BeNil())
 		},
 
-		Entry("Etcd", druidcorecrds.ResourceNameEtcd),
-		Entry("EtcdCopyBackupsTask", druidcorecrds.ResourceNameEtcdCopyBackupsTask),
+		Entry("Etcd", "etcds.druid.gardener.cloud"),
+		Entry("EtcdCopyBackupsTask", "etcdcopybackupstasks.druid.gardener.cloud"),
 	)
 
 })
 
 func verifyDeployedCRD(ctx context.Context, crdName string, c client.Client) {
 	crd := &apiextensionsv1.CustomResourceDefinition{}
-	err := c.Get(ctx, client.ObjectKey{Name: crdName}, crd)
-	Expect(err).NotTo(HaveOccurred())
-	deletionProtectedVal, ok := crd.GetLabels()[gardenerutils.DeletionProtected]
-	Expect(ok).To(BeTrue())
-	Expect(deletionProtectedVal).To(Equal("true"))
+	Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, crd)).To(Succeed())
+	Expect(crd.Labels).To(HaveKeyWithValue("gardener.cloud/deletion-protected", "true"))
 }
