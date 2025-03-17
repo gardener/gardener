@@ -233,6 +233,16 @@ var _ = Describe("shoot", func() {
 				Expect(s.ComputeOutOfClusterAPIServerAddress(true)).To(Equal("api." + internalDomain))
 			})
 
+			It("should return the internal domain when shoot's external domain is not set (even if not requested)", func() {
+				internalDomain := "foo"
+				s := &Shoot{
+					InternalClusterDomain: internalDomain,
+				}
+				s.SetInfo(&gardencorev1beta1.Shoot{})
+
+				Expect(s.ComputeOutOfClusterAPIServerAddress(false)).To(Equal("api." + internalDomain))
+			})
+
 			It("should return the external domain as requested (shoot's external domain is not unmanaged)", func() {
 				externalDomain := "foo"
 				s := &Shoot{
