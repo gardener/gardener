@@ -106,6 +106,11 @@ func newShootObject(ctx context.Context, projectName string, cloudProfile *garde
 		return nil, fmt.Errorf("failed building shoot object: %w", err)
 	}
 
+	obj.Networks, err = shootpkg.ToNetworks(shoot, obj.IsWorkerless)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing shoot networks: %w", err)
+	}
+
 	obj.ControlPlaneNamespace = metav1.NamespaceSystem
 	return obj, nil
 }
