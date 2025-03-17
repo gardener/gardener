@@ -498,7 +498,7 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(useInternalClusterDomain boo
 		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
-	if useInternalClusterDomain {
+	if useInternalClusterDomain || s.ExternalClusterDomain == nil {
 		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
