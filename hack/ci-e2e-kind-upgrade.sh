@@ -112,7 +112,6 @@ function upgrade_to_next_release() {
     export GARDENER_NEXT_VERSION=$VERSION
     gardener_up
   fi
-
 }
 
 function set_gardener_upgrade_version_env_variables() {

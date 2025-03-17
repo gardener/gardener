@@ -17,7 +17,7 @@ import (
 	_ "github.com/gardener/gardener/test/e2e/gardener/project"
 	_ "github.com/gardener/gardener/test/e2e/gardener/seed"
 	_ "github.com/gardener/gardener/test/e2e/gardener/shoot"
-	_ "github.com/gardener/gardener/test/e2e/gardener/upgrade"
+	_ "github.com/gardener/gardener/test/e2e/gardener/shoot/gardenerupgrade"
 	"github.com/gardener/gardener/test/framework"
 )
 

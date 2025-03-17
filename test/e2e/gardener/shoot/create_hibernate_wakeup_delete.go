@@ -46,24 +46,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				node.VerifyNodeCriticalComponentsBootstrapping(s)
 			}
 
-			It("Hibernate Shoot", func(ctx SpecContext) {
-				Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
-					s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-						Enabled: ptr.To(true),
-					}
-				})).Should(Succeed())
-			}, SpecTimeout(time.Minute))
-
+			ItShouldHibernateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 
-			It("Wake up Shoot", func(ctx SpecContext) {
-				Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
-					s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-						Enabled: ptr.To(false),
-					}
-				})).Should(Succeed())
-			}, SpecTimeout(time.Minute))
-
+			ItShouldWakeUpShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
