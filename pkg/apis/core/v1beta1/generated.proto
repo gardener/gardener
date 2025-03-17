@@ -1786,6 +1786,15 @@ message MachineControllerManagerSettings {
   // NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
   // +optional
   repeated string nodeConditions = 5;
+
+  // MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration inPlaceUpdateTimeout = 6;
+
+  // DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+  // This is intended to be used only for in-place updates.
+  // +optional
+  optional bool disableHealthTimeout = 7;
 }
 
 // MachineImage defines the name and multiple versions of the machine image in any environment.
@@ -3522,11 +3531,15 @@ message Worker {
 
   // MaxSurge is maximum number of machines that are created during an update.
   // This value is divided by the number of configured zones for a fair distribution.
+  // Defaults to 0 in case of an in-place update.
+  // Defaults to 1 in case of a rolling update.
   // +optional
   optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString maxSurge = 10;
 
   // MaxUnavailable is the maximum number of machines that can be unavailable during an update.
   // This value is divided by the number of configured zones for a fair distribution.
+  // Defaults to 1 in case of an in-place update.
+  // Defaults to 0 in case of a rolling update.
   // +optional
   optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString maxUnavailable = 11;
 
