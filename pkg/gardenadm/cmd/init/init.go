@@ -65,9 +65,19 @@ func run(ctx context.Context, opts *Options) error {
 	var (
 		g = flow.NewGraph("init")
 
-		_ = g.Add(flow.Task{
+		initializeSecretsManagement = g.Add(flow.Task{
 			Name: "Initializing secrets management",
 			Fn:   b.InitializeSecretsManagement,
+		})
+		deployOperatingSystemConfigSecretForNodeAgent = g.Add(flow.Task{
+			Name:         "Generating OperatingSystemConfig and deploying Secret for gardener-node-agent",
+			Fn:           b.DeployOperatingSystemConfigSecretForNodeAgent,
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
+			Fn:           b.ApplyOperatingSystemConfig,
+			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfigSecretForNodeAgent),
 		})
 	)
 

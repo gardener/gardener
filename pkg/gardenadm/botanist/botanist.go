@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -25,6 +26,8 @@ import (
 	gardenpkg "github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/nodeagent"
+	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -32,7 +35,11 @@ import (
 type AutonomousBotanist struct {
 	*botanistpkg.Botanist
 
-	FS afero.Afero
+	HostName string
+	DBus     dbus.DBus
+	FS       afero.Afero
+
+	operatingSystemConfigSecret *corev1.Secret
 }
 
 // NewAutonomousBotanist creates a new botanist.AutonomousBotanist instance for the gardenadm command execution.
@@ -46,6 +53,11 @@ func NewAutonomousBotanist(
 	*AutonomousBotanist,
 	error,
 ) {
+	hostName, err := nodeagent.GetHostName()
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching hostname: %w", err)
+	}
+
 	gardenObj, err := newGardenObject(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating garden object: %w", err)
@@ -81,7 +93,9 @@ func NewAutonomousBotanist(
 	return &AutonomousBotanist{
 		Botanist: b,
 
-		FS: afero.Afero{Fs: afero.NewOsFs()},
+		HostName: hostName,
+		DBus:     dbus.New(log),
+		FS:       afero.Afero{Fs: afero.NewOsFs()},
 	}, nil
 }
 
