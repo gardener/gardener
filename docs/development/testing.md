@@ -61,12 +61,31 @@ Ideally though, you would add the missing test cases for the current code as wel
 - Use constants in test code with care.
   - Typically, you should not use constants from the same package as the tested code, instead use literals.
   - If the constant value is changed, tests using the constant will still pass, although the "specification" is not fulfilled anymore.
+  - The literals increase the readability and maintainability of the test. Every usage of a constant instead of a literal increases the time to read the test. A developer has to jump to the constant definition and then switch back to its usage in the test.
   - There are cases where it's fine to use constants, but keep this caveat in mind when doing so.
 - Creating sample data for tests can be a high effort.
   - If valuable, add a package for generating common sample data, e.g. Shoot/Cluster objects.
 - Make use of the `testdata` directory for storing arbitrary sample data needed by tests (helm charts, YAML manifests, etc.), [example PR](https://github.com/gardener/gardener/pull/2140)
   - From https://pkg.go.dev/cmd/go/internal/test:
     > The go tool will ignore a directory named "testdata", making it available to hold ancillary data needed by the tests.
+- Favor small code duplications instead of extracting each and every repeated logic to a helper func.
+  - A developer is often tempted to extract a code duplication to a helper func following the rule of thumb that a duplicated piece of code should be reused.
+  - However, in the context of testing introducing a helper func for a small repeated piece of code reduces the readability of the tests. A developer has to jump to the helper func and then switch back to its usage in the test.
+  - A code duplication is often preferred instead of a helper func, e.g., prefer repeating in each and every unit test the assertion
+    ```go
+        crd := &apiextensionsv1.CustomResourceDefinition{}
+        Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, crd)).To(Succeed())
+        Expect(crd.Labels).To(HaveKeyWithValue("gardener.cloud/deletion-protected", "true"))
+    ```
+    over introducing a helper func for it
+    ```go
+    func verifyCRDIsDeployed(ctx context.Context, c client.Client, crdName string) {
+        crd := &apiextensionsv1.CustomResourceDefinition{}
+        ExpectWithOffset(1, c.Get(ctx, client.ObjectKey{Name: crdName}, crd)).To(Succeed())
+        ExpectWithOffset(1, crd.Labels).To(HaveKeyWithValue("gardener.cloud/deletion-protected", "true"))
+    }
+  ```
+  - Make use of helper func for a long and complex repeated logic, prefer the code duplication for a short and simple repeated logic.
 
 ## Unit Tests
 
