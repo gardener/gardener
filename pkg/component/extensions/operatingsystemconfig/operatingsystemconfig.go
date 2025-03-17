@@ -345,10 +345,6 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 
 		var pools poolHash
 		for _, worker := range o.values.Workers {
-			if worker.Machine.Image == nil {
-				continue
-			}
-
 			workerHash, ok := workerPoolNameToHashEntry[worker.Name]
 			if !ok {
 				workerHash.Name = worker.Name
@@ -568,10 +564,6 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 	wantedOSCNames := sets.New[string]()
 
 	for _, worker := range o.values.Workers {
-		if worker.Machine.Image == nil {
-			continue
-		}
-
 		version, err := o.hashVersion(worker.Name)
 		if err != nil {
 			return nil, err
@@ -585,7 +577,7 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 			if err != nil {
 				return nil, err
 			}
-			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image.Name, purpose))
+			wantedOSCNames.Insert(oscKey + keySuffix(version, worker.Machine.Image, purpose))
 		}
 	}
 
@@ -594,10 +586,6 @@ func (o *operatingSystemConfig) getWantedOSCNames() (sets.Set[string], error) {
 
 func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(int, *extensionsv1alpha1.OperatingSystemConfig, gardencorev1beta1.Worker, extensionsv1alpha1.OperatingSystemConfigPurpose) error) error {
 	for _, worker := range o.values.Workers {
-		if worker.Machine.Image == nil {
-			continue
-		}
-
 		version, err := o.hashVersion(worker.Name)
 		if err != nil {
 			return err
@@ -611,7 +599,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(int, *extens
 			if err != nil {
 				return err
 			}
-			oscName := oscKey + keySuffix(version, worker.Machine.Image.Name, purpose)
+			oscName := oscKey + keySuffix(version, worker.Machine.Image, purpose)
 
 			osc, ok := o.oscs[oscName]
 			if !ok {
@@ -926,18 +914,22 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelWorkerPool, d.worker.Name)
 		metav1.SetMetaDataLabel(&d.osc.ObjectMeta, v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook, "true")
 
-		d.osc.Spec.Type = d.worker.Machine.Image.Name
-		d.osc.Spec.ProviderConfig = d.worker.Machine.Image.ProviderConfig
+		if d.worker.Machine.Image != nil {
+			d.osc.Spec.Type = d.worker.Machine.Image.Name
+			d.osc.Spec.ProviderConfig = d.worker.Machine.Image.ProviderConfig
+		}
 		d.osc.Spec.Purpose = d.purpose
 		d.osc.Spec.Units = units
 		d.osc.Spec.Files = files
 
 		if v1beta1helper.IsUpdateStrategyInPlace(d.worker.UpdateStrategy) && d.purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
 			d.osc.Spec.InPlaceUpdates = &extensionsv1alpha1.InPlaceUpdates{
-				OperatingSystemVersion: ptr.Deref(d.worker.Machine.Image.Version, ""),
+				KubeletVersion: d.kubernetesVersion.String(),
 			}
 
-			d.osc.Spec.InPlaceUpdates.KubeletVersion = d.kubernetesVersion.String()
+			if d.worker.Machine.Image != nil {
+				d.osc.Spec.InPlaceUpdates.OperatingSystemVersion = ptr.Deref(d.worker.Machine.Image.Version, "")
+			}
 
 			if d.caRotationLastInitiationTime != nil || d.serviceAccountKeyRotationLastInitiationTime != nil {
 				d.osc.Spec.InPlaceUpdates.CredentialsRotation = &extensionsv1alpha1.CredentialsRotation{
@@ -1046,17 +1038,18 @@ func KeyV2(
 	var (
 		inPlaceUpdate               = v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
 		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
-		data                        = []string{
-			kubernetesMajorMinorVersion,
-			worker.Machine.Type,
-			worker.Machine.Image.Name + *worker.Machine.Image.Version,
-		}
+		data                        = []string{kubernetesMajorMinorVersion, worker.Machine.Type}
 	)
 
+	if worker.Machine.Image != nil {
+		data = append(data, worker.Machine.Image.Name+*worker.Machine.Image.Version)
+	}
+
 	if inPlaceUpdate {
-		data = []string{
-			worker.Machine.Type,
-			worker.Machine.Image.Name,
+		data = []string{worker.Machine.Type}
+
+		if worker.Machine.Image != nil {
+			data = append(data, worker.Machine.Image.Name)
 		}
 	}
 
@@ -1100,10 +1093,10 @@ func KeyV2(
 	return fmt.Sprintf("gardener-node-agent-%s-%s", worker.Name, utils.ComputeSHA256Hex([]byte(result))[:16])
 }
 
-func keySuffix(version int, machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
-	imagePrefix := ""
-	if version == 1 {
-		imagePrefix = "-" + machineImageName
+func keySuffix(version int, machineImage *gardencorev1beta1.ShootMachineImage, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
+	var imagePrefix string
+	if version == 1 && machineImage != nil {
+		imagePrefix = "-" + machineImage.Name
 	}
 
 	switch purpose {
