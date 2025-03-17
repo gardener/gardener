@@ -244,8 +244,8 @@ var _ = Describe("GardenerAPIServer", func() {
 								corev1.ResourceMemory: resource.MustParse("200M"),
 							},
 							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("7"),
-								corev1.ResourceMemory: resource.MustParse("28G"),
+								corev1.ResourceCPU:    resource.MustParse("12"),
+								corev1.ResourceMemory: resource.MustParse("48G"),
 							},
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 						},
