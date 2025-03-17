@@ -40,9 +40,6 @@ config:
     NewWorkerPoolHash: true
     NodeAgentAuthorizer: true
     IstioTLSTermination: true
-  etcdConfig:
-    featureGates:
-      UseEtcdWrapper: true
   logging:
     enabled: true
     vali:

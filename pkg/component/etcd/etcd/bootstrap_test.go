@@ -271,7 +271,7 @@ var _ = Describe("Etcd", func() {
 				Immutable: ptr.To(true),
 			}
 
-			deploymentWithoutImageVectorOverwriteFor = func(useEtcdWrapper bool) *appsv1.Deployment {
+			deploymentWithoutImageVectorOverwriteFor = func() *appsv1.Deployment {
 				deployment := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "etcd-druid",
@@ -367,15 +367,6 @@ var _ = Describe("Etcd", func() {
 						},
 					},
 				}
-
-				// Add feature gate command if useEtcdWrapper is true
-				if useEtcdWrapper {
-					deployment.Spec.Template.Spec.Containers[0].Args = append(
-						deployment.Spec.Template.Spec.Containers[0].Args,
-						"--feature-gates=UseEtcdWrapper=true",
-					)
-				}
-
 				return deployment
 			}
 
@@ -768,7 +759,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("w/o image vector overwrite", func() {
 			It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
-				expectedResources = append(expectedResources, deploymentWithoutImageVectorOverwriteFor(false))
+				expectedResources = append(expectedResources, deploymentWithoutImageVectorOverwriteFor())
 			})
 		})
 
@@ -783,20 +774,6 @@ var _ = Describe("Etcd", func() {
 				expectedResources = append(expectedResources,
 					deploymentWithImageVectorOverwrite,
 					configMapImageVectorOverwrite,
-				)
-			})
-		})
-
-		Context("w/ feature gates being present in etcd config", func() {
-			BeforeEach(func() {
-				featureGates = map[string]bool{
-					"UseEtcdWrapper": true,
-				}
-			})
-
-			It("should successfully deploy all the resources", func() {
-				expectedResources = append(expectedResources,
-					deploymentWithoutImageVectorOverwriteFor(true),
 				)
 			})
 		})
