@@ -155,10 +155,7 @@ func addDeletionProtectedLabel(crdYAML string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if crdObj.Labels == nil {
-		crdObj.Labels = make(map[string]string)
-	}
-	crdObj.Labels[gardenerutils.DeletionProtected] = "true"
+	metav1.SetMetaDataLabel(&crdObj.ObjectMeta, gardenerutils.DeletionProtected, "true")
 	return yaml.Marshal(crdObj)
 }
 
