@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/spf13/afero"
@@ -45,11 +44,8 @@ func (b *AutonomousBotanist) CreateBootstrapToken(ctx context.Context) error {
 
 // WriteKubeletBootstrapKubeconfig writes the kubelet bootstrap kubeconfig to the file system.
 func (b *AutonomousBotanist) WriteKubeletBootstrapKubeconfig(ctx context.Context) error {
-	if err := b.FS.MkdirAll(nodeagentconfigv1alpha1.TempDir, os.ModeDir); err != nil {
-		return fmt.Errorf("failed to create temporary directory (%q): %w", nodeagentconfigv1alpha1.TempDir, err)
-	}
-	if err := b.FS.MkdirAll(nodeagentconfigv1alpha1.CredentialsDir, os.ModeDir); err != nil {
-		return fmt.Errorf("failed to create credentials directory (%q): %w", nodeagentconfigv1alpha1.CredentialsDir, err)
+	if err := b.ensureGardenerNodeAgentDirectories(); err != nil {
+		return fmt.Errorf("failed ensuring gardener-node-agent directories exist: %w", err)
 	}
 
 	exists, err := b.FS.Exists(nodeagentconfigv1alpha1.BootstrapTokenFilePath)

@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,6 +78,10 @@ func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) err
 		return fmt.Errorf("operating system config secret is nil, make sure to call DeployOperatingSystemConfigSecretForNodeAgent first")
 	}
 
+	if err := b.ensureGardenerNodeAgentDirectories(); err != nil {
+		return fmt.Errorf("failed ensuring gardener-node-agent directories exist: %w", err)
+	}
+
 	reconcilerCtx, cancelFunc := context.WithCancel(ctx)
 	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler"))
 
@@ -95,4 +100,14 @@ func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) err
 		FS:            b.FS,
 	}).Reconcile(reconcilerCtx, reconcile.Request{NamespacedName: types.NamespacedName{Name: b.operatingSystemConfigSecret.Name, Namespace: b.operatingSystemConfigSecret.Namespace}})
 	return err
+}
+
+func (b *AutonomousBotanist) ensureGardenerNodeAgentDirectories() error {
+	if err := b.FS.MkdirAll(nodeagentconfigv1alpha1.TempDir, os.ModeDir); err != nil {
+		return fmt.Errorf("failed creating temporary directory (%q): %w", nodeagentconfigv1alpha1.TempDir, err)
+	}
+	if err := b.FS.MkdirAll(nodeagentconfigv1alpha1.CredentialsDir, os.ModeDir); err != nil {
+		return fmt.Errorf("failed creating credentials directory (%q): %w", nodeagentconfigv1alpha1.CredentialsDir, err)
+	}
+	return nil
 }
