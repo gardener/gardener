@@ -667,9 +667,7 @@ func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserv
 			Requests: kubernetesutils.MaximumResourcesFromResourceList(corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("600m"),
 				corev1.ResourceMemory: resource.MustParse("512Mi"),
-			},
-				minAllowed,
-			),
+			}, minAllowed),
 		},
 		Replicas:          ptr.To(replicas),
 		ScaleDownDisabled: false,
