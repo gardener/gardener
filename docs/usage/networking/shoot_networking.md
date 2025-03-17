@@ -96,7 +96,23 @@ Some network ranges are reserved for specific use-cases in the communication bet
 |------|-----------------------|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
 | IPv6 | fd8f:6d53:b97a:1::/96 | Default VPN Range            |                                                                                                                                      |
 | IPv4 | 240.0.0.0/8           | Kube-ApiServer Mapping Range | Used for the `kubernetes.default.svc.cluster.local` service in a shoot                                                               |
+| IPv4 | 241.0.0.0/8           | Seed Pod Mapping Range       | Used for allowing overlapping IPv4 networks between shoot and seed. Requires `NewVPN` feature flag enabled + non-HA control plane.   |
+| IPv4 | 242.0.0.0/8           | Shoot Node Mapping Range     |                                                                                                                                      |
+| IPv4 | 243.0.0.0/8           | Shoot Service Mapping Range  |                                                                                                                                      |
+| IPv4 | 244.0.0.0/8           | Shoot Pod Mapping Range      |                                                                                                                                      |
 
 > :warning: Do not use any of the CIDR ranges mentioned above for any of the node, pod or service networks.
 > Gardener will prevent their creation. Pre-existing shoots using reserved ranges will still work, though it is recommended
 > to recreate them with compatible network ranges.
+
+## Overlapping Networks between Seed and Shoot
+By default, the seed and shoot clusters must have non-overlapping network ranges and gardener will enforce disjunct ranges.
+However, under certain conditions it is possible to allow overlapping network ranges:
+1. The feature gate `NewVPN` must be enabled.
+2. The seed cluster must have a single control plane (non-HA).
+3. The shoot cluster must be either single-stack IPv4 or dual-stack IPv4/IPv6.
+4. The shoot cluster networks don't use the reserved ranges mentioned above.
+
+> **Note:** if the shoot cluster is single-stack IPv6, the network ranges should be non-overlapping by default.
+
+If all conditions are met, the seed and shoot clusters can have overlapping (v4) network ranges. The overlapping ranges are mapped to the reserved ranges mentioned above within the VPN network.
