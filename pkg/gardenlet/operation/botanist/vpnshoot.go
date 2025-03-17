@@ -6,6 +6,7 @@ package botanist
 
 import (
 	"context"
+
 	"github.com/gardener/gardener/imagevector"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"

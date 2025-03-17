@@ -8,7 +8,10 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"net"
+	"strings"
+	"text/template"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -30,11 +33,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
-	"net"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"strings"
-	"text/template"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -44,6 +44,7 @@ import (
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -1140,7 +1141,7 @@ func seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, volumeMountP
 		"caCert":          volumeMountPathCerts + `/` + fileNameCABundle,
 		"metricsPort":     metricsPort,
 	}
-	
+
 	var envoyConfig strings.Builder
 	err := tplEnvoy.Execute(&envoyConfig, values)
 	Expect(err).ToNot(HaveOccurred())
