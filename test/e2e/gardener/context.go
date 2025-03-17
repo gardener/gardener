@@ -149,6 +149,29 @@ func (s *ShootContext) WithSeedClientSet(clientSet kubernetes.Interface) *ShootC
 	return s
 }
 
+// ProjectContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
+// same test case, i.e., within the same ordered container.
+// Accordingly, ProjectContext values must not be reused across multiple test cases (ordered containers). Make sure to
+// declare ProjectContext variables within the ordered container and initialize them during ginkgo tree construction,
+// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+//
+// A ProjectContext can be initialized using TestContext.ForProject.
+type ProjectContext struct {
+	TestContext
+	Project *gardencorev1beta1.Project
+}
+
+// ForProject copies the receiver TestContext for deriving a ProjectContext.
+func (t *TestContext) ForProject(project *gardencorev1beta1.Project) *ProjectContext {
+	s := &ProjectContext{
+		TestContext: *t,
+		Project:     project,
+	}
+	s.Log = s.Log.WithValues("project", client.ObjectKeyFromObject(project))
+
+	return s
+}
+
 // GardenContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
 // same test case, i.e., within the same ordered container.
 // Accordingly, GardenContext values must not be reused across multiple test cases (ordered containers). Make sure to
