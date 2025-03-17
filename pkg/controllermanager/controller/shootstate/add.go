@@ -7,6 +7,8 @@ package shootstate
 import (
 	"context"
 
+	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -31,6 +33,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		r.Client = mgr.GetClient()
 	}
 
+	logger := mgr.GetLogger().WithValues("controller", ControllerName)
 	return builder.ControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(
@@ -42,23 +45,33 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 		}).
 		Watches(
 			&gardencorev1beta1.Shoot{},
-			handler.EnqueueRequestsFromMapFunc(r.MapShootToShootState),
+			handler.EnqueueRequestsFromMapFunc(r.MapShootToShootState(logger)),
 			builder.WithPredicates(r.ShootPredicates()),
 		).Complete(r)
 }
 
 // MapShootToShootState maps a Shoot object to ShootState reconciliation request.
-func (r *Reconciler) MapShootToShootState(_ context.Context, obj client.Object) []reconcile.Request {
-	shoot, ok := obj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return nil
-	}
+func (r *Reconciler) MapShootToShootState(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
+		if !ok {
+			return nil
+		}
 
-	namespacedName := types.NamespacedName{
-		Name:      shoot.Name,
-		Namespace: shoot.Namespace,
+		shootState := &gardencorev1beta1.ShootState{}
+		if err := r.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shootState); err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to get ShootState for Shoot", "shoot", client.ObjectKeyFromObject(shoot))
+			}
+			return nil
+		}
+
+		namespacedName := types.NamespacedName{
+			Name:      shoot.Name,
+			Namespace: shoot.Namespace,
+		}
+		return []reconcile.Request{{NamespacedName: namespacedName}}
 	}
-	return []reconcile.Request{{NamespacedName: namespacedName}}
 }
 
 // ShootPredicates returns predicates for Shoot requests acceptance.
@@ -107,14 +120,7 @@ func (r *Reconciler) ShootPredicates() predicate.Predicate {
 				// Shoot last operation gets updated from Restore to Reconcile.
 				enqueueShootState = true
 			}
-
-			isShootStatePresent := true
-			shootState := &gardencorev1beta1.ShootState{}
-			ctx := context.Background()
-			if err := r.Client.Get(ctx, client.ObjectKeyFromObject(shoot), shootState); err != nil {
-				isShootStatePresent = false
-			}
-			return enqueueShootState && isShootStatePresent
+			return enqueueShootState
 		},
 		DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 		GenericFunc: func(_ event.GenericEvent) bool { return false },

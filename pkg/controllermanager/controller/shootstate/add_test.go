@@ -7,6 +7,7 @@ package shootstate_test
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -41,15 +42,18 @@ var _ = Describe("Add", func() {
 	Describe("#MapShootToShootState", func() {
 		var (
 			ctx context.Context
+			log logr.Logger
+
+			shootName      = "shoot-1"
+			shootNamespace = "ns-1"
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
+			log = logr.Discard()
 		})
 
 		It("should return reconciliation request matching the shoot name", func() {
-			shootName := "shoot-1"
-			shootNamespace := "ns-1"
 			shoot := &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootName,
@@ -64,8 +68,27 @@ var _ = Describe("Add", func() {
 				},
 			}
 
-			requests := reconciler.MapShootToShootState(ctx, shoot)
+			shootState := &gardencorev1beta1.ShootState{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shootName,
+					Namespace: shootNamespace,
+				},
+			}
+			Expect(c.Create(ctx, shootState)).To(Succeed())
+
+			requests := reconciler.MapShootToShootState(log)(ctx, shoot)
 			Expect(requests).To(ConsistOf(reconciliationRequest))
+		})
+
+		It("should return nil if ShootState is not present", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shootName,
+					Namespace: shootNamespace,
+				},
+			}
+			requests := reconciler.MapShootToShootState(log)(ctx, shoot)
+			Expect(requests).To(BeEmpty())
 		})
 
 		It("should return nil if argument is not a gardencorev1beta1.Shoot", func() {
@@ -78,7 +101,7 @@ var _ = Describe("Add", func() {
 				},
 			}
 
-			requests := reconciler.MapShootToShootState(ctx, &deployment)
+			requests := reconciler.MapShootToShootState(log)(ctx, &deployment)
 			Expect(requests).To(BeNil())
 		})
 	})
@@ -166,18 +189,6 @@ var _ = Describe("Add", func() {
 					Type: gardencorev1beta1.LastOperationTypeReconcile,
 				}
 				Expect(p.Update(event.UpdateEvent{ObjectOld: shootOld, ObjectNew: shoot})).To(BeTrue())
-			})
-
-			It("should return false if ShootState is not present", func() {
-				Expect(c.Delete(ctx, shootState)).To(Succeed())
-
-				shootOld.Status.LastOperation = &gardencorev1beta1.LastOperation{
-					Type: gardencorev1beta1.LastOperationTypeReconcile,
-				}
-				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-					Type: gardencorev1beta1.LastOperationTypeMigrate,
-				}
-				Expect(p.Update(event.UpdateEvent{ObjectOld: shootOld, ObjectNew: shoot})).To(BeFalse())
 			})
 		})
 	})
