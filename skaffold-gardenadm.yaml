@@ -216,6 +216,7 @@ build:
             - pkg/extensions
             - pkg/features
             - pkg/gardenadm
+            - pkg/gardenadm/botanist
             - pkg/gardenadm/cmd
             - pkg/gardenadm/cmd/bootstrap
             - pkg/gardenadm/cmd/connect
