@@ -54,6 +54,8 @@ type Interface interface {
 // Values contains configuration values for the gardener-apiserver resources.
 type Values struct {
 	apiserver.Values
+	// Autoscaling contains information for configuring autoscaling settings for the API server.
+	Autoscaling AutoscalingConfig
 	// ClusterIdentity is the identity of the garden cluster.
 	ClusterIdentity string
 	// Image is the container image used for the gardener-apiserver pods.
@@ -71,6 +73,14 @@ type Values struct {
 	WorkloadIdentityTokenIssuer string
 	// WorkloadIdentityKeyRotationPhase is the rotation phase of workload identity key.
 	WorkloadIdentityKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
+}
+
+// AutoscalingConfig contains information for configuring autoscaling settings for the API server.
+type AutoscalingConfig struct {
+	// APIServerResources are the resource requirements for the API server container.
+	APIServerResources corev1.ResourceRequirements
+	// Replicas is the number of pod replicas for the API server.
+	Replicas *int32
 }
 
 // New creates a new instance of DeployWaiter for the gardener-apiserver.

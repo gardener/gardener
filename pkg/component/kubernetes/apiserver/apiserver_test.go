@@ -79,7 +79,7 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi                Interface
 		version             *semver.Version
 		runtimeVersion      *semver.Version
-		autoscalingConfig   apiserver.AutoscalingConfig
+		autoscalingConfig   AutoscalingConfig
 		namePrefix          string
 		consistOf           func(...client.Object) types.GomegaMatcher
 
@@ -137,10 +137,10 @@ var _ = Describe("KubeAPIServer", func() {
 	JustBeforeEach(func() {
 		values = Values{
 			Values: apiserver.Values{
-				Autoscaling:    autoscalingConfig,
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{ResourcesToEncrypt: []string{"secrets"}},
 				RuntimeVersion: runtimeVersion,
 			},
+			Autoscaling:       autoscalingConfig,
 			PriorityClassName: priorityClassName,
 			NamePrefix:        namePrefix,
 			Version:           version,
@@ -205,13 +205,14 @@ var _ = Describe("KubeAPIServer", func() {
 	Describe("#Deploy", func() {
 		Describe("HorizontalPodAutoscaler", func() {
 			DescribeTable("should delete the HPA resource",
-				func(autoscalingConfig apiserver.AutoscalingConfig) {
+				func(autoscalingConfig AutoscalingConfig) {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
-							Autoscaling:    autoscalingConfig,
+
 							RuntimeVersion: runtimeVersion,
 						},
-						Version: version},
+						Autoscaling: autoscalingConfig,
+						Version:     version},
 					)
 
 					Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
@@ -220,12 +221,12 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
 				},
 
-				Entry("replicas is nil", apiserver.AutoscalingConfig{Replicas: nil}),
-				Entry("replicas is 0", apiserver.AutoscalingConfig{Replicas: ptr.To[int32](0)}),
+				Entry("replicas is nil", AutoscalingConfig{Replicas: nil}),
+				Entry("replicas is 0", AutoscalingConfig{Replicas: ptr.To[int32](0)}),
 			)
 
 			It("should successfully deploy the HPA resource", func() {
-				autoscalingConfig := apiserver.AutoscalingConfig{
+				autoscalingConfig := AutoscalingConfig{
 					Replicas:    ptr.To[int32](2),
 					MinReplicas: 4,
 					MaxReplicas: 6,
@@ -277,10 +278,10 @@ var _ = Describe("KubeAPIServer", func() {
 
 				kapi = New(kubernetesInterface, namespace, sm, Values{
 					Values: apiserver.Values{
-						Autoscaling:    autoscalingConfig,
 						RuntimeVersion: runtimeVersion,
 					},
-					Version: version},
+					Autoscaling: autoscalingConfig,
+					Version:     version},
 				)
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
@@ -312,13 +313,13 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("VerticalPodAutoscaler", func() {
 			DescribeTable("should successfully deploy the VPA resource",
-				func(autoscalingConfig apiserver.AutoscalingConfig, haVPN bool, annotations, labels map[string]string, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy) {
+				func(autoscalingConfig AutoscalingConfig, haVPN bool, annotations, labels map[string]string, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy) {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
-							Autoscaling:    autoscalingConfig,
 							RuntimeVersion: runtimeVersion,
 						},
-						Version: version,
+						Autoscaling: autoscalingConfig,
+						Version:     version,
 						VPN: VPNConfig{
 							HighAvailabilityEnabled:             haVPN,
 							HighAvailabilityNumberOfSeedServers: 2,
@@ -352,7 +353,7 @@ var _ = Describe("KubeAPIServer", func() {
 					}))
 				},
 				Entry("default behaviour",
-					apiserver.AutoscalingConfig{},
+					AutoscalingConfig{},
 					false,
 					nil,
 					nil,
@@ -368,7 +369,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 				Entry("HA VPN is enabled",
-					apiserver.AutoscalingConfig{},
+					AutoscalingConfig{},
 					true,
 					nil,
 					nil,
@@ -396,7 +397,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 				Entry("scale-down is disabled",
-					apiserver.AutoscalingConfig{ScaleDownDisabled: true},
+					AutoscalingConfig{ScaleDownDisabled: true},
 					false,
 					map[string]string{"eviction-requirements.autoscaling.gardener.cloud/downscale-restriction": "never"},
 					map[string]string{"autoscaling.gardener.cloud/eviction-requirements": "managed-by-controller"},
@@ -412,7 +413,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 				Entry("minAllowed configured",
-					apiserver.AutoscalingConfig{MinAllowed: corev1.ResourceList{"memory": resource.MustParse("2Gi")}},
+					AutoscalingConfig{MinAllowed: corev1.ResourceList{"memory": resource.MustParse("2Gi")}},
 					false,
 					nil,
 					nil,
@@ -3062,13 +3063,13 @@ kind: AuthorizationConfiguration
 					values = Values{
 						Values: apiserver.Values{
 							EnabledAdmissionPlugins: admissionPlugins,
-							Autoscaling:             apiserver.AutoscalingConfig{APIServerResources: apiServerResources},
 							Logging: &gardencorev1beta1.APIServerLogging{
 								Verbosity:           ptr.To[int32](3),
 								HTTPAccessVerbosity: ptr.To[int32](3),
 							},
 							RuntimeVersion: runtimeVersion,
 						},
+						Autoscaling:      AutoscalingConfig{APIServerResources: apiServerResources},
 						EventTTL:         &metav1.Duration{Duration: eventTTL},
 						ExternalHostname: externalHostname,
 						Images:           images,

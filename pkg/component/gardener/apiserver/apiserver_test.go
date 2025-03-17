@@ -119,14 +119,14 @@ var _ = Describe("GardenerAPIServer", func() {
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
 			Values: apiserver.Values{
-				Autoscaling: apiserver.AutoscalingConfig{
-					Replicas:           &replicas,
-					APIServerResources: resources,
-				},
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{
 					ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"},
 				},
 				RuntimeVersion: semver.MustParse("1.27.1"),
+			},
+			Autoscaling: AutoscalingConfig{
+				Replicas:           &replicas,
+				APIServerResources: resources,
 			},
 			ClusterIdentity:             clusterIdentity,
 			Image:                       image,

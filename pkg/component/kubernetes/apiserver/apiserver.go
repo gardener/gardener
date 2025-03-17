@@ -93,6 +93,8 @@ type Values struct {
 	AuthenticationWebhook *AuthenticationWebhook
 	// AuthorizationWebhook contains configuration for the authorization webhooks.
 	AuthorizationWebhooks []AuthorizationWebhook
+	// Autoscaling contains information for configuring autoscaling settings for the API server.
+	Autoscaling AutoscalingConfig
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
 	DefaultNotReadyTolerationSeconds *int64
@@ -154,6 +156,22 @@ type AuthorizationWebhook struct {
 	Kubeconfig []byte
 	// WebhookConfiguration is the actual webhook configuration.
 	apiserverv1beta1.WebhookConfiguration
+}
+
+// AutoscalingConfig contains information for configuring autoscaling settings for the API server.
+type AutoscalingConfig struct {
+	// APIServerResources are the resource requirements for the API server container.
+	APIServerResources corev1.ResourceRequirements
+	// Replicas is the number of pod replicas for the API server.
+	Replicas *int32
+	// MinReplicas are the minimum Replicas for horizontal autoscaling.
+	MinReplicas int32
+	// MaxReplicas are the maximum Replicas for horizontal autoscaling.
+	MaxReplicas int32
+	// ScaleDownDisabled states whether scale-down shall be disabled.
+	ScaleDownDisabled bool
+	// MinAllowed are the minimum allowed resources for vertical autoscaling.
+	MinAllowed corev1.ResourceList
 }
 
 // Images is a set of container images used for the containers of the kube-apiserver pods.

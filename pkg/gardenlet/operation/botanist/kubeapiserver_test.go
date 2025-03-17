@@ -31,7 +31,6 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/component/apiserver"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -182,7 +181,7 @@ var _ = Describe("KubeAPIServer", func() {
 	Describe("#DefaultKubeAPIServer", func() {
 		Describe("AutoscalingConfig", func() {
 			DescribeTable("should have the expected autoscaling config",
-				func(prepTest func(), expectedConfig apiserver.AutoscalingConfig) {
+				func(prepTest func(), expectedConfig kubeapiserver.AutoscalingConfig) {
 					if prepTest != nil {
 						prepTest()
 					}
@@ -194,7 +193,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("default behaviour",
 					nil,
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -210,7 +209,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
 					},
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -226,7 +225,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -249,7 +248,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Replicas: ptr.To[int32](24),
 						}
 					},
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -269,7 +268,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						}
 					},
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -292,7 +291,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						}
 					},
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),

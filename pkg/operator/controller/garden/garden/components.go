@@ -651,31 +651,24 @@ func (r *Reconciler) newKubeAPIServer(
 	)
 }
 
-func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserver.AutoscalingConfig {
+func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardenerapiserver.AutoscalingConfig {
 	replicas := int32(2)
 	if helper.HighAvailabilityEnabled(garden) {
 		replicas = 3
 	}
 
-	var minAllowed corev1.ResourceList
-	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil && kubeAPIServer.Autoscaling != nil {
-		minAllowed = kubeAPIServer.Autoscaling.MinAllowed
-	}
-
-	return apiserver.AutoscalingConfig{
+	return gardenerapiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
-			Requests: kubernetesutils.MaximumResourcesFromResourceList(corev1.ResourceList{
+			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("600m"),
 				corev1.ResourceMemory: resource.MustParse("512Mi"),
-			}, minAllowed),
+			},
 		},
-		Replicas:          ptr.To(replicas),
-		ScaleDownDisabled: false,
-		MinAllowed:        minAllowed,
+		Replicas: ptr.To(replicas),
 	}
 }
 
-func kubeAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserver.AutoscalingConfig {
+func kubeAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) kubeapiserver.AutoscalingConfig {
 	minReplicas := int32(2)
 	if helper.HighAvailabilityEnabled(garden) {
 		minReplicas = 3
@@ -686,7 +679,7 @@ func kubeAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserver.A
 		minAllowed = kubeAPIServer.Autoscaling.MinAllowed
 	}
 
-	return apiserver.AutoscalingConfig{
+	return kubeapiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
 			Requests: kubernetesutils.MaximumResourcesFromResourceList(corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("600m"),

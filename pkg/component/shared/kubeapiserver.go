@@ -78,7 +78,7 @@ func NewKubeAPIServer(
 	secretsManager secretsmanager.Interface,
 	namePrefix string,
 	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
-	autoscalingConfig apiserver.AutoscalingConfig,
+	autoscalingConfig kubeapiserver.AutoscalingConfig,
 	vpnConfig kubeapiserver.VPNConfig,
 	priorityClassName string,
 	isWorkerless bool,
@@ -172,7 +172,6 @@ func NewKubeAPIServer(
 				EnabledAdmissionPlugins:  enabledAdmissionPluginConfigs,
 				DisabledAdmissionPlugins: disabledAdmissionPlugins,
 				Audit:                    auditConfig,
-				Autoscaling:              autoscalingConfig,
 				FeatureGates:             featureGates,
 				Logging:                  logging,
 				Requests:                 requests,
@@ -184,6 +183,7 @@ func NewKubeAPIServer(
 			AuthenticationConfiguration:         authenticationConfigurationFromConfigMap,
 			AuthenticationWebhook:               authenticationWebhookConfig,
 			AuthorizationWebhooks:               append(authorizationWebhookConfigs, authorizationWebhookConfigsFromConfigMap...),
+			Autoscaling:                         autoscalingConfig,
 			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 			DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 			EventTTL:                            eventTTL,
@@ -367,7 +367,7 @@ func ensureKubeAPIServerAdmissionPluginConfig(plugins []gardencorev1beta1.Admiss
 	return plugins, nil
 }
 
-func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {
+func computeKubeAPIServerReplicas(autoscalingConfig kubeapiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {
 	switch {
 	case autoscalingConfig.Replicas != nil:
 		// If the replicas were already set then don't change them.
