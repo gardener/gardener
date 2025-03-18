@@ -17,9 +17,9 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
@@ -33,7 +33,7 @@ func CreateBootstrapToken(ctx context.Context, b *botanistpkg.Botanist, fs afero
 	bootstrapTokenSecret, err := bootstraptoken.ComputeBootstrapToken(
 		ctx,
 		b.SeedClientSet.Client(),
-		tokenID(metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name, Namespace: b.Shoot.GetInfo().Namespace}),
+		gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name, Namespace: b.Shoot.GetInfo().Namespace}),
 		kubeletTokenDescription,
 		10*time.Minute,
 	)
@@ -68,8 +68,7 @@ func WriteKubeletBootstrapKubeconfig(
 	if !exists {
 		b.Logger.Info("Writing fake bootstrap token to file to make sure kubelet can start up", "path", nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 		// without this, kubelet will complain about an invalid kubeconfig
-		token := tokenID(metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name, Namespace: b.Shoot.GetInfo().Namespace})
-		if err := fs.WriteFile(nodeagentconfigv1alpha1.BootstrapTokenFilePath, []byte(token), kubeletTokenFilePermission); err != nil {
+		if err := fs.WriteFile(nodeagentconfigv1alpha1.BootstrapTokenFilePath, []byte("dummy-token-to-make-kubelet-start"), kubeletTokenFilePermission); err != nil {
 			return fmt.Errorf("failed to write fake bootstrap token to file (%q): %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
 		}
 	}
@@ -88,13 +87,4 @@ func WriteKubeletBootstrapKubeconfig(
 	}
 
 	return kubeletBootstrapKubeconfigCreator.Start(ctx)
-}
-
-func tokenID(meta metav1.ObjectMeta) string {
-	value := meta.Name
-	if meta.Namespace != "" {
-		value = meta.Namespace + "--" + meta.Name
-	}
-
-	return utils.ComputeSHA256Hex([]byte(value))[:6]
 }
