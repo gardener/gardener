@@ -58,7 +58,7 @@ const (
 	volumeMountPathConntrackFixScript = "/script"
 	volumeMountPathKernelModules      = "/lib/modules"
 	volumeMountPathSSLCertsHosts      = "/etc/ssl/certs"
-	volumeMountPathSystemBusSocket    = "/var/run/dbus/system_bus_socket"
+	volumeMountPathXtablesLock        = "/run/xtables.lock"
 
 	volumeNameKubeconfig         = "kubeconfig"
 	volumeNameConfig             = "kube-proxy-config"
@@ -68,12 +68,12 @@ const (
 	volumeNameConntrackFixScript = "conntrack-fix-script"
 	volumeNameKernelModules      = "kernel-modules"
 	volumeNameSSLCertsHosts      = "ssl-certs-hosts"
-	volumeNameSystemBusSocket    = "systembussocket"
+	volumeNameXtablesLock        = "xtables-lock"
 
-	hostPathSSLCertsHosts   = "/usr/share/ca-certificates"
-	hostPathSystemBusSocket = "/var/run/dbus/system_bus_socket"
-	hostPathKernelModules   = "/lib/modules"
-	hostPathDir             = "/var/lib/kube-proxy"
+	hostPathSSLCertsHosts = "/usr/share/ca-certificates"
+	hostPathKernelModules = "/lib/modules"
+	hostPathDir           = "/var/lib/kube-proxy"
+	hostPathXtablesLock   = "/run/xtables.lock"
 )
 
 var (
@@ -304,14 +304,6 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								},
 							},
 							{
-								Name: volumeNameSystemBusSocket,
-								VolumeSource: corev1.VolumeSource{
-									HostPath: &corev1.HostPathVolumeSource{
-										Path: hostPathSystemBusSocket,
-									},
-								},
-							},
-							{
 								Name: volumeNameKernelModules,
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
@@ -355,6 +347,15 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: k.configMapConntrackFixScript.Name,
 										},
+									},
+								},
+							},
+							{
+								Name: volumeNameXtablesLock,
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: hostPathXtablesLock,
+										Type: &fileOrCreate,
 									},
 								},
 							},
@@ -574,12 +575,12 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string,
 				ReadOnly:  true,
 			},
 			{
-				Name:      volumeNameSystemBusSocket,
-				MountPath: volumeMountPathSystemBusSocket,
-			},
-			{
 				Name:      volumeNameKernelModules,
 				MountPath: volumeMountPathKernelModules,
+			},
+			{
+				Name:      volumeNameXtablesLock,
+				MountPath: volumeMountPathXtablesLock,
 			},
 		},
 	}
