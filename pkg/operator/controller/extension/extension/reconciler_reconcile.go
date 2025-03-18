@@ -18,6 +18,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -135,7 +136,7 @@ func (r *Reconciler) reconcile(
 }
 
 func (r *Reconciler) deployExtensionInRuntime(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	if !r.isDeploymentInRuntimeRequired(extension) {
+	if !helper.IsDeploymentInRuntimeRequired(extension) {
 		log.V(1).Info("Deployment in runtime cluster not required")
 		return r.runtime.Delete(ctx, log, extension)
 	}

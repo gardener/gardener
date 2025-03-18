@@ -38,6 +38,9 @@ type Reconciler struct {
 	GardenNamespace string
 	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for usage in tests.
 	GardenClientMap clientmap.ClientMap
+
+	registerManagedResourceWatchFunc func() error
+	managedResourceWatchRegistered   bool
 }
 
 // Reconcile reconciles Extension resources and executes health check operations.
@@ -72,6 +75,14 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 	if garden == nil {
 		log.V(1).Info("No garden found, stop reconciling")
 		return reconcile.Result{}, nil
+	}
+
+	if !r.managedResourceWatchRegistered && r.registerManagedResourceWatchFunc != nil {
+		if err := r.registerManagedResourceWatchFunc(); err != nil {
+			log.Error(err, "Failed registering watch for resources.gardener.cloud/v1alpha1.ManagedResource now that a operator.gardener.cloud/v1alpha1.Garden object has been created")
+		} else {
+			r.managedResourceWatchRegistered = true
+		}
 	}
 
 	ctx, cancel := controllerutils.GetChildReconciliationContext(reconcileCtx, r.Config.Controllers.ExtensionCare.SyncPeriod.Duration)

@@ -14,6 +14,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
@@ -63,7 +64,7 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
-	if r.isDeploymentInRuntimeRequired(extension) {
+	if helper.IsDeploymentInRuntimeRequired(extension) {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionTrue, ReasonInstalledInRuntime, "Extension is still required in runtime cluster")
 		return reconcile.Result{}, r.updateExtensionStatus(ctx, log, extension, conditions)
 	}

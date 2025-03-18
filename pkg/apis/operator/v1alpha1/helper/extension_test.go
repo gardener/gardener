@@ -8,6 +8,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 )
 
@@ -21,6 +23,16 @@ var _ = Describe("Extension", func() {
 	Describe("#ExtensionRuntimeNamespaceName", func() {
 		It("should return the expected namespace name", func() {
 			Expect(ExtensionRuntimeNamespaceName("provider-test")).To(Equal("runtime-extension-provider-test"))
+		})
+	})
+
+	Describe("#IsDeploymentInRuntimeRequired", func() {
+		It("should return true if the extension requires a deployment in the runtime cluster", func() {
+			Expect(IsDeploymentInRuntimeRequired(&operatorv1alpha1.Extension{
+				Status: operatorv1alpha1.ExtensionStatus{
+					Conditions: []gardencorev1beta1.Condition{{Type: "RequiredRuntime", Status: "True"}},
+				},
+			})).To(BeTrue())
 		})
 	})
 })
