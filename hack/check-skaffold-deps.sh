@@ -43,6 +43,7 @@ run "skaffold-operator.yaml" "gardener-extension-admission-local"        "provid
 
 # skaffold-gardenadm.yaml
 run "skaffold-gardenadm.yaml" "gardenadm"                                 "gardenadm"
+run "skaffold-gardenadm.yaml" "gardener-node-agent"                       "gardenadm"
 run "skaffold-gardenadm.yaml" "gardener-extension-provider-local"         "provider-local"
 run "skaffold-gardenadm.yaml" "machine-controller-manager-provider-local" "provider-local"
 
