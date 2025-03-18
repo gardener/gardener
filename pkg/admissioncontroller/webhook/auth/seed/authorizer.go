@@ -30,6 +30,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 // NewAuthorizer returns a new authorizer for requests from gardenlets. It never has an opinion on the request.
@@ -308,7 +309,7 @@ func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs aut
 	if (attrs.GetVerb() == "delete" &&
 		attrs.GetNamespace() == metav1.NamespaceSystem &&
 		strings.HasPrefix(attrs.GetName(), bootstraptokenapi.BootstrapTokenSecretPrefix)) &&
-		(attrs.GetName() == bootstraptokenapi.BootstrapTokenSecretPrefix+gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})) {
+		(attrs.GetName() == bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraptoken.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})) {
 		return auth.DecisionAllow, "", nil
 	}
 

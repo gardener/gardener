@@ -10,6 +10,7 @@ build:
           paths:
             - cmd/gardenadm
             - cmd/gardenadm/app
+            - cmd/gardener-node-agent/app/bootstrappers
             - cmd/utils
             - imagevector
             - imagevector/charts.yaml
@@ -260,6 +261,7 @@ build:
             - pkg/utils/imagevector
             - pkg/utils/istio
             - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/bootstraptoken
             - pkg/utils/kubernetes/client
             - pkg/utils/kubernetes/health
             - pkg/utils/kubernetes/unstructured

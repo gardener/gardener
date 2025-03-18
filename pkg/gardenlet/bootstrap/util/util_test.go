@@ -472,16 +472,6 @@ var _ = Describe("Util", func() {
 			})
 		})
 
-		Describe("#TokenID", func() {
-			It("should compute the expected id (w/o namespace", func() {
-				Expect(TokenID(metav1.ObjectMeta{Name: name})).To(Equal("baa5a0"))
-			})
-
-			It("should compute the expected id (w/ namespace", func() {
-				Expect(TokenID(metav1.ObjectMeta{Name: name, Namespace: namespace})).To(Equal("594384"))
-			})
-		})
-
 		Describe("#Description", func() {
 			It("should compute the expected description (w/o namespace)", func() {
 				Expect(Description(kind, "", name)).To(Equal(descriptionWithoutNamespace))
