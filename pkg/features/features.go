@@ -54,6 +54,7 @@ const (
 	// NewVPN enables the new implementation of the VPN (go rewrite) using an IPv6 transfer network.
 	// owner: @MartinWeindel @ScheererJ @axel7born @DockToFuture
 	// alpha: v1.104.0
+	// beta: v1.115.0
 	NewVPN featuregate.Feature = "NewVPN"
 
 	// NodeAgentAuthorizer enables authorization of requests from gardener-node-agents to shoot kube-apiservers using an authorization webhook.
@@ -123,7 +124,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.Beta},
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},
-	NewVPN:                                   {Default: false, PreRelease: featuregate.Alpha},
+	NewVPN:                                   {Default: true, PreRelease: featuregate.Beta},
 	NodeAgentAuthorizer:                      {Default: false, PreRelease: featuregate.Alpha},
 	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},

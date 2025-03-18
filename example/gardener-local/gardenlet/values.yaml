@@ -38,7 +38,6 @@ config:
   featureGates:
     DefaultSeccompProfile: true
     NewWorkerPoolHash: true
-    NewVPN: true
     NodeAgentAuthorizer: true
     IstioTLSTermination: true
     RemoveAPIServerProxyLegacyPort: true
