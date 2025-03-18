@@ -41,10 +41,13 @@ var RequeueDurationWhenGardenIsBeingDeleted = 2 * time.Second
 
 // Reconciler reconciles Extensions to determine their required state.
 type Reconciler struct {
-	Client client.Client
-	Config operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration
+	Client          client.Client
+	Config          operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration
+	GardenNamespace string
 
-	clock clock.Clock
+	clock                            clock.Clock
+	registerManagedResourceWatchFunc func() error
+	managedResourceWatchRegistered   bool
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -75,6 +78,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		log.Info("No Garden found")
 	}
 
+	if garden != nil && !r.managedResourceWatchRegistered && r.registerManagedResourceWatchFunc != nil {
+		if err := r.registerManagedResourceWatchFunc(); err != nil {
+			log.Error(err, "Failed registering watch for extensions.extension.gardener.cloud/v1alpha1.Extension now that a operator.gardener.cloud/v1alpha1.Garden object has been created")
+		} else {
+			r.managedResourceWatchRegistered = true
+		}
+	}
+
 	requiredExtensionKinds, err := r.calculateRequiredResourceKinds(ctx, log, r.Client, garden, extension)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -95,6 +106,19 @@ func (r *Reconciler) calculateRequiredResourceKinds(ctx context.Context, log log
 		requiredExtensionKinds = sets.New[string]()
 		requiredExtensions     = gardenerutils.ComputeRequiredExtensionsForGarden(garden)
 	)
+
+	if r.managedResourceWatchRegistered {
+		// If an extension.extension resource is existing in the garden namespace, the extension.operator is still required for the garden runtime cluster.
+		extensionList := &extensionsv1alpha1.ExtensionList{}
+		if err := r.Client.List(ctx, extensionList, client.InNamespace(r.GardenNamespace)); err != nil {
+			return nil, fmt.Errorf("could not list extensions: %w", err)
+		}
+		for _, ext := range extensionList.Items {
+			if v1beta1helper.IsResourceSupported(extension.Spec.Resources, extensionsv1alpha1.ExtensionResource, ext.Spec.Type) {
+				requiredExtensions.Insert(gardenerutils.ExtensionsID(extensionsv1alpha1.ExtensionResource, ext.Spec.Type))
+			}
+		}
+	}
 
 	for _, kindType := range requiredExtensions.UnsortedList() {
 		extensionKind, extensionType, err := gardenerutils.ExtensionKindAndTypeForID(kindType)

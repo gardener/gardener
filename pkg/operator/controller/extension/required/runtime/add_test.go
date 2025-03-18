@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -118,6 +119,62 @@ var _ = Describe("Add", func() {
 					Expect(mapperFunc(ctx, garden)).To(ConsistOf(
 						Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: infraExtension.Name}}),
 						Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: dnsExtension.Name}}),
+					))
+				})
+			})
+		})
+
+		Describe("#MapExtensionToExtensions", func() {
+			var (
+				fakeClient client.Client
+				ext        *extensionsv1alpha1.Extension
+				mapperFunc handler.MapFunc
+			)
+
+			BeforeEach(func() {
+				fakeClient = fake.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
+				reconciler.Client = fakeClient
+
+				ext = &extensionsv1alpha1.Extension{
+					Spec: extensionsv1alpha1.ExtensionSpec{
+						DefaultSpec: extensionsv1alpha1.DefaultSpec{
+							Type: "shoot-foo-service",
+						},
+					},
+				}
+
+				mapperFunc = reconciler.MapExtensionToExtensions(log)
+			})
+
+			Context("without extensions", func() {
+				It("should not return any requests", func() {
+					Expect(mapperFunc(ctx, ext)).To(BeEmpty())
+				})
+			})
+
+			Context("with extensions", func() {
+				var (
+					fooExtension *operatorv1alpha1.Extension
+				)
+
+				BeforeEach(func() {
+					fooExtension = &operatorv1alpha1.Extension{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "extension-shoot-foo-service",
+						},
+						Spec: operatorv1alpha1.ExtensionSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{Kind: "Extension", Type: "shoot-foo-service"},
+							},
+						},
+					}
+
+					Expect(fakeClient.Create(ctx, fooExtension)).To(Succeed())
+				})
+
+				It("should return the expected extensions", func() {
+					Expect(mapperFunc(ctx, ext)).To(ConsistOf(
+						Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: fooExtension.Name}}),
 					))
 				})
 			})

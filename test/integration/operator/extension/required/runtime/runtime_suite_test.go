@@ -74,6 +74,7 @@ var _ = BeforeSuite(func() {
 					filepath.Join("..", "..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupbuckets.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "..", "pkg", "component", "extensions", "crds", "assets", "crd-extensions.gardener.cloud_extensions.yaml"),
 				},
 			},
 			ErrorIfCRDPathMissing: true,
@@ -138,7 +139,8 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&requiredruntime.RequeueDurationWhenGardenIsBeingDeleted, 10*time.Millisecond))
 
 	Expect((&requiredruntime.Reconciler{
-		Config: operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
+		Config:          operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration{ConcurrentSyncs: ptr.To(5)},
+		GardenNamespace: testNamespace.Name,
 	}).AddToManager(mgr)).Should(Succeed())
 
 	By("Start manager")
