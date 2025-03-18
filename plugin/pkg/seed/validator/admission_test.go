@@ -260,7 +260,7 @@ var _ = Describe("validator", func() {
 	})
 
 	Describe("#New", func() {
-		It("should handle only DELETE, Update, and Create operations", func() {
+		It("should handle only CREATE, UPDATE, and DELETE operations", func() {
 			dr, err := New()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
