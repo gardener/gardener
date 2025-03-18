@@ -774,18 +774,6 @@ var _ = Describe("Etcd", func() {
 				)
 			})
 		})
-
-		Context("w/ feature gates being present in etcd config", func() {
-			BeforeEach(func() {
-				featureGates = map[string]bool{
-					"UseEtcdWrapper": true,
-				}
-			})
-
-			It("should successfully deploy all the resources", func() {
-				expectedResources = append(expectedResources, deploymentWithoutImageVectorOverwriteFor)
-			})
-		})
 	})
 
 	Describe("#Destroy", func() {
