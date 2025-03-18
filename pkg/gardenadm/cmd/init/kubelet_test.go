@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/rest"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/init"
@@ -52,7 +52,7 @@ var _ = Describe("Kubelet", func() {
 					Build(),
 			},
 		}
-		b.Shoot.SetInfo(&corev1beta1.Shoot{
+		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: metav1.NamespaceSystem,
@@ -69,19 +69,28 @@ var _ = Describe("Kubelet", func() {
 	})
 
 	Describe("#WriteKubeletBootstrapKubeconfig", func() {
-		It("should write the kubelet bootstrap kubeconfig", func() {
-			Expect(fs.WriteFile("/var/lib/kubelet/kubeconfig-real", []byte{}, 0o600)).To(Succeed())
-			Expect(fs.Exists("/var/lib/gardener-node-agent/tmp")).To(BeFalse())
-			Expect(fs.Exists("/var/lib/gardener-node-agent/credentials")).To(BeFalse())
-			Expect(fs.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeFalse())
-			Expect(fs.Exists("/var/lib/kubelet/kubeconfig-real")).To(BeTrue())
-			Expect(fs.Exists("/var/lib/kubelet/kubeconfig-bootstrap")).To(BeFalse())
-			Expect(WriteKubeletBootstrapKubeconfig(ctx, b, fs, "foo", []byte("bar"))).To(Succeed())
-			Expect(fs.Exists("/var/lib/gardener-node-agent/tmp")).To(BeTrue())
-			Expect(fs.Exists("/var/lib/gardener-node-agent/credentials")).To(BeTrue())
-			Expect(fs.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeTrue())
-			Expect(fs.Exists("/var/lib/kubelet/kubeconfig-real")).To(BeFalse())
-			Expect(fs.Exists("/var/lib/kubelet/kubeconfig-bootstrap")).To(BeTrue())
-		})
+		DescribeTable("should write the kubelet bootstrap kubeconfig",
+			func(createToken bool) {
+				Expect(fs.WriteFile("/var/lib/kubelet/kubeconfig-real", []byte{}, 0o600)).To(Succeed())
+				Expect(fs.Exists("/var/lib/gardener-node-agent/tmp")).To(BeFalse())
+				Expect(fs.Exists("/var/lib/gardener-node-agent/credentials")).To(BeFalse())
+				Expect(fs.Exists("/var/lib/kubelet/kubeconfig-real")).To(BeTrue())
+				Expect(fs.Exists("/var/lib/kubelet/kubeconfig-bootstrap")).To(BeFalse())
+				if !createToken {
+					Expect(fs.WriteFile("/var/lib/gardener-node-agent/credentials/bootstrap-token", []byte{}, 0o600)).To(Succeed())
+				} else {
+					Expect(fs.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeFalse())
+				}
+				Expect(WriteKubeletBootstrapKubeconfig(ctx, b, fs, "foo", []byte("bar"))).To(Succeed())
+				Expect(fs.Exists("/var/lib/gardener-node-agent/tmp")).To(BeTrue())
+				Expect(fs.Exists("/var/lib/gardener-node-agent/credentials")).To(BeTrue())
+				Expect(fs.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeTrue())
+				Expect(fs.Exists("/var/lib/kubelet/kubeconfig-real")).To(BeFalse())
+				Expect(fs.Exists("/var/lib/kubelet/kubeconfig-bootstrap")).To(BeTrue())
+			},
+
+			Entry("with creation of token file", true),
+			Entry("with existing token file", false),
+		)
 	})
 })

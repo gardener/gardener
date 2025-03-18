@@ -16,17 +16,16 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
 	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
-	nodeagentv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 const (
-	kubeletBootstrapKubeconfigPath = "/var/lib/kubelet/kubeconfig-real"
-	kubeletTokenDescription        = "kubelet"
-	kubeletTokenFilePermission     = 0o600
+	kubeletTokenDescription    = "kubelet"
+	kubeletTokenFilePermission = 0o600
 )
 
 // CreateBootstrapToken creates a bootstrap token for the kubelet and writes it to the file system.
@@ -36,14 +35,15 @@ func CreateBootstrapToken(ctx context.Context, b *botanistpkg.Botanist, fs afero
 		b.SeedClientSet.Client(),
 		tokenID(metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name, Namespace: b.Shoot.GetInfo().Namespace}),
 		kubeletTokenDescription,
-		10*time.Minute)
+		10*time.Minute,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create bootstrap token: %w", err)
 	}
 
 	bootstrapToken := string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenIDKey]) +
 		"." + string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenSecretKey])
-	return fs.WriteFile(nodeagentv1alpha1.BootstrapTokenFilePath, []byte(bootstrapToken), kubeletTokenFilePermission)
+	return fs.WriteFile(nodeagentconfigv1alpha1.BootstrapTokenFilePath, []byte(bootstrapToken), kubeletTokenFilePermission)
 }
 
 // WriteKubeletBootstrapKubeconfig writes the kubelet bootstrap kubeconfig to the file system.
@@ -54,28 +54,28 @@ func WriteKubeletBootstrapKubeconfig(
 	server string,
 	caBundle []byte,
 ) error {
-	if err := fs.MkdirAll(nodeagentv1alpha1.TempDir, os.ModeDir); err != nil {
-		return fmt.Errorf("failed to create temporary directory ('%s'): %w", nodeagentv1alpha1.TempDir, err)
+	if err := fs.MkdirAll(nodeagentconfigv1alpha1.TempDir, os.ModeDir); err != nil {
+		return fmt.Errorf("failed to create temporary directory (%q): %w", nodeagentconfigv1alpha1.TempDir, err)
 	}
-	if err := fs.MkdirAll(nodeagentv1alpha1.CredentialsDir, os.ModeDir); err != nil {
-		return fmt.Errorf("failed to create credentials directory ('%s'): %w", nodeagentv1alpha1.CredentialsDir, err)
+	if err := fs.MkdirAll(nodeagentconfigv1alpha1.CredentialsDir, os.ModeDir); err != nil {
+		return fmt.Errorf("failed to create credentials directory (%q): %w", nodeagentconfigv1alpha1.CredentialsDir, err)
 	}
 
-	exists, err := fs.Exists(nodeagentv1alpha1.BootstrapTokenFilePath)
+	exists, err := fs.Exists(nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to check whether bootstrap token file exists ('%s'): %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+		return fmt.Errorf("failed to check whether bootstrap token file exists (%q): %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
 	}
 	if !exists {
-		b.Logger.Info("Writing fake bootstrap token to file to make sure kubelet can start up", "path", nodeagentv1alpha1.BootstrapTokenFilePath)
+		b.Logger.Info("Writing fake bootstrap token to file to make sure kubelet can start up", "path", nodeagentconfigv1alpha1.BootstrapTokenFilePath)
 		// without this, kubelet will complain about an invalid kubeconfig
 		token := tokenID(metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name, Namespace: b.Shoot.GetInfo().Namespace})
-		if err := fs.WriteFile(nodeagentv1alpha1.BootstrapTokenFilePath, []byte(token), kubeletTokenFilePermission); err != nil {
-			return fmt.Errorf("failed to write fake bootstrap token to file ('%s'): %w", nodeagentv1alpha1.BootstrapTokenFilePath, err)
+		if err := fs.WriteFile(nodeagentconfigv1alpha1.BootstrapTokenFilePath, []byte(token), kubeletTokenFilePermission); err != nil {
+			return fmt.Errorf("failed to write fake bootstrap token to file (%q): %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
 		}
 	}
 
-	if err := fs.Remove(kubeletBootstrapKubeconfigPath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-		return fmt.Errorf("failed to remove kubelet bootstrap kubeconfig file ('%s'): %w", kubeletBootstrapKubeconfigPath, err)
+	if err := fs.Remove(kubelet.PathKubeconfigReal); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		return fmt.Errorf("failed to remove kubelet kubeconfig file (%q): %w", kubelet.PathKubeconfigReal, err)
 	}
 
 	kubeletBootstrapKubeconfigCreator := &bootstrappers.KubeletBootstrapKubeconfig{
