@@ -46,7 +46,7 @@ func Predicate(oldObj, newObj client.Object) bool {
 		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig, newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig) ||
 		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication) ||
 		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization) ||
-		!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources)
+		!v1beta1helper.ResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources)
 }
 
 func getReferencedSecretNames(obj client.Object) []string {

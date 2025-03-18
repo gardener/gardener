@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -97,4 +98,26 @@ func HasOperationAnnotation(annotations map[string]string) bool {
 	return annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
 		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
 		annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
+}
+
+// ResourceReferencesEqual returns true when at least one of the Secret/ConfigMap resource references has changed.
+func ResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
+	var (
+		oldNames = sets.New[string]()
+		newNames = sets.New[string]()
+	)
+
+	for _, resource := range oldResources {
+		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
+			oldNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
+		}
+	}
+
+	for _, resource := range newResources {
+		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
+			newNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
+		}
+	}
+
+	return oldNames.Equal(newNames)
 }

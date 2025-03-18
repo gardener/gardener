@@ -486,29 +486,6 @@ func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) boo
 	return oldNames.Equal(newNames)
 }
 
-// ShootResourceReferencesEqual returns true when at least one of the Secret/ConfigMap resource references inside a Shoot
-// has been changed.
-func ShootResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
-	var (
-		oldNames = sets.New[string]()
-		newNames = sets.New[string]()
-	)
-
-	for _, resource := range oldResources {
-		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
-			oldNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
-		}
-	}
-
-	for _, resource := range newResources {
-		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
-			newNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
-		}
-	}
-
-	return oldNames.Equal(newNames)
-}
-
 // CalculateEffectiveKubernetesVersion if a shoot has kubernetes version specified by worker group, return this,
 // otherwise the shoot kubernetes version
 func CalculateEffectiveKubernetesVersion(controlPlaneVersion *semver.Version, workerKubernetes *gardencorev1beta1.WorkerKubernetes) (*semver.Version, error) {
