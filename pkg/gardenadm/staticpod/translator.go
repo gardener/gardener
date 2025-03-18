@@ -17,11 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
-
-var filePathKubernetesManifests = filepath.Join(string(filepath.Separator), "etc", "kubernetes", "manifests")
 
 // Translate translates the given object into a list of files containing static pod manifests as well as ConfigMaps and
 // Secrets that can be injected into an OperatingSystemConfig.
@@ -55,7 +54,7 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 	}
 
 	return append([]extensionsv1alpha1.File{{
-		Path:        filepath.Join(filePathKubernetesManifests, pod.Name+".yaml"),
+		Path:        filepath.Join(kubelet.FilePathKubernetesManifests, pod.Name+".yaml"),
 		Permissions: ptr.To[uint32](0600),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(staticPodYAML))}},
 	}}, filesFromVolumes...), nil
@@ -90,7 +89,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sou
 	)
 
 	for i, volume := range pod.Spec.Volumes {
-		hostPath := filepath.Join(filePathKubernetesManifests, pod.Name, volume.Name)
+		hostPath := filepath.Join(kubelet.FilePathKubernetesManifests, pod.Name, volume.Name)
 
 		switch {
 		case volume.ConfigMap != nil:
