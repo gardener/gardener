@@ -56,7 +56,7 @@ func NewCRDGetter(k8sVersion *semver.Version) (CRDGetter, error) {
 func NewCRD(c client.Client, applier kubernetes.Applier, k8sVersion *semver.Version) (CRDAccess, error) {
 	crdResources, err := getEtcdCRDS(k8sVersion)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get etcd-druid CRDs for Kubernetes version: %s:%w", k8sVersion, err)
+		return nil, fmt.Errorf("failed to get etcd-druid CRDs for Kubernetes version %s: %w", k8sVersion, err)
 	}
 	return &crd{
 		client:       c,
