@@ -304,6 +304,125 @@ build:
               - -ec
               - |
                 echo "$SKAFFOLD_IMAGE" > example/gardenadm-local/.skaffold-image
+    - image: local-skaffold/gardener-node-agent
+      ko:
+        dependencies:
+          paths:
+            - cmd/gardener-node-agent
+            - cmd/gardener-node-agent/app
+            - cmd/gardener-node-agent/app/bootstrappers
+            - cmd/utils
+            - cmd/utils/initrun
+            - imagevector
+            - imagevector/charts.yaml
+            - imagevector/containers.yaml
+            - pkg/api/extensions
+            - pkg/apis/authentication
+            - pkg/apis/core
+            - pkg/apis/core/install
+            - pkg/apis/core/v1
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/core/v1beta1/helper
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/extensions/v1alpha1/helper
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/component
+            - pkg/component/extensions/operatingsystemconfig/original/components
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/logrotate
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/health-monitor.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/containerd/templates/scripts/init.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/kubelet
+            - pkg/component/extensions/operatingsystemconfig/original/components/nodeagent
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates
+            - pkg/component/extensions/operatingsystemconfig/original/components/rootcertificates/templates/scripts/update-local-ca-certificates.tpl.sh
+            - pkg/component/extensions/operatingsystemconfig/original/components/valitail
+            - pkg/component/extensions/operatingsystemconfig/original/components/valitail/templates/valitail-config.tpl.yaml
+            - pkg/component/extensions/operatingsystemconfig/utils
+            - pkg/component/observability/logging/vali/constants
+            - pkg/controllerutils
+            - pkg/controllerutils/predicate
+            - pkg/controllerutils/routes
+            - pkg/features
+            - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/healthz
+            - pkg/logger
+            - pkg/nodeagent
+            - pkg/nodeagent/apis/config/v1alpha1
+            - pkg/nodeagent/apis/config/v1alpha1/validation
+            - pkg/nodeagent/bootstrap
+            - pkg/nodeagent/bootstrap/templates/scripts/format-kubelet-data-volume.tpl.sh
+            - pkg/nodeagent/controller
+            - pkg/nodeagent/controller/certificate
+            - pkg/nodeagent/controller/healthcheck
+            - pkg/nodeagent/controller/hostnamecheck
+            - pkg/nodeagent/controller/lease
+            - pkg/nodeagent/controller/node
+            - pkg/nodeagent/controller/operatingsystemconfig
+            - pkg/nodeagent/controller/operatingsystemconfig/templates/containerd-hosts.toml.tpl
+            - pkg/nodeagent/controller/token
+            - pkg/nodeagent/dbus
+            - pkg/nodeagent/features
+            - pkg/nodeagent/files
+            - pkg/nodeagent/registry
+            - pkg/resourcemanager/controller/garbagecollector/references
+            - pkg/utils
+            - pkg/utils/chart
+            - pkg/utils/context
+            - pkg/utils/errors
+            - pkg/utils/flow
+            - pkg/utils/gardener
+            - pkg/utils/imagevector
+            - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/certificatesigningrequest
+            - pkg/utils/kubernetes/health
+            - pkg/utils/managedresources
+            - pkg/utils/managedresources/builder
+            - pkg/utils/retry
+            - pkg/utils/secrets
+            - pkg/utils/structuredmap
+            - pkg/utils/timewindow
+            - pkg/utils/validation
+            - pkg/utils/validation/kubernetesversion
+            - pkg/utils/version
+            - third_party/gopkg.in/yaml.v2
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardener-node-agent
+      hooks:
+        after:
+          - command:
+              - bash
+              - -ec
+              - |
+                cat <<EOF > example/gardenadm-local/.imagevector-overwrite.yaml
+                images:
+                - name: gardener-node-agent
+                  ref: "$SKAFFOLD_IMAGE"
+                EOF
   insecureRegistries:
     - garden.local.gardener.cloud:5001
   tagPolicy:
@@ -611,6 +730,8 @@ deploy:
                 kubectl -n $SKAFFOLD_NAMESPACES exec machine-1 -- /bin/sh -c 'rm -rf /gardenadm/resources'
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources machine-0:/gardenadm/resources
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources machine-1:/gardenadm/resources
+                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.imagevector-overwrite.yaml machine-0:/gardenadm/imagevector-overwrite.yaml
+                kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.imagevector-overwrite.yaml machine-1:/gardenadm/imagevector-overwrite.yaml
         - container:
             command:
               - bash

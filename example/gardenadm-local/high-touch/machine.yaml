@@ -23,6 +23,8 @@ spec:
         env:
           - name: PATH
             value: /gardenadm:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+          - name: IMAGEVECTOR_OVERWRITE
+            value: /gardenadm/imagevector-overwrite.yaml
         volumeMounts:
         - name: containerd
           mountPath: /var/lib/containerd
