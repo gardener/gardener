@@ -193,9 +193,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 		mTLSHostName = fmt.Sprintf("%s%s.%s.svc.%s", s.name, MutualTLSServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
 	)
 
-	istioGatewayConfigurations, err := s.getIstioGatewayConfigurations()
+	istioGatewayConfigurations, err := s.istioGatewayConfigurations()
 	if err != nil {
-		return fmt.Errorf("failed to get istio gateway configuration: %w", err)
+		return fmt.Errorf("failed to create istio gateway configuration: %w", err)
 	}
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
@@ -256,11 +256,11 @@ func (s *sni) Deploy(ctx context.Context) error {
 				wildcardRouteConfigurationName = fmt.Sprintf("https.%d.%s.%s.%s", kubeapiserverconstants.Port, portNameWildcardTLS, configuration.gateway.Name, configuration.gateway.Namespace)
 
 				envoyFilterIstioTLSTermination bytes.Buffer
+				wildcardHosts                  []string
 			)
 
 			envoyFilter := s.emptyEnvoyFilterIstioTLSTermination(configuration.istioIngressGateway.Namespace)
 
-			var wildcardHosts []string
 			if configuration.wildcardConfiguration != nil {
 				wildcardHosts = configuration.wildcardConfiguration.Hosts
 			}
@@ -526,40 +526,35 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 	return nil
 }
 
-func (s *sni) getIstioGatewayConfigurations() ([]istioGatewayConfiguration, error) {
-	var configurations []istioGatewayConfiguration
-
+func (s *sni) istioGatewayConfigurations() ([]istioGatewayConfiguration, error) {
 	values := s.valuesFunc()
-
 	if values.WildcardConfiguration != nil && values.WildcardConfiguration.IstioIngressGateway != nil {
 		if values.IstioIngressGateway.Namespace == values.WildcardConfiguration.IstioIngressGateway.Namespace {
 			return nil, fmt.Errorf("wildcard istio ingress gateway must be nil or in different namespace than istio ingress gateway")
 		}
-
-		configurations = append(configurations,
-			istioGatewayConfiguration{
+		return []istioGatewayConfiguration{
+			{
 				istioIngressGateway: values.IstioIngressGateway,
 				hosts:               values.Hosts,
 				gateway:             s.emptyGateway(),
 				virtualService:      s.emptyVirtualService(),
 			},
-			istioGatewayConfiguration{
+			{
 				istioIngressGateway:   *values.WildcardConfiguration.IstioIngressGateway,
 				gateway:               s.emptyWildcardGateway(),
 				virtualService:        s.emptyWildcardVirtualService(),
 				wildcardConfiguration: values.WildcardConfiguration,
-			})
-	} else {
-		configurations = append(configurations, istioGatewayConfiguration{
-			istioIngressGateway:   values.IstioIngressGateway,
-			hosts:                 values.Hosts,
-			gateway:               s.emptyGateway(),
-			virtualService:        s.emptyVirtualService(),
-			wildcardConfiguration: values.WildcardConfiguration,
-		})
+			},
+		}, nil
 	}
 
-	return configurations, nil
+	return []istioGatewayConfiguration{{
+		istioIngressGateway:   values.IstioIngressGateway,
+		hosts:                 values.Hosts,
+		gateway:               s.emptyGateway(),
+		virtualService:        s.emptyVirtualService(),
+		wildcardConfiguration: values.WildcardConfiguration,
+	}}, nil
 }
 
 // GetAPIServerProxyTargetClusterName returns the name of the target cluster for apiserver-proxy for the given control-plane namespace.
