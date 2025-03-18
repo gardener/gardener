@@ -45,6 +45,9 @@ func NewCommand() *cobra.Command {
 		},
 	}
 
+	// don't output usage on further errors raised during execution
+	cmd.SilenceUsage = true
+
 	opts.AddFlags(cmd.PersistentFlags())
 
 	prepareClusterBootstrapGroup(cmd, opts)
