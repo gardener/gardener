@@ -6201,6 +6201,7 @@ func autoConvert_v1beta1_SeedSpec_To_core_SeedSpec(in *SeedSpec, out *core.SeedS
 	out.Ingress = (*core.Ingress)(unsafe.Pointer(in.Ingress))
 	out.AccessRestrictions = *(*[]core.AccessRestriction)(unsafe.Pointer(&in.AccessRestrictions))
 	out.Extensions = *(*[]core.Extension)(unsafe.Pointer(&in.Extensions))
+	out.Resources = *(*[]core.NamedResourceReference)(unsafe.Pointer(&in.Resources))
 	return nil
 }
 
@@ -6226,6 +6227,7 @@ func autoConvert_core_SeedSpec_To_v1beta1_SeedSpec(in *core.SeedSpec, out *SeedS
 	out.Ingress = (*Ingress)(unsafe.Pointer(in.Ingress))
 	out.AccessRestrictions = *(*[]AccessRestriction)(unsafe.Pointer(&in.AccessRestrictions))
 	out.Extensions = *(*[]Extension)(unsafe.Pointer(&in.Extensions))
+	out.Resources = *(*[]NamedResourceReference)(unsafe.Pointer(&in.Resources))
 	return nil
 }
 

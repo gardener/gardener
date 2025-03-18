@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1210,6 +1211,104 @@ var _ = Describe("Seed Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 		})
+
+		Context("Resources validation", func() {
+			It("should forbid resources w/o names or w/ invalid references", func() {
+				ref := core.NamedResourceReference{}
+				seed.Spec.Resources = append(seed.Spec.Resources, ref)
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].resourceRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].resourceRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].resourceRef.apiVersion"),
+					})),
+				))
+			})
+
+			It("should forbid resources of kind other than Secret/ConfigMap", func() {
+				ref := core.NamedResourceReference{
+					Name: "test",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "ServiceAccount",
+						Name:       "test-sa",
+						APIVersion: "v1",
+					},
+				}
+				seed.Spec.Resources = append(seed.Spec.Resources, ref)
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeNotSupported),
+						"Field":    Equal("spec.resources[0].resourceRef.kind"),
+						"BadValue": Equal("ServiceAccount"),
+					})),
+				))
+			})
+
+			It("should forbid resources with non-unique names", func() {
+				ref := core.NamedResourceReference{
+					Name: "test",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Secret",
+						Name:       "test-secret",
+						APIVersion: "v1",
+					},
+				}
+				seed.Spec.Resources = append(seed.Spec.Resources, ref, ref)
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.resources[1].name"),
+					})),
+				))
+			})
+
+			It("should allow resources w/ names and valid references", func() {
+				ref := core.NamedResourceReference{
+					Name: "test",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Secret",
+						Name:       "test-secret",
+						APIVersion: "v1",
+					},
+				}
+
+				ref2 := core.NamedResourceReference{
+					Name: "test-cm",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "ConfigMap",
+						Name:       "test-cm",
+						APIVersion: "v1",
+					},
+				}
+
+				seed.Spec.Resources = append(seed.Spec.Resources, ref, ref2)
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(BeEmpty())
+			})
+		})
+
 	})
 
 	Describe("#ValidateSeedStatusUpdate", func() {

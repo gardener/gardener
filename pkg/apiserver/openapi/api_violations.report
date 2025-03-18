@@ -58,6 +58,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSettingLoadBalancerServices,Zones
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSpec,AccessRestrictions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSpec,Extensions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSpec,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSpec,Taints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedVolume,Providers

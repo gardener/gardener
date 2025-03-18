@@ -2807,6 +2807,10 @@ message SeedSpec {
   // Extensions contain type and provider information for Shoot extensions.
   // +optional
   repeated Extension extensions = 11;
+
+  // Resources holds a list of named resource references that can be referred to in extension configs by their names.
+  // +optional
+  repeated NamedResourceReference resources = 12;
 }
 
 // SeedStatus is the status of a Seed.

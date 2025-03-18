@@ -834,22 +834,6 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
-func validateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	names := sets.Set[string]{}
-	for i, resource := range resources {
-		if resource.Name == "" {
-			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "field must not be empty"))
-		} else if names.Has(resource.Name) {
-			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), resource.Name))
-		} else {
-			names.Insert(resource.Name)
-		}
-		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.ResourceRef, fldPath.Index(i).Child("resourceRef"))...)
-	}
-	return allErrs
-}
-
 func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

@@ -4832,6 +4832,11 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = make([]NamedResourceReference, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

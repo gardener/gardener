@@ -84,6 +84,9 @@ type SeedSpec struct {
 	// Extensions contain type and provider information for Shoot extensions.
 	// +optional
 	Extensions []Extension `json:"extensions,omitempty" protobuf:"bytes,11,rep,name=extensions"`
+	// Resources holds a list of named resource references that can be referred to in extension configs by their names.
+	// +optional
+	Resources []NamedResourceReference `json:"resources,omitempty" protobuf:"bytes,12,rep,name=resources"`
 }
 
 // SeedStatus is the status of a Seed.

@@ -5,6 +5,7 @@
 package v1beta1
 
 import (
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -67,4 +68,12 @@ type Extension struct {
 	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
 	// +optional
 	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
+}
+
+// NamedResourceReference is a named reference to a resource.
+type NamedResourceReference struct {
+	// Name of the resource reference.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// ResourceRef is a reference to a resource.
+	ResourceRef autoscalingv1.CrossVersionObjectReference `json:"resourceRef" protobuf:"bytes,2,opt,name=resourceRef"`
 }

@@ -70,6 +70,8 @@ type SeedSpec struct {
 	AccessRestrictions []AccessRestriction
 	// Extensions contain type and provider information for Shoot extensions.
 	Extensions []Extension
+	// Resources holds a list of named resource references that can be referred to in extension configs by their names.
+	Resources []NamedResourceReference
 }
 
 // SeedStatus is the status of a Seed.
