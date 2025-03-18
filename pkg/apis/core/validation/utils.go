@@ -462,7 +462,7 @@ func ValidateCredentialsRef(ref corev1.ObjectReference, fldPath *field.Path) fie
 	return allErrs
 }
 
-// ValidateObjectReferenceNameAndNamespace ensured the name in the ObjectReference is set.
+// ValidateObjectReferenceNameAndNamespace ensures the name in the ObjectReference is set.
 // Optionally, it can ensure the namespace is also set when requireNamespace=true.
 func ValidateObjectReferenceNameAndNamespace(ref corev1.ObjectReference, fldPath *field.Path, requireNamespace bool) field.ErrorList {
 	allErrs := field.ErrorList{}

@@ -10362,7 +10362,7 @@ Kubernetes core/v1.SecretReference
 <p>SecretRef is a reference to a Secret object containing the cloud provider credentials for
 the object store where backups should be stored. It should have enough privileges to manipulate
 the objects as well as buckets.
-Deprecated: This field will be removed in a future version of Gardener. Use <code>CredentialsRef</code> instead.
+Deprecated: This field will be removed after v1.119.0 has been released. Use <code>CredentialsRef</code> instead.
 Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
 </td>
 </tr>

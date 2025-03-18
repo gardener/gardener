@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -96,7 +97,8 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 			if seedTemplate.Spec.Backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
 				seedTemplate.Spec.Backup.CredentialsRef.Kind == "WorkloadIdentity" {
 				vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
-			} else {
+			} else if seedTemplate.Spec.Backup.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+				seedTemplate.Spec.Backup.CredentialsRef.Kind == "Secret" {
 				vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
 			}
 			g.addEdge(vertex, managedSeedVertex)

@@ -28,8 +28,10 @@ var _ = Describe("secretref", func() {
 
 		ctx context.Context
 
-		secretRef *corev1.SecretReference
-		secret    *corev1.Secret
+		secretRef               *corev1.SecretReference
+		secret                  *corev1.Secret
+		objectRef               *corev1.ObjectReference
+		secretPartialObjectMeta *metav1.PartialObjectMetadata
 	)
 
 	BeforeEach(func() {
@@ -41,6 +43,12 @@ var _ = Describe("secretref", func() {
 		secretRef = &corev1.SecretReference{
 			Name:      name,
 			Namespace: namespace,
+		}
+		objectRef = &corev1.ObjectReference{
+			APIVersion: "v1",
+			Kind:       "Secret",
+			Name:       name,
+			Namespace:  namespace,
 		}
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -61,6 +69,13 @@ var _ = Describe("secretref", func() {
 				"foo": []byte("bar"),
 			},
 			Type: corev1.SecretTypeOpaque,
+		}
+		secretPartialObjectMeta = &metav1.PartialObjectMetadata{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: *secret.ObjectMeta.DeepCopy(),
 		}
 	})
 
@@ -86,6 +101,67 @@ var _ = Describe("secretref", func() {
 			result, err := kubernetesutils.GetSecretByReference(ctx, c, secretRef)
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeNil())
+		})
+	})
+
+	Describe("#GetSecretMetadataByReference", func() {
+		It("should get the secret", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadata{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *metav1.PartialObjectMetadata, _ ...client.GetOption) error {
+				*s = *secretPartialObjectMeta
+				return nil
+			})
+
+			result, err := kubernetesutils.GetSecretMetadataByReference(ctx, c, secretRef)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(secretPartialObjectMeta))
+		})
+
+		It("should fail if getting the secret failed", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadata{})).Return(fmt.Errorf("error"))
+
+			result, err := kubernetesutils.GetSecretMetadataByReference(ctx, c, secretRef)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+	})
+
+	Describe("#GetSecretByObjectReference", func() {
+		It("should get the secret", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret, _ ...client.GetOption) error {
+				*s = *secret
+				return nil
+			})
+
+			result, err := kubernetesutils.GetSecretByObjectReference(ctx, c, objectRef)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(secret))
+		})
+
+		It("should fail if getting the secret failed", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fmt.Errorf("error"))
+
+			result, err := kubernetesutils.GetSecretByObjectReference(ctx, c, objectRef)
+			Expect(err).To(HaveOccurred())
+			Expect(result).To(BeNil())
+		})
+
+		It("should fail if object reference is nil", func() {
+			_, err := kubernetesutils.GetSecretByObjectReference(ctx, c, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("ref is nil"))
+		})
+
+		It("should fail if object reference does not refer to a secret", func() {
+			ref := &corev1.ObjectReference{
+				APIVersion: "foo.bar/v1alpha1",
+				Kind:       "Baz",
+				Name:       name,
+				Namespace:  namespace,
+			}
+
+			_, err := kubernetesutils.GetSecretByObjectReference(ctx, c, ref)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("objectRef does not refer to secret"))
 		})
 	})
 
@@ -118,6 +194,57 @@ var _ = Describe("secretref", func() {
 
 			err := kubernetesutils.DeleteSecretByReference(ctx, c, secretRef)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("#DeleteSecretByObjectReference", func() {
+		BeforeEach(func() {
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+			}
+		})
+
+		It("should delete the secret if it exists", func() {
+			c.EXPECT().Delete(ctx, secret).Return(nil)
+
+			err := kubernetesutils.DeleteSecretByObjectReference(ctx, c, objectRef)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should succeed if the secret doesn't exist", func() {
+			c.EXPECT().Delete(ctx, secret).Return(apierrors.NewNotFound(corev1.Resource("secret"), name))
+
+			err := kubernetesutils.DeleteSecretByObjectReference(ctx, c, objectRef)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should fail if deleting the secret failed", func() {
+			c.EXPECT().Delete(ctx, secret).Return(fmt.Errorf("error"))
+
+			err := kubernetesutils.DeleteSecretByObjectReference(ctx, c, objectRef)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail if object reference is nil", func() {
+			err := kubernetesutils.DeleteSecretByObjectReference(ctx, c, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("ref is nil"))
+		})
+
+		It("should fail if object reference does not refer to a secret", func() {
+			ref := &corev1.ObjectReference{
+				APIVersion: "foo.bar/v1alpha1",
+				Kind:       "Baz",
+				Name:       name,
+				Namespace:  namespace,
+			}
+
+			err := kubernetesutils.DeleteSecretByObjectReference(ctx, c, ref)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("objectRef does not refer to secret"))
 		})
 	})
 })

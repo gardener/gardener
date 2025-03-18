@@ -200,12 +200,14 @@ func (v *ValidateSeed) validateCredentialsRef(attrs admission.Attributes, seed *
 		return nil
 	}
 
-	wi, err := v.workloadIdentityLister.WorkloadIdentities(seed.Spec.Backup.CredentialsRef.Namespace).Get(seed.Spec.Backup.CredentialsRef.Name)
+	workloadIdentity, err := v.workloadIdentityLister.WorkloadIdentities(seed.Spec.Backup.CredentialsRef.Namespace).Get(seed.Spec.Backup.CredentialsRef.Name)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
-	if seedBackupType, workloadIdentityType := seed.Spec.Backup.Provider, wi.Spec.TargetSystem.Type; seedBackupType != workloadIdentityType {
+
+	if seedBackupType, workloadIdentityType := seed.Spec.Backup.Provider, workloadIdentity.Spec.TargetSystem.Type; seedBackupType != workloadIdentityType {
 		return admission.NewForbidden(attrs, fmt.Errorf("seed using backup of type %q cannot use WorkloadIdentity of type %q", seedBackupType, workloadIdentityType))
 	}
+
 	return nil
 }

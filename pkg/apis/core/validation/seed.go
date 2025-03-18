@@ -244,7 +244,7 @@ func validateSeedBackup(seedBackup *core.SeedBackup, seedProviderType string, fl
 	}
 
 	if seedProviderType != seedBackup.Provider && (seedBackup.Region == nil || len(*seedBackup.Region) == 0) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("region"), "", "region must be specified for if backup provider is different from provider used in `spec.cloud`"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("region"), "", "region must be specified for if backup provider is different from seed provider used in `spec.provider.type`"))
 	}
 
 	// How to achieve backward compatibility between secretRef and credentialsRef?
@@ -253,7 +253,7 @@ func validateSeedBackup(seedBackup *core.SeedBackup, seedProviderType string, fl
 	//
 	// After the sync in the strategy, we can have the following cases:
 	// - both secretRef and credentialsRef are unset, which we forbid here
-	// - both can be set but to refer to different resources, which we forbid here
+	// - both can be set but refer to different resources, which we forbid here
 	// - secretRef can be unset only when workloadIdentity is used, which we respect here
 
 	if seedBackup.CredentialsRef == nil {
