@@ -50,6 +50,10 @@ type NamespacedCloudProfileSpec struct {
 	Parent CloudProfileReference
 	// ProviderConfig contains provider-specific configuration for the profile.
 	ProviderConfig *runtime.RawExtension
+	// Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
+	// If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
+	Limits *Limits
 }
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.

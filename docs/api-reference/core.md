@@ -1124,6 +1124,22 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <p>ProviderConfig contains provider-specific configuration for the profile.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>limits</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Limits">
+Limits
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
+If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -7815,7 +7831,8 @@ LastOperationType
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>Limits configures operational limits for Shoot clusters using this CloudProfile.
@@ -8763,6 +8780,22 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <em>(Optional)</em>
 <p>ProviderConfig contains provider-specific configuration for the profile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>limits</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Limits">
+Limits
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
+If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
 </td>
 </tr>
 </tbody>

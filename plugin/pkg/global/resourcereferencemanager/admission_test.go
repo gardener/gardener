@@ -2577,6 +2577,151 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 		})
 
+		Context("CloudProfile - Update limits", func() {
+			var (
+				ctx                           context.Context
+				shootOne, shootTwo            *gardencorev1beta1.Shoot
+				cloudProfile, oldCloudProfile *core.CloudProfile
+			)
+
+			BeforeEach(func() {
+				ctx = context.Background()
+
+				cloudProfile = &core.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: cloudProfileName,
+					},
+				}
+				oldCloudProfile = cloudProfile.DeepCopy()
+
+				shootOne = shoot.DeepCopy()
+				shootOne.Name = "shoot-one"
+				shootOne.Spec.Provider.Type = "aws"
+				shootOne.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+					Kind: "CloudProfile",
+					Name: cloudProfileName,
+				}
+				shootOne.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+					{
+						Name:    "coreos-worker",
+						Minimum: 2,
+						Maximum: 10,
+						Machine: gardencorev1beta1.Machine{
+							Image: &gardencorev1beta1.ShootMachineImage{
+								Name:    "coreos",
+								Version: ptr.To("1.17.3"),
+							},
+						},
+					},
+				}
+
+				shootTwo = shootOne.DeepCopy()
+				shootTwo.Name = "shoot-two"
+				shootTwo.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+					{
+						Name:    "ubuntu-worker-1",
+						Minimum: 2,
+						Maximum: 10,
+						Machine: gardencorev1beta1.Machine{
+							Image: &gardencorev1beta1.ShootMachineImage{
+								Name:    "ubuntu",
+								Version: ptr.To("1.17.2"),
+							},
+						},
+					},
+					{
+						Name:    "ubuntu-worker-2",
+						Minimum: 2,
+						Maximum: 10,
+						Machine: gardencorev1beta1.Machine{
+							Image: &gardencorev1beta1.ShootMachineImage{
+								Name:    "ubuntu",
+								Version: ptr.To("1.17.1"),
+							},
+						},
+					},
+				}
+			})
+
+			It("should accept if referencing shoots limits are within the accepted range", func() {
+				cloudProfile.Spec.Limits = &core.Limits{
+					MaxNodesTotal: ptr.To(int32(12)),
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
+				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should fail if referencing shoots limits are not within the accepted range", func() {
+				shootOne.Spec.Provider.Workers[0].Minimum = 7
+				oldCloudProfile.Spec.Limits = &core.Limits{
+					MaxNodesTotal: ptr.To(int32(12)),
+				}
+				cloudProfile.Spec.Limits = &core.Limits{
+					MaxNodesTotal: ptr.To(int32(5)),
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
+				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"ErrStatus": MatchFields(IgnoreExtras, Fields{
+						"Code": Equal(int32(http.StatusForbidden)),
+						"Message": And(
+							ContainSubstring("maximum node count of worker pool \"coreos-worker\" in shoot \"default/shoot-one\" exceeds the limit of 5 total nodes configured in the cloud profile"),
+							ContainSubstring("total minimum node count of all worker pools of shoot \"default/shoot-one\" must not exceed the limit of 5 total nodes configured in the cloud profile"),
+							ContainSubstring("maximum node count of worker pool \"ubuntu-worker-2\" in shoot \"default/shoot-two\" exceeds the limit of 5 total nodes configured in the cloud profile"),
+							ContainSubstring("maximum node count of worker pool \"ubuntu-worker-1\" in shoot \"default/shoot-two\" exceeds the limit of 5 total nodes configured in the cloud profile"),
+						),
+					}),
+				})))
+			})
+
+			It("should fail if shoots referencing a descendant NamespacedCloudProfile have limits that are not within the accepted range", func() {
+				shootOne.Spec.Provider.Workers[0].Minimum = 7
+				cloudProfile.Spec.Limits = &core.Limits{
+					MaxNodesTotal: ptr.To(int32(5)),
+				}
+				shootOne.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: "namespaced-profile",
+				}
+				namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: namespace,
+					},
+					Spec: gardencorev1beta1.NamespacedCloudProfileSpec{
+						Parent: gardencorev1beta1.CloudProfileReference{Kind: "CloudProfile", Name: cloudProfile.Name},
+					},
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"ErrStatus": MatchFields(IgnoreExtras, Fields{
+						"Code": Equal(int32(http.StatusForbidden)),
+						"Message": And(
+							ContainSubstring("maximum node count of worker pool \"coreos-worker\" in shoot \"default/shoot-one\" exceeds the limit of 5 total nodes configured in the cloud profile"),
+							ContainSubstring("total minimum node count of all worker pools of shoot \"default/shoot-one\" must not exceed the limit of 5 total nodes configured in the cloud profile"),
+						),
+					}),
+				})))
+			})
+		})
+
 		Context("NamespacedCloudProfile - Extending Kubernetes versions", func() {
 			var (
 				expirationDateFuture2 metav1.Time
@@ -3163,6 +3308,128 @@ var _ = Describe("resourcereferencemanager", func() {
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
 				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+		})
+
+		Context("NamespacedCloudProfile - Update limits", func() {
+			var (
+				ctx                context.Context
+				shootOne, shootTwo *gardencorev1beta1.Shoot
+				projectNamespace   string
+
+				namespacedCloudProfile, oldNamespacedCloudProfile *core.NamespacedCloudProfile
+			)
+
+			BeforeEach(func() {
+				ctx = context.Background()
+
+				projectNamespace = "test-project"
+
+				cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(12)),
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+				namespacedCloudProfile = &core.NamespacedCloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "namespaced-profile",
+						Namespace: projectNamespace,
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{Name: cloudProfileName, Kind: "CloudProfile"},
+					},
+				}
+				oldNamespacedCloudProfile = namespacedCloudProfile.DeepCopy()
+
+				shootOne = shoot.DeepCopy()
+				shootOne.Name = "shoot-one"
+				shootOne.Namespace = namespace // shoot namespace is intentionally not the project namespace
+				shootOne.Spec.Provider.Type = "aws"
+				shootOne.Spec.CloudProfile = &gardencorev1beta1.CloudProfileReference{
+					Kind: "NamespacedCloudProfile",
+					Name: namespacedCloudProfile.Name,
+				}
+				shootOne.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+					{
+						Name:    "coreos-worker",
+						Minimum: 2,
+						Maximum: 10,
+						Machine: gardencorev1beta1.Machine{
+							Image: &gardencorev1beta1.ShootMachineImage{
+								Name:    "coreos",
+								Version: ptr.To("1.17.3"),
+							},
+						},
+					},
+				}
+
+				shootTwo = shootOne.DeepCopy()
+				shootTwo.Namespace = projectNamespace
+				shootTwo.Name = "shoot-two"
+				shootTwo.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+					{
+						Name:    "ubuntu-worker-1",
+						Minimum: 2,
+						Maximum: 10,
+						Machine: gardencorev1beta1.Machine{
+							Image: &gardencorev1beta1.ShootMachineImage{
+								Name:    "ubuntu",
+								Version: ptr.To("1.17.2"),
+							},
+						},
+					},
+					{
+						Name:    "ubuntu-worker-2",
+						Minimum: 2,
+						Maximum: 10,
+						Machine: gardencorev1beta1.Machine{
+							Image: &gardencorev1beta1.ShootMachineImage{
+								Name:    "ubuntu",
+								Version: ptr.To("1.17.1"),
+							},
+						},
+					},
+				}
+			})
+
+			It("should accept if referencing shoots limits are within the accepted range", func() {
+				namespacedCloudProfile.Spec.Limits = &core.Limits{
+					MaxNodesTotal: ptr.To(int32(12)),
+				}
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should fail if referencing shoots limits are not within the accepted range", func() {
+				shootTwo.Spec.Provider.Workers[0].Minimum = 7
+				oldNamespacedCloudProfile.Spec.Limits = &core.Limits{
+					MaxNodesTotal: ptr.To(int32(12)),
+				}
+				namespacedCloudProfile.Spec.Limits = &core.Limits{
+					MaxNodesTotal: ptr.To(int32(5)),
+				}
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
+				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"ErrStatus": MatchFields(IgnoreExtras, Fields{
+						"Code": Equal(int32(http.StatusForbidden)),
+						"Message": And(
+							ContainSubstring("maximum node count of worker pool \"ubuntu-worker-2\" in shoot \"test-project/shoot-two\" exceeds the limit of 5 total nodes configured in the cloud profile"),
+							ContainSubstring("maximum node count of worker pool \"ubuntu-worker-1\" in shoot \"test-project/shoot-two\" exceeds the limit of 5 total nodes configured in the cloud profile"),
+							ContainSubstring("total minimum node count of all worker pools of shoot \"test-project/shoot-two\" must not exceed the limit of 5 total nodes configured in the cloud profile"),
+						),
+					}),
+				})))
 			})
 		})
 

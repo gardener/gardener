@@ -8,6 +8,8 @@ Gardener operators can configure limits for shoot clusters in the `CloudProfile.
 The limits are enforced on all shoot clusters using the respective `CloudProfile`.
 If a certain limit is not configured, no limit is enforced.
 
+The configured limits of a `CloudProfile` can be overridden by setting a more restrictive value in a `NamespacedCloudProfile`.
+
 This document explains the limits that can be configured in the `CloudProfile`.
 
 ## Maximum Node Count

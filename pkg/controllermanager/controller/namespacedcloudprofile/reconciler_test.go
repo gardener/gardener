@@ -809,5 +809,59 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(Equal(namespacedCloudProfile.Spec.MachineImages))
 			})
 		})
+
+		Describe("#MergeCloudProfiles", func() {
+			Describe("merge limits.maxNodesTotal correctly", func() {
+				var (
+					cloudProfile           *gardencorev1beta1.CloudProfile
+					namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
+				)
+
+				BeforeEach(func() {
+					cloudProfile = &gardencorev1beta1.CloudProfile{}
+					namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{}
+				})
+
+				It("should stay nil if no value is provided at all", func() {
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits).To(BeNil())
+				})
+
+				It("should apply only the value from the CloudProfile", func() {
+					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+				})
+
+				It("should apply only the value from the NamespacedCloudProfile", func() {
+					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+				})
+
+				It("should ignore a higher value from the NamespacedCloudProfile", func() {
+					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(99))}
+
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+				})
+
+				It("should apply a lower value from the NamespacedCloudProfile", func() {
+					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(124))}
+					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(20))}
+
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(20))))
+				})
+			})
+		})
 	})
 })
