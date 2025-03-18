@@ -635,7 +635,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployNetwork),
 		})
-
 		_ = g.Add(flow.Task{
 			Name: "Deploying shoot cluster identity",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
@@ -820,7 +819,6 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name: "Checking dualstack migration of nodes",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				// Check all nodes for podcidrs and remove annotation
 				return checkPodCIDRSinNodes(ctx, o)
 			}),
 			SkipIf:       o.Shoot.IsWorkerless,
@@ -1116,9 +1114,6 @@ func checkNetworkStatusIPFamilies(ctx context.Context, o *operation.Operation) e
 
 			o.Logger.Info("Checking network update shoot status")
 			if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
-				// condition := v1beta1helper.GetOrInitConditionWithClock(o.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootToDualStackMigration)
-				// condition = v1beta1helper.UpdatedConditionWithClock(o.Clock, condition, gardencorev1beta1.ConditionTrue, "ToDualStackMigration", "Dual-stack migration is finished.")
-				// shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
 				shoot.Status.Constraints = v1beta1helper.RemoveConditions(shoot.Status.Constraints, gardencorev1beta1.ShootToDualStackMigration)
 				return nil
 			}); err != nil {
