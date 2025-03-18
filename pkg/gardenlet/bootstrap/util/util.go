@@ -258,7 +258,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 func TokenID(meta metav1.ObjectMeta) string {
 	value := meta.Name
 	if meta.Namespace != "" {
-		value += meta.Namespace + "--" + meta.Name
+		value = meta.Namespace + "--" + meta.Name
 	}
 
 	return utils.ComputeSHA256Hex([]byte(value))[:6]
