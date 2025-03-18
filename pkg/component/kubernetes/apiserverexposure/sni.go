@@ -42,6 +42,8 @@ const (
 	MutualTLSServiceNameSuffix = "-mtls"
 	// AuthenticationDynamicMetadataKey is the key used to configure the istio envoy filter.
 	AuthenticationDynamicMetadataKey = "authenticated-kube-apiserver-host"
+	// IstioTLSTerminationEnvoyFilterSuffix is the suffix for the envoy filter used for TLS termination.
+	IstioTLSTerminationEnvoyFilterSuffix = "-istio-tls-termination"
 
 	// authenticationDynamicMetadataKeyAPIServerProxy is the key used to configure the istio envoy filter for the APIServer proxy.
 	authenticationDynamicMetadataKeyAPIServerProxy = "authenticated-shoot"
@@ -359,7 +361,7 @@ func (s *sni) emptyEnvoyFilterAPIServerProxy() *istionetworkingv1alpha3.EnvoyFil
 }
 
 func (s *sni) emptyEnvoyFilterIstioTLSTermination() *istionetworkingv1alpha3.EnvoyFilter {
-	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace + "-istio-tls-termination", Namespace: s.valuesFunc().IstioIngressGateway.Namespace}}
+	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace + IstioTLSTerminationEnvoyFilterSuffix, Namespace: s.valuesFunc().IstioIngressGateway.Namespace}}
 }
 
 func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {

@@ -44,13 +44,14 @@ var _ = Describe("istiod", func() {
 	)
 
 	var (
-		ctx            context.Context
-		c              client.Client
-		istiod         Interface
-		igw            []IngressGatewayValues
-		igwAnnotations map[string]string
-		labels         map[string]string
-		networkLabels  map[string]string
+		ctx                           context.Context
+		c                             client.Client
+		istiod                        Interface
+		igw                           []IngressGatewayValues
+		igwAnnotations                map[string]string
+		labels                        map[string]string
+		networkLabels                 map[string]string
+		expectAPIServerTLSTermination bool
 
 		managedResourceIstioName   string
 		managedResourceIstio       *resourcesv1alpha1.ManagedResource
@@ -255,6 +256,7 @@ var _ = Describe("istiod", func() {
 		igwAnnotations = map[string]string{"foo": "bar"}
 		labels = map[string]string{"foo": "bar"}
 		networkLabels = map[string]string{"to-target": "allowed"}
+		expectAPIServerTLSTermination = false
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.31.1"})
@@ -408,7 +410,7 @@ var _ = Describe("istiod", func() {
 			expectedIstioManifests = append(expectedIstioManifests, istioIngressPodDisruptionBudget())
 			expectedIstioSystemManifests = append(expectedIstioSystemManifests, istiodPodDisruptionBudget())
 
-			if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+			if expectAPIServerTLSTermination {
 				expectedIstioManifests = append(expectedIstioManifests, istioAPIServerTLSTerminationEnvoyFilter())
 				expectedIstioManifests = append(expectedIstioManifests, istioStripTrailingDotEnvoyFilter())
 			}
@@ -746,7 +748,27 @@ var _ = Describe("istiod", func() {
 
 		Context("With IstioTLSTermination feature gate enabled", func() {
 			BeforeEach(func() {
+				expectAPIServerTLSTermination = true
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
+			})
+
+			It("should successfully deploy all resources", func() {
+				checkSuccessfulDeployment(nil, nil)
+			})
+		})
+
+		Context("With IstioTLSTermination feature gate disabled but with shoots still using the feature", func() {
+			BeforeEach(func() {
+				expectAPIServerTLSTermination = true
+
+				envoyFilter := istionetworkingv1alpha3.EnvoyFilter{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "shoot--foo--bar-istio-tls-termination",
+						Namespace: "test-ingress",
+					},
+				}
+				Expect(c.Create(ctx, &envoyFilter)).To(Succeed())
+				DeferCleanup(func() { Expect(c.Delete(ctx, &envoyFilter)).To(Succeed()) })
 			})
 
 			It("should successfully deploy all resources", func() {
