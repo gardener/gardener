@@ -177,7 +177,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				{
 					APIGroups: []string{rbacv1.GroupName},
 					Resources: []string{"clusterroles", "clusterrolebindings", "roles", "rolebindings"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{admissionregistrationv1.GroupName},

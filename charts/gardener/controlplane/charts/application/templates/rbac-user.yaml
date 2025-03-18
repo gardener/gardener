@@ -46,7 +46,14 @@ rules:
   - roles
   - rolebindings
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - admissionregistration.k8s.io
   resources:

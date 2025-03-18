@@ -198,7 +198,7 @@ var _ = Describe("Virtual", func() {
 				{
 					APIGroups: []string{"rbac.authorization.k8s.io"},
 					Resources: []string{"clusterroles", "clusterrolebindings", "roles", "rolebindings"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{"admissionregistration.k8s.io"},
