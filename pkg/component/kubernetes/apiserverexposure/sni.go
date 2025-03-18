@@ -88,12 +88,11 @@ func init() {
 
 // SNIValues configure the kube-apiserver service SNI.
 type SNIValues struct {
-	Hosts               []string
-	APIServerProxy      *APIServerProxy
-	IstioIngressGateway IstioIngressGateway
-	IstioTLSTermination bool
-	WildcardHost        *string
-	WildcardTLSSecret   *corev1.Secret
+	Hosts                 []string
+	APIServerProxy        *APIServerProxy
+	IstioIngressGateway   IstioIngressGateway
+	IstioTLSTermination   bool
+	WildcardConfiguration *WildcardConfiguration
 }
 
 // APIServerProxy contains values for the APIServer proxy protocol configuration.
@@ -105,6 +104,13 @@ type APIServerProxy struct {
 type IstioIngressGateway struct {
 	Namespace string
 	Labels    map[string]string
+}
+
+// WildcardConfiguration contains the values for the wildcard certificate configuration.
+type WildcardConfiguration struct {
+	Hosts               []string
+	TLSSecret           corev1.Secret
+	IstioIngressGateway *IstioIngressGateway
 }
 
 // NewSNI creates a new instance of DeployWaiter which deploys Istio resources for
@@ -168,26 +174,28 @@ type envoyFilterIstioTLSTerminationTemplateValues struct {
 	WildcardRouteConfigurationName   string
 }
 
+type istioGatewayConfiguration struct {
+	istioIngressGateway   IstioIngressGateway
+	hosts                 []string
+	gateway               *istionetworkingv1beta1.Gateway
+	virtualService        *istionetworkingv1beta1.VirtualService
+	wildcardConfiguration *WildcardConfiguration
+}
+
 func (s *sni) Deploy(ctx context.Context) error {
 	var (
 		values = s.valuesFunc()
 
 		destinationRule     = s.emptyDestinationRule()
 		mTLSDestinationRule = s.emptyMTLSDestinationRule()
-		gateway             = s.emptyGateway()
-		virtualService      = s.emptyVirtualService()
 
-		hostName                       = fmt.Sprintf("%s.%s.svc.%s", s.name, s.namespace, gardencorev1beta1.DefaultDomain)
-		mTLSHostName                   = fmt.Sprintf("%s%s.%s.svc.%s", s.name, MutualTLSServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
-		routeConfigurationName         = fmt.Sprintf("https.%d.%s.%s.%s", kubeapiserverconstants.Port, portNameTLS, s.name, s.namespace)
-		wildcardRouteConfigurationName = fmt.Sprintf("https.%d.%s.%s.%s", kubeapiserverconstants.Port, portNameWildcardTLS, s.name, s.namespace)
-		envoyFilterAPIServerProxy      bytes.Buffer
-		envoyFilterIstioTLSTermination bytes.Buffer
+		hostName     = fmt.Sprintf("%s.%s.svc.%s", s.name, s.namespace, gardencorev1beta1.DefaultDomain)
+		mTLSHostName = fmt.Sprintf("%s%s.%s.svc.%s", s.name, MutualTLSServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
 	)
 
-	allHosts := values.Hosts
-	if values.WildcardHost != nil {
-		allHosts = append(allHosts, *values.WildcardHost)
+	istioGatewayConfigurations, err := s.istioGatewayConfigurations()
+	if err != nil {
+		return fmt.Errorf("failed to create istio gateway configuration: %w", err)
 	}
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
@@ -196,8 +204,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 		envoyFilter := s.emptyEnvoyFilterAPIServerProxy()
 
 		var (
-			apiServerClusterIPPrefixLen int
 			err                         error
+			apiServerClusterIPPrefixLen int
 		)
 
 		if values.APIServerProxy != nil {
@@ -210,6 +218,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 		if values.IstioTLSTermination {
 			targetClusterProxyProtocol = GetAPIServerProxyTargetClusterName(s.namespace)
 		}
+
+		var envoyFilterAPIServerProxy bytes.Buffer
 
 		if err := envoyFilterAPIServerProxyTemplate.Execute(&envoyFilterAPIServerProxy, envoyFilterAPIServerProxyTemplateValues{
 			APIServerProxy:                 values.APIServerProxy,
@@ -240,30 +250,39 @@ func (s *sni) Deploy(ctx context.Context) error {
 	}
 
 	if values.IstioTLSTermination {
-		envoyFilter := s.emptyEnvoyFilterIstioTLSTermination()
+		for _, configuration := range istioGatewayConfigurations {
+			var (
+				routeConfigurationName         = fmt.Sprintf("https.%d.%s.%s.%s", kubeapiserverconstants.Port, portNameTLS, configuration.gateway.Name, configuration.gateway.Namespace)
+				wildcardRouteConfigurationName = fmt.Sprintf("https.%d.%s.%s.%s", kubeapiserverconstants.Port, portNameWildcardTLS, configuration.gateway.Name, configuration.gateway.Namespace)
 
-		var wildcardHosts []string
-		if values.WildcardHost != nil {
-			wildcardHosts = append(wildcardHosts, *values.WildcardHost)
+				envoyFilterIstioTLSTermination bytes.Buffer
+				wildcardHosts                  []string
+			)
+
+			envoyFilter := s.emptyEnvoyFilterIstioTLSTermination(configuration.istioIngressGateway.Namespace)
+
+			if configuration.wildcardConfiguration != nil {
+				wildcardHosts = configuration.wildcardConfiguration.Hosts
+			}
+
+			if err := envoyFilterIstioTLSTerminationTemplate.Execute(&envoyFilterIstioTLSTermination, envoyFilterIstioTLSTerminationTemplateValues{
+				AuthenticationDynamicMetadataKey: AuthenticationDynamicMetadataKey,
+				Hosts:                            configuration.hosts,
+				WildcardHosts:                    wildcardHosts,
+				IngressGatewayLabels:             configuration.istioIngressGateway.Labels,
+				Name:                             envoyFilter.Name,
+				Namespace:                        envoyFilter.Namespace,
+				Port:                             kubeapiserverconstants.Port,
+				MutualTLSHost:                    mTLSHostName,
+				RouteConfigurationName:           routeConfigurationName,
+				WildcardRouteConfigurationName:   wildcardRouteConfigurationName,
+			}); err != nil {
+				return err
+			}
+
+			filename := fmt.Sprintf("envoyfilter__%s__%s.yaml", envoyFilter.Namespace, envoyFilter.Name)
+			registry.AddSerialized(filename, envoyFilterIstioTLSTermination.Bytes())
 		}
-
-		if err := envoyFilterIstioTLSTerminationTemplate.Execute(&envoyFilterIstioTLSTermination, envoyFilterIstioTLSTerminationTemplateValues{
-			AuthenticationDynamicMetadataKey: AuthenticationDynamicMetadataKey,
-			Hosts:                            values.Hosts,
-			WildcardHosts:                    wildcardHosts,
-			IngressGatewayLabels:             values.IstioIngressGateway.Labels,
-			Name:                             envoyFilter.Name,
-			Namespace:                        envoyFilter.Namespace,
-			Port:                             kubeapiserverconstants.Port,
-			MutualTLSHost:                    mTLSHostName,
-			RouteConfigurationName:           routeConfigurationName,
-			WildcardRouteConfigurationName:   wildcardRouteConfigurationName,
-		}); err != nil {
-			return err
-		}
-
-		filename := fmt.Sprintf("envoyfilter__%s__%s.yaml", envoyFilter.Namespace, envoyFilter.Name)
-		registry.AddSerialized(filename, envoyFilterIstioTLSTermination.Bytes())
 	}
 
 	if values.APIServerProxy != nil || values.IstioTLSTermination {
@@ -301,26 +320,42 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 	}
 
-	gatewayMutateFn := istio.GatewayWithTLSPassthrough(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, allHosts, kubeapiserverconstants.Port)
-	if values.IstioTLSTermination {
-		serverConfigs := []istio.ServerConfig{{Hosts: values.Hosts, Port: kubeapiserverconstants.Port, PortName: portNameTLS, TLSSecret: s.namespace + istioTLSSecretSuffix}}
-		if values.WildcardHost != nil && values.WildcardTLSSecret != nil {
-			serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: []string{*values.WildcardHost}, Port: kubeapiserverconstants.Port, PortName: portNameWildcardTLS, TLSSecret: s.emptyIstioWildcardTLSSecret().Name})
+	for _, configuration := range istioGatewayConfigurations {
+		allHosts := configuration.hosts
+		if configuration.wildcardConfiguration != nil {
+			allHosts = append(allHosts, configuration.wildcardConfiguration.Hosts...)
 		}
-		gatewayMutateFn = istio.GatewayWithMutualTLS(gateway, getLabels(), s.valuesFunc().IstioIngressGateway.Labels, serverConfigs)
+
+		gatewayMutateFn := istio.GatewayWithTLSPassthrough(configuration.gateway, getLabels(), configuration.istioIngressGateway.Labels, allHosts, kubeapiserverconstants.Port)
+		if values.IstioTLSTermination {
+			var serverConfigs []istio.ServerConfig
+			if len(configuration.hosts) > 0 {
+				serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: configuration.hosts, Port: kubeapiserverconstants.Port, PortName: portNameTLS, TLSSecret: s.namespace + istioTLSSecretSuffix})
+			}
+			if configuration.wildcardConfiguration != nil {
+				serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: configuration.wildcardConfiguration.Hosts, Port: kubeapiserverconstants.Port, PortName: portNameWildcardTLS, TLSSecret: s.emptyIstioWildcardTLSSecret().Name})
+			}
+			gatewayMutateFn = istio.GatewayWithMutualTLS(configuration.gateway, getLabels(), configuration.istioIngressGateway.Labels, serverConfigs)
+		}
+
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, configuration.gateway, gatewayMutateFn); err != nil {
+			return err
+		}
+
+		virtualServiceMutateFn := istio.VirtualServiceWithSNIMatch(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName)
+		if values.IstioTLSTermination {
+			virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName)
+		}
+
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, configuration.virtualService, virtualServiceMutateFn); err != nil {
+			return err
+		}
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, gateway, gatewayMutateFn); err != nil {
-		return err
-	}
-
-	virtualServiceMutateFn := istio.VirtualServiceWithSNIMatch(virtualService, getLabels(), allHosts, gateway.Name, kubeapiserverconstants.Port, hostName)
-	if values.IstioTLSTermination {
-		virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(virtualService, getLabels(), allHosts, gateway.Name, kubeapiserverconstants.Port, hostName)
-	}
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, virtualService, virtualServiceMutateFn); err != nil {
-		return err
+	if len(istioGatewayConfigurations) < 2 {
+		if err := kubernetesutils.DeleteObjects(ctx, s.client, s.emptyWildcardGateway(), s.emptyWildcardVirtualService()); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -341,7 +376,9 @@ func (s *sni) Destroy(ctx context.Context) error {
 		s.emptyDestinationRule(),
 		s.emptyMTLSDestinationRule(),
 		s.emptyGateway(),
+		s.emptyWildcardGateway(),
 		s.emptyVirtualService(),
+		s.emptyWildcardVirtualService(),
 	)
 }
 
@@ -360,16 +397,24 @@ func (s *sni) emptyEnvoyFilterAPIServerProxy() *istionetworkingv1alpha3.EnvoyFil
 	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace + "-apiserver-proxy", Namespace: s.valuesFunc().IstioIngressGateway.Namespace}}
 }
 
-func (s *sni) emptyEnvoyFilterIstioTLSTermination() *istionetworkingv1alpha3.EnvoyFilter {
-	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace + IstioTLSTerminationEnvoyFilterSuffix, Namespace: s.valuesFunc().IstioIngressGateway.Namespace}}
+func (s *sni) emptyEnvoyFilterIstioTLSTermination(namespace string) *istionetworkingv1alpha3.EnvoyFilter {
+	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace + IstioTLSTerminationEnvoyFilterSuffix, Namespace: namespace}}
 }
 
 func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {
 	return &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: s.name, Namespace: s.namespace}}
 }
 
+func (s *sni) emptyWildcardGateway() *istionetworkingv1beta1.Gateway {
+	return &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: s.name + "-wildcard", Namespace: s.namespace}}
+}
+
 func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: s.name, Namespace: s.namespace}}
+}
+
+func (s *sni) emptyWildcardVirtualService() *istionetworkingv1beta1.VirtualService {
+	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: s.name + "-wildcard", Namespace: s.namespace}}
 }
 
 func (s *sni) emptyIstioMTLSSecret() *corev1.Secret {
@@ -391,10 +436,15 @@ func (s *sni) emptyIstioTLSSecret() *corev1.Secret {
 }
 
 func (s *sni) emptyIstioWildcardTLSSecret() *corev1.Secret {
+	namespace := s.valuesFunc().IstioIngressGateway.Namespace
+	if s.valuesFunc().WildcardConfiguration != nil && s.valuesFunc().WildcardConfiguration.IstioIngressGateway != nil {
+		namespace = s.valuesFunc().WildcardConfiguration.IstioIngressGateway.Namespace
+	}
+
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      s.namespace + istioWildcardTLSSecretSuffix,
-			Namespace: s.valuesFunc().IstioIngressGateway.Namespace,
+			Namespace: namespace,
 		},
 	}
 }
@@ -448,12 +498,18 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 	}
 	serializeObjects = append(serializeObjects, istioMTLSSecret)
 
-	if s.valuesFunc().WildcardTLSSecret != nil {
+	if s.valuesFunc().WildcardConfiguration != nil && s.valuesFunc().WildcardConfiguration.IstioIngressGateway != nil {
+		istioWildcardMTLSSecret := istioMTLSSecret.DeepCopy()
+		istioWildcardMTLSSecret.Namespace = s.valuesFunc().WildcardConfiguration.IstioIngressGateway.Namespace
+		serializeObjects = append(serializeObjects, istioWildcardMTLSSecret)
+	}
+
+	if s.valuesFunc().WildcardConfiguration != nil {
 		istioWildcardTLSSecret := s.emptyIstioWildcardTLSSecret()
 		istioWildcardTLSSecret.Data = map[string][]byte{
 			"cacert": secretCAClient.Data[secretsutils.DataKeyCertificateBundle],
-			"key":    s.valuesFunc().WildcardTLSSecret.Data[secretsutils.DataKeyPrivateKey],
-			"cert":   s.valuesFunc().WildcardTLSSecret.Data[secretsutils.DataKeyCertificate],
+			"key":    s.valuesFunc().WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyPrivateKey],
+			"cert":   s.valuesFunc().WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyCertificate],
 		}
 		serializeObjects = append(serializeObjects, istioWildcardTLSSecret)
 	}
@@ -468,6 +524,37 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *sni) istioGatewayConfigurations() ([]istioGatewayConfiguration, error) {
+	values := s.valuesFunc()
+	if values.WildcardConfiguration != nil && values.WildcardConfiguration.IstioIngressGateway != nil {
+		if values.IstioIngressGateway.Namespace == values.WildcardConfiguration.IstioIngressGateway.Namespace {
+			return nil, fmt.Errorf("wildcard istio ingress gateway must be nil or in different namespace than istio ingress gateway")
+		}
+		return []istioGatewayConfiguration{
+			{
+				istioIngressGateway: values.IstioIngressGateway,
+				hosts:               values.Hosts,
+				gateway:             s.emptyGateway(),
+				virtualService:      s.emptyVirtualService(),
+			},
+			{
+				istioIngressGateway:   *values.WildcardConfiguration.IstioIngressGateway,
+				gateway:               s.emptyWildcardGateway(),
+				virtualService:        s.emptyWildcardVirtualService(),
+				wildcardConfiguration: values.WildcardConfiguration,
+			},
+		}, nil
+	}
+
+	return []istioGatewayConfiguration{{
+		istioIngressGateway:   values.IstioIngressGateway,
+		hosts:                 values.Hosts,
+		gateway:               s.emptyGateway(),
+		virtualService:        s.emptyVirtualService(),
+		wildcardConfiguration: values.WildcardConfiguration,
+	}}, nil
 }
 
 // GetAPIServerProxyTargetClusterName returns the name of the target cluster for apiserver-proxy for the given control-plane namespace.
