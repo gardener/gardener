@@ -114,11 +114,11 @@ var _ = Describe("graph", func() {
 		managedSeed1                  *seedmanagementv1alpha1.ManagedSeed
 		managedSeedBootstrapMode      = seedmanagementv1alpha1.BootstrapToken
 		bootstrapTokenNamespace       = "kube-system"
-		managedSeedBootstrapTokenName = "bootstrap-token-2d9418"
+		managedSeedBootstrapTokenName = "bootstrap-token-78f9fc"
 		backupSecretRef               = corev1.SecretReference{Namespace: "backupsecret1ns", Name: "backupsecret1name"}
 
 		gardenlet1                  *seedmanagementv1alpha1.Gardenlet
-		gardenletBootstrapTokenName = "bootstrap-token-34d1a7"
+		gardenletBootstrapTokenName = "bootstrap-token-2a9d62"
 
 		seedNameInCSR = "myseed"
 		csr1          *certificatesv1.CertificateSigningRequest
