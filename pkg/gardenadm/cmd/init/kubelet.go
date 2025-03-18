@@ -17,7 +17,6 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
@@ -33,7 +32,7 @@ func CreateBootstrapToken(ctx context.Context, b *botanistpkg.Botanist, fs afero
 	bootstrapTokenSecret, err := bootstraptoken.ComputeBootstrapToken(
 		ctx,
 		b.SeedClientSet.Client(),
-		gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name, Namespace: b.Shoot.GetInfo().Namespace}),
+		bootstraptoken.TokenID(metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name, Namespace: b.Shoot.GetInfo().Namespace}),
 		kubeletTokenDescription,
 		10*time.Minute,
 	)

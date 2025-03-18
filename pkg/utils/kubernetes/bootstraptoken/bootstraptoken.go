@@ -70,3 +70,13 @@ func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, descri
 func FromSecretData(data map[string][]byte) string {
 	return bootstraptokenutil.TokenFromIDAndSecret(string(data[bootstraptokenapi.BootstrapTokenIDKey]), string(data[bootstraptokenapi.BootstrapTokenSecretKey]))
 }
+
+// TokenID returns the token id based on the given metadata.
+func TokenID(meta metav1.ObjectMeta) string {
+	value := meta.Name
+	if meta.Namespace != "" {
+		value = meta.Namespace + "--" + meta.Name
+	}
+
+	return utils.ComputeSHA256Hex([]byte(value))[:6]
+}

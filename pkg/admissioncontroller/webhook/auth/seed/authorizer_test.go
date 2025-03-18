@@ -31,9 +31,9 @@ import (
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 var _ = Describe("Seed", func() {
@@ -2000,7 +2000,7 @@ var _ = Describe("Seed", func() {
 				It("should allow to delete the gardenlet's bootstrap tokens without consulting the graph", func() {
 					attrs.Verb = "delete"
 					attrs.Namespace = "kube-system"
-					attrs.Name = "bootstrap-token-" + gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})
+					attrs.Name = "bootstrap-token-" + bootstraptoken.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())

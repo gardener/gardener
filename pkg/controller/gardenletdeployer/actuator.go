@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 const (
@@ -790,7 +791,7 @@ func createBootstrapKubeconfig(
 		}
 
 		var (
-			tokenID          = gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: obj.GetName(), Namespace: obj.GetNamespace()})
+			tokenID          = bootstraptoken.TokenID(metav1.ObjectMeta{Name: obj.GetName(), Namespace: obj.GetNamespace()})
 			tokenDescription = gardenletbootstraputil.Description(kind, obj.GetNamespace(), obj.GetName())
 			tokenValidity    = 24 * time.Hour
 		)

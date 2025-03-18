@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
@@ -252,16 +251,6 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 
 	// Get bootstrap kubeconfig from service account secret
 	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, tokenRequest.Status.Token)
-}
-
-// TokenID returns the token id based on the given metadata.
-func TokenID(meta metav1.ObjectMeta) string {
-	value := meta.Name
-	if meta.Namespace != "" {
-		value = meta.Namespace + "--" + meta.Name
-	}
-
-	return utils.ComputeSHA256Hex([]byte(value))[:6]
 }
 
 // ClusterRoleBindingName concatenates the gardener seed bootstrapper group with the given name, separated by a colon.
