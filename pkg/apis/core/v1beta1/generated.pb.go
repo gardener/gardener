@@ -15563,6 +15563,20 @@ func (m *SeedSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.Extensions) > 0 {
+		for iNdEx := len(m.Extensions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Extensions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x5a
+		}
+	}
 	if len(m.AccessRestrictions) > 0 {
 		for iNdEx := len(m.AccessRestrictions) - 1; iNdEx >= 0; iNdEx-- {
 			{
@@ -21613,6 +21627,12 @@ func (m *SeedSpec) Size() (n int) {
 			n += 1 + l + sovGenerated(uint64(l))
 		}
 	}
+	if len(m.Extensions) > 0 {
+		for _, e := range m.Extensions {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -24917,6 +24937,11 @@ func (this *SeedSpec) String() string {
 		repeatedStringForAccessRestrictions += strings.Replace(strings.Replace(f.String(), "AccessRestriction", "AccessRestriction", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForAccessRestrictions += "}"
+	repeatedStringForExtensions := "[]Extension{"
+	for _, f := range this.Extensions {
+		repeatedStringForExtensions += strings.Replace(strings.Replace(f.String(), "Extension", "Extension", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForExtensions += "}"
 	s := strings.Join([]string{`&SeedSpec{`,
 		`Backup:` + strings.Replace(this.Backup.String(), "SeedBackup", "SeedBackup", 1) + `,`,
 		`DNS:` + strings.Replace(strings.Replace(this.DNS.String(), "SeedDNS", "SeedDNS", 1), `&`, ``, 1) + `,`,
@@ -24927,6 +24952,7 @@ func (this *SeedSpec) String() string {
 		`Settings:` + strings.Replace(this.Settings.String(), "SeedSettings", "SeedSettings", 1) + `,`,
 		`Ingress:` + strings.Replace(this.Ingress.String(), "Ingress", "Ingress", 1) + `,`,
 		`AccessRestrictions:` + repeatedStringForAccessRestrictions + `,`,
+		`Extensions:` + repeatedStringForExtensions + `,`,
 		`}`,
 	}, "")
 	return s
@@ -52262,6 +52288,40 @@ func (m *SeedSpec) Unmarshal(dAtA []byte) error {
 			}
 			m.AccessRestrictions = append(m.AccessRestrictions, AccessRestriction{})
 			if err := m.AccessRestrictions[len(m.AccessRestrictions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 11:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Extensions", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Extensions = append(m.Extensions, Extension{})
+			if err := m.Extensions[len(m.Extensions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

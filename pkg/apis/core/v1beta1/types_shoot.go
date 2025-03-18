@@ -535,18 +535,6 @@ type DNSIncludeExclude struct {
 // DefaultDomain is the default value in the Shoot's '.spec.dns.domain' when '.spec.dns.provider' is 'unmanaged'
 const DefaultDomain = "cluster.local"
 
-// Extension contains type and provider information for Shoot extensions.
-type Extension struct {
-	// Type is the type of the extension resource.
-	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
-	// ProviderConfig is the configuration passed to extension resource.
-	// +optional
-	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
-	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
-	// +optional
-	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
-}
-
 // NamedResourceReference is a named reference to a resource.
 type NamedResourceReference struct {
 	// Name of the resource reference.

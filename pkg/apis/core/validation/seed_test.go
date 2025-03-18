@@ -1157,6 +1157,59 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))
 			})
 		})
+
+		Context("Extensions validation", func() {
+			It("should forbid passing an extension w/o type information", func() {
+				extension := core.Extension{}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension)
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.extensions[0].type"),
+					}))))
+			})
+
+			It("should allow passing an extension w/ type information", func() {
+				extension := core.Extension{
+					Type: "arbitrary",
+				}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension)
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid passing an extension of same type more than once", func() {
+				extension := core.Extension{
+					Type: "arbitrary",
+				}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension, extension)
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.extensions[1].type"),
+					}))))
+			})
+
+			It("should allow passing more than one extension of different type", func() {
+				extension := core.Extension{
+					Type: "arbitrary",
+				}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension, extension)
+				seed.Spec.Extensions[1].Type = "arbitrary-2"
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(BeEmpty())
+			})
+		})
 	})
 
 	Describe("#ValidateSeedStatusUpdate", func() {

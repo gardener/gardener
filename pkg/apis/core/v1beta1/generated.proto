@@ -984,7 +984,7 @@ message ExposureClassScheduling {
   repeated Toleration tolerations = 2;
 }
 
-// Extension contains type and provider information for Shoot extensions.
+// Extension contains type and provider information for extensions.
 message Extension {
   // Type is the type of the extension resource.
   optional string type = 1;
@@ -2803,6 +2803,10 @@ message SeedSpec {
   // AccessRestrictions describe a list of access restrictions for this seed cluster.
   // +optional
   repeated AccessRestriction accessRestrictions = 10;
+
+  // Extensions contain type and provider information for Shoot extensions.
+  // +optional
+  repeated Extension extensions = 11;
 }
 
 // SeedStatus is the status of a Seed.

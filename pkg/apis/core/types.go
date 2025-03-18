@@ -6,6 +6,7 @@ package core
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -60,4 +61,14 @@ type AccessRestrictionWithOptions struct {
 	// Options is a map of additional options for the access restriction.
 	// +optional
 	Options map[string]string
+}
+
+// Extension contains type and provider information for extensions.
+type Extension struct {
+	// Type is the type of the extension resource.
+	Type string
+	// ProviderConfig is the configuration passed to extension resource.
+	ProviderConfig *runtime.RawExtension
+	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
+	Disabled *bool
 }

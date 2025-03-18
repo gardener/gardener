@@ -236,6 +236,8 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 		}
 	}
 
+	allErrs = append(allErrs, validateExtensions(seedSpec.Extensions, fldPath.Child("extensions"))...)
+
 	return allErrs
 }
 

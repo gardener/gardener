@@ -81,6 +81,9 @@ type SeedSpec struct {
 	// AccessRestrictions describe a list of access restrictions for this seed cluster.
 	// +optional
 	AccessRestrictions []AccessRestriction `json:"accessRestrictions,omitempty" protobuf:"bytes,10,rep,name=accessRestrictions"`
+	// Extensions contain type and provider information for Shoot extensions.
+	// +optional
+	Extensions []Extension `json:"extensions,omitempty" protobuf:"bytes,11,rep,name=extensions"`
 }
 
 // SeedStatus is the status of a Seed.

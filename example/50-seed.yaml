@@ -28,6 +28,13 @@ spec:
       secretRef:
         name: ingress-secret
         namespace: garden
+  extensions:
+  - type: foobar
+  # providerConfig:
+  #   apiVersion: foobar.extensions.gardener.cloud/v1alpha1
+  #   kind: FooBarConfig
+  #   foo: bar
+  # disabled: true # only relevant for extensions that were marked as 'globally enabled' by Gardener administrators
   ingress: 
     domain: ingress.dev.my-seed.example.com
     controller:

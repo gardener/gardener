@@ -6200,6 +6200,7 @@ func autoConvert_v1beta1_SeedSpec_To_core_SeedSpec(in *SeedSpec, out *core.SeedS
 	out.Settings = (*core.SeedSettings)(unsafe.Pointer(in.Settings))
 	out.Ingress = (*core.Ingress)(unsafe.Pointer(in.Ingress))
 	out.AccessRestrictions = *(*[]core.AccessRestriction)(unsafe.Pointer(&in.AccessRestrictions))
+	out.Extensions = *(*[]core.Extension)(unsafe.Pointer(&in.Extensions))
 	return nil
 }
 
@@ -6224,6 +6225,7 @@ func autoConvert_core_SeedSpec_To_v1beta1_SeedSpec(in *core.SeedSpec, out *SeedS
 	out.Volume = (*SeedVolume)(unsafe.Pointer(in.Volume))
 	out.Ingress = (*Ingress)(unsafe.Pointer(in.Ingress))
 	out.AccessRestrictions = *(*[]AccessRestriction)(unsafe.Pointer(&in.AccessRestrictions))
+	out.Extensions = *(*[]Extension)(unsafe.Pointer(&in.Extensions))
 	return nil
 }
 

@@ -1735,6 +1735,20 @@ Ingress
 <p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Shoot extensions.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -5370,6 +5384,7 @@ SeedSelector
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
@@ -11335,6 +11350,20 @@ Ingress
 <p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Shoot extensions.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedStatus">SeedStatus
@@ -11688,6 +11717,20 @@ Ingress
 <td>
 <em>(Optional)</em>
 <p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Shoot extensions.</p>
 </td>
 </tr>
 </table>

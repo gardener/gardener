@@ -4,6 +4,10 @@
 
 package v1beta1
 
+import (
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
 const (
 	// GardenerSeedLeaseNamespace is the namespace in which Gardenlet will report Seeds'
 	// status using Lease resources for each Seed
@@ -51,4 +55,16 @@ type AccessRestrictionWithOptions struct {
 	// Options is a map of additional options for the access restriction.
 	// +optional
 	Options map[string]string `json:"options,omitempty" protobuf:"bytes,2,rep,name=options"`
+}
+
+// Extension contains type and provider information for extensions.
+type Extension struct {
+	// Type is the type of the extension resource.
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
+	// ProviderConfig is the configuration passed to extension resource.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
+	// +optional
+	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
 }

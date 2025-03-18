@@ -834,21 +834,6 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
-func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	types := sets.Set[string]{}
-	for i, extension := range extensions {
-		if extension.Type == "" {
-			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("type"), "field must not be empty"))
-		} else if types.Has(extension.Type) {
-			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), extension.Type))
-		} else {
-			types.Insert(extension.Type)
-		}
-	}
-	return allErrs
-}
-
 func validateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	names := sets.Set[string]{}
