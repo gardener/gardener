@@ -44,6 +44,8 @@ type Values struct {
 	Requests *gardencorev1beta1.APIServerRequests
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
+	// RunsAsStaticPod is true when the API server runs as static pod in the same network as the worker nodes.
+	RunsAsStaticPod bool
 	// WatchCacheSizes are the configured sizes for the watch caches.
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
 }
