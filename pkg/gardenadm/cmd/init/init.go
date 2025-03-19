@@ -92,5 +92,30 @@ func run(ctx context.Context, opts *Options) error {
 		return flow.Errors(err)
 	}
 
+	fmt.Fprintf(opts.IOStreams.Out, `
+Your Shoot cluster control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i %s $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  kubectl get nodes
+
+You can now join any number of machines by running the following on each node
+as root:
+
+  gardenadm join <TODO>
+
+Note that the mentioned kubeconfig file will be disabled once you deploy the
+gardenlet and connect this cluster to an existing Gardener installation by
+running on any node:
+
+  gardenadm connect <TODO>
+
+Please use the shoots/adminkubeconfig subresource to retrieve a kubeconfig,
+see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
+`, botanist.PathKubeconfig)
+
 	return nil
 }
