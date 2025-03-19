@@ -218,6 +218,7 @@ func syncBackupSecretRefAndCredentialsRef(backup *core.SeedBackup) {
 			Namespace:  backup.SecretRef.Namespace,
 			Name:       backup.SecretRef.Name,
 		}
+
 		return
 	}
 

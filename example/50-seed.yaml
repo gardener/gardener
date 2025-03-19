@@ -22,6 +22,11 @@ spec:
     secretRef:
       name: backup-secret
       namespace: garden
+    # credentialsRef:
+    #   apiVersion: v1
+    #   kind: Secret
+    #   name: backup-secret
+    #   namespace: garden
   dns:
     provider:
       type: aws-route53
@@ -42,7 +47,7 @@ spec:
   #     apiVersion: v1
   #     kind: Secret
   #     name: my-foobar-secret
-  ingress: 
+  ingress:
     domain: ingress.dev.my-seed.example.com
     controller:
       kind: nginx
