@@ -301,8 +301,7 @@ build:
           envTemplate:
             template: '{{.GARDENER_VERSION}}'
         - name: sha
-          gitCommit:
-            variant: AbbrevCommitSha
+          inputDigest: {}
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
