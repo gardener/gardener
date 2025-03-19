@@ -22,11 +22,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -355,6 +357,8 @@ var _ = Describe("Garden", func() {
 		Entry("operations resource", operationsv1alpha1.Resource("bastions").String(), true),
 		Entry("settings resource", settingsv1alpha1.Resource("openidconnectpresets").String(), true),
 		Entry("seedmanagement resource", seedmanagementv1alpha1.Resource("managedseeds").String(), true),
+		Entry("authentication resource", authenticationv1alpha1.Resource("adminkubeconfigrequests").String(), true),
+		Entry("security resource", securityv1alpha1.Resource("workloadidentities").String(), true),
 		Entry("any other resource", "foo", false),
 	)
 
@@ -367,6 +371,8 @@ var _ = Describe("Garden", func() {
 		Entry("operations resource", operationsv1alpha1.Resource("bastions").String(), false),
 		Entry("settings resource", settingsv1alpha1.Resource("openidconnectpresets").String(), false),
 		Entry("seedmanagement resource", seedmanagementv1alpha1.Resource("managedseeds").String(), false),
+		Entry("authentication resource", authenticationv1alpha1.Resource("adminkubeconfigrequests").String(), false),
+		Entry("security resource", securityv1alpha1.Resource("workloadidentities").String(), false),
 		Entry("any other resource", "foo", true),
 	)
 

@@ -26,6 +26,7 @@ build:
             - pkg/admissioncontroller/apis/config/v1alpha1/validation
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -319,6 +320,7 @@ build:
             - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -650,6 +652,7 @@ build:
             - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -765,6 +768,7 @@ build:
             - cmd/utils
             - cmd/utils/initrun
             - pkg/api/extensions
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -853,6 +857,7 @@ build:
             - pkg/admissioncontroller/webhook/admission/updaterestriction
             - pkg/admissioncontroller/webhook/auth/seed
             - pkg/admissioncontroller/webhook/auth/seed/graph
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -1018,6 +1023,7 @@ build:
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1172,6 +1178,7 @@ build:
             - extensions/pkg/webhook/cmd
             - extensions/pkg/webhook/shoot
             - pkg/api/extensions
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1

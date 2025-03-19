@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/apis/authentication"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -29,6 +30,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/security"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/settings"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -351,8 +353,10 @@ func DefaultGardenerResourcesForEncryption() sets.Set[string] {
 // IsServedByGardenerAPIServer returns true if the passed resources is served by the Gardener API Server.
 func IsServedByGardenerAPIServer(resource string) bool {
 	for _, groupName := range []string{
+		authentication.GroupName,
 		gardencore.GroupName,
 		operations.GroupName,
+		security.GroupName,
 		settings.GroupName,
 		seedmanagement.GroupName,
 	} {
