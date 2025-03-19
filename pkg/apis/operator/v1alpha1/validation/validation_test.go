@@ -1544,19 +1544,19 @@ var _ = Describe("Validation Tests", func() {
 									"Type":     Equal(field.ErrorTypeInvalid),
 									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[2]"),
 									"BadValue": Equal("ingresses.networking.io"),
-									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"),
 								})),
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":     Equal(field.ErrorTypeInvalid),
 									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[3]"),
 									"BadValue": Equal("foo.gardener.cloud"),
-									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"),
 								})),
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":     Equal(field.ErrorTypeInvalid),
 									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[4]"),
 									"BadValue": Equal("configmaps"),
-									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"),
+									"Detail":   Equal("should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"),
 								})),
 							))
 						})
