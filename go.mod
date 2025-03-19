@@ -10,7 +10,7 @@ require (
 	github.com/containerd/containerd v1.7.27
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/distribution/distribution/v3 v3.0.0-rc.3
-	github.com/docker/cli v28.0.1+incompatible
+	github.com/docker/cli v28.0.2+incompatible
 	github.com/fluent/fluent-operator/v3 v3.3.0
 	github.com/gardener/cert-management v0.17.5
 	github.com/gardener/dependency-watchdog v1.4.0
