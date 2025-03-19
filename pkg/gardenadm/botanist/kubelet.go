@@ -16,9 +16,11 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
 	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const kubeletTokenFilePermission = 0o600
@@ -42,7 +44,7 @@ func (b *AutonomousBotanist) CreateBootstrapToken(ctx context.Context) error {
 }
 
 // WriteKubeletBootstrapKubeconfig writes the kubelet bootstrap kubeconfig to the file system.
-func (b *AutonomousBotanist) WriteKubeletBootstrapKubeconfig(ctx context.Context, server string, caBundle []byte) error {
+func (b *AutonomousBotanist) WriteKubeletBootstrapKubeconfig(ctx context.Context) error {
 	if err := b.FS.MkdirAll(nodeagentconfigv1alpha1.TempDir, os.ModeDir); err != nil {
 		return fmt.Errorf("failed to create temporary directory (%q): %w", nodeagentconfigv1alpha1.TempDir, err)
 	}
@@ -66,12 +68,17 @@ func (b *AutonomousBotanist) WriteKubeletBootstrapKubeconfig(ctx context.Context
 		return fmt.Errorf("failed to remove kubelet kubeconfig file (%q): %w", kubelet.PathKubeconfigReal, err)
 	}
 
+	caBundleSecret, ok := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !ok {
+		return fmt.Errorf("failed to retrieve cluster CA secret")
+	}
+
 	kubeletBootstrapKubeconfigCreator := &bootstrappers.KubeletBootstrapKubeconfig{
 		Log: b.Logger,
 		FS:  b.FS,
 		APIServerConfig: nodeagentconfigv1alpha1.APIServer{
-			Server:   server,
-			CABundle: caBundle,
+			Server:   "localhost",
+			CABundle: caBundleSecret.Data[secretsutils.DataKeyCertificateBundle],
 		},
 	}
 

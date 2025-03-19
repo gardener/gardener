@@ -11,8 +11,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -22,21 +24,33 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
 
 var _ = Describe("Kubelet", func() {
 	var (
-		ctx context.Context
-		b   *AutonomousBotanist
+		ctx       context.Context
+		namespace = "kube-system"
+
+		fakeSeedClient    client.Client
+		fakeSecretManager secretsmanager.Interface
+
+		b *AutonomousBotanist
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
+
+		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		fakeSecretManager = fakesecretsmanager.New(fakeSeedClient, namespace)
+
 		b = &AutonomousBotanist{
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
-					Logger: logr.Discard(),
-					Shoot:  &shoot.Shoot{},
+					Logger:         logr.Discard(),
+					Shoot:          &shoot.Shoot{},
+					SecretsManager: fakeSecretManager,
 					SeedClientSet: fakekubernetes.
 						NewClientSetBuilder().
 						WithClient(fakeclient.
@@ -53,9 +67,11 @@ var _ = Describe("Kubelet", func() {
 		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
-				Namespace: metav1.NamespaceSystem,
+				Namespace: namespace,
 			},
 		})
+
+		Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 	})
 
 	Describe("#CreateBootstrapToken", func() {
@@ -79,7 +95,7 @@ var _ = Describe("Kubelet", func() {
 				} else {
 					Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeFalse())
 				}
-				Expect(b.WriteKubeletBootstrapKubeconfig(ctx, "foo", []byte("bar"))).To(Succeed())
+				Expect(b.WriteKubeletBootstrapKubeconfig(ctx)).To(Succeed())
 				Expect(b.FS.Exists("/var/lib/gardener-node-agent/tmp")).To(BeTrue())
 				Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials")).To(BeTrue())
 				Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeTrue())

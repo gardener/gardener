@@ -69,6 +69,11 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Initializing secrets management",
 			Fn:   b.InitializeSecretsManagement,
 		})
+		writeKubeletBootstrapKubeconfig = g.Add(flow.Task{
+			Name:         "Writing kubelet bootstrap kubeconfig with a fake token to disk to make kubelet start",
+			Fn:           b.WriteKubeletBootstrapKubeconfig,
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
 		deployOperatingSystemConfigSecretForNodeAgent = g.Add(flow.Task{
 			Name:         "Generating OperatingSystemConfig and deploying Secret for gardener-node-agent",
 			Fn:           b.DeployOperatingSystemConfigSecretForNodeAgent,
@@ -77,7 +82,7 @@ func run(ctx context.Context, opts *Options) error {
 		_ = g.Add(flow.Task{
 			Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
 			Fn:           b.ApplyOperatingSystemConfig,
-			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfigSecretForNodeAgent),
+			Dependencies: flow.NewTaskIDs(writeKubeletBootstrapKubeconfig, deployOperatingSystemConfigSecretForNodeAgent),
 		})
 	)
 
