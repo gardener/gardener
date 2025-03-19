@@ -191,15 +191,26 @@ var _ = Describe("shoot", func() {
 		})
 
 		Describe("#ComputeInClusterAPIServerAddress", func() {
-			controlPlaneNamespace := "foo"
-			s := &Shoot{ControlPlaneNamespace: controlPlaneNamespace}
+			When("shoot is not autonomous", func() {
+				controlPlaneNamespace := "foo"
+				s := &Shoot{ControlPlaneNamespace: controlPlaneNamespace}
 
-			It("should return <service-name>", func() {
-				Expect(s.ComputeInClusterAPIServerAddress(true)).To(Equal(v1beta1constants.DeploymentNameKubeAPIServer))
+				It("should return <service-name>", func() {
+					Expect(s.ComputeInClusterAPIServerAddress(true)).To(Equal(v1beta1constants.DeploymentNameKubeAPIServer))
+				})
+
+				It("should return <service-name>.<namespace>.svc", func() {
+					Expect(s.ComputeInClusterAPIServerAddress(false)).To(Equal(v1beta1constants.DeploymentNameKubeAPIServer + "." + controlPlaneNamespace + ".svc"))
+				})
 			})
 
-			It("should return <service-name>.<namespace>.svc", func() {
-				Expect(s.ComputeInClusterAPIServerAddress(false)).To(Equal(v1beta1constants.DeploymentNameKubeAPIServer + "." + controlPlaneNamespace + ".svc"))
+			When("shoot is autonomous", func() {
+				s := &Shoot{ControlPlaneNamespace: "kube-system"}
+
+				It("should return kubernetes.default.svc", func() {
+					Expect(s.ComputeInClusterAPIServerAddress(true)).To(Equal("kubernetes.default.svc"))
+					Expect(s.ComputeInClusterAPIServerAddress(false)).To(Equal("kubernetes.default.svc"))
+				})
 			})
 		})
 
@@ -251,6 +262,16 @@ var _ = Describe("shoot", func() {
 				s.SetInfo(&gardencorev1beta1.Shoot{})
 
 				Expect(s.ComputeOutOfClusterAPIServerAddress(false)).To(Equal("api." + externalDomain))
+			})
+		})
+
+		Describe("#RunsControlPlane", func() {
+			It("should return true", func() {
+				Expect((&Shoot{ControlPlaneNamespace: "kube-system"}).RunsControlPlane()).To(BeTrue())
+			})
+
+			It("should return false", func() {
+				Expect((&Shoot{ControlPlaneNamespace: "shoot--foo--bar"}).RunsControlPlane()).To(BeFalse())
 			})
 		})
 	})
