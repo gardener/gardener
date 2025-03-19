@@ -18,6 +18,7 @@ set -o pipefail
 #     -k (Optional)                       If this argument is given then the generated CRDs will have annotation resources.gardener.cloud/keep-object: "true"
 #     -r <reason> (Optional)              If this argument is given then the generated CRDs will have annotation api-approved.kubernetes.io: "<reason>"
 #     --allow-dangerous-types (Optional)  If this argument is given then the CRD generation will tolerate issues related to dangerous types.
+#     --custom-package <group>=<package>  If this argument is given it supports generation for a package not listed explicitly, i.e. in another project reusing this script.
 #     <group>                             List of groups to generate (generate all if unset)
 
 if ! command -v controller-gen &> /dev/null ; then
@@ -31,6 +32,7 @@ add_deletion_protection_label=false
 add_keep_object_annotation=false
 k8s_io_api_approval_reason="unapproved, temporarily squatting"
 crd_options=""
+declare -A custom_packages=()
 
 # setup virtual GOPATH
 source $(dirname $0)/vgopath-setup.sh
@@ -38,6 +40,11 @@ source $(dirname $0)/vgopath-setup.sh
 export GO111MODULE=off
 
 get_group_package () {
+  if [[ -v custom_packages["$1"] ]]; then
+    echo "${custom_packages["$1"]}"
+    return
+  fi
+
   case "$1" in
   "extensions.gardener.cloud")
     echo "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -225,6 +232,17 @@ parse_flags() {
       ;;
     --allow-dangerous-types)
       crd_options=":allowDangerousTypes=true"
+      shift
+      ;;
+   --custom-package)
+      if [[ "$2" =~ ^[^=]+=[^=]+$ ]]; then
+        IFS='=' read -r group package <<< "$2"
+        custom_packages["$group"]="$package"
+        shift
+      else
+        >&2 echo "Invalid format for --custom-package. Expected <group>=<package>"
+        exit 1
+      fi
       shift
       ;;
     *)
