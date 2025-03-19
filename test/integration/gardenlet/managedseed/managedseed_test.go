@@ -121,10 +121,6 @@ var _ = Describe("ManagedSeed controller test", func() {
 								Name:       backupSecret.Name,
 								Namespace:  backupSecret.Namespace,
 							},
-							SecretRef: corev1.SecretReference{
-								Name:      backupSecret.Name,
-								Namespace: backupSecret.Namespace,
-							},
 						},
 					},
 				},

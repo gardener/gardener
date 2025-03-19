@@ -21,6 +21,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
+	"github.com/gardener/gardener/pkg/apiserver/registry/seedmanagement/internal/utils"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -46,6 +48,8 @@ func (s Strategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	managedSeed.Generation = 1
 	managedSeed.Status = seedmanagement.ManagedSeedStatus{}
+
+	syncSeedBackupCredentials(managedSeed)
 }
 
 // PrepareForUpdate is invoked on update before validation to normalize
@@ -56,6 +60,8 @@ func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newManagedSeed := obj.(*seedmanagement.ManagedSeed)
 	oldManagedSeed := old.(*seedmanagement.ManagedSeed)
 	newManagedSeed.Status = oldManagedSeed.Status
+
+	syncSeedBackupCredentials(newManagedSeed)
 
 	if mustIncreaseGeneration(oldManagedSeed, newManagedSeed) {
 		newManagedSeed.Generation = oldManagedSeed.Generation + 1
@@ -200,4 +206,21 @@ func GetShootName(managedSeed *seedmanagement.ManagedSeed) string {
 		return ""
 	}
 	return managedSeed.Spec.Shoot.Name
+}
+
+func syncSeedBackupCredentials(managedSeed *seedmanagement.ManagedSeed) {
+	if managedSeed.Spec.Gardenlet.Config == nil {
+		return
+	}
+
+	gardenletConfig, ok := managedSeed.Spec.Gardenlet.Config.(*gardenletconfigv1alpha1.GardenletConfiguration)
+	if !ok {
+		return
+	}
+
+	if gardenletConfig.SeedConfig == nil {
+		return
+	}
+
+	utils.SyncBackupSecretRefAndCredentialsRef(gardenletConfig.SeedConfig.Spec.Backup)
 }

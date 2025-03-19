@@ -22,13 +22,18 @@ spec:
     secretRef:
       name: backup-secret
       namespace: garden
+    # credentialsRef:
+    #   apiVersion: v1
+    #   kind: Secret
+    #   name: backup-secret
+    #   namespace: garden
   dns:
     provider:
       type: aws-route53
       secretRef:
         name: ingress-secret
         namespace: garden
-  ingress: 
+  ingress:
     domain: ingress.dev.my-seed.example.com
     controller:
       kind: nginx
