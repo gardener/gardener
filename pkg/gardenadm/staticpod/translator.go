@@ -55,7 +55,7 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 
 	return append([]extensionsv1alpha1.File{{
 		Path:        filepath.Join(kubelet.FilePathKubernetesManifests, pod.Name+".yaml"),
-		Permissions: ptr.To[uint32](0600),
+		Permissions: ptr.To[uint32](0640),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(staticPodYAML))}},
 	}}, filesFromVolumes...), nil
 }
@@ -63,6 +63,13 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 func translateSpec(spec *corev1.PodSpec) {
 	spec.HostNetwork = true
 	spec.PriorityClassName = "system-node-critical"
+
+	// The control plane pods need to access their secrets, which are created by gardener-node-agent as user 'root'.
+	// However, the pods run as user 'nobody'. Hence, they cannot read files owned by 'root' with permission '0600'.
+	// Setting the FSGroup to 0 allows the pods to access files as group root so that the access should work.
+	if spec.SecurityContext != nil && spec.SecurityContext.FSGroup != nil {
+		spec.SecurityContext.FSGroup = ptr.To[int64](0)
+	}
 }
 
 func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sourceNamespace string) ([]extensionsv1alpha1.File, error) {
@@ -70,7 +77,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sou
 		files               []extensionsv1alpha1.File
 		addFileWithHostPath = func(hostPath, fileName string, content []byte, desiredItems []corev1.KeyToPath) {
 			file := extensionsv1alpha1.File{
-				Permissions: ptr.To[uint32](0600),
+				Permissions: ptr.To[uint32](0640),
 				Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(content)}},
 			}
 
@@ -89,7 +96,7 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sou
 	)
 
 	for i, volume := range pod.Spec.Volumes {
-		hostPath := filepath.Join(kubelet.FilePathKubernetesManifests, pod.Name, volume.Name)
+		hostPath := filepath.Join(string(filepath.Separator), "var", "lib", pod.Name, volume.Name)
 
 		switch {
 		case volume.ConfigMap != nil:
