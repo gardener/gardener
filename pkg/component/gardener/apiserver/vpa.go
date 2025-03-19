@@ -39,8 +39,8 @@ func (g *gardenerAPIServer) verticalPodAutoscaler() *vpaautoscalingv1.VerticalPo
 						},
 						MaxAllowed: corev1.ResourceList{
 							// The CPU and memory are aligned to the machine ration of 1:4.
-							corev1.ResourceCPU:    resource.MustParse("7"),
-							corev1.ResourceMemory: resource.MustParse("28G"),
+							corev1.ResourceCPU:    resource.MustParse("12"),
+							corev1.ResourceMemory: resource.MustParse("48G"),
 						},
 						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					},

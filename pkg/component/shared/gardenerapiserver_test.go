@@ -25,6 +25,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/apiserver"
+	gardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver"
 	mockgardenerapiserver "github.com/gardener/gardener/pkg/component/gardener/apiserver/mock"
 	. "github.com/gardener/gardener/pkg/component/shared"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -56,7 +57,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			objectMeta         metav1.ObjectMeta
 			secret             *corev1.Secret
 			runtimeVersion     *semver.Version
-			autoscalingConfig  apiserver.AutoscalingConfig
+			autoscalingConfig  gardenerapiserver.AutoscalingConfig
 			auditWebhookConfig *apiserver.AuditWebhook
 			sm                 secretsmanager.Interface
 		)
@@ -65,7 +66,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			name = "bar"
 			objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
 			runtimeVersion = semver.MustParse("1.27.0")
-			autoscalingConfig = apiserver.AutoscalingConfig{}
+			autoscalingConfig = gardenerapiserver.AutoscalingConfig{}
 			auditWebhookConfig = nil
 
 			secret = &corev1.Secret{

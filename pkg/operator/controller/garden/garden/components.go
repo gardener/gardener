@@ -641,7 +641,7 @@ func (r *Reconciler) newKubeAPIServer(
 		secretsManager,
 		namePrefix,
 		apiServerConfig,
-		defaultAPIServerAutoscalingConfig(garden),
+		kubeAPIServerAutoscalingConfig(garden),
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
@@ -652,7 +652,24 @@ func (r *Reconciler) newKubeAPIServer(
 	)
 }
 
-func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserver.AutoscalingConfig {
+func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardenerapiserver.AutoscalingConfig {
+	replicas := int32(2)
+	if helper.HighAvailabilityEnabled(garden) {
+		replicas = 3
+	}
+
+	return gardenerapiserver.AutoscalingConfig{
+		APIServerResources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("600m"),
+				corev1.ResourceMemory: resource.MustParse("512Mi"),
+			},
+		},
+		Replicas: ptr.To(replicas),
+	}
+}
+
+func kubeAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) kubeapiserver.AutoscalingConfig {
 	minReplicas := int32(2)
 	if helper.HighAvailabilityEnabled(garden) {
 		minReplicas = 3
@@ -663,7 +680,7 @@ func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserve
 		minAllowed = kubeAPIServer.Autoscaling.MinAllowed
 	}
 
-	return apiserver.AutoscalingConfig{
+	return kubeapiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
 			Requests: kubernetesutils.MaximumResourcesFromResourceList(corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("600m"),
@@ -1058,7 +1075,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		r.RuntimeVersion,
 		secretsManager,
 		apiServerConfig,
-		defaultAPIServerAutoscalingConfig(garden),
+		gardenerAPIServerAutoscalingConfig(garden),
 		auditWebhookConfig,
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		garden.Spec.VirtualCluster.Gardener.ClusterIdentity,

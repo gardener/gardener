@@ -70,7 +70,7 @@ var _ = Describe("KubeAPIServer", func() {
 			runtimeVersion               *semver.Version
 			targetVersion                *semver.Version
 			namePrefix                   string
-			autoscalingConfig            apiserver.AutoscalingConfig
+			autoscalingConfig            kubeapiserver.AutoscalingConfig
 			vpnConfig                    kubeapiserver.VPNConfig
 			priorityClassName            string
 			isWorkerless                 bool
@@ -90,7 +90,7 @@ var _ = Describe("KubeAPIServer", func() {
 			runtimeVersion = semver.MustParse("1.31.0")
 			targetVersion = semver.MustParse("1.31.0")
 			namePrefix = ""
-			autoscalingConfig = apiserver.AutoscalingConfig{}
+			autoscalingConfig = kubeapiserver.AutoscalingConfig{}
 			vpnConfig = kubeapiserver.VPNConfig{}
 			priorityClassName = "priority-class"
 			isWorkerless = false
@@ -1184,15 +1184,14 @@ authorizers:
 		}
 
 		DescribeTable("should correctly set the autoscaling apiserver resources",
-			func(prepTest func(), autoscalingConfig apiserver.AutoscalingConfig, expectedResources *corev1.ResourceRequirements) {
+			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedResources *corev1.ResourceRequirements) {
 				if prepTest != nil {
 					prepTest()
 				}
 
 				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{
-					Values: apiserver.Values{
-						Autoscaling: autoscalingConfig,
-					}},
+					Autoscaling: autoscalingConfig,
+				},
 				)
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				if expectedResources != nil {
@@ -1214,7 +1213,7 @@ authorizers:
 
 			Entry("nothing is set when deployment is not found",
 				nil,
-				apiserver.AutoscalingConfig{},
+				kubeapiserver.AutoscalingConfig{},
 				nil,
 			),
 			Entry("set the existing requirements when the deployment is found and scale-down is disabled",
@@ -1236,7 +1235,7 @@ authorizers:
 						},
 					})).To(Succeed())
 				},
-				apiserver.AutoscalingConfig{ScaleDownDisabled: true},
+				kubeapiserver.AutoscalingConfig{ScaleDownDisabled: true},
 				&apiServerResources,
 			),
 			Entry("set the existing requirements when the deployment is found and scale-down is enabled",
@@ -1258,21 +1257,19 @@ authorizers:
 						},
 					})).To(Succeed())
 				},
-				apiserver.AutoscalingConfig{},
+				kubeapiserver.AutoscalingConfig{},
 				&apiServerResources,
 			),
 		)
 
 		DescribeTable("should correctly set the autoscaling replicas",
-			func(prepTest func(), autoscalingConfig apiserver.AutoscalingConfig, expectedReplicas int32) {
+			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedReplicas int32) {
 				if prepTest != nil {
 					prepTest()
 				}
 
 				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{
-					Values: apiserver.Values{
-						Autoscaling: autoscalingConfig,
-					},
+					Autoscaling: autoscalingConfig,
 				})
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
@@ -1291,19 +1288,19 @@ authorizers:
 
 			Entry("no change due to already set",
 				nil,
-				apiserver.AutoscalingConfig{Replicas: ptr.To[int32](1)},
+				kubeapiserver.AutoscalingConfig{Replicas: ptr.To[int32](1)},
 				int32(1),
 			),
 			Entry("use minReplicas because deployment does not exist",
 				nil,
-				apiserver.AutoscalingConfig{MinReplicas: 2},
+				kubeapiserver.AutoscalingConfig{MinReplicas: 2},
 				int32(2),
 			),
 			Entry("use 0 because shoot is hibernated, even  if deployment does not exist",
 				func() {
 					wantScaleDown = true
 				},
-				apiserver.AutoscalingConfig{MinReplicas: 2},
+				kubeapiserver.AutoscalingConfig{MinReplicas: 2},
 				int32(0),
 			),
 			Entry("use deployment replicas because they are greater than 0",
@@ -1318,7 +1315,7 @@ authorizers:
 						},
 					})).To(Succeed())
 				},
-				apiserver.AutoscalingConfig{},
+				kubeapiserver.AutoscalingConfig{},
 				int32(3),
 			),
 			Entry("use 0 because shoot is hibernated and deployment is already scaled down",
@@ -1334,7 +1331,7 @@ authorizers:
 						},
 					})).To(Succeed())
 				},
-				apiserver.AutoscalingConfig{},
+				kubeapiserver.AutoscalingConfig{},
 				int32(0),
 			),
 		)
