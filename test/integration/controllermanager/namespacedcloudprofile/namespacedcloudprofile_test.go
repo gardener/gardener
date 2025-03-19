@@ -206,14 +206,18 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 
 		JustBeforeEach(func() {
 			By("Create parent CloudProfile")
-			Expect(testClient.Create(ctx, parentCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, parentCloudProfile)
+			}).Should(Succeed())
 
 			By("Create NamespacedCloudProfile")
 			namespacedCloudProfile.Spec.Parent = gardencorev1beta1.CloudProfileReference{
 				Kind: "CloudProfile",
 				Name: parentCloudProfile.Name,
 			}
-			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
 			waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
 
 			if shoot != nil {
@@ -222,7 +226,9 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 					Kind: "NamespacedCloudProfile",
 					Name: namespacedCloudProfile.Name,
 				}
-				Expect(testClient.Create(ctx, shoot)).To(Succeed())
+				Eventually(func() error {
+					return testClient.Create(ctx, shoot)
+				}).Should(Succeed())
 				log.Info("Created shoot for test", "shoot", client.ObjectKeyFromObject(shoot))
 
 				By("Wait until manager has observed Shoot")
@@ -299,14 +305,18 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 	Context("merging the CloudProfiles", func() {
 		JustBeforeEach(func() {
 			By("Create parent CloudProfile")
-			Expect(testClient.Create(ctx, parentCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, parentCloudProfile)
+			}).Should(Succeed())
 
 			By("Create NamespacedCloudProfile")
 			namespacedCloudProfile.Spec.Parent = gardencorev1beta1.CloudProfileReference{
 				Kind: "CloudProfile",
 				Name: parentCloudProfile.Name,
 			}
-			Expect(testClient.Create(ctx, namespacedCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, namespacedCloudProfile)
+			}).Should(Succeed())
 			waitForNamespacedCloudProfileToBeReconciled(ctx, namespacedCloudProfile)
 
 			DeferCleanup(func() {
@@ -475,7 +485,9 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 
 		JustBeforeEach(func() {
 			By("Create parent CloudProfile")
-			Expect(testClient.Create(ctx, parentCloudProfile)).To(Succeed())
+			Eventually(func() error {
+				return testClient.Create(ctx, parentCloudProfile)
+			}).Should(Succeed())
 			log.Info("Created parent CloudProfile for test", "parentCloudProfile", client.ObjectKeyFromObject(parentCloudProfile))
 
 			namespacedCloudProfile.Spec.Parent = gardencorev1beta1.CloudProfileReference{
