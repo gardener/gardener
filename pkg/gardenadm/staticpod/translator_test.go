@@ -73,6 +73,19 @@ metadata:
   namespace: kube-system
 spec:
   containers: null
+  hostAliases:
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: 127.0.0.1
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: ::1
   hostNetwork: true
   priorityClassName: system-node-critical
   securityContext:
@@ -176,6 +189,19 @@ metadata:
   namespace: kube-system
 spec:
   containers: null
+  hostAliases:
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: 127.0.0.1
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: ::1
   hostNetwork: true
   priorityClassName: system-node-critical
   securityContext:
@@ -267,6 +293,19 @@ metadata:
   namespace: kube-system
 spec:
   containers: null
+  hostAliases:
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: 127.0.0.1
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: ::1
   hostNetwork: true
   priorityClassName: system-node-critical
 status: {}
@@ -368,6 +407,19 @@ metadata:
   namespace: kube-system
 spec:
   containers: null
+  hostAliases:
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: 127.0.0.1
+  - hostnames:
+    - kubernetes
+    - kubernetes.default
+    - kubernetes.default.svc
+    - kubernetes.default.svc.cluster.local
+    ip: ::1
   hostNetwork: true
   priorityClassName: system-node-critical
   volumes:

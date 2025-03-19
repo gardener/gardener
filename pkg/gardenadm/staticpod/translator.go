@@ -64,6 +64,12 @@ func translateSpec(spec *corev1.PodSpec) {
 	spec.HostNetwork = true
 	spec.PriorityClassName = "system-node-critical"
 
+	hostNames := kubernetesutils.DNSNamesForService("kubernetes", metav1.NamespaceDefault)
+	spec.HostAliases = append(spec.HostAliases,
+		corev1.HostAlias{IP: "127.0.0.1", Hostnames: hostNames},
+		corev1.HostAlias{IP: "::1", Hostnames: hostNames},
+	)
+
 	// The control plane pods need to access their secrets, which are created by gardener-node-agent as user 'root'.
 	// However, the pods run as user 'nobody'. Hence, they cannot read files owned by 'root' with permission '0600'.
 	// Setting the FSGroup to 0 allows the pods to access files as group root so that the access should work.
