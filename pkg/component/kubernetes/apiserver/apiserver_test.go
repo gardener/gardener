@@ -3535,6 +3535,23 @@ kind: AuthorizationConfiguration
 					))
 				})
 
+				It("should configure correctly when run as static pod", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion:  runtimeVersion,
+							RunsAsStaticPod: true,
+						},
+						Images:  images,
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--etcd-servers=https://localhost:2379",
+						"--etcd-servers-overrides=/events#https://localhost:2382",
+					))
+				})
+
 				It("should configure the api audiences if provided", func() {
 					var (
 						apiAudience1 = "foo"

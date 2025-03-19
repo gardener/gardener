@@ -468,9 +468,14 @@ func (k *kubeAPIServer) etcdServersOverrides() string {
 		return append([]schema.GroupResource{groupResource}, groupResources...)
 	}
 
+	hostName, port := k.values.NamePrefix+etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient
+	if k.values.RunsAsStaticPod {
+		hostName, port = "localhost", etcdconstants.StaticPodPortEtcdEventsClient
+	}
+
 	var overrides []string
 	for _, resource := range addGroupResourceIfNotPresent(k.values.ResourcesToStoreInETCDEvents, schema.GroupResource{Resource: "events"}) {
-		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s%s:%d", resource.Group, resource.Resource, k.values.NamePrefix, etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient))
+		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s:%d", resource.Group, resource.Resource, hostName, port))
 	}
 	return strings.Join(overrides, ",")
 }

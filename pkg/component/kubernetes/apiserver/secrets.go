@@ -153,7 +153,8 @@ func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secr
 		dnsNames       = kubernetesutils.DNSNamesForService(deploymentName, k.namespace)
 	)
 
-	if k.values.SNI.Enabled || (k.values.VPN.Enabled && k.values.VPN.HighAvailabilityEnabled) {
+	if k.values.RunsAsStaticPod || k.values.SNI.Enabled || (k.values.VPN.Enabled && k.values.VPN.HighAvailabilityEnabled) {
+		dnsNames = append(dnsNames, "localhost")
 		ipAddresses = append(ipAddresses, net.ParseIP("127.0.0.1"))
 		ipAddresses = append(ipAddresses, net.ParseIP("::1"))
 	}
