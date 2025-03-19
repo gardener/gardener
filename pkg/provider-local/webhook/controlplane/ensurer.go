@@ -6,7 +6,6 @@ package controlplane
 
 import (
 	"context"
-	"slices"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
@@ -18,8 +17,6 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionscontextwebhook "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
@@ -71,53 +68,4 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscont
 	}
 
 	return nil
-}
-
-func (e *ensurer) EnsureCRIConfig(_ context.Context, _ extensionscontextwebhook.GardenContext, new, _ *extensionsv1alpha1.CRIConfig) error {
-	if !extensionsv1alpha1helper.HasContainerdConfiguration(new) {
-		return nil
-	}
-
-	for _, registry := range []extensionsv1alpha1.RegistryConfig{
-		{
-			Upstream: "gcr.io",
-			Server:   ptr.To("https://gcr.io"),
-			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5003"}},
-		},
-		{
-			Upstream: "registry.k8s.io",
-			Server:   ptr.To("https://registry.k8s.io"),
-			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5006"}},
-		},
-		{
-			Upstream: "quay.io",
-			Server:   ptr.To("https://quay.io"),
-			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5007"}},
-		},
-		// Enable containerd to reach registry at garden.local.gardener.cloud:5001 via HTTP.
-		{
-			Upstream: "garden.local.gardener.cloud:5001",
-			Server:   ptr.To("http://garden.local.gardener.cloud:5001"),
-			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5001"}},
-		},
-		// europe-docker.pkg.dev upstream is required for loading the Hyperkube image.
-		{
-			Upstream: "europe-docker.pkg.dev",
-			Server:   ptr.To("https://europe-docker.pkg.dev"),
-			Hosts:    []extensionsv1alpha1.RegistryHost{{URL: "http://garden.local.gardener.cloud:5008"}},
-		},
-	} {
-		// Only add registry when it is not already set in the OSC.
-		// This way, it is not added repeatably and extensions (e.g. registry cache) in the local setup may decide
-		// to configure the same upstreams differently. The configuration of such an extension should have precedence.
-		addRegistryIfNotAvailable(registry, new.Containerd)
-	}
-
-	return nil
-}
-
-func addRegistryIfNotAvailable(registry extensionsv1alpha1.RegistryConfig, config *extensionsv1alpha1.ContainerdConfig) {
-	if !slices.ContainsFunc(config.Registries, func(r extensionsv1alpha1.RegistryConfig) bool { return r.Upstream == registry.Upstream }) {
-		config.Registries = append(config.Registries, registry)
-	}
 }
