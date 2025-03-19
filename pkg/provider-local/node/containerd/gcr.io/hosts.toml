@@ -1,0 +1,4 @@
+server = "https://gcr.io"
+
+[host."http://garden.local.gardener.cloud:5003"]
+  capabilities = ["pull", "resolve"]
