@@ -49,6 +49,9 @@ var _ = Describe("Translator", func() {
 								Labels:      map[string]string{"baz": "foo"},
 								Annotations: map[string]string{"bar": "baz"},
 							},
+							Spec: corev1.PodSpec{
+								SecurityContext: &corev1.PodSecurityContext{FSGroup: ptr.To[int64](65534)},
+							},
 						},
 					},
 				}
@@ -57,7 +60,7 @@ var _ = Describe("Translator", func() {
 			It("should successfully translate a deployment w/o volumes", func() {
 				Expect(Translate(ctx, fakeClient, deployment)).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
-					Permissions: ptr.To[uint32](0600),
+					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -72,6 +75,8 @@ spec:
   containers: null
   hostNetwork: true
   priorityClassName: system-node-critical
+  securityContext:
+    fsGroup: 0
 status: {}
 `))}},
 				}))
@@ -158,7 +163,7 @@ kind: Config
 				Expect(Translate(ctx, fakeClient, deployment)).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + deployment.Name + ".yaml",
-						Permissions: ptr.To[uint32](0600),
+						Permissions: ptr.To[uint32](0640),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -173,47 +178,49 @@ spec:
   containers: null
   hostNetwork: true
   priorityClassName: system-node-critical
+  securityContext:
+    fsGroup: 0
   volumes:
   - hostPath:
-      path: /etc/kubernetes/manifests/foo/v1
+      path: /var/lib/foo/v1
     name: v1
   - hostPath:
-      path: /etc/kubernetes/manifests/foo/v2
+      path: /var/lib/foo/v2
     name: v2
   - hostPath:
-      path: /etc/kubernetes/manifests/foo/v3
+      path: /var/lib/foo/v3
     name: v3
 status: {}
 `))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file1.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file1.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file2.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[0].Name + "/cm1file2.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file2.txt"]))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file1.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file1.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file1.txt"])}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file2.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[1].Name + "/secret1file2.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file2.txt"])}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file1.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file1.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap2.Data["cm2file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file2.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/cm2file2.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 clusters:
 - cluster:
@@ -223,8 +230,8 @@ kind: Config
 `))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/mystery.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + deployment.Name + "/" + deployment.Spec.Template.Spec.Volumes[2].Name + "/mystery.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret2.Data["secret2file2.txt"])}},
 					},
 				))
@@ -247,7 +254,7 @@ kind: Config
 			It("should successfully translate a pod w/o volumes", func() {
 				Expect(Translate(ctx, fakeClient, pod)).To(HaveExactElements(extensionsv1alpha1.File{
 					Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
-					Permissions: ptr.To[uint32](0600),
+					Permissions: ptr.To[uint32](0640),
 					Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -348,7 +355,7 @@ kind: Config
 				Expect(Translate(ctx, fakeClient, pod)).To(ConsistOf(
 					extensionsv1alpha1.File{
 						Path:        "/etc/kubernetes/manifests/" + pod.Name + ".yaml",
-						Permissions: ptr.To[uint32](0600),
+						Permissions: ptr.To[uint32](0640),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 kind: Pod
 metadata:
@@ -365,45 +372,45 @@ spec:
   priorityClassName: system-node-critical
   volumes:
   - hostPath:
-      path: /etc/kubernetes/manifests/foo/v1
+      path: /var/lib/foo/v1
     name: v1
   - hostPath:
-      path: /etc/kubernetes/manifests/foo/v2
+      path: /var/lib/foo/v2
     name: v2
   - hostPath:
-      path: /etc/kubernetes/manifests/foo/v3
+      path: /var/lib/foo/v3
     name: v3
 status: {}
 `))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + pod.Name + "/" + pod.Spec.Volumes[0].Name + "/cm1file1.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + pod.Name + "/" + pod.Spec.Volumes[0].Name + "/cm1file1.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + pod.Name + "/" + pod.Spec.Volumes[0].Name + "/cm1file2.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + pod.Name + "/" + pod.Spec.Volumes[0].Name + "/cm1file2.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap1.Data["cm1file2.txt"]))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + pod.Name + "/" + pod.Spec.Volumes[1].Name + "/secret1file1.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + pod.Name + "/" + pod.Spec.Volumes[1].Name + "/secret1file1.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file1.txt"])}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + pod.Name + "/" + pod.Spec.Volumes[1].Name + "/secret1file2.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + pod.Name + "/" + pod.Spec.Volumes[1].Name + "/secret1file2.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret1.Data["secret1file2.txt"])}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + pod.Name + "/" + pod.Spec.Volumes[2].Name + "/cm2file1.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + pod.Name + "/" + pod.Spec.Volumes[2].Name + "/cm2file1.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(configMap2.Data["cm2file1.txt"]))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + pod.Name + "/" + pod.Spec.Volumes[2].Name + "/cm2file2.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + pod.Name + "/" + pod.Spec.Volumes[2].Name + "/cm2file2.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content: extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64([]byte(`apiVersion: v1
 clusters:
 - cluster:
@@ -413,8 +420,8 @@ kind: Config
 `))}},
 					},
 					extensionsv1alpha1.File{
-						Path:        "/etc/kubernetes/manifests/" + pod.Name + "/" + pod.Spec.Volumes[2].Name + "/mystery.txt",
-						Permissions: ptr.To[uint32](0600),
+						Path:        "/var/lib/" + pod.Name + "/" + pod.Spec.Volumes[2].Name + "/mystery.txt",
+						Permissions: ptr.To[uint32](0640),
 						Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(secret2.Data["secret2file2.txt"])}},
 					},
 				))
