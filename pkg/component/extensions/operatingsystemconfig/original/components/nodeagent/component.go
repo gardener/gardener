@@ -6,6 +6,7 @@ package nodeagent
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -78,10 +79,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		Path:        PathBinary,
 		Permissions: ptr.To[uint32](0755),
 		Content: extensionsv1alpha1.FileContent{
-			ImageRef: &extensionsv1alpha1.FileContentImageRef{
-				Image:           ctx.Images[imagevector.ContainerImageNameGardenerNodeAgent].String(),
-				FilePathInImage: "/gardener-node-agent",
-			},
+			ImageRef: fileContentImageRef(ctx.Images[imagevector.ContainerImageNameGardenerNodeAgent].String()),
 		},
 	})
 
@@ -161,4 +159,16 @@ func Files(config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensions
 		Permissions: ptr.To[uint32](0600),
 		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(configRaw)}},
 	}}, nil
+}
+
+func fileContentImageRef(image string) *extensionsv1alpha1.FileContentImageRef {
+	var prefix string
+	if strings.HasPrefix(image, "garden.local.gardener.cloud:5001") {
+		prefix = "/ko-app"
+	}
+
+	return &extensionsv1alpha1.FileContentImageRef{
+		Image:           image,
+		FilePathInImage: prefix + "/gardener-node-agent",
+	}
 }
