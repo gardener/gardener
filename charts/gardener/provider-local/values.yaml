@@ -70,10 +70,10 @@ imageVectorOverwrite: {}
 
 webhookConfig:
   servicePort: 443
-  serverPort: 10250
+  serverPort: "{{ index .Values.usablePorts 1 }}"
 
-metricsPort: 8080
-healthPort: 8081
+metricsPort: "{{ index .Values.usablePorts 0 }}"
+healthPort: "{{ index .Values.usablePorts 2 }}"
 
 ## settings for metrics, e.g. scraping by seed-prometheus
 ##
@@ -96,3 +96,8 @@ gardener:
     provider: local
   runtimeCluster:
     enabled: false
+
+usablePorts:
+- 8080  # metrics
+- 10250 # webhook server
+- 8081  # healthcheck

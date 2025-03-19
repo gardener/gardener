@@ -4,9 +4,9 @@ metadata:
   name: {{ include "name" . }}
   namespace: {{ .Release.Namespace }}
   annotations:
-    networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":{{ .Values.webhookConfig.serverPort }}}]'
-    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":{{ .Values.metricsPort }},"protocol":"TCP"}]'
-    networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports: '[{"protocol":"TCP","port":{{ .Values.webhookConfig.serverPort }}}]'
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":{{ tpl .Values.webhookConfig.serverPort . }}}]'
+    networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":{{ tpl .Values.metricsPort . }},"protocol":"TCP"}]'
+    networking.resources.gardener.cloud/from-all-webhook-targets-allowed-ports: '[{"protocol":"TCP","port":{{ tpl .Values.webhookConfig.serverPort . }}}]'
     networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"kubernetes.io/metadata.name":"garden"}},{"matchLabels":{"gardener.cloud/role":"shoot"}}]'
     networking.resources.gardener.cloud/pod-label-selector-namespace-alias: extensions
 {{-  if .Values.ignoreResources }}
@@ -21,4 +21,4 @@ spec:
   ports:
   - port: {{ .Values.webhookConfig.servicePort }}
     protocol: TCP
-    targetPort: {{ .Values.webhookConfig.serverPort }}
+    targetPort: {{ tpl .Values.webhookConfig.serverPort . }}

@@ -26,7 +26,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/name: 'provider-local'
         # default metrics endpoint in controller-runtime
-        prometheus.io/port: "{{ .Values.metricsPort }}"
+        prometheus.io/port: "{{ tpl .Values.metricsPort . }}"
         {{- end }}
       labels:
         networking.gardener.cloud/to-runtime-apiserver: allowed
@@ -75,7 +75,7 @@ spec:
         {{- else }}
         - --webhook-config-namespace={{ .Release.Namespace }}
         - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
-        - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
+        - --webhook-config-server-port={{ tpl .Values.webhookConfig.serverPort . }}
         {{- range .Values.webhooks.prometheus.remoteWriteURLs }}
         - --prometheus-remote-write-url={{ . }}
         {{- end }}
@@ -85,12 +85,8 @@ spec:
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --disable-webhooks={{ .Values.disableWebhooks | join "," }}
         {{- end }}
-        {{- if .Values.metricsPort }}
-        - --metrics-bind-address=:{{ .Values.metricsPort }}
-        {{- end }}
-        {{- if .Values.healthPort }}
-        - --health-bind-address=:{{ .Values.healthPort }}
-        {{- end }}
+        - --metrics-bind-address=:{{ tpl .Values.metricsPort . }}
+        - --health-bind-address=:{{ tpl .Values.healthPort . }}
         {{- if .Values.gardener.version }}
         - --gardener-version={{ .Values.gardener.version }}
         {{- end }}
@@ -108,18 +104,18 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ .Values.healthPort }}
+            port: {{ tpl .Values.healthPort . }}
             scheme: HTTP
           initialDelaySeconds: 10
         readinessProbe:
           httpGet:
             path: /readyz
-            port: {{ .Values.healthPort }}
+            port: {{ tpl .Values.healthPort . }}
             scheme: HTTP
           initialDelaySeconds: 5
         ports:
         - name: webhook-server
-          containerPort: {{ .Values.webhookConfig.serverPort }}
+          containerPort: {{ tpl .Values.webhookConfig.serverPort . }}
           protocol: TCP
 {{- if .Values.resources }}
         resources:
