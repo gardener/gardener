@@ -63,7 +63,9 @@ spec:
         backup:
           provider: local
           region: local
-          secretRef:
+          credentialsRef:
+            apiVersion: v1
+            kind: Secret
             name: backup-local
             namespace: garden
         dns:
