@@ -20,9 +20,9 @@ func ValidateNamespacedCloudProfile(namespacedCloudProfile *core.NamespacedCloud
 	allErrs = append(allErrs, validateNamespacedCloudProfileParent(namespacedCloudProfile.Spec.Parent, field.NewPath("spec.parent"))...)
 
 	allErrs = append(allErrs, validateNamespacedCloudProfileKubernetesVersions(namespacedCloudProfile.Spec.Kubernetes, field.NewPath("spec.kubernetes"))...)
-	allErrs = append(allErrs, ValidateMachineImages(namespacedCloudProfile.Spec.MachineImages, field.NewPath("spec.machineImages"), true)...)
+	allErrs = append(allErrs, ValidateMachineImages(namespacedCloudProfile.Spec.MachineImages, nil, field.NewPath("spec.machineImages"), true)...)
 	allErrs = append(allErrs, validateVolumeTypes(namespacedCloudProfile.Spec.VolumeTypes, field.NewPath("spec.volumeTypes"))...)
-	allErrs = append(allErrs, validateMachineTypes(namespacedCloudProfile.Spec.MachineTypes, field.NewPath("spec.machineTypes"))...)
+	allErrs = append(allErrs, validateMachineTypes(namespacedCloudProfile.Spec.MachineTypes, nil, field.NewPath("spec.machineTypes"))...)
 
 	if namespacedCloudProfile.Spec.CABundle != nil {
 		_, err := utils.DecodeCertificate([]byte(*(namespacedCloudProfile.Spec.CABundle)))
@@ -62,10 +62,10 @@ func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, fldPath *
 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	if spec.MachineImages != nil {
-		allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, fldPath.Child("machineImages"))...)
+		allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, spec.Capabilities, fldPath.Child("machineImages"))...)
 	}
 	if spec.MachineTypes != nil {
-		allErrs = append(allErrs, validateMachineTypes(spec.MachineTypes, fldPath.Child("machineTypes"))...)
+		allErrs = append(allErrs, validateMachineTypes(spec.MachineTypes, spec.Capabilities, fldPath.Child("machineTypes"))...)
 	}
 	if spec.VolumeTypes != nil {
 		allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
