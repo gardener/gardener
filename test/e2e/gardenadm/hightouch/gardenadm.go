@@ -45,17 +45,29 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 
 	Describe("Single-node control plane", Ordered, Label("single"), func() {
 		It("should initialize as control plane node", func(ctx SpecContext) {
-			_, stdErr := execute(ctx, 0,
+			stdOut, _, err := execute(ctx, 0,
 				"gardenadm", "init", "-d", "/gardenadm/resources",
 			)
+			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(ctx, stdErr).Should(gbytes.Say(`Finished\t{"flow": "init"}`))
+			Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
 		}, SpecTimeout(time.Minute))
 
+		It("should be able to communicate with the API server", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) *gbytes.Buffer {
+				_, stdErr, err := execute(ctx, 0,
+					"kubectl", "--kubeconfig", "/etc/kubernetes/admin.conf", "get", "nodes",
+				)
+				g.Expect(err).NotTo(HaveOccurred())
+				return stdErr
+			}).WithPolling(10 * time.Second).Should(gbytes.Say("No resources found"))
+		}, SpecTimeout(30*time.Second))
+
 		It("should join as worker node", func(ctx SpecContext) {
-			_, stdErr := execute(ctx, 1,
+			_, stdErr, err := execute(ctx, 1,
 				"gardenadm", "join",
 			)
+			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdErr).Should(gbytes.Say("Not implemented either"))
 		}, SpecTimeout(time.Minute))
@@ -63,11 +75,10 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 })
 
 // nolint:unparam
-func execute(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffer, *gbytes.Buffer) {
-	GinkgoHelper()
+func execute(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffer, *gbytes.Buffer, error) {
 	var stdOutBuffer, stdErrBuffer = gbytes.NewBuffer(), gbytes.NewBuffer()
 
-	Expect(RuntimeClient.PodExecutor().ExecuteWithStreams(
+	return stdOutBuffer, stdErrBuffer, RuntimeClient.PodExecutor().ExecuteWithStreams(
 		ctx,
 		namespace,
 		machinePodName(ordinal),
@@ -76,7 +87,5 @@ func execute(ctx context.Context, ordinal int, command ...string) (*gbytes.Buffe
 		io.MultiWriter(stdOutBuffer, gexec.NewPrefixedWriter("[out] ", GinkgoWriter)),
 		io.MultiWriter(stdErrBuffer, gexec.NewPrefixedWriter("[err] ", GinkgoWriter)),
 		command...,
-	)).To(Succeed())
-
-	return stdOutBuffer, stdErrBuffer
+	)
 }

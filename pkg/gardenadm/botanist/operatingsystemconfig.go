@@ -13,16 +13,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
+	"github.com/gardener/gardener/pkg/utils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // DeployOperatingSystemConfigSecretForNodeAgent deploys the OperatingSystemConfig resource and adds its content into
@@ -41,10 +46,28 @@ func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForNodeAgent(ctx c
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)
 }
 
+func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
+	userKubeconfigSecret, ok := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
+	if !ok {
+		return nil, fmt.Errorf("failed fetching secret %q", kubeapiserver.SecretNameUserKubeconfig)
+	}
+
+	return append(files, extensionsv1alpha1.File{
+		Path:        PathKubeconfig,
+		Permissions: ptr.To[uint32](0600),
+		Content:     extensionsv1alpha1.FileContent{Inline: &extensionsv1alpha1.FileContentInline{Encoding: "b64", Data: utils.EncodeBase64(userKubeconfigSecret.Data[secretsutils.DataKeyKubeconfig])}},
+	}), nil
+}
+
 func (b *AutonomousBotanist) deployOperatingSystemConfig(ctx context.Context) (*operatingsystemconfig.Data, string, error) {
 	files, err := b.filesForStaticControlPlanePods(ctx)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed computing files for static control plane pods: %w", err)
+	}
+
+	files, err = b.appendAdminKubeconfigToFiles(files)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
 	}
 
 	if err := b.Botanist.DeployOperatingSystemConfig(ctx); err != nil {

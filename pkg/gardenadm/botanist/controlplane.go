@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +25,9 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
+
+// PathKubeconfig is the path to a file on the control plane node containing an admin kubeconfig.
+var PathKubeconfig = filepath.Join(string(filepath.Separator), "etc", "kubernetes", "admin.conf")
 
 func (b *AutonomousBotanist) filesForStaticControlPlanePods(ctx context.Context) ([]extensionsv1alpha1.File, error) {
 	var files []extensionsv1alpha1.File
