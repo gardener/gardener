@@ -6,6 +6,7 @@ package garbagecollector
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -13,6 +14,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -62,7 +64,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind(resource.listKind))
 		if err := r.TargetClient.List(ctx, objList, labels); err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed listing %ss: %w", resource.kind, err)
 		}
 
 		for _, obj := range objList.Items {
@@ -93,8 +95,10 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
 		if err := r.TargetClient.List(ctx, objList); err != nil {
-			if !meta.IsNoMatchError(err) {
-				return reconcile.Result{}, err
+			// Need to check for both error types. The DynamicRestMapper can hold a stale cache returning a path to a
+			// non-existing api-resource leading to a NotFound error.
+			if !meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
+				return reconcile.Result{}, fmt.Errorf("failed listing objects of gvk %s: %w", gvk, err)
 			}
 		}
 		items = append(items, objList.Items...)
