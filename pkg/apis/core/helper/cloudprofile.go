@@ -7,12 +7,13 @@ package helper
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/Masterminds/semver/v3"
-	"k8s.io/apimachinery/pkg/util/sets"
-
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // FindMachineImageVersion finds the machine image version in the <cloudProfile> for the given <name> and <version>.
@@ -229,4 +230,16 @@ func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version se
 		result = append(result, v)
 	}
 	return result, nil
+}
+
+func ExtractArchitectures(capabilities []core.CapabilitySet) []string {
+	var architectures []string
+	for _, capabilitySet := range capabilities {
+		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey].Values {
+			if !slices.Contains(architectures, architectureValue) {
+				architectures = append(architectures, architectureValue)
+			}
+		}
+	}
+	return architectures
 }

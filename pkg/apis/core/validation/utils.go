@@ -342,12 +342,10 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 }
 
 func validateMachineImageVersionArchitecture(machineImageVersion core.MachineImageVersion, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	supportedArchitectures := v1beta1constants.ValidArchitectures
-	if len(capabilities) > 0 {
-		supportedArchitectures = capabilities[v1beta1constants.ArchitectureKey].Values
-	}
+	var (
+		allErrs                = field.ErrorList{}
+		supportedArchitectures = v1beta1constants.ValidArchitectures
+	)
 
 	if len(capabilities) > 0 {
 		capabilitiesPath := fldPath.Child("capabilities")
@@ -379,6 +377,18 @@ func validateMachineImageVersionArchitecture(machineImageVersion core.MachineIma
 	return allErrs
 }
 
+func areSlicesEqual(s1, s2 []string) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	for _, i := range s1 {
+		if !slices.Contains(s2, i) {
+			return false
+		}
+	}
+	return true
+}
+
 func validateMachineTypeArchitecture(machineType core.MachineType, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
@@ -394,8 +404,15 @@ func validateMachineTypeArchitecture(machineType core.MachineType, capabilities 
 		if len(architectureCapabilityValues) > 1 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilities.architecture"), architectureCapabilityValues, "must not define more than one architecture"))
 		}
-		if len(architectureCapabilityValues) == 1 && !slices.Contains(supportedArchitectures, architectureCapabilityValues[0]) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("capabilities.architecture[0]"), architectureCapabilityValues[0], supportedArchitectures))
+		if len(architectureCapabilityValues) == 1 {
+			if !slices.Contains(supportedArchitectures, architectureCapabilityValues[0]) {
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("capabilities.architecture[0]"), architectureCapabilityValues[0], supportedArchitectures))
+			}
+
+			// assert that the architecture values defined do not conflict
+			if arch != "" && arch != architectureCapabilityValues[0] {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilities.architecture[0]"), architectureCapabilityValues[0], fmt.Sprintf("machine type architecture (%s) conflicts with the capability architecture (%s)", arch, architectureCapabilityValues[0])))
+			}
 		}
 	}
 
