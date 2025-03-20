@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
@@ -164,6 +165,13 @@ type MachineType struct {
 	Architecture *string
 	// Capabilities contains the the machine type capabilities.
 	Capabilities Capabilities
+}
+
+func (m *MachineType) GetArchitecture() string {
+	if len(m.Capabilities[constants.ArchitectureKey].Values) == 1 {
+		return m.Capabilities[constants.ArchitectureKey].Values[0]
+	}
+	return ptr.Deref(m.Architecture, "")
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
