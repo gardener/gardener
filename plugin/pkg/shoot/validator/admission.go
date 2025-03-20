@@ -33,6 +33,7 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -764,7 +765,13 @@ func (c *validationContext) ensureMachineImages() field.ErrorList {
 		for idx, worker := range c.shoot.Spec.Provider.Workers {
 			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
 
-			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, fldPath)
+			var capabilities core.Capabilities
+			if err := api.Scheme.Convert(c.cloudProfileSpec.Capabilities, &capabilities, ctx); err != nil {
+				allErrs = append(allErrs, field.InternalError(fldPath, err))
+				continue
+			}
+
+			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, capabilities, fldPath)
 			if err != nil {
 				allErrs = append(allErrs, err)
 				continue
@@ -1739,7 +1746,7 @@ func validateZone(constraints []gardencorev1beta1.Region, region, zone string) (
 }
 
 // getDefaultMachineImage determines the latest non-preview machine image version from the first machine image in the CloudProfile and considers that as the default image
-func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, image *core.ShootMachineImage, arch *string, isUpdateStrategyInPlace bool, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, capabilities core.Capabilities, image *core.ShootMachineImage, arch *string, isUpdateStrategyInPlace bool, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	var imageReference string
 	if image != nil {
 		imageReference = fmt.Sprintf("%s@%s", image.Name, image.Version)
@@ -1817,7 +1824,7 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 	var validVersions []core.MachineImageVersion
 
 	for _, version := range defaultImage.Versions {
-		if !slices.Contains(version.Architectures, *arch) {
+		if !version.SupportsArchitecture(capabilities, *arch) {
 			continue
 		}
 
@@ -1832,7 +1839,12 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 			machineImageVersionMinor != nil && parsedVersion.Minor() != *machineImageVersionMinor {
 			continue
 		}
-		validVersions = append(validVersions, version)
+
+		var coreVersion core.MachineImageVersion
+		if err := api.Scheme.Convert(&version, &coreVersion, nil); err != nil {
+			return nil, field.InternalError(fldPath, fmt.Errorf("failed to convert machine image from cloud profile: %s", err.Error()))
+		}
+		validVersions = append(validVersions, coreVersion)
 	}
 
 	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(validVersions, true)
@@ -2023,7 +2035,7 @@ func validateKubeletVersion(constraints []gardencorev1beta1.MachineImage, worker
 	return nil
 }
 
-func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []gardencorev1beta1.MachineImage, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []gardencorev1beta1.MachineImage, capabilities core.Capabilities, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	// General approach with machine image defaulting in this code: Try to keep the machine image
 	// from the old shoot object to not accidentally update it to the default machine image.
 	// This should only happen in the maintenance time window of shoots and is performed by the
@@ -2051,7 +2063,7 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []g
 		}
 	}
 
-	return getDefaultMachineImage(images, worker.Machine.Image, worker.Machine.Architecture, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
+	return getDefaultMachineImage(images, capabilities, worker.Machine.Image, worker.Machine.Architecture, helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), fldPath)
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {

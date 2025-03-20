@@ -81,7 +81,7 @@ func (v *ValidateNamespacedCloudProfile) ValidateInitialization() error {
 var _ admission.ValidationInterface = &ValidateNamespacedCloudProfile{}
 
 // Validate validates the NamespacedCloudProfile.
-func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {
@@ -146,7 +146,7 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 	if err := validationContext.validateKubernetesVersionOverrides(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateMachineImageOverrides(a); err != nil {
+	if err := validationContext.validateMachineImageOverrides(ctx, a); err != nil {
 		return err
 	}
 	if err := validationContext.validateSimulatedCloudProfileStatusMergeResult(); err != nil {
@@ -220,7 +220,7 @@ func (c *validationContext) validateKubernetesVersionOverrides(attr admission.At
 	return nil
 }
 
-func (c *validationContext) validateMachineImageOverrides(attr admission.Attributes) error {
+func (c *validationContext) validateMachineImageOverrides(ctx context.Context, attr admission.Attributes) error {
 	var (
 		allErrs      = field.ErrorList{}
 		now          = ptr.To(metav1.Now())
@@ -293,9 +293,14 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 				}
 			}
 		} else {
+			var parentCloudProfileSpecCore gardencore.CloudProfileSpec
+			if err := api.Scheme.Convert(&c.parentCloudProfile.Spec, &parentCloudProfileSpecCore, ctx); err != nil {
+				allErrs = append(allErrs, field.InternalError(imageIndexPath, err))
+			}
+
 			// There is no entry for this image in the parent CloudProfile yet.
-			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, imageIndexPath, false)...)
-			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, imageIndexPath)...)
+			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, parentCloudProfileSpecCore.Capabilities, imageIndexPath, false)...)
+			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, parentCloudProfileSpecCore.Capabilities, imageIndexPath)...)
 		}
 	}
 	return allErrs.ToAggregate()
@@ -312,6 +317,9 @@ func validateNamespacedCloudProfileExtendedMachineImages(machineVersion gardenco
 	}
 	if len(machineVersion.Architectures) > 0 {
 		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("architectures"), "must not provide an architecture to an extended machine image in NamespacedCloudProfile"))
+	}
+	if len(machineVersion.CapabilitySets) > 0 {
+		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("capabilities"), "must not provide capabilities to an extended machine image in NamespacedCloudProfile"))
 	}
 	if len(ptr.Deref(machineVersion.KubeletVersionConstraint, "")) > 0 {
 		allErrs = append(allErrs, field.Forbidden(versionsPath.Child("kubeletVersionConstraint"), "must not provide a kubelet version constraint to an extended machine image in NamespacedCloudProfile"))
