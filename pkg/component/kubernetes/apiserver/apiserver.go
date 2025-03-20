@@ -196,9 +196,6 @@ type VPNConfig struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA.
 	HighAvailabilityNumberOfShootClients int
-	// DisableNewVPN disable new VPN implementation.
-	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
-	DisableNewVPN bool
 	// IPFamilies are the IPFamilies of the shoot.
 	IPFamilies []gardencorev1beta1.IPFamily
 }

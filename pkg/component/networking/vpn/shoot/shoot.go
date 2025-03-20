@@ -95,9 +95,6 @@ type Values struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA.
 	HighAvailabilityNumberOfShootClients int
-	// DisableNewVPN disable new VPN implementation.
-	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
-	DisableNewVPN bool
 }
 
 // New creates a new instance of DeployWaiter for vpnshoot
@@ -582,9 +579,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 		for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 			template.Spec.Containers = append(template.Spec.Containers, *v.container(secrets, &i))
 		}
-		if !v.values.DisableNewVPN {
-			template.Spec.Containers = append(template.Spec.Containers, *v.tunnelControllerContainer())
-		}
+		template.Spec.Containers = append(template.Spec.Containers, *v.tunnelControllerContainer())
 	}
 
 	return template
@@ -765,15 +760,6 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			}...)
 	}
 
-	if v.values.DisableNewVPN {
-		envVariables = append(envVariables,
-			corev1.EnvVar{
-				Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-				Value: "true",
-			},
-		)
-	}
-
 	return envVariables
 }
 
@@ -931,24 +917,6 @@ func (v *vpnShoot) getInitContainers() []corev1.Container {
 				Value: strconv.Itoa(v.values.HighAvailabilityNumberOfShootClients),
 			},
 		}...)
-	}
-
-	if v.values.DisableNewVPN {
-		container.Command = nil
-		container.Env = append(container.Env,
-			corev1.EnvVar{
-				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-				Value: "true",
-			})
-
-		if v.values.HighAvailabilityEnabled {
-			container.Env = append(container.Env,
-				corev1.EnvVar{
-					Name:  "CONFIGURE_BONDING",
-					Value: "true",
-				},
-			)
-		}
 	}
 
 	return []corev1.Container{container}

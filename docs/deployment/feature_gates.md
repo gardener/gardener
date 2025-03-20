@@ -26,8 +26,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootCredentialsBinding                  | `false` | `Alpha` | `1.98`  | `1.106` |
 | ShootCredentialsBinding                  | `true`  | `Beta`  | `1.107` |         |
 | NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  |         |
-| NewVPN                                   | `false` | `Alpha` | `1.104` | `1.114` |
-| NewVPN                                   | `true`  | `Beta`  | `1.115` |         |
 | NodeAgentAuthorizer                      | `false` | `Alpha` | `1.109` |         |
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
@@ -184,6 +182,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | IPv6SingleStack                              |         | `Removed`    | `1.107` |         |
 | ShootManagedIssuer                           | `false` | `Alpha`      | `1.93`  | `1.110` |
 | ShootManagedIssuer                           |         | `Removed`    | `1.111` |         |
+| NewVPN                                       | `false` | `Alpha`      | `1.104` | `1.114` |
+| NewVPN                                       | `true`  | `Beta`       | `1.115` | `1.115` |
+| NewVPN                                       | `true`  | `GA`         | `1.116` |         |
 
 ## Using a Feature
 

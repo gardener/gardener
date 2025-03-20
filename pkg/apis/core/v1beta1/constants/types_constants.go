@@ -324,10 +324,6 @@ const (
 	// ShootAlphaControlPlaneVPNVPAUpdateDisabled is a constant for an annotation on the Shoot resource to enforce
 	// disabling the vertical pod autoscaler update resources related to the VPN connection.
 	ShootAlphaControlPlaneVPNVPAUpdateDisabled = "alpha.control-plane.shoot.gardener.cloud/vpn-vpa-update-disabled"
-	// ShootAlphaControlPlaneDisableNewVPN is a constant for an annotation on the Shoot resource to disabling the
-	// new Go implementation of VPN.
-	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
-	ShootAlphaControlPlaneDisableNewVPN = "alpha.control-plane.shoot.gardener.cloud/disable-new-vpn"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.

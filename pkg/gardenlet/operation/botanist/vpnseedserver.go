@@ -22,9 +22,6 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 	}
 
 	imageNameVPNSeedServer := imagevector.ContainerImageNameVpnServer
-	if !b.Shoot.UsesNewVPN {
-		imageNameVPNSeedServer = imagevector.ContainerImageNameVpnSeedServer
-	}
 	imageVPNSeedServer, err := imagevector.Containers().FindImage(imageNameVPNSeedServer, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
@@ -42,7 +39,6 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		VPAUpdateDisabled:                    b.Shoot.VPNVPAUpdateDisabled,
-		DisableNewVPN:                        !b.Shoot.UsesNewVPN,
 	}
 
 	if b.ShootUsesDNS() {
