@@ -49,7 +49,7 @@ func (s Strategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	managedSeed.Generation = 1
 	managedSeed.Status = seedmanagement.ManagedSeedStatus{}
 
-	syncSeedBackupCredentials(managedSeed)
+	SyncSeedBackupCredentials(managedSeed)
 }
 
 // PrepareForUpdate is invoked on update before validation to normalize
@@ -61,7 +61,7 @@ func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	oldManagedSeed := old.(*seedmanagement.ManagedSeed)
 	newManagedSeed.Status = oldManagedSeed.Status
 
-	syncSeedBackupCredentials(newManagedSeed)
+	SyncSeedBackupCredentials(newManagedSeed)
 
 	if mustIncreaseGeneration(oldManagedSeed, newManagedSeed) {
 		newManagedSeed.Generation = oldManagedSeed.Generation + 1
@@ -208,7 +208,10 @@ func GetShootName(managedSeed *seedmanagement.ManagedSeed) string {
 	return managedSeed.Spec.Shoot.Name
 }
 
-func syncSeedBackupCredentials(managedSeed *seedmanagement.ManagedSeed) {
+// SyncSeedBackupCredentials ensures the backup fields
+// credentialsRef and secretRef are synced.
+// TODO(vpnachev): Remove once the backup.secretRef field is removed.
+func SyncSeedBackupCredentials(managedSeed *seedmanagement.ManagedSeed) {
 	if managedSeed.Spec.Gardenlet.Config == nil {
 		return
 	}

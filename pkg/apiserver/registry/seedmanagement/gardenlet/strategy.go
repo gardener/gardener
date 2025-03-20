@@ -41,14 +41,14 @@ func (gardenletStrategy) PrepareForCreate(_ context.Context, obj runtime.Object)
 
 	gardenlet.Generation = 1
 
-	syncSeedBackupCredentials(gardenlet)
+	SyncSeedBackupCredentials(gardenlet)
 }
 
 func (gardenletStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newGardenlet := obj.(*seedmanagement.Gardenlet)
 	oldGardenlet := old.(*seedmanagement.Gardenlet)
 
-	syncSeedBackupCredentials(newGardenlet)
+	SyncSeedBackupCredentials(newGardenlet)
 
 	if mustIncreaseGeneration(oldGardenlet, newGardenlet) {
 		newGardenlet.Generation = oldGardenlet.Generation + 1
@@ -128,7 +128,10 @@ func (statusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object)
 	return validation.ValidateGardenletStatusUpdate(obj.(*seedmanagement.Gardenlet), old.(*seedmanagement.Gardenlet))
 }
 
-func syncSeedBackupCredentials(gardenlet *seedmanagement.Gardenlet) {
+// SyncSeedBackupCredentials ensures the backup fields
+// credentialsRef and secretRef are synced.
+// TODO(vpnachev): Remove once the backup.secretRef field is removed.
+func SyncSeedBackupCredentials(gardenlet *seedmanagement.Gardenlet) {
 	if gardenlet.Spec.Config == nil {
 		return
 	}
