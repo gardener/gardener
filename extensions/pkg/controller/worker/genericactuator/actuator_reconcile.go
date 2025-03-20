@@ -124,10 +124,10 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Update the worker status with the worker pool hash for in-place update worker pools.
-	// If we had reached this point, we can safely say for AutoInPlaceUpdate worker pools that they have been updated.
+	// If we had reached this point, we can safely say that AutoInPlaceUpdate worker pools have been updated.
 	// Hence we can update their hash in the status.
 	// But for ManualInPlaceUpdate worker pools, we need to check if all the machine deployments for the worker pool are updated.
-	// The worker controller is triggered when a machine deployment is updated, so this can happen at a latter time as well.
+	// The worker controller is triggered when a machine deployment is updated, so this can also happen later.
 	if err := a.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster); err != nil {
 		return fmt.Errorf("failed to update the worker status with the worker pool hash for in-place update worker pools: %w", err)
 	}
@@ -312,7 +312,8 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 	log.Info("Waiting until wanted machine deployments are available")
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
-		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines int32
+		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines,
+			numDesiredManualInPlace, numUpdatedManualInPlace, numNeedUpdatedManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace int32
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
@@ -328,6 +329,14 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 		// map the owner reference to the machine sets
 		ownerReferenceToMachineSet := gardenerutils.BuildOwnerToMachineSetsMap(machineSets.Items)
+
+		// Get the list of all machines
+		machines := &machinev1alpha1.MachineList{}
+		if err := a.seedClient.List(ctx, machines, client.InNamespace(worker.Namespace)); err != nil {
+			return retryutils.SevereError(err)
+		}
+
+		machineSetToMachinesMap := gardenerutils.BuildMachineSetToMachinesMap(machines.Items)
 
 		// Collect the numbers of available and desired replicas.
 		for _, deployment := range machineDeployments.Items {
@@ -371,7 +380,8 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 			// If the Shoot is not hibernated we want to make sure that the machine set with the right
 			// machine class for the machine deployment is deployed by the machine-controller-manager
-			if machineSet := extensionsworkerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet); machineSet == nil {
+			latestMachineSet := extensionsworkerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet)
+			if latestMachineSet == nil {
 				return retryutils.MinorError(fmt.Errorf("waiting for the machine-controller-manager to create the updated machine set for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name))
 			}
 
@@ -380,8 +390,29 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			if health.CheckMachineDeployment(&deployment) == nil {
 				numHealthyDeployments++
 			}
-			numDesired += deployment.Spec.Replicas
-			numUpdated += deployment.Status.UpdatedReplicas
+
+			if gardenerutils.IsMachineDeploymentStrategyManualInPlace(deployment.Spec.Strategy) {
+				oldMachineSetsTotalReplicas := 0
+				oldMachineSets := extensionsworkerhelper.GetOldMachineSets(machineSets, *latestMachineSet)
+				for _, oldMachineSet := range oldMachineSets {
+					oldMachineSetsTotalReplicas += int(oldMachineSet.Status.Replicas)
+					machines := machineSetToMachinesMap[oldMachineSet.Name]
+					for _, machine := range machines {
+						cond := extensionsworkercontroller.GetMachineCondition(&machine, machinev1alpha1.NodeInPlaceUpdate)
+						if cond != nil && cond.Reason != machinev1alpha1.CandidateForUpdate {
+							numOldMachinesNotUpdateCandidateManualInPlace++
+						}
+					}
+				}
+
+				numDesiredManualInPlace += deployment.Spec.Replicas
+				numNeedUpdatedManualInPlace += int32(oldMachineSetsTotalReplicas) // #nosec: G115 - `oldMachineSetsTotalReplicas` cannot be higher than max int32.
+				numUpdatedManualInPlace += deployment.Status.UpdatedReplicas
+			} else {
+				numDesired += deployment.Spec.Replicas
+				numUpdated += deployment.Status.UpdatedReplicas
+			}
+
 			numAvailable += deployment.Status.AvailableReplicas
 			numUnavailable += deployment.Status.UnavailableReplicas
 		}
@@ -391,16 +422,26 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 		case !extensionscontroller.IsHibernationEnabled(cluster):
 			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
-			if numUnavailable == 0 && numUpdated == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) {
+			if numUnavailable == 0 && (numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
+				numOldMachinesNotUpdateCandidateManualInPlace == 0 {
 				return retryutils.Ok()
 			}
 
-			if numUnavailable == 0 && numAvailable == numDesired && numUpdated < numberOfAwakeMachines {
+			if numUnavailable == 0 && numAvailable == (numDesired+numDesiredManualInPlace) && (numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace) < numberOfAwakeMachines {
 				msg = fmt.Sprintf("Waiting until all old machines are drained and terminated. Waiting for %d machine(s)...", numberOfAwakeMachines-numUpdated)
+			}
+
+			if numOldMachinesNotUpdateCandidateManualInPlace > 0 {
+				if msg != "" {
+					msg += "\n"
+				}
+
+				msg += fmt.Sprintf("Waiting until %d old machines are updated...", numOldMachinesNotUpdateCandidateManualInPlace)
 				break
 			}
 
-			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d/%d machinedeployments available)...", numAvailable, numDesired, numUpdated, numDesired, numUnavailable, numHealthyDeployments, len(wantedMachineDeployments))
+			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d/%d machinedeployments available)...",
+				numAvailable, numDesired+numDesiredManualInPlace, numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace+numDesiredManualInPlace, numDesired, numUnavailable, numHealthyDeployments, len(wantedMachineDeployments))
 		default:
 			if numberOfAwakeMachines == 0 {
 				return retryutils.Ok()
@@ -480,9 +521,9 @@ func (a *genericActuator) updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx cont
 
 		if v1beta1helper.IsUpdateStrategyManualInPlace(pool.UpdateStrategy) {
 			// Check if all the machine deployments for the worker pool are updated.
-			mcdList := &machinev1alpha1.MachineDeploymentList{}
+			machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
 			if err := a.seedClient.List(ctx,
-				mcdList,
+				machineDeploymentList,
 				client.InNamespace(worker.Namespace),
 				client.MatchingLabels{
 					v1beta1constants.LabelWorkerPool: pool.Name,
@@ -492,15 +533,15 @@ func (a *genericActuator) updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx cont
 			}
 
 			// Skip the worker pool if there are machine deployments which are not updated.
-			outDatedMachineDeploymentsPresent := false
-			for _, mcd := range mcdList.Items {
+			outdatedMachineDeploymentsPresent := false
+			for _, mcd := range machineDeploymentList.Items {
 				if mcd.Status.UpdatedReplicas < mcd.Status.Replicas {
-					outDatedMachineDeploymentsPresent = true
+					outdatedMachineDeploymentsPresent = true
 					break
 				}
 			}
 
-			if outDatedMachineDeploymentsPresent {
+			if outdatedMachineDeploymentsPresent {
 				continue
 			}
 		}
