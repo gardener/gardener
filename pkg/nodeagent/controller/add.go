@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -44,18 +45,23 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 		return fmt.Errorf("failed adding node controller: %w", err)
 	}
 
+	var channel = make(chan event.TypedGenericEvent[*corev1.Secret])
+
 	if err := (&operatingsystemconfig.Reconciler{
-		Config:        cfg.Controllers.OperatingSystemConfig,
-		HostName:      hostName,
-		NodeName:      nodeName,
-		CancelContext: cancel,
+		Config:                 cfg.Controllers.OperatingSystemConfig,
+		TokenSecretSyncConfigs: cfg.Controllers.Token.SyncConfigs,
+		Channel:                channel,
+		HostName:               hostName,
+		NodeName:               nodeName,
+		MachineName:            machineName,
+		CancelContext:          cancel,
 	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding operating system config controller: %w", err)
 	}
 
 	if err := (&token.Reconciler{
 		Config: cfg.Controllers.Token,
-	}).AddToManager(mgr); err != nil {
+	}).AddToManager(mgr, channel); err != nil {
 		return fmt.Errorf("failed adding token controller: %w", err)
 	}
 
