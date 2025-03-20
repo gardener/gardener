@@ -1318,11 +1318,18 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
 				})
 
-				It("should successfully validate with only architectures set", func() {
+				It("should fail to validate with only architectures set", func() {
 					cloudProfile.Spec.MachineImages[0].Versions[0].Architectures = []string{"arm64"}
 					cloudProfile.Spec.MachineTypes[0].Architecture = ptr.To("arm64")
 
-					Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
+					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.machineImages[0].versions[0].architectures"),
+							"BadValue": Equal([]string{"arm64"}),
+							"Detail":   Equal("architecture field values set (arm64) conflict with the capability architectures ()"),
+						})),
+					))
 				})
 
 				It("should successfully validate with only capabilities set", func() {
@@ -1812,17 +1819,24 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
 						})
 
-						It("should successfully validate with only architectures set", func() {
+						It("should fail to validate with only architectures set", func() {
 							cloudProfileNew.Spec.MachineImages[0].Versions[0].Architectures = []string{"arm64"}
 							cloudProfileNew.Spec.MachineTypes[0].Architecture = ptr.To("arm64")
 
 							cloudProfileOld.Spec.MachineImages = cloudProfileNew.Spec.MachineImages
 							cloudProfileOld.Spec.MachineTypes = cloudProfileNew.Spec.MachineTypes
 
-							Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(BeEmpty())
+							Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(ConsistOf(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":     Equal(field.ErrorTypeInvalid),
+									"Field":    Equal("spec.machineImages[0].versions[0].architectures"),
+									"BadValue": Equal([]string{"arm64"}),
+									"Detail":   Equal("architecture field values set (arm64) conflict with the capability architectures ()"),
+								})),
+							))
 						})
 
-						It("should successfully validate with only capabilities set", func() {
+						It("should successfully to validate with only capabilities set", func() {
 							cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
 								{Capabilities: core.Capabilities{"architecture": {Values: []string{"arm64"}}}},
 							}
