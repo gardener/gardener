@@ -7,21 +7,32 @@ package operatingsystemconfig
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"reflect"
 	"slices"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
 
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
+	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var decoder runtime.Decoder
@@ -29,6 +40,7 @@ var decoder runtime.Decoder
 func init() {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kubeletconfigv1beta1.AddToScheme(scheme))
 	decoder = serializer.NewCodecFactory(scheme).UniversalDeserializer()
 }
 
@@ -46,7 +58,7 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 	return osc, secret.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumDownloadedOperatingSystemConfig], nil
 }
 
-func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig, newOSCChecksum string) (*operatingSystemConfigChanges, error) {
+func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig, newOSCChecksum string, currentOSVersion *string) (*operatingSystemConfigChanges, error) {
 	changes := &operatingSystemConfigChanges{
 		fs:                            fs,
 		OperatingSystemConfigChecksum: newOSCChecksum,
@@ -134,6 +146,55 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 		changes.Files,
 	)
 
+	if oldOSC.Spec.InPlaceUpdates != nil && newOSC.Spec.InPlaceUpdates != nil {
+		if oldOSC.Spec.InPlaceUpdates.OperatingSystemVersion != newOSC.Spec.InPlaceUpdates.OperatingSystemVersion &&
+			currentOSVersion != nil && *currentOSVersion != newOSC.Spec.InPlaceUpdates.OperatingSystemVersion {
+			changes.OSUpdate = true
+		}
+
+		if oldOSC.Spec.InPlaceUpdates.KubeletVersion != newOSC.Spec.InPlaceUpdates.KubeletVersion {
+			changes.KubeletUpdate.MinorVersionUpdate, err = CheckIfMinorVersionUpdate(oldOSC.Spec.InPlaceUpdates.KubeletVersion, newOSC.Spec.InPlaceUpdates.KubeletVersion)
+			if err != nil {
+				return nil, fmt.Errorf("failed to check if kubelet version update is minor: %w", err)
+			}
+		}
+
+		oldKubeletConfig, err := getKubeletConfig(oldOSC)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get old kubelet config from the OSC: %w", err)
+		}
+		newKubeletConfig, err := getKubeletConfig(newOSC)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get new kubelet config from the OSC: %w", err)
+		}
+
+		changes.KubeletUpdate.ConfigUpdate, changes.KubeletUpdate.CPUManagerPolicyUpdate, err = ComputeKubeletConfigChange(oldKubeletConfig, newKubeletConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if kubelet config has changed: %w", err)
+		}
+
+		if newOSC.Spec.InPlaceUpdates.CredentialsRotation != nil {
+			// Rotation is triggered for the first time
+			if oldOSC.Spec.InPlaceUpdates.CredentialsRotation == nil {
+				caRotation := newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime != nil
+				changes.CARotation.Kubelet = caRotation
+				changes.CARotation.NodeAgent = caRotation && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
+
+				changes.SAKeyRotation = newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime != nil
+			} else {
+				caRotation := oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil &&
+					newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil &&
+					!reflect.DeepEqual(oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime, newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime)
+				changes.CARotation.Kubelet = caRotation
+				changes.CARotation.NodeAgent = caRotation && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
+
+				changes.SAKeyRotation = oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
+					newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
+					!reflect.DeepEqual(oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime, newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime)
+			}
+		}
+	}
+
 	var (
 		newRegistries []extensionsv1alpha1.RegistryConfig
 		oldRegistries []extensionsv1alpha1.RegistryConfig
@@ -161,6 +222,135 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 	changes.lock.Lock()
 	defer changes.lock.Unlock()
 	return changes, changes.persist()
+}
+
+func getKubeletConfig(osc *extensionsv1alpha1.OperatingSystemConfig) (*kubeletconfigv1beta1.KubeletConfiguration, error) {
+	var (
+		fciCodec           = oscutils.NewFileContentInlineCodec()
+		kubeletConfigCodec = kubelet.NewConfigCodec(fciCodec)
+	)
+
+	kubeletConfigFile := extensionswebhook.FileWithPath(osc.Spec.Files, kubelet.PathKubeletConfig)
+	if kubeletConfigFile == nil {
+		return nil, fmt.Errorf("kubelet config file with path: %q not found in OSC", kubelet.PathKubeletConfig)
+	}
+
+	return kubeletConfigCodec.Decode(kubeletConfigFile.Content.Inline)
+}
+
+// ComputeKubeletConfigChange computes changes in the kubelet configuration relevant for in-place updates.
+func ComputeKubeletConfigChange(oldConfig, newConfig *kubeletconfigv1beta1.KubeletConfiguration) (bool, bool, error) {
+	var (
+		cpuManagerPolicyChanged = oldConfig.CPUManagerPolicy != newConfig.CPUManagerPolicy
+		oldRelevantEvictionHard = make(map[string]string)
+		newRelevantEvictionHard = make(map[string]string)
+	)
+
+	// Copy only relevant config values for comparison.
+	if oldConfig.EvictionHard != nil {
+		oldRelevantEvictionHard[components.MemoryAvailable] = oldConfig.EvictionHard[components.MemoryAvailable]
+		oldRelevantEvictionHard[components.ImageFSAvailable] = oldConfig.EvictionHard[components.ImageFSAvailable]
+		oldRelevantEvictionHard[components.ImageFSInodesFree] = oldConfig.EvictionHard[components.ImageFSInodesFree]
+		oldRelevantEvictionHard[components.NodeFSAvailable] = oldConfig.EvictionHard[components.NodeFSAvailable]
+		oldRelevantEvictionHard[components.NodeFSInodesFree] = oldConfig.EvictionHard[components.NodeFSInodesFree]
+	}
+
+	if newConfig.EvictionHard != nil {
+		newRelevantEvictionHard[components.MemoryAvailable] = newConfig.EvictionHard[components.MemoryAvailable]
+		newRelevantEvictionHard[components.ImageFSAvailable] = newConfig.EvictionHard[components.ImageFSAvailable]
+		newRelevantEvictionHard[components.ImageFSInodesFree] = newConfig.EvictionHard[components.ImageFSInodesFree]
+		newRelevantEvictionHard[components.NodeFSAvailable] = newConfig.EvictionHard[components.NodeFSAvailable]
+		newRelevantEvictionHard[components.NodeFSInodesFree] = newConfig.EvictionHard[components.NodeFSInodesFree]
+	}
+
+	if !maps.Equal(oldRelevantEvictionHard, newRelevantEvictionHard) {
+		return true, cpuManagerPolicyChanged, nil
+	}
+
+	oldReserved, err := sumResourceReservations(oldConfig.KubeReserved, oldConfig.SystemReserved)
+	if err != nil {
+		return false, cpuManagerPolicyChanged, fmt.Errorf("failed to sum resource reservations for old kubelet config: %w", err)
+	}
+	newReserved, err := sumResourceReservations(newConfig.KubeReserved, newConfig.SystemReserved)
+	if err != nil {
+		return false, cpuManagerPolicyChanged, fmt.Errorf("failed to sum resource reservations for new kubelet config: %w", err)
+	}
+
+	return !maps.Equal(oldReserved, newReserved), cpuManagerPolicyChanged, nil
+}
+
+func sumResourceReservations(left, right map[string]string) (map[string]string, error) {
+	if left == nil {
+		return right, nil
+	} else if right == nil {
+		return left, nil
+	}
+
+	out := make(map[string]string)
+
+	if cpu, err := sumQuantities(left["cpu"], right["cpu"]); err != nil {
+		return nil, fmt.Errorf("failed to sum cpu reservations: %w", err)
+	} else {
+		out["cpu"] = cpu.String()
+	}
+
+	if memory, err := sumQuantities(left["memory"], right["memory"]); err != nil {
+		return nil, fmt.Errorf("failed to sum memory reservations: %w", err)
+	} else {
+		out["memory"] = memory.String()
+	}
+
+	if ephemeralStorage, err := sumQuantities(left["ephemeral-storage"], right["ephemeral-storage"]); err != nil {
+		return nil, fmt.Errorf("failed to sum ephemeral-storage reservations: %w", err)
+	} else {
+		out["ephemeral-storage"] = ephemeralStorage.String()
+	}
+
+	if pid, err := sumQuantities(left["pid"], right["pid"]); err != nil {
+		return nil, fmt.Errorf("failed to sum pid reservations: %w", err)
+	} else {
+		out["pid"] = pid.String()
+	}
+
+	return out, nil
+}
+
+func sumQuantities(l, r string) (*resource.Quantity, error) {
+	var (
+		left, right resource.Quantity
+
+		err error
+	)
+
+	if r == "" && l == "" {
+		return resource.NewQuantity(0, resource.DecimalSI), nil
+	}
+
+	if l != "" {
+		left, err = resource.ParseQuantity(l)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse left quantity: %w", err)
+		}
+
+		if r == "" {
+			return &left, nil
+		}
+	}
+
+	if r != "" {
+		right, err = resource.ParseQuantity(r)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse right quantity: %w", err)
+		}
+
+		if l == "" {
+			return &right, nil
+		}
+	}
+
+	copy := left.DeepCopy()
+	copy.Add(right)
+	return &copy, nil
 }
 
 func computeUnitDiffs(oldUnits, newUnits []extensionsv1alpha1.Unit, fileDiffs files) units {
@@ -319,4 +509,18 @@ func getCommandToExecute(newUnit extensionsv1alpha1.Unit) extensionsv1alpha1.Uni
 		commandToExecute = extensionsv1alpha1.CommandStop
 	}
 	return commandToExecute
+}
+
+// CheckIfMinorVersionUpdate checks if the new kubelet version is a minor version update to the old kubelet version.
+func CheckIfMinorVersionUpdate(old, new string) (bool, error) {
+	oldVersion, err := semver.NewVersion(versionutils.Normalize(old))
+	if err != nil {
+		return false, fmt.Errorf("failed to parse old kubelet version %s: %w", old, err)
+	}
+	newVersion, err := semver.NewVersion(versionutils.Normalize(new))
+	if err != nil {
+		return false, fmt.Errorf("failed to parse new kubelet version %s: %w", new, err)
+	}
+
+	return oldVersion.Minor() != newVersion.Minor(), nil
 }
