@@ -331,3 +331,15 @@ type Capabilities map[string]CapabilityValues
 type CapabilitySet struct {
 	Capabilities
 }
+
+func ExtractArchitectures(capabilities []CapabilitySet) []string {
+	var architectures []string
+	for _, capabilitySet := range capabilities {
+		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey].Values {
+			if !slices.Contains(architectures, architectureValue) {
+				architectures = append(architectures, architectureValue)
+			}
+		}
+	}
+	return architectures
+}

@@ -523,7 +523,7 @@ func maintainMachineImages(log logr.Logger, shoot *gardencorev1beta1.Shoot, clou
 			return nil, err
 		}
 
-		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, worker.Machine.Architecture)
+		filteredMachineImageVersionsFromCloudProfile := filterForArchitecture(&machineImageFromCloudProfile, cloudProfile.Spec.Capabilities, worker.Machine.Architecture)
 		filteredMachineImageVersionsFromCloudProfile = filterForCRI(filteredMachineImageVersionsFromCloudProfile, worker.CRI)
 		filteredMachineImageVersionsFromCloudProfile = filterForKubeleteVersionConstraint(filteredMachineImageVersionsFromCloudProfile, kubeletVersion)
 
@@ -671,7 +671,7 @@ func getOperation(shoot *gardencorev1beta1.Shoot) string {
 	return operation
 }
 
-func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, arch *string) *gardencorev1beta1.MachineImage {
+func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, capabilities gardencorev1beta1.Capabilities, arch *string) *gardencorev1beta1.MachineImage {
 	filteredMachineImages := gardencorev1beta1.MachineImage{
 		Name:           machineImageFromCloudProfile.Name,
 		UpdateStrategy: machineImageFromCloudProfile.UpdateStrategy,
@@ -679,7 +679,7 @@ func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.Machi
 	}
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
-		if slices.Contains(cloudProfileVersion.Architectures, *arch) {
+		if slices.Contains(cloudProfileVersion.GetArchitectures(capabilities), *arch) {
 			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
 		}
 	}

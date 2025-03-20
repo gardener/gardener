@@ -765,13 +765,7 @@ func (c *validationContext) ensureMachineImages() field.ErrorList {
 		for idx, worker := range c.shoot.Spec.Provider.Workers {
 			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
 
-			var capabilities core.Capabilities
-			if err := api.Scheme.Convert(c.cloudProfileSpec.Capabilities, &capabilities, ctx); err != nil {
-				allErrs = append(allErrs, field.InternalError(fldPath, err))
-				continue
-			}
-
-			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, capabilities, fldPath)
+			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, c.cloudProfileSpec.Capabilities, fldPath)
 			if err != nil {
 				allErrs = append(allErrs, err)
 				continue
@@ -1150,7 +1144,7 @@ func (c *validationContext) validateWorkerMachine(idxPath *field.Path, worker, o
 	}
 
 	isUpdateStrategyInPlace := helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
-	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine)
+	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.Capabilities)
 	if !isMachineImagePresentInCloudprofile {
 		return field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageVersions))
 	}
@@ -1746,7 +1740,7 @@ func validateZone(constraints []gardencorev1beta1.Region, region, zone string) (
 }
 
 // getDefaultMachineImage determines the latest non-preview machine image version from the first machine image in the CloudProfile and considers that as the default image
-func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, capabilities core.Capabilities, image *core.ShootMachineImage, arch *string, isUpdateStrategyInPlace bool, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, capabilities gardencorev1beta1.Capabilities, image *core.ShootMachineImage, arch *string, isUpdateStrategyInPlace bool, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	var imageReference string
 	if image != nil {
 		imageReference = fmt.Sprintf("%s@%s", image.Name, image.Version)
@@ -1756,18 +1750,13 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, capa
 		return nil, field.Invalid(fldPath, imageReference, "the cloud profile does not contain any machine image - cannot create shoot cluster")
 	}
 
-	var defaultImage *core.MachineImage
+	var defaultImage *gardencorev1beta1.MachineImage
 
 	if image != nil && len(image.Name) != 0 {
 		for _, mi := range machineImages {
 			machineImage := mi
 			if machineImage.Name == image.Name {
-				coreMachineImage := &core.MachineImage{}
-				if err := gardencorev1beta1.Convert_v1beta1_MachineImage_To_core_MachineImage(&machineImage, coreMachineImage, nil); err != nil {
-					return nil, field.Invalid(fldPath, machineImage.Name, fmt.Sprintf("failed to convert machine image from cloud profile: %s", err.Error()))
-				}
-				defaultImage = coreMachineImage
-
+				defaultImage = &machineImage
 				break
 			}
 		}
@@ -1779,13 +1768,8 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, capa
 		for _, mi := range machineImages {
 			machineImage := mi
 			for _, version := range machineImage.Versions {
-				coreMachineImage := &core.MachineImage{}
-				if err := gardencorev1beta1.Convert_v1beta1_MachineImage_To_core_MachineImage(&machineImage, coreMachineImage, nil); err != nil {
-					return nil, field.Invalid(fldPath, machineImage.Name, fmt.Sprintf("failed to convert machine image from cloud profile: %s", err.Error()))
-				}
-
-				if slices.Contains(version.Architectures, *arch) {
-					defaultImage = coreMachineImage
+				if slices.Contains(version.GetArchitectures(capabilities), *arch) {
+					defaultImage = &machineImage
 					break
 				}
 			}
@@ -1866,7 +1850,7 @@ func parseSemanticVersionPart(part string) (*uint64, error) {
 	return ptr.To(v), nil
 }
 
-func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool, isUpdateStrategyInPlace bool, machine, oldMachine core.Machine) (bool, bool, bool, bool, []string) {
+func validateMachineImagesConstraints(a admission.Attributes, constraints []gardencorev1beta1.MachineImage, isNewWorkerPool, isUpdateStrategyInPlace bool, machine, oldMachine core.Machine, capabilities gardencorev1beta1.Capabilities) (bool, bool, bool, bool, []string) {
 	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, true, nil
 	}
@@ -1897,7 +1881,7 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 					}
 				}
 
-				if slices.Contains(machineVersion.Architectures, *machine.Architecture) {
+				if slices.Contains(machineVersion.GetArchitectures(capabilities), *machine.Architecture) {
 					machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
 				}
 
@@ -2035,7 +2019,7 @@ func validateKubeletVersion(constraints []gardencorev1beta1.MachineImage, worker
 	return nil
 }
 
-func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []gardencorev1beta1.MachineImage, capabilities core.Capabilities, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
+func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []gardencorev1beta1.MachineImage, capabilities gardencorev1beta1.Capabilities, fldPath *field.Path) (*core.ShootMachineImage, *field.Error) {
 	// General approach with machine image defaulting in this code: Try to keep the machine image
 	// from the old shoot object to not accidentally update it to the default machine image.
 	// This should only happen in the maintenance time window of shoots and is performed by the

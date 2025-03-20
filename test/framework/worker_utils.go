@@ -82,7 +82,7 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 		return fmt.Errorf("no MachineTypes of architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
 
-	machineImage := firstMachineImageWithAMDSupport(cloudProfile.Spec.MachineImages)
+	machineImage := firstMachineImageWithAMDSupport(cloudProfile.Spec.MachineImages, cloudProfile.Spec.Capabilities)
 
 	if machineImage == nil {
 		return fmt.Errorf("no MachineImage that supports architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
@@ -147,10 +147,10 @@ func generateRandomWorkerName(prefix string) (string, error) {
 	return prefix + strings.ToLower(randomString), nil
 }
 
-func firstMachineImageWithAMDSupport(machineImageFromCloudProfile []gardencorev1beta1.MachineImage) *gardencorev1beta1.MachineImage {
+func firstMachineImageWithAMDSupport(machineImageFromCloudProfile []gardencorev1beta1.MachineImage, capabilities gardencorev1beta1.Capabilities) *gardencorev1beta1.MachineImage {
 	for _, machineImage := range machineImageFromCloudProfile {
 		for _, version := range machineImage.Versions {
-			if slices.Contains(version.Architectures, v1beta1constants.ArchitectureAMD64) {
+			if slices.Contains(version.GetArchitectures(capabilities), v1beta1constants.ArchitectureAMD64) {
 				return &machineImage
 			}
 		}

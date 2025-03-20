@@ -158,6 +158,7 @@ func mergeMachineImages(base, override gardencorev1beta1.MachineImage) gardencor
 
 func mergeMachineImageVersions(base, override gardencorev1beta1.MachineImageVersion) gardencorev1beta1.MachineImageVersion {
 	if len(override.Architectures) > 0 ||
+		len(override.CapabilitySets) > 0 ||
 		len(override.CRI) > 0 ||
 		len(ptr.Deref(override.KubeletVersionConstraint, "")) > 0 ||
 		len(ptr.Deref(override.Classification, "")) > 0 {
