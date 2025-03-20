@@ -26,13 +26,11 @@ import (
 
 var _ = Describe("Add", func() {
 	var (
-		ctx        context.Context
 		c          client.Client
 		reconciler *shootstate.Reconciler
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		reconciler = &shootstate.Reconciler{
 			Client: c,
@@ -117,8 +115,6 @@ var _ = Describe("Add", func() {
 			var (
 				shoot    *gardencorev1beta1.Shoot
 				shootOld *gardencorev1beta1.Shoot
-
-				shootState *gardencorev1beta1.ShootState
 			)
 
 			BeforeEach(func() {
@@ -127,19 +123,9 @@ var _ = Describe("Add", func() {
 						Name:      "shoot-",
 						Namespace: "ns-",
 					},
-					Status: gardencorev1beta1.ShootStatus{},
 				}
-				Expect(c.Create(ctx, shoot)).To(Succeed())
 
 				shootOld = shoot.DeepCopy()
-
-				shootState = &gardencorev1beta1.ShootState{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      shoot.Name,
-						Namespace: shoot.Namespace,
-					},
-				}
-				Expect(c.Create(ctx, shootState)).To(Succeed())
 			})
 
 			It("should return false because new object is not a shoot", func() {
@@ -170,7 +156,7 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: shootOld, ObjectNew: shoot})).To(BeTrue())
 			})
 
-			It("should return true if Restore operation succeeds ", func() {
+			It("should return true if Restore operation succeeds", func() {
 				shootOld.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type: gardencorev1beta1.LastOperationTypeRestore,
 				}
