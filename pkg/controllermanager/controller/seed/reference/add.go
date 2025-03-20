@@ -24,7 +24,7 @@ func AddToManager(mgr manager.Manager, gardenNamespace string, cfg controllerman
 		GetReferencedSecretNames:    getReferencedSecretNames,
 		GetReferencedConfigMapNames: getReferencedConfigMapNames,
 		ReferenceChangedPredicate:   Predicate,
-	}).AddToManager(mgr)
+	}).AddToManager(mgr, "seed")
 }
 
 // Predicate is a predicate function for checking whether a reference changed in the Seed

@@ -25,7 +25,7 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Shoot
 		GetReferencedSecretNames:    getReferencedSecretNames,
 		GetReferencedConfigMapNames: getReferencedConfigMapNames,
 		ReferenceChangedPredicate:   Predicate,
-	}).AddToManager(mgr)
+	}).AddToManager(mgr, "shoot")
 }
 
 // Predicate is a predicate function for checking whether a reference changed in the Shoot

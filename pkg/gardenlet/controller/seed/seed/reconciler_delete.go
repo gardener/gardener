@@ -269,6 +269,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:           ensureNoControllerInstallations(r.GardenClient, seed.GetInfo().Name),
 			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting referenced resources",
+			Fn:           r.destroyReferencedResources,
+			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
+		})
 
 		destroyIstioCRDs = g.Add(flow.Task{
 			Name:         "Destroy Istio CRDs",
