@@ -257,7 +257,7 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 	for imageIdx, image := range newMachineImages {
 		for versionIdx, version := range newMachineImages[imageIdx].Versions {
 			oldMachineImageVersion, oldVersionExists := oldMachineImagesMap.GetImageVersion(image.Name, version.Version)
-			capabilityArchitectures := ExtractArchitectures(version.CapabilitySets)
+			capabilityArchitectures := core.ExtractArchitectures(version.CapabilitySets)
 
 			// Skip any architecture field syncing if
 			// - architecture field has been modified and changed to any value other than empty.
@@ -326,16 +326,4 @@ func syncMachineTypeArchitectureCapabilities(newMachineTypes, oldMachineTypes []
 			newMachineTypes[i].Architecture = ptr.To(capabilityArchitectures[0])
 		}
 	}
-}
-
-func ExtractArchitectures(capabilities []core.CapabilitySet) []string {
-	var architectures []string
-	for _, capabilitySet := range capabilities {
-		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey].Values {
-			if !slices.Contains(architectures, architectureValue) {
-				architectures = append(architectures, architectureValue)
-			}
-		}
-	}
-	return architectures
 }
