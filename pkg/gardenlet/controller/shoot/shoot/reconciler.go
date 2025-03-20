@@ -664,7 +664,7 @@ func (r *Reconciler) updateShootStatusOperationStart(
 		}
 	}
 
-	removeNonExistentPoolsFromPendingWorkersRollouts(shoot.Status.Credentials, shoot.Spec.Provider.Workers, v1beta1helper.HibernationIsEnabled(shoot))
+	removeNonExistentPoolsFromPendingWorkersRollouts(shoot, v1beta1helper.HibernationIsEnabled(shoot))
 
 	if err := r.GardenClient.Status().Update(ctx, shoot); err != nil {
 		return err
@@ -761,10 +761,12 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	switch v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials) {
 	case gardencorev1beta1.RotationPreparing:
-		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
-			rotation.Phase = gardencorev1beta1.RotationPrepared
-			rotation.LastInitiationFinishedTime = &now
-		})
+		if !manualInPlacePendingWorkersPresent(shoot.Status.InPlaceUpdates) {
+			v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
+				rotation.Phase = gardencorev1beta1.RotationPrepared
+				rotation.LastInitiationFinishedTime = &now
+			})
+		}
 
 	case gardencorev1beta1.RotationPreparingWithoutWorkersRollout:
 		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
@@ -772,7 +774,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 		})
 
 	case gardencorev1beta1.RotationWaitingForWorkersRollout:
-		if len(shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts) == 0 {
+		if len(shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts) == 0 && !manualInPlacePendingWorkersPresent(shoot.Status.InPlaceUpdates) {
 			v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.CARotation) {
 				rotation.Phase = gardencorev1beta1.RotationPrepared
 				rotation.LastInitiationFinishedTime = &now
@@ -790,10 +792,12 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 
 	switch v1beta1helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) {
 	case gardencorev1beta1.RotationPreparing:
-		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ServiceAccountKeyRotation) {
-			rotation.Phase = gardencorev1beta1.RotationPrepared
-			rotation.LastInitiationFinishedTime = &now
-		})
+		if !manualInPlacePendingWorkersPresent(shoot.Status.InPlaceUpdates) {
+			v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ServiceAccountKeyRotation) {
+				rotation.Phase = gardencorev1beta1.RotationPrepared
+				rotation.LastInitiationFinishedTime = &now
+			})
+		}
 
 	case gardencorev1beta1.RotationPreparingWithoutWorkersRollout:
 		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ServiceAccountKeyRotation) {
@@ -801,7 +805,7 @@ func (r *Reconciler) patchShootStatusOperationSuccess(
 		})
 
 	case gardencorev1beta1.RotationWaitingForWorkersRollout:
-		if len(shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts) == 0 {
+		if len(shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts) == 0 && !manualInPlacePendingWorkersPresent(shoot.Status.InPlaceUpdates) {
 			v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ServiceAccountKeyRotation) {
 				rotation.Phase = gardencorev1beta1.RotationPrepared
 				rotation.LastInitiationFinishedTime = &now
@@ -890,28 +894,48 @@ func (r *Reconciler) patchShootStatusOperationError(
 	return r.GardenClient.Status().Patch(ctx, shoot, statusPatch)
 }
 
-func removeNonExistentPoolsFromPendingWorkersRollouts(credentials *gardencorev1beta1.ShootCredentials, workerPools []gardencorev1beta1.Worker, hibernationEnabled bool) {
-	if credentials == nil || credentials.Rotation == nil {
+func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.Shoot, hibernationEnabled bool) {
+	if (shoot.Status.Credentials == nil || shoot.Status.Credentials.Rotation == nil) && (shoot.Status.InPlaceUpdates == nil || shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil) {
 		return
 	}
 
 	poolNames := sets.New[string]()
 	if !hibernationEnabled {
-		for _, pool := range workerPools {
+		for _, pool := range shoot.Spec.Provider.Workers {
 			poolNames.Insert(pool.Name)
 		}
 	}
 
-	if credentials.Rotation.CertificateAuthorities != nil {
-		credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts = slices.DeleteFunc(credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
-			return !poolNames.Has(rollout.Name)
-		})
+	if shoot.Status.Credentials != nil && shoot.Status.Credentials.Rotation != nil {
+		if shoot.Status.Credentials.Rotation.CertificateAuthorities != nil {
+			shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts = slices.DeleteFunc(shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+				return !poolNames.Has(rollout.Name)
+			})
+		}
+
+		if shoot.Status.Credentials.Rotation.ServiceAccountKey != nil {
+			shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts = slices.DeleteFunc(shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
+				return !poolNames.Has(rollout.Name)
+			})
+		}
 	}
 
-	if credentials.Rotation.ServiceAccountKey != nil {
-		credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts = slices.DeleteFunc(credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, func(rollout gardencorev1beta1.PendingWorkersRollout) bool {
-			return !poolNames.Has(rollout.Name)
+	if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
+		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, func(workerName string) bool {
+			return !poolNames.Has(workerName)
 		})
+
+		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, func(workerName string) bool {
+			return !poolNames.Has(workerName)
+		})
+
+		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0 && len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
+		}
+
+		if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
+			shoot.Status.InPlaceUpdates = nil
+		}
 	}
 }
 
@@ -1146,4 +1170,8 @@ func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1bet
 	gardenletmetrics.ShootOperationDurationSeconds.
 		WithLabelValues(string(operationType), workerless, hibernated).
 		Observe(float64(duration.Seconds()))
+}
+
+func manualInPlacePendingWorkersPresent(inPlaceUpdates *gardencorev1beta1.InPlaceUpdatesStatus) bool {
+	return inPlaceUpdates != nil && inPlaceUpdates.PendingWorkerUpdates != nil && len(inPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0
 }
