@@ -42,6 +42,7 @@ var (
 	eventResource                     = eventsv1.Resource("events")
 	leaseResource                     = coordinationv1.Resource("leases")
 	nodeResource                      = corev1.Resource("nodes")
+	podResource                       = corev1.Resource("pods")
 	secretsResource                   = corev1.Resource("secrets")
 )
 
@@ -81,6 +82,8 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			return a.authorizeLease(ctx, requestLog, machineName, attrs)
 		case nodeResource:
 			return a.authorizeNode(ctx, requestLog, machineName, attrs)
+		case podResource:
+			return a.authorizePod(requestLog, attrs)
 		case secretsResource:
 			return a.authorizeSecret(ctx, requestLog, machineName, attrs)
 		}
@@ -181,6 +184,19 @@ func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machine
 	if machine.Labels[machinev1alpha1.NodeLabelKey] != attrs.GetName() {
 		log.Info("Denying request because node belongs to a different machine", "nodeName", attrs.GetName(), "machineName", machineName)
 		return auth.DecisionDeny, fmt.Sprintf("node %q does not belong to machine %q", attrs.GetName(), machineName), nil
+	}
+
+	return auth.DecisionAllow, "", nil
+}
+
+func (a *authorizer) authorizePod(log logr.Logger, attrs auth.Attributes) (auth.Decision, string, error) {
+	if ok, reason := a.checkSubresource(log, attrs); !ok {
+		return auth.DecisionDeny, reason, nil
+	}
+
+	allowedVerbs := []string{"get", "list", "watch", "delete"}
+	if allowed, reason := a.checkVerb(log, attrs, allowedVerbs...); !allowed {
+		return auth.DecisionDeny, reason, nil
 	}
 
 	return auth.DecisionAllow, "", nil
