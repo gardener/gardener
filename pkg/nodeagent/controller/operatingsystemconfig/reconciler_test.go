@@ -7,6 +7,9 @@ package operatingsystemconfig
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -22,6 +25,9 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
+	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -30,6 +36,7 @@ var _ = Describe("Reconciler", func() {
 	var (
 		ctx        context.Context
 		fs         afero.Afero
+		fakeDBus   *fakedbus.DBus
 		c          client.Client
 		reconciler *Reconciler
 		node       *corev1.Node
@@ -39,6 +46,7 @@ var _ = Describe("Reconciler", func() {
 	BeforeEach(func() {
 		ctx = context.TODO()
 		fs = afero.Afero{Fs: afero.NewMemMapFs()}
+		fakeDBus = fakedbus.New()
 		log = logr.Discard()
 		c = fakeclient.NewClientBuilder().
 			WithScheme(kubernetes.SeedScheme).
@@ -48,6 +56,7 @@ var _ = Describe("Reconciler", func() {
 		reconciler = &Reconciler{
 			Client:   c,
 			FS:       fs,
+			DBus:     fakeDBus,
 			Recorder: nil,
 		}
 
@@ -332,6 +341,113 @@ var _ = Describe("Reconciler", func() {
 			podList := &corev1.PodList{}
 			Expect(c.List(ctx, podList)).To(Succeed())
 			Expect(podList.Items).To(BeEmpty())
+		})
+	})
+
+	Context("#checkKubeletHealth", func() {
+		var server *httptest.Server
+
+		BeforeEach(func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				n, err := fmt.Fprintln(w, "OK")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(BeNumerically(">", 0))
+			}))
+
+			DeferCleanup(func() {
+				server.Close()
+			})
+
+			DeferCleanup(test.WithVars(
+				&KubeletHealthCheckRetryInterval, 1*time.Millisecond,
+				&KubeletHealthCheckRetryTimeout, 10*time.Millisecond,
+			))
+		})
+
+		It("should mark the node as failed when kubelet health check fails", func() {
+			err := reconciler.checkKubeletHealth(ctx, log, node)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("HTTP request to kubelet health endpoint failed"))
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+			Expect(node.Annotations).To(HaveKeyWithValue(machinev1alpha1.AnnotationKeyMachineUpdateFailedReason, ContainSubstring("HTTP request to kubelet health endpoint failed")))
+		})
+
+		It("should succeed when kubelet health endpoint returns OK", func() {
+			DeferCleanup(test.WithVar(&healthcheckcontroller.DefaultKubeletHealthEndpoint, server.URL))
+
+			Expect(reconciler.checkKubeletHealth(ctx, log, node)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+			Expect(node.Annotations).NotTo(HaveKey(machinev1alpha1.AnnotationKeyMachineUpdateFailedReason))
+		})
+
+		It("should fail when the retry times out", func() {
+			DeferCleanup(test.WithVar(&healthcheckcontroller.DefaultKubeletHealthEndpoint, server.URL))
+
+			DeferCleanup(test.WithVar(&retry.UntilTimeout, func(_ context.Context, _, _ time.Duration, _ retry.Func) error {
+				return errors.New("timeout reached")
+			}))
+
+			err := reconciler.checkKubeletHealth(ctx, log, node)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("timeout reached"))
+			Expect(node.Annotations).To(HaveKeyWithValue(machinev1alpha1.AnnotationKeyMachineUpdateFailedReason, "kubelet is not healthy after in-place update: timeout reached"))
+		})
+
+		It("should fail when patching the node fails", func() {
+			Expect(c.Delete(ctx, node)).To(Succeed())
+
+			Expect(reconciler.checkKubeletHealth(ctx, log, node)).To(BeNotFoundError())
+		})
+	})
+
+	Context("#completeKubeletInPlaceUpdate", func() {
+		var (
+			oscChanges *operatingSystemConfigChanges
+			server     *httptest.Server
+		)
+
+		BeforeEach(func() {
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				n, err := fmt.Fprintln(w, "OK")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(BeNumerically(">", 0))
+			}))
+
+			DeferCleanup(func() {
+				server.Close()
+			})
+
+			oscChanges = &operatingSystemConfigChanges{
+				KubeletUpdate: kubeletUpdate{
+					MinorVersionUpdate:     true,
+					ConfigUpdate:           true,
+					CPUManagerPolicyUpdate: true,
+				},
+				fs: fs,
+			}
+
+			DeferCleanup(test.WithVars(
+				&KubeletHealthCheckRetryInterval, 1*time.Millisecond,
+				&KubeletHealthCheckRetryTimeout, 10*time.Millisecond,
+			))
+		})
+
+		It("should successfully complete kubelet in-place update", func() {
+			DeferCleanup(test.WithVar(&healthcheckcontroller.DefaultKubeletHealthEndpoint, server.URL))
+
+			Expect(reconciler.completeKubeletInPlaceUpdate(ctx, log, oscChanges, node)).To(Succeed())
+
+			Expect(oscChanges.KubeletUpdate.MinorVersionUpdate).To(BeFalse())
+			Expect(oscChanges.KubeletUpdate.ConfigUpdate).To(BeFalse())
+			Expect(oscChanges.KubeletUpdate.CPUManagerPolicyUpdate).To(BeFalse())
+		})
+
+		It("should fail if kubelet health check fails", func() {
+			err := reconciler.completeKubeletInPlaceUpdate(ctx, log, oscChanges, node)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("kubelet is not healthy after minor version/config update"))
 		})
 	})
 })

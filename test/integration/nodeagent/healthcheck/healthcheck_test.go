@@ -125,6 +125,10 @@ var _ = Describe("Healthcheck controller tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(n).To(BeNumerically(">", 0))
 		}))
+
+		DeferCleanup(func() {
+			ts.Close()
+		})
 	})
 
 	It("Containerd health should be true", func() {

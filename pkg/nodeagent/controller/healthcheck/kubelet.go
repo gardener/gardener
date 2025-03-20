@@ -24,9 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 )
 
+// DefaultKubeletHealthEndpoint is the health endpoint of the kubelet.
+var DefaultKubeletHealthEndpoint = "http://127.0.0.1:10248/healthz"
+
 const (
-	// defaultKubeletHealthEndpoint is the health endpoint of the kubelet.
-	defaultKubeletHealthEndpoint = "http://127.0.0.1:10248/healthz"
 	// maxToggles defines how often the kubelet can change the readiness during toggleTimeSpan until the node will be rebooted.
 	maxToggles = 5
 	// toggleTimeSpan is a floating time window where the kubelet readiness toggles are considered harmful.
@@ -62,7 +63,7 @@ func NewKubeletHealthChecker(client client.Client, clock clock.Clock, dbus dbus.
 		recorder:                recorder,
 		getAddresses:            getAddresses,
 		KubeletReadinessToggles: []time.Time{},
-		kubeletHealthEndpoint:   defaultKubeletHealthEndpoint,
+		kubeletHealthEndpoint:   DefaultKubeletHealthEndpoint,
 	}
 }
 
