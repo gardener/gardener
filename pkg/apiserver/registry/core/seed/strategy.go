@@ -43,7 +43,7 @@ func (s Strategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	seed.Generation = 1
 	seed.Status = core.SeedStatus{}
 
-	syncBackupSecretRefAndCredentialsRef(seed.Spec.Backup)
+	SyncBackupSecretRefAndCredentialsRef(seed.Spec.Backup)
 }
 
 // PrepareForUpdate is invoked on update before validation to normalize
@@ -55,7 +55,7 @@ func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	oldSeed := old.(*core.Seed)
 	newSeed.Status = oldSeed.Status
 
-	syncBackupSecretRefAndCredentialsRef(newSeed.Spec.Backup)
+	SyncBackupSecretRefAndCredentialsRef(newSeed.Spec.Backup)
 
 	if mustIncreaseGeneration(oldSeed, newSeed) {
 		newSeed.Generation = oldSeed.Generation + 1
@@ -203,7 +203,10 @@ func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(seed, oldSeed *core.Se
 	}
 }
 
-func syncBackupSecretRefAndCredentialsRef(backup *core.SeedBackup) {
+// SyncBackupSecretRefAndCredentialsRef ensures the backup fields
+// credentialsRef and secretRef are synced.
+// TODO(vpnachev): Remove once the backup.secretRef field is removed.
+func SyncBackupSecretRefAndCredentialsRef(backup *core.SeedBackup) {
 	if backup == nil {
 		return
 	}
