@@ -37,6 +37,7 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
 	"github.com/gardener/gardener/cmd/utils/initrun"
+	"github.com/gardener/gardener/pkg/api/indexer"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -139,6 +140,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 	var (
 		nodeCacheOptions  = cache.ByObject{Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})}
 		leaseCacheOptions = cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
+		podCacheOptions   = cache.ByObject{Field: fields.SelectorFromSet(fields.Set{indexer.PodNodeName: hostName})}
 	)
 
 	if nodeName != "" {
@@ -146,6 +148,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 		nodeCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: nodeName})
 		nodeCacheOptions.Label = nil
 		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenerutils.NodeAgentLeaseName(nodeName)})
+		podCacheOptions.Field = fields.SelectorFromSet(fields.Set{indexer.PodNodeName: nodeName})
 	}
 
 	log.Info("Setting up manager")
@@ -167,6 +170,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 			},
 			&corev1.Node{}:          nodeCacheOptions,
 			&coordinationv1.Lease{}: leaseCacheOptions,
+			&corev1.Pod{}:           podCacheOptions,
 		}},
 		LeaderElection: false,
 	})
@@ -185,6 +189,11 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 	log.Info("Creating directory for temporary files", "path", nodeagentconfigv1alpha1.TempDir)
 	if err := fs.MkdirAll(nodeagentconfigv1alpha1.TempDir, os.ModeDir); err != nil {
 		return fmt.Errorf("unable to create directory for temporary files %q: %w", nodeagentconfigv1alpha1.TempDir, err)
+	}
+
+	log.Info("Adding field indexes to informers")
+	if err := addAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
 	var machineName string
@@ -460,4 +469,17 @@ func fetchNodeName(ctx context.Context, restConfig *rest.Config, hostName string
 	}
 
 	return node.Name, nil
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core/v1 API group
+		indexer.AddPodNodeName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
