@@ -95,7 +95,6 @@ func (r *Reconciler) ShootPredicates() predicate.Predicate {
 				oldLastOpState = shootOld.Status.LastOperation.State
 				newLastOpState = shoot.Status.LastOperation.State
 
-				isOldLastOpReconcile = oldLastOpType == gardencorev1beta1.LastOperationTypeReconcile
 				isOldLastOpMigrate   = oldLastOpType == gardencorev1beta1.LastOperationTypeMigrate
 				isOldLastOpRestore   = oldLastOpType == gardencorev1beta1.LastOperationTypeRestore
 				isOldLastOpSucceeded = oldLastOpState == gardencorev1beta1.LastOperationStateSucceeded
@@ -107,8 +106,8 @@ func (r *Reconciler) ShootPredicates() predicate.Predicate {
 			)
 
 			enqueueShootState := false
-			if isOldLastOpReconcile && isNewLastOpMigrate {
-				// Shoot last operation gets updated from Reconcile to Migrate type.
+			if !isOldLastOpMigrate && isNewLastOpMigrate {
+				// Shoot last operation gets updated from non-Migrate to Migrate type.
 				enqueueShootState = true
 			} else if isOldLastOpMigrate && isNewLastOpRestore {
 				// Shoot last operation gets updated from Migrate to Restore type.
@@ -116,7 +115,7 @@ func (r *Reconciler) ShootPredicates() predicate.Predicate {
 			} else if isOldLastOpRestore && !isOldLastOpSucceeded && isNewLastOpRestore && isNewLastOpSucceeded {
 				// Shoot last operation gets updated from Restore to Restore type with Succeeded state.
 				enqueueShootState = true
-			} else if isOldLastOpRestore && isNewLastOpReconcile {
+			} else if isOldLastOpRestore && !isOldLastOpSucceeded && isNewLastOpReconcile {
 				// Shoot last operation gets updated from Restore to Reconcile.
 				enqueueShootState = true
 			}
