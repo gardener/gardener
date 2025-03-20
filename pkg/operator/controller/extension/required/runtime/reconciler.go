@@ -98,9 +98,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	requiredExtensionKinds.Insert(requiredExtensionKindsBySpec.UnsortedList()...)
 
-	if err := r.updateCondition(ctx, log, extension, requiredExtensionKinds); err != nil {
+	if err := r.updateCondition(ctx, log, extension, requiredExtensionKinds.Union(requiredExtensionKindsBySpec)); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update extension status: %w", err)
 	}
 
