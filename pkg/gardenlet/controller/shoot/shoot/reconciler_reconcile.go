@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,6 +19,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -46,6 +48,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	// We create the botanists (which will do the actual work).
 	var (
 		botanist                *botanistpkg.Botanist
+		worker                  *extensionsv1alpha1.Worker
 		err                     error
 		isCopyOfBackupsRequired bool
 		tasksWithErrors         []string
@@ -83,6 +86,20 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		errors.ToExecute("Check if copy of backups is required", func() error {
 			isCopyOfBackupsRequired, err = botanist.IsCopyOfBackupsRequired(ctx)
 			return err
+		}),
+		errors.ToExecute("Retrieve the Worker resource", func() error {
+			if o.Shoot.IsWorkerless {
+				return nil
+			}
+			obj, err := botanist.Shoot.Components.Extensions.Worker.Get(ctx)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+			worker = obj
+			return nil
 		}),
 	)
 	if err != nil {
@@ -132,6 +149,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 		}
 		o.Shoot.Networks = networks
+	}
+
+	if err := botanist.SetInPlaceUpdatePendingWorkers(ctx, worker); err != nil {
+		return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 	}
 
 	nodeAgentAuthorizerWebhookReady, err := botanist.IsGardenerResourceManagerReady(ctx)
@@ -808,7 +829,39 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		waitUntilWorkerReady = g.Add(flow.Task{
 			Name: "Waiting until shoot worker nodes have been reconciled",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.Worker.Wait(ctx)
+				if err := botanist.Shoot.Components.Extensions.Worker.Wait(ctx); err != nil {
+					return err
+				}
+
+				// If the worker is ready, all the AutoInPlaceUpdate worker pools should be updated already, so we can remove them from the status.
+				if shootHasPendingInPlaceUpdateWorkers(o.Shoot.GetInfo()) {
+					if err := botanist.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+						shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = nil
+
+						if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+							shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
+						}
+
+						if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
+							shoot.Status.InPlaceUpdates = nil
+						}
+
+						return nil
+					}); err != nil {
+						return err
+					}
+				}
+
+				// If there are no pending workers rollouts for in-place updates, we can remove the force in-place update annotation.
+				if (o.Shoot.GetInfo().Status.InPlaceUpdates == nil || o.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates == nil) &&
+					metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationForceInPlaceUpdate) {
+					return botanist.Shoot.UpdateInfo(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+						delete(shoot.Annotations, v1beta1constants.AnnotationForceInPlaceUpdate)
+						return nil
+					})
+				}
+
+				return nil
 			}),
 			SkipIf:       o.Shoot.IsWorkerless || skipReadiness,
 			Dependencies: flow.NewTaskIDs(deployWorker, waitUntilWorkerStatusUpdate, deployManagedResourceForGardenerNodeAgent),
@@ -1087,4 +1140,9 @@ func deleteGardenerNodeAgentShootAccess(ctx context.Context, o *operation.Operat
 			},
 		},
 	)
+}
+
+func shootHasPendingInPlaceUpdateWorkers(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil &&
+		(len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) > 0 || len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0)
 }

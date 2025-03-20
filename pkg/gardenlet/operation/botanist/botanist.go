@@ -7,15 +7,19 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -251,4 +255,104 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 // available.
 func (b *Botanist) outOfClusterAPIServerFQDN() string {
 	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(true))
+}
+
+// SetInPlaceUpdatePendingWorkers sets the Shoot status with the name of worker pools which are undergoing an in-place update.
+func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *extensionsv1alpha1.Worker) error {
+	var (
+		autoInPlaceUpdatePendingWorkers   = sets.New[string]()
+		manualInPlaceUpdatePendingWorkers = sets.New[string]()
+	)
+
+	for _, pool := range b.Shoot.GetInfo().Spec.Provider.Workers {
+		if !v1beta1helper.IsUpdateStrategyInPlace(pool.UpdateStrategy) {
+			continue
+		}
+
+		if worker != nil {
+			var oldPool extensionsv1alpha1.WorkerPool
+			oldPoolIndex := slices.IndexFunc(worker.Spec.Pools, func(ow extensionsv1alpha1.WorkerPool) bool {
+				oldPool = ow
+				return ow.Name == pool.Name
+			})
+
+			if oldPoolIndex != -1 && worker.Status.InPlaceUpdates != nil && worker.Status.InPlaceUpdates.WorkerPoolToHashMap != nil {
+				if oldPoolHash, ok := worker.Status.InPlaceUpdates.WorkerPoolToHashMap[oldPool.Name]; ok {
+					var (
+						kubernetesVersion    = b.Shoot.GetInfo().Spec.Kubernetes.Version
+						kubeletConfiguration = b.Shoot.GetInfo().Spec.Kubernetes.Kubelet
+					)
+
+					if pool.Kubernetes != nil {
+						if pool.Kubernetes.Version != nil {
+							kubernetesVersion = *pool.Kubernetes.Version
+						}
+
+						if pool.Kubernetes.Kubelet != nil {
+							kubeletConfiguration = pool.Kubernetes.Kubelet
+						}
+					}
+
+					newPoolHash, err := gardenerutils.CalculateWorkerPoolHashForInPlaceUpdate(
+						pool.Name,
+						&kubernetesVersion,
+						kubeletConfiguration,
+						ptr.Deref(pool.Machine.Image.Version, ""),
+						b.Shoot.GetInfo().Status.Credentials,
+					)
+					if err != nil {
+						return fmt.Errorf("failed to calculate worker pool %q hash: %w", pool.Name, err)
+					}
+
+					if oldPoolHash == newPoolHash {
+						continue
+					}
+				}
+			}
+		}
+
+		switch ptr.Deref(pool.UpdateStrategy, "") {
+		case gardencorev1beta1.AutoInPlaceUpdate:
+			autoInPlaceUpdatePendingWorkers.Insert(pool.Name)
+		case gardencorev1beta1.ManualInPlaceUpdate:
+			manualInPlaceUpdatePendingWorkers.Insert(pool.Name)
+		}
+	}
+
+	if autoInPlaceUpdatePendingWorkers.Len() == 0 && manualInPlaceUpdatePendingWorkers.Len() == 0 {
+		return nil
+	}
+
+	if b.Shoot.GetInfo().Status.InPlaceUpdates != nil &&
+		b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates != nil &&
+		autoInPlaceUpdatePendingWorkers.Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate...)) &&
+		manualInPlaceUpdatePendingWorkers.Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...)) {
+		return nil
+	}
+
+	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+		if shoot.Status.InPlaceUpdates == nil {
+			shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{}
+		}
+
+		if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = &gardencorev1beta1.PendingWorkerUpdates{}
+		}
+
+		for poolName := range autoInPlaceUpdatePendingWorkers {
+			if slices.Contains(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, poolName) {
+				continue
+			}
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = append(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, poolName)
+		}
+
+		for poolName := range manualInPlaceUpdatePendingWorkers {
+			if slices.Contains(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, poolName) {
+				continue
+			}
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = append(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, poolName)
+		}
+
+		return nil
+	})
 }
