@@ -167,6 +167,18 @@ var _ = Describe("Add", func() {
 				Expect(p.Update(event.UpdateEvent{ObjectOld: shootOld, ObjectNew: shoot})).To(BeTrue())
 			})
 
+			It("should return false once Restore operation succeeds", func() {
+				shootOld.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  gardencorev1beta1.LastOperationTypeRestore,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  gardencorev1beta1.LastOperationTypeRestore,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				Expect(p.Update(event.UpdateEvent{ObjectOld: shootOld, ObjectNew: shoot})).To(BeFalse())
+			})
+
 			It("should return true if last operation transitions from Restore to Reconcile", func() {
 				shootOld.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type: gardencorev1beta1.LastOperationTypeRestore,
