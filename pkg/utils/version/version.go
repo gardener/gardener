@@ -69,8 +69,8 @@ func init() {
 // if needed.
 func CompareVersions(version1, operator, version2 string) (bool, error) {
 	var (
-		v1 = normalize(version1)
-		v2 = normalize(version2)
+		v1 = Normalize(version1)
+		v2 = Normalize(version2)
 	)
 
 	return CheckVersionMeetsConstraint(v1, fmt.Sprintf("%s %s", operator, v2))
@@ -83,7 +83,7 @@ func CheckVersionMeetsConstraint(version, constraint string) (bool, error) {
 		return false, err
 	}
 
-	v, err := semver.NewVersion(normalize(version))
+	v, err := semver.NewVersion(Normalize(version))
 	if err != nil {
 		return false, err
 	}
@@ -91,7 +91,8 @@ func CheckVersionMeetsConstraint(version, constraint string) (bool, error) {
 	return c.Check(v), nil
 }
 
-func normalize(version string) string {
+// Normalize returns the normalized version string by removing the leading 'v' and any suffixes like '-rc1', '-beta2', etc.
+func Normalize(version string) string {
 	v := strings.ReplaceAll(version, "v", "")
 	idx := strings.IndexAny(v, "-+")
 	if idx != -1 {
