@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -63,15 +64,18 @@ func init() {
 // Reconciler decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
 // node.
 type Reconciler struct {
-	Client        client.Client
-	Config        nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig
-	Recorder      record.EventRecorder
-	DBus          dbus.DBus
-	FS            afero.Afero
-	Extractor     registry.Extractor
-	CancelContext context.CancelFunc
-	HostName      string
-	NodeName      string
+	Client                 client.Client
+	Config                 nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig
+	TokenSecretSyncConfigs []nodeagentconfigv1alpha1.TokenSecretSyncConfig
+	Channel                chan event.TypedGenericEvent[*corev1.Secret]
+	Recorder               record.EventRecorder
+	DBus                   dbus.DBus
+	FS                     afero.Afero
+	Extractor              registry.Extractor
+	CancelContext          context.CancelFunc
+	HostName               string
+	NodeName               string
+	MachineName            string
 }
 
 // Reconcile decodes the OperatingSystemConfig resources from secrets and applies the systemd units and files to the
