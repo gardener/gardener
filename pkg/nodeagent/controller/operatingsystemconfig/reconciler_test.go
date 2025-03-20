@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -19,14 +20,20 @@ import (
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/nodeagent"
+	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -34,13 +41,18 @@ import (
 
 var _ = Describe("Reconciler", func() {
 	var (
-		ctx        context.Context
-		fs         afero.Afero
-		fakeDBus   *fakedbus.DBus
-		c          client.Client
-		reconciler *Reconciler
-		node       *corev1.Node
-		log        logr.Logger
+		ctx             context.Context
+		fs              afero.Afero
+		fakeDBus        *fakedbus.DBus
+		c               client.Client
+		reconciler      *Reconciler
+		node            *corev1.Node
+		nodeAgentConfig *nodeagentconfigv1alpha1.NodeAgentConfiguration
+		log             logr.Logger
+
+		kubeletCertPath string
+		kubeletCertDir  string
+		fakeKubeConfig  string
 	)
 
 	BeforeEach(func() {
@@ -70,6 +82,32 @@ var _ = Describe("Reconciler", func() {
 		DeferCleanup(func() {
 			Expect(client.IgnoreNotFound(c.Delete(ctx, node))).To(Succeed())
 		})
+
+		nodeAgentConfig = &nodeagentconfigv1alpha1.NodeAgentConfiguration{
+			APIServer: nodeagentconfigv1alpha1.APIServer{
+				CABundle: []byte("new-ca-bundle"),
+				Server:   "https://test-server",
+			},
+		}
+
+		fakeKubeConfig = `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ` + utils.EncodeBase64([]byte("test-ca-bundle")) + `
+    server: https://test-server
+  name: default-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: system:node:test-node
+  name: test-context
+current-context: test-context
+kind: Config
+preferences: {}
+`
+
+		kubeletCertPath = filepath.Join(kubelet.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
+		kubeletCertDir = filepath.Join(kubelet.PathKubeletDirectory, "pki")
 	})
 
 	Context("#deleteRemainingPods", func() {
@@ -450,4 +488,207 @@ var _ = Describe("Reconciler", func() {
 			Expect(err.Error()).To(ContainSubstring("kubelet is not healthy after minor version/config update"))
 		})
 	})
+
+	Context("#rebootstrapKubelet", func() {
+		It("should successfully rebootstrap kubelet", func() {
+			Expect(fs.WriteFile(kubeletCertPath, []byte("test-cert"), 0600)).To(Succeed())
+			Expect(fs.WriteFile(kubelet.PathKubeconfigReal, []byte(fakeKubeConfig), 0600)).To(Succeed())
+
+			Expect(reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)).To(Succeed())
+
+			expectedBootStrapConfig := `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ` + utils.EncodeBase64(nodeAgentConfig.APIServer.CABundle) + `
+    server: ` + nodeAgentConfig.APIServer.Server + `
+  name: default-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: system:node:test-node
+  name: test-context
+current-context: test-context
+kind: Config
+preferences: {}
+users:
+- name: default-auth
+  user:
+    client-certificate-data: ` + utils.EncodeBase64([]byte("test-cert")) + `
+    client-key-data: ` + utils.EncodeBase64([]byte("test-cert")) + `
+`
+			test.AssertFileOnDisk(fs, kubelet.PathKubeconfigBootstrap, expectedBootStrapConfig, 0600)
+
+			Expect(fs.DirExists(kubeletCertDir)).To(BeFalse())
+
+			Expect(fakeDBus.Actions).To(ContainElement(fakedbus.SystemdAction{
+				Action:    fakedbus.ActionRestart,
+				UnitNames: []string{kubeletUnitName},
+			}))
+		})
+
+		It("should not fail if kubelet client certificate is missing but bootstrap file exists", func() {
+			Expect(fs.WriteFile(kubelet.PathKubeconfigBootstrap, []byte("test-bootstrap-kubeconfig"), 0600)).To(Succeed())
+
+			Expect(reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)).To(Succeed())
+
+			Expect(fs.DirExists(kubeletCertDir)).To(BeFalse())
+
+			Expect(fakeDBus.Actions).To(ContainElement(fakedbus.SystemdAction{
+				Action:    fakedbus.ActionRestart,
+				UnitNames: []string{kubeletUnitName},
+			}))
+		})
+
+		It("should fail if kubelet client certificate and bootstrap file are missing", func() {
+			err := reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("kubeconfig file %q does not exist, cannot proceed with rebootstrap", kubelet.PathKubeconfigBootstrap))
+		})
+
+		It("should fail if kubeconfig file cannot be loaded", func() {
+			Expect(fs.WriteFile(kubelet.PathKubeconfigReal, []byte("invalid-kubeconfig"), 0600)).To(Succeed())
+
+			err := reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("unable to load kubeconfig file"))
+		})
+
+		It("should fail if DBus restart fails", func() {
+			Expect(fs.WriteFile(kubelet.PathKubeconfigBootstrap, []byte("test-bootstrap-kubeconfig"), 0600)).To(Succeed())
+
+			// Inject DBus restart failure
+			fakeDBus.InjectRestartFailure(errors.New("restart failed"), kubeletUnitName)
+
+			err := reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("unable to restart unit"))
+		})
+	})
+
+	Context("#performCredentialsRotationInPlace", func() {
+		var (
+			channel    chan event.TypedGenericEvent[*corev1.Secret]
+			oscChanges *operatingSystemConfigChanges
+			server     *httptest.Server
+
+			nodeAgentConfigFile []byte
+		)
+
+		BeforeEach(func() {
+			channel = make(chan event.TypedGenericEvent[*corev1.Secret])
+			oscChanges = &operatingSystemConfigChanges{
+				fs: fs,
+			}
+
+			reconciler.Channel = channel
+
+			nodeAgentConfigFile = []byte(`apiServer:
+  caBundle: ` + utils.EncodeBase64(nodeAgentConfig.APIServer.CABundle) + `
+  server: ` + nodeAgentConfig.APIServer.Server + `
+apiVersion: nodeagent.config.gardener.cloud/v1alpha1
+kind: NodeAgentConfiguration
+`)
+			Expect(fs.WriteFile(nodeagentconfigv1alpha1.ConfigFilePath, nodeAgentConfigFile, 0600)).To(Succeed())
+
+			server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				n, err := fmt.Fprintln(w, "OK")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).To(BeNumerically(">", 0))
+			}))
+
+			DeferCleanup(func() {
+				server.Close()
+			})
+
+			DeferCleanup(test.WithVars(
+				&KubeletHealthCheckRetryInterval, 1*time.Millisecond,
+				&KubeletHealthCheckRetryTimeout, 10*time.Millisecond,
+				&healthcheckcontroller.DefaultKubeletHealthEndpoint, server.URL,
+			))
+		})
+
+		It("should successfully generate events for service account key rotation", func(ctx context.Context) {
+			oscChanges.SAKeyRotation = true
+			reconciler.TokenSecretSyncConfigs = []nodeagentconfigv1alpha1.TokenSecretSyncConfig{
+				{SecretName: "test-token-1"},
+				{SecretName: "test-token-2"},
+			}
+
+			go func() {
+				defer GinkgoRecover()
+				expectedSecrets := []string{"test-token-1", "test-token-2"}
+				for _, secretName := range expectedSecrets {
+					event := <-channel
+					Expect(event.Object.GetName()).To(Equal(secretName))
+					Expect(event.Object.GetNamespace()).To(Equal("kube-system"))
+				}
+			}()
+
+			Expect(reconciler.performCredentialsRotationInPlace(ctx, log, oscChanges, node)).To(Succeed())
+			Expect(oscChanges.SAKeyRotation).To(BeFalse())
+		}, NodeTimeout(time.Second*5))
+
+		It("should successfully rotate CA certificate for kubelet", func() {
+			Expect(fs.WriteFile(kubeletCertPath, []byte("test-cert"), 0600)).To(Succeed())
+			Expect(fs.WriteFile(kubelet.PathKubeconfigReal, []byte(fakeKubeConfig), 0600)).To(Succeed())
+
+			oscChanges.CARotation.Kubelet = true
+
+			Expect(reconciler.performCredentialsRotationInPlace(ctx, log, oscChanges, node)).To(Succeed())
+			Expect(fakeDBus.Actions).To(ContainElement(fakedbus.SystemdAction{
+				Action:    fakedbus.ActionRestart,
+				UnitNames: []string{kubeletUnitName},
+			}))
+
+			Expect(oscChanges.CARotation.Kubelet).To(BeFalse())
+		})
+
+		It("should successfully rotate the CA certificate for gardener-node-agent", func() {
+			nodeAgentKubeconfig := getNodeAgentKubeConfig([]byte("old-ca-bundle"), nodeAgentConfig.APIServer.Server, "old-cert")
+			Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(nodeAgentKubeconfig), 0600)).To(Succeed())
+
+			DeferCleanup(test.WithVar(
+				&nodeagent.RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, _ afero.Afero, restConfig *rest.Config, _ string) error {
+					newKubeConfig := getNodeAgentKubeConfig(restConfig.TLSClientConfig.CAData, nodeAgentConfig.APIServer.Server, "new-cert")
+
+					Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(newKubeConfig), 0600)).To(Succeed())
+
+					return nil
+				},
+			))
+
+			oscChanges.CARotation.NodeAgent = true
+
+			Expect(reconciler.performCredentialsRotationInPlace(ctx, log, oscChanges, node)).To(Succeed())
+
+			Expect(oscChanges.CARotation.NodeAgent).To(BeFalse())
+			Expect(oscChanges.MustRestartNodeAgent).To(BeTrue())
+
+			expectedNodeAgentKubeConfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CABundle, nodeAgentConfig.APIServer.Server, "new-cert")
+			test.AssertFileOnDisk(fs, nodeagentconfigv1alpha1.KubeconfigFilePath, expectedNodeAgentKubeConfig, 0600)
+		})
+	})
 })
+
+func getNodeAgentKubeConfig(caBundle []byte, server, clientCertificate string) string {
+	return `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ` + utils.EncodeBase64(caBundle) + `
+    server: ` + server + `
+  name: node-agent
+contexts:
+- context:
+    cluster: node-agent
+    user: node-agent
+  name: node-agent
+current-context: node-agent
+kind: Config
+preferences: {}
+users:
+- name: node-agent
+  user:
+    client-certificate-data: ` + utils.EncodeBase64([]byte(clientCertificate)) + `
+    client-key-data: ` + utils.EncodeBase64([]byte(clientCertificate)) + `
+`
+}
