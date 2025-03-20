@@ -32,6 +32,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +45,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
@@ -661,6 +664,10 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		return fmt.Errorf("failed to update OS in-place: %w", err)
 	}
 
+	if err := r.performCredentialsRotationInPlace(ctx, log, oscChanges, node); err != nil {
+		return fmt.Errorf("failed to perform certificate rotation in-place: %w", err)
+	}
+
 	if nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
 		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
 			return fmt.Errorf("failed to delete remaining pods: %w", err)
@@ -724,6 +731,149 @@ func (r *Reconciler) completeKubeletInPlaceUpdate(ctx context.Context, log logr.
 	}
 
 	return nil
+}
+
+func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log logr.Logger, oscChanges *operatingSystemConfigChanges, node *corev1.Node) error {
+	if oscChanges.SAKeyRotation {
+		// Generate events for the token sync controller to update the SA tokens.
+		for _, tokenSyncConfig := range r.TokenSecretSyncConfigs {
+			r.Channel <- event.TypedGenericEvent[*corev1.Secret]{Object: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: tokenSyncConfig.SecretName, Namespace: metav1.NamespaceSystem}}}
+			log.Info("Triggered an event for the token controller", "secret", tokenSyncConfig.SecretName)
+		}
+
+		if err := oscChanges.completeSAKeyRotation(); err != nil {
+			return fmt.Errorf("failed completing SA key rotation: %w", err)
+		}
+	}
+
+	if oscChanges.CARotation.Kubelet || oscChanges.CARotation.NodeAgent {
+		// Read the updated gardener-node-agent config for the API server CA bundle and server URL.
+		// This must always be called after applying the updated files.
+		nodeAgentConfigFile, err := r.FS.ReadFile(nodeagentconfigv1alpha1.ConfigFilePath)
+		if err != nil {
+			return fmt.Errorf("error reading config file: %w", err)
+		}
+
+		nodeAgentConfig := &nodeagentconfigv1alpha1.NodeAgentConfiguration{}
+		if err = runtimepkg.DecodeInto(codec, nodeAgentConfigFile, nodeAgentConfig); err != nil {
+			return fmt.Errorf("error decoding gardener-node-agent config: %w", err)
+		}
+
+		if oscChanges.CARotation.NodeAgent {
+			if err := r.requestNewKubeConfigForNodeAgent(ctx, log, nodeAgentConfig); err != nil {
+				return fmt.Errorf("failed requesting new certificate for node agent: %w", err)
+			}
+
+			if err := oscChanges.completeCARotationNodeAgent(); err != nil {
+				return fmt.Errorf("failed completing CA key rotation: %w", err)
+			}
+
+			log.Info("Successfully requested new kubeconfig for node agent after CA rotation")
+		}
+
+		if oscChanges.CARotation.Kubelet {
+			if err := r.rebootstrapKubelet(ctx, log, nodeAgentConfig, node); err != nil {
+				return fmt.Errorf("failed to rebootstrap kubelet: %w", err)
+			}
+
+			if err := r.checkKubeletHealth(ctx, log, node); err != nil {
+				return fmt.Errorf("kubelet is not healthy after CA rotation: %w", err)
+			}
+
+			if err := oscChanges.completeCARotationKubelet(); err != nil {
+				return fmt.Errorf("failed completing CA key rotation for Kubelet: %w", err)
+			}
+
+			log.Info("Successfully rebootstrapped kubelet after CA rotation")
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, nodeAgentConfig *nodeagentconfigv1alpha1.NodeAgentConfiguration, node *corev1.Node) error {
+	log.Info("Rebootstrapping kubelet after CA rotation")
+
+	kubeletClientCertificatePath := filepath.Join(kubelet.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
+	kubeletClientCertificate, err := r.FS.ReadFile(kubeletClientCertificatePath)
+	if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		return fmt.Errorf("failed checking whether kubelet client certificate file %q exists: %w", kubeletClientCertificatePath, err)
+	}
+
+	kubeConfigFile, err := r.FS.ReadFile(kubelet.PathKubeconfigReal)
+	if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		return fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", kubelet.PathKubeconfigReal, err)
+	} else if err == nil {
+		kubeConfig, err := clientcmd.Load(kubeConfigFile)
+		if err != nil {
+			return fmt.Errorf("unable to load kubeconfig file %q: %w", kubelet.PathKubeconfigReal, err)
+		}
+
+		kubeConfig.Clusters = map[string]*clientcmdapi.Cluster{
+			"default-cluster": {
+				CertificateAuthorityData: nodeAgentConfig.APIServer.CABundle,
+				Server:                   nodeAgentConfig.APIServer.Server,
+			},
+		}
+
+		kubeConfig.AuthInfos = map[string]*clientcmdapi.AuthInfo{
+			"default-auth": {
+				ClientCertificateData: kubeletClientCertificate,
+				ClientKeyData:         kubeletClientCertificate,
+			},
+		}
+
+		content, err := clientcmd.Write(*kubeConfig)
+		if err != nil {
+			return fmt.Errorf("unable to serialize kubeconfig: %w", err)
+		}
+
+		if err := r.FS.WriteFile(kubelet.PathKubeconfigBootstrap, content, 0600); err != nil {
+			return fmt.Errorf("unable to write kubeconfig file %q: %w", kubelet.PathKubeconfigBootstrap, err)
+		}
+	}
+
+	if _, err := r.FS.Stat(kubelet.PathKubeconfigBootstrap); err != nil {
+		if !errors.Is(err, afero.ErrFileNotFound) {
+			return fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", kubelet.PathKubeconfigBootstrap, err)
+		}
+
+		return fmt.Errorf("kubeconfig file %q does not exist, cannot proceed with rebootstrap", kubelet.PathKubeconfigBootstrap)
+	}
+
+	if err := r.FS.Remove(kubelet.PathKubeconfigReal); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		return fmt.Errorf("failed removing kubeconfig file %q: %w", kubelet.PathKubeconfigReal, err)
+	}
+
+	kubeletClientCertificateDir := filepath.Join(kubelet.PathKubeletDirectory, "pki")
+	if err := r.FS.RemoveAll(kubeletClientCertificateDir); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+		return fmt.Errorf("unable to delete kubelet client certificate directory %q: %w", kubeletClientCertificateDir, err)
+	}
+
+	if err := r.DBus.Restart(ctx, r.Recorder, node, kubeletUnitName); err != nil {
+		return fmt.Errorf("unable to restart unit %q: %w", kubeletUnitName, err)
+	}
+
+	log.Info("Successfully restarted kubelet after CA rotation", "node", node.Name)
+	return nil
+}
+
+func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log logr.Logger, nodeAgentConfig *nodeagentconfigv1alpha1.NodeAgentConfiguration) error {
+	log.Info("Requesting new kubeconfig for node agent after CA rotation")
+
+	kubeConfigFile, err := r.FS.ReadFile(nodeagentconfigv1alpha1.KubeconfigFilePath)
+	if err != nil {
+		return fmt.Errorf("failed reading kubeconfig file %q: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
+	}
+	restConfig, err := kubernetes.RESTConfigFromKubeconfig(kubeConfigFile)
+	if err != nil {
+		return fmt.Errorf("failed creating REST config from kubeconfig file %q: %w", nodeagentconfigv1alpha1.KubeconfigFilePath, err)
+	}
+
+	// Use the updated CA Bundle
+	restConfig.TLSClientConfig.CAData = nodeAgentConfig.APIServer.CABundle
+
+	return nodeagent.RequestAndStoreKubeconfig(ctx, log, r.FS, restConfig, r.MachineName)
 }
 
 func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, node *corev1.Node) error {
