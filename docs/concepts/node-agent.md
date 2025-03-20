@@ -78,6 +78,7 @@ Whenever the `.data.token` field changes, it writes the new content to a file on
 This mechanism is used to download its own access token for the shoot cluster, but also the access tokens of other `systemd` components (e.g., `valitail`).
 Since the underlying client is based on `k8s.io/client-go` and the kubeconfig points to this token file, it is dynamically reloaded without the necessity of explicit configuration or code changes.
 This procedure ensures that the most up-to-date tokens are always present on the host and used by the `gardener-node-agent` and the other `systemd` components.
+The controller is also triggered via a source channel, which is done by the `Operating System Config` controller during an in-place service account key rotation.
 
 ## Reasoning
 
