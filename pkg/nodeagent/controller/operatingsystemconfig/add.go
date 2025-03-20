@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
@@ -59,6 +60,11 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 			&corev1.Secret{},
 			r.EnqueueWithJitterDelay(ctx, mgr.GetLogger().WithValues("controller", ControllerName).WithName("reconciliation-delayer")),
 			builder.WithPredicates(r.SecretPredicate(), predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update)),
+		).
+		Watches(
+			&corev1.Node{},
+			handler.EnqueueRequestsFromMapFunc(NodeToSecretMapper()),
+			builder.WithPredicates(NodeReadyForUpdate()),
 		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
@@ -126,6 +132,67 @@ func (r *Reconciler) EnqueueWithJitterDelay(ctx context.Context, log logr.Logger
 			}
 		},
 	}
+}
+
+// NodeToSecretMapper returns a mapper that returns requests for a secret based on its node.
+func NodeToSecretMapper() handler.MapFunc {
+	return func(_ context.Context, obj client.Object) []reconcile.Request {
+		node, ok := obj.(*corev1.Node)
+		if !ok {
+			return nil
+		}
+
+		secretName, ok := node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName]
+		if !ok {
+			return nil
+		}
+
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: secretName, Namespace: metav1.NamespaceSystem}}}
+	}
+}
+
+// NodeReadyForUpdate returns a predicate that returns
+// - true for Create event if the new node has the InPlaceUpdate condition with the reason ReadyForUpdate.
+// - true for Update event if the new node has the InPlaceUpdate condition with the reason ReadyForUpdate and old node doesn't.
+// - false for Delete and Generic events.
+func NodeReadyForUpdate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			node, ok := e.Object.(*corev1.Node)
+			if !ok {
+				return false
+			}
+
+			return nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			old, ok := e.ObjectOld.(*corev1.Node)
+			if !ok {
+				return false
+			}
+			new, ok := e.ObjectNew.(*corev1.Node)
+			if !ok {
+				return false
+			}
+
+			return !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(old.Status.Conditions) && nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(new.Status.Conditions)
+		},
+		DeleteFunc: func(_ event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(_ event.GenericEvent) bool {
+			return false
+		},
+	}
+}
+
+func nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(conditions []corev1.NodeCondition) bool {
+	for _, condition := range conditions {
+		if condition.Type == machinev1alpha1.NodeInPlaceUpdate && condition.Reason == machinev1alpha1.ReadyForUpdate {
+			return true
+		}
+	}
+	return false
 }
 
 type delayer struct {
