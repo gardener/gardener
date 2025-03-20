@@ -298,7 +298,7 @@ func validateCloudProfileBastion(spec *core.CloudProfileSpec, fldPath *field.Pat
 	}
 
 	if spec.Bastion.MachineImage != nil {
-		allErrs = append(allErrs, validateBastionImage(spec.Bastion.MachineImage, spec.MachineImages, machineArch, fldPath.Child("machineImage"))...)
+		allErrs = append(allErrs, validateBastionImage(spec.Bastion.MachineImage, spec.MachineImages, spec.Capabilities, machineArch, fldPath.Child("machineImage"))...)
 	}
 
 	return allErrs
@@ -316,7 +316,7 @@ func validateBastionMachineType(bastionMachineType *core.BastionMachineType, mac
 	return machineTypes[machineIndex].Architecture, nil
 }
 
-func validateBastionImage(bastionImage *core.BastionMachineImage, machineImages []core.MachineImage, machineArch *string, fldPath *field.Path) field.ErrorList {
+func validateBastionImage(bastionImage *core.BastionMachineImage, machineImages []core.MachineImage, capabilities core.Capabilities, machineArch *string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	namePath := fldPath.Child("name")
 
@@ -331,7 +331,7 @@ func validateBastionImage(bastionImage *core.BastionMachineImage, machineImages 
 	imageVersions := machineImages[imageIndex].Versions
 
 	if bastionImage.Version == nil {
-		allErrs = append(allErrs, checkImageSupport(bastionImage.Name, imageVersions, machineArch, namePath)...)
+		allErrs = append(allErrs, checkImageSupport(bastionImage.Name, imageVersions, capabilities, machineArch, namePath)...)
 	} else {
 		versionPath := fldPath.Child("version")
 
@@ -344,24 +344,22 @@ func validateBastionImage(bastionImage *core.BastionMachineImage, machineImages 
 		}
 
 		imageVersion := []core.MachineImageVersion{imageVersions[versionIndex]}
-		allErrs = append(allErrs, checkImageSupport(bastionImage.Name, imageVersion, machineArch, versionPath)...)
+		allErrs = append(allErrs, checkImageSupport(bastionImage.Name, imageVersion, capabilities, machineArch, versionPath)...)
 	}
 
 	return allErrs
 }
 
-func checkImageSupport(bastionImageName string, imageVersions []core.MachineImageVersion, machineArch *string, fldPath *field.Path) field.ErrorList {
+func checkImageSupport(bastionImageName string, imageVersions []core.MachineImageVersion, capabilities core.Capabilities, machineArch *string, fldPath *field.Path) field.ErrorList {
 	for _, version := range imageVersions {
 		archSupported := false
 		validClassification := false
 
-		if machineArch != nil && slices.Contains(version.Architectures, *machineArch) {
-			archSupported = true
-		}
 		// any arch is supported in case machineArch is nil
-		if machineArch == nil && len(version.Architectures) > 0 {
+		if machineArch == nil || version.SupportsArchitecture(capabilities, *machineArch) {
 			archSupported = true
 		}
+
 		if version.Classification != nil && *version.Classification == core.ClassificationSupported {
 			validClassification = true
 		}
