@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	cloudprofileregistry "github.com/gardener/gardener/pkg/apiserver/registry/core/cloudprofile"
@@ -181,6 +182,45 @@ var _ = Describe("Strategy", func() {
 			Expect(newCloudProfile.Spec.Regions[0].AccessRestrictions).To(BeEmpty())
 			Expect(newCloudProfile.Spec.Regions[0].Labels).To(Equal(map[string]string{"seed.gardener.cloud/eu-access": "true"}))
 		})
+
+		It("should correctly sync the architecture fields on migration to Capabilities", func() {
+			oldCloudProfile := &core.CloudProfile{
+				Spec: core.CloudProfileSpec{
+					MachineTypes: []core.MachineType{
+						{
+							Name:         "machineType1",
+							Architecture: ptr.To("amd64"),
+						},
+					},
+					MachineImages: []core.MachineImage{
+						{
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "1.0.0",
+									},
+									Architectures: []string{"amd64"},
+								},
+							},
+						},
+					},
+				},
+			}
+			newCloudProfile := oldCloudProfile.DeepCopy()
+			newCloudProfile.Spec.Capabilities = core.Capabilities{
+				"architecture": core.CapabilityValues{Values: []string{"amd64"}},
+			}
+
+			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)
+
+			Expect(newCloudProfile.Spec.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
+			Expect(newCloudProfile.Spec.MachineTypes[0].Capabilities["architecture"].Values).To(ConsistOf("amd64"))
+
+			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
+			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets).To(ConsistOf(core.CapabilitySet{
+				Capabilities: core.Capabilities{"architecture": core.CapabilityValues{Values: []string{"amd64"}}},
+			}))
+		})
 	})
 
 	Describe("#Canonicalize", func() {
@@ -228,6 +268,28 @@ var _ = Describe("Strategy", func() {
 
 			Expect(cloudProfile.Spec.Regions[0].AccessRestrictions).To(BeEmpty())
 			Expect(cloudProfile.Spec.Regions[0].Labels).To(BeEmpty())
+		})
+
+		It("should sync architecture capabilities to empty architecture fields", func() {
+			cloudProfile := &core.CloudProfile{
+				Spec: core.CloudProfileSpec{
+					Capabilities: core.Capabilities{
+						"architecture": core.CapabilityValues{Values: []string{"amd64"}},
+					},
+					MachineImages: []core.MachineImage{{Versions: []core.MachineImageVersion{
+						{CapabilitySets: []core.CapabilitySet{{Capabilities: core.Capabilities{
+							"architecture": core.CapabilityValues{Values: []string{"amd64"}}}}}},
+					}}},
+					MachineTypes: []core.MachineType{{Capabilities: core.Capabilities{
+						"architecture": core.CapabilityValues{Values: []string{"amd64"}},
+					}}},
+				},
+			}
+
+			cloudprofileregistry.Strategy.Canonicalize(cloudProfile)
+
+			Expect(cloudProfile.Spec.MachineTypes[0].Architecture).To(PointTo(Equal("amd64")))
+			Expect(cloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
 		})
 	})
 })
