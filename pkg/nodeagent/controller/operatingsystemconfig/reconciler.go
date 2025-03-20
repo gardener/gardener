@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -46,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
@@ -58,6 +60,8 @@ const (
 	lastAppliedOperatingSystemConfigFilePath         = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
 	lastComputedOperatingSystemConfigChangesFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-computed-osc-changes.yaml"
 	annotationUpdatingOSVersion                      = "node-agent.gardener.cloud/updating-os-version"
+	kubeletUnitName                                  = "kubelet.service"
+	pathKubeletCPUManagerPolicyState                 = kubelet.PathKubeletDirectory + "/cpu_manager_state"
 )
 
 var (
@@ -65,6 +69,11 @@ var (
 	osVersionRegex                = regexp.MustCompile(`\d+(?:\.\d+)+`)
 	retriableErrorPatternRegex    = regexp.MustCompile(`(?i)network problems`)
 	nonRetriableErrorPatternRegex = regexp.MustCompile(`(?i)invalid arguments|system failure`)
+
+	// KubeletHealthCheckRetryInterval is the interval at which the kubelet health check is retried. Exposed for testing.
+	KubeletHealthCheckRetryInterval = 5 * time.Second
+	// KubeletHealthCheckRetryTimeout is the timeout after which the kubelet health check is considered failed. Exposed for testing.
+	KubeletHealthCheckRetryTimeout = 5 * time.Minute
 
 	// OSUpdateRetryInterval is the interval between OS update retries. Exported for testing.
 	OSUpdateRetryInterval = 30 * time.Second
@@ -208,6 +217,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	log.Info("Executing unit commands (start/stop)", "unitCommands", len(oscChanges.Units.Commands))
 	if err := r.executeUnitCommands(ctx, log, node, oscChanges); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
+	}
+
+	if isInPlaceKubeletUpdate(oscChanges) {
+		if err := r.completeKubeletInPlaceUpdate(ctx, log, oscChanges, node); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed completing kubelet in-place update: %w", err)
+		}
 	}
 
 	// After the node is prepared, we can wait for the registries to be configured.
@@ -467,6 +482,14 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, cha
 		if err := changes.completedUnitChanged(unit.Name); err != nil {
 			return err
 		}
+
+		if unit.Name == kubeletUnitName && changes.KubeletUpdate.CPUManagerPolicyUpdate {
+			// See https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/#changing-the-cpu-manager-policy
+			log.Info("Removing kubelet cpu manager policy state file", "path", pathKubeletCPUManagerPolicyState)
+			if err := r.FS.Remove(pathKubeletCPUManagerPolicyState); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
+				return fmt.Errorf("failed removing kubelet cpu manager policy state file %q: %w", kubelet.PathKubeconfigReal, err)
+			}
+		}
 	}
 
 	return nil
@@ -651,6 +674,58 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 
 	return nil
 }
+
+func isInPlaceKubeletUpdate(changes *operatingSystemConfigChanges) bool {
+	return changes.KubeletUpdate.MinorVersionUpdate || changes.KubeletUpdate.ConfigUpdate || changes.KubeletUpdate.CPUManagerPolicyUpdate
+}
+
+func (r *Reconciler) checkKubeletHealth(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, healthcheckcontroller.DefaultKubeletHealthEndpoint, nil)
+	if err != nil {
+		log.Error(err, "Creating request to kubelet health endpoint failed")
+		return err
+	}
+
+	err = retryutils.UntilTimeout(ctx, KubeletHealthCheckRetryInterval, KubeletHealthCheckRetryTimeout, func(_ context.Context) (done bool, err error) {
+		if response, err2 := httpClient.Do(request); err2 != nil {
+			return retryutils.MinorError(fmt.Errorf("HTTP request to kubelet health endpoint failed: %w", err2))
+		} else if response.StatusCode == http.StatusOK {
+			log.Info("Kubelet is healthy after in-place update")
+			return retryutils.Ok()
+		}
+
+		return retryutils.NotOk()
+	})
+	if err != nil {
+		if patchErr := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("kubelet is not healthy after in-place update: %s", err.Error())); patchErr != nil {
+			return patchErr
+		}
+	}
+
+	return err
+}
+
+func (r *Reconciler) completeKubeletInPlaceUpdate(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges, node *corev1.Node) error {
+	if err := r.checkKubeletHealth(ctx, log, node); err != nil {
+		return fmt.Errorf("kubelet is not healthy after minor version/config update: %w", err)
+	}
+
+	if err := changes.completeKubeletMinorVersionUpdate(); err != nil {
+		return fmt.Errorf("failed completing kubelet minor version update: %w", err)
+	}
+
+	if err := changes.completeKubeletConfigUpdate(); err != nil {
+		return fmt.Errorf("failed completing kubelet config update: %w", err)
+	}
+
+	if err := changes.completeKubeletCpuManagerPolicyUpdate(); err != nil {
+		return fmt.Errorf("failed completing kubelet cpu manager policy update: %w", err)
+	}
+
+	return nil
+}
+
 func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, node *corev1.Node) error {
 	// List all pods running on the node and delete them.
 	// This should recreate daemonset pods and pods with local storage.
