@@ -148,6 +148,7 @@ func (o *operatingSystemConfigChanges) completeCARotationNodeAgent() error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
+	o.MustRestartNodeAgent = true
 	o.CARotation.NodeAgent = false
 
 	return o.persist()
