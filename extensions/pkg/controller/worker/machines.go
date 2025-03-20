@@ -22,6 +22,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
 
@@ -95,7 +96,7 @@ func (m MachineDeployments) HasSecret(secretName string) bool {
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
 func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalDataV1 []string, additionalDataV2 []string) (string, error) {
 	if pool.NodeAgentSecretName != nil {
-		return WorkerPoolHashV2(*pool.NodeAgentSecretName, additionalDataV2...)
+		return WorkerPoolHashV2(pool, cluster, additionalDataV2...)
 	}
 	return WorkerPoolHashV1(pool, cluster, additionalDataV1...)
 }
@@ -164,9 +165,30 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 	return utils.ComputeSHA256Hex([]byte(result))[:5], nil
 }
 
-// WorkerPoolHashV2 returns a hash value for a given nodeAgentSecretName and additional data.
-func WorkerPoolHashV2(nodeAgentSecretName string, additionalData ...string) (string, error) {
-	data := []string{nodeAgentSecretName}
+// WorkerPoolHashV2 returns a hash value for a given pool and additional data.
+func WorkerPoolHashV2(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
+	var data []string
+
+	if pool.NodeAgentSecretName != nil {
+		data = append(data, *pool.NodeAgentSecretName)
+	}
+
+	// In case of in-place update, the following data are omitted from the node-agent secret name calculation, but we still want to create a different machine class.
+	// So we add this data to the hash calculation here.
+	if v1beta1helper.IsUpdateStrategyInPlace(pool.UpdateStrategy) {
+		workerPoolHash, err := gardenerutils.CalculateWorkerPoolHashForInPlaceUpdate(
+			pool.Name,
+			pool.KubernetesVersion,
+			pool.KubeletConfig,
+			pool.MachineImage.Version,
+			cluster.Shoot.Status.Credentials,
+		)
+		if err != nil {
+			return "", fmt.Errorf("failed to calculate worker pool hash for in-place update: %w", err)
+		}
+
+		data = append(data, workerPoolHash)
+	}
 
 	data = append(data, additionalData...)
 
