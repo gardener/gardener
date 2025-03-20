@@ -312,7 +312,8 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 	log.Info("Waiting until wanted machine deployments are available")
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
-		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines int32
+		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines,
+			numDesiredManualInPlace, numUpdatedManualInPlace, numNeedUpdatedManualInPlace, numOldMachineSetNotUpdateCandidateManualInPlace int32
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
@@ -328,6 +329,14 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 		// map the owner reference to the machine sets
 		ownerReferenceToMachineSet := gardenerutils.BuildOwnerToMachineSetsMap(machineSets.Items)
+
+		// Get the list of all machines
+		machines := &machinev1alpha1.MachineList{}
+		if err := a.seedClient.List(ctx, machines, client.InNamespace(worker.Namespace)); err != nil {
+			return retryutils.SevereError(err)
+		}
+
+		machineSetToMachinesMap := gardenerutils.BuildMachineSetToMachinesMap(machines.Items)
 
 		// Collect the numbers of available and desired replicas.
 		for _, deployment := range machineDeployments.Items {
@@ -371,7 +380,9 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 			// If the Shoot is not hibernated we want to make sure that the machine set with the right
 			// machine class for the machine deployment is deployed by the machine-controller-manager
-			if machineSet := extensionsworkerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet); machineSet == nil {
+
+			latestMachineSet := extensionsworkerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet)
+			if latestMachineSet == nil {
 				return retryutils.MinorError(fmt.Errorf("waiting for the machine-controller-manager to create the updated machine set for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name))
 			}
 
@@ -380,8 +391,29 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			if health.CheckMachineDeployment(&deployment) == nil {
 				numHealthyDeployments++
 			}
-			numDesired += deployment.Spec.Replicas
-			numUpdated += deployment.Status.UpdatedReplicas
+
+			if deployment.Spec.Strategy.Type == machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType && deployment.Spec.Strategy.InPlaceUpdate != nil && deployment.Spec.Strategy.InPlaceUpdate.OrchestrationType == machinev1alpha1.OrchestrationTypeManual {
+				oldMachineSetsTotalReplicas := 0
+				oldMachineSets := extensionsworkerhelper.GetOldMachineSets(machineSets, *latestMachineSet)
+				for _, oldMachineSet := range oldMachineSets {
+					oldMachineSetsTotalReplicas += int(oldMachineSet.Status.Replicas)
+					machines := machineSetToMachinesMap[oldMachineSet.Name]
+					for _, machine := range machines {
+						cond := extensionsworkercontroller.GetMachineCondition(&machine, machinev1alpha1.NodeInPlaceUpdate)
+						if cond != nil && cond.Reason != machinev1alpha1.UpdateCandidate {
+							numOldMachineSetNotUpdateCandidateManualInPlace++
+						}
+					}
+				}
+
+				numDesiredManualInPlace += deployment.Spec.Replicas
+				numNeedUpdatedManualInPlace += int32(oldMachineSetsTotalReplicas)
+				numUpdatedManualInPlace += deployment.Status.UpdatedReplicas
+			} else {
+				numDesired += deployment.Spec.Replicas
+				numUpdated += deployment.Status.UpdatedReplicas
+			}
+
 			numAvailable += deployment.Status.AvailableReplicas
 			numUnavailable += deployment.Status.UnavailableReplicas
 		}
@@ -391,16 +423,26 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 		case !extensionscontroller.IsHibernationEnabled(cluster):
 			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
-			if numUnavailable == 0 && numUpdated == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) {
+			if numUnavailable == 0 && (numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
+				numOldMachineSetNotUpdateCandidateManualInPlace == 0 {
 				return retryutils.Ok()
 			}
 
-			if numUnavailable == 0 && numAvailable == numDesired && numUpdated < numberOfAwakeMachines {
+			if numUnavailable == 0 && numAvailable == (numDesired+numDesiredManualInPlace) && (numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace) < numberOfAwakeMachines {
 				msg = fmt.Sprintf("Waiting until all old machines are drained and terminated. Waiting for %d machine(s)...", numberOfAwakeMachines-numUpdated)
+			}
+
+			if numOldMachineSetNotUpdateCandidateManualInPlace > 0 {
+				if msg != "" {
+					msg += "\n"
+				}
+
+				msg += fmt.Sprintf("Waiting until %d old machines are updated...", numOldMachineSetNotUpdateCandidateManualInPlace)
 				break
 			}
 
-			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d/%d machinedeployments available)...", numAvailable, numDesired, numUpdated, numDesired, numUnavailable, numHealthyDeployments, len(wantedMachineDeployments))
+			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d/%d machinedeployments available)...",
+				numAvailable, numDesired+numDesiredManualInPlace, numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace+numDesiredManualInPlace, numDesired, numUnavailable, numHealthyDeployments, len(wantedMachineDeployments))
 		default:
 			if numberOfAwakeMachines == 0 {
 				return retryutils.Ok()
