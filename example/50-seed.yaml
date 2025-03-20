@@ -19,14 +19,11 @@ spec:
   # providerConfig:
   #   <some-provider-specific-config-for-the-backup-buckets>
     region: europe-1
-    secretRef:
+    credentialsRef:
+      apiVersion: v1
+      kind: Secret
       name: backup-secret
       namespace: garden
-    # credentialsRef:
-    #   apiVersion: v1
-    #   kind: Secret
-    #   name: backup-secret
-    #   namespace: garden
   dns:
     provider:
       type: aws-route53

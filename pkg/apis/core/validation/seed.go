@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
@@ -270,6 +271,12 @@ func validateSeedBackup(seedBackup *core.SeedBackup, seedProviderType string, fl
 			if seedBackup.SecretRef != emptySecretRef {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretRef"), "must not be set when `spec.backup.credentialsRef` refer to resource other than secret"))
 			}
+		}
+
+		// TODO(vpnachev): Allow WorkloadIdentities once the support in the controllers and components is fully implemented.
+		if seedBackup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			seedBackup.CredentialsRef.Kind == "WorkloadIdentity" {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsRef"), "support for workload identity as backup credentials is not yet fully implemented"))
 		}
 	}
 

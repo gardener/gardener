@@ -342,11 +342,17 @@ var _ = Describe("Seed Validation Tests", func() {
 				))
 			})
 
-			It("should allow credentialsRef to refer a WorkloadIdentity", func() {
+			It("should forbid credentialsRef to refer a WorkloadIdentity", func() {
 				seed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Namespace: "garden", Name: "backup"}
 				seed.Spec.Backup.SecretRef = corev1.SecretReference{}
 
-				Expect(ValidateSeed(seed)).To((BeEmpty()))
+				Expect(ValidateSeed(seed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.backup.credentialsRef"),
+						"Detail": Equal("support for workload identity as backup credentials is not yet fully implemented"),
+					})),
+				))
 			})
 
 			It("should allow credentialsRef to refer a Secret", func() {
@@ -455,6 +461,11 @@ var _ = Describe("Seed Validation Tests", func() {
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.backup.secretRef"),
 						"Detail": Equal("must not be set when `spec.backup.credentialsRef` refer to resource other than secret"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.backup.credentialsRef"),
+						"Detail": Equal("support for workload identity as backup credentials is not yet fully implemented"),
 					})),
 				))
 			})
