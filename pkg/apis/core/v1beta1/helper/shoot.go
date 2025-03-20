@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -671,6 +672,11 @@ func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStra
 	}
 
 	return *updateStrategy == gardencorev1beta1.AutoInPlaceUpdate || *updateStrategy == gardencorev1beta1.ManualInPlaceUpdate
+}
+
+// IsUpdateStrategyManualInPlace returns true if the given machine update strategy is ManualInPlaceUpdate.
+func IsUpdateStrategyManualInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStrategy) bool {
+	return ptr.Deref(updateStrategy, "") == gardencorev1beta1.ManualInPlaceUpdate
 }
 
 // IsShootIstioTLSTerminationEnabled returns true if the Istio TLS termination for the shoot kube-apiserver is enabled.

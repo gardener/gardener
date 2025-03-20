@@ -1574,4 +1574,202 @@ var _ = Describe("Shoot", func() {
 			semver.MustParse("1.30.0"),
 			BeFalse()),
 	)
+
+	Describe("#CalculateWorkerPoolHashForInPlaceUpdate", func() {
+		var (
+			kubernetesVersion *string
+			kubeletConfig     *gardencorev1beta1.KubeletConfig
+			credentials       *gardencorev1beta1.ShootCredentials
+
+			machineImageVersion string
+			workerPoolName      string
+
+			hash                        string
+			lastCARotationInitiation    = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+			lastSAKeyRotationInitiation = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
+		)
+
+		BeforeEach(func() {
+			workerPoolName = "worker"
+			kubernetesVersion = ptr.To("1.2.3")
+			machineImageVersion = "1.1.1"
+
+			kubeletConfig = &gardencorev1beta1.KubeletConfig{
+				KubeReserved: &gardencorev1beta1.KubeletConfigReserved{
+					CPU:              ptr.To(resource.MustParse("80m")),
+					Memory:           ptr.To(resource.MustParse("1Gi")),
+					PID:              ptr.To(resource.MustParse("10k")),
+					EphemeralStorage: ptr.To(resource.MustParse("20Gi")),
+				},
+				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+					MemoryAvailable: ptr.To("100Mi"),
+				},
+				CPUManagerPolicy: nil,
+			}
+
+			credentials = &gardencorev1beta1.ShootCredentials{
+				Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+					CertificateAuthorities: &gardencorev1beta1.CARotation{
+						LastInitiationTime: &lastCARotationInitiation,
+					},
+					ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+						LastInitiationTime: &lastSAKeyRotationInitiation,
+					},
+				},
+			}
+
+			var err error
+			hash, err = CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName, kubernetesVersion, kubeletConfig, machineImageVersion, credentials)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Context("hash value should change", func() {
+			AfterEach(func() {
+				actual, err := CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName, kubernetesVersion, kubeletConfig, machineImageVersion, credentials)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).NotTo(Equal(hash))
+			})
+
+			It("when changing machine image version", func() {
+				machineImageVersion = "new-version"
+			})
+
+			It("when changing the kubernetes major/minor version of the worker pool version", func() {
+				kubernetesVersion = ptr.To("1.3.2")
+			})
+
+			It("when a shoot CA rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastCARotationInitiation.Add(time.Hour)}
+				credentials.Rotation.CertificateAuthorities.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot CA rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := credentials.Rotation.CertificateAuthorities.DeepCopy()
+				credentials.Rotation.CertificateAuthorities = nil
+				hash, err = CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName, kubernetesVersion, kubeletConfig, machineImageVersion, credentials)
+				Expect(err).ToNot(HaveOccurred())
+
+				credentials.Rotation.CertificateAuthorities = credentialStatusWithInitiatedRotation
+			})
+
+			It("when a shoot service account key rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastSAKeyRotationInitiation.Add(time.Hour)}
+				credentials.Rotation.ServiceAccountKey.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot service account key rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := credentials.Rotation.ServiceAccountKey.DeepCopy()
+				credentials.Rotation.ServiceAccountKey = nil
+				hash, err = CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName, kubernetesVersion, kubeletConfig, machineImageVersion, credentials)
+				Expect(err).ToNot(HaveOccurred())
+
+				credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
+			})
+
+			It("when changing kubeReserved CPU", func() {
+				kubeletConfig.KubeReserved.CPU = ptr.To(resource.MustParse("100m"))
+			})
+
+			It("when changing kubeReserved memory", func() {
+				kubeletConfig.KubeReserved.Memory = ptr.To(resource.MustParse("2Gi"))
+			})
+
+			It("when changing kubeReserved PID", func() {
+				kubeletConfig.KubeReserved.PID = ptr.To(resource.MustParse("15k"))
+			})
+
+			It("when changing kubeReserved ephemeral storage", func() {
+				kubeletConfig.KubeReserved.EphemeralStorage = ptr.To(resource.MustParse("42Gi"))
+			})
+
+			It("when changing evictionHard memory threshold", func() {
+				kubeletConfig.EvictionHard.MemoryAvailable = ptr.To("200Mi")
+			})
+
+			It("when changing evictionHard image fs threshold", func() {
+				kubeletConfig.EvictionHard.ImageFSAvailable = ptr.To("200Mi")
+			})
+
+			It("when changing evictionHard image fs inodes threshold", func() {
+				kubeletConfig.EvictionHard.ImageFSInodesFree = ptr.To("1k")
+			})
+
+			It("when changing evictionHard node fs threshold", func() {
+				kubeletConfig.EvictionHard.NodeFSAvailable = ptr.To("200Mi")
+			})
+
+			It("when changing evictionHard node fs inodes threshold", func() {
+				kubeletConfig.EvictionHard.NodeFSInodesFree = ptr.To("1k")
+			})
+
+			It("when changing CPUManagerPolicy", func() {
+				kubeletConfig.CPUManagerPolicy = ptr.To("test")
+			})
+
+			It("when changing systemReserved CPU", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					CPU: ptr.To(resource.MustParse("1m")),
+				}
+			})
+
+			It("when changing systemReserved memory", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					Memory: ptr.To(resource.MustParse("1Mi")),
+				}
+			})
+
+			It("when systemReserved PID", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					PID: ptr.To(resource.MustParse("1k")),
+				}
+			})
+
+			It("when changing systemReserved EphemeralStorage", func() {
+				kubeletConfig.SystemReserved = &gardencorev1beta1.KubeletConfigReserved{
+					EphemeralStorage: ptr.To(resource.MustParse("100Gi")),
+				}
+			})
+		})
+
+		Context("hash value should not change", func() {
+			AfterEach(func() {
+				actual, err := CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName, kubernetesVersion, kubeletConfig, machineImageVersion, credentials)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).To(Equal(hash))
+			})
+
+			It("when a shoot CA rotation is triggered but the pool name is present in pendingWorkersRollouts", func() {
+				credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{
+					{
+						Name:               workerPoolName,
+						LastInitiationTime: &lastCARotationInitiation,
+					},
+				}
+
+				newRotationTime := metav1.Time{Time: lastCARotationInitiation.Add(time.Hour)}
+				credentials.Rotation.CertificateAuthorities.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot ServiceAccountKey rotation is triggered but the pool name is present in pendingWorkersRollouts", func() {
+				credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts = []gardencorev1beta1.PendingWorkersRollout{
+					{
+						Name:               workerPoolName,
+						LastInitiationTime: &lastSAKeyRotationInitiation,
+					},
+				}
+
+				newRotationTime := metav1.Time{Time: lastSAKeyRotationInitiation.Add(time.Hour)}
+				credentials.Rotation.ServiceAccountKey.LastInitiationTime = &newRotationTime
+			})
+		})
+
+		It("should return an error if kubernetes version is invalid", func() {
+			kubernetesVersion = ptr.To("invalid")
+
+			_, err := CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName, kubernetesVersion, kubeletConfig, machineImageVersion, credentials)
+			Expect(err).To(MatchError(ContainSubstring("failed to parse")))
+		})
+	})
 })
