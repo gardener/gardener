@@ -187,6 +187,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, validateHibernationUpdate(newShoot, oldShoot)...)
 	allErrs = append(allErrs, ValidateForceDeletion(newShoot, oldShoot)...)
 	allErrs = append(allErrs, validateNodeLocalDNSUpdate(&newShoot.Spec, &oldShoot.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateInPlaceUpdates(newShoot, oldShoot)...)
 
 	return allErrs
 }
@@ -382,9 +383,9 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 	for i, newWorker := range newProvider.Workers {
 		var oldWorker core.Worker
 
-		oldWorkerIndex := slices.IndexFunc(oldProvider.Workers, func(ow core.Worker) bool {
-			oldWorker = ow
-			return ow.Name == newWorker.Name
+		oldWorkerIndex := slices.IndexFunc(oldProvider.Workers, func(worker core.Worker) bool {
+			oldWorker = worker
+			return worker.Name == newWorker.Name
 		})
 
 		if oldWorkerIndex == -1 {
@@ -2601,6 +2602,8 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
+		allErrs = append(allErrs, validatePendingWorkerUpdates(shoot, fldPath, "rotation of all credentials")...)
+
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
@@ -2619,6 +2622,8 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootCARotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
 		}
+		allErrs = append(allErrs, validatePendingWorkerUpdates(shoot, fldPath, "CA rotation")...)
+
 	case v1beta1constants.OperationRotateCAComplete:
 		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
@@ -2631,6 +2636,8 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Completed'"))
 		}
+		allErrs = append(allErrs, validatePendingWorkerUpdates(shoot, fldPath, "service account key rotation")...)
+
 	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
 		if helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
@@ -2677,6 +2684,23 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 	return allErrs
 }
 
+// validatePendingWorkerUpdates checks if there are pending workers rollouts in the Shoot's status and returns an error if any are found.
+func validatePendingWorkerUpdates(shoot *core.Shoot, fldPath *field.Path, operation string) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	var forbiddenPendingWorkerUpdatesMessageTemplate = "cannot start %s if status.inPlaceUpdates.pendingWorkerUpdates.%s is not empty"
+	if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
+		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf(forbiddenPendingWorkerUpdatesMessageTemplate, operation, "autoInPlaceUpdate")))
+		}
+		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf(forbiddenPendingWorkerUpdatesMessageTemplate, operation, "manualInPlaceUpdate")))
+		}
+	}
+
+	return allErrs
+}
+
 // ValidateForceDeletion validates the addition of force-deletion annotation on the Shoot.
 func ValidateForceDeletion(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	var (
@@ -2705,6 +2729,82 @@ func ValidateForceDeletion(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		}
 		if !errorCodePresent {
 			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("force-deletion annotation cannot be set when Shoot status does not contain one of these error codes: %v", sets.List(errorCodesAllowingForceDeletion))))
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateInPlaceUpdates validates the updates of the worker pools with in-place update strategy of a Shoot.
+func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Allow the update without validation if the force-update annotation is present.
+	if helper.ShootNeedsForceInPlaceUpdate(newShoot) {
+		return allErrs
+	}
+
+	if newShoot.Status.InPlaceUpdates == nil || newShoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
+		return allErrs
+	}
+
+	pendingWorkerNames := sets.New[string]()
+	pendingWorkerNames.Insert(newShoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate...)
+	pendingWorkerNames.Insert(newShoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...)
+
+	oldControlPlaneKubernetesVersion, err := semver.NewVersion(oldShoot.Spec.Kubernetes.Version)
+	if err != nil {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), "old control plane kubernetes version is not a valid semver version"))
+		return allErrs
+	}
+
+	newControlPlaneKubernetesVersion, err := semver.NewVersion(newShoot.Spec.Kubernetes.Version)
+	if err != nil {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), "new control plane kubernetes version is not a valid semver version"))
+		return allErrs
+	}
+
+	for i, worker := range newShoot.Spec.Provider.Workers {
+		if !helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			continue
+		}
+
+		if !pendingWorkerNames.Has(worker.Name) {
+			continue
+		}
+
+		var (
+			oldWorker core.Worker
+			idxPath   = field.NewPath("spec", "provider", "workers").Index(i)
+		)
+
+		oldWorkerIndex := slices.IndexFunc(oldShoot.Spec.Provider.Workers, func(ow core.Worker) bool {
+			oldWorker = ow
+			return ow.Name == worker.Name
+		})
+
+		if oldWorkerIndex == -1 {
+			continue
+		}
+
+		oldWorkerIndexPath := field.NewPath("spec", "provider", "workers").Index(oldWorkerIndex)
+
+		oldKubernetesVersion, err := helper.CalculateEffectiveKubernetesVersion(oldControlPlaneKubernetesVersion, oldWorker.Kubernetes)
+		if err != nil {
+			allErrs = append(allErrs, field.Forbidden(oldWorkerIndexPath, fmt.Sprintf("failed to calculate effective kubernetes version for old worker: %v", err)))
+			continue
+		}
+		newKubernetesVersion, err := helper.CalculateEffectiveKubernetesVersion(newControlPlaneKubernetesVersion, worker.Kubernetes)
+		if err != nil {
+			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("failed to calculate effective kubernetes version for new worker: %v", err)))
+			continue
+		}
+
+		oldKubeletConfig := helper.CalculateEffectiveKubeletConfiguration(oldShoot.Spec.Kubernetes.Kubelet, oldWorker.Kubernetes)
+		newKubeletConfig := helper.CalculateEffectiveKubeletConfiguration(newShoot.Spec.Kubernetes.Kubelet, worker.Kubernetes)
+
+		if !apiequality.Semantic.DeepEqual(oldWorker, worker) || !oldKubernetesVersion.Equal(newKubernetesVersion) || !apiequality.Semantic.DeepEqual(oldKubeletConfig, newKubeletConfig) {
+			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("the worker pool %q is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration.", worker.Name)))
 		}
 	}
 
