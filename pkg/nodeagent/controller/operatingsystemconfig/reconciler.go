@@ -11,17 +11,22 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"slices"
+	"strings"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	runtimepkg "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -33,6 +38,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -44,17 +50,30 @@ import (
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
 const (
 	lastAppliedOperatingSystemConfigFilePath         = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
 	lastComputedOperatingSystemConfigChangesFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-computed-osc-changes.yaml"
+	annotationUpdatingOSVersion                      = "node-agent.gardener.cloud/updating-os-version"
 )
 
-var codec runtime.Codec
+var (
+	codec                         runtimepkg.Codec
+	osVersionRegex                = regexp.MustCompile(`\d+(?:\.\d+)+`)
+	retriableErrorPatternRegex    = regexp.MustCompile(`(?i)network problems`)
+	nonRetriableErrorPatternRegex = regexp.MustCompile(`(?i)invalid arguments|system failure`)
+
+	// OSUpdateRetryInterval is the interval between OS update retries. Exported for testing.
+	OSUpdateRetryInterval = 30 * time.Second
+	// OSUpdateRetryTimeout is the timeout for OS update retries. Exported for testing.
+	OSUpdateRetryTimeout = 5 * time.Minute
+)
 
 func init() {
-	scheme := runtime.NewScheme()
+	scheme := runtimepkg.NewScheme()
 	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
 	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentconfigv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
@@ -116,7 +135,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed reconciling containerd configuration: %w", err)
 	}
 
-	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum)
+	var osVersion *string
+	if osc.Spec.InPlaceUpdates != nil {
+		osVersion, err = GetOSVersion()
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed getting OS version: %w", err)
+		}
+	}
+
+	oscChanges, err := computeOperatingSystemConfigChanges(log, r.FS, osc, oscChecksum, osVersion)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed calculating the OSC changes: %w", err)
 	}
@@ -124,6 +151,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if node != nil && node.Annotations[nodeagentconfigv1alpha1.AnnotationKeyChecksumAppliedOperatingSystemConfig] == oscChecksum {
 		log.Info("Configuration on this node is up to date, nothing to be done")
 		return reconcile.Result{}, nil
+	}
+
+	// If the nodeagent has restarted after OS update, we need to persist the change in oscChanges.
+	if osc.Spec.InPlaceUpdates != nil && ptr.Deref(osVersion, "") == osc.Spec.InPlaceUpdates.OperatingSystemVersion {
+		if err := oscChanges.completeOSUpdate(); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed completing OS update: %w", err)
+		}
+	}
+
+	// If in-place update, wait until node drain.
+	if isInPlaceUpdate(oscChanges) {
+		if !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
+			log.Info("Node is not ready for in-place update, will be requeued when the node has the ready-for-update condition", "node", node.Name)
+			return reconcile.Result{RequeueAfter: 10 * time.Minute}, nil
+		}
+
+		log.Info("In-place update is in progress", "osUpdate", oscChanges.OSUpdate,
+			"kubeletMinorVersionUpdate", oscChanges.KubeletUpdate.MinorVersionUpdate,
+			"kubeletConfigUpdate", oscChanges.KubeletUpdate.ConfigUpdate || oscChanges.KubeletUpdate.CPUManagerPolicyUpdate,
+			"certificateAuthoritiesRotation", oscChanges.CARotation, "serviceAccountKeyRotation", oscChanges.SAKeyRotation,
+		)
 	}
 
 	log.Info("Applying new or changed inline files")
@@ -175,10 +223,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed removing deleted files: %w", err)
 	}
 
+	if err := r.performInPlaceUpdate(ctx, log, osc, oscChanges, node, osVersion); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed performing in-place update: %w", err)
+	}
+
 	log.Info("Successfully applied operating system config")
 
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
-	oscRaw, err := runtime.Encode(codec, osc)
+	oscRaw, err := runtimepkg.Encode(codec, osc)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
 	}
@@ -552,4 +604,189 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+func isInPlaceUpdate(changes *operatingSystemConfigChanges) bool {
+	return changes.OSUpdate ||
+		changes.KubeletUpdate.MinorVersionUpdate ||
+		changes.KubeletUpdate.ConfigUpdate ||
+		changes.KubeletUpdate.CPUManagerPolicyUpdate ||
+		changes.CARotation.Kubelet ||
+		changes.CARotation.NodeAgent ||
+		changes.SAKeyRotation
+}
+
+func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, osc *extensionsv1alpha1.OperatingSystemConfig, oscChanges *operatingSystemConfigChanges, node *corev1.Node, osVersion *string) error {
+	// Node can be nil during the first reconciliation loop.
+	if node == nil {
+		return nil
+	}
+
+	// This means that the OS was not updated in-place and it rolled back to the previous version but a newer version is not yet applied.
+	if lastAttemptedUpdateVersion, osUpdateAnnotationExists := node.Annotations[annotationUpdatingOSVersion]; osUpdateAnnotationExists &&
+		osc.Spec.InPlaceUpdates != nil && osVersion != nil && osc.Spec.InPlaceUpdates.OperatingSystemVersion != *osVersion &&
+		lastAttemptedUpdateVersion == osc.Spec.InPlaceUpdates.OperatingSystemVersion {
+		if err := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", osc.Spec.InPlaceUpdates.OperatingSystemVersion, *osVersion)); err != nil {
+			return err
+		}
+
+		// No point in requeuing the node for the same version, wait for the newer version to be applied.
+		return nil
+	}
+
+	if err := r.updateOSInPlace(ctx, log, oscChanges, osc, node); err != nil {
+		return fmt.Errorf("failed to update OS in-place: %w", err)
+	}
+
+	if nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
+		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
+			return fmt.Errorf("failed to delete remaining pods: %w", err)
+		}
+
+		// If this point is reached, which means all the in-place updates are done, we can label the node with the update-successful label.
+		if err := r.patchNodeUpdateSuccessful(ctx, log, node); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	// List all pods running on the node and delete them.
+	// This should recreate daemonset pods and pods with local storage.
+	log.Info("Deleting pods running on the node", "node", node.Name)
+	podList := &corev1.PodList{}
+	if err := r.Client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: node.Name}); err != nil {
+		return fmt.Errorf("failed listing pods for node %s: %w", node.Name, err)
+	}
+
+	return kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, func(obj runtimepkg.Object) bool {
+		pod, ok := obj.(*corev1.Pod)
+		if !ok {
+			return false
+		}
+		return pod.Spec.NodeName == node.Name
+	})
+}
+
+// Copied from https://github.com/google/cadvisor/blob/5b649021c2dab9db34c8c37596f8f73c48548350/machine/operatingsystem_unix.go#L29-L54
+// This is how kubelet gets the OS name and version.
+
+var rex = regexp.MustCompile("(PRETTY_NAME)=(.*)")
+
+// getOperatingSystem gets the name of the current operating system.
+func getOperatingSystem() (string, error) {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "freebsd" {
+		cmd := exec.Command("uname", "-s")
+		osName, err := cmd.Output()
+		if err != nil {
+			return "", err
+		}
+		return string(osName), nil
+	}
+	bytes, err := os.ReadFile("/etc/os-release")
+	if err != nil && os.IsNotExist(err) {
+		// /usr/lib/os-release in stateless systems like Clear Linux
+		bytes, err = os.ReadFile("/usr/lib/os-release")
+	}
+	if err != nil {
+		return "", fmt.Errorf("error opening file : %v", err)
+	}
+	line := rex.FindAllStringSubmatch(string(bytes), -1)
+	if len(line) > 0 {
+		return strings.Trim(line[0][2], "\""), nil
+	}
+	return "Linux", nil
+}
+
+// GetOSVersion returns the current operating system version.
+var GetOSVersion = func() (*string, error) {
+	osName, err := getOperatingSystem()
+	if err != nil {
+		return nil, err
+	}
+
+	version := osVersionRegex.FindString(osName)
+	if version == "" {
+		return nil, fmt.Errorf("unable to find version in %q", osName)
+	}
+	return ptr.To(version), nil
+}
+
+// ExecCommandCombinedOutput executes the given command with the given arguments and returns the combined output. Exposed for testing.
+var ExecCommandCombinedOutput = func(ctx context.Context, command string, args ...string) ([]byte, error) {
+	return exec.CommandContext(ctx, command, args...).CombinedOutput()
+}
+
+func (r *Reconciler) updateOSInPlace(ctx context.Context, log logr.Logger, oscChanges *operatingSystemConfigChanges, osc *extensionsv1alpha1.OperatingSystemConfig, node *corev1.Node) error {
+	if !oscChanges.OSUpdate {
+		return nil
+	}
+
+	if osc.Status.InPlaceUpdates == nil || osc.Status.InPlaceUpdates.OSUpdate == nil || osc.Status.InPlaceUpdates.OSUpdate.Command ==
+		"" {
+		return fmt.Errorf("update command is not provided in OSC, cannot proceed with in-place update")
+	}
+
+	if osc.Spec.InPlaceUpdates == nil || osc.Spec.InPlaceUpdates.OperatingSystemVersion == "" {
+		return fmt.Errorf("operating system version is not provided in OSC, cannot proceed with in-place update")
+	}
+
+	log.Info("Adding annotation on node for OS update", "key", annotationUpdatingOSVersion, "value", osc.Spec.InPlaceUpdates.OperatingSystemVersion)
+	patch := client.MergeFrom(node.DeepCopy())
+	metav1.SetMetaDataAnnotation(&node.ObjectMeta, annotationUpdatingOSVersion, osc.Spec.InPlaceUpdates.OperatingSystemVersion)
+	if err := r.Client.Patch(ctx, node, patch); err != nil {
+		log.Error(err, "Failed to patch node with annotation for OS update", "node", node.Name)
+		return err
+	}
+
+	if err := retryutils.UntilTimeout(ctx, OSUpdateRetryInterval, OSUpdateRetryTimeout, func(_ context.Context) (done bool, err error) {
+		log.Info("Executing update script", "command", osc.Status.InPlaceUpdates.OSUpdate.Command, "args", strings.Join(osc.Status.InPlaceUpdates.OSUpdate.Args, " "))
+
+		if output, err2 := ExecCommandCombinedOutput(ctx, osc.Status.InPlaceUpdates.OSUpdate.Command, osc.Status.InPlaceUpdates.OSUpdate.Args...); err2 != nil {
+			if retriableErrorPatternRegex.MatchString(string(output)) {
+				return retryutils.MinorError(fmt.Errorf("retriable error detected: %w, output: %s", err2, string(output)))
+			} else if nonRetriableErrorPatternRegex.MatchString(string(output)) {
+				return retryutils.SevereError(fmt.Errorf("non-retriable error detected: %w, output: %s", err2, string(output)))
+			}
+
+			return retryutils.SevereError(fmt.Errorf("no specific error detected: %w, output: %s", err2, string(output)))
+		}
+
+		return retryutils.Ok()
+	}); err != nil {
+		if err2 := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("failed to execute update command: %v", err)); err2 != nil {
+			return err2
+		}
+	}
+
+	return nil
+}
+
+func (r *Reconciler) patchNodeUpdateSuccessful(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	log.Info("Marking the node with in-place update successful label", "node", node.Name)
+
+	patch := client.MergeFrom(node.DeepCopy())
+	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)
+	delete(node.Annotations, machinev1alpha1.AnnotationKeyMachineUpdateFailedReason)
+	delete(node.Annotations, annotationUpdatingOSVersion)
+	if err := r.Client.Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed patching node with update-successful label: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) patchNodeUpdateFailed(ctx context.Context, log logr.Logger, node *corev1.Node, reason string) error {
+	log.Info("Marking the node with in-place update failed label", "node", node.Name, "reason", reason)
+
+	patch := client.MergeFrom(node.DeepCopy())
+	metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed)
+	metav1.SetMetaDataAnnotation(&node.ObjectMeta, machinev1alpha1.AnnotationKeyMachineUpdateFailedReason, reason)
+
+	if err := r.Client.Patch(ctx, node, patch); err != nil {
+		return fmt.Errorf("failed patching node with update-failed label: %w", err)
+	}
+
+	return nil
 }
