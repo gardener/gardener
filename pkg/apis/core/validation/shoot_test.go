@@ -4231,6 +4231,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					EncryptedResources: []string{"configmaps"},
 				}),
+				Entry("when AutoInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+							AutoInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
+				Entry("when ManualInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+							ManualInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
 			)
 
 			DescribeTable("completing rotation of all credentials",
@@ -4534,6 +4554,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
+				Entry("when AutoInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+							AutoInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
+				Entry("when ManualInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+							ManualInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
 			)
 
 			DescribeTable("completing CA rotation",
@@ -4702,6 +4742,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleted,
 							},
+						},
+					},
+				}),
+				Entry("when AutoInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+							AutoInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
+				Entry("when ManualInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+							ManualInPlaceUpdate: []string{"worker-1"},
 						},
 					},
 				}),
