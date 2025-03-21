@@ -68,6 +68,10 @@ var _ = Describe("CopyBackupsTask", func() {
 
 	Describe("#Deploy", func() {
 		It("should create the EtcdCopyBackupsTask", func() {
+			expected.Spec.PodLabels = map[string]string{
+				"networking.gardener.cloud/to-dns":             "allowed",
+				"networking.gardener.cloud/to-public-networks": "allowed",
+			}
 			c.EXPECT().Create(ctx, expected)
 			Expect(etcdCopyBackupsTask.Deploy(ctx)).To(Succeed())
 		})
@@ -79,7 +83,7 @@ var _ = Describe("CopyBackupsTask", func() {
 			Expect(etcdCopyBackupsTask.Destroy(ctx)).To(Succeed())
 		})
 
-		It("should properly delete EtcdCopyBackupsTask resource if it exissts", func() {
+		It("should properly delete EtcdCopyBackupsTask resource if it exists", func() {
 			c.EXPECT().Delete(ctx, expected)
 			Expect(etcdCopyBackupsTask.Destroy(ctx)).To(Succeed())
 		})
