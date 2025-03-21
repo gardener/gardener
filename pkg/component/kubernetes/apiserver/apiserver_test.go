@@ -2683,7 +2683,7 @@ kind: AuthorizationConfiguration
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
 			})
 
-			haVPNClientContainerFor := func(index int, disableNewVPN bool) corev1.Container {
+			haVPNClientContainerFor := func(index int) corev1.Container {
 
 				var serviceCIDRs, podCIDRs, nodeCIDRs []string
 
@@ -2791,19 +2791,11 @@ kind: AuthorizationConfiguration
 					},
 				}
 
-				if disableNewVPN {
-					container.Env = append(container.Env,
-						corev1.EnvVar{
-							Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-							Value: "true",
-						},
-					)
-				}
 				return container
 			}
 
-			haVPNInitClientContainer := func(disableNewVPN bool) corev1.Container {
-				initContainer := haVPNClientContainerFor(0, disableNewVPN)
+			haVPNInitClientContainer := func() corev1.Container {
+				initContainer := haVPNClientContainerFor(0)
 				initContainer.Name = "vpn-client-init"
 				initContainer.LivenessProbe = nil
 				initContainer.Command = []string{"/bin/vpn-client", "setup"}
@@ -2830,26 +2822,11 @@ kind: AuthorizationConfiguration
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					ReadOnly:  true,
 				})
-				if !disableNewVPN {
-					initContainer.SecurityContext.Privileged = ptr.To(true)
-				}
-				if disableNewVPN {
-					initContainer.Command = nil
-					initContainer.Env = append(initContainer.Env,
-						corev1.EnvVar{
-							Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-							Value: "true",
-						},
-						corev1.EnvVar{
-							Name:  "CONFIGURE_BONDING",
-							Value: "true",
-						},
-					)
-				}
+				initContainer.SecurityContext.Privileged = ptr.To(true)
 				return initContainer
 			}
 
-			testHAVPN := func(disableNewVPN bool) {
+			testHAVPN := func() {
 				values = Values{
 					Values: apiserver.Values{
 						RuntimeVersion: runtimeVersion,
@@ -2864,20 +2841,19 @@ kind: AuthorizationConfiguration
 						PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
 						NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
 						IPFamilies:                           []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
-						DisableNewVPN:                        disableNewVPN,
 					},
 					Version: version,
 				}
 				kapi = New(kubernetesInterface, namespace, sm, values)
 				deployAndRead()
 
-				initContainer := haVPNInitClientContainer(disableNewVPN)
+				initContainer := haVPNInitClientContainer()
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
 				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
 				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 					labelKey := fmt.Sprintf("networking.resources.gardener.cloud/to-vpn-seed-server-%d-tcp-1194", i)
 					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
-					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i, disableNewVPN)))
+					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i)))
 				}
 
 				var serviceCIDRs, podCIDRs, nodeCIDRs []string
@@ -2953,10 +2929,6 @@ kind: AuthorizationConfiguration
 					TerminationMessagePath:   "/dev/termination-log",
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 				}
-				if disableNewVPN {
-					pathControllerContainer.Command = nil
-					pathControllerContainer.Args = []string{"/path-controller.sh"}
-				}
 				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(pathControllerContainer))
 
 				Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
@@ -3025,11 +2997,7 @@ kind: AuthorizationConfiguration
 			}
 
 			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled", func() {
-				testHAVPN(false)
-			})
-
-			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled and GO VPN rewrite disabled", func() {
-				testHAVPN(true)
+				testHAVPN()
 			})
 
 			Context("kube-apiserver container", func() {

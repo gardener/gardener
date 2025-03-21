@@ -748,23 +748,8 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 		},
 	}...)
 
-	if !k.values.VPN.DisableNewVPN {
-		// may need to enable IPv6 in pod network (e.g. for GKE clusters)
-		container.SecurityContext.Privileged = ptr.To(true)
-	}
-
-	if k.values.VPN.DisableNewVPN {
-		container.Command = nil
-		container.Env = append(container.Env,
-			corev1.EnvVar{
-				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-				Value: "true",
-			},
-			corev1.EnvVar{
-				Name:  "CONFIGURE_BONDING",
-				Value: "true",
-			})
-	}
+	// may need to enable IPv6 in pod network (e.g. for GKE clusters)
+	container.SecurityContext.Privileged = ptr.To(true)
 
 	container.LivenessProbe = nil
 	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
@@ -889,14 +874,6 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 		})
 	}
 
-	if k.values.VPN.DisableNewVPN {
-		container.Command = nil
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-			Value: "true",
-		})
-	}
-
 	return container
 }
 
@@ -918,7 +895,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		podCIDRs = append(podCIDRs, v.String())
 	}
 
-	container := &corev1.Container{
+	return &corev1.Container{
 		Name:            containerNameVPNPathController,
 		Image:           k.values.Images.VPNClient,
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -986,13 +963,6 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 	}
-
-	if k.values.VPN.DisableNewVPN {
-		container.Command = nil
-		container.Args = []string{"/path-controller.sh"}
-	}
-
-	return container
 }
 
 func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv1.Deployment) {

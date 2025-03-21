@@ -48,7 +48,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		vpnConfig.HighAvailabilityNumberOfShootClients = b.Shoot.VPNHighAvailabilityNumberOfShootClients
 		// Pod/service/node network CIDRs are set on deployment to handle dynamic network CIDRs
 		vpnConfig.IPFamilies = b.Seed.GetInfo().Spec.Networks.IPFamilies
-		vpnConfig.DisableNewVPN = !b.Shoot.UsesNewVPN
 	}
 
 	return shared.NewKubeAPIServer(

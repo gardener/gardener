@@ -127,10 +127,6 @@ const (
 	ContainerImageNameVpaUpdater = "vpa-updater"
 	// ContainerImageNameVpnClient is a constant for an image in the image vector with name 'vpn-client'.
 	ContainerImageNameVpnClient = "vpn-client"
-	// ContainerImageNameVpnSeedServer is a constant for an image in the image vector with name 'vpn-seed-server'.
-	ContainerImageNameVpnSeedServer = "vpn-seed-server"
 	// ContainerImageNameVpnServer is a constant for an image in the image vector with name 'vpn-server'.
 	ContainerImageNameVpnServer = "vpn-server"
-	// ContainerImageNameVpnShootClient is a constant for an image in the image vector with name 'vpn-shoot-client'.
-	ContainerImageNameVpnShootClient = "vpn-shoot-client"
 )

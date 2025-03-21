@@ -94,7 +94,6 @@ Some network ranges are reserved for specific use-cases in the communication bet
 
 | IPv  | CIDR                  | Name                         | Purpose                                                                                                                              |
 |------|-----------------------|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| IPv4 | 192.168.123.0/24      | Default VPN Range            | Used for communication between seed API server and shoot resources via VPN. Will be removed once feature gate `NewVPN` is graduated. |
 | IPv6 | fd8f:6d53:b97a:1::/96 | Default VPN Range            |                                                                                                                                      |
 | IPv4 | 240.0.0.0/8           | Kube-ApiServer Mapping Range | Used for the `kubernetes.default.svc.cluster.local` service in a shoot                                                               |
 
