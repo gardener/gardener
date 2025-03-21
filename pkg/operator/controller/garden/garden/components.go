@@ -157,7 +157,7 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// crds
-	c.etcdCRD, err = etcd.NewCRD(r.RuntimeClientSet.Client(), applier, r.RuntimeVersion)
+	c.etcdCRD, err = etcd.NewCRD(r.RuntimeClientSet.Client(), r.RuntimeVersion)
 	if err != nil {
 		return
 	}

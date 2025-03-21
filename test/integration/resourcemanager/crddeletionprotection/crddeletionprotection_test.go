@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
-	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -46,7 +45,8 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "containerruntimes.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "controlplanes.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "dnsrecords.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: druidcorecrds.ResourceNameEtcd}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "etcds.druid.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "etcdcopybackupstasks.druid.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "extensions.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "infrastructures.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "managedresources.resources.gardener.cloud"}},
@@ -84,13 +84,11 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(extensionCRDDeployer.Deploy(ctx)).To(Succeed())
 
-		etcdCRDAccess, err := etcd.NewCRD(c, applier, k8sVersion)
+		etcdCRDDeployer, err := etcd.NewCRD(c, k8sVersion)
 		Expect(err).NotTo(HaveOccurred())
-		etcdCRD, err := etcdCRDAccess.GetCRDYaml(druidcorecrds.ResourceNameEtcd)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(etcdCRDDeployer.Deploy(ctx)).To(Succeed())
 
 		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
-			etcdCRD,
 			resourcemanager.CRD,
 		}, "\n---\n")))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())

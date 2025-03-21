@@ -6,10 +6,17 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"time"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -74,4 +81,36 @@ func WaitUntilCRDManifestsDestroyed(ctx context.Context, c client.Client, crdNam
 		})
 	}
 	return flow.Parallel(fns...)(ctx)
+}
+
+var (
+	crdScheme  *runtime.Scheme
+	crdCodec   runtime.Codec
+	initOnceFn sync.Once
+)
+
+func initializeCRDSchemeAndCodec() {
+	crdScheme = runtime.NewScheme()
+	utilruntime.Must(apiextensionsv1.AddToScheme(crdScheme))
+	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, crdScheme, crdScheme, json.SerializerOptions{
+		Yaml:   true,
+		Pretty: false,
+		Strict: false,
+	})
+	versions := schema.GroupVersions([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
+	crdCodec = serializer.NewCodecFactory(crdScheme).CodecForVersions(ser, ser, versions, versions)
+}
+
+// DecodeCRD decodes a CRD from a YAML string.
+func DecodeCRD(crdYAML string) (*apiextensionsv1.CustomResourceDefinition, error) {
+	initOnceFn.Do(initializeCRDSchemeAndCodec)
+	obj, err := runtime.Decode(crdCodec, []byte(crdYAML))
+	if err != nil {
+		return nil, err
+	}
+	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
+	if !ok {
+		return nil, fmt.Errorf("expected *apiextensionsv1.CustomResourceDefinition, got %T", obj)
+	}
+	return crd, nil
 }
