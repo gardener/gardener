@@ -250,6 +250,7 @@ build:
             - pkg/operator/controller/virtual/access
             - pkg/operator/controller/virtual/cluster
             - pkg/operator/features
+            - pkg/operator/mapper
             - pkg/operator/predicate
             - pkg/operator/webhook
             - pkg/operator/webhook/defaulting
