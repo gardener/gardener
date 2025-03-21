@@ -6,6 +6,7 @@ package shoot
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -124,6 +125,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	}
 
 	if hasNodesCIDR {
+		err := o.Shoot.CheckDualStackMigrateNetworks(ctx, botanist.GardenClient, botanist.Clock)
+		if err != nil {
+			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
+		}
 		networks, err := shoot.ToNetworks(o.Shoot.GetInfo(), o.Shoot.IsWorkerless)
 		if err != nil {
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
@@ -812,6 +817,14 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployWorker, waitUntilWorkerStatusUpdate, deployManagedResourceForGardenerNodeAgent),
 		})
 		_ = g.Add(flow.Task{
+			Name: "Checking dualstack migration of nodes",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return checkPodCIDRSinNodes(ctx, o)
+			}),
+			SkipIf:       o.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Waiting until extension resources handled after workers are ready",
 			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitAfterWorker,
 			SkipIf:       o.Shoot.IsWorkerless || skipReadiness,
@@ -823,7 +836,23 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			SkipIf:       o.Shoot.IsWorkerless || !o.Shoot.HibernationEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
 		})
-
+		_ = g.Add(flow.Task{
+			Name: "Checking dualstack migration of network",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				// Check network providerStatus for ipfamilies
+				return checkNetworkStatusIPFamilies(ctx, o)
+			}),
+			SkipIf:       o.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Checking dualstack migration of infrastructure",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return checkInfraStatus(ctx, o)
+			}),
+			SkipIf:       o.Shoot.IsWorkerless,
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling Plutono for Shoot in Seed for the logging stack",
 			Fn:           flow.TaskFn(botanist.DeployPlutono).RetryUntilTimeout(defaultInterval, 2*time.Minute),
@@ -1051,6 +1080,109 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})
+}
+
+func checkNetworkStatusIPFamilies(ctx context.Context, o *operation.Operation) error {
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := o.GardenClient.Get(ctx, client.ObjectKeyFromObject(o.Shoot.GetInfo()), shoot); err != nil {
+		return err
+	}
+	condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootToDualStackMigration)
+	if condition != nil && condition.Status == gardencorev1beta1.ConditionDualStackNodes {
+		if o.ShootClientSet != nil {
+			network, err := o.Shoot.Components.Extensions.Network.Get(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get network resource: %w", err)
+			}
+			providerStatus := network.Status.GetProviderStatus()
+
+			if providerStatus.Raw == nil {
+				return nil
+			}
+			var networkStatus map[string]any
+			if err := json.Unmarshal(providerStatus.Raw, &networkStatus); err != nil {
+				return fmt.Errorf("failed to unmarshal network providerStatus: %w", err)
+			}
+			ipFamilies, ok := networkStatus["ipFamilies"]
+			if !ok {
+				return fmt.Errorf("failed to get ipFamilies from network providerStatus")
+			}
+
+			if len(ipFamilies.([]any)) != 2 {
+				return nil
+			}
+
+			o.Logger.Info("Checking network update shoot status")
+			if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+				shoot.Status.Constraints = v1beta1helper.RemoveConditions(shoot.Status.Constraints, gardencorev1beta1.ShootToDualStackMigration)
+				return nil
+			}); err != nil {
+				o.Logger.Info("Checking network update shoot status: error", "error", err)
+				return fmt.Errorf("checking network providerStatus failed to update shoot status: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+func checkInfraStatus(ctx context.Context, o *operation.Operation) error {
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := o.GardenClient.Get(ctx, client.ObjectKeyFromObject(o.Shoot.GetInfo()), shoot); err != nil {
+		return err
+	}
+	condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootToDualStackMigration)
+	if condition != nil && condition.Status == gardencorev1beta1.ConditionProgressing {
+		if o.ShootClientSet != nil {
+			infra, err := o.Shoot.Components.Extensions.Infrastructure.Get(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get infra resource: %w", err)
+			}
+			nodCIDRs := infra.Status.Networking.Nodes
+			if len(nodCIDRs) == 2 {
+				if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+					condition := v1beta1helper.GetOrInitConditionWithClock(o.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootToDualStackMigration)
+					condition = v1beta1helper.UpdatedConditionWithClock(o.Clock, condition, gardencorev1beta1.ConditionDualStackInfra, "ToDualStackMigration", "Infrastructure is migrated to dualstack.")
+					shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
+					return nil
+				}); err != nil {
+					return fmt.Errorf("checking infra providerStatus failed to update shoot status: %w", err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func checkPodCIDRSinNodes(ctx context.Context, o *operation.Operation) error {
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := o.GardenClient.Get(ctx, client.ObjectKeyFromObject(o.Shoot.GetInfo()), shoot); err != nil {
+		return err
+	}
+	condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootToDualStackMigration)
+	if condition != nil && condition.Status == gardencorev1beta1.ConditionDualStackInfra {
+		if o.ShootClientSet != nil {
+			nodeList := &corev1.NodeList{}
+			if err := o.ShootClientSet.Client().List(ctx, nodeList); err != nil {
+				return err
+			}
+			allNodesIPv6 := true
+			for _, node := range nodeList.Items {
+				allNodesIPv6 = allNodesIPv6 && len(node.Spec.PodCIDRs) == 2
+			}
+
+			if allNodesIPv6 {
+				if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+					condition := v1beta1helper.GetOrInitConditionWithClock(o.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootToDualStackMigration)
+					condition = v1beta1helper.UpdatedConditionWithClock(o.Clock, condition, gardencorev1beta1.ConditionDualStackNodes, "ToDualStackMigration", "Nodes are migrated to dual-stack networking.")
+					shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
+					return nil
+				}); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // TODO(oliver-goetz): Remove this when removing NodeAgentAuthorizer feature gate.

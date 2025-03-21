@@ -225,26 +225,6 @@ var _ = Describe("Network validation tests", func() {
 			}))))
 		})
 
-		It("should prevent updating the ipFamilies", func() {
-			newNetwork := prepareNetworkForUpdate(network)
-			newNetwork.Spec.IPFamilies = []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv6}
-
-			errorList := ValidateNetworkUpdate(newNetwork, network)
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.ipFamilies"),
-				"Detail": ContainSubstring("immutable"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.podCIDR"),
-				"Detail": Equal("must be a valid IPv6 address"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.serviceCIDR"),
-				"Detail": Equal("must be a valid IPv6 address"),
-			}))))
-		})
-
 		It("should allow updating the provider config", func() {
 			newNetwork := prepareNetworkForUpdate(network)
 			newNetwork.Spec.ProviderConfig = nil
