@@ -48,6 +48,17 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
   - events
   verbs:
   - get
@@ -216,6 +227,17 @@ rules:
   - watch
   - patch
   - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - delete
 - apiGroups:
   - ""
   resources:
