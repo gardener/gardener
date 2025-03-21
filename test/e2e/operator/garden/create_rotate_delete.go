@@ -86,8 +86,17 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				},
 			},
 			&rotationutils.ETCDEncryptionKeyVerifier{
-				RuntimeClient:               runtimeClient,
-				Namespace:                   namespace,
+				GetETCDSecretNamespace: func() string {
+					return namespace
+				},
+				ListETCDEncryptionSecretsFunc: func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error) {
+					secretList := &corev1.SecretList{}
+					if err := runtimeClient.List(ctx, secretList, namespace, matchLabels); err != nil {
+						return nil, err
+					}
+
+					return secretList, nil
+				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 					return garden.Status.Credentials.Rotation.ETCDEncryptionKey
@@ -96,8 +105,13 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
 			},
 			&rotationutils.ETCDEncryptionKeyVerifier{
-				RuntimeClient:               runtimeClient,
-				Namespace:                   namespace,
+				GetETCDSecretNamespace: func() string {
+					return namespace
+				},
+				ListETCDEncryptionSecretsFunc: func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error) {
+					secretList := &corev1.SecretList{}
+					return secretList, runtimeClient.List(ctx, secretList, namespace, matchLabels)
+				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 					return garden.Status.Credentials.Rotation.ETCDEncryptionKey
@@ -106,8 +120,13 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				RoleLabelValue: v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration,
 			},
 			&rotationutils.ServiceAccountKeyVerifier{
-				RuntimeClient:               runtimeClient,
-				Namespace:                   namespace,
+				GetServiceAccountKeySecretNamespace: func() string {
+					return namespace
+				},
+				ListServiceAccountKeySecretsFunc: func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error) {
+					secretList := &corev1.SecretList{}
+					return secretList, runtimeClient.List(ctx, secretList, namespace, matchLabels)
+				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetServiceAccountKeyRotation: func() *gardencorev1beta1.ServiceAccountKeyRotation {
 					return garden.Status.Credentials.Rotation.ServiceAccountKey
