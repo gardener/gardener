@@ -40,6 +40,12 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				Backup: &core.SeedBackup{
 					Provider: "foo",
 					Region:   ptr.To("some-region"),
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       "backup-test",
+						Namespace:  "garden",
+					},
 					SecretRef: corev1.SecretReference{
 						Name:      "backup-test",
 						Namespace: "garden",

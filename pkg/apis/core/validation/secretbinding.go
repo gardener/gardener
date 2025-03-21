@@ -19,7 +19,7 @@ func ValidateSecretBinding(binding *core.SecretBinding) field.ErrorList {
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateSecretReferenceOptionalNamespace(binding.SecretRef, field.NewPath("secretRef"))...)
 	for i, quota := range binding.Quotas {
-		allErrs = append(allErrs, validateObjectReferenceOptionalNamespace(quota, field.NewPath("quotas").Index(i))...)
+		allErrs = append(allErrs, ValidateObjectReferenceNameAndNamespace(quota, field.NewPath("quotas").Index(i), false)...)
 	}
 
 	return allErrs
@@ -61,23 +61,7 @@ func ValidateSecretBindingProvider(provider *core.SecretBindingProvider) field.E
 
 // ValidateAuditPolicyConfigMapReference validates the audit policy config map reference.
 func ValidateAuditPolicyConfigMapReference(ref *corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(ref.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
-	}
-
-	return allErrs
-}
-
-func validateObjectReferenceOptionalNamespace(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(ref.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
-	}
-
-	return allErrs
+	return ValidateObjectReferenceNameAndNamespace(*ref, fldPath, false)
 }
 
 func validateSecretReferenceOptionalNamespace(ref corev1.SecretReference, fldPath *field.Path) field.ErrorList {

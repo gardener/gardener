@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -17,6 +18,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -65,6 +67,7 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 
 	g.deleteAllIncomingEdges(VertexTypeSeed, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
+	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllIncomingEdges(VertexTypeServiceAccount, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllIncomingEdges(VertexTypeClusterRoleBinding, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
 	g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeShoot)
@@ -85,8 +88,20 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 
 	if seedTemplate != nil {
 		if seedTemplate.Spec.Backup != nil {
-			secretVertex := g.getOrCreateVertex(VertexTypeSecret, seedTemplate.Spec.Backup.SecretRef.Namespace, seedTemplate.Spec.Backup.SecretRef.Name)
-			g.addEdge(secretVertex, managedSeedVertex)
+			var (
+				namespace = seedTemplate.Spec.Backup.CredentialsRef.Namespace
+				name      = seedTemplate.Spec.Backup.CredentialsRef.Name
+				vertex    *vertex
+			)
+
+			if seedTemplate.Spec.Backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+				seedTemplate.Spec.Backup.CredentialsRef.Kind == "WorkloadIdentity" {
+				vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
+			} else if seedTemplate.Spec.Backup.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+				seedTemplate.Spec.Backup.CredentialsRef.Kind == "Secret" {
+				vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
+			}
+			g.addEdge(vertex, managedSeedVertex)
 		}
 	}
 
