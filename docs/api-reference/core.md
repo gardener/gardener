@@ -483,6 +483,23 @@ Limits
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>capabilities</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Capabilities">
+Capabilities
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Capabilities contains the definition of all possible capabilities in the CloudProfile.
+Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+The order of values for a given capability is relevant. The most important value is listed first.
+During maintenance upgrades, the image that matches most capabilities will be selected.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3418,6 +3435,75 @@ CRIName
 <p>
 <p>CRIName is a type alias for the CRI name string.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.Capabilities">Capabilities
+(<code>map[string]github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CapabilitySet">CapabilitySet</a>, 
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.MachineType">MachineType</a>)
+</p>
+<p>
+<p>Capabilities of a machine type or machine image.</p>
+</p>
+<h3 id="core.gardener.cloud/v1beta1.CapabilitySet">CapabilitySet
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
+</p>
+<p>
+<p>CapabilitySet is a wrapper for Capabilities.
+This is a workaround as the Protobuf generator can&rsquo;t handle a slice of maps.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Capabilities</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Capabilities">
+Capabilities
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.CapabilityValues">CapabilityValues
+</h3>
+<p>
+<p>CapabilityValues contains capability values.
+This is a workaround as the Protobuf generator can&rsquo;t handle a map with slice values.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>Values</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.CloudProfileReference">CloudProfileReference
 </h3>
 <p>
@@ -3627,6 +3713,23 @@ Limits
 <em>(Optional)</em>
 <p>Limits configures operational limits for Shoot clusters using this CloudProfile.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>capabilities</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Capabilities">
+Capabilities
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Capabilities contains the definition of all possible capabilities in the CloudProfile.
+Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+The order of values for a given capability is relevant. The most important value is listed first.
+During maintenance upgrades, the image that matches most capabilities will be selected.</p>
 </td>
 </tr>
 </tbody>
@@ -8251,6 +8354,21 @@ InPlaceUpdates
 <p>InPlaceUpdates contains the configuration for in-place updates for this machine image version.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>capabilitySets</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CapabilitySet">
+[]CapabilitySet
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+the machine image version.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MachineType">MachineType
@@ -8357,6 +8475,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>Architecture is the CPU architecture of this machine type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>capabilities</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Capabilities">
+Capabilities
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Capabilities contains the the machine type capabilities.</p>
 </td>
 </tr>
 </tbody>
