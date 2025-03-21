@@ -5,9 +5,14 @@
 package v1beta1
 
 import (
+	"encoding/json"
+	"slices"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // +genclient
@@ -81,6 +86,12 @@ type CloudProfileSpec struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 	// +optional
 	Limits *Limits `json:"limits,omitempty" protobuf:"bytes,11,opt,name=limits"`
+	// Capabilities contains the definition of all possible capabilities in the CloudProfile.
+	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+	// The order of values for a given capability is relevant. The most important value is listed first.
+	// During maintenance upgrades, the image that matches most capabilities will be selected.
+	// +optional
+	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=capabilities,casttype=Capabilities"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -137,6 +148,29 @@ type MachineImageVersion struct {
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	// +optional
 	InPlaceUpdates *InPlaceUpdates `json:"inPlaceUpdates,omitempty" protobuf:"bytes,5,opt,name=inPlaceUpdates"`
+	// CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+	// the machine image version.
+	// +optional
+	CapabilitySets []CapabilitySet `json:"capabilitySets,omitempty" protobuf:"bytes,6,rep,name=capabilitySets"`
+}
+
+func (v *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, architecture string) bool {
+	if len(capabilities) == 0 {
+		return slices.Contains(v.Architectures, architecture)
+	}
+	for _, capability := range v.CapabilitySets {
+		if slices.Contains(capability.Capabilities[constants.ArchitectureKey].Values, architecture) {
+			return true
+		}
+	}
+	return slices.Contains(capabilities[constants.ArchitectureKey].Values, architecture)
+}
+
+func (v *MachineImageVersion) GetArchitectures(capabilities Capabilities) []string {
+	if len(capabilities) > 0 {
+		return ExtractArchitectures(v.CapabilitySets)
+	}
+	return v.Architectures
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -170,6 +204,9 @@ type MachineType struct {
 	// Architecture is the CPU architecture of this machine type.
 	// +optional
 	Architecture *string `json:"architecture,omitempty" protobuf:"bytes,7,opt,name=architecture"`
+	// Capabilities contains the the machine type capabilities.
+	// +optional
+	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,8,rep,name=capabilities,casttype=Capabilities"`
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
@@ -309,4 +346,58 @@ type InPlaceUpdates struct {
 	// MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
 	// +optional
 	MinVersionForUpdate *string `json:"minVersionForUpdate,omitempty" protobuf:"bytes,2,opt,name=minVersionForUpdate"`
+}
+
+// CapabilityValues contains capability values.
+// This is a workaround as the Protobuf generator can't handle a map with slice values.
+type CapabilityValues struct {
+	Values []string `protobuf:"bytes,1,rep,name=values"`
+}
+
+// UnmarshalJSON unmarshals the CapabilityValues object from JSON.
+func (c *CapabilityValues) UnmarshalJSON(bytes []byte) error {
+	var values []string
+	if err := json.Unmarshal(bytes, &values); err != nil {
+		return err
+	}
+
+	c.Values = append(c.Values, values...)
+
+	return nil
+}
+
+// MarshalJSON marshals the CapabilityValues object to JSON.
+func (c CapabilityValues) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.Values)
+}
+
+// Capabilities of a machine type or machine image.
+type Capabilities map[string]CapabilityValues
+
+// CapabilitySet is a wrapper for Capabilities.
+// This is a workaround as the Protobuf generator can't handle a slice of maps.
+type CapabilitySet struct {
+	Capabilities `protobuf:"bytes,1,rep,name=capabilities,casttype=Capabilities"`
+}
+
+// UnmarshalJSON unmarshals the given data to a CapabilitySet
+func (c *CapabilitySet) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &c.Capabilities)
+}
+
+// MarshalJSON marshals the CapabilitySet object to JSON.
+func (c *CapabilitySet) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.Capabilities)
+}
+
+func ExtractArchitectures(capabilities []CapabilitySet) []string {
+	var architectures []string
+	for _, capabilitySet := range capabilities {
+		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey].Values {
+			if !slices.Contains(architectures, architectureValue) {
+				architectures = append(architectures, architectureValue)
+			}
+		}
+	}
+	return architectures
 }
