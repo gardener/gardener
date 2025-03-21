@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -43,6 +44,7 @@ var _ = Describe("VPNShoot", func() {
 				Networks: &shootpkg.Networks{
 					Pods:     []net.IPNet{{IP: []byte("192.168.0.0"), Mask: []byte("16")}},
 					Services: []net.IPNet{{IP: []byte("10.0.0.0"), Mask: []byte("24")}},
+					Nodes:    []net.IPNet{{IP: []byte("10.181.0.0"), Mask: []byte("16")}},
 				},
 			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -52,6 +54,9 @@ var _ = Describe("VPNShoot", func() {
 					},
 					Networking: &gardencorev1beta1.Networking{
 						IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+						Pods:       ptr.To("192.168.0.0/16"),
+						Services:   ptr.To("10.0.0.0/24"),
+						Nodes:      ptr.To("10.181.0.0/16"),
 					},
 				},
 			})
