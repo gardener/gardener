@@ -112,6 +112,25 @@ var _ = Describe("Helper", func() {
 			BeTrue()),
 	)
 
+	DescribeTable("#ShootNeedsForceInPlaceUpdate",
+		func(shoot *core.Shoot, match gomegatypes.GomegaMatcher) {
+			Expect(ShootNeedsForceInPlaceUpdate(shoot)).To(match)
+		},
+
+		Entry("shoot is nil",
+			nil,
+			BeFalse()),
+		Entry("no force-update annotation present",
+			&core.Shoot{},
+			BeFalse()),
+		Entry("force-update annotation present but value is false",
+			&core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationForceInPlaceUpdate: "0"}}},
+			BeFalse()),
+		Entry("force-update annotation present and value is true",
+			&core.Shoot{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.AnnotationForceInPlaceUpdate: "t"}}},
+			BeTrue()),
+	)
+
 	Describe("#IsHAControlPlaneConfigured", func() {
 		var shoot *core.Shoot
 
@@ -484,6 +503,27 @@ var _ = Describe("Helper", func() {
 		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{}, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
+	)
+
+	var (
+		sampleShootKubelet = &core.KubeletConfig{
+			MaxPods: ptr.To(int32(50)),
+		}
+		sampleWorkerKubelet = &core.KubeletConfig{
+			MaxPods: ptr.To(int32(100)),
+		}
+	)
+
+	DescribeTable("#CalculateEffectiveKubeletConfiguration",
+		func(shootKubelet *core.KubeletConfig, workerKubernetes *core.WorkerKubernetes, expectedRes *core.KubeletConfig) {
+			res := CalculateEffectiveKubeletConfiguration(shootKubelet, workerKubernetes)
+			Expect(res).To(Equal(expectedRes))
+		},
+
+		Entry("all nil", nil, nil, nil),
+		Entry("workerKubernetes = nil", sampleShootKubelet, nil, sampleShootKubelet),
+		Entry("workerKubernetes.kubelet = nil", sampleShootKubelet, &core.WorkerKubernetes{}, sampleShootKubelet),
+		Entry("workerKubernetes.kubelet != nil", sampleShootKubelet, &core.WorkerKubernetes{Kubelet: sampleWorkerKubelet}, sampleWorkerKubelet),
 	)
 
 	DescribeTable("#SystemComponentsAllowed",

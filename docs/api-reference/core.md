@@ -5957,6 +5957,49 @@ float64
 <p>
 <p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.InPlaceUpdatePendingWorkers">InPlaceUpdatePendingWorkers
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.InPlaceUpdatesStatus">InPlaceUpdatesStatus</a>)
+</p>
+<p>
+<p>InPlaceUpdatePendingWorkers contains information about a worker pool pending in-place update.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>autoInPlaceUpdate</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>manualInPlaceUpdate</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.InPlaceUpdates">InPlaceUpdates
 </h3>
 <p>
@@ -5995,6 +6038,39 @@ string
 <td>
 <em>(Optional)</em>
 <p>MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.InPlaceUpdatesStatus">InPlaceUpdatesStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
+</p>
+<p>
+<p>InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>pendingWorkersRollouts</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.InPlaceUpdatePendingWorkers">
+InPlaceUpdatePendingWorkers
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PendingWorkersRollouts contains information about worker pools pending in-place updates.</p>
 </td>
 </tr>
 </tbody>
@@ -13035,6 +13111,20 @@ NetworkingStatus
 <td>
 <em>(Optional)</em>
 <p>Networking contains information about cluster networking such as CIDRs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>inPlaceUpdates</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.InPlaceUpdatesStatus">
+InPlaceUpdatesStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InPlaceUpdates contains information about in-place updates for the Shoot workers.</p>
 </td>
 </tr>
 </tbody>

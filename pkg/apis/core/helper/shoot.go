@@ -64,6 +64,21 @@ func ShootNeedsForceDeletion(shoot *core.Shoot) bool {
 	return forceDelete
 }
 
+// ShootNeedsForceInPlaceUpdate determines whether a Shoot should be forcefully updated in-place or not.
+func ShootNeedsForceInPlaceUpdate(shoot *core.Shoot) bool {
+	if shoot == nil {
+		return false
+	}
+
+	value, ok := shoot.Annotations[v1beta1constants.AnnotationForceInPlaceUpdate]
+	if !ok {
+		return false
+	}
+
+	forceDelete, _ := strconv.ParseBool(value)
+	return forceDelete
+}
+
 // IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set.
 func IsHAControlPlaneConfigured(shoot *core.Shoot) bool {
 	return shoot.Spec.ControlPlane != nil && shoot.Spec.ControlPlane.HighAvailability != nil
@@ -204,6 +219,15 @@ func CalculateEffectiveKubernetesVersion(controlPlaneVersion *semver.Version, wo
 		return semver.NewVersion(*workerKubernetes.Version)
 	}
 	return controlPlaneVersion, nil
+}
+
+// CalculateEffectiveKubeletConfiguration returns the worker group specific kubelet configuration if available.
+// Otherwise the shoot kubelet configuration is returned
+func CalculateEffectiveKubeletConfiguration(shootKubelet *core.KubeletConfig, workerKubernetes *core.WorkerKubernetes) *core.KubeletConfig {
+	if workerKubernetes != nil && workerKubernetes.Kubelet != nil {
+		return workerKubernetes.Kubelet
+	}
+	return shootKubelet
 }
 
 // SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it

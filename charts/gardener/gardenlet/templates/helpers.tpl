@@ -249,6 +249,10 @@ controllers:
     concurrentSyncs: {{ required ".Values.config.controllers.shootState.concurrentSyncs is required" .Values.config.controllers.shootState.concurrentSyncs }}
     syncPeriod: {{ required ".Values.config.controllers.shootState.syncPeriod is required" .Values.config.controllers.shootState.syncPeriod }}
   {{- end }}
+  {{- if .Values.config.controllers.shootStatus }}
+  shootStatus:
+    concurrentSyncs: {{ required ".Values.config.controllers.shootStatus.concurrentSyncs is required" .Values.config.controllers.shootStatus.concurrentSyncs }}
+  {{- end }}
   {{- if .Values.config.controllers.managedSeed }}
   managedSeed:
     concurrentSyncs: {{ required ".Values.config.controllers.managedSeed.concurrentSyncs is required" .Values.config.controllers.managedSeed.concurrentSyncs }}

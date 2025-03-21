@@ -214,6 +214,9 @@ type ShootStatus struct {
 	// Networking contains information about cluster networking such as CIDRs.
 	// +optional
 	Networking *NetworkingStatus `json:"networking,omitempty" protobuf:"bytes,19,opt,name=networking"`
+	// InPlaceUpdates contains information about in-place updates for the Shoot workers.
+	// +optional
+	InPlaceUpdates *InPlaceUpdatesStatus `json:"inPlaceUpdates,omitempty" protobuf:"bytes,20,opt,name=inPlaceUpdates"`
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -245,6 +248,23 @@ type NetworkingStatus struct {
 	// extension controller may opt to not populate this field.
 	// +optional
 	EgressCIDRs []string `json:"egressCIDRs,omitempty" protobuf:"bytes,4,rep,name=egressCIDRs"`
+}
+
+// InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.
+type InPlaceUpdatesStatus struct {
+	// PendingWorkersRollouts contains information about worker pools pending in-place updates.
+	// +optional
+	PendingWorkersRollouts *InPlaceUpdatePendingWorkers `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,1,opt,name=pendingWorkersRollouts"`
+}
+
+// InPlaceUpdatePendingWorkers contains information about a worker pool pending in-place update.
+type InPlaceUpdatePendingWorkers struct {
+	// AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.
+	// +optional
+	AutoInPlaceUpdate []string `json:"autoInPlaceUpdate,omitempty" protobuf:"bytes,1,rep,name=autoInPlaceUpdate"`
+	// ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.
+	// +optional
+	ManualInPlaceUpdate []string `json:"manualInPlaceUpdate,omitempty" protobuf:"bytes,2,rep,name=manualInPlaceUpdate"`
 }
 
 // ShootCredentials contains information about the shoot credentials.
@@ -1958,6 +1978,9 @@ const (
 	// ShootAPIServerProxyUsesHTTPProxy is a constant for a constraint type indicating that the Shoot cluster uses
 	// the new HTTP proxy connection method for in-cluster API server traffic (See https://github.com/gardener/gardener/blob/master/docs/proposals/30-apiserver-proxy.md)
 	ShootAPIServerProxyUsesHTTPProxy ConditionType = "APIServerProxyUsesHTTPProxy"
+	// ShootManualInPlaceWorkersUpdated is a constant for a condition type indicating that the Shoot cluster does not have
+	// any worker pools with update strategy "ManualInPlaceUpdate" and pending update.
+	ShootManualInPlaceWorkersUpdated ConditionType = "ManualInPlaceWorkersUpdated"
 	// ShootReadyForMigration is a constant for a condition type indicating whether the Shoot can be migrated.
 	ShootReadyForMigration ConditionType = "ReadyForMigration"
 )
