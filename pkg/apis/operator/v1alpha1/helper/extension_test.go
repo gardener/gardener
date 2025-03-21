@@ -14,6 +14,18 @@ import (
 )
 
 var _ = Describe("Extension", func() {
+	Describe("#ExtensionAdmissionRuntimeManagedResourceName", func() {
+		It("should return the expected managed resource name", func() {
+			Expect(ExtensionAdmissionRuntimeManagedResourceName("provider-test")).To(Equal("extension-admission-runtime-provider-test"))
+		})
+	})
+
+	Describe("#ExtensionAdmissionVirtualManagedResourceName", func() {
+		It("should return the expected managed resource name", func() {
+			Expect(ExtensionAdmissionVirtualManagedResourceName("provider-test")).To(Equal("extension-admission-virtual-provider-test"))
+		})
+	})
+
 	Describe("#ExtensionRuntimeManagedResourceName", func() {
 		It("should return the expected managed resource name", func() {
 			Expect(ExtensionRuntimeManagedResourceName("provider-test")).To(Equal("extension-provider-test-garden"))

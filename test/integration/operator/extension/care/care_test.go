@@ -132,7 +132,7 @@ var _ = Describe("Extension Care controller tests", func() {
 			log.Info("Created ManagedResource", "managedResource", client.ObjectKeyFromObject(managedResource))
 
 			DeferCleanup(func() {
-				By("Delete ManagedResource for runtime extension")
+				By("Delete ManagedResource for extension in runtime cluster")
 				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: testNamespace.Name}})).To(Succeed())
 			})
 		})
@@ -162,6 +162,129 @@ var _ = Describe("Extension Care controller tests", func() {
 				WithStatus(gardencorev1beta1.ConditionTrue),
 				WithReason("ExtensionComponentsRunning"),
 				WithMessageSubstrings("All extension components are healthy."),
+			))
+		})
+	})
+
+	Context("when Extension admission exists", func() {
+		extensionName := "bar"
+		managedResourceRuntimeName := "extension-admission-runtime-bar"
+		managedResourceVirtualName := "extension-admission-virtual-bar"
+
+		BeforeEach(func() {
+			By("Create Extension")
+			extension = &operatorv1alpha1.Extension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: extensionName,
+				},
+				Spec: operatorv1alpha1.ExtensionSpec{
+					Deployment: &operatorv1alpha1.Deployment{
+						AdmissionDeployment: &operatorv1alpha1.AdmissionDeploymentSpec{},
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, extension)).To(Succeed())
+			log.Info("Created Extension for test", "extension", client.ObjectKeyFromObject(extension))
+
+			DeferCleanup(func() {
+				By("Delete Extension")
+				Expect(testClient.Delete(ctx, &operatorv1alpha1.Extension{ObjectMeta: metav1.ObjectMeta{Name: extensionName}})).To(Succeed())
+			})
+
+			By("Create ManagedResource for runtime cluster")
+			managedResourceRuntime := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceRuntimeName,
+					Namespace: testNamespace.Name,
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					Class:      ptr.To("seed"),
+					SecretRefs: []corev1.LocalObjectReference{{Name: "bar-runtime-secret"}},
+				},
+			}
+			Expect(testClient.Create(ctx, managedResourceRuntime)).To(Succeed())
+			log.Info("Created ManagedResource", "managedResource", client.ObjectKeyFromObject(managedResourceRuntime))
+
+			DeferCleanup(func() {
+				By("Delete ManagedResource for extension admission in runtime cluster")
+				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceRuntimeName, Namespace: testNamespace.Name}})).To(Succeed())
+			})
+
+			By("Create ManagedResource for virtual cluster")
+			managedResourceVirtual := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceVirtualName,
+					Namespace: testNamespace.Name,
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					SecretRefs: []corev1.LocalObjectReference{{Name: "bar-virtual-secret"}},
+				},
+			}
+			Expect(testClient.Create(ctx, managedResourceVirtual)).To(Succeed())
+			log.Info("Created ManagedResource", "managedResource", client.ObjectKeyFromObject(managedResourceVirtual))
+
+			DeferCleanup(func() {
+				By("Delete ManagedResource for extension admission in virtual cluster")
+				Expect(testClient.Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceVirtualName, Namespace: testNamespace.Name}})).To(Succeed())
+			})
+		})
+
+		It("should set condition to False because all ManagedResource statuses are outdated", func() {
+			By("Expect ExtensionHealthy condition to be False")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+				return extension.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ExtensionAdmissionHealthy),
+				WithStatus(gardencorev1beta1.ConditionFalse),
+				WithReason("OutdatedStatus"),
+				WithMessageSubstrings("observed generation of managed resource"),
+			))
+		})
+
+		It("should set condition to False because status of virtual ManagedResource statuses is outdated", func() {
+			updateManagedResourceStatusToHealthy(managedResourceRuntimeName)
+
+			By("Expect ExtensionHealthy condition to be False")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+				return extension.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ExtensionAdmissionHealthy),
+				WithStatus(gardencorev1beta1.ConditionFalse),
+				WithReason("OutdatedStatus"),
+				WithMessageSubstrings("observed generation of managed resource"),
+			))
+		})
+
+		It("should set condition to False because status of runtime ManagedResource statuses is outdated", func() {
+			updateManagedResourceStatusToHealthy(managedResourceVirtualName)
+
+			By("Expect ExtensionHealthy condition to be False")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+				return extension.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ExtensionAdmissionHealthy),
+				WithStatus(gardencorev1beta1.ConditionFalse),
+				WithReason("OutdatedStatus"),
+				WithMessageSubstrings("observed generation of managed resource"),
+			))
+		})
+
+		It("should set condition to True because all ManagedResource statuses are healthy", func() {
+			updateManagedResourceStatusToHealthy(managedResourceVirtualName)
+			updateManagedResourceStatusToHealthy(managedResourceRuntimeName)
+
+			By("Expect ExtensionHealthy condition to be True")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+				return extension.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ExtensionAdmissionHealthy),
+				WithStatus(gardencorev1beta1.ConditionTrue),
+				WithReason("ExtensionAdmissionComponentsRunning"),
+				WithMessageSubstrings("All extension admission components are healthy."),
 			))
 		})
 	})
