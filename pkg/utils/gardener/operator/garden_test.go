@@ -100,9 +100,7 @@ var _ = Describe("Garden", func() {
 				},
 			}
 
-			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(ConsistOf(
-				"BackupBucket/local-infrastructure",
-			))
+			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(BeEmpty())
 		})
 
 		It("should return required DNSRecord extension types", func() {
@@ -161,7 +159,6 @@ var _ = Describe("Garden", func() {
 			}
 
 			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(ConsistOf(
-				"BackupBucket/local-infrastructure",
 				"DNSRecord/local-dns",
 				"Extension/local-extension-1",
 				"Extension/local-extension-2",

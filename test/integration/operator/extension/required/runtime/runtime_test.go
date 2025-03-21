@@ -189,10 +189,10 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 	It("should report extensions as required after garden was created", func() {
 		Expect(testClient.Create(ctx, garden)).To(Succeed())
 
-		for _, ext := range []client.Object{providerExtension, dnsExtension} {
+		for _, ext := range []client.Object{dnsExtension} {
 			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ext), ext)).To(Succeed())
-				return providerExtension.Status.Conditions
+				return dnsExtension.Status.Conditions
 			}).Should(ContainCondition(
 				OfType(operatorv1alpha1.ExtensionRequiredRuntime),
 				WithStatus(gardencorev1beta1.ConditionTrue),
@@ -299,15 +299,6 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
 			WithStatus(gardencorev1beta1.ConditionFalse),
 			WithReason("ExtensionNotRequired"),
-		))
-
-		Consistently(func(g Gomega) []gardencorev1beta1.Condition {
-			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(providerExtension), providerExtension)).To(Succeed())
-			return providerExtension.Status.Conditions
-		}).Should(ContainCondition(
-			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
-			WithStatus(gardencorev1beta1.ConditionTrue),
-			WithReason("ExtensionRequired"),
 		))
 	})
 

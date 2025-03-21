@@ -122,7 +122,6 @@ var _ = Describe("Add", func() {
 
 				It("should return the expected extensions", func() {
 					Expect(mapperFunc(ctx, garden)).To(ConsistOf(
-						Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: infraExtension.Name}}),
 						Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: dnsExtension.Name}}),
 					))
 				})
