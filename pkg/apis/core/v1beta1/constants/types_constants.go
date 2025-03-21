@@ -808,8 +808,6 @@ const (
 	// or the specified namespace was not present.
 	NamespaceCreatedByProjectController = "namespace.gardener.cloud/created-by-project-controller"
 
-	// DefaultVPNRange is the default IPv4 network range for the VPN between seed and shoot cluster.
-	DefaultVPNRange = "192.168.123.0/24"
 	// DefaultVPNRangeV6 is the default IPv6 network range for the VPN between seed and shoot cluster.
 	DefaultVPNRangeV6 = "fd8f:6d53:b97a:1::/96"
 	// ReservedKubeApiServerMappingRange is the IPv4 network range for the "kubernetes" service used by apiserver-proxy
