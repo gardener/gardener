@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/extensions"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -100,6 +101,10 @@ func (e *etcdCopyBackupsTask) Deploy(ctx context.Context) error {
 	e.task.Spec.SourceStore = e.values.SourceStore
 	e.task.Spec.TargetStore = e.values.TargetStore
 	e.task.Spec.WaitForFinalSnapshot = e.values.WaitForFinalSnapshot
+	e.task.Spec.PodLabels = map[string]string{
+		v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+	}
 	return e.client.Create(ctx, e.task)
 }
 
