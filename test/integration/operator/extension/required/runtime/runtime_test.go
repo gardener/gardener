@@ -23,6 +23,7 @@ import (
 var _ = Describe("Extension Required Runtime controller tests", Ordered, func() {
 	var (
 		providerExtension, dnsExtension, extension *operatorv1alpha1.Extension
+		extextension                               *extensionsv1alpha1.Extension
 
 		backupBucketProvider string
 		dnsProvider          string
@@ -83,6 +84,19 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 						Kind: "Extension",
 						Type: extensionProvider,
 					},
+				},
+			},
+		}
+
+		extextension = &extensionsv1alpha1.Extension{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      extensionProvider,
+				Namespace: testNamespace.Name,
+			},
+			Spec: extensionsv1alpha1.ExtensionSpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{
+					Class: ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+					Type:  extensionProvider,
 				},
 			},
 		}
@@ -217,6 +231,32 @@ var _ = Describe("Extension Required Runtime controller tests", Ordered, func() 
 		}
 
 		Expect(testClient.Update(ctx, garden)).To(Succeed())
+
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+			return extension.Status.Conditions
+		}).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
+			WithStatus(gardencorev1beta1.ConditionFalse),
+			WithReason("ExtensionNotRequired"),
+		))
+	})
+
+	It("should report generic extension as still required after extension is removed from spec, but extension.extension resource is existing", func() {
+		Expect(testClient.Create(ctx, extextension)).To(Succeed())
+
+		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+			return extension.Status.Conditions
+		}).Should(ContainCondition(
+			OfType(operatorv1alpha1.ExtensionRequiredRuntime),
+			WithStatus(gardencorev1beta1.ConditionTrue),
+			WithReason("ExtensionRequired"),
+		))
+	})
+
+	It("should report generic extension as not required after garden removed it and no extension.extension resource is existing anymore", func() {
+		Expect(testClient.Delete(ctx, extextension)).To(Succeed())
 
 		Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
