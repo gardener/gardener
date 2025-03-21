@@ -157,7 +157,10 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// crds
-	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
+	c.etcdCRD, err = etcd.NewCRD(r.RuntimeClientSet.Client(), r.RuntimeVersion)
+	if err != nil {
+		return
+	}
 	c.vpaCRD = vpa.NewCRD(applier, nil)
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	c.fluentCRD, err = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)

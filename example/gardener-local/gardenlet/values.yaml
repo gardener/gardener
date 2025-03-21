@@ -41,9 +41,6 @@ config:
     NodeAgentAuthorizer: true
     IstioTLSTermination: true
     RemoveAPIServerProxyLegacyPort: true
-  etcdConfig:
-    featureGates:
-      UseEtcdWrapper: true
   logging:
     enabled: true
     vali:

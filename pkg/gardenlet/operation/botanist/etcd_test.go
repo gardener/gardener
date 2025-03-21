@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
@@ -30,6 +30,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -104,17 +105,18 @@ var _ = Describe("Etcd", func() {
 			})
 
 			validator = &newEtcdValidator{
-				expectedClient:                  Equal(c),
-				expectedLogger:                  BeAssignableToTypeOf(logr.Logger{}),
-				expectedNamespace:               Equal(namespace),
-				expectedSecretsManager:          Equal(sm),
-				expectedRole:                    Equal(role),
-				expectedClass:                   Equal(class),
-				expectedReplicas:                PointTo(Equal(int32(1))),
-				expectedStorageCapacity:         Equal("10Gi"),
-				expectedDefragmentationSchedule: Equal(ptr.To("34 12 */3 * *")),
-				expectedMaintenanceTimeWindow:   Equal(maintenanceTimeWindow),
-				expectedHighAvailabilityEnabled: Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
+				expectedClient:                    Equal(c),
+				expectedLogger:                    BeAssignableToTypeOf(logr.Logger{}),
+				expectedNamespace:                 Equal(namespace),
+				expectedSecretsManager:            Equal(sm),
+				expectedRole:                      Equal(role),
+				expectedClass:                     Equal(class),
+				expectedReplicas:                  PointTo(Equal(int32(1))),
+				expectedETCDMainStorageCapacity:   Equal("25Gi"),
+				expectedETCDEventsStorageCapacity: Equal("10Gi"),
+				expectedDefragmentationSchedule:   Equal(ptr.To("34 12 */3 * *")),
+				expectedMaintenanceTimeWindow:     Equal(maintenanceTimeWindow),
+				expectedHighAvailabilityEnabled:   Equal(v1beta1helper.IsHAControlPlaneConfigured(botanist.Shoot.GetInfo())),
 			}
 		})
 
@@ -423,9 +425,9 @@ var _ = Describe("Etcd", func() {
 				})
 
 				It("should properly restore multi-node etcd from backup if it is deployed with 1 replica", func() {
-					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
-						return &druidv1alpha1.Etcd{
-							Spec: druidv1alpha1.EtcdSpec{
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidcorev1alpha1.Etcd, error) {
+						return &druidcorev1alpha1.Etcd{
+							Spec: druidcorev1alpha1.EtcdSpec{
 								Replicas: 1,
 							},
 						}, nil
@@ -444,9 +446,9 @@ var _ = Describe("Etcd", func() {
 				})
 
 				It("should not try to restore multi-node etcd from backup if it has already been scaled up", func() {
-					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
-						return &druidv1alpha1.Etcd{
-							Spec: druidv1alpha1.EtcdSpec{
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidcorev1alpha1.Etcd, error) {
+						return &druidcorev1alpha1.Etcd{
+							Spec: druidcorev1alpha1.EtcdSpec{
 								Replicas: 3,
 							},
 						}, nil
@@ -460,9 +462,9 @@ var _ = Describe("Etcd", func() {
 				It("should not try to restore multi-node etcd from backup if it has already been scaled down and the shoot is hibernated", func() {
 					botanist.Shoot.HibernationEnabled = true
 
-					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidv1alpha1.Etcd, error) {
-						return &druidv1alpha1.Etcd{
-							Spec: druidv1alpha1.EtcdSpec{
+					etcdMain.EXPECT().Get(ctx).DoAndReturn(func(_ context.Context) (*druidcorev1alpha1.Etcd, error) {
+						return &druidcorev1alpha1.Etcd{
+							Spec: druidcorev1alpha1.EtcdSpec{
 								Replicas: 0,
 							},
 						}, nil
@@ -526,18 +528,19 @@ var _ = Describe("Etcd", func() {
 type newEtcdValidator struct {
 	etcd.Interface
 
-	expectedClient                   gomegatypes.GomegaMatcher
-	expectedLogger                   gomegatypes.GomegaMatcher
-	expectedNamespace                gomegatypes.GomegaMatcher
-	expectedSecretsManager           gomegatypes.GomegaMatcher
-	expectedRole                     gomegatypes.GomegaMatcher
-	expectedClass                    gomegatypes.GomegaMatcher
-	expectedReplicas                 gomegatypes.GomegaMatcher
-	expectedStorageCapacity          gomegatypes.GomegaMatcher
-	expectedDefragmentationSchedule  gomegatypes.GomegaMatcher
-	expectedHighAvailabilityEnabled  gomegatypes.GomegaMatcher
-	expectedMaintenanceTimeWindow    gomegatypes.GomegaMatcher
-	expectedAutoscalingConfiguration gomegatypes.GomegaMatcher
+	expectedClient                    gomegatypes.GomegaMatcher
+	expectedLogger                    gomegatypes.GomegaMatcher
+	expectedNamespace                 gomegatypes.GomegaMatcher
+	expectedSecretsManager            gomegatypes.GomegaMatcher
+	expectedRole                      gomegatypes.GomegaMatcher
+	expectedClass                     gomegatypes.GomegaMatcher
+	expectedReplicas                  gomegatypes.GomegaMatcher
+	expectedETCDMainStorageCapacity   gomegatypes.GomegaMatcher
+	expectedETCDEventsStorageCapacity gomegatypes.GomegaMatcher
+	expectedDefragmentationSchedule   gomegatypes.GomegaMatcher
+	expectedHighAvailabilityEnabled   gomegatypes.GomegaMatcher
+	expectedMaintenanceTimeWindow     gomegatypes.GomegaMatcher
+	expectedAutoscalingConfiguration  gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
@@ -554,10 +557,13 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(values.Role).To(v.expectedRole)
 	Expect(values.Class).To(v.expectedClass)
 	Expect(values.Replicas).To(v.expectedReplicas)
-	Expect(values.StorageCapacity).To(v.expectedStorageCapacity)
 	Expect(values.DefragmentationSchedule).To(v.expectedDefragmentationSchedule)
 	Expect(values.HighAvailabilityEnabled).To(v.expectedHighAvailabilityEnabled)
-
+	if values.Role == v1beta1constants.ETCDRoleMain {
+		Expect(values.StorageCapacity).To(v.expectedETCDMainStorageCapacity)
+	} else if values.Role == v1beta1constants.ETCDRoleEvents {
+		Expect(values.StorageCapacity).To(v.expectedETCDEventsStorageCapacity)
+	}
 	if v.expectedAutoscalingConfiguration != nil {
 		Expect(values.Autoscaling).To(v.expectedAutoscalingConfiguration)
 	} else {

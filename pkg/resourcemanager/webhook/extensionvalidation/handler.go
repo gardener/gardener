@@ -7,7 +7,7 @@ package extensionvalidation
 import (
 	"context"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	druidvalidation "github.com/gardener/etcd-druid/api/validation"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -153,7 +153,7 @@ func (dnsRecordValidator) ValidateDelete(_ context.Context, _ runtime.Object) (a
 }
 
 func (etcdValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	object := obj.(*druidv1alpha1.Etcd)
+	object := obj.(*druidcorev1alpha1.Etcd)
 	if errs := druidvalidation.ValidateEtcd(object); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(object.GroupVersionKind().GroupKind(), object.GetName(), errs)
 	}
@@ -161,8 +161,8 @@ func (etcdValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admi
 }
 
 func (etcdValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	object := newObj.(*druidv1alpha1.Etcd)
-	if errs := druidvalidation.ValidateEtcdUpdate(object, oldObj.(*druidv1alpha1.Etcd)); len(errs) > 0 {
+	object := newObj.(*druidcorev1alpha1.Etcd)
+	if errs := druidvalidation.ValidateEtcdUpdate(object, oldObj.(*druidcorev1alpha1.Etcd)); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(object.GroupVersionKind().GroupKind(), object.GetName(), errs)
 	}
 	return nil, nil
