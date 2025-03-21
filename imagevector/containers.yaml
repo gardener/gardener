@@ -69,6 +69,10 @@ images:
   sourceRepository: github.com/gardener/etcd-druid
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcd-druid
   tag: "v0.27.0"
+- name: etcd
+  sourceRepository: github.com/etcd-io/etcd
+  repository: quay.io/coreos/etcd
+  tag: "v3.4.34"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dependency-watchdog

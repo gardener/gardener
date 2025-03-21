@@ -20,13 +20,12 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
-	metricsPort = 2381
-
-	volumeNameData          = "main-etcd"
+	volumeNameData          = "data"
 	volumeNameETCDCA        = "etcd-ca"
 	volumeNameServerTLS     = "etcd-server-tls"
 	volumeNameClientTLS     = "etcd-client-tls"
@@ -44,6 +43,14 @@ const (
 type Values struct {
 	// Image is the container image used for Etcd.
 	Image string
+	// Role is the role of this etcd instance (main or events).
+	Role string
+	// PortClient is the port for the client connections.
+	PortClient int32
+	// PortPeer is the port for the peer connections.
+	PortPeer int32
+	// PortMetrics is the port for the metrics connections.
+	PortMetrics int32
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -72,7 +79,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 	etcdCASecret, serverSecret, clientSecret, err := etcd.GenerateClientServerCertificates(
 		ctx,
 		e.secretsManager,
-		"main",
+		e.values.Role,
 		[]string{"localhost"},
 		[]net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
 	)
@@ -83,7 +90,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 	etcdPeerCASecretName, peerServerSecretName, err := etcd.GeneratePeerCertificates(
 		ctx,
 		e.secretsManager,
-		"main",
+		e.values.Role,
 		[]string{"localhost"},
 		[]net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
 	)
@@ -96,32 +103,32 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, e.client, pod, func() error {
 		pod.Labels = map[string]string{
 			v1beta1constants.LabelApp:   "etcd",
-			v1beta1constants.LabelRole:  "main",
+			v1beta1constants.LabelRole:  e.values.Role,
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
 		pod.Spec = corev1.PodSpec{
 			Containers: []corev1.Container{{
 				Command: []string{
 					"etcd",
-					"--advertise-client-urls=https://127.0.0.1:2379,https://[::1]:2379",
-					"--cert-file=" + volumeMountPathServerTLS + "/tls.crt",
-					"--client-cert-auth=true",
+					"--name=" + pod.Name,
 					"--data-dir=" + volumeMountPathData,
 					"--experimental-initial-corrupt-check=true",
 					"--experimental-watch-progress-notify-interval=5s",
-					"--initial-advertise-peer-urls=https://127.0.0.1:2380,https://[::1]:2380",
-					"--initial-cluster=etcd-main=https://127.0.0.1:2380",
-					"--key-file=" + volumeNamePeerServerTLS + "/tls.key",
-					"--listen-client-urls=https://127.0.0.1:2379,https://[::1]:2379",
-					"--listen-metrics-urls=http://127.0.0.1:2381,http://[::1]:2381",
-					"--listen-peer-urls=https://127.0.0.1:2380,https://[::1]:2380",
-					"--name=etcd-main",
-					"--peer-cert-file=" + volumeNamePeerServerTLS + "/tls.crt",
-					"--peer-client-cert-auth=true",
-					"--peer-key-file=" + volumeNamePeerServerTLS + "/tls.key",
-					"--peer-trusted-ca-file=" + volumeMountPathPeerCA + "/bundle.crt",
 					"--snapshot-count=10000",
-					"--trusted-ca-file=" + volumeNameETCDCA + "/bundle.crt",
+					fmt.Sprintf("--advertise-client-urls=https://localhost:%d", e.values.PortClient),
+					fmt.Sprintf("--initial-advertise-peer-urls=https://localhost:%d", e.values.PortPeer),
+					fmt.Sprintf("--listen-client-urls=https://localhost:%d", e.values.PortClient),
+					fmt.Sprintf("--initial-cluster=%s=https://localhost:%d", pod.Name, e.values.PortPeer),
+					fmt.Sprintf("--listen-peer-urls=https://localhost:%d", e.values.PortPeer),
+					fmt.Sprintf("--listen-metrics-urls=http://localhost:%d", e.values.PortMetrics),
+					"--client-cert-auth=true",
+					fmt.Sprintf("--trusted-ca-file=%s/%s", volumeMountPathETCDCA, secretsutils.DataKeyCertificateBundle),
+					fmt.Sprintf("--cert-file=%s/%s", volumeMountPathServerTLS, secretsutils.DataKeyCertificate),
+					fmt.Sprintf("--key-file=%s/%s", volumeMountPathServerTLS, secretsutils.DataKeyPrivateKey),
+					"--peer-client-cert-auth=true",
+					fmt.Sprintf("--peer-trusted-ca-file=%s/%s", volumeMountPathPeerCA, secretsutils.DataKeyCertificateBundle),
+					fmt.Sprintf("--peer-cert-file=%s/%s", volumeMountPathPeerServerTLS, secretsutils.DataKeyCertificate),
+					fmt.Sprintf("--peer-key-file=%s/%s", volumeMountPathPeerServerTLS, secretsutils.DataKeyPrivateKey),
 				},
 				Image:           e.values.Image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
@@ -130,7 +137,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 						HTTPGet: &corev1.HTTPGetAction{
 							Path:   "/livez",
 							Scheme: corev1.URISchemeHTTP,
-							Port:   intstr.FromInt32(metricsPort),
+							Port:   intstr.FromInt32(e.values.PortMetrics),
 						},
 					},
 					SuccessThreshold:    1,
@@ -151,7 +158,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 						HTTPGet: &corev1.HTTPGetAction{
 							Path:   "/health",
 							Scheme: corev1.URISchemeHTTP,
-							Port:   intstr.FromInt32(metricsPort),
+							Port:   intstr.FromInt32(e.values.PortMetrics),
 						},
 					},
 					SuccessThreshold:    1,
@@ -197,7 +204,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 					Name: volumeNameData,
 					VolumeSource: corev1.VolumeSource{
 						HostPath: &corev1.HostPathVolumeSource{
-							Path: "/var/lib/etcd",
+							Path: "/var/lib/" + pod.Name + "/data",
 							Type: ptr.To(corev1.HostPathDirectoryOrCreate),
 						},
 					},
@@ -256,5 +263,5 @@ func (e *etcdDeployer) Destroy(_ context.Context) error {
 }
 
 func (e *etcdDeployer) emptyPod() *corev1.Pod {
-	return &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "etcd-main", Namespace: e.namespace}}
+	return &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + e.values.Role + "-0", Namespace: e.namespace}}
 }

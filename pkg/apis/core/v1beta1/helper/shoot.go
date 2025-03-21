@@ -649,6 +649,22 @@ func IsShootAutonomous(shoot *gardencorev1beta1.Shoot) bool {
 	})
 }
 
+// ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is autonomous.
+func ControlPlaneWorkerPoolForShoot(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.Worker {
+	if !IsShootAutonomous(shoot) {
+		return nil
+	}
+
+	idx := slices.IndexFunc(shoot.Spec.Provider.Workers, func(worker gardencorev1beta1.Worker) bool {
+		return worker.ControlPlane != nil
+	})
+	if idx == -1 {
+		return nil
+	}
+
+	return &shoot.Spec.Provider.Workers[idx]
+}
+
 // ControlPlaneNamespaceForShoot returns the control plane namespace for the shoot. If it is an autonomous shoot,
 // kube-system is returned. Otherwise, it is the technical ID of the shoot.
 func ControlPlaneNamespaceForShoot(shoot *gardencorev1beta1.Shoot) string {

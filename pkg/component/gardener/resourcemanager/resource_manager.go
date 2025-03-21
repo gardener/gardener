@@ -825,8 +825,8 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
 		)
 		// If 'BootstrapControlPlaneNode', there is typically no CoreDNS running yet, i.e, we cannot rely on the
-		// standard 'kubernetes.default.svc' DNS name but have to explicitly set it to '127.0.0.1'.
-		env = append(env, corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "127.0.0.1"})
+		// standard 'kubernetes.default.svc' DNS name but have to explicitly set it to 'localhost'.
+		env = append(env, corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"})
 	}
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {

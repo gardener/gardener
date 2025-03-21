@@ -20,4 +20,8 @@ var (
 	PortEtcdPeer int32 = 2380
 	// PortBackupRestore is the client port exposed by the backup-restore sidecar container.
 	PortBackupRestore int32 = 8080
+
+	// StaticPodPortEtcdEventsClient is the port exposed by etcd-events for client communication when it runs as static
+	// pod.
+	StaticPodPortEtcdEventsClient int32 = 2382
 )

@@ -14,11 +14,8 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
 )
-
-const gnaBinaryPathBuiltViaKo = "/ko-app/gardener-node-agent"
 
 type mutator struct{}
 
@@ -31,14 +28,10 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 	if err := modifyFile(operatingSystemConfig.Spec.Files, nodeinit.PathInitScript, func(oldContent string) string {
 		return strings.ReplaceAll(oldContent,
 			`cp -f "$tmp_dir/gardener-node-agent"`,
-			`cp -f "$tmp_dir`+gnaBinaryPathBuiltViaKo+`"`,
+			`cp -f "$tmp_dir/ko-app/gardener-node-agent"`,
 		)
 	}); err != nil {
 		return fmt.Errorf("failed modifying file %q: %w", nodeinit.PathInitScript, err)
-	}
-
-	if file := extensionswebhook.FileWithPath(operatingSystemConfig.Spec.Files, nodeagent.PathBinary); file != nil && file.Content.ImageRef != nil {
-		file.Content.ImageRef.FilePathInImage = gnaBinaryPathBuiltViaKo
 	}
 
 	return nil

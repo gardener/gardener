@@ -2,13 +2,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package gardenadm
+package botanist
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/spf13/afero"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -24,20 +26,38 @@ import (
 	gardenpkg "github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/nodeagent"
+	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// NewBotanist creates a new botanist.Botanist instance for the gardenadm commands execution.
-func NewBotanist(
+// AutonomousBotanist is a struct which has methods that perform operations for an autonomous shoot cluster.
+type AutonomousBotanist struct {
+	*botanistpkg.Botanist
+
+	HostName string
+	DBus     dbus.DBus
+	FS       afero.Afero
+
+	operatingSystemConfigSecret *corev1.Secret
+}
+
+// NewAutonomousBotanist creates a new botanist.AutonomousBotanist instance for the gardenadm command execution.
+func NewAutonomousBotanist(
 	ctx context.Context,
 	log logr.Logger,
 	project *gardencorev1beta1.Project,
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
 ) (
-	*botanistpkg.Botanist,
+	*AutonomousBotanist,
 	error,
 ) {
+	hostName, err := nodeagent.GetHostName()
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching hostname: %w", err)
+	}
+
 	gardenObj, err := newGardenObject(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating garden object: %w", err)
@@ -53,12 +73,12 @@ func NewBotanist(
 		return nil, fmt.Errorf("failed creating seed object: %w", err)
 	}
 
-	log.Info("Initializing botanist",
+	log.Info("Initializing autonomous botanist",
 		"cloudProfile", cloudProfile,
 		"project", project,
 		"shoot", shoot)
 
-	return botanistpkg.New(ctx, &operation.Operation{
+	b, err := botanistpkg.New(ctx, &operation.Operation{
 		Logger:        log,
 		GardenClient:  newFakeGardenClient(),
 		SeedClientSet: newFakeSeedClientSet(seedObj.KubernetesVersion.String()),
@@ -66,6 +86,17 @@ func NewBotanist(
 		Seed:          seedObj,
 		Shoot:         shootObj,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed creating botanist: %w", err)
+	}
+
+	return &AutonomousBotanist{
+		Botanist: b,
+
+		HostName: hostName,
+		DBus:     dbus.New(log),
+		FS:       afero.Afero{Fs: afero.NewOsFs()},
+	}, nil
 }
 
 func newGardenObject(ctx context.Context, project *gardencorev1beta1.Project) (*gardenpkg.Garden, error) {
@@ -104,6 +135,11 @@ func newShootObject(ctx context.Context, projectName string, cloudProfile *garde
 		Build(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed building shoot object: %w", err)
+	}
+
+	obj.Networks, err = shootpkg.ToNetworks(shoot, obj.IsWorkerless)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing shoot networks: %w", err)
 	}
 
 	obj.ControlPlaneNamespace = metav1.NamespaceSystem
