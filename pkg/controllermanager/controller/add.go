@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/shootstate"
 )
 
 // AddToManager adds all controller-manager controllers to the given manager.
@@ -111,6 +112,12 @@ func AddToManager(ctx context.Context, mgr manager.Manager, cfg *controllermanag
 		Config: *cfg.Controllers.SecretBinding,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding SecretBinding controller: %w", err)
+	}
+
+	if err := (&shootstate.Reconciler{
+		Config: *cfg.Controllers.ShootState,
+	}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding ShootState controller: %w", err)
 	}
 
 	if err := seed.AddToManager(mgr, *cfg); err != nil {

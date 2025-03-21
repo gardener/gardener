@@ -52,6 +52,8 @@ controllers:
   # retryDuration: 10m
   shootMigration:
     concurrentSyncs: 5
+  shootState:
+    concurrentSyncs: 5
   project:
     concurrentSyncs: 5
     minimumLifetimeDays: 30
