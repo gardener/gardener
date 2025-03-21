@@ -26,7 +26,7 @@ import (
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
-// ValidateName is a helper function for validating that a name is a DNS sub domain.
+// ValidateName is a helper function for validating that a name is a DNS subdomain.
 func ValidateName(name string, prefix bool) []string {
 	return apivalidation.NameIsDNSSubdomain(name, prefix)
 }
