@@ -1431,10 +1431,14 @@ build:
             - cmd/gardener-node-agent/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
+            - extensions/pkg/apis/config/v1alpha1
+            - extensions/pkg/util
+            - extensions/pkg/webhook
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
+            - pkg/api/indexer
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
