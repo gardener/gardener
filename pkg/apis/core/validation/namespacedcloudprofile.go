@@ -61,13 +61,13 @@ func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, fldPath *
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
-	if spec.MachineImages != nil {
+	if len(spec.MachineImages) > 0 {
 		allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, spec.Capabilities, fldPath.Child("machineImages"))...)
 	}
-	if spec.MachineTypes != nil {
-		allErrs = append(allErrs, validateMachineTypes(spec.MachineTypes, spec.Capabilities, fldPath.Child("machineTypes"))...)
+	if len(spec.MachineTypes) > 0 {
+		allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, spec.Capabilities, fldPath.Child("machineTypes"))...)
 	}
-	if spec.VolumeTypes != nil {
+	if len(spec.VolumeTypes) > 0 {
 		allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)
 	}
 
