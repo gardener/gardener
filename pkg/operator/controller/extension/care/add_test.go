@@ -53,6 +53,10 @@ var _ = Describe("Add", func() {
 			Entry("managed resource for extension in non-garden namespace", "goo", "extension-foobar-garden", ""),
 
 			Entry("managed resource for extension", "garden", "extension-foobar-garden", "foobar"),
+
+			Entry("managed resource for runtime resources of extension admission", "garden", "extension-admission-runtime-foobar", "foobar"),
+
+			Entry("managed resource for virtual resources of extension admission", "garden", "extension-admission-virtual-foobar", "foobar"),
 		)
 	})
 })

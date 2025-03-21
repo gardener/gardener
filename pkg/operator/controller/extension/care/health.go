@@ -66,6 +66,14 @@ func (h *health) Check(ctx context.Context, conditions ExtensionConditions) []ga
 		})
 	}
 
+	if conditions.extensionAdmissionHealthy != nil {
+		taskFns = append(taskFns, func(_ context.Context) error {
+			newExtensionAdmissionComponentsCondition, err := h.checkExtensionAdmission(ctx, *conditions.extensionAdmissionHealthy)
+			conditions.extensionAdmissionHealthy = ptr.To(v1beta1helper.NewConditionOrError(h.clock, *conditions.extensionAdmissionHealthy, newExtensionAdmissionComponentsCondition, err))
+			return nil
+		})
+	}
+
 	_ = flow.Parallel(taskFns...)(ctx)
 
 	return conditions.ConvertToSlice()
@@ -86,9 +94,30 @@ func (h *health) checkExtension(ctx context.Context, condition gardencorev1beta1
 	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ExtensionComponentsRunning", "All extension components are healthy.")), nil
 }
 
+func (h *health) checkExtensionAdmission(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+	managedResourceNames := []string{
+		helper.ExtensionAdmissionVirtualManagedResourceName(h.extension.Name),
+		helper.ExtensionAdmissionRuntimeManagedResourceName(h.extension.Name),
+	}
+
+	for _, managedResourceName := range managedResourceNames {
+		managedResource := &resourcesv1alpha1.ManagedResource{}
+		if err := h.runtimeClient.Get(ctx, client.ObjectKey{Namespace: h.gardenNamespace, Name: managedResourceName}, managedResource); err != nil {
+			return nil, fmt.Errorf("failed to get managed resource %s: %w", managedResourceName, err)
+		}
+
+		if exitCondition := h.healthChecker.CheckManagedResource(condition, managedResource, nil); exitCondition != nil {
+			return exitCondition, nil
+		}
+	}
+
+	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ExtensionAdmissionComponentsRunning", "All extension admission components are healthy.")), nil
+}
+
 // ExtensionConditions contains all conditions of the extension status subresource.
 type ExtensionConditions struct {
-	extensionHealthy *gardencorev1beta1.Condition
+	extensionHealthy          *gardencorev1beta1.Condition
+	extensionAdmissionHealthy *gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the extension conditions as a slice.
@@ -99,6 +128,10 @@ func (e ExtensionConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 		conditions = append(conditions, *e.extensionHealthy)
 	}
 
+	if e.extensionAdmissionHealthy != nil {
+		conditions = append(conditions, *e.extensionAdmissionHealthy)
+	}
+
 	return conditions
 }
 
@@ -106,6 +139,7 @@ func (e ExtensionConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 func (e ExtensionConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
 	return []gardencorev1beta1.ConditionType{
 		operatorv1alpha1.ExtensionHealthy,
+		operatorv1alpha1.ExtensionAdmissionHealthy,
 	}
 }
 
@@ -116,6 +150,10 @@ func NewExtensionConditions(clock clock.Clock, extension *operatorv1alpha1.Exten
 
 	if helper.IsDeploymentInRuntimeRequired(extension) {
 		extensionConditions.extensionHealthy = ptr.To(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ExtensionHealthy))
+	}
+
+	if extension.Spec.Deployment != nil && extension.Spec.Deployment.AdmissionDeployment != nil {
+		extensionConditions.extensionAdmissionHealthy = ptr.To(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ExtensionAdmissionHealthy))
 	}
 
 	return extensionConditions

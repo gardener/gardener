@@ -14,9 +14,21 @@ import (
 )
 
 const (
-	extensionRuntimePrefix = "extension-"
-	extensionRuntimeSuffix = "-garden"
+	extensionAdmissionRuntimePrefix = "extension-admission-runtime-"
+	extensionAdmissionVirtualPrefix = "extension-admission-virtual-"
+	extensionRuntimePrefix          = "extension-"
+	extensionRuntimeSuffix          = "-garden"
 )
+
+// ExtensionAdmissionRuntimeManagedResourceName returns the name of the ManagedResource containing resources for the Garden runtime cluster.
+func ExtensionAdmissionRuntimeManagedResourceName(extensionName string) string {
+	return extensionAdmissionRuntimePrefix + extensionName
+}
+
+// ExtensionAdmissionVirtualManagedResourceName returns the name of the ManagedResource containing resources for the Garden virtual cluster.
+func ExtensionAdmissionVirtualManagedResourceName(extensionName string) string {
+	return extensionAdmissionVirtualPrefix + extensionName
+}
 
 // ExtensionRuntimeManagedResourceName returns the name of the ManagedResource containing resources for the Garden runtime cluster.
 func ExtensionRuntimeManagedResourceName(extensionName string) string {
@@ -27,6 +39,14 @@ func ExtensionRuntimeManagedResourceName(extensionName string) string {
 func ExtensionForManagedResourceName(managedResourceName string) (string, bool) {
 	if strings.HasPrefix(managedResourceName, extensionRuntimePrefix) && strings.HasSuffix(managedResourceName, extensionRuntimeSuffix) {
 		return strings.TrimSuffix(strings.TrimPrefix(managedResourceName, extensionRuntimePrefix), extensionRuntimeSuffix), true
+	}
+
+	if strings.HasPrefix(managedResourceName, extensionAdmissionRuntimePrefix) {
+		return strings.TrimPrefix(managedResourceName, extensionAdmissionRuntimePrefix), true
+	}
+
+	if strings.HasPrefix(managedResourceName, extensionAdmissionVirtualPrefix) {
+		return strings.TrimPrefix(managedResourceName, extensionAdmissionVirtualPrefix), true
 	}
 
 	return "", false

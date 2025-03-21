@@ -145,4 +145,6 @@ const (
 
 	// ExtensionHealthy is a constant for a condition type indicating the extension's health.
 	ExtensionHealthy gardencorev1beta1.ConditionType = "ExtensionHealthy"
+	// ExtensionAdmissionHealthy is a constant for a condition type indicating the runtime extension admission's health.
+	ExtensionAdmissionHealthy gardencorev1beta1.ConditionType = "ExtensionAdmissionHealthy"
 )

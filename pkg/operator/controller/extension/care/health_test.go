@@ -37,7 +37,8 @@ var _ = Describe("Extension health", func() {
 		extensionConditions ExtensionConditions
 		gardenNamespace     string
 
-		extensionHealthyCondition gardencorev1beta1.Condition
+		extensionHealthyCondition          gardencorev1beta1.Condition
+		extensionAdmissionHealthyCondition gardencorev1beta1.Condition
 	)
 
 	BeforeEach(func() {
@@ -48,6 +49,11 @@ var _ = Describe("Extension health", func() {
 		extension = &operatorv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
+			},
+			Spec: operatorv1alpha1.ExtensionSpec{
+				Deployment: &operatorv1alpha1.Deployment{
+					AdmissionDeployment: &operatorv1alpha1.AdmissionDeploymentSpec{},
+				},
 			},
 			Status: operatorv1alpha1.ExtensionStatus{
 				Conditions: []gardencorev1beta1.Condition{
@@ -66,11 +72,15 @@ var _ = Describe("Extension health", func() {
 			Type:               operatorv1alpha1.ExtensionHealthy,
 			LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
 		}
+		extensionAdmissionHealthyCondition = gardencorev1beta1.Condition{
+			Type:               operatorv1alpha1.ExtensionAdmissionHealthy,
+			LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+		}
 	})
 
 	Describe("#Check", func() {
 		JustBeforeEach(func() {
-			extension.Status.Conditions = append(extension.Status.Conditions, extensionHealthyCondition)
+			extension.Status.Conditions = append(extension.Status.Conditions, extensionHealthyCondition, extensionAdmissionHealthyCondition)
 
 			extensionConditions = NewExtensionConditions(fakeClock, extension)
 		})
@@ -78,6 +88,8 @@ var _ = Describe("Extension health", func() {
 		Context("when all managed resources are deployed successfully", func() {
 			JustBeforeEach(func() {
 				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
+				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
+				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
 			})
 
 			It("should set ExtensionComponentsRunning condition to true", func() {
@@ -93,6 +105,7 @@ var _ = Describe("Extension health", func() {
 				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ExtensionComponentsRunning", "All extension components are healthy."),
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ExtensionAdmissionComponentsRunning", "All extension admission components are healthy."),
 				))
 			})
 		})
@@ -113,12 +126,14 @@ var _ = Describe("Extension health", func() {
 						Expect(updatedConditions).ToNot(BeEmpty())
 						Expect(updatedConditions).To(ContainElements(
 							beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
+							beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
 						))
 					})
 
 					Context("condition is currently False", func() {
 						BeforeEach(func() {
 							extensionHealthyCondition.Status = gardencorev1beta1.ConditionFalse
+							extensionAdmissionHealthyCondition.Status = gardencorev1beta1.ConditionFalse
 						})
 
 						It("should set ExtensionComponentsRunning condition to Progressing if time is within threshold duration", func() {
@@ -130,13 +145,15 @@ var _ = Describe("Extension health", func() {
 								gardenClientSet,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ExtensionHealthy: time.Minute,
+									operatorv1alpha1.ExtensionHealthy:          time.Minute,
+									operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
 								},
 								gardenNamespace,
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
+								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
 							))
 						})
@@ -145,6 +162,7 @@ var _ = Describe("Extension health", func() {
 					Context("condition is currently True", func() {
 						BeforeEach(func() {
 							extensionHealthyCondition.Status = gardencorev1beta1.ConditionTrue
+							extensionAdmissionHealthyCondition.Status = gardencorev1beta1.ConditionTrue
 						})
 
 						It("should set ExtensionComponentsRunning condition to Progressing if time is within threshold duration", func() {
@@ -156,13 +174,15 @@ var _ = Describe("Extension health", func() {
 								gardenClientSet,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ExtensionHealthy: time.Minute,
+									operatorv1alpha1.ExtensionHealthy:          time.Minute,
+									operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
 								},
 								gardenNamespace,
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
+								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
 							))
 						})
@@ -171,6 +191,7 @@ var _ = Describe("Extension health", func() {
 					Context("condition is currently Progressing", func() {
 						BeforeEach(func() {
 							extensionHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
+							extensionAdmissionHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
 						})
 
 						It("should not set ExtensionComponentsRunning condition to Progressing if Progressing threshold duration has not expired", func() {
@@ -182,13 +203,15 @@ var _ = Describe("Extension health", func() {
 								gardenClientSet,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ExtensionHealthy: time.Minute,
+									operatorv1alpha1.ExtensionHealthy:          time.Minute,
+									operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
 								},
 								gardenNamespace,
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
+								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
 							))
 						})
@@ -202,13 +225,15 @@ var _ = Describe("Extension health", func() {
 								gardenClientSet,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
-									operatorv1alpha1.ExtensionHealthy: time.Minute,
+									operatorv1alpha1.ExtensionHealthy:          time.Minute,
+									operatorv1alpha1.ExtensionAdmissionHealthy: time.Minute,
 								},
 								gardenNamespace,
 							).Check(ctx, extensionConditions)
 
 							Expect(updatedConditions).ToNot(BeEmpty())
 							Expect(updatedConditions).To(ContainElements(
+								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
 								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
 							))
 						})
@@ -219,6 +244,8 @@ var _ = Describe("Extension health", func() {
 			Context("when all managed resources are unhealthy", func() {
 				JustBeforeEach(func() {
 					Expect(runtimeClient.Create(ctx, unhealthyManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, unhealthyManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, unhealthyManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
 				})
 
 				tests("NotHealthy", "Resources are not healthy")
@@ -227,6 +254,8 @@ var _ = Describe("Extension health", func() {
 			Context("when all managed resources are not applied", func() {
 				JustBeforeEach(func() {
 					Expect(runtimeClient.Create(ctx, unappliedManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, unappliedManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, unappliedManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
 				})
 
 				tests("NotApplied", "Resources are not applied")
@@ -235,6 +264,8 @@ var _ = Describe("Extension health", func() {
 			Context("when all managed resources are still progressing", func() {
 				JustBeforeEach(func() {
 					Expect(runtimeClient.Create(ctx, progressingManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, progressingManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, progressingManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
 				})
 
 				tests("ResourcesProgressing", "Resources are progressing")
@@ -243,6 +274,14 @@ var _ = Describe("Extension health", func() {
 			Context("when all managed resources are deployed but not all required conditions are present", func() {
 				JustBeforeEach(func() {
 					Expect(runtimeClient.Create(ctx, managedResource(gardenNamespace, "extension-foo-garden", true, []gardencorev1beta1.Condition{{
+						Type:   resourcesv1alpha1.ResourcesApplied,
+						Status: gardencorev1beta1.ConditionTrue}},
+					))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, managedResource(gardenNamespace, "extension-admission-virtual-foo", false, []gardencorev1beta1.Condition{{
+						Type:   resourcesv1alpha1.ResourcesApplied,
+						Status: gardencorev1beta1.ConditionTrue}},
+					))).To(Succeed())
+					Expect(runtimeClient.Create(ctx, managedResource(gardenNamespace, "extension-admission-runtime-foo", true, []gardencorev1beta1.Condition{{
 						Type:   resourcesv1alpha1.ResourcesApplied,
 						Status: gardencorev1beta1.ConditionTrue}},
 					))).To(Succeed())
@@ -256,6 +295,7 @@ var _ = Describe("Extension health", func() {
 	Describe("ExtensionConditions", func() {
 		Describe("#NewExtensionConditions", func() {
 			It("should initialize nothing if extension is not required", func() {
+				extension.Spec.Deployment = nil
 				extension.Status.Conditions = nil
 				conditions := NewExtensionConditions(fakeClock, extension)
 
@@ -267,6 +307,7 @@ var _ = Describe("Extension health", func() {
 
 				Expect(conditions.ConvertToSlice()).To(ConsistOf(
 					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -276,6 +317,7 @@ var _ = Describe("Extension health", func() {
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					OfType("ExtensionHealthy"),
+					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 		})
@@ -286,6 +328,7 @@ var _ = Describe("Extension health", func() {
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					OfType("ExtensionHealthy"),
+					OfType("ExtensionAdmissionHealthy"),
 				))
 			})
 		})
@@ -296,6 +339,7 @@ var _ = Describe("Extension health", func() {
 
 				Expect(conditions.ConditionTypes()).To(HaveExactElements(
 					gardencorev1beta1.ConditionType("ExtensionHealthy"),
+					gardencorev1beta1.ConditionType("ExtensionAdmissionHealthy"),
 				))
 			})
 		})
