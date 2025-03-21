@@ -171,6 +171,52 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
 		})
+
+		It("should sync the architecture capabilities", func() {
+			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+				{
+					Name: "test-image-namespaced",
+					Versions: []gardencorev1beta1.MachineImageVersion{{
+						ExpirableVersion:         gardencorev1beta1.ExpirableVersion{Version: "1.1.2"},
+						CRI:                      []gardencorev1beta1.CRI{{Name: "containerd"}},
+						Architectures:            []string{"arm64"},
+						KubeletVersionConstraint: ptr.To("==1.29.0"),
+					}},
+					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
+				},
+			}
+			cloudProfile.Spec.Capabilities = gardencorev1beta1.Capabilities{
+				"architecture": gardencorev1beta1.CapabilityValues{Values: []string{"amd64", "arm64"}},
+			}
+
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
+				namespacedCloudProfile.DeepCopyInto(obj)
+				return nil
+			})
+
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
+
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+				cloudProfile.DeepCopyInto(obj)
+				return nil
+			})
+
+			gomock.InOrder(
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(And(
+						ContainSubstring(`"capabilities":{"architecture":["amd64","arm64"]}`), // global capabilities
+						ContainSubstring(`"versions":[{"architectures":["arm64"]`),            // original value
+						ContainSubstring(`"capabilitySets":[{"architecture":["arm64"]}]`),     // synced value
+					))
+					return nil
+				}),
+			)
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).ToNot(HaveOccurred())
+		})
 	})
 
 	Context("merge Kubernetes versions", func() {
