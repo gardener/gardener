@@ -51,7 +51,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, channel <-chan event.Type
 			}),
 		).
 		WatchesRawSource(
-			source.TypedChannel[*corev1.Secret, reconcile.Request](channel, r.EventHandler()),
+			source.TypedChannel(channel, r.EventHandler()),
 		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: len(r.Config.SyncConfigs)}).
 		Complete(r)

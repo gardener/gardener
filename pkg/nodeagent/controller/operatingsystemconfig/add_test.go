@@ -258,7 +258,7 @@ var _ = Describe("Add", func() {
 
 		BeforeEach(func() {
 			ctx = context.TODO()
-			mapper = NodeToSecretMapper()
+			mapper = (&Reconciler{}).NodeToSecretMapper()
 			node = &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "node",
@@ -298,7 +298,7 @@ var _ = Describe("Add", func() {
 		)
 
 		BeforeEach(func() {
-			p = NodeReadyForUpdate()
+			p = (&Reconciler{}).NodeReadyForUpdate()
 
 			node = &corev1.Node{
 				Status: corev1.NodeStatus{
