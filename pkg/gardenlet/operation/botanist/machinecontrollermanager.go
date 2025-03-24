@@ -19,15 +19,27 @@ import (
 )
 
 // DefaultMachineControllerManager returns a deployer for the machine-controller-manager.
-func (b *Botanist) DefaultMachineControllerManager(ctx context.Context) (machinecontrollermanager.Interface, error) {
+func (b *Botanist) DefaultMachineControllerManager() (machinecontrollermanager.Interface, error) {
 	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameMachineControllerManager, imagevectorutils.RuntimeVersion(b.SeedVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
 
+	return machinecontrollermanager.New(
+		b.SeedClientSet.Client(),
+		b.Shoot.ControlPlaneNamespace,
+		b.SecretsManager,
+		machinecontrollermanager.Values{
+			Image: image.String(),
+		},
+	), nil
+}
+
+// DeployMachineControllerManager deploys the machine-controller-manager.
+func (b *Botanist) DeployMachineControllerManager(ctx context.Context) error {
 	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
 	if err := b.SeedClientSet.Client().List(ctx, machineDeploymentList, client.InNamespace(b.Shoot.ControlPlaneNamespace)); err != nil {
-		return nil, err
+		return err
 	}
 
 	var replicas int32 = 1
@@ -56,20 +68,9 @@ func (b *Botanist) DefaultMachineControllerManager(ctx context.Context) (machine
 		replicas = 0
 	}
 
-	return machinecontrollermanager.New(
-		b.SeedClientSet.Client(),
-		b.Shoot.ControlPlaneNamespace,
-		b.SecretsManager,
-		machinecontrollermanager.Values{
-			Image:    image.String(),
-			Replicas: replicas,
-		},
-	), nil
-}
-
-// DeployMachineControllerManager deploys the machine-controller-manager.
-func (b *Botanist) DeployMachineControllerManager(ctx context.Context) error {
+	b.Shoot.Components.ControlPlane.MachineControllerManager.SetReplicas(replicas)
 	b.Shoot.Components.ControlPlane.MachineControllerManager.SetNamespaceUID(b.SeedNamespaceObject.UID)
+
 	return b.Shoot.Components.ControlPlane.MachineControllerManager.Deploy(ctx)
 }
 

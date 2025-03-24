@@ -137,7 +137,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		if err != nil {
 			return nil, err
 		}
-		o.Shoot.Components.ControlPlane.MachineControllerManager, err = b.DefaultMachineControllerManager(ctx)
+		o.Shoot.Components.ControlPlane.MachineControllerManager, err = b.DefaultMachineControllerManager()
 		if err != nil {
 			return nil, err
 		}

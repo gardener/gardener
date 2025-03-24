@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mockmachinecontrollermanager "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -73,9 +72,21 @@ var _ = Describe("MachineControllerManager", func() {
 		})
 	})
 
-	Describe("#DefaultMachineControllerManager", func() {
+	Describe("#DeployMachineControllerManager", func() {
 		BeforeEach(func() {
 			kubernetesClient.EXPECT().Version()
+			kubernetesClient.EXPECT().Client().Return(fakeClient)
+
+			botanist.SeedNamespaceObject = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: types.UID("5678"),
+				},
+			}
+
+			machineControllerManager, err := botanist.DefaultMachineControllerManager()
+			Expect(machineControllerManager).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			botanist.Shoot.Components = &shootpkg.Components{ControlPlane: &shootpkg.ControlPlane{MachineControllerManager: machineControllerManager}}
 
 			By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
@@ -83,17 +94,13 @@ var _ = Describe("MachineControllerManager", func() {
 
 		DescribeTable("it should successfully create a machine-controller-manager interface",
 			func(expectedReplicas int, prepTest func()) {
-				kubernetesClient.EXPECT().Client().Return(fakeClient).Times(2)
+				kubernetesClient.EXPECT().Client().Return(fakeClient)
 
 				if prepTest != nil {
 					prepTest()
 				}
 
-				machineControllerManager, err := botanist.DefaultMachineControllerManager(ctx)
-				Expect(machineControllerManager).NotTo(BeNil())
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(machineControllerManager.Deploy(ctx)).To(Succeed())
+				Expect(botanist.DeployMachineControllerManager(ctx)).To(Succeed())
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 				Expect(deployment.Spec.Replicas).To(PointTo(Equal(int32(expectedReplicas))))
 			},
@@ -147,41 +154,6 @@ var _ = Describe("MachineControllerManager", func() {
 				botanist.Shoot.SetInfo(shoot)
 			}),
 		)
-	})
-
-	Describe("#DeployMachineControllerManager", func() {
-		var (
-			machineControllerManager *mockmachinecontrollermanager.MockInterface
-			namespaceUID             = types.UID("5678")
-		)
-
-		BeforeEach(func() {
-			machineControllerManager = mockmachinecontrollermanager.NewMockInterface(ctrl)
-			machineControllerManager.EXPECT().SetNamespaceUID(namespaceUID)
-
-			botanist.SeedNamespaceObject = &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: namespaceUID,
-				},
-			}
-			botanist.Shoot = &shootpkg.Shoot{
-				Components: &shootpkg.Components{
-					ControlPlane: &shootpkg.ControlPlane{
-						MachineControllerManager: machineControllerManager,
-					},
-				},
-			}
-		})
-
-		It("should set the namespace uid and deploy", func() {
-			machineControllerManager.EXPECT().Deploy(ctx)
-			Expect(botanist.DeployMachineControllerManager(ctx)).To(Succeed())
-		})
-
-		It("should fail when the deploy function fails", func() {
-			machineControllerManager.EXPECT().Deploy(ctx).Return(fakeErr)
-			Expect(botanist.DeployMachineControllerManager(ctx)).To(Equal(fakeErr))
-		})
 	})
 
 	Describe("#ScaleMachineControllerManagerToZero", func() {
