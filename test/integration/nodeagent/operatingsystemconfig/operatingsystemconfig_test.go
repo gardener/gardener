@@ -482,21 +482,22 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/existing-unit.service", "#existingunit", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/existing-unit.service.d/existing-dropin.conf", "#existingdropin", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+existingUnitDropIn.Name+".d/"+existingUnitDropIn.DropIns[0].Name, "#unit11drop", 0600)
-		test.AssertFileOnDisk(fakeFS, "/var/lib/gardener-node-agent/last-computed-osc-changes.yaml", `caRotation:
-  kubelet: false
-  nodeAgent: false
-containerd:
+		test.AssertFileOnDisk(fakeFS, "/var/lib/gardener-node-agent/last-computed-osc-changes.yaml", `containerd:
   configFileChanged: false
   registries: {}
 files: {}
-kubeletUpdate:
-  configUpdate: false
-  cpuManagerPolicy: false
-  minorVersionUpdate: false
+inPlaceUpdates:
+  certificateAuthoritiesRotation:
+    kubelet: false
+    nodeAgent: false
+  kubelet:
+    config: false
+    cpuManagerPolicy: false
+    minorVersion: false
+  operatingSystem: false
+  serviceAccountKeyRotation: false
 mustRestartNodeAgent: false
 operatingSystemConfigChecksum: 43b154622b6da9c7a28d3337eececad055a1f7eeaed5420c405c83c11b1ab6c4
-osUpdate: false
-saKeyRotation: false
 units: {}
 `, 0600)
 
@@ -972,7 +973,7 @@ kind: NodeAgentConfiguration
 			})
 
 			DeferCleanup(test.WithVars(
-				&operatingsystemconfig.GetOSVersion, func() (*string, error) { return ptr.To("1.2.3"), nil },
+				&operatingsystemconfig.GetOSVersion, func(*extensionsv1alpha1.InPlaceUpdates, afero.Afero) (*string, error) { return ptr.To("1.2.3"), nil },
 				&operatingsystemconfig.KubeletHealthCheckRetryTimeout, 2*time.Second,
 				&operatingsystemconfig.KubeletHealthCheckRetryInterval, 200*time.Millisecond,
 				&healthcheckcontroller.DefaultKubeletHealthEndpoint, server.URL,

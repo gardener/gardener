@@ -25,10 +25,7 @@ type operatingSystemConfigChanges struct {
 	Containerd                    containerd `json:"containerd"`
 	MustRestartNodeAgent          bool       `json:"mustRestartNodeAgent"`
 
-	OSUpdate      bool          `json:"osUpdate"`
-	KubeletUpdate kubeletUpdate `json:"kubeletUpdate"`
-	CARotation    caRotation    `json:"caRotation"`
-	SAKeyRotation bool          `json:"saKeyRotation"`
+	InPlaceUpdates inPlaceUpates `json:"inPlaceUpdates"`
 }
 
 type units struct {
@@ -70,13 +67,20 @@ type containerdRegistries struct {
 	Deleted []extensionsv1alpha1.RegistryConfig `json:"deleted,omitempty"`
 }
 
-type kubeletUpdate struct {
-	MinorVersionUpdate     bool `json:"minorVersionUpdate"`
-	ConfigUpdate           bool `json:"configUpdate"`
-	CPUManagerPolicyUpdate bool `json:"cpuManagerPolicy"`
+type inPlaceUpates struct {
+	OperatingSystem                bool                           `json:"operatingSystem"`
+	Kubelet                        kubelet                        `json:"kubelet"`
+	CertificateAuthoritiesRotation certificateAuthoritiesRotation `json:"certificateAuthoritiesRotation"`
+	ServiceAccountKeyRotation      bool                           `json:"serviceAccountKeyRotation"`
 }
 
-type caRotation struct {
+type kubelet struct {
+	MinorVersion     bool `json:"minorVersion"`
+	Config           bool `json:"config"`
+	CPUManagerPolicy bool `json:"cpuManagerPolicy"`
+}
+
+type certificateAuthoritiesRotation struct {
 	Kubelet   bool `json:"kubelet"`
 	NodeAgent bool `json:"nodeAgent"`
 }
@@ -103,7 +107,7 @@ func (o *operatingSystemConfigChanges) completeOSUpdate() error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	o.OSUpdate = false
+	o.InPlaceUpdates.OperatingSystem = false
 
 	return o.persist()
 }
@@ -112,7 +116,7 @@ func (o *operatingSystemConfigChanges) completeKubeletMinorVersionUpdate() error
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	o.KubeletUpdate.MinorVersionUpdate = false
+	o.InPlaceUpdates.Kubelet.MinorVersion = false
 
 	return o.persist()
 }
@@ -121,16 +125,16 @@ func (o *operatingSystemConfigChanges) completeKubeletConfigUpdate() error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	o.KubeletUpdate.ConfigUpdate = false
+	o.InPlaceUpdates.Kubelet.Config = false
 
 	return o.persist()
 }
 
-func (o *operatingSystemConfigChanges) completeKubeletCpuManagerPolicyUpdate() error {
+func (o *operatingSystemConfigChanges) completeKubeletCPUManagerPolicyUpdate() error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	o.KubeletUpdate.CPUManagerPolicyUpdate = false
+	o.InPlaceUpdates.Kubelet.CPUManagerPolicy = false
 
 	return o.persist()
 }
@@ -139,7 +143,7 @@ func (o *operatingSystemConfigChanges) completeCARotationKubelet() error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	o.CARotation.Kubelet = false
+	o.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet = false
 
 	return o.persist()
 }
@@ -149,7 +153,7 @@ func (o *operatingSystemConfigChanges) completeCARotationNodeAgent() error {
 	defer o.lock.Unlock()
 
 	o.MustRestartNodeAgent = true
-	o.CARotation.NodeAgent = false
+	o.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent = false
 
 	return o.persist()
 }
@@ -158,7 +162,7 @@ func (o *operatingSystemConfigChanges) completeSAKeyRotation() error {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 
-	o.SAKeyRotation = false
+	o.InPlaceUpdates.ServiceAccountKeyRotation = false
 
 	return o.persist()
 }
