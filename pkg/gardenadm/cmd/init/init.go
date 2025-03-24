@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -79,10 +80,23 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployOperatingSystemConfigSecretForNodeAgent,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
-		_ = g.Add(flow.Task{
+		applyOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
 			Fn:           b.ApplyOperatingSystemConfig,
 			Dependencies: flow.NewTaskIDs(writeKubeletBootstrapKubeconfig, deployOperatingSystemConfigSecretForNodeAgent),
+		})
+		initializeClientSet = g.Add(flow.Task{
+			Name: "Initializing connection to Kubernetes control plane",
+			Fn: flow.TaskFn(func(_ context.Context) error {
+				b.SeedClientSet, err = b.CreateClientSet(ctx)
+				return err
+			}).RetryUntilTimeout(2*time.Second, time.Minute),
+			Dependencies: flow.NewTaskIDs(applyOperatingSystemConfig),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Creating real bootstrap token for kubelet and restart unit",
+			Fn:           b.BootstrapKubelet,
+			Dependencies: flow.NewTaskIDs(initializeClientSet),
 		})
 	)
 

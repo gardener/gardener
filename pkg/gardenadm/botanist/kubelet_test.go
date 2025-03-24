@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 )
@@ -32,9 +34,11 @@ var _ = Describe("Kubelet", func() {
 	var (
 		ctx       context.Context
 		namespace = "kube-system"
+		hostName  = "test"
 
 		fakeSeedClient    client.Client
 		fakeSecretManager secretsmanager.Interface
+		fakeDBus          *fakedbus.DBus
 
 		b *AutonomousBotanist
 	)
@@ -44,6 +48,7 @@ var _ = Describe("Kubelet", func() {
 
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeSeedClient, namespace)
+		fakeDBus = fakedbus.New()
 
 		b = &AutonomousBotanist{
 			Botanist: &botanistpkg.Botanist{
@@ -53,16 +58,14 @@ var _ = Describe("Kubelet", func() {
 					SecretsManager: fakeSecretManager,
 					SeedClientSet: fakekubernetes.
 						NewClientSetBuilder().
-						WithClient(fakeclient.
-							NewClientBuilder().
-							WithScheme(kubernetes.SeedScheme).
-							Build(),
-						).
+						WithClient(fakeSeedClient).
 						WithRESTConfig(&rest.Config{}).
 						Build(),
 				},
 			},
-			FS: afero.Afero{Fs: afero.NewMemMapFs()},
+			FS:       afero.Afero{Fs: afero.NewMemMapFs()},
+			DBus:     fakeDBus,
+			HostName: hostName,
 		}
 		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
@@ -74,10 +77,10 @@ var _ = Describe("Kubelet", func() {
 		Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
 	})
 
-	Describe("#CreateBootstrapToken", func() {
+	Describe("#WriteBootstrapToken", func() {
 		It("should create a bootstrap token", func() {
 			Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeFalse())
-			Expect(b.CreateBootstrapToken(ctx)).To(Succeed())
+			Expect(b.WriteBootstrapToken(ctx)).To(Succeed())
 			Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeTrue())
 		})
 	})
@@ -106,5 +109,24 @@ var _ = Describe("Kubelet", func() {
 			Entry("with creation of token file", true),
 			Entry("with existing token file", false),
 		)
+	})
+
+	Describe("#BootstrapKubelet", func() {
+		It("should do nothing when the node was already found", func() {
+			Expect(fakeSeedClient.Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "foo", Labels: map[string]string{"kubernetes.io/hostname": hostName}}})).To(Succeed())
+
+			Expect(b.BootstrapKubelet(ctx)).To(Succeed())
+		})
+
+		It("should write a bootstrap token and restart the kubelet unit", func() {
+			Expect(b.BootstrapKubelet(ctx)).To(Succeed())
+
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:node-bootstrapper"}, &rbacv1.ClusterRoleBinding{})).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:certificates.k8s.io:certificatesigningrequests:nodeclient"}, &rbacv1.ClusterRoleBinding{})).To(Succeed())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient"}, &rbacv1.ClusterRoleBinding{})).To(Succeed())
+
+			Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeTrue())
+			Expect(fakeDBus.Actions).To(HaveExactElements(fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"kubelet.service"}}))
+		})
 	})
 })
