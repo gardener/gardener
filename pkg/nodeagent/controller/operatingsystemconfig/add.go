@@ -63,8 +63,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		).
 		Watches(
 			&corev1.Node{},
-			handler.EnqueueRequestsFromMapFunc(NodeToSecretMapper()),
-			builder.WithPredicates(NodeReadyForUpdate()),
+			handler.EnqueueRequestsFromMapFunc(r.NodeToSecretMapper()),
+			builder.WithPredicates(r.NodeReadyForUpdate()),
 		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
@@ -135,7 +135,7 @@ func (r *Reconciler) EnqueueWithJitterDelay(ctx context.Context, log logr.Logger
 }
 
 // NodeToSecretMapper returns a mapper that returns requests for a secret based on its node.
-func NodeToSecretMapper() handler.MapFunc {
+func (r *Reconciler) NodeToSecretMapper() handler.MapFunc {
 	return func(_ context.Context, obj client.Object) []reconcile.Request {
 		node, ok := obj.(*corev1.Node)
 		if !ok {
@@ -155,7 +155,7 @@ func NodeToSecretMapper() handler.MapFunc {
 // - true for Create event if the new node has the InPlaceUpdate condition with the reason ReadyForUpdate.
 // - true for Update event if the new node has the InPlaceUpdate condition with the reason ReadyForUpdate and old node doesn't.
 // - false for Delete and Generic events.
-func NodeReadyForUpdate() predicate.Predicate {
+func (r *Reconciler) NodeReadyForUpdate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			node, ok := e.Object.(*corev1.Node)

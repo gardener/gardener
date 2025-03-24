@@ -28,7 +28,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	oscutils "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
@@ -149,13 +149,13 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 	if oldOSC.Spec.InPlaceUpdates != nil && newOSC.Spec.InPlaceUpdates != nil {
 		if oldOSC.Spec.InPlaceUpdates.OperatingSystemVersion != newOSC.Spec.InPlaceUpdates.OperatingSystemVersion &&
 			currentOSVersion != nil && *currentOSVersion != newOSC.Spec.InPlaceUpdates.OperatingSystemVersion {
-			changes.OSUpdate = true
+			changes.InPlaceUpdates.OperatingSystem = true
 		}
 
 		if oldOSC.Spec.InPlaceUpdates.KubeletVersion != newOSC.Spec.InPlaceUpdates.KubeletVersion {
-			changes.KubeletUpdate.MinorVersionUpdate, err = CheckIfMinorVersionUpdate(oldOSC.Spec.InPlaceUpdates.KubeletVersion, newOSC.Spec.InPlaceUpdates.KubeletVersion)
+			changes.InPlaceUpdates.Kubelet.MinorVersion, err = CheckIfMinorVersionUpdate(oldOSC.Spec.InPlaceUpdates.KubeletVersion, newOSC.Spec.InPlaceUpdates.KubeletVersion)
 			if err != nil {
-				return nil, fmt.Errorf("failed to check if kubelet version update is minor: %w", err)
+				return nil, fmt.Errorf("failed to check if kubelet minor version was updated: %w", err)
 			}
 		}
 
@@ -168,7 +168,7 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 			return nil, fmt.Errorf("failed to get new kubelet config from the OSC: %w", err)
 		}
 
-		changes.KubeletUpdate.ConfigUpdate, changes.KubeletUpdate.CPUManagerPolicyUpdate, err = ComputeKubeletConfigChange(oldKubeletConfig, newKubeletConfig)
+		changes.InPlaceUpdates.Kubelet.Config, changes.InPlaceUpdates.Kubelet.CPUManagerPolicy, err = ComputeKubeletConfigChange(oldKubeletConfig, newKubeletConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if kubelet config has changed: %w", err)
 		}
@@ -177,18 +177,18 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 			// Rotation is triggered for the first time
 			if oldOSC.Spec.InPlaceUpdates.CredentialsRotation == nil {
 				caRotation := newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime != nil
-				changes.CARotation.Kubelet = caRotation
-				changes.CARotation.NodeAgent = caRotation && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
+				changes.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet = caRotation
+				changes.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent = caRotation && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
 
-				changes.SAKeyRotation = newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime != nil
+				changes.InPlaceUpdates.ServiceAccountKeyRotation = newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil && newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime != nil
 			} else {
 				caRotation := oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil &&
 					newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil &&
 					!reflect.DeepEqual(oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime, newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime)
-				changes.CARotation.Kubelet = caRotation
-				changes.CARotation.NodeAgent = caRotation && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
+				changes.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet = caRotation
+				changes.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent = caRotation && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
 
-				changes.SAKeyRotation = oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
+				changes.InPlaceUpdates.ServiceAccountKeyRotation = oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
 					newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
 					!reflect.DeepEqual(oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime, newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime)
 			}
@@ -227,18 +227,19 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 func getKubeletConfig(osc *extensionsv1alpha1.OperatingSystemConfig) (*kubeletconfigv1beta1.KubeletConfiguration, error) {
 	var (
 		fciCodec           = oscutils.NewFileContentInlineCodec()
-		kubeletConfigCodec = kubelet.NewConfigCodec(fciCodec)
+		kubeletConfigCodec = kubeletcomponent.NewConfigCodec(fciCodec)
 	)
 
-	kubeletConfigFile := extensionswebhook.FileWithPath(osc.Spec.Files, kubelet.PathKubeletConfig)
+	kubeletConfigFile := extensionswebhook.FileWithPath(osc.Spec.Files, kubeletcomponent.PathKubeletConfig)
 	if kubeletConfigFile == nil {
-		return nil, fmt.Errorf("kubelet config file with path: %q not found in OSC", kubelet.PathKubeletConfig)
+		return nil, fmt.Errorf("kubelet config file with path: %q not found in OSC", kubeletcomponent.PathKubeletConfig)
 	}
 
 	return kubeletConfigCodec.Decode(kubeletConfigFile.Content.Inline)
 }
 
 // ComputeKubeletConfigChange computes changes in the kubelet configuration relevant for in-place updates.
+// This function needs to be updated when the kubelet configuration triggers in https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_updates.md#rolling-update-triggers are changed.
 func ComputeKubeletConfigChange(oldConfig, newConfig *kubeletconfigv1beta1.KubeletConfiguration) (bool, bool, error) {
 	var (
 		cpuManagerPolicyChanged = oldConfig.CPUManagerPolicy != newConfig.CPUManagerPolicy
