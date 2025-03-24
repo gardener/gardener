@@ -672,10 +672,8 @@ func (h *Health) CheckClusterNodes(
 	registeredNodes = registeredNodes - nodeNotManagedByMCM
 
 	machineList := &machinev1alpha1.MachineList{}
-	if registeredNodes != desiredMachines || readyNodes != desiredMachines {
-		if err := h.seedClient.Client().List(ctx, machineList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
-			return nil, err
-		}
+	if err := h.seedClient.Client().List(ctx, machineList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
+		return nil, err
 	}
 
 	leaseList := &coordinationv1.LeaseList{}
