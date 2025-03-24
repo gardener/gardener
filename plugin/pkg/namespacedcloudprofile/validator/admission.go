@@ -123,7 +123,9 @@ func (v *ValidateNamespacedCloudProfile) Validate(ctx context.Context, a admissi
 	// Exit early if the spec hasn't changed
 	if a.GetOperation() == admission.Update {
 		// do not ignore metadata updates to detect and prevent removal of the gardener finalizer or unwanted changes to annotations
-		if reflect.DeepEqual(namespacedCloudProfile.Spec, oldNamespacedCloudProfile.Spec) && reflect.DeepEqual(namespacedCloudProfile.ObjectMeta, oldNamespacedCloudProfile.ObjectMeta) {
+		if reflect.DeepEqual(namespacedCloudProfile.Spec, oldNamespacedCloudProfile.Spec) &&
+			(reflect.DeepEqual(namespacedCloudProfile.ObjectMeta, oldNamespacedCloudProfile.ObjectMeta) ||
+				namespacedCloudProfile.DeletionTimestamp != nil) {
 			return nil
 		}
 	}
