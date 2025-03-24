@@ -5,13 +5,13 @@
 package predicate
 
 import (
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/gardener/gardener/pkg/api/extensions"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 )
 
 var logger = log.Log.WithName("predicate")
@@ -72,7 +72,7 @@ func HasClass(extensionClass extensionsv1alpha1.ExtensionClass) predicate.Predic
 			return false
 		}
 
-		return ptr.Deref(accessor.GetExtensionSpec().GetExtensionClass(), extensionsv1alpha1.ExtensionClassShoot) == extensionClass
+		return extensionsv1alpha1helper.GetExtensionClassOrDefault(accessor.GetExtensionSpec().GetExtensionClass()) == extensionClass
 	})
 }
 

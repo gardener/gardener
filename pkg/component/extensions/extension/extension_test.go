@@ -7,6 +7,8 @@ package extension_test
 import (
 	"context"
 	"errors"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -74,6 +76,7 @@ var _ = Describe("Extension", func() {
 		namespace      *corev1.Namespace
 		ctx            = context.TODO()
 		ext            extension.Interface
+		extGarden      extension.Interface
 		log            logr.Logger
 
 		defaultExtension     *extensionsv1alpha1.Extension
@@ -82,7 +85,8 @@ var _ = Describe("Extension", func() {
 		afterWorkerExtension *extensionsv1alpha1.Extension
 		allExtensions        []*extensionsv1alpha1.Extension
 
-		requiredExtensions map[string]extension.Extension
+		requiredExtensions       map[string]extension.Extension
+		requiredGardenExtensions map[string]extension.Extension
 	)
 
 	BeforeEach(func() {
@@ -176,6 +180,13 @@ var _ = Describe("Extension", func() {
 			},
 		}
 
+		requiredGardenExtensions = maps.Clone(requiredExtensions)
+		for v := range requiredGardenExtensions {
+			ext := requiredGardenExtensions[v]
+			ext.Name = "garden-" + ext.Name
+			requiredGardenExtensions[v] = ext
+		}
+
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithStatusSubresource(&extensionsv1alpha1.Extension{}).Build()
 
 		ext = extension.New(
@@ -189,6 +200,28 @@ var _ = Describe("Extension", func() {
 			time.Microsecond*400,
 			time.Second,
 		)
+
+		extGarden = extension.New(
+			log,
+			fakeSeedClient,
+			&extension.Values{
+				Class:      ptr.To[extensionsv1alpha1.ExtensionClass]("garden"),
+				Namespace:  namespace.Name,
+				Extensions: requiredGardenExtensions,
+			},
+			time.Microsecond*100,
+			time.Microsecond*400,
+			time.Second,
+		)
+	})
+
+	Describe("#Deploy", func() {
+		It("should successfully deploy extension resources", func() {
+			Expect(ext.Deploy(ctx)).To(Succeed())
+			extensionList := &extensionsv1alpha1.ExtensionList{}
+			Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+			Expect(extensionList.Items).To(consistOfObjects(beforeName, defaultName, afterName, afterWorkerName))
+		})
 	})
 
 	Describe("#DeployBeforeKubeAPIServer", func() {
@@ -218,8 +251,59 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
-	Describe("#WaitBeforeKubeAPIServer", func() {
+	Describe("#Wait", func() {
 		It("should return error when no resources are found", func() {
+			Expect(ext.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
+		})
+
+		It("should return error when resource is not ready", func() {
+			errDescription := "Some error"
+			beforeExtension.Status = extensionsv1alpha1.ExtensionStatus{
+				DefaultStatus: extensionsv1alpha1.DefaultStatus{
+					LastError: &gardencorev1beta1.LastError{
+						Description: errDescription,
+					},
+				},
+			}
+			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
+
+			Expect(ext.Wait(ctx)).To(And(
+				MatchError(ContainSubstring("Error while waiting for Extension test-namespace/before to become ready: error during reconciliation: "+errDescription)),
+				MatchError(ContainSubstring("Error while waiting for Extension test-namespace/after to become ready: extension did not record a last operation yet")),
+				MatchError(ContainSubstring("Error while waiting for Extension test-namespace/after-worker to become ready: retry failed with context deadline exceeded, last error: extensions.extensions.gardener.cloud \"after-worker\" not found")),
+				MatchError(ContainSubstring("Error while waiting for Extension test-namespace/def to become ready: retry failed with context deadline exceeded, last error: extensions.extensions.gardener.cloud \"def\" not found")),
+			), "extensions indicates error")
+		})
+
+		It("should return error if we haven't observed the latest timestamp annotation", func() {
+			now := time.Now()
+			By("Deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(ext.Deploy(ctx)).To(Succeed())
+
+			By("Patch object")
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
+			patch := client.MergeFrom(beforeExtension.DeepCopy())
+			// remove operation annotation, add old timestamp annotation
+			beforeExtension.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
+			}
+			// set last operation
+			beforeExtension.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			Expect(fakeSeedClient.Patch(ctx, beforeExtension, patch)).ToNot(HaveOccurred(), "patching extension succeeds")
+
+			By("Wait")
+			Expect(ext.Wait(ctx)).NotTo(Succeed())
+		})
+	})
+
+	Describe("#WaitBeforeKubeAPIServer", func() {
+		It("should return error when no resources with related extension class are found", func() {
+			Expect(extGarden.DeployBeforeKubeAPIServer(ctx)).To(Succeed())
+
 			Expect(ext.WaitBeforeKubeAPIServer(ctx)).To(MatchError(ContainSubstring("not found")))
 		})
 
@@ -447,17 +531,6 @@ var _ = Describe("Extension", func() {
 		It("should return error if resources still exist", func() {
 			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
 			Expect(ext.WaitCleanupAfterKubeAPIServer(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/after is still present")))
-		})
-	})
-
-	Describe("#WaitCleanup", func() {
-		It("should not return error if all resources are gone", func() {
-			Expect(ext.WaitCleanup(ctx)).To(Succeed())
-		})
-
-		It("should return error if resources still exist", func() {
-			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
-			Expect(ext.WaitCleanup(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/after is still present")))
 		})
 	})
 
@@ -697,13 +770,13 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
-	Describe("#DeleteResources", func() {
+	Describe("#Destroy", func() {
 		It("should delete extensions resources", func() {
 			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
 			Expect(fakeSeedClient.Create(ctx, beforeExtension)).To(Succeed())
 			Expect(fakeSeedClient.Create(ctx, afterExtension)).To(Succeed())
 
-			Expect(ext.DeleteResources(ctx)).To(Succeed())
+			Expect(ext.Destroy(ctx)).To(Succeed())
 
 			extensionList := &extensionsv1alpha1.ExtensionList{}
 			Expect(fakeSeedClient.List(ctx, extensionList)).To(Succeed())
@@ -711,20 +784,8 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
-	Describe("#WaitCleanupResources", func() {
-		It("should not return error if all resources are gone", func() {
-			Expect(ext.WaitCleanupStaleResources(ctx)).To(Succeed())
-		})
-
-		It("should return error if resources still exist", func() {
-			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
-
-			Expect(ext.WaitCleanupResources(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/def is still present")))
-		})
-	})
-
 	Describe("#DeleteStaleResources", func() {
-		It("should delete stale extensions resources", func() {
+		It("should delete stale extension resources", func() {
 			staleExtension := defaultExtension.DeepCopy()
 			staleExtension.Name = "new-name"
 			staleExtension.Spec.Type = "new-type"
@@ -738,6 +799,18 @@ var _ = Describe("Extension", func() {
 			extensionList := &extensionsv1alpha1.ExtensionList{}
 			Expect(fakeSeedClient.List(ctx, extensionList)).To(Succeed())
 			Expect(extensionList.Items).To(consistOfObjects(defaultName, beforeName, afterName))
+		})
+	})
+
+	Describe("#WaitCleanup", func() {
+		It("should not return error if all resources are gone", func() {
+			Expect(ext.WaitCleanupStaleResources(ctx)).To(Succeed())
+		})
+
+		It("should return error if resources still exist", func() {
+			Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+
+			Expect(ext.WaitCleanup(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/def is still present")))
 		})
 	})
 
@@ -758,6 +831,109 @@ var _ = Describe("Extension", func() {
 			Expect(fakeSeedClient.Create(ctx, staleExtension)).To(Succeed())
 
 			Expect(ext.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/new-name is still present")))
+		})
+	})
+
+	Context("With class", func() {
+		Describe("#Deploy", func() {
+			It("should successfully deploy extension resources", func() {
+				Expect(extGarden.Deploy(ctx)).To(Succeed())
+				extensionList := &extensionsv1alpha1.ExtensionList{}
+				Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+
+				for _, extension := range extensionList.Items {
+					Expect(extension.Spec.Class).To(PointTo(BeEquivalentTo("garden")))
+				}
+			})
+		})
+
+		Describe("#Wait", func() {
+			It("should return error when no resources with related extension class are found", func() {
+				Expect(extGarden.Deploy(ctx)).To(Succeed())
+
+				Expect(ext.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
+			})
+		})
+
+		Describe("#Destroy", func() {
+			It("should not delete extensions resources of another class", func() {
+				Expect(fakeSeedClient.Create(ctx, defaultExtension)).To(Succeed())
+				Expect(extGarden.DeployAfterKubeAPIServer(ctx)).To(Succeed())
+
+				Expect(ext.Destroy(ctx)).To(Succeed())
+
+				extensionList := &extensionsv1alpha1.ExtensionList{}
+				Expect(fakeSeedClient.List(ctx, extensionList)).To(Succeed())
+				Expect(extensionList.Items).To(HaveLen(2))
+				Expect(slices.Collect(func(yield func(string) bool) {
+					for _, ext := range extensionList.Items {
+						if !yield(ext.Name) {
+							return
+						}
+					}
+				})).To(ContainElements("garden-def", "garden-after"))
+			})
+		})
+
+		Describe("#WaitCleanup", func() {
+			It("should not return error if all resources with related extension class are gone", func() {
+				Expect(extGarden.DeployAfterKubeAPIServer(ctx)).To(Succeed())
+
+				Expect(ext.WaitCleanupStaleResources(ctx)).To(Succeed())
+			})
+		})
+
+		Describe("#DeleteStaleResources", func() {
+			It("should delete stale extension resources", func() {
+				Expect(ext.Deploy(ctx)).To(Succeed())
+
+				staleExtension := defaultExtension.DeepCopy()
+				staleExtension.Name = "new-name"
+				staleExtension.Spec.Type = "new-type"
+				Expect(fakeSeedClient.Create(ctx, staleExtension)).To(Succeed())
+
+				staleExtensionGarden := defaultExtension.DeepCopy()
+				staleExtensionGarden.Name = "garden-new-name"
+				staleExtensionGarden.Spec.Type = "new-type"
+				staleExtensionGarden.Spec.Class = ptr.To[extensionsv1alpha1.ExtensionClass]("garden")
+				Expect(fakeSeedClient.Create(ctx, staleExtensionGarden)).To(Succeed())
+
+				Expect(ext.DeleteStaleResources(ctx)).To(Succeed())
+
+				extensionList := &extensionsv1alpha1.ExtensionList{}
+				Expect(fakeSeedClient.List(ctx, extensionList)).To(Succeed())
+				Expect(extensionList.Items).To(consistOfObjects(defaultName, beforeName, afterName, afterWorkerName, staleExtensionGarden.Name))
+			})
+		})
+	})
+
+	Context("With Prefix", func() {
+		Describe("#Deploy", func() {
+			It("should successfully deploy extension resources", func() {
+				Expect(extGarden.Deploy(ctx)).To(Succeed())
+				extensionList := &extensionsv1alpha1.ExtensionList{}
+				Expect(fakeSeedClient.List(ctx, extensionList, client.InNamespace(namespace.Name))).To(Succeed())
+				Expect(extensionList.Items).To(consistOfObjects("garden-"+beforeName, "garden-"+defaultName, "garden-"+afterName, "garden-"+afterWorkerName))
+			})
+		})
+
+		Describe("#DeleteStaleResources", func() {
+			It("should delete stale extension resources", func() {
+				Expect(extGarden.Deploy(ctx)).To(Succeed())
+
+				staleExtension := defaultExtension.DeepCopy()
+				staleExtension.Name = "garden-new-name"
+				staleExtension.Spec.Type = "new-type"
+				staleExtension.Spec.Class = ptr.To[extensionsv1alpha1.ExtensionClass]("garden")
+
+				Expect(fakeSeedClient.Create(ctx, staleExtension)).To(Succeed())
+
+				Expect(extGarden.DeleteStaleResources(ctx)).To(Succeed())
+
+				extensionList := &extensionsv1alpha1.ExtensionList{}
+				Expect(fakeSeedClient.List(ctx, extensionList)).To(Succeed())
+				Expect(extensionList.Items).To(consistOfObjects("garden-"+defaultName, "garden-"+beforeName, "garden-"+afterName, "garden-"+afterWorkerName))
+			})
 		})
 	})
 })
