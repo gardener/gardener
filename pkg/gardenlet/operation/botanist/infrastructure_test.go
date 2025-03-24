@@ -19,6 +19,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubernetesmock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockinfrastructure "github.com/gardener/gardener/pkg/component/extensions/infrastructure/mock"
@@ -161,6 +162,7 @@ var _ = Describe("Infrastructure", func() {
 			botanist.GardenClient = gardenClient
 			botanist.SeedClientSet = seedClientSet
 			botanist.Shoot.SetInfo(shoot)
+			botanist.Shoot.ControlPlaneNamespace = "shoot--foo--bar"
 		})
 
 		It("should successfully wait (w/ CIDRs)", func() {
@@ -184,7 +186,10 @@ var _ = Describe("Infrastructure", func() {
 			gardenClient.EXPECT().Status().Return(mockStatusWriter)
 			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot2, updatedShoot, types.StrategicMergePatchType)
 
+			// cluster resource sync
 			seedClientSet.EXPECT().Client().Return(seedClient)
+			seedClient.EXPECT().Get(ctx, client.ObjectKey{Name: botanist.Shoot.ControlPlaneNamespace}, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{}))
+			seedClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{}), gomock.Any())
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
 			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot2))
@@ -205,7 +210,10 @@ var _ = Describe("Infrastructure", func() {
 			gardenClient.EXPECT().Status().Return(mockStatusWriter)
 			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot2, updatedShoot, types.StrategicMergePatchType)
 
+			// cluster resource sync
 			seedClientSet.EXPECT().Client().Return(seedClient)
+			seedClient.EXPECT().Get(ctx, client.ObjectKey{Name: botanist.Shoot.ControlPlaneNamespace}, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{}))
+			seedClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{}), gomock.Any())
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
 			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot2))

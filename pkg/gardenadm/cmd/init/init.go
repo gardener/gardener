@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
@@ -62,9 +63,26 @@ func run(ctx context.Context, opts *Options) error {
 	var (
 		g = flow.NewGraph("init")
 
+		reconcileCustomResourceDefinitions = g.Add(flow.Task{
+			Name: "Reconciling CustomResourceDefinitions",
+			Fn:   b.ReconcileCustomResourceDefinitions,
+		})
+		ensureCustomResourceDefinitionsReady = g.Add(flow.Task{
+			Name:         "Ensuring CustomResourceDefinitions are ready",
+			Fn:           flow.TaskFn(b.EnsureCustomResourceDefinitionsReady).RetryUntilTimeout(time.Second, time.Minute),
+			Dependencies: flow.NewTaskIDs(reconcileCustomResourceDefinitions),
+		})
+		reconcileClusterResource = g.Add(flow.Task{
+			Name: "Reconciling extensions.gardener.cloud/v1alpha1.Cluster resource",
+			Fn: func(ctx context.Context) error {
+				return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, b.Seed.GetInfo())
+			},
+			Dependencies: flow.NewTaskIDs(ensureCustomResourceDefinitionsReady),
+		})
 		initializeSecretsManagement = g.Add(flow.Task{
-			Name: "Initializing internal state of Gardener secrets manager",
-			Fn:   b.InitializeSecretsManagement,
+			Name:         "Initializing internal state of Gardener secrets manager",
+			Fn:           b.InitializeSecretsManagement,
+			Dependencies: flow.NewTaskIDs(reconcileClusterResource),
 		})
 		bootstrapKubelet = g.Add(flow.Task{
 			Name:         "Creating real bootstrap token for kubelet and restart unit",
