@@ -1492,7 +1492,7 @@ func validateMachineTypes(constraints []gardencorev1beta1.MachineType, machine, 
 	)
 
 	for _, t := range constraints {
-		if ptr.Equal(t.Architecture, machine.Architecture) {
+		if t.GetArchitecture() == ptr.Deref(machine.Architecture, "") {
 			machinesWithSupportedArchitecture.Insert(t.Name)
 		}
 		if ptr.Deref(t.Usable, false) {

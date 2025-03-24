@@ -63,11 +63,12 @@ func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1b
 	}
 
 	machine := machineTypes[machineIndex]
-	if machine.Architecture == nil {
+	machineArch = machine.GetArchitecture()
+	if machineArch == "" {
 		return "", "",
 			fmt.Errorf("architecture for specified bastion machine type %s is <nil>", bastion.MachineType.Name)
 	}
-	return machine.Name, *machine.Architecture, nil
+	return machine.Name, machineArch, nil
 }
 
 func findSupportedArchitectures(images []gardencorev1beta1.MachineImage, capabilities gardencorev1beta1.Capabilities, machineImageName, machineImageVersion string) []string {
@@ -200,11 +201,11 @@ func findMostSuitableMachineType(profile *gardencorev1beta1.CloudProfile) (machi
 	var minCpu *int64
 
 	for _, machine := range profile.Spec.MachineTypes {
-		if machine.Architecture == nil {
+		arch := machine.GetArchitecture()
+		if arch == "" {
 			continue
 		}
 
-		arch := *machine.Architecture
 		if minCpu == nil || machine.CPU.Value() < *minCpu &&
 			(supportedArchs == nil || slices.Contains(supportedArchs, arch)) {
 			minCpu = ptr.To(machine.CPU.Value())
