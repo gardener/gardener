@@ -530,17 +530,12 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 }
 
 func (r *Reconciler) newKubeAPIServerServiceWithSuffix(log logr.Logger, garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues, suffix string) component.DeployWaiter {
-	var annotations map[string]string
-	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
-		annotations = settings.LoadBalancerServices.Annotations
-	}
-
 	return kubeapiserverexposure.NewService(
 		log,
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc:             func() map[string]string { return annotations },
+			AnnotationsFunc:             func() map[string]string { return nil },
 			NamePrefix:                  namePrefix,
 			NameSuffix:                  suffix,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
