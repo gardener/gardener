@@ -135,6 +135,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 				LivenessProbe: &corev1.Probe{
 					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
+							Host:   "localhost",
 							Path:   "/livez",
 							Scheme: corev1.URISchemeHTTP,
 							Port:   intstr.FromInt32(e.values.PortMetrics),
@@ -156,6 +157,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 				StartupProbe: &corev1.Probe{
 					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
+							Host:   "localhost",
 							Path:   "/health",
 							Scheme: corev1.URISchemeHTTP,
 							Port:   intstr.FromInt32(e.values.PortMetrics),
