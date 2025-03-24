@@ -1369,7 +1369,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeNotSupported),
-							"Field":    Equal("spec.machineImages[0].versions[0].capabilities[0].architecture[1]"),
+							"Field":    Equal("spec.machineImages[0].versions[0].capabilitySets[0].architecture[1]"),
 							"BadValue": Equal("other"),
 							"Detail":   Equal(`supported values: "amd64", "arm64"`),
 						})), PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1798,11 +1798,64 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 			})
 
 			Describe("using CapabilitySets", func() {
+				BeforeEach(func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
+				})
+
+				It("should validate other capability values against global definition", func() {
+					cloudProfileNew.Spec.Capabilities = core.Capabilities{
+						"architecture": core.CapabilityValues{
+							Values: []string{"amd64", "arm64"},
+						},
+						"foo": core.CapabilityValues{
+							Values: []string{"bar", "baz"},
+						},
+					}
+
+					cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{
+							"architecture": {Values: []string{"arm64"}},
+							"foo":          {Values: []string{"bar", "foobar"}},
+							"bar":          {Values: []string{"baz"}},
+						}},
+					}
+					cloudProfileNew.Spec.MachineTypes[0].Capabilities = core.Capabilities{
+						"architecture": {Values: []string{"arm64"}},
+						"foo":          {Values: []string{"bar", "foobar"}},
+						"bar":          {Values: []string{"baz"}},
+					}
+
+					Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeNotSupported),
+							"Field":    Equal("spec.machineImages[0].versions[0].capabilitySets[0].foo[1]"),
+							"BadValue": Equal("foobar"),
+							"Detail":   Equal(`supported values: "bar", "baz"`),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeNotSupported),
+							"Field":    Equal("spec.machineImages[0].versions[0].capabilitySets[0]"),
+							"BadValue": Equal("bar"),
+							"Detail":   And(ContainSubstring("supported values: "), ContainSubstring("architecture"), ContainSubstring("foo")),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeNotSupported),
+							"Field":    Equal("spec.machineTypes[0].capabilities.foo[1]"),
+							"BadValue": Equal("foobar"),
+							"Detail":   Equal(`supported values: "bar", "baz"`),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeNotSupported),
+							"Field":    Equal("spec.machineTypes[0].capabilities"),
+							"BadValue": Equal("bar"),
+							"Detail":   And(ContainSubstring("supported values: "), ContainSubstring("architecture"), ContainSubstring("foo")),
+						})),
+					))
+				})
+
 				DescribeTableSubtree("switching to CapabilitySets",
 					func(isInitialSwitch bool) {
 						BeforeEach(func() {
-							DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
-
 							cloudProfileNew.Spec.Capabilities = core.Capabilities{
 								"architecture": core.CapabilityValues{
 									Values: []string{"amd64", "arm64"},
@@ -1882,7 +1935,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(ConsistOf(
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":     Equal(field.ErrorTypeNotSupported),
-									"Field":    Equal("spec.machineImages[0].versions[0].capabilities[0].architecture[1]"),
+									"Field":    Equal("spec.machineImages[0].versions[0].capabilitySets[0].architecture[1]"),
 									"BadValue": Equal("other"),
 									"Detail":   Equal(`supported values: "amd64", "arm64"`),
 								})), PointTo(MatchFields(IgnoreExtras, Fields{

@@ -6,6 +6,7 @@ package validation
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"strconv"
@@ -260,7 +261,7 @@ func ValidateMachineImages(machineImages []core.MachineImage, capabilities core.
 				allErrs = append(allErrs, field.NotSupported(versionsPath.Child("classification"), *machineVersion.Classification, sets.List(supportedVersionClassifications)))
 			}
 
-			allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineVersion, capabilities, versionsPath)...)
+			allErrs = append(allErrs, validateMachineImageVersionCapabilities(machineVersion, capabilities, versionsPath)...)
 
 			if machineVersion.KubeletVersionConstraint != nil {
 				if _, err := semver.NewConstraint(*machineVersion.KubeletVersionConstraint); err != nil {
@@ -299,7 +300,7 @@ func validateMachineTypes(machineTypes []core.MachineType, capabilities core.Cap
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
-		allErrs = append(allErrs, validateMachineTypeArchitecture(machineType, capabilities, idxPath)...)
+		allErrs = append(allErrs, validateMachineTypeCapabilities(machineType, capabilities, idxPath)...)
 
 		if machineType.Storage != nil {
 			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
@@ -341,28 +342,44 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 	return allErrs
 }
 
+func validateMachineImageVersionCapabilities(machineImageVersion core.MachineImageVersion, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateMachineImageVersionArchitecture(machineImageVersion, capabilities, fldPath)...)
+
+	if len(capabilities) > 0 {
+		supportedCapabilityKeys := slices.Collect(maps.Keys(capabilities))
+		capabilitiesPath := fldPath.Child("capabilitySets")
+		for i, capabilitySet := range machineImageVersion.CapabilitySets {
+			capabilitySetFldPath := capabilitiesPath.Index(i)
+			for capabilityKey, capability := range capabilitySet.Capabilities {
+				supportedValues, keyExists := capabilities[capabilityKey]
+				if !keyExists {
+					allErrs = append(allErrs, field.NotSupported(capabilitySetFldPath, capabilityKey, supportedCapabilityKeys))
+					continue
+				}
+				for valueIndex, value := range capability.Values {
+					if !supportedValues.Contains(value) {
+						allErrs = append(allErrs, field.NotSupported(capabilitySetFldPath.Child(capabilityKey).Index(valueIndex), value, supportedValues.Values))
+					}
+				}
+			}
+		}
+	}
+
+	return allErrs
+}
 func validateMachineImageVersionArchitecture(machineImageVersion core.MachineImageVersion, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs                = field.ErrorList{}
 		supportedArchitectures = v1beta1constants.ValidArchitectures
 	)
 
+	// assert that the architecture values defined do not conflict
 	if len(capabilities) > 0 {
-		capabilitiesPath := fldPath.Child("capabilities")
 		supportedArchitectures = capabilities[v1beta1constants.ArchitectureKey].Values
 		allCapabilityArchitectures := core.ExtractArchitectures(machineImageVersion.CapabilitySets)
 
-		for i, capabilitySet := range machineImageVersion.CapabilitySets {
-			capabilitySetFldPath := capabilitiesPath.Index(i)
-			architectures := capabilitySet.Capabilities[v1beta1constants.ArchitectureKey].Values
-			for architectureIdx, arch := range architectures {
-				if !slices.Contains(supportedArchitectures, arch) {
-					allErrs = append(allErrs, field.NotSupported(capabilitySetFldPath.Child("architecture").Index(architectureIdx), arch, supportedArchitectures))
-				}
-			}
-		}
-
-		// assert that the architecture values defined do not conflict
 		if len(machineImageVersion.Architectures) > 0 && !areSlicesEqual(allCapabilityArchitectures, machineImageVersion.Architectures) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("architectures"), machineImageVersion.Architectures, fmt.Sprintf("architecture field values set (%s) conflict with the capability architectures (%s)", strings.Join(machineImageVersion.Architectures, ","), strings.Join(allCapabilityArchitectures, ","))))
 		}
@@ -389,6 +406,30 @@ func areSlicesEqual(s1, s2 []string) bool {
 	return true
 }
 
+func validateMachineTypeCapabilities(machineType core.MachineType, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateMachineTypeArchitecture(machineType, capabilities, fldPath)...)
+
+	if len(capabilities) > 0 {
+		supportedCapabilityKeys := slices.Collect(maps.Keys(capabilities))
+		capabilitiesPath := fldPath.Child("capabilities")
+		for capabilityKey, capability := range machineType.Capabilities {
+			supportedValues, keyExists := capabilities[capabilityKey]
+			if !keyExists {
+				allErrs = append(allErrs, field.NotSupported(capabilitiesPath, capabilityKey, supportedCapabilityKeys))
+				continue
+			}
+			for i, value := range capability.Values {
+				if !supportedValues.Contains(value) {
+					allErrs = append(allErrs, field.NotSupported(capabilitiesPath.Child(capabilityKey).Index(i), value, supportedValues.Values))
+				}
+			}
+		}
+	}
+
+	return allErrs
+}
 func validateMachineTypeArchitecture(machineType core.MachineType, capabilities core.Capabilities, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
@@ -398,21 +439,13 @@ func validateMachineTypeArchitecture(machineType core.MachineType, capabilities 
 	)
 
 	if len(capabilities) > 0 {
-		supportedArchitectures = capabilities[v1beta1constants.ArchitectureKey].Values
-
 		architectureCapabilityValues := machineType.Capabilities[v1beta1constants.ArchitectureKey].Values
 		if len(architectureCapabilityValues) > 1 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilities.architecture"), architectureCapabilityValues, "must not define more than one architecture"))
 		}
-		if len(architectureCapabilityValues) == 1 {
-			if !slices.Contains(supportedArchitectures, architectureCapabilityValues[0]) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("capabilities.architecture[0]"), architectureCapabilityValues[0], supportedArchitectures))
-			}
-
-			// assert that the architecture values defined do not conflict
-			if arch != "" && arch != architectureCapabilityValues[0] {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilities.architecture[0]"), architectureCapabilityValues[0], fmt.Sprintf("machine type architecture (%s) conflicts with the capability architecture (%s)", arch, architectureCapabilityValues[0])))
-			}
+		// assert that the architecture values defined do not conflict
+		if len(architectureCapabilityValues) == 1 && arch != "" && arch != architectureCapabilityValues[0] {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilities.architecture[0]"), architectureCapabilityValues[0], fmt.Sprintf("machine type architecture (%s) conflicts with the capability architecture (%s)", arch, architectureCapabilityValues[0])))
 		}
 	}
 
