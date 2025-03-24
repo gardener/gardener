@@ -24,6 +24,7 @@ func NewExtension(
 	gardenClient client.Client,
 	seedClient client.Client,
 	namespace string,
+	class extensionsv1alpha1.ExtensionClass,
 	extensions []gardencorev1beta1.Extension,
 	workerlessSupported bool,
 ) (extension.Interface, error) {
@@ -32,10 +33,17 @@ func NewExtension(
 		return nil, err
 	}
 
+	var extensionClass *extensionsv1alpha1.ExtensionClass
+	// Don't set the class for shoot extensions because the class field was only introduced later and not every extension can handle it.
+	if class != extensionsv1alpha1.ExtensionClassShoot {
+		extensionClass = &class
+	}
+
 	return extension.New(
 		log,
 		seedClient,
 		&extension.Values{
+			Class:      extensionClass,
 			Namespace:  namespace,
 			Extensions: mergeExtensions(controllerRegistrations.Items, extensions, namespace, workerlessSupported),
 		},

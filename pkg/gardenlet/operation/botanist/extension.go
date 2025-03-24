@@ -7,13 +7,14 @@ package botanist
 import (
 	"context"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/component/shared"
 )
 
 // DefaultExtension creates the default deployer for the Extension custom resources.
 func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, error) {
-	return shared.NewExtension(ctx, b.Logger, b.GardenClient, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo().Spec.Extensions, b.Shoot.IsWorkerless)
+	return shared.NewExtension(ctx, b.Logger, b.GardenClient, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, extensionsv1alpha1.ExtensionClassShoot, b.Shoot.GetInfo().Spec.Extensions, b.Shoot.IsWorkerless)
 }
 
 // DeployExtensionsAfterKubeAPIServer deploys the Extension custom resources and triggers the restore operation in case

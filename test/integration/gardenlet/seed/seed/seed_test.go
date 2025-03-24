@@ -11,11 +11,14 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -32,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
 	"github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
+	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
@@ -54,8 +58,10 @@ var _ = Describe("Seed controller tests", func() {
 		testRunID          string
 		testNamespace      *corev1.Namespace
 		seedName           string
+		providerName       string
 		seed               *gardencorev1beta1.Seed
 		seedControllerInst *gardencorev1beta1.ControllerInstallation
+		extensionData      []byte
 		identity           = &gardencorev1beta1.Gardener{Version: "1.2.3"}
 	)
 
@@ -195,7 +201,8 @@ var _ = Describe("Seed controller tests", func() {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(dnsProviderSecret), dnsProviderSecret)
 		}).Should(Succeed())
 
-		provider := "providerType"
+		providerName = "provider-type"
+		extensionData = []byte(`{"someField":"someValue"}`)
 
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -205,7 +212,7 @@ var _ = Describe("Seed controller tests", func() {
 			Spec: gardencorev1beta1.SeedSpec{
 				Provider: gardencorev1beta1.SeedProvider{
 					Region: "region",
-					Type:   provider,
+					Type:   providerName,
 					Zones:  []string{"a", "b", "c"},
 				},
 				Networks: gardencorev1beta1.SeedNetworks{
@@ -221,15 +228,39 @@ var _ = Describe("Seed controller tests", func() {
 				},
 				DNS: gardencorev1beta1.SeedDNS{
 					Provider: &gardencorev1beta1.SeedDNSProvider{
-						Type: provider,
+						Type: providerName,
 						SecretRef: corev1.SecretReference{
 							Name:      dnsProviderSecret.Name,
 							Namespace: dnsProviderSecret.Namespace,
 						},
 					},
 				},
+				Extensions: []gardencorev1beta1.Extension{
+					{
+						Type:           providerName,
+						ProviderConfig: &runtime.RawExtension{Raw: extensionData},
+					},
+				},
+				Resources: []gardencorev1beta1.NamedResourceReference{
+					{
+						Name: "resource",
+						ResourceRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "v1",
+							Kind:       "ConfigMap",
+							Name:       "extension-config",
+						},
+					},
+				},
 			},
 		}
+
+		referencedConfigMap := corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "extension-config",
+				Namespace: testNamespace.Name,
+			},
+		}
+		Expect(testClient.Create(ctx, &referencedConfigMap)).To(Succeed())
 
 		controllerRegistration := &gardencorev1beta1.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
@@ -238,10 +269,11 @@ var _ = Describe("Seed controller tests", func() {
 			},
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
 				Resources: []gardencorev1beta1.ControllerResource{
-					{Kind: extensionsv1alpha1.DNSRecordResource, Type: provider},
-					{Kind: extensionsv1alpha1.ControlPlaneResource, Type: provider},
-					{Kind: extensionsv1alpha1.InfrastructureResource, Type: provider},
-					{Kind: extensionsv1alpha1.WorkerResource, Type: provider},
+					{Kind: extensionsv1alpha1.DNSRecordResource, Type: providerName},
+					{Kind: extensionsv1alpha1.ControlPlaneResource, Type: providerName},
+					{Kind: extensionsv1alpha1.ExtensionResource, Type: providerName},
+					{Kind: extensionsv1alpha1.InfrastructureResource, Type: providerName},
+					{Kind: extensionsv1alpha1.WorkerResource, Type: providerName},
 				},
 			},
 		}
@@ -285,6 +317,9 @@ var _ = Describe("Seed controller tests", func() {
 		DeferCleanup(func() {
 			By("Delete Seed")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, seed))).To(Succeed())
+
+			By("Delete referenced ConfigMap")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, &referencedConfigMap))).To(Succeed())
 
 			By("Delete ControllerInstallation")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, seedControllerInst))).To(Succeed())
@@ -364,11 +399,12 @@ var _ = Describe("Seed controller tests", func() {
 			JustBeforeEach(func() {
 				DeferCleanup(
 					test.WithVars(
+						&dnsrecord.WaitUntilExtensionObjectReady, waitUntilExtensionObjectReadyInTest,
+						&extension.WaitUntilExtensionObjectReady, waitUntilExtensionObjectReadyInTest,
+						&nginxingress.WaitUntilHealthy, waitUntilHealthyInTest,
 						&resourcemanager.Until, untilInTest,
 						&resourcemanager.TimeoutWaitForDeployment, 50*time.Millisecond,
-						&nginxingress.WaitUntilHealthy, waitUntilHealthyInTest,
 						&seedcontroller.WaitUntilLoadBalancerIsReady, waitUntilLoadBalancerIsReadyInTest,
-						&dnsrecord.WaitUntilExtensionObjectReady, waitUntilExtensionObjectReadyInTest,
 					),
 				)
 
@@ -647,6 +683,7 @@ var _ = Describe("Seed controller tests", func() {
 						"prometheus-seed",
 						"prometheus-aggregate",
 						"kube-state-metrics-seed",
+						"referenced-resources-" + seedName,
 					}
 
 					if !seedIsGarden {
@@ -681,6 +718,21 @@ var _ = Describe("Seed controller tests", func() {
 						g.Expect(testClient.List(ctx, managedResourceList, client.InNamespace("istio-system"))).To(Succeed())
 						return test.ObjectNames(managedResourceList)
 					}).Should(ConsistOf(expectedIstioManagedResources))
+
+					By("Verify extension object")
+					Eventually(func(g Gomega) {
+						extension := &extensionsv1alpha1.Extension{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      providerName,
+								Namespace: testNamespace.Name,
+							},
+						}
+
+						g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+						g.Expect(extension.Spec.Class).To(PointTo(BeEquivalentTo("seed")))
+						g.Expect(extension.Spec.ProviderConfig).NotTo(BeNil())
+						g.Expect(extension.Spec.ProviderConfig.Raw).To(Equal(extensionData))
+					}).Should(Succeed())
 
 					By("Wait for 'last operation' state to be set to Succeeded")
 					Eventually(func(g Gomega) {

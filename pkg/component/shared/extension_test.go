@@ -142,7 +142,7 @@ var _ = Describe("Extension", func() {
 				Expect(gardenClient.Create(ctx, &registration)).To(Succeed())
 			}
 
-			ext, err := NewExtension(ctx, log, gardenClient, seedClient, "test", extensions, workerless)
+			ext, err := NewExtension(ctx, log, gardenClient, seedClient, "test", extensionsv1alpha1.ExtensionClassShoot, extensions, workerless)
 			Expect(err).NotTo(HaveOccurred())
 
 			extensionObjs := ext.Extensions()

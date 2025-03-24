@@ -193,10 +193,13 @@ func (e *extension) Deploy(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
+// WaitUntilExtensionObjectReady is an alias for extensions.WaitUntilExtensionObjectReady. Exposed for tests.
+var WaitUntilExtensionObjectReady = extensions.WaitUntilExtensionObjectReady
+
 // Wait waits until all extensions are deployed and report readiness.
 func (e *extension) Wait(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, _ string, _ *runtime.RawExtension, timeout time.Duration) error {
-		return extensions.WaitUntilExtensionObjectReady(
+		return WaitUntilExtensionObjectReady(
 			ctx,
 			e.client,
 			e.log,
@@ -236,7 +239,7 @@ func (e *extension) DestroyAfterKubeAPIServer(ctx context.Context) error {
 // WaitAfterKubeAPIServer waits until the Extension resources that should be deployed after the kube-apiserver are ready.
 func (e *extension) WaitAfterKubeAPIServer(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, _ string, _ *runtime.RawExtension, timeout time.Duration) error {
-		return extensions.WaitUntilExtensionObjectReady(
+		return WaitUntilExtensionObjectReady(
 			ctx,
 			e.client,
 			e.log,
@@ -255,7 +258,7 @@ func (e *extension) WaitAfterKubeAPIServer(ctx context.Context) error {
 // WaitBeforeKubeAPIServer waits until the Extension resources that should be deployed before the kube-apiserver are ready.
 func (e *extension) WaitBeforeKubeAPIServer(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, _ string, _ *runtime.RawExtension, timeout time.Duration) error {
-		return extensions.WaitUntilExtensionObjectReady(
+		return WaitUntilExtensionObjectReady(
 			ctx,
 			e.client,
 			e.log,
@@ -274,7 +277,7 @@ func (e *extension) WaitBeforeKubeAPIServer(ctx context.Context) error {
 // WaitAfterWorker waits until the Extension resources that should be deployed after the workers are ready.
 func (e *extension) WaitAfterWorker(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, ext *extensionsv1alpha1.Extension, _ string, _ *runtime.RawExtension, timeout time.Duration) error {
-		return extensions.WaitUntilExtensionObjectReady(
+		return WaitUntilExtensionObjectReady(
 			ctx,
 			e.client,
 			e.log,

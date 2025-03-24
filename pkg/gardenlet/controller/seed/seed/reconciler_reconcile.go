@@ -293,6 +293,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(waitUntilRequiredExtensionsReady),
 			SkipIf:       !seedIsOriginOfClusterIdentity,
 		})
+		deployExtensionResources = g.Add(flow.Task{
+			Name:         "Deploying extension resources",
+			Fn:           c.extension.Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilRequiredExtensionsReady),
+		})
+		waitUntilExtensionResourcesReady = g.Add(flow.Task{
+			Name:         "Waiting until extension resources are ready",
+			Fn:           c.extension.Wait,
+			Dependencies: flow.NewTaskIDs(deployExtensionResources),
+		})
 		cleanupOrphanedExposureClassHandlers = g.Add(flow.Task{
 			Name: "Cleaning up orphan ExposureClass handler resources",
 			Fn: func(ctx context.Context) error {
@@ -304,6 +314,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployGardenerResourceManager,
 			deployClusterIdentity,
 			cleanupOrphanedExposureClassHandlers,
+			waitUntilExtensionResourcesReady,
 		)
 
 		deployIstio = g.Add(flow.Task{
@@ -476,6 +487,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Deploying Alertmanager",
 			Fn:           c.alertManager.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		deleteStaleExtensionResources = g.Add(flow.Task{
+			Name:         "Deleting stale extension resources",
+			Fn:           flow.TaskFn(c.extension.DeleteStaleResources),
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until stale extension resources are deleted",
+			Fn:           c.extension.WaitCleanupStaleResources,
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
 	)
 
