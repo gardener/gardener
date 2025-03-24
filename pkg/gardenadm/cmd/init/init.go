@@ -66,10 +66,15 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Initializing internal state of Gardener secrets manager",
 			Fn:   b.InitializeSecretsManagement,
 		})
-		_ = g.Add(flow.Task{
+		bootstrapKubelet = g.Add(flow.Task{
 			Name:         "Creating real bootstrap token for kubelet and restart unit",
 			Fn:           b.BootstrapKubelet,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Approving kubelet server certificate signing request if necessary",
+			Fn:           flow.TaskFn(b.ApproveKubeletServerCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
+			Dependencies: flow.NewTaskIDs(bootstrapKubelet),
 		})
 	)
 
