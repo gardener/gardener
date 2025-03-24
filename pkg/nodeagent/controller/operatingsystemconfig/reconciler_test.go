@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
+	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
@@ -106,8 +106,8 @@ kind: Config
 preferences: {}
 `
 
-		kubeletCertPath = filepath.Join(kubelet.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
-		kubeletCertDir = filepath.Join(kubelet.PathKubeletDirectory, "pki")
+		kubeletCertPath = filepath.Join(kubeletcomponent.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
+		kubeletCertDir = filepath.Join(kubeletcomponent.PathKubeletDirectory, "pki")
 	})
 
 	Context("#deleteRemainingPods", func() {
@@ -180,7 +180,9 @@ preferences: {}
 			}
 
 			oscChanges = &operatingSystemConfigChanges{
-				OSUpdate: true,
+				InPlaceUpdates: inPlaceUpates{
+					OperatingSystem: true,
+				},
 			}
 
 			DeferCleanup(test.WithVars(
@@ -190,7 +192,7 @@ preferences: {}
 		})
 
 		It("should return nil if oscChanges.OSVersion.Changed is false", func() {
-			oscChanges.OSUpdate = false
+			oscChanges.InPlaceUpdates.OperatingSystem = false
 
 			Expect(reconciler.updateOSInPlace(ctx, log, oscChanges, osc, node)).To(Succeed())
 		})
@@ -203,7 +205,7 @@ preferences: {}
 			Expect(reconciler.updateOSInPlace(ctx, log, oscChanges, osc, node)).To(Succeed())
 
 			Expect(reconciler.Client.Get(ctx, client.ObjectKey{Name: node.Name}, node)).To(Succeed())
-			Expect(node.Annotations).To(HaveKeyWithValue("node-agent.gardener.cloud/updating-os-version", "1.2.3"))
+			Expect(node.Annotations).To(HaveKeyWithValue("node-agent.gardener.cloud/updating-operating-system-version", "1.2.3"))
 			Expect(node.Labels).NotTo(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed))
 		})
 
@@ -231,7 +233,7 @@ preferences: {}
 			Expect(reconciler.updateOSInPlace(ctx, log, oscChanges, osc, node)).To(Succeed())
 
 			Expect(reconciler.Client.Get(ctx, client.ObjectKey{Name: node.Name}, node)).To(Succeed())
-			Expect(node.Annotations).To(HaveKeyWithValue("node-agent.gardener.cloud/updating-os-version", "1.2.3"))
+			Expect(node.Annotations).To(HaveKeyWithValue("node-agent.gardener.cloud/updating-operating-system-version", "1.2.3"))
 			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed))
 			Expect(node.Annotations).To(HaveKeyWithValue(machinev1alpha1.AnnotationKeyMachineUpdateFailedReason, ContainSubstring("retriable error detected: command failed, output: network problems")))
 		})
@@ -244,7 +246,7 @@ preferences: {}
 			Expect(reconciler.updateOSInPlace(ctx, log, oscChanges, osc, node)).To(Succeed())
 
 			Expect(reconciler.Client.Get(ctx, client.ObjectKey{Name: node.Name}, node)).To(Succeed())
-			Expect(node.Annotations).To(HaveKeyWithValue("node-agent.gardener.cloud/updating-os-version", "1.2.3"))
+			Expect(node.Annotations).To(HaveKeyWithValue("node-agent.gardener.cloud/updating-operating-system-version", "1.2.3"))
 			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed))
 			Expect(node.Annotations).To(HaveKeyWithValue(machinev1alpha1.AnnotationKeyMachineUpdateFailedReason, ContainSubstring("non-retriable error detected: command failed, output: invalid arguments")))
 		})
@@ -287,7 +289,7 @@ preferences: {}
 		})
 
 		It("should set the node to update-failed if the lastAttempted version is equal to the osc.Spec.InPlaceUpdates.OperatingSystemVersion", func() {
-			node.Annotations = map[string]string{"node-agent.gardener.cloud/updating-os-version": "1.2.4"}
+			node.Annotations = map[string]string{"node-agent.gardener.cloud/updating-operating-system-version": "1.2.4"}
 			osc.Spec.InPlaceUpdates.OperatingSystemVersion = "1.2.4"
 
 			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)).To(Succeed())
@@ -458,10 +460,12 @@ preferences: {}
 			})
 
 			oscChanges = &operatingSystemConfigChanges{
-				KubeletUpdate: kubeletUpdate{
-					MinorVersionUpdate:     true,
-					ConfigUpdate:           true,
-					CPUManagerPolicyUpdate: true,
+				InPlaceUpdates: inPlaceUpates{
+					Kubelet: kubelet{
+						MinorVersion:     true,
+						Config:           true,
+						CPUManagerPolicy: true,
+					},
 				},
 				fs: fs,
 			}
@@ -477,9 +481,9 @@ preferences: {}
 
 			Expect(reconciler.completeKubeletInPlaceUpdate(ctx, log, oscChanges, node)).To(Succeed())
 
-			Expect(oscChanges.KubeletUpdate.MinorVersionUpdate).To(BeFalse())
-			Expect(oscChanges.KubeletUpdate.ConfigUpdate).To(BeFalse())
-			Expect(oscChanges.KubeletUpdate.CPUManagerPolicyUpdate).To(BeFalse())
+			Expect(oscChanges.InPlaceUpdates.Kubelet.MinorVersion).To(BeFalse())
+			Expect(oscChanges.InPlaceUpdates.Kubelet.Config).To(BeFalse())
+			Expect(oscChanges.InPlaceUpdates.Kubelet.CPUManagerPolicy).To(BeFalse())
 		})
 
 		It("should fail if kubelet health check fails", func() {
@@ -492,7 +496,7 @@ preferences: {}
 	Context("#rebootstrapKubelet", func() {
 		It("should successfully rebootstrap kubelet", func() {
 			Expect(fs.WriteFile(kubeletCertPath, []byte("test-cert"), 0600)).To(Succeed())
-			Expect(fs.WriteFile(kubelet.PathKubeconfigReal, []byte(fakeKubeConfig), 0600)).To(Succeed())
+			Expect(fs.WriteFile(kubeletcomponent.PathKubeconfigReal, []byte(fakeKubeConfig), 0600)).To(Succeed())
 
 			Expect(reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)).To(Succeed())
 
@@ -516,7 +520,7 @@ users:
     client-certificate-data: ` + utils.EncodeBase64([]byte("test-cert")) + `
     client-key-data: ` + utils.EncodeBase64([]byte("test-cert")) + `
 `
-			test.AssertFileOnDisk(fs, kubelet.PathKubeconfigBootstrap, expectedBootStrapConfig, 0600)
+			test.AssertFileOnDisk(fs, kubeletcomponent.PathKubeconfigBootstrap, expectedBootStrapConfig, 0600)
 
 			Expect(fs.DirExists(kubeletCertDir)).To(BeFalse())
 
@@ -527,7 +531,7 @@ users:
 		})
 
 		It("should not fail if kubelet client certificate is missing but bootstrap file exists", func() {
-			Expect(fs.WriteFile(kubelet.PathKubeconfigBootstrap, []byte("test-bootstrap-kubeconfig"), 0600)).To(Succeed())
+			Expect(fs.WriteFile(kubeletcomponent.PathKubeconfigBootstrap, []byte("test-bootstrap-kubeconfig"), 0600)).To(Succeed())
 
 			Expect(reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)).To(Succeed())
 
@@ -542,11 +546,11 @@ users:
 		It("should fail if kubelet client certificate and bootstrap file are missing", func() {
 			err := reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("kubeconfig file %q does not exist, cannot proceed with rebootstrap", kubelet.PathKubeconfigBootstrap))
+			Expect(err.Error()).To(ContainSubstring("kubeconfig file %q does not exist, cannot proceed with rebootstrap", kubeletcomponent.PathKubeconfigBootstrap))
 		})
 
 		It("should fail if kubeconfig file cannot be loaded", func() {
-			Expect(fs.WriteFile(kubelet.PathKubeconfigReal, []byte("invalid-kubeconfig"), 0600)).To(Succeed())
+			Expect(fs.WriteFile(kubeletcomponent.PathKubeconfigReal, []byte("invalid-kubeconfig"), 0600)).To(Succeed())
 
 			err := reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)
 			Expect(err).To(HaveOccurred())
@@ -554,7 +558,7 @@ users:
 		})
 
 		It("should fail if DBus restart fails", func() {
-			Expect(fs.WriteFile(kubelet.PathKubeconfigBootstrap, []byte("test-bootstrap-kubeconfig"), 0600)).To(Succeed())
+			Expect(fs.WriteFile(kubeletcomponent.PathKubeconfigBootstrap, []byte("test-bootstrap-kubeconfig"), 0600)).To(Succeed())
 
 			// Inject DBus restart failure
 			fakeDBus.InjectRestartFailure(errors.New("restart failed"), kubeletUnitName)
@@ -608,7 +612,7 @@ kind: NodeAgentConfiguration
 		})
 
 		It("should successfully generate events for service account key rotation", func(ctx context.Context) {
-			oscChanges.SAKeyRotation = true
+			oscChanges.InPlaceUpdates.ServiceAccountKeyRotation = true
 			reconciler.TokenSecretSyncConfigs = []nodeagentconfigv1alpha1.TokenSecretSyncConfig{
 				{SecretName: "test-token-1"},
 				{SecretName: "test-token-2"},
@@ -625,14 +629,14 @@ kind: NodeAgentConfiguration
 			}()
 
 			Expect(reconciler.performCredentialsRotationInPlace(ctx, log, oscChanges, node)).To(Succeed())
-			Expect(oscChanges.SAKeyRotation).To(BeFalse())
+			Expect(oscChanges.InPlaceUpdates.ServiceAccountKeyRotation).To(BeFalse())
 		}, NodeTimeout(time.Second*5))
 
 		It("should successfully rotate CA certificate for kubelet", func() {
 			Expect(fs.WriteFile(kubeletCertPath, []byte("test-cert"), 0600)).To(Succeed())
-			Expect(fs.WriteFile(kubelet.PathKubeconfigReal, []byte(fakeKubeConfig), 0600)).To(Succeed())
+			Expect(fs.WriteFile(kubeletcomponent.PathKubeconfigReal, []byte(fakeKubeConfig), 0600)).To(Succeed())
 
-			oscChanges.CARotation.Kubelet = true
+			oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet = true
 
 			Expect(reconciler.performCredentialsRotationInPlace(ctx, log, oscChanges, node)).To(Succeed())
 			Expect(fakeDBus.Actions).To(ContainElement(fakedbus.SystemdAction{
@@ -640,7 +644,7 @@ kind: NodeAgentConfiguration
 				UnitNames: []string{kubeletUnitName},
 			}))
 
-			Expect(oscChanges.CARotation.Kubelet).To(BeFalse())
+			Expect(oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet).To(BeFalse())
 		})
 
 		It("should successfully rotate the CA certificate for gardener-node-agent", func() {
@@ -657,11 +661,11 @@ kind: NodeAgentConfiguration
 				},
 			))
 
-			oscChanges.CARotation.NodeAgent = true
+			oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent = true
 
 			Expect(reconciler.performCredentialsRotationInPlace(ctx, log, oscChanges, node)).To(Succeed())
 
-			Expect(oscChanges.CARotation.NodeAgent).To(BeFalse())
+			Expect(oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent).To(BeFalse())
 			Expect(oscChanges.MustRestartNodeAgent).To(BeTrue())
 
 			expectedNodeAgentKubeConfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CABundle, nodeAgentConfig.APIServer.Server, "new-cert")

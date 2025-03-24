@@ -83,6 +83,21 @@ var _ = Describe("Version", func() {
 		Entry("no match w/ suffix", "1.2.3-foo.12", ">", "v1.2.4-foo.34", BeFalse()),
 	)
 
+	DescribeTable("should normalize version strings correctly",
+		func(input string, expected string) {
+			Expect(Normalize(input)).To(Equal(expected))
+		},
+
+		Entry("removes leading 'v'", "v1.2.3", "1.2.3"),
+		Entry("removes suffix '-rc1'", "1.2.3-rc1", "1.2.3"),
+		Entry("removes suffix '-beta2'", "1.2.3-beta2", "1.2.3"),
+		Entry("removes suffix '-alpha'", "1.2.3-alpha", "1.2.3"),
+		Entry("removes build metadata '+build123'", "1.2.3+build123", "1.2.3"),
+		Entry("handles both suffix and metadata", "1.2.3-rc1+build123", "1.2.3"),
+		Entry("returns unchanged version without 'v', suffix, or metadata", "1.2.3", "1.2.3"),
+		Entry("handles empty version string", "", ""),
+	)
+
 	DescribeTable("#CheckVersionMeetsConstraint",
 		func(version, constraint string, expected gomegatypes.GomegaMatcher) {
 			result, err := CheckVersionMeetsConstraint(version, constraint)

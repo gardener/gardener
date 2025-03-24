@@ -56,8 +56,6 @@ rules:
   - get
   - list
   - watch
-  - patch
-  - update
   - delete
 - apiGroups:
   - ""
@@ -237,8 +235,6 @@ rules:
   - get
   - list
   - watch
-  - patch
-  - update
   - delete
 - apiGroups:
   - ""

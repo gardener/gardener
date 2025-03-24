@@ -39,7 +39,7 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 				{
 					APIGroups: []string{""},
 					Resources: []string{"pods"},
-					Verbs:     []string{"get", "list", "watch", "patch", "update", "delete"},
+					Verbs:     []string{"get", "list", "watch", "delete"},
 				},
 				{
 					APIGroups: []string{""},
