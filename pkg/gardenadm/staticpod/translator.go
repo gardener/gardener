@@ -29,7 +29,7 @@ func Translate(ctx context.Context, c client.Client, o client.Object) ([]extensi
 	case *appsv1.Deployment:
 		return translatePodTemplate(ctx, c, obj.ObjectMeta, obj.Spec.Template)
 	case *corev1.Pod:
-		return translatePodTemplate(ctx, c, obj.ObjectMeta, corev1.PodTemplateSpec{ObjectMeta: obj.ObjectMeta, Spec: obj.Spec})
+		return translatePodTemplate(ctx, c, obj.ObjectMeta, corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: obj.Labels, Annotations: obj.Annotations}, Spec: obj.Spec})
 	// TODO(rfranzke): Consider adding support for StatefulSet in the future.
 	default:
 		return nil, fmt.Errorf("unsupported object type %T", o)

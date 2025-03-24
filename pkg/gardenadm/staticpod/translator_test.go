@@ -270,9 +270,12 @@ kind: Config
 			BeforeEach(func() {
 				pod = &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels:      map[string]string{"baz": "foo"},
-						Annotations: map[string]string{"bar": "baz"},
-						Name:        "foo",
+						Labels:          map[string]string{"baz": "foo"},
+						Annotations:     map[string]string{"bar": "baz"},
+						Name:            "foo",
+						ResourceVersion: "1",
+						Finalizers:      []string{"bar"},
+						OwnerReferences: []metav1.OwnerReference{{}},
 					},
 				}
 			})
