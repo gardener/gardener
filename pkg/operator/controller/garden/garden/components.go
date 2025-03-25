@@ -535,7 +535,6 @@ func (r *Reconciler) newKubeAPIServerServiceWithSuffix(log logr.Logger, garden *
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc:             func() map[string]string { return nil },
 			NamePrefix:                  namePrefix,
 			NameSuffix:                  suffix,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
