@@ -144,7 +144,18 @@ func syncArchitectureCapabilities(namespacedCloudProfile *gardencorev1beta1.Name
 	var coreCloudProfileSpec gardencore.CloudProfileSpec
 	_ = api.Scheme.Convert(&namespacedCloudProfile.Status.CloudProfileSpec, &coreCloudProfileSpec, nil)
 	helper.SyncArchitectureCapabilityFields(coreCloudProfileSpec, gardencore.CloudProfileSpec{})
+	defaultMachineTypeArchitectures(coreCloudProfileSpec)
 	_ = api.Scheme.Convert(&coreCloudProfileSpec, &namespacedCloudProfile.Status.CloudProfileSpec, nil)
+}
+
+// defaultMachineTypeArchitectures defaults the architectures of the machine types for NamespacedCloudProfiles.
+// The sync can only happen after having had a look at the parent CloudProfile and whether it uses capabilities.
+func defaultMachineTypeArchitectures(cloudProfile gardencore.CloudProfileSpec) {
+	for i, machineType := range cloudProfile.MachineTypes {
+		if machineType.GetArchitecture() == "" {
+			cloudProfile.MachineTypes[i].Architecture = ptr.To(v1beta1constants.ArchitectureAMD64)
+		}
+	}
 }
 
 var (
