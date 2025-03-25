@@ -17,6 +17,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -108,6 +109,64 @@ preferences: {}
 
 		kubeletCertPath = filepath.Join(kubeletcomponent.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
 		kubeletCertDir = filepath.Join(kubeletcomponent.PathKubeletDirectory, "pki")
+	})
+
+	Context("#GetOSVersion", func() {
+		BeforeEach(func() {
+			Expect(fs.WriteFile("/etc/os-release", []byte(`ID=gardenlinux
+NAME="Garden Linux"
+PRETTY_NAME="Garden Linux 1592.6"
+HOME_URL="https://gardenlinux.io"
+SUPPORT_URL="https://github.com/gardenlinux/gardenlinux"
+BUG_REPORT_URL="https://github.com/gardenlinux/gardenlinux/issues"
+GARDENLINUX_CNAME=gardener_prod-amd64-1592.6
+GARDENLINUX_FEATURES=log
+GARDENLINUX_VERSION=1592.6
+GARDENLINUX_COMMIT_ID=5b20e1c
+GARDENLINUX_COMMIT_ID_LONG=5b20e1c0436d229b051f0481a72d0a366315b220
+`), 0600)).To(Succeed())
+		})
+
+		It("should return the OS version", func() {
+			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).To(PointTo(Equal("1592.6")))
+		})
+
+		It("should return nil when inPlaceUpdates is nil", func() {
+			version, err := GetOSVersion(nil, fs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).To(BeNil())
+		})
+
+		It("should return an error when os-release file does not exist", func() {
+			Expect(fs.Remove("/etc/os-release")).To(Succeed())
+
+			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)
+			Expect(err).To(MatchError(ContainSubstring("file does not exist")))
+			Expect(version).To(BeNil())
+		})
+
+		It("should return an error when it is not able to get the version", func() {
+			Expect(fs.WriteFile("/etc/os-release", []byte(`ID=gardenlinux
+NAME="Garden Linux"
+`), 0600)).To(Succeed())
+
+			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)
+			Expect(err).To(MatchError(ContainSubstring("unable to find version")))
+			Expect(version).To(BeNil())
+		})
+
+		It("should return an error when it is not able to parse the version", func() {
+			Expect(fs.WriteFile("/etc/os-release", []byte(`ID=gardenlinux
+NAME="Garden Linux"
+PRETTY_NAME="Garden Linux 1592"
+`), 0600)).To(Succeed())
+
+			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)
+			Expect(err).To(MatchError(ContainSubstring("unable to find version")))
+			Expect(version).To(BeNil())
+		})
 	})
 
 	Context("#deleteRemainingPods", func() {
