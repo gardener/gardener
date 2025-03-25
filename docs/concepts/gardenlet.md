@@ -496,7 +496,7 @@ Please refer to [GEP-22: Improved Usage of the `ShootState` API](../proposals/22
 
 ### ["Status" Reconciler](../../pkg/gardenlet/controller/shoot/status)
 
-This reconciler watches for the `extensionsv1alpha1.Worker` resource in the control plane namespace of the `Shoot` and if it's `status.inPlaceUpdates.workerPoolToHashMap` has changed, it requeues the corresponding `Shoot`. The worker pools from `status.inPlaceUpdates.pendingWorkersRollouts.manualInPlaceUpdate` field in the `Shoot` is removed if the hash of the worker pool in the `Shoot` spec and the `Worker` status field is matching. This essentially indicates that the worker pool is successfully updated and is no longer pending manual in-place update.
+This reconciler watches for the `extensionsv1alpha1.Worker` resource in the control plane namespace of the `Shoot` and if its `status.inPlaceUpdates.workerPoolToHashMap` has changed, it requeues the corresponding `Shoot`. The worker pools from `status.inPlaceUpdates.pendingWorkersRollouts.manualInPlaceUpdate` field in the `Shoot` is removed if the hash of the worker pool in the `Shoot` spec and the `Worker` status field matches. This indicates that the worker pool is successfully updated and is no longer pending manual in-place update.
 
 ### [`TokenRequestor` Controller For `ServiceAccount`s](../../pkg/controller/tokenrequestor)
 

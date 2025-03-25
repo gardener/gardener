@@ -21,6 +21,7 @@ import (
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -94,6 +95,10 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	return nil
 }
 
+// MachineConditionChangedPredicate returns a predicate function that returns
+// - true for Create events if the MachineDeployment strategy is InPlaceUpdate and OrchestrationType is Manual
+// - true for Update events if the MachineDeployment strategy is InPlaceUpdate and OrchestrationType is Manual and machine condition transitioned from UpdateCandidate to SelectedForUpdate
+// - false for Delete and Generic events
 func MachineConditionChangedPredicate(ctx context.Context, log logr.Logger, c client.Client) predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -119,8 +124,7 @@ func MachineConditionChangedPredicate(ctx context.Context, log logr.Logger, c cl
 				return false
 			}
 
-			return machineDeployment.Spec.Strategy.Type == machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType &&
-				machineDeployment.Spec.Strategy.InPlaceUpdate != nil && machineDeployment.Spec.Strategy.InPlaceUpdate.OrchestrationType == machinev1alpha1.OrchestrationTypeManual
+			return gardenerutils.IsMachineDeploymentStrategyManualInPlace(machineDeployment.Spec.Strategy)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldMachine, ok := e.ObjectOld.(*machinev1alpha1.Machine)
@@ -151,8 +155,7 @@ func MachineConditionChangedPredicate(ctx context.Context, log logr.Logger, c cl
 			}
 
 			// Need to consider only the machines that are having update strategy in-place and orchestration type manual.
-			if machineDeployment.Spec.Strategy.Type != machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType ||
-				machineDeployment.Spec.Strategy.InPlaceUpdate == nil || machineDeployment.Spec.Strategy.InPlaceUpdate.OrchestrationType != machinev1alpha1.OrchestrationTypeManual {
+			if !gardenerutils.IsMachineDeploymentStrategyManualInPlace(machineDeployment.Spec.Strategy) {
 				return false
 			}
 

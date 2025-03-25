@@ -173,6 +173,8 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 func WorkerPoolHashV2(nodeAgentSecretName string, pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
 	data := []string{nodeAgentSecretName}
 
+	// In case of in-place update, the following data are omitted from the node-agent secret name calculation, but we still want to create a different machine class.
+	// So we add this data to the hash calculation here.
 	if v1beta1helper.IsUpdateStrategyInPlace(pool.UpdateStrategy) {
 		workerPoolHash, err := gardenerutils.CalculateWorkerPoolHashForInPlaceUpdate(
 			pool.Name,
