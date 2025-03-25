@@ -16,7 +16,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	goruntime "runtime"
 	"slices"
 	"strings"
 	"time"
@@ -893,30 +892,14 @@ func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, n
 	})
 }
 
-// Copied from https://github.com/google/cadvisor/blob/5b649021c2dab9db34c8c37596f8f73c48548350/machine/operatingsystem_unix.go#L29-L54
-// This is how kubelet gets the OS name and version.
-
+// Logic copied from https://github.com/google/cadvisor/blob/5b649021c2dab9db34c8c37596f8f73c48548350/machine/operatingsystem_unix.go#L29-L54
+// This is how kubelet gets the OS name and version. This function needs to be adapted and tested when an OS wants to support in-place updates.
 var rex = regexp.MustCompile("(PRETTY_NAME)=(.*)")
 
 // getOperatingSystem gets the name of the current operating system.
 func getOperatingSystem(fs afero.Afero) (string, error) {
-	if goruntime.GOOS == "darwin" || goruntime.GOOS == "freebsd" {
-		cmd := exec.Command("uname", "-s")
-		osName, err := cmd.Output()
-		if err != nil {
-			return "", fmt.Errorf("error running uname -s: %v", err)
-		}
-
-		return string(osName), nil
-	}
-
 	fileName := "/etc/os-release"
 	bytes, err := fs.ReadFile(fileName)
-	if err != nil && errors.Is(err, afero.ErrFileNotFound) {
-		// /usr/lib/os-release in stateless systems like Clear Linux
-		fileName = "/usr/lib/os-release"
-		bytes, err = fs.ReadFile(fileName)
-	}
 	if err != nil {
 		return "", fmt.Errorf("error opening file %q: %v", fileName, err)
 	}
@@ -925,7 +908,8 @@ func getOperatingSystem(fs afero.Afero) (string, error) {
 	if len(line) > 0 {
 		return strings.Trim(line[0][2], "\""), nil
 	}
-	return "Linux", nil
+
+	return "", nil
 }
 
 // GetOSVersion returns the current operating system version.
@@ -934,14 +918,14 @@ var GetOSVersion = func(inPlaceUpdates *extensionsv1alpha1.InPlaceUpdates, fs af
 		return nil, nil
 	}
 
-	osName, err := getOperatingSystem(fs)
+	os, err := getOperatingSystem(fs)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get operating system name: %w", err)
 	}
 
-	version := osVersionRegex.FindString(osName)
+	version := osVersionRegex.FindString(os)
 	if version == "" {
-		return nil, fmt.Errorf("unable to find version in %q with regex: %s", osName, osVersionRegex.String())
+		return nil, fmt.Errorf("unable to find version in %q with regex: %s", os, osVersionRegex.String())
 	}
 	return ptr.To(version), nil
 }
