@@ -124,10 +124,10 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	}
 
 	// Update the worker status with the worker pool hash for in-place update worker pools.
-	// If we had reached this point, we can safely say for AutoInPlaceUpdate worker pools that they have been updated.
+	// If we had reached this point, we can safely say that AutoInPlaceUpdate worker pools have been updated.
 	// Hence we can update their hash in the status.
 	// But for ManualInPlaceUpdate worker pools, we need to check if all the machine deployments for the worker pool are updated.
-	// The worker controller is triggered when a machine deployment is updated, so this can happen at a latter time as well.
+	// The worker controller is triggered when a machine deployment is updated, so this can also happen later.
 	if err := a.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster); err != nil {
 		return fmt.Errorf("failed to update the worker status with the worker pool hash for in-place update worker pools: %w", err)
 	}
@@ -391,7 +391,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				numHealthyDeployments++
 			}
 
-			if deployment.Spec.Strategy.Type == machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType && deployment.Spec.Strategy.InPlaceUpdate != nil && deployment.Spec.Strategy.InPlaceUpdate.OrchestrationType == machinev1alpha1.OrchestrationTypeManual {
+			if gardenerutils.IsMachineDeploymentStrategyManualInPlace(deployment.Spec.Strategy) {
 				oldMachineSetsTotalReplicas := 0
 				oldMachineSets := extensionsworkerhelper.GetOldMachineSets(machineSets, *latestMachineSet)
 				for _, oldMachineSet := range oldMachineSets {

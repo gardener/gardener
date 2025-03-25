@@ -2804,7 +2804,7 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		newKubeletConfig := helper.CalculateEffectiveKubeletConfiguration(newShoot.Spec.Kubernetes.Kubelet, worker.Kubernetes)
 
 		if !apiequality.Semantic.DeepEqual(oldWorker, worker) || !oldKubernetesVersion.Equal(newKubernetesVersion) || !apiequality.Semantic.DeepEqual(oldKubeletConfig, newKubeletConfig) {
-			allErrs = append(allErrs, field.Forbidden(idxPath, "worker pool is currently being updated in place, no changes are allowed. It could also be that the Shoot kubernetes version or Shoot kubelet configuration has changed"))
+			allErrs = append(allErrs, field.Forbidden(idxPath, "the worker pool is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration."))
 		}
 	}
 

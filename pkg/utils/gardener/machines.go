@@ -182,3 +182,8 @@ func WaitUntilMachineResourcesDeleted(ctx context.Context, log logr.Logger, read
 func NodeAgentLeaseName(nodeName string) string {
 	return NodeLeasePrefix + nodeName
 }
+
+// IsMachineDeploymentStrategyManualInPlace checks whether the given strategy is InPlaceUpdate and orchestration type is Manual.
+func IsMachineDeploymentStrategyManualInPlace(strategy machinev1alpha1.MachineDeploymentStrategy) bool {
+	return strategy.Type == machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType && strategy.InPlaceUpdate != nil && strategy.InPlaceUpdate.OrchestrationType == machinev1alpha1.OrchestrationTypeManual
+}

@@ -114,6 +114,10 @@ var _ = Describe("Controller", func() {
 
 				Expect(p.Create(event.CreateEvent{Object: machine})).To(BeFalse())
 			})
+
+			It("should return true when machineDeployment strategy type is InPlace and orchestration type is Manual", func() {
+				Expect(p.Create(event.CreateEvent{Object: machine})).To(BeTrue())
+			})
 		})
 
 		Describe("#Update", func() {
