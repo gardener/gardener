@@ -336,7 +336,7 @@ If the shoot cluster is older than the configured lifetime, then it gets deleted
 It maintains the expiration time of the `Shoot` in the value of the `shoot.gardener.cloud/expiration-timestamp` annotation.
 This annotation might be overridden, however only by at most twice the value of the `.spec.clusterLifetimeDays`.
 
-#### ["Reference" Reconciler](../../pkg/controllermanager/controller/shoot/reference)
+#### ["Shoot-Reference" Reconciler](../../pkg/controllermanager/controller/shoot/reference)
 
 Shoot objects may specify references to other objects in the garden cluster which are required for certain features.
 For example, users can configure various DNS providers via `.spec.dns.providers` and usually need to refer to a corresponding `Secret` with valid DNS provider credentials inside.
@@ -356,7 +356,17 @@ This reconciler inspects the following references:
 - Structured authorization kubeconfig `Secret`s (`.spec.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[].secretName`)
 - `Secret`s and `ConfigMap`s from `.spec.resources[]`
 
-Further checks might be added in the future.
+The checks naturally grow with the number of references that are added to the `Shoot` specification.
+
+#### ["Seed-Reference" Reconciler](../../pkg/controllermanager/controller/shoot/reference)
+
+Same as [Shoot-Reference Reconciler](#-shoot-reference--reconciler), but for `Seed` objects.
+
+This reconciler inspects the following references:
+
+- `Secret`s and `ConfigMap`s from `.spec.resources[]`
+
+The checks naturally grow with the number of references that are added to the `Seed` specification.
 
 #### ["Retry" Reconciler](../../pkg/controllermanager/controller/shoot/retry)
 
