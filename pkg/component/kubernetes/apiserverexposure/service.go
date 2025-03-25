@@ -41,8 +41,6 @@ var (
 
 // ServiceValues configure the kube-apiserver service.
 type ServiceValues struct {
-	// AnnotationsFunc is a function that returns annotations that should be added to the service.
-	AnnotationsFunc func() map[string]string
 	// NamePrefix is the prefix for the service name.
 	NamePrefix string
 	// NameSuffix is the suffix for the service name.
@@ -57,7 +55,6 @@ type ServiceValues struct {
 // this one is not exposed as not all values should be configured
 // from the outside.
 type serviceValues struct {
-	annotationsFunc             func() map[string]string
 	namePrefix                  string
 	nameSuffix                  string
 	topologyAwareRoutingEnabled bool
@@ -89,16 +86,13 @@ func NewService(
 	}
 
 	var (
-		internalValues = &serviceValues{
-			annotationsFunc: func() map[string]string { return map[string]string{} },
-		}
+		internalValues             = &serviceValues{}
 		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
 
 	if values != nil {
 		loadBalancerServiceKeyFunc = sniServiceKeyFunc
 
-		internalValues.annotationsFunc = values.AnnotationsFunc
 		internalValues.namePrefix = values.NamePrefix
 		internalValues.nameSuffix = values.NameSuffix
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
@@ -132,7 +126,6 @@ func (s *service) Deploy(ctx context.Context) error {
 	obj := s.emptyService()
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
-		obj.Annotations = utils.MergeStringMaps(obj.Annotations, s.values.annotationsFunc())
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 
 		namespaceSelectors := []metav1.LabelSelector{

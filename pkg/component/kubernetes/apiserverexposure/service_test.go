@@ -65,8 +65,7 @@ var _ = Describe("#Service", func() {
 		ingressIPFunc = func(c string) { ingressIP = c }
 
 		values = &ServiceValues{
-			AnnotationsFunc: func() map[string]string { return map[string]string{"foo": "bar"} },
-			NamePrefix:      namePrefix,
+			NamePrefix: namePrefix,
 		}
 		expected = &corev1.Service{
 			TypeMeta: metav1.TypeMeta{

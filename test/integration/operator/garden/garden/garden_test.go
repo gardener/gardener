@@ -54,7 +54,6 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
-	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -558,11 +557,11 @@ spec:
 			service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "virtual-garden-kube-apiserver", Namespace: testNamespace.Name}}
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(service), service)).To(Succeed())
 			return service.Annotations
-		}).Should(Equal(utils.MergeStringMaps(loadBalancerServiceAnnotations, map[string]string{
+		}).Should(Equal(map[string]string{
 			"networking.istio.io/exportTo": "*",
 			"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":443}]`,
 			"networking.resources.gardener.cloud/namespace-selectors":                          `[{"matchLabels":{"gardener.cloud/role":"istio-ingress"}},{"matchLabels":{"networking.gardener.cloud/access-target-apiserver":"allowed"}}]`,
-		})))
+		}))
 
 		// The garden controller waits for the Etcd resources to be healthy, but etcd-druid is not really running in
 		// this test, so let's fake this here.

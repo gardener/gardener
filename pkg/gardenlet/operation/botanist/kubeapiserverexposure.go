@@ -49,7 +49,6 @@ func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc:             func() map[string]string { return b.IstioLoadBalancerAnnotations() },
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
 			NameSuffix:                  suffix,

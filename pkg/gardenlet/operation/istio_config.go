@@ -12,7 +12,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -29,21 +28,6 @@ func (o *Operation) IstioNamespace() string {
 // DefaultIstioNamespace is the default namespace of the istio ingress gateway disregarding zonal affinities of the shoot cluster.
 func (o *Operation) DefaultIstioNamespace() string {
 	return *o.sniConfig().Ingress.Namespace
-}
-
-// IstioLoadBalancerAnnotations contain the annotation to be used for the istio ingress service load balancer.
-func (o *Operation) IstioLoadBalancerAnnotations() map[string]string {
-	zone := o.singleZoneIfPinned()
-	if exposureClassHandler := o.exposureClassHandler(); exposureClassHandler != nil {
-		if zone != nil {
-			return utils.MergeStringMaps(exposureClassHandler.LoadBalancerService.Annotations, o.Seed.GetZonalLoadBalancerServiceAnnotations(*zone))
-		}
-		return utils.MergeStringMaps(o.Seed.GetLoadBalancerServiceAnnotations(), exposureClassHandler.LoadBalancerService.Annotations)
-	}
-	if zone != nil {
-		return o.Seed.GetZonalLoadBalancerServiceAnnotations(*zone)
-	}
-	return o.Seed.GetLoadBalancerServiceAnnotations()
 }
 
 // IstioLabels contain the labels to be used for the istio ingress gateway entities.
