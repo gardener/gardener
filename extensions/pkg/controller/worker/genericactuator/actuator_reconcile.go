@@ -380,7 +380,6 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 			// If the Shoot is not hibernated we want to make sure that the machine set with the right
 			// machine class for the machine deployment is deployed by the machine-controller-manager
-
 			latestMachineSet := extensionsworkerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet)
 			if latestMachineSet == nil {
 				return retryutils.MinorError(fmt.Errorf("waiting for the machine-controller-manager to create the updated machine set for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name))

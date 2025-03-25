@@ -124,6 +124,23 @@ var _ = Describe("Machines", func() {
 		}),
 	)
 
+	DescribeTable("#BuildMachineSetToMachinesMap", func(machines []machinev1alpha1.Machine, expected map[string][]machinev1alpha1.Machine) {
+		result := BuildMachineSetToMachinesMap(machines)
+		Expect(result).To(Equal(expected))
+	},
+		Entry("should map using reference kind = `MachineSet`", []machinev1alpha1.Machine{machineSetReference}, map[string][]machinev1alpha1.Machine{
+			machineSetName: {machineSetReference},
+		}),
+
+		Entry("should not map if reference kind is not `MachineSet`", []machinev1alpha1.Machine{machineDeploymentReference}, map[string][]machinev1alpha1.Machine{}),
+
+		Entry("should map multiple machines to the same MachineSet", []machinev1alpha1.Machine{machineSetReference, machineSetReference}, map[string][]machinev1alpha1.Machine{
+			machineSetName: {machineSetReference, machineSetReference},
+		}),
+
+		Entry("should not map machines without owner references", []machinev1alpha1.Machine{machineLabelReference}, map[string][]machinev1alpha1.Machine{}),
+	)
+
 	Describe("#WaitUntilMachineResourcesDeleted", func() {
 		var (
 			ctx        = context.TODO()

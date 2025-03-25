@@ -132,6 +132,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate, func(pool string) bool {
 		return !manualInPlacePendingWorkers.Has(pool)
 	})
+
 	if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) == 0 {
 		shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate = nil
 
@@ -139,6 +140,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			shoot.Status.InPlaceUpdates.PendingWorkersRollouts = nil
 		}
 	}
+
 	if shoot.Status.InPlaceUpdates.PendingWorkersRollouts == nil {
 		shoot.Status.InPlaceUpdates = nil
 	}
