@@ -109,7 +109,8 @@ WantedBy=multi-user.target`))
 	})
 
 	Describe("#ComponentConfig", func() {
-		It("should return the expected result", func() {
+		It("should return the expected result when NodeAgentAuthorizer feature gate is disabled", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
 			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
 				APIServer: nodeagentconfigv1alpha1.APIServer{
 					Server:   apiServerURL,
@@ -138,8 +139,7 @@ WantedBy=multi-user.target`))
 			}))
 		})
 
-		It("should return the expected result when NodeAgentAuthorizer feature gate is enabled", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, true))
+		It("should return the expected result", func() {
 			Expect(ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, additionalTokenSyncConfigs)).To(Equal(&nodeagentconfigv1alpha1.NodeAgentConfiguration{
 				APIServer: nodeagentconfigv1alpha1.APIServer{
 					Server:   apiServerURL,
@@ -166,7 +166,8 @@ WantedBy=multi-user.target`))
 	})
 
 	Describe("#Files", func() {
-		It("should return the expected files", func() {
+		It("should return the expected files when NodeAgentAuthorizer feature gate is disabled ", func() {
+			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
 			config := ComponentConfig(oscSecretName, nil, apiServerURL, caBundle, additionalTokenSyncConfigs)
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{
@@ -203,8 +204,7 @@ server: {}
 			}))
 		})
 
-		It("should return the expected files when NodeAgentAuthorizer feature gate is enabled", func() {
-			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, true))
+		It("should return the expected files", func() {
 			config := ComponentConfig(oscSecretName, nil, apiServerURL, caBundle, additionalTokenSyncConfigs)
 
 			Expect(Files(config)).To(ConsistOf(extensionsv1alpha1.File{

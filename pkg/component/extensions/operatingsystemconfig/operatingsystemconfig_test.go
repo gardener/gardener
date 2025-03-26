@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -453,7 +454,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		Describe("#Deploy", func() {
-			It("should successfully deploy the shoot access secret for the gardener-node-agent", func() {
+			It("should successfully deploy the shoot access secret for the gardener-node-agent when NodeAgentAuthorizer feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
 				))
@@ -808,7 +810,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 			})
 
-			It("should properly restore the extensions state if it exists", func() {
+			It("should properly restore the extensions state if it exists when NodeAgentAuthorizer feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
 				defer test.WithVars(
 					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
