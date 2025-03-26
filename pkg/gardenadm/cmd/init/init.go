@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/gardener/gardener/pkg/gardenadm"
+	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
@@ -56,7 +57,7 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", opts.ConfigDir, err)
 	}
 
-	b, err := gardenadm.NewBotanist(ctx, opts.Log, project, cloudProfile, shoot)
+	b, err := botanist.NewAutonomousBotanist(ctx, opts.Log, project, cloudProfile, shoot)
 	if err != nil {
 		return fmt.Errorf("failed constructing botanist: %w", err)
 	}
@@ -64,9 +65,24 @@ func run(ctx context.Context, opts *Options) error {
 	var (
 		g = flow.NewGraph("init")
 
-		_ = g.Add(flow.Task{
+		initializeSecretsManagement = g.Add(flow.Task{
 			Name: "Initializing secrets management",
 			Fn:   b.InitializeSecretsManagement,
+		})
+		writeKubeletBootstrapKubeconfig = g.Add(flow.Task{
+			Name:         "Writing kubelet bootstrap kubeconfig with a fake token to disk to make kubelet start",
+			Fn:           b.WriteKubeletBootstrapKubeconfig,
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
+		deployOperatingSystemConfigSecretForNodeAgent = g.Add(flow.Task{
+			Name:         "Generating OperatingSystemConfig and deploying Secret for gardener-node-agent",
+			Fn:           b.DeployOperatingSystemConfigSecretForNodeAgent,
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
+			Fn:           b.ApplyOperatingSystemConfig,
+			Dependencies: flow.NewTaskIDs(writeKubeletBootstrapKubeconfig, deployOperatingSystemConfigSecretForNodeAgent),
 		})
 	)
 
@@ -75,6 +91,31 @@ func run(ctx context.Context, opts *Options) error {
 	}); err != nil {
 		return flow.Errors(err)
 	}
+
+	fmt.Fprintf(opts.IOStreams.Out, `
+Your Shoot cluster control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i %s $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  kubectl get nodes
+
+You can now join any number of machines by running the following on each node
+as root:
+
+  gardenadm join <TODO>
+
+Note that the mentioned kubeconfig file will be disabled once you deploy the
+gardenlet and connect this cluster to an existing Gardener installation by
+running on any node:
+
+  gardenadm connect <TODO>
+
+Please use the shoots/adminkubeconfig subresource to retrieve a kubeconfig,
+see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
+`, botanist.PathKubeconfig)
 
 	return nil
 }

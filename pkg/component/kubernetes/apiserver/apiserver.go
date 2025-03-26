@@ -61,6 +61,8 @@ type Interface interface {
 	// TODO(oliver-goetz): Consider removing this method when we support Kubernetes version with structured authorization only.
 	//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
 	AppendAuthorizationWebhook(AuthorizationWebhook) error
+	// EnableStaticTokenKubeconfig enables the static token kubeconfig.
+	EnableStaticTokenKubeconfig()
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
 	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
@@ -130,6 +132,8 @@ type Values struct {
 	ServiceNetworkCIDRs []net.IPNet
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
+	// StaticTokenKubeconfigEnabled indicates whether static token kubeconfig secret will be created for shoot.
+	StaticTokenKubeconfigEnabled *bool
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
 	// VPN contains information for configuring the VPN settings for the kube-apiserver.
@@ -438,6 +442,12 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if ptr.Deref(k.values.StaticTokenKubeconfigEnabled, false) {
+		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken); err != nil {
+			return err
+		}
+	}
+
 	if err := k.reconcileServiceMonitor(ctx, k.emptyServiceMonitor()); err != nil {
 		return err
 	}
@@ -564,6 +574,10 @@ func (k *kubeAPIServer) AppendAuthorizationWebhook(webhook AuthorizationWebhook)
 	k.values.AuthorizationWebhooks = append(k.values.AuthorizationWebhooks, webhook)
 
 	return nil
+}
+
+func (k *kubeAPIServer) EnableStaticTokenKubeconfig() {
+	k.values.StaticTokenKubeconfigEnabled = ptr.To(true)
 }
 
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {

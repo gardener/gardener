@@ -6,8 +6,25 @@ metadata:
 spec:
   provider:
     type: local
+    workers:
+    - name: control-plane
+      controlPlane: {}
+      machine:
+        type: local
+      minimum: 1
+      maximum: 1
   kubernetes:
     version: 1.32.0
+    kubelet:
+      seccompDefault: true
+      serializeImagePulls: false
+      registryPullQPS: 10
+      registryBurst: 20
+      protectKernelDefaults: true
+      streamingConnectionIdleTimeout: 5m
+      failSwapOn: false # Swap is not supported in our kindest/node machine pods.
   networking:
-    services: 100.64.0.0/11
-    pods: 100.96.0.0/13
+    type: calico
+    pods: 10.3.0.0/16
+    services: 10.4.0.0/16
+    nodes: 10.10.0.0/16

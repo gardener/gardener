@@ -86,6 +86,18 @@ func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), ctx)
 }
 
+// EnableStaticTokenKubeconfig mocks base method.
+func (m *MockInterface) EnableStaticTokenKubeconfig() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EnableStaticTokenKubeconfig")
+}
+
+// EnableStaticTokenKubeconfig indicates an expected call of EnableStaticTokenKubeconfig.
+func (mr *MockInterfaceMockRecorder) EnableStaticTokenKubeconfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableStaticTokenKubeconfig", reflect.TypeOf((*MockInterface)(nil).EnableStaticTokenKubeconfig))
+}
+
 // GetAutoscalingReplicas mocks base method.
 func (m *MockInterface) GetAutoscalingReplicas() *int32 {
 	m.ctrl.T.Helper()

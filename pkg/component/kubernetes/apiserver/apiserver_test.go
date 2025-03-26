@@ -30,8 +30,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -3409,6 +3411,26 @@ kind: AuthorizationConfiguration
 					))
 				})
 
+				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
+					kapi.EnableStaticTokenKubeconfig()
+
+					deployAndRead()
+
+					secretList := &corev1.SecretList{}
+					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"name": "user-kubeconfig",
+					})).To(Succeed())
+
+					Expect(secretList.Items).To(HaveLen(1))
+					Expect(secretList.Items[0].Data).To(HaveKey("kubeconfig"))
+
+					kubeconfig := &clientcmdv1.Config{}
+					Expect(yaml.Unmarshal(secretList.Items[0].Data["kubeconfig"], kubeconfig)).To(Succeed())
+					Expect(kubeconfig.CurrentContext).To(Equal(namespace))
+					Expect(kubeconfig.AuthInfos).To(HaveLen(1))
+					Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
+				})
+
 				It("should generate kube-apiserver-static-token without system:cluster-admin token", func() {
 					deployAndRead()
 
@@ -3510,6 +3532,23 @@ kind: AuthorizationConfiguration
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--etcd-servers-overrides=networking.k8s.io/networkpolicies#https://etcd-events-client:2379,/events#https://etcd-events-client:2379,apps/daemonsets#https://etcd-events-client:2379",
+					))
+				})
+
+				It("should configure correctly when run as static pod", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion:  runtimeVersion,
+							RunsAsStaticPod: true,
+						},
+						Images:  images,
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--etcd-servers=https://localhost:2379",
+						"--etcd-servers-overrides=/events#https://localhost:2382",
 					))
 				})
 

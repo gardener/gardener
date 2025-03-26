@@ -484,10 +484,15 @@ func (s *Shoot) GetReplicas(wokenUp int32) int32 {
 // ComputeInClusterAPIServerAddress returns the internal address for the shoot API server depending on whether
 // the caller runs in the shoot namespace or not.
 func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) string {
+	if s.RunsControlPlane() {
+		return fmt.Sprintf("kubernetes.%s.svc", metav1.NamespaceDefault)
+	}
+
 	url := v1beta1constants.DeploymentNameKubeAPIServer
 	if !runsInShootNamespace {
 		url = fmt.Sprintf("%s.%s.svc", url, s.ControlPlaneNamespace)
 	}
+
 	return url
 }
 
@@ -498,7 +503,7 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(useInternalClusterDomain boo
 		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
-	if useInternalClusterDomain {
+	if useInternalClusterDomain || s.ExternalClusterDomain == nil {
 		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
@@ -633,4 +638,9 @@ func copyUniqueCIDRs(src []string, dst []net.IPNet, networkType string) ([]net.I
 		}
 	}
 	return dst, nil
+}
+
+// RunsControlPlane returns true in case the Kubernetes control plane runs inside the shoot cluster.
+func (s *Shoot) RunsControlPlane() bool {
+	return s.ControlPlaneNamespace == metav1.NamespaceSystem
 }

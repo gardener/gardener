@@ -56,17 +56,6 @@ var _ = Describe("Component", func() {
 				Images:            map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: ptr.To("gardener-node-agent"), Tag: ptr.To("v1")}},
 			})
 
-			expectedFiles = append(expectedFiles, extensionsv1alpha1.File{
-				Path:        "/opt/bin/gardener-node-agent",
-				Permissions: ptr.To[uint32](0755),
-				Content: extensionsv1alpha1.FileContent{
-					ImageRef: &extensionsv1alpha1.FileContentImageRef{
-						Image:           "gardener-node-agent:v1",
-						FilePathInImage: "/gardener-node-agent",
-					},
-				},
-			})
-
 			Expect(err).NotTo(HaveOccurred())
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
@@ -87,7 +76,33 @@ WantedBy=multi-user.target`),
 					FilePaths: []string{"/var/lib/gardener-node-agent/config.yaml", "/opt/bin/gardener-node-agent"},
 				},
 			))
-			Expect(files).To(ConsistOf(expectedFiles))
+			Expect(files).To(ConsistOf(append(expectedFiles, extensionsv1alpha1.File{
+				Path:        "/opt/bin/gardener-node-agent",
+				Permissions: ptr.To[uint32](0755),
+				Content: extensionsv1alpha1.FileContent{
+					ImageRef: &extensionsv1alpha1.FileContentImageRef{
+						Image:           "gardener-node-agent:v1",
+						FilePathInImage: "/gardener-node-agent",
+					},
+				},
+			})))
+		})
+
+		It("should return the expected binary prefix when image is from local registry", func() {
+			_, files, err := component.Config(components.Context{
+				Images: map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: ptr.To("garden.local.gardener.cloud:5001/gardener-node-agent"), Tag: ptr.To("v1")}},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(ContainElement(extensionsv1alpha1.File{
+				Path:        "/opt/bin/gardener-node-agent",
+				Permissions: ptr.To[uint32](0755),
+				Content: extensionsv1alpha1.FileContent{
+					ImageRef: &extensionsv1alpha1.FileContentImageRef{
+						Image:           "garden.local.gardener.cloud:5001/gardener-node-agent:v1",
+						FilePathInImage: "/ko-app/gardener-node-agent",
+					},
+				},
+			}))
 		})
 	})
 

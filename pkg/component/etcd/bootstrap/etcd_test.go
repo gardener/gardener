@@ -31,10 +31,10 @@ var _ = Describe("Etcd", func() {
 		etcd      component.Deployer
 		ctx       = context.Background()
 		namespace = "shoot--foo--bar"
-		image     = "some.registry.io/etcd:v3.5.10"
+		image     = "some-image"
 		pod       = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "etcd-main",
+				Name:      "etcd-main-0",
 				Namespace: namespace,
 			},
 		}
@@ -43,7 +43,7 @@ var _ = Describe("Etcd", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		etcd = New(c, namespace, sm, Values{Image: image})
+		etcd = New(c, namespace, sm, Values{Image: image, Role: "main"})
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: namespace}})).To(Succeed())
@@ -59,7 +59,7 @@ var _ = Describe("Etcd", func() {
 			Expect(pod.Spec.Containers[0].Image).To(Equal(image))
 			Expect(pod.Spec.Containers[0].VolumeMounts).To(HaveLen(6))
 			Expect(pod.Spec.Containers[0].VolumeMounts).Should(ContainElements([]gomegatypes.GomegaMatcher{
-				MatchFields(IgnoreExtras, Fields{"Name": Equal("main-etcd"), "MountPath": Equal("/var/etcd/data")}),
+				MatchFields(IgnoreExtras, Fields{"Name": Equal("data"), "MountPath": Equal("/var/etcd/data")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-ca"), "MountPath": Equal("/var/etcd/ssl/ca")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-server-tls"), "MountPath": Equal("/var/etcd/ssl/server")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-client-tls"), "MountPath": Equal("/var/etcd/ssl/client")}),
@@ -68,7 +68,7 @@ var _ = Describe("Etcd", func() {
 			}))
 			Expect(pod.Spec.Volumes).To(HaveLen(6))
 			Expect(pod.Spec.Volumes).Should(ContainElements([]gomegatypes.GomegaMatcher{
-				MatchFields(IgnoreExtras, Fields{"Name": Equal("main-etcd")}),
+				MatchFields(IgnoreExtras, Fields{"Name": Equal("data")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-ca")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-server-tls")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-client-tls")}),
