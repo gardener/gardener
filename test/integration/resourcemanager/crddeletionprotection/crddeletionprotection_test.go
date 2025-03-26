@@ -7,7 +7,6 @@ package crddeletionprotection_test
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
@@ -88,9 +87,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(etcdCRDDeployer.Deploy(ctx)).To(Succeed())
 
-		manifestReader := kubernetes.NewManifestReader([]byte(strings.Join([]string{
-			resourcemanager.CRD,
-		}, "\n---\n")))
+		manifestReader := kubernetes.NewManifestReader([]byte(resourcemanager.CRD))
 		Expect(applier.ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)).To(Succeed())
 
 		Eventually(func() bool {

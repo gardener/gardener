@@ -32,13 +32,13 @@ type crd struct {
 
 // NewCRD can be used to deploy the CRD definitions for all CRDs defined by etcd-druid.
 func NewCRD(c client.Client, k8sVersion *semver.Version) (component.Deployer, error) {
-	crdg, err := NewCRDGetter(k8sVersion)
+	crdGetter, err := NewCRDGetter(k8sVersion)
 	if err != nil {
 		return nil, err
 	}
 	return &crd{
 		client:    c,
-		crdGetter: crdg,
+		crdGetter: crdGetter,
 	}, nil
 }
 
@@ -107,28 +107,28 @@ type CRDGetter interface {
 	GetCRD(name string) (*apiextensionsv1.CustomResourceDefinition, error)
 }
 
-type _crdGetter struct {
+type crdGetter struct {
 	crdResources map[string]*apiextensionsv1.CustomResourceDefinition
 }
 
-var _ CRDGetter = (*_crdGetter)(nil)
+var _ CRDGetter = (*crdGetter)(nil)
 
 // NewCRDGetter creates a new CRDGetter.
 func NewCRDGetter(k8sVersion *semver.Version) (CRDGetter, error) {
-	crdResources, err := getEtcdCRDS(k8sVersion)
+	crdResources, err := getEtcdCRDs(k8sVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get etcd-druid CRDs for Kubernetes version %s: %w", k8sVersion, err)
 	}
-	return &_crdGetter{
+	return &crdGetter{
 		crdResources: crdResources,
 	}, nil
 }
 
-func (c *_crdGetter) GetAllCRDs() map[string]*apiextensionsv1.CustomResourceDefinition {
+func (c *crdGetter) GetAllCRDs() map[string]*apiextensionsv1.CustomResourceDefinition {
 	return c.crdResources
 }
 
-func (c *_crdGetter) GetCRD(name string) (*apiextensionsv1.CustomResourceDefinition, error) {
+func (c *crdGetter) GetCRD(name string) (*apiextensionsv1.CustomResourceDefinition, error) {
 	crdObj, ok := c.crdResources[name]
 	if !ok {
 		return nil, fmt.Errorf("CRD %s not found", name)
@@ -136,7 +136,7 @@ func (c *_crdGetter) GetCRD(name string) (*apiextensionsv1.CustomResourceDefinit
 	return crdObj, nil
 }
 
-func getEtcdCRDS(k8sVersion *semver.Version) (map[string]*apiextensionsv1.CustomResourceDefinition, error) {
+func getEtcdCRDs(k8sVersion *semver.Version) (map[string]*apiextensionsv1.CustomResourceDefinition, error) {
 	crdYAMLs, err := druidcorecrds.GetAll(k8sVersion.String())
 	if err != nil {
 		return nil, err

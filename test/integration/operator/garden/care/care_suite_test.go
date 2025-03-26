@@ -68,10 +68,10 @@ var (
 var _ = BeforeSuite(func() {
 	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
 	log = logf.Log.WithName(testID)
-	var err error
 
 	features.RegisterFeatureGates()
 
+	var err error
 	By("Fetch Etcd CRD")
 	k8sVersion, err := gardenerenvtest.GetK8SVersion()
 	Expect(err).NotTo(HaveOccurred())
