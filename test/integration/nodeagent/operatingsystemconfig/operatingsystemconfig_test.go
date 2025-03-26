@@ -444,7 +444,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
 		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
-		test.AssertNoFileOnDisk(fakeFS, "/opt/bin/init-containerd")
 		test.AssertDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
@@ -461,6 +460,8 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 
 		By("Assert that unit actions have been applied")
 		Expect(fakeDBus.Actions).To(ConsistOf(
+			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit10.Name}},
+			fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{unit10.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit1.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionDisable, UnitNames: []string{unit2.Name}},
 			fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{unit3.Name}},
@@ -605,7 +606,6 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit7.Name, "#unit7", 0600)
 		test.AssertFileOnDisk(fakeFS, "/etc/systemd/system/"+unit8.Name, "#unit8", 0600)
 		test.AssertNoFileOnDisk(fakeFS, "/etc/systemd/system/"+unit9.Name)
-		test.AssertNoFileOnDisk(fakeFS, "/opt/bin/init-containerd")
 		test.AssertDirectoryOnDisk(fakeFS, "/var/bin/containerruntimes")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/certs.d")
 		test.AssertDirectoryOnDisk(fakeFS, "/etc/containerd/conf.d")
