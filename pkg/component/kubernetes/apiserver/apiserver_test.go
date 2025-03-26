@@ -796,11 +796,11 @@ var _ = Describe("KubeAPIServer", func() {
 									"nodes/spec",
 									"nodes/metrics",
 								},
-								Verbs: []string{"*"},
+								Verbs: []string{"create", "get", "update", "patch", "delete"},
 							},
 							{
 								NonResourceURLs: []string{"*"},
-								Verbs:           []string{"*"},
+								Verbs:           []string{"create", "get", "update", "patch", "delete"},
 							},
 						},
 					}
