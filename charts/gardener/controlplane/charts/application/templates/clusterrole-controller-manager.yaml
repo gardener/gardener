@@ -6,14 +6,193 @@ metadata:
   name: gardener.cloud:system:controller-manager
   labels:
     app: gardener
+    role: controller-manager
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 rules:
 - apiGroups:
-  - "*"
+  - operations.gardener.cloud
   resources:
-  - "*"
+  - bastions
   verbs:
-  - "*"
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+  - deletecollection
+- apiGroups:
+  - seedmanagement.gardener.cloud
+  resources:
+  - managedseeds
+  - managedseedsets
+  - managedseedsets/status
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+- apiGroups:
+  - security.gardener.cloud
+  resources:
+  - credentialsbindings
+  - workloadidentities
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+  - deletecollection
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  - certificatesigningrequests/approval
+  - certificatesigningrequests/seedclient
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - approve
+  - deny
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - signers
+  resourceNames:
+  - kubernetes.io/kube-apiserver-client
+  verbs:
+  - patch
+  - update
+  - approve
+  - deny
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - backupbuckets
+  - backupentries
+  - controllerregistrations
+  - controllerdeployments
+  - controllerinstallations
+  - cloudprofiles
+  - exposureclasses
+  - namespacedcloudprofiles
+  - secretbindings
+  - seeds
+  - seeds/status
+  - shoots
+  - shoots/adminkubeconfig
+  - shoots/status
+  - shoots/viewerkubeconfig
+  - quotas
+  verbs:
+  - get
+  - list
+  - create
+  - watch
+  - patch
+  - update
+  - delete
+  - deletecollection
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - projects
+  - projects/status
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - delete
+  - manage-members
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+  - deletecollection
+- apiGroups:
+  - settings.gardener.cloud
+  resources:
+  - openidconnectpresets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - resourcequotas
+  - namespaces
+  - events
+  - serviceaccounts
+  - secrets
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  verbs:
+  - create
+- apiGroups:
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
 {{- end }}

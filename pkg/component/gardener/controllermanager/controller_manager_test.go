@@ -220,9 +220,131 @@ var _ = Describe("GardenerControllerManager", func() {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups: []string{"*"},
-					Resources: []string{"*"},
-					Verbs:     []string{"*"},
+					APIGroups: []string{"operations.gardener.cloud"},
+					Resources: []string{
+						"bastions",
+					},
+					Verbs: []string{"get", "list", "watch", "create", "patch", "update", "delete", "deletecollection"},
+				},
+				{
+					APIGroups: []string{"seedmanagement.gardener.cloud"},
+					Resources: []string{
+						"managedseeds",
+						"managedseedsets",
+						"managedseedsets/status",
+					},
+					Verbs: []string{"get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"get", "list", "create", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"security.gardener.cloud"},
+					Resources: []string{
+						"credentialsbindings",
+						"workloadidentities",
+					},
+					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"certificates.k8s.io"},
+					Resources: []string{
+						"certificatesigningrequests",
+						"certificatesigningrequests/approval",
+						"certificatesigningrequests/seedclient",
+					},
+					Verbs: []string{"get", "list", "watch", "create", "patch", "update", "approve", "deny"},
+				},
+				{
+					APIGroups: []string{"certificates.k8s.io"},
+					Resources: []string{
+						"signers",
+					},
+					ResourceNames: []string{
+						"kubernetes.io/kube-apiserver-client",
+					},
+					Verbs: []string{"patch", "update", "approve", "deny"},
+				},
+				{
+					APIGroups: []string{"authorization.k8s.io"},
+					Resources: []string{
+						"subjectaccessreviews",
+					},
+					Verbs: []string{"create"},
+				},
+				{
+					APIGroups: []string{"settings.gardener.cloud"},
+					Resources: []string{
+						"openidconnectpresets",
+					},
+					Verbs: []string{"get", "list", "create", "watch", "patch", "update", "delete", "deletecollection"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{
+						"backupbuckets",
+						"backupentries",
+						"controllerregistrations",
+						"controllerdeployments",
+						"controllerinstallations",
+						"exposureclasses",
+						"secretbindings",
+						"seeds",
+						"seeds/status",
+						"shoots",
+						"shoots/status",
+						"shoots/viewerkubeconfig",
+						"quotas",
+						"cloudprofiles",
+						"namespacedcloudprofiles",
+					},
+					Verbs: []string{"get", "list", "create", "watch", "patch", "update", "delete", "deletecollection"},
+				},
+				{
+					APIGroups: []string{"core.gardener.cloud"},
+					Resources: []string{
+						"projects",
+						"projects/status",
+					},
+					Verbs: []string{"get", "list", "watch", "patch", "update", "manage-members", "delete"},
+				},
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{
+						"clusterroles",
+						"clusterrolebindings",
+						"roles",
+						"rolebindings",
+					},
+					Verbs: []string{"get", "list", "watch", "create", "patch", "update", "delete", "deletecollection"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"resourcequotas",
+						"namespaces",
+						"events",
+						"serviceaccounts",
+						"secrets",
+						"configmaps",
+					},
+					Verbs: []string{"get", "list", "watch", "create", "patch", "update", "delete", "deletecollection"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"serviceaccounts/token",
+					},
+					Verbs: []string{"create"},
+				},
+				{
+					APIGroups: []string{"events.k8s.io"},
+					Resources: []string{
+						"events",
+					},
+					Verbs: []string{"get", "list", "watch"},
 				},
 			},
 		}
