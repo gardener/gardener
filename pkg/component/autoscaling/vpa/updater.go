@@ -249,8 +249,8 @@ func (v *vpa) computeUpdaterArgs() []string {
 		fmt.Sprintf("--updater-interval=%s", ptr.Deref(v.values.Updater.Interval, gardencorev1beta1.DefaultUpdaterInterval).Duration),
 		"--stderrthreshold=info",
 		"--v=2",
-		"--kube-api-qps=100",
-		"--kube-api-burst=120",
+		"--kube-api-qps=200",
+		"--kube-api-burst=250",
 		"--leader-elect=true",
 		fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
 	}
