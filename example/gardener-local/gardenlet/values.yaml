@@ -40,7 +40,6 @@ config:
     NewWorkerPoolHash: true
     NodeAgentAuthorizer: true
     IstioTLSTermination: true
-    RemoveAPIServerProxyLegacyPort: true
   etcdConfig:
     featureGates:
       UseEtcdWrapper: true

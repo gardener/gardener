@@ -29,7 +29,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | NodeAgentAuthorizer                      | `false` | `Alpha` | `1.109` |         |
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
-| RemoveAPIServerProxyLegacyPort           | `false` | `Alpha` | `1.113` |         |
+| RemoveAPIServerProxyLegacyPort           | `false` | `Alpha` | `1.113` | `1.115` |
+| RemoveAPIServerProxyLegacyPort           | `true`  | `Beta`  | `1.116` |         |
 | IstioTLSTermination                      | `false` | `Alpha` | `1.114` |         |
 
 ## Feature Gates for Graduated or Deprecated Features
