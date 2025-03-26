@@ -154,7 +154,7 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 						operationsv1alpha1.GroupName,
 					},
 					Resources: []string{"*"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{securityv1alpha1.GroupName},
@@ -162,17 +162,17 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 						"credentialsbindings",
 						"workloadidentities", // Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
 					},
-					Verbs: []string{"*"},
+					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"events", "namespaces", "resourcequotas"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{eventsv1.GroupName},
 					Resources: []string{"events"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{rbacv1.GroupName},
@@ -182,27 +182,27 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 				{
 					APIGroups: []string{admissionregistrationv1.GroupName},
 					Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{apiregistrationv1.GroupName},
 					Resources: []string{"apiservices"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{apiextensionsv1.GroupName},
 					Resources: []string{"customresourcedefinitions"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{coordinationv1.GroupName},
 					Resources: []string{"leases"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{certificatesv1.GroupName},
 					Resources: []string{"certificatesigningrequests"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "approve", "deny"},
 				},
 			},
 		}
@@ -223,7 +223,8 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 		clusterRoleGardenerAdminAggregated = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: v1beta1constants.ClusterRoleNameGardenerAdministrators,
+				Name:   v1beta1constants.ClusterRoleNameGardenerAdministrators,
+				Labels: map[string]string{v1beta1constants.GardenRole: "administrators"},
 			},
 			AggregationRule: &rbacv1.AggregationRule{
 				ClusterRoleSelectors: []metav1.LabelSelector{
@@ -266,8 +267,31 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 						settingsv1alpha1.GroupName,
 						operationsv1alpha1.GroupName,
 					},
-					Resources: []string{"*"},
-					Verbs:     []string{"get", "list", "watch"},
+					Resources: []string{
+						"backupbuckets",
+						"backupentrie",
+						"cloudprofiles",
+						"controllerdeployments",
+						"controllerinstallations",
+						"controllerregistrations",
+						"exposureclasse",
+						"internalsecrets",
+						"namespacedcloudprofiles",
+						"projects",
+						"quotas",
+						"secretbindings",
+						"seeds",
+						"shoots",
+						"shootstates",
+						"gardenlets",
+						"managedseeds",
+						"managedseedsets",
+						"terminals",
+						"clusteropenidconnectpresets",
+						"openidconnectpresets",
+						"bastions",
+					},
+					Verbs: []string{"get", "list", "watch"},
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
@@ -308,7 +332,8 @@ func (g *gardenSystem) computeResourcesData() (map[string][]byte, error) {
 		}
 		clusterRoleGardenerViewerAggregated = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:system:viewers",
+				Name:   "gardener.cloud:system:viewers",
+				Labels: map[string]string{v1beta1constants.GardenRole: "viewers"},
 			},
 			AggregationRule: &rbacv1.AggregationRule{
 				ClusterRoleSelectors: []metav1.LabelSelector{
