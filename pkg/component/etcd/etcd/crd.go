@@ -100,7 +100,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 
 // CRDGetter provides methods to get CRDs defined in etcd-druid.
 type CRDGetter interface {
-	// GetAllCRDs returns a map of CRD names to CRD objects
+	// GetAllCRDs returns a map of CRD names to CRD objects.
 	GetAllCRDs() map[string]*apiextensionsv1.CustomResourceDefinition
 	// GetCRD returns the CRD with the given name.
 	// An error is returned if no CRD is found with the given name.
