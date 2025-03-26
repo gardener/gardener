@@ -710,10 +710,11 @@ var _ = Describe("Seed controller tests", func() {
 						}).Should(BeEmpty())
 					} else {
 						By("Verify that gardener-resource-manager has been deleted")
+						// This step might take longer because it has to wait for some CRDs to be deleted.
 						Eventually(func() error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).Should(BeNotFoundError())
+						}).WithTimeout(15 * time.Second).Should(BeNotFoundError())
 
 						// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
 						// with other test cases.
