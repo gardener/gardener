@@ -30,7 +30,7 @@ type crd struct {
 	crdGetter CRDGetter
 }
 
-// NewCRD can be used to deploy and/or retrieve the CRD definitions for all CRDs defined by etcd-druid.
+// NewCRD can be used to deploy the CRD definitions for all CRDs defined by etcd-druid.
 func NewCRD(c client.Client, k8sVersion *semver.Version) (component.Deployer, error) {
 	crdg, err := NewCRDGetter(k8sVersion)
 	if err != nil {
