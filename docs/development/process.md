@@ -239,9 +239,7 @@ Before you initiate a cherry pick, make sure that the following prerequisites ar
 - Have the `gardener/gardener` repository cloned as follows:
   - the `origin` remote should point to your fork (alternatively this can be overwritten by passing `FORK_REMOTE=<fork-remote>`).
   - the `upstream` remote should point to the Gardener GitHub org (alternatively this can be overwritten by passing `UPSTREAM_REMOTE=<upstream-remote>`).
-- Have `hub` installed, which is most easily installed via
-  `go get github.com/github/hub` assuming you have a standard golang
-  development environment.
+- Have `hub` installed. On macOS, `hub` can be installed via homebrew using the [hub formula](https://formulae.brew.sh/formula/hub). For other OS, follow the [`hub` installation instructions](https://github.com/mislav/hub?tab=readme-ov-file#installation).
 - A GitHub token which has permissions to create a PR in an upstream branch.
 
 ### Initiate a Cherry Pick
