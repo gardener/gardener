@@ -7,6 +7,7 @@ package shoot_test
 import (
 	"context"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 
@@ -77,6 +78,11 @@ var _ = Describe("VPNShoot", func() {
 				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
 			SeedPodNetworkV4: "10.1.0.0/16",
+			Network: NetworkValues{
+				PodCIDRs:     []net.IPNet{{IP: net.ParseIP("10.0.1.0"), Mask: net.CIDRMask(24, 32)}},
+				ServiceCIDRs: []net.IPNet{{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(24, 32)}},
+				NodeCIDRs:    []net.IPNet{{IP: net.ParseIP("10.0.2.0"), Mask: net.CIDRMask(24, 32)}},
+			},
 		}
 
 		scrapeConfig = &monitoringv1alpha1.ScrapeConfig{
@@ -455,7 +461,19 @@ var _ = Describe("VPNShoot", func() {
 					},
 					corev1.EnvVar{
 						Name:  "SEED_POD_NETWORK_V4",
-						Value: "10.1.0.0/16",
+						Value: values.SeedPodNetworkV4,
+					},
+					corev1.EnvVar{
+						Name:  "SHOOT_POD_NETWORKS",
+						Value: values.Network.PodCIDRs[0].String(),
+					},
+					corev1.EnvVar{
+						Name:  "SHOOT_SERVICE_NETWORKS",
+						Value: values.Network.ServiceCIDRs[0].String(),
+					},
+					corev1.EnvVar{
+						Name:  "SHOOT_NODE_NETWORKS",
+						Value: values.Network.NodeCIDRs[0].String(),
 					},
 				)
 

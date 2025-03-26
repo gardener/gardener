@@ -770,24 +770,19 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			Name:  "SEED_POD_NETWORK_V4",
 			Value: v.values.SeedPodNetworkV4,
 		},
+		corev1.EnvVar{
+			Name:  "SHOOT_POD_NETWORKS",
+			Value: netutils.JoinByComma(v.values.Network.PodCIDRs),
+		},
+		corev1.EnvVar{
+			Name:  "SHOOT_SERVICE_NETWORKS",
+			Value: netutils.JoinByComma(v.values.Network.ServiceCIDRs),
+		},
+		corev1.EnvVar{
+			Name:  "SHOOT_NODE_NETWORKS",
+			Value: netutils.JoinByComma(v.values.Network.NodeCIDRs),
+		},
 	)
-
-	if !gardencorev1beta1.IsIPv6SingleStack(v.values.ReversedVPN.IPFamilies) {
-		envVariables = append(envVariables,
-			corev1.EnvVar{
-				Name:  "SHOOT_POD_NETWORK_V4",
-				Value: netutils.JoinByComma(netutils.GetByIPFamily(v.values.Network.PodCIDRs, netutils.IPv4Family)),
-			},
-			corev1.EnvVar{
-				Name:  "SHOOT_SERVICE_NETWORK_V4",
-				Value: netutils.JoinByComma(netutils.GetByIPFamily(v.values.Network.ServiceCIDRs, netutils.IPv4Family)),
-			},
-			corev1.EnvVar{
-				Name:  "SHOOT_NODE_NETWORK_V4",
-				Value: netutils.JoinByComma(netutils.GetByIPFamily(v.values.Network.NodeCIDRs, netutils.IPv4Family)),
-			},
-		)
-	}
 
 	if index != nil {
 		envVariables = append(envVariables,
