@@ -91,7 +91,7 @@ func (c *crd) Destroy(ctx context.Context) error {
 	for _, resource := range c.crdGetter.GetAllCRDs() {
 		r := resource
 		fns = append(fns, func(ctx context.Context) error {
-			return client.IgnoreNotFound(c.client.Delete(ctx, r, &client.DeleteOptions{}))
+			return client.IgnoreNotFound(c.client.Delete(ctx, r))
 		})
 	}
 
