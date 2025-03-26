@@ -88,6 +88,7 @@ var _ = BeforeSuite(func() {
 
 	features.RegisterFeatureGates()
 
+	var err error
 	By("Fetch Etcd CRD")
 	k8sVersion, err := gardenerenvtest.GetK8SVersion()
 	Expect(err).NotTo(HaveOccurred())
