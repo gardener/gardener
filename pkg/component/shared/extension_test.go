@@ -135,14 +135,14 @@ var _ = Describe("Extension", func() {
 			ctrl.Finish()
 		})
 
-		test := func(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, workerless bool, conditionMatcher gomegatypes.GomegaMatcher) {
+		test := func(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, class extensionsv1alpha1.ExtensionClass, workerless bool, conditionMatcher gomegatypes.GomegaMatcher) {
 			GinkgoHelper()
 
 			for _, registration := range registrations {
 				Expect(gardenClient.Create(ctx, &registration)).To(Succeed())
 			}
 
-			ext, err := NewExtension(ctx, log, gardenClient, seedClient, "test", extensionsv1alpha1.ExtensionClassShoot, extensions, workerless)
+			ext, err := NewExtension(ctx, log, gardenClient, seedClient, "test", class, extensions, workerless)
 			Expect(err).NotTo(HaveOccurred())
 
 			extensionObjs := ext.Extensions()
@@ -154,20 +154,21 @@ var _ = Describe("Extension", func() {
 		}
 
 		It("should return no extensions when no extensions are configured and registered", func() {
-			test(nil, nil, false, BeEmpty())
+			test(nil, nil, extensionsv1alpha1.ExtensionClassShoot, false, BeEmpty())
 		})
 
 		It("should return no extensions when extension is not registered", func() {
-			test(nil, []gardencorev1beta1.Extension{{Type: fooExtensionType}}, false, BeEmpty())
+			test(nil, []gardencorev1beta1.Extension{{Type: fooExtensionType}}, extensionsv1alpha1.ExtensionClassShoot, false, BeEmpty())
 		})
 
 		It("should return no extension when no extension is configured", func() {
-			test([]gardencorev1beta1.ControllerRegistration{fooRegistration}, nil, false, BeEmpty())
+			test([]gardencorev1beta1.ControllerRegistration{fooRegistration}, nil, extensionsv1alpha1.ExtensionClassShoot, false, BeEmpty())
 		})
 
 		It("should return the configured expected extension", func() {
 			test([]gardencorev1beta1.ControllerRegistration{fooRegistration},
 				[]gardencorev1beta1.Extension{fooExtension},
+				extensionsv1alpha1.ExtensionClassShoot,
 				false,
 				HaveKeyWithValue(
 					Equal(fooExtensionType),
@@ -210,6 +211,7 @@ var _ = Describe("Extension", func() {
 					},
 				},
 				[]gardencorev1beta1.Extension{barExtension},
+				extensionsv1alpha1.ExtensionClassShoot,
 				false,
 				HaveKeyWithValue(
 					Equal(barExtensionType),
@@ -232,10 +234,36 @@ var _ = Describe("Extension", func() {
 			)
 		})
 
+		It("should not return the globally enabled extension when class is not shoot", func() {
+			test(
+				[]gardencorev1beta1.ControllerRegistration{
+					barRegistration,
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "another-extension",
+						},
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind: "kind",
+									Type: "type",
+								},
+							},
+						},
+					},
+				},
+				[]gardencorev1beta1.Extension{},
+				extensionsv1alpha1.ExtensionClassSeed,
+				false,
+				BeEmpty(),
+			)
+		})
+
 		Context("Globally enabled", func() {
 			It("should return the expected extension", func() {
 				test([]gardencorev1beta1.ControllerRegistration{barRegistration},
 					nil,
+					extensionsv1alpha1.ExtensionClassShoot,
 					false,
 					HaveKeyWithValue(
 						Equal(barExtensionType),
@@ -259,13 +287,14 @@ var _ = Describe("Extension", func() {
 			})
 
 			It("should return no extension when explicitly disabled", func() {
-				test([]gardencorev1beta1.ControllerRegistration{barRegistration}, []gardencorev1beta1.Extension{barExtensionDisabled}, false, BeEmpty())
+				test([]gardencorev1beta1.ControllerRegistration{barRegistration}, []gardencorev1beta1.Extension{barExtensionDisabled}, extensionsv1alpha1.ExtensionClassShoot, false, BeEmpty())
 			})
 
 			It("should return the expected extension", func() {
 				test(
 					[]gardencorev1beta1.ControllerRegistration{fooRegistration, barRegistration},
 					[]gardencorev1beta1.Extension{fooExtension, barExtensionDisabled},
+					extensionsv1alpha1.ExtensionClassShoot,
 					false,
 					SatisfyAll(
 						HaveLen(1),
@@ -299,6 +328,7 @@ var _ = Describe("Extension", func() {
 						barRegistrationSupportedForWorkerless,
 					},
 					[]gardencorev1beta1.Extension{},
+					extensionsv1alpha1.ExtensionClassShoot,
 					true,
 					HaveKeyWithValue(
 						Equal(barExtensionType),
@@ -323,6 +353,7 @@ var _ = Describe("Extension", func() {
 						barRegistration,
 					},
 					[]gardencorev1beta1.Extension{},
+					extensionsv1alpha1.ExtensionClassShoot,
 					true,
 					BeEmpty())
 			})

@@ -45,7 +45,7 @@ func NewExtension(
 		&extension.Values{
 			Class:      extensionClass,
 			Namespace:  namespace,
-			Extensions: mergeExtensions(controllerRegistrations.Items, extensions, namespace, workerlessSupported),
+			Extensions: mergeExtensions(controllerRegistrations.Items, extensions, namespace, class, workerlessSupported),
 		},
 		extension.DefaultInterval,
 		extension.DefaultSevereThreshold,
@@ -53,7 +53,7 @@ func NewExtension(
 	), nil
 }
 
-func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string, workerlessShoot bool) map[string]extension.Extension {
+func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string, class extensionsv1alpha1.ExtensionClass, workerlessShoot bool) map[string]extension.Extension {
 	var (
 		typeToExtension    = make(map[string]extension.Extension)
 		requiredExtensions = make(map[string]extension.Extension)
@@ -88,6 +88,10 @@ func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 			}
 
 			if res.GloballyEnabled != nil && *res.GloballyEnabled {
+				// For backwards compatibility, GloballyEnabled must only be considered for Shoots.
+				if class != extensionsv1alpha1.ExtensionClassShoot {
+					continue
+				}
 				if workerlessShoot && !ptr.Deref(res.WorkerlessSupported, false) {
 					continue
 				}

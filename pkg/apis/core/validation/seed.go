@@ -237,6 +237,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	}
 
 	allErrs = append(allErrs, validateExtensions(seedSpec.Extensions, fldPath.Child("extensions"))...)
+	allErrs = append(allErrs, validateExtensionsForSeed(seedSpec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(seedSpec.Resources, fldPath.Child("resources"))...)
 
 	return allErrs
@@ -370,6 +371,18 @@ func validateSeedOperationUpdate(newOperation, oldOperation string, fldPath *fie
 
 	if newOperation != oldOperation {
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("must not overwrite operation %q with %q", oldOperation, newOperation)))
+	}
+
+	return allErrs
+}
+
+func validateExtensionsForSeed(extensions []core.Extension, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for i, extension := range extensions {
+		if extension.Disabled != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i).Child("disabled"), "must not be set"))
+		}
 	}
 
 	return allErrs

@@ -1210,6 +1210,22 @@ var _ = Describe("Seed Validation Tests", func() {
 
 				Expect(errorList).To(BeEmpty())
 			})
+
+			It("should forbid setting the 'disabled' field", func() {
+				extension := core.Extension{
+					Type:     "arbitrary",
+					Disabled: ptr.To(true),
+				}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension)
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.extensions[0].disabled"),
+					}))))
+			})
 		})
 
 		Context("Resources validation", func() {
