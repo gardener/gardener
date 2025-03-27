@@ -99,6 +99,10 @@ const (
 	ContainerImageNameNodeProblemDetector = "node-problem-detector"
 	// ContainerImageNamePauseContainer is a constant for an image in the image vector with name 'pause-container'.
 	ContainerImageNamePauseContainer = "pause-container"
+	// ContainerImageNamePerses is a constant for an image in the image vector with name 'perses'.
+	ContainerImageNamePerses = "perses"
+	// ContainerImageNamePersesOperator is a constant for an image in the image vector with name 'perses-operator'.
+	ContainerImageNamePersesOperator = "perses-operator"
 	// ContainerImageNamePlutono is a constant for an image in the image vector with name 'plutono'.
 	ContainerImageNamePlutono = "plutono"
 	// ContainerImageNamePlutonoDashboardRefresher is a constant for an image in the image vector with name 'plutono-dashboard-refresher'.
