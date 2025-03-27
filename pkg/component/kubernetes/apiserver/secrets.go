@@ -148,7 +148,7 @@ func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.C
 
 func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secret, error) {
 	var (
-		ipAddresses    = append([]net.IP{}, k.values.ServerCertificate.ExtraIPAddresses...)
+		ipAddresses    []net.IP
 		deploymentName = k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer
 		dnsNames       = kubernetesutils.DNSNamesForService(deploymentName, k.namespace)
 	)
