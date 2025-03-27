@@ -1538,7 +1538,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						})), PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.capabilities"),
-							"Detail": Equal("capabilities are not allowed with disabled feature gate"),
+							"Detail": Equal("capabilities are not allowed with disabled CloudProfileCapabilities feature gate"),
 						})),
 					))
 				})
@@ -1797,7 +1797,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				cloudProfileOld = cloudProfileNew.DeepCopy()
 			})
 
-			Describe("using CapabilitySets", func() {
+			Describe("using Capabilities", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
 				})
@@ -1853,7 +1853,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					))
 				})
 
-				DescribeTableSubtree("switching to CapabilitySets",
+				DescribeTableSubtree("switching to Capabilities",
 					func(isInitialSwitch bool) {
 						BeforeEach(func() {
 							cloudProfileNew.Spec.Capabilities = core.Capabilities{
@@ -2013,12 +2013,12 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							})
 						})
 					},
-					Entry("switching to CapabilitySets", true),
-					Entry("using CapabilitySets", false),
+					Entry("switching to Capabilities", true),
+					Entry("using Capabilities", false),
 				)
 			})
 
-			Describe("not using CapabilitySets", func() {
+			Describe("not using Capabilities", func() {
 				BeforeEach(func() {
 					cloudProfileOld.Spec.MachineImages[0].Versions[0].Architectures = []string{"arm64"}
 					cloudProfileOld.Spec.MachineTypes[0].Architecture = ptr.To("arm64")

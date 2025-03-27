@@ -419,7 +419,7 @@ func validateCapabilities(capabilities core.Capabilities, fldPath *field.Path) f
 	}
 
 	if !utilfeature.DefaultFeatureGate.Enabled(features.CloudProfileCapabilities) {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "capabilities are not allowed with disabled feature gate"))
+		allErrs = append(allErrs, field.Forbidden(fldPath, "capabilities are not allowed with disabled CloudProfileCapabilities feature gate"))
 	}
 
 	// Capability "architecture" is required.

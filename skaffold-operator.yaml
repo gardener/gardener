@@ -652,9 +652,16 @@ build:
             - cmd/gardener-controller-manager/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
+            - extensions/pkg/apis/config/v1alpha1
+            - extensions/pkg/util
+            - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
+            - pkg/apis/core/helper
             - pkg/apis/core/install
             - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
@@ -840,6 +847,8 @@ build:
             - cmd/gardener-admission-controller/app
             - cmd/utils
             - cmd/utils/initrun
+            - extensions/pkg/apis/config/v1alpha1
+            - extensions/pkg/util
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/v1alpha1/helper
             - pkg/admissioncontroller/apis/config/v1alpha1/validation
