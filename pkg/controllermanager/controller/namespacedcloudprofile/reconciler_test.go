@@ -627,7 +627,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(sw),
 				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[{"cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}]}}}`))
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}]}}}`))
 					return nil
 				}),
 			)
@@ -665,8 +665,8 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					// Order of machine type array in patch is not guaranteed
 					Expect(patch.Data(o)).To(And(
 						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[],"machineTypes":[`),
-						ContainSubstring(`{"cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}`),
-						ContainSubstring(`{"cpu":"2","gpu":"7","memory":"10Gi","name":"test-type"}`),
+						ContainSubstring(`{"architecture":"amd64","cpu":"1","gpu":"5","memory":"3Gi","name":"test-type-namespaced"}`),
+						ContainSubstring(`{"architecture":"amd64","cpu":"2","gpu":"7","memory":"10Gi","name":"test-type"}`),
 					))
 					return nil
 				}),

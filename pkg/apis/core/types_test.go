@@ -86,11 +86,11 @@ var _ = Describe("API Types", func() {
 		Describe("Capabilities", func() {
 			Describe("#len", func() {
 				It("should return true if it has capabilities defined", func() {
-					Expect(len(Capabilities{"fooCap": CapabilityValues{Values: []string{"a", "b", "c"}}}) > 0).To(BeTrue())
+					Expect(Capabilities{"fooCap": CapabilityValues{Values: []string{"a", "b", "c"}}}).NotTo(BeEmpty())
 				})
 
 				It("should return false if it hasn't capabilities defined", func() {
-					Expect(len(Capabilities{}) > 0).To(BeFalse())
+					Expect(Capabilities{}).To(BeEmpty())
 				})
 			})
 		})
