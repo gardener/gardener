@@ -76,7 +76,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.12.0"
+  tag: "v1.12.1"
   targetVersion: ">= 1.28"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -90,7 +90,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.11.4"
+  tag: "v1.11.5"
   targetVersion: "1.27.x"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -136,7 +136,7 @@ images:
 - name: machine-controller-manager
   sourceRepository: github.com/gardener/machine-controller-manager
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager
-  tag: "v0.57.0"
+  tag: "v0.57.1"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
