@@ -28,22 +28,22 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 
 	fluentCRDDeployer, err := fluentoperator.NewCRDs(b.SeedClientSet.Client(), b.SeedClientSet.Applier())
 	if err != nil {
-		return fmt.Errorf("failed creating Prometheus CRD deployer: %w", err)
+		return fmt.Errorf("failed creating fluent CRD deployer: %w", err)
 	}
 
 	extensionCRDDeployer, err := extensioncrds.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier(), true, true)
 	if err != nil {
-		return fmt.Errorf("failed creating Prometheus CRD deployer: %w", err)
+		return fmt.Errorf("failed creating extension CRD deployer: %w", err)
 	}
 
-	for _, deploy := range []func(context.Context) error{
-		vpaCRDDeployer.Deploy,
-		prometheusCRDDeployer.Deploy,
-		fluentCRDDeployer.Deploy,
-		extensionCRDDeployer.Deploy,
+	for description, deploy := range map[string]func(context.Context) error{
+		"VPA":        vpaCRDDeployer.Deploy,
+		"Prometheus": prometheusCRDDeployer.Deploy,
+		"Fluent":     fluentCRDDeployer.Deploy,
+		"Extension":  extensionCRDDeployer.Deploy,
 	} {
 		if err := deploy(ctx); err != nil {
-			return fmt.Errorf("failed to deploy CustomResourceDefinition: %w", err)
+			return fmt.Errorf("failed to deploy CustomResourceDefinition related to %s: %w", description, err)
 		}
 	}
 

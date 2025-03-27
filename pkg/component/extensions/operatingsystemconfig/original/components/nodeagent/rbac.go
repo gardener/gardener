@@ -116,8 +116,8 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			Verbs:     []string{"create", "get"},
 		})
 	} else {
-		// For the case that NodeAgentAuthorizer feature gate is disabled again node-agents group have to be added to
-		// (cluster) role binding that node-agents which are already migrated do not lose access.
+		// For the case that NodeAgentAuthorizer feature gate is disabled again node-agents group has to be added to
+		// (cluster) role binding so that node-agents which are already migrated do not lose access.
 		clusterRoleBinding.Subjects = append(clusterRoleBinding.Subjects, rbacv1.Subject{
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
 			Kind:     rbacv1.GroupKind,

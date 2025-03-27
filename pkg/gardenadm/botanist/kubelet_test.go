@@ -29,6 +29,7 @@ import (
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Kubelet", func() {
@@ -117,6 +118,12 @@ var _ = Describe("Kubelet", func() {
 			Expect(fakeSeedClient.Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "foo", Labels: map[string]string{"kubernetes.io/hostname": hostName}}})).To(Succeed())
 
 			Expect(b.BootstrapKubelet(ctx)).To(Succeed())
+
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:node-bootstrapper"}, &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:certificates.k8s.io:certificatesigningrequests:nodeclient"}, &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKey{Name: "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient"}, &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+
+			Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeFalse())
 		})
 
 		It("should write a bootstrap token and restart the kubelet unit", func() {

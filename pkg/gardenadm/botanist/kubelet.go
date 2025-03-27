@@ -114,7 +114,7 @@ func (b *AutonomousBotanist) BootstrapKubelet(ctx context.Context) error {
 	}
 
 	if err := b.WriteBootstrapToken(ctx); err != nil {
-		return fmt.Errorf("failed creating bootstrap token: %w", err)
+		return fmt.Errorf("failed writing bootstrap token: %w", err)
 	}
 
 	if err := b.WriteKubeletBootstrapKubeconfig(ctx); err != nil {
@@ -144,7 +144,7 @@ func (b *AutonomousBotanist) ApproveKubeletServerCertificateSigningRequest(ctx c
 			if !slices.ContainsFunc(csr.Status.Conditions, func(condition certificatesv1.CertificateSigningRequestCondition) bool {
 				return condition.Type == certificatesv1.CertificateApproved && condition.Status == corev1.ConditionTrue
 			}) {
-				b.Logger.Info("Approving kubelet server certificate signing request")
+				b.Logger.Info("Approving kubelet server certificate signing request", "csrName", csr.Name, "hostName", b.HostName)
 				csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
 					Type:    certificatesv1.CertificateApproved,
 					Status:  corev1.ConditionTrue,
