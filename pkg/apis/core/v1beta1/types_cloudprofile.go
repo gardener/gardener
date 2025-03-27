@@ -155,6 +155,7 @@ type MachineImageVersion struct {
 	CapabilitySets []CapabilitySet `json:"capabilitySets,omitempty" protobuf:"bytes,6,rep,name=capabilitySets"`
 }
 
+// SupportsArchitecture checks if the machine image version supports the given architecture.
 func (v *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, architecture string) bool {
 	if len(capabilities) == 0 {
 		return slices.Contains(v.Architectures, architecture)
@@ -167,6 +168,7 @@ func (v *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, ar
 	return slices.Contains(capabilities[constants.ArchitectureKey].Values, architecture)
 }
 
+// GetArchitectures returns the list of supported architectures for the machine image version.
 func (v *MachineImageVersion) GetArchitectures(capabilities Capabilities) []string {
 	if len(capabilities) > 0 {
 		return ExtractArchitectures(v.CapabilitySets)
@@ -210,6 +212,7 @@ type MachineType struct {
 	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,8,rep,name=capabilities,casttype=Capabilities"`
 }
 
+// GetArchitecture returns the architecture of the machine type.
 func (m *MachineType) GetArchitecture() string {
 	if len(m.Capabilities[constants.ArchitectureKey].Values) == 1 {
 		return m.Capabilities[constants.ArchitectureKey].Values[0]
@@ -398,6 +401,7 @@ func (c *CapabilitySet) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.Capabilities)
 }
 
+// ExtractArchitectures extracts the architectures from the given capability sets.
 func ExtractArchitectures(capabilities []CapabilitySet) []string {
 	var architectures []string
 	for _, capabilitySet := range capabilities {
