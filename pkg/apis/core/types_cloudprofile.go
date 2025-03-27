@@ -125,6 +125,7 @@ type MachineImageVersion struct {
 	CapabilitySets []CapabilitySet
 }
 
+// SupportsArchitecture checks if the machine image version supports a given architecture.
 func (m *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, architecture string) bool {
 	if len(capabilities) == 0 {
 		return slices.Contains(m.Architectures, architecture)
@@ -167,6 +168,7 @@ type MachineType struct {
 	Capabilities Capabilities
 }
 
+// GetArchitecture returns the architecture of the machine type.
 func (m *MachineType) GetArchitecture() string {
 	if len(m.Capabilities[constants.ArchitectureKey].Values) == 1 {
 		return m.Capabilities[constants.ArchitectureKey].Values[0]
@@ -332,6 +334,7 @@ type CapabilitySet struct {
 	Capabilities
 }
 
+// ExtractArchitectures extracts all architectures from a list of CapabilitySets.
 func ExtractArchitectures(capabilities []CapabilitySet) []string {
 	var architectures []string
 	for _, capabilitySet := range capabilities {

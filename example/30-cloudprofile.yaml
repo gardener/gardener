@@ -27,7 +27,7 @@ spec:
 # ---
 # If CloudProfileCapabilities feature gate is enabled:
 # capabilities:
-#   architecture: amd64,arm64
+#   architecture: [amd64,arm64]
   kubernetes:
     versions:
     - version: 1.30.1
