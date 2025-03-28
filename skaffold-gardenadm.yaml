@@ -125,6 +125,7 @@ build:
             - pkg/component/networking/nodelocaldns
             - pkg/component/networking/nodelocaldns/constants
             - pkg/component/networking/vpn/seedserver
+            - pkg/component/networking/vpn/seedserver/templates/envoy.yaml.tpl
             - pkg/component/networking/vpn/shoot
             - pkg/component/nodemanagement/dependencywatchdog
             - pkg/component/nodemanagement/machinecontrollermanager

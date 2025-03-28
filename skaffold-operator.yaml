@@ -132,6 +132,7 @@ build:
             - pkg/component/networking/nginxingress
             - pkg/component/networking/nodelocaldns/constants
             - pkg/component/networking/vpn/seedserver
+            - pkg/component/networking/vpn/seedserver/templates/envoy.yaml.tpl
             - pkg/component/observability/logging
             - pkg/component/observability/logging/fluentbit
             - pkg/component/observability/logging/fluentcustomresources
