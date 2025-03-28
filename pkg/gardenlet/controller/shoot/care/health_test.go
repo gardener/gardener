@@ -422,6 +422,262 @@ var _ = Describe("health check", func() {
 		)
 	})
 
+	Describe("#CheckNodesScaling", func() {
+		var (
+			ctrl *gomock.Controller
+			c    *mockclient.MockClient
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			c = mockclient.NewMockClient(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		Describe("Scaling up", func() {
+			It("should return true if number of ready nodes equal number of desired machines", func() {
+				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{}, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
+				Expect(msg).To(Equal(""))
+				Expect(err).To(BeNil())
+			})
+
+			It("should return an error if not enough machine objects as desired were created", func() {
+				machineDeployment := machinev1alpha1.MachineDeployment{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+				}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
+				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{}, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingUp"))
+				Expect(err).To(MatchError(ContainSubstring("not enough machine objects created yet")))
+			})
+
+			It("should return an error when detecting erroneous machines", func() {
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachineUnknown},
+							},
+						},
+					},
+				}
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				machineDeployment := machinev1alpha1.MachineDeployment{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+				}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingUp"))
+				Expect(err).To(MatchError(ContainSubstring("is erroneous")))
+			})
+
+			It("should return an error when not enough ready nodes are registered", func() {
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachineRunning},
+							},
+						},
+					},
+				}
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				machineDeployment := machinev1alpha1.MachineDeployment{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+				}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingUp"))
+				Expect(err).To(MatchError(ContainSubstring("not enough ready worker nodes registered in the cluster")))
+			})
+
+			It("should return progressing when detecting a regular scale up (pending status)", func() {
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachinePending},
+							},
+						},
+					},
+				}
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				machineDeployment := machinev1alpha1.MachineDeployment{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+				}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingUp"))
+				Expect(err).To(MatchError(ContainSubstring("provisioning and should join the cluster soon")))
+			})
+
+			It("should return progressing when detecting a regular scale up (no status)", func() {
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace}},
+					},
+				}
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				machineDeployment := machinev1alpha1.MachineDeployment{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+				}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingUp"))
+				Expect(err).To(MatchError(ContainSubstring("provisioning and should join the cluster soon")))
+			})
+		})
+
+		Describe("Scaling down", func() {
+			It("should return true if number of registered nodes equal number of desired machines", func() {
+				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				machineDeployment := machinev1alpha1.MachineDeployment{
+					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+				}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal(""))
+				Expect(err).To(BeNil())
+			})
+
+			It("should return an error if the machine for a cordoned node is not found", func() {
+				nodeList := &corev1.NodeList{
+					Items: []corev1.Node{
+						{Spec: corev1.NodeSpec{Unschedulable: true}},
+					},
+				}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{}}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingDown"))
+				Expect(err).To(MatchError(ContainSubstring("machine object for cordoned node \"\" not found")))
+			})
+
+			It("should return an error if the machine for a cordoned node is not deleted", func() {
+				var (
+					nodeName = "foo"
+
+					machineList = &machinev1alpha1.MachineList{
+						Items: []machinev1alpha1.Machine{
+							{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace, Labels: map[string]string{"node": nodeName}}},
+						},
+					}
+					nodeList = &corev1.NodeList{
+						Items: []corev1.Node{
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+								Spec:       corev1.NodeSpec{Unschedulable: true},
+							},
+						},
+					}
+				)
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingDown"))
+				Expect(err).To(MatchError(ContainSubstring("found but corresponding machine object does not have a deletion timestamp")))
+			})
+
+			It("should return an error if there are more nodes then machines", func() {
+				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingDown"))
+				Expect(err).To(MatchError(ContainSubstring("too many worker nodes are registered. Exceeding maximum desired machine count")))
+			})
+
+			It("should return progressing for a regular scale down", func() {
+				var (
+					nodeName          = "foo"
+					deletionTimestamp = metav1.Now()
+
+					machineList = &machinev1alpha1.MachineList{
+						Items: []machinev1alpha1.Machine{
+							{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace, DeletionTimestamp: &deletionTimestamp, Labels: map[string]string{"node": nodeName}}},
+						},
+					}
+					nodeList = &corev1.NodeList{
+						Items: []corev1.Node{
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+								Spec:       corev1.NodeSpec{Unschedulable: true},
+							},
+						},
+					}
+				)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *machinev1alpha1.MachineList, _ ...client.ListOption) error {
+					*list = *machineList
+					return nil
+				})
+				msg, err := CheckNodesScaling(ctx, c, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingDown"))
+				Expect(err).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
+			})
+
+			It("should ignore node not managed by MCM and return progressing for a regular scale down", func() {
+				var (
+					nodeName          = "foo"
+					deletionTimestamp = metav1.Now()
+
+					machineList = &machinev1alpha1.MachineList{
+						Items: []machinev1alpha1.Machine{
+							{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &deletionTimestamp, Labels: map[string]string{"node": nodeName}}},
+						},
+					}
+					nodeList = &corev1.NodeList{
+						Items: []corev1.Node{
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+								Spec:       corev1.NodeSpec{Unschedulable: true},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:        "bar",
+									Annotations: map[string]string{"node.machine.sapcloud.io/not-managed-by-mcm": "1"},
+								},
+							},
+						},
+					}
+				)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *machinev1alpha1.MachineList, _ ...client.ListOption) error {
+					*list = *machineList
+					return nil
+				})
+				msg, err := CheckNodesScaling(ctx, c, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodesScalingDown"))
+				Expect(err).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
+			})
+		})
+	})
+
 	Describe("#CheckIfDependencyWatchdogProberScaledDownControllers", func() {
 		var (
 			deploymentCA  *appsv1.Deployment
