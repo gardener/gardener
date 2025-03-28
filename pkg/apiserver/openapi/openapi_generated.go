@@ -1976,21 +1976,21 @@ func schema_pkg_apis_core_v1beta1_CapabilitySet(ref common.ReferenceCallback) co
 				Description: "CapabilitySet is a wrapper for Capabilities. This is a workaround as the Protobuf generator can't handle a slice of maps.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"Capabilities": {
+					"capabilities": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
 									},
 								},
 							},
 						},
 					},
 				},
-				Required: []string{"Capabilities"},
 			},
 		},
 		Dependencies: []string{
@@ -2005,7 +2005,7 @@ func schema_pkg_apis_core_v1beta1_CapabilityValues(ref common.ReferenceCallback)
 				Description: "CapabilityValues contains capability values. This is a workaround as the Protobuf generator can't handle a map with slice values.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"Values": {
+					"values": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -2020,7 +2020,6 @@ func schema_pkg_apis_core_v1beta1_CapabilityValues(ref common.ReferenceCallback)
 						},
 					},
 				},
-				Required: []string{"Values"},
 			},
 		},
 	}
@@ -2291,7 +2290,8 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
 									},
 								},
 							},
@@ -5782,7 +5782,8 @@ func schema_pkg_apis_core_v1beta1_MachineType(ref common.ReferenceCallback) comm
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
 									},
 								},
 							},

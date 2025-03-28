@@ -5,7 +5,6 @@
 package v1beta1
 
 import (
-	"encoding/json"
 	"slices"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -362,24 +361,7 @@ type InPlaceUpdates struct {
 // CapabilityValues contains capability values.
 // This is a workaround as the Protobuf generator can't handle a map with slice values.
 type CapabilityValues struct {
-	Values []string `protobuf:"bytes,1,rep,name=values"`
-}
-
-// UnmarshalJSON unmarshals the CapabilityValues object from JSON.
-func (c *CapabilityValues) UnmarshalJSON(bytes []byte) error {
-	var values []string
-	if err := json.Unmarshal(bytes, &values); err != nil {
-		return err
-	}
-
-	c.Values = append(c.Values, values...)
-
-	return nil
-}
-
-// MarshalJSON marshals the CapabilityValues object to JSON.
-func (c CapabilityValues) MarshalJSON() ([]byte, error) {
-	return json.Marshal(c.Values)
+	Values []string `json:"values,omitempty" protobuf:"bytes,1,rep,name=values"`
 }
 
 // Capabilities of a machine type or machine image.
@@ -388,17 +370,7 @@ type Capabilities map[string]CapabilityValues
 // CapabilitySet is a wrapper for Capabilities.
 // This is a workaround as the Protobuf generator can't handle a slice of maps.
 type CapabilitySet struct {
-	Capabilities `protobuf:"bytes,1,rep,name=capabilities,casttype=Capabilities"`
-}
-
-// UnmarshalJSON unmarshals the given data to a CapabilitySet
-func (c *CapabilitySet) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &c.Capabilities)
-}
-
-// MarshalJSON marshals the CapabilitySet object to JSON.
-func (c *CapabilitySet) MarshalJSON() ([]byte, error) {
-	return json.Marshal(c.Capabilities)
+	Capabilities `json:"capabilities,omitempty" protobuf:"bytes,1,rep,name=capabilities,casttype=Capabilities"`
 }
 
 // ExtractArchitectures extracts the architectures from the given capability sets.

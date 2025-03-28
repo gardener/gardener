@@ -394,7 +394,7 @@ func validateMachineImageVersionArchitecture(machineImageVersion core.MachineIma
 	return allErrs
 }
 
-func areSlicesEqual(s1, s2 []string) bool {
+func areSlicesEqual[T comparable](s1, s2 []T) bool {
 	if len(s1) != len(s2) {
 		return false
 	}
