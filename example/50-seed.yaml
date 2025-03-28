@@ -19,7 +19,9 @@ spec:
   # providerConfig:
   #   <some-provider-specific-config-for-the-backup-buckets>
     region: europe-1
-    secretRef:
+    credentialsRef:
+      apiVersion: v1
+      kind: Secret
       name: backup-secret
       namespace: garden
   dns:
@@ -28,7 +30,7 @@ spec:
       secretRef:
         name: ingress-secret
         namespace: garden
-  ingress: 
+  ingress:
     domain: ingress.dev.my-seed.example.com
     controller:
       kind: nginx
