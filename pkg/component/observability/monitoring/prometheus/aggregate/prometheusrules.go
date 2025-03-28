@@ -62,7 +62,7 @@ func CentralPrometheusRules(seedIsGarden bool) []*monitoringv1.PrometheusRule {
 		},
 		{
 			Alert: "TooManyEtcdSnapshotCompactionJobsFailing",
-			Expr:  intstr.FromString(`count(increase(etcddruid_compaction_jobs_total{succeeded="false"}[3h]) >= 1) / count(increase(etcddruid_compaction_jobs_total[3h])) > 0.1`),
+			Expr:  intstr.FromString(`count(increase(etcddruid_compaction_jobs_total{succeeded="false", failureReason=~"processFailure|unknown"}[3h]) >= 1) / count(increase(etcddruid_compaction_jobs_total[3h])) > 0.1`),
 			Labels: map[string]string{
 				"severity":   "warning",
 				"type":       "seed",
