@@ -109,8 +109,7 @@ _(enabled by default)_
 This admission controller reacts on `CREATE`, `UPDATE`, and `DELETE` operations for `Seed`s.
 Rejects the deletion if `Shoot`(s) reference the seed cluster.
 While the seed is still used by `Shoot`(s), the plugin disallows removal of entries from the `seed.spec.provider.zones` field.
-When the seed is using `WorkloadIdentity` as backup credentials, the plugin ensures the seed backup and the workload identity
-have the same provider type, i.e. `seed.spec.backup.provider` and `workloadIdentity.spec.targetSystem.type` have the same value.
+When the seed is using `WorkloadIdentity` as backup credentials, the plugin ensures the seed backup and the workload identity have the same provider type, i.e. `seed.spec.backup.provider` and `workloadIdentity.spec.targetSystem.type` have the same value.
 
 ## `SeedMutator`
 
