@@ -87,6 +87,9 @@ type ControllerManagerControllerConfiguration struct {
 	// SeedBackupBucketsCheck defines the configuration of the SeedBackupBucketsCheck controller.
 	// +optional
 	SeedBackupBucketsCheck *SeedBackupBucketsCheckControllerConfiguration `json:"seedBackupBucketsCheck,omitempty"`
+	// SeedReference defines the configuration of the SeedReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	// +optional
+	SeedReference *SeedReferenceControllerConfiguration `json:"seedReference,omitempty"`
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
 	ShootMaintenance ShootMaintenanceControllerConfiguration `json:"shootMaintenance"`
 	// ShootQuota defines the configuration of the ShootQuota controller.
@@ -309,6 +312,15 @@ type SeedBackupBucketsCheckControllerConfiguration struct {
 	// ConditionThresholds defines the condition threshold per condition type.
 	// +optional
 	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
+}
+
+// SeedReferenceControllerConfiguration defines the configuration of the
+// SeedReference controller.
+type SeedReferenceControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// seeds.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ShootMaintenanceControllerConfiguration defines the configuration of the

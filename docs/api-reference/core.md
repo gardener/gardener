@@ -1735,6 +1735,34 @@ Ingress
 <p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Seed extensions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamedResourceReference">
+[]NamedResourceReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -5370,10 +5398,11 @@ SeedSelector
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
-<p>Extension contains type and provider information for Shoot extensions.</p>
+<p>Extension contains type and provider information for extensions.</p>
 </p>
 <table>
 <thead>
@@ -8631,6 +8660,7 @@ Alerting
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.ExtensionResourceState">ExtensionResourceState</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
@@ -11335,6 +11365,34 @@ Ingress
 <p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Seed extensions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamedResourceReference">
+[]NamedResourceReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedStatus">SeedStatus
@@ -11688,6 +11746,34 @@ Ingress
 <td>
 <em>(Optional)</em>
 <p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Seed extensions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamedResourceReference">
+[]NamedResourceReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
 </td>
 </tr>
 </table>

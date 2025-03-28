@@ -28,6 +28,20 @@ spec:
       secretRef:
         name: ingress-secret
         namespace: garden
+  extensions:
+  - type: foobar
+  # providerConfig:
+  #   apiVersion: foobar.extensions.gardener.cloud/v1alpha1
+  #   kind: FooBarConfig
+  #   foo: bar
+  #   secretRef: foobar-secret # See the resources section below for the actual reference
+  # List resources referenced by providerConfig and other sections
+  # resources:
+  # - name: foobar-secret
+  #   resourceRef:
+  #     apiVersion: v1
+  #     kind: Secret
+  #     name: my-foobar-secret
   ingress: 
     domain: ingress.dev.my-seed.example.com
     controller:

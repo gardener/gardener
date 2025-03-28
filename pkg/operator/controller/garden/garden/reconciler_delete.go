@@ -239,11 +239,11 @@ func (r *Reconciler) delete(
 
 		deleteExtensionResources = g.Add(flow.Task{
 			Name: "Destroying extension resources",
-			Fn:   flow.TaskFn(c.extensions.DeleteResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:   flow.TaskFn(c.extensions.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
 		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extension resources have been deleted",
-			Fn:           c.extensions.WaitCleanupResources,
+			Fn:           c.extensions.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
 		})
 		destroyDNSRecords = g.Add(flow.Task{

@@ -43,7 +43,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 	return extension.Add(mgr, extension.AddArgs{
 		Actuator:          NewActuator(mgr),
 		ControllerOptions: opts.Controller,
-		ExtensionClass:    opts.ExtensionClass,
+		ExtensionClasses:  []extensionsv1alpha1.ExtensionClass{opts.ExtensionClass},
 		Name:              ApplicationName,
 		FinalizerSuffix:   Type,
 		Resync:            60 * time.Minute,

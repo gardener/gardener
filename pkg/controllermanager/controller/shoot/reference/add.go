@@ -25,7 +25,7 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Shoot
 		GetReferencedSecretNames:    getReferencedSecretNames,
 		GetReferencedConfigMapNames: getReferencedConfigMapNames,
 		ReferenceChangedPredicate:   Predicate,
-	}).AddToManager(mgr)
+	}).AddToManager(mgr, "shoot")
 }
 
 // Predicate is a predicate function for checking whether a reference changed in the Shoot
@@ -46,7 +46,7 @@ func Predicate(oldObj, newObj client.Object) bool {
 		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig, newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig) ||
 		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication) ||
 		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization) ||
-		!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources)
+		!v1beta1helper.ResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources)
 }
 
 func getReferencedSecretNames(obj client.Object) []string {

@@ -74,6 +74,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			backupBucket gardencorev1beta1.BackupBucket
 			backupEntry  gardencorev1beta1.BackupEntry
 			coreShoot    core.Shoot
+			coreSeed     core.Seed
 
 			namespace                  = "default"
 			cloudProfileName           = "profile-1"
@@ -291,6 +292,24 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 			}
 
+			seedBase = core.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: seedName,
+				},
+				Spec: core.SeedSpec{
+					Resources: []core.NamedResourceReference{
+						{
+							Name: secretName,
+							ResourceRef: autoscalingv1.CrossVersionObjectReference{
+								Kind:       "Secret",
+								Name:       secretName,
+								APIVersion: "v1",
+							},
+						},
+					},
+				},
+			}
+
 			coreBackupBucket = core.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "bucket",
@@ -423,6 +442,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			coreProject = projectBase
 			coreShoot = shootBase
+			coreSeed = seedBase
 			backupBucket = backupBucketBase
 			backupEntry = backupEntryBase
 
@@ -1173,7 +1193,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(MatchError("shoots.core.gardener.cloud \"shoot-1\" is forbidden: shoot cannot reference a resource you are not allowed to read"))
+				Expect(err).To(MatchError("shoots.core.gardener.cloud \"shoot-1\" is forbidden: cannot reference a resource you are not allowed to read"))
 			})
 
 			It("should reject because the user is not allowed to read the referenced resource (update)", func() {
@@ -1200,7 +1220,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(MatchError("shoots.core.gardener.cloud \"shoot-1\" is forbidden: shoot cannot reference a resource you are not allowed to read"))
+				Expect(err).To(MatchError("shoots.core.gardener.cloud \"shoot-1\" is forbidden: cannot reference a resource you are not allowed to read"))
 			})
 
 			It("should allow because the user is not allowed to read the referenced resource but resource spec hasn't changed", func() {
@@ -1233,7 +1253,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(MatchError(ContainSubstring("failed to resolve shoot resource reference")))
+				Expect(err).To(MatchError(ContainSubstring("failed to resolve resource reference")))
 			})
 
 			tests := func(description string, resource string, mutate func(*core.Shoot), expectedErrorMessage string) {
@@ -1368,6 +1388,50 @@ var _ = Describe("resourcereferencemanager", func() {
 						},
 					}
 				}, "failed to resolve structured authorization kubeconfig secret reference")
+			})
+		})
+
+		Context("tests for Seed objects", func() {
+			It("should reject because the user is not allowed to read the referenced resource (update)", func() {
+				coreSeed.Spec.Resources = append(coreShoot.Spec.Resources, core.NamedResourceReference{
+					Name: "foo",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Secret",
+						Name:       "foo",
+						APIVersion: "v1",
+					},
+				})
+
+				oldSeed := coreSeed.DeepCopy()
+				coreSeed.Spec.Resources[0] = oldSeed.Spec.Resources[1]
+				coreSeed.Spec.Resources[1] = oldSeed.Spec.Resources[0]
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(&coreSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", coreSeed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(MatchError("seeds.core.gardener.cloud \"seed-1\" is forbidden: cannot reference a resource you are not allowed to read"))
+			})
+
+			It("should allow because the user is not allowed to read the referenced resource but resource spec hasn't changed", func() {
+				oldSeed := coreSeed.DeepCopy()
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(&coreSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", coreSeed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+			})
+
+			It("should reject because the referenced resource does not exist", func() {
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&coreSeed, nil, core.Kind("Seed").WithVersion("version"), "", coreSeed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("failed to resolve resource reference")))
 			})
 		})
 

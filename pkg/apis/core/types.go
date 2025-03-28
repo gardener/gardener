@@ -5,7 +5,9 @@
 package core
 
 import (
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -60,4 +62,22 @@ type AccessRestrictionWithOptions struct {
 	// Options is a map of additional options for the access restriction.
 	// +optional
 	Options map[string]string
+}
+
+// Extension contains type and provider information for extensions.
+type Extension struct {
+	// Type is the type of the extension resource.
+	Type string
+	// ProviderConfig is the configuration passed to extension resource.
+	ProviderConfig *runtime.RawExtension
+	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
+	Disabled *bool
+}
+
+// NamedResourceReference is a named reference to a resource.
+type NamedResourceReference struct {
+	// Name of the resource reference.
+	Name string
+	// ResourceRef is a reference to a resource.
+	ResourceRef autoscalingv1.CrossVersionObjectReference
 }

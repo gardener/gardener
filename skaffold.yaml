@@ -182,6 +182,7 @@ build:
             - pkg/utils/gardener
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/time
@@ -311,6 +312,7 @@ build:
             - pkg/controllermanager/controller/seed/backupbucketscheck
             - pkg/controllermanager/controller/seed/extensionscheck
             - pkg/controllermanager/controller/seed/lifecycle
+            - pkg/controllermanager/controller/seed/reference
             - pkg/controllermanager/controller/seed/secrets
             - pkg/controllermanager/controller/seed/utils
             - pkg/controllermanager/controller/shoot
@@ -342,6 +344,7 @@ build:
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
             - pkg/utils/retry
@@ -417,6 +420,7 @@ build:
             - pkg/utils/gardener
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/timewindow
@@ -503,6 +507,7 @@ build:
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/timewindow
@@ -1424,6 +1429,7 @@ build:
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/time
@@ -1540,6 +1546,7 @@ build:
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/certificatesigningrequest
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
             - pkg/utils/retry

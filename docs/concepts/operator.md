@@ -544,7 +544,7 @@ This reconciler inspects the following references:
 - Structured authorization kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[].secretName`)
 - SNI `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.sni.secretName`)
 
-Further checks might be added in the future.
+The checks naturally grow with the number of references that are added to the `Garden` specification.
 
 ### [`Controller Registrar` Controller](../../pkg/operator/controller/controllerregistrar)
 

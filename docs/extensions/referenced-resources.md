@@ -1,6 +1,6 @@
 # Referenced Resources
 
-The Shoot resource can include a list of resources (usually secrets) that can be referenced by name in the extension `providerConfig` and other Shoot sections, for example:
+`Shoot`s and `Seed`s can include a list of resources (usually secrets) that can be referenced by name in the extension `providerConfig` and other Shoot sections, for example:
 
 ```yaml
 kind: Shoot
@@ -26,7 +26,9 @@ spec:
       name: my-foobar-secret
 ```
 
-Gardener expects to find these referenced resources in the project namespace (e.g., `garden-dev`) and will copy them to the Shoot namespace in the Seed cluster when reconciling a Shoot, adding a prefix to their names to avoid naming collisions with Gardener's own resources.
+Gardener expects these referenced resources to be located in the project namespace (e.g., `garden-dev`) for `Shoot`s and in the `garden` namespace for `Seed`s.
+`Seed` resources are copied to the `garden` namespace in the seed cluster, while `Shoot` resources are copied to the control-plane namespace in the shoot cluster.
+To avoid conflicts with other resources in the shoot, all resources in the seed are prefixed with a static value.
 
 Extension controllers can resolve the references to these resources by accessing the Shoot via the `Cluster` resource. To properly read a referenced resources, extension controllers should use the utility function `GetObjectByReference` from the `extensions/pkg/controller` package, for example:
 

@@ -1468,7 +1468,9 @@ func domainNames(domains []operatorv1alpha1.DNSDomain) []string {
 
 func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) (extension.Interface, error) {
 	values := &extension.Values{
+		Class:      ptr.To(extensionsv1alpha1.ExtensionClassGarden),
 		Namespace:  r.GardenNamespace,
+		NamePrefix: ptr.To("garden-"),
 		Extensions: make(map[string]extension.Extension),
 	}
 
@@ -1477,13 +1479,11 @@ func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden 
 		values.Extensions[ext.Type] = extension.Extension{
 			Extension: extensionsv1alpha1.Extension{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      ext.Type,
-					Namespace: r.GardenNamespace,
+					Name: ext.Type,
 				},
 				Spec: extensionsv1alpha1.ExtensionSpec{
 					DefaultSpec: extensionsv1alpha1.DefaultSpec{
 						Type:           ext.Type,
-						Class:          ptr.To(extensionsv1alpha1.ExtensionClassGarden),
 						ProviderConfig: ext.ProviderConfig,
 					},
 				},

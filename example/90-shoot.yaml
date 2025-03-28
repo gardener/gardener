@@ -408,7 +408,7 @@ spec:
 # seedSelector:
 #   matchLabels:
 #     foo: bar
-# List resources referenced by providerConfig and other sections, if any
+# List resources referenced by providerConfig and other sections
 # resources:
 # - name: foobar-secret
 #   resourceRef:

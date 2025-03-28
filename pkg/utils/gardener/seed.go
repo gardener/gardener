@@ -145,6 +145,10 @@ func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed) sets.Set[str
 		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
 	}
 
+	for _, extension := range seed.Spec.Extensions {
+		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type))
+	}
+
 	// add extension combinations for seed provider type
 	wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
 	wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.InfrastructureResource, seed.Spec.Provider.Type))

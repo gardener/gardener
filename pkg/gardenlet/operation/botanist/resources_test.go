@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"maps"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -147,29 +146,6 @@ var _ = Describe("Resources", func() {
 						Namespace:   controlPlaneNamespace,
 						Labels:      resource.Labels,
 						Annotations: resource.Annotations,
-					},
-					Type: resource.Type,
-					Data: resource.Data,
-				},
-			)
-		})
-
-		It("should drop unwanted metadata from referenced resources", func() {
-			metav1.SetMetaDataAnnotation(&resource.ObjectMeta, "kubectl.kubernetes.io/some-random-annotation", "this should be kept")
-			expectedAnnotations := maps.Clone(resource.Annotations)
-			metav1.SetMetaDataAnnotation(&resource.ObjectMeta, "kubectl.kubernetes.io/last-applied-configuration", "this should be dropped")
-
-			Expect(gardenClient.Create(ctx, resource)).To(Succeed())
-
-			Expect(botanist.DeployReferencedResources(ctx)).To(Succeed())
-
-			expectReferencedResourcesInSeed(
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "ref-" + resource.Name,
-						Namespace:   controlPlaneNamespace,
-						Labels:      resource.Labels,
-						Annotations: expectedAnnotations,
 					},
 					Type: resource.Type,
 					Data: resource.Data,

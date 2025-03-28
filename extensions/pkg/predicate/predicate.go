@@ -5,13 +5,14 @@
 package predicate
 
 import (
-	"k8s.io/utils/ptr"
+	"k8s.io/utils/set"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/gardener/gardener/pkg/api/extensions"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 )
 
 var logger = log.Log.WithName("predicate")
@@ -54,12 +55,14 @@ func HasOneOfTypesPredicate(extensionTypes ...string) predicate.Predicate {
 	return predicate.Or(orPreds...)
 }
 
-// HasClass filters the incoming objects for the given extension class.
-// For backwards compatibility, if the extension class is unset, it is assumed that the extension belongs to a shoot cluster.
-// An empty given 'extensionClass' is likewise treated to be of class 'shoot'.
-func HasClass(extensionClass extensionsv1alpha1.ExtensionClass) predicate.Predicate {
-	if extensionClass == "" {
-		extensionClass = extensionsv1alpha1.ExtensionClassShoot
+// HasClass filters the incoming objects for the given extension classes.
+// For backwards compatibility, if the class is unset in the extension object, it is assumed that the extension belongs to a shoot cluster.
+// An empty 'extensionClass' is likewise treated to be of class 'shoot'.
+func HasClass(extensionClasses ...extensionsv1alpha1.ExtensionClass) predicate.Predicate {
+	if len(extensionClasses) == 0 {
+		extensionClasses = append(extensionClasses, extensionsv1alpha1.ExtensionClassShoot)
+	} else if len(extensionClasses) == 1 && extensionClasses[0] == "" {
+		extensionClasses[0] = extensionsv1alpha1.ExtensionClassShoot
 	}
 
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -72,7 +75,7 @@ func HasClass(extensionClass extensionsv1alpha1.ExtensionClass) predicate.Predic
 			return false
 		}
 
-		return ptr.Deref(accessor.GetExtensionSpec().GetExtensionClass(), extensionsv1alpha1.ExtensionClassShoot) == extensionClass
+		return set.New(extensionClasses...).Has(extensionsv1alpha1helper.GetExtensionClassOrDefault(accessor.GetExtensionSpec().GetExtensionClass()))
 	})
 }
 

@@ -29,10 +29,13 @@ type DefaultSpec struct {
 type ExtensionClass string
 
 const (
-	// ExtensionClassShoot is the extension class responsible for shoot clusters.
-	ExtensionClassShoot ExtensionClass = "shoot"
 	// ExtensionClassGarden is the extension class responsible for the garden cluster.
 	ExtensionClassGarden ExtensionClass = "garden"
+	// ExtensionClassSeed is the extension class responsible for seed clusters.
+	ExtensionClassSeed ExtensionClass = "seed"
+	// ExtensionClassShoot is the extension class responsible for shoot clusters.
+	// For backwards compatibility, this class must be treated as the default value if non is provided.
+	ExtensionClassShoot ExtensionClass = "shoot"
 )
 
 // GetExtensionType implements Spec.

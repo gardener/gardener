@@ -372,6 +372,34 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 		}
 		err = r.ensureShootReferences(ctx, a, oldShoot, shoot)
 
+	case core.Kind("Seed"):
+		var (
+			oldSeed, seed *core.Seed
+			ok            bool
+		)
+
+		seed, ok = a.GetObject().(*core.Seed)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into Seed object")
+		}
+		if utils.SkipVerification(operation, seed.ObjectMeta) {
+			return nil
+		}
+
+		switch a.GetOperation() {
+		case admission.Create:
+			oldSeed = &core.Seed{}
+		case admission.Update:
+			oldSeed, ok = a.GetOldObject().(*core.Seed)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old resource into Seed object")
+			}
+			if reflect.DeepEqual(oldSeed.Spec, seed.Spec) {
+				return nil
+			}
+		}
+		err = r.ensureSeedReferences(ctx, a, oldSeed, seed)
+
 	case core.Kind("Project"):
 		project, ok := a.GetObject().(*core.Project)
 		if !ok {
@@ -908,50 +936,8 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		}
 	}
 
-	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.Resources, shoot.Spec.Resources) {
-		for _, resource := range shoot.Spec.Resources {
-			// Get the APIResource for the current resource
-			apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
-			if err != nil {
-				return err
-			}
-			if apiResource == nil {
-				return fmt.Errorf("shoot resource reference %q could not be resolved for API resource with version %q and kind %q", resource.Name, resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
-			}
-
-			// Parse APIVersion to GroupVersion
-			gv, err := schema.ParseGroupVersion(resource.ResourceRef.APIVersion)
-			if err != nil {
-				return err
-			}
-
-			// Check if the resource is namespaced
-			if !apiResource.Namespaced {
-				return fmt.Errorf("failed to resolve shoot resource reference %q. Cannot reference a resource that is not namespaced", resource.Name)
-			}
-
-			// Check if the user is allowed to read the resource
-			readAttributes := authorizer.AttributesRecord{
-				User:            attributes.GetUserInfo(),
-				Verb:            "get",
-				APIGroup:        gv.Group,
-				APIVersion:      gv.Version,
-				Resource:        apiResource.Name,
-				Namespace:       shoot.Namespace,
-				Name:            resource.ResourceRef.Name,
-				ResourceRequest: true,
-			}
-			if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
-				return fmt.Errorf("could not authorize read request for shoot resource reference: %w", err)
-			} else if decision != authorizer.DecisionAllow {
-				return errors.New("shoot cannot reference a resource you are not allowed to read")
-			}
-
-			// Check if the resource actually exists
-			if err := r.lookupResource(ctx, gv.WithResource(apiResource.Name), shoot.Namespace, resource.ResourceRef.Name); err != nil {
-				return fmt.Errorf("failed to resolve shoot resource reference %q: %w", resource.Name, err)
-			}
-		}
+	if err := r.ensureResourceReferences(ctx, attributes, shoot.Namespace, oldShoot.Spec.Resources, shoot.Spec.Resources); err != nil {
+		return err
 	}
 
 	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {
@@ -1033,6 +1019,10 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 	}
 
 	return nil
+}
+
+func (r *ReferenceManager) ensureSeedReferences(ctx context.Context, attributes admission.Attributes, oldSeed, seed *core.Seed) error {
+	return r.ensureResourceReferences(ctx, attributes, v1beta1constants.GardenNamespace, oldSeed.Spec.Resources, seed.Spec.Resources)
 }
 
 func (r *ReferenceManager) ensureBackupEntryReferences(oldBackupEntry, backupEntry *core.BackupEntry) error {
@@ -1308,4 +1298,55 @@ func validateShootWorkerLimits(channel chan error, shoot *gardencorev1beta1.Shoo
 	if totalMinimum > maxNodesTotal {
 		channel <- fmt.Errorf("the total minimum node count of all worker pools of shoot \"%s/%s\" must not exceed the limit of %d total nodes configured in the cloud profile", shoot.Namespace, shoot.Name, maxNodesTotal)
 	}
+}
+
+func (r *ReferenceManager) ensureResourceReferences(ctx context.Context, attributes admission.Attributes, namespace string, oldResources, resources []core.NamedResourceReference) error {
+	if apiequality.Semantic.DeepEqual(oldResources, resources) {
+		return nil
+	}
+
+	for _, resource := range resources {
+		// Get the APIResource for the current resource
+		apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
+		if err != nil {
+			return err
+		}
+		if apiResource == nil {
+			return fmt.Errorf("resource reference %q could not be resolved for API resource with version %q and kind %q", resource.Name, resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
+		}
+
+		// Parse APIVersion to GroupVersion
+		gv, err := schema.ParseGroupVersion(resource.ResourceRef.APIVersion)
+		if err != nil {
+			return err
+		}
+
+		// Check if the resource is namespaced
+		if !apiResource.Namespaced {
+			return fmt.Errorf("failed to resolve resource reference %q. Cannot reference a resource that is not namespaced", resource.Name)
+		}
+
+		// Check if the user is allowed to read the resource
+		readAttributes := authorizer.AttributesRecord{
+			User:            attributes.GetUserInfo(),
+			Verb:            "get",
+			APIGroup:        gv.Group,
+			APIVersion:      gv.Version,
+			Resource:        apiResource.Name,
+			Namespace:       namespace,
+			Name:            resource.ResourceRef.Name,
+			ResourceRequest: true,
+		}
+		if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
+			return fmt.Errorf("could not authorize read request for resource reference: %w", err)
+		} else if decision != authorizer.DecisionAllow {
+			return errors.New("cannot reference a resource you are not allowed to read")
+		}
+
+		// Check if the resource actually exists
+		if err := r.lookupResource(ctx, gv.WithResource(apiResource.Name), namespace, resource.ResourceRef.Name); err != nil {
+			return fmt.Errorf("failed to resolve resource reference %q: %w", resource.Name, err)
+		}
+	}
+	return nil
 }

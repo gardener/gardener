@@ -68,6 +68,10 @@ type SeedSpec struct {
 	Ingress *Ingress
 	// AccessRestrictions describe a list of access restrictions for this seed cluster.
 	AccessRestrictions []AccessRestriction
+	// Extensions contain type and provider information for Seed extensions.
+	Extensions []Extension
+	// Resources holds a list of named resource references that can be referred to in extension configs by their names.
+	Resources []NamedResourceReference
 }
 
 // SeedStatus is the status of a Seed.
