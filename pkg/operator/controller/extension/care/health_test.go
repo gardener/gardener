@@ -11,16 +11,20 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/care"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -33,18 +37,32 @@ var _ = Describe("Extension health", func() {
 		gardenClientSet kubernetes.Interface
 		fakeClock       *testclock.FakeClock
 
-		extension           *operatorv1alpha1.Extension
-		extensionConditions ExtensionConditions
-		gardenNamespace     string
+		controllerRegistration *gardencorev1beta1.ControllerRegistration
+		extension              *operatorv1alpha1.Extension
+		extensionConditions    ExtensionConditions
+		gardenNamespace        string
 
-		extensionHealthyCondition          gardencorev1beta1.Condition
-		extensionAdmissionHealthyCondition gardencorev1beta1.Condition
+		controllerInstallationsHealthyCondition gardencorev1beta1.Condition
+		extensionHealthyCondition               gardencorev1beta1.Condition
+		extensionAdmissionHealthyCondition      gardencorev1beta1.Condition
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
+		gardenClient := fakeclient.NewClientBuilder().
+			WithScheme(operatorclient.VirtualScheme).
+			WithIndex(&gardencorev1beta1.ControllerInstallation{}, core.RegistrationRefName, indexer.ControllerInstallationRegistrationRefNameIndexerFunc).
+			Build()
+		gardenClientSet = fakekubernetes.NewClientSetBuilder().WithClient(gardenClient).Build()
 		fakeClock = testclock.NewFakeClock(time.Now())
+
+		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		}
+		Expect(gardenClient.Create(ctx, controllerRegistration)).To(Succeed())
 
 		extension = &operatorv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{
@@ -62,12 +80,21 @@ var _ = Describe("Extension health", func() {
 						Status:             gardencorev1beta1.ConditionTrue,
 						LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
 					},
+					{
+						Type:               operatorv1alpha1.ExtensionRequiredVirtual,
+						Status:             gardencorev1beta1.ConditionTrue,
+						LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					},
 				},
 			},
 		}
 
 		gardenNamespace = "garden"
 
+		controllerInstallationsHealthyCondition = gardencorev1beta1.Condition{
+			Type:               operatorv1alpha1.ControllerInstallationsHealthy,
+			LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+		}
 		extensionHealthyCondition = gardencorev1beta1.Condition{
 			Type:               operatorv1alpha1.ExtensionHealthy,
 			LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
@@ -80,16 +107,17 @@ var _ = Describe("Extension health", func() {
 
 	Describe("#Check", func() {
 		JustBeforeEach(func() {
-			extension.Status.Conditions = append(extension.Status.Conditions, extensionHealthyCondition, extensionAdmissionHealthyCondition)
+			extension.Status.Conditions = append(extension.Status.Conditions, controllerInstallationsHealthyCondition, extensionHealthyCondition, extensionAdmissionHealthyCondition)
 
 			extensionConditions = NewExtensionConditions(fakeClock, extension)
 		})
 
-		Context("when all managed resources are deployed successfully", func() {
+		Context("when all managed resources are deployed successfully and controller installations are healthy", func() {
 			JustBeforeEach(func() {
 				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
 				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
 				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
+				Expect(gardenClientSet.Client().Create(ctx, healthyControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
 			})
 
 			It("should set ExtensionComponentsRunning condition to true", func() {
@@ -104,6 +132,7 @@ var _ = Describe("Extension health", func() {
 
 				Expect(updatedConditions).ToNot(BeEmpty())
 				Expect(updatedConditions).To(ContainElements(
+					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ControllerInstallationsRunning", "All controller installations are healthy."),
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ExtensionComponentsRunning", "All extension components are healthy."),
 					beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "ExtensionAdmissionComponentsRunning", "All extension admission components are healthy."),
 				))
@@ -290,6 +319,170 @@ var _ = Describe("Extension health", func() {
 				tests("MissingManagedResourceCondition", "is missing the following condition(s)")
 			})
 		})
+
+		Context("when there are issues with controller installations", func() {
+			var (
+				tests = func(reason, message string) {
+					It("should set ControllerInstallationsRunning condition to False if there is no Progressing threshold duration mapping", func() {
+						updatedConditions := NewHealth(
+							extension,
+							runtimeClient,
+							gardenClientSet,
+							fakeClock,
+							nil,
+							gardenNamespace,
+						).Check(ctx, extensionConditions)
+
+						Expect(updatedConditions).ToNot(BeEmpty())
+						Expect(updatedConditions).To(ContainElements(
+							beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
+						))
+					})
+
+					Context("condition is currently False", func() {
+						BeforeEach(func() {
+							controllerInstallationsHealthyCondition.Status = gardencorev1beta1.ConditionFalse
+						})
+
+						It("should set ControllerInstallationsRunning condition to Progressing if time is within threshold duration", func() {
+							fakeClock.Step(30 * time.Second)
+
+							updatedConditions := NewHealth(
+								extension,
+								runtimeClient,
+								gardenClientSet,
+								fakeClock,
+								map[gardencorev1beta1.ConditionType]time.Duration{
+									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
+								},
+								gardenNamespace,
+							).Check(ctx, extensionConditions)
+
+							Expect(updatedConditions).ToNot(BeEmpty())
+							Expect(updatedConditions).To(ContainElements(
+								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
+							))
+						})
+					})
+
+					Context("condition is currently True", func() {
+						BeforeEach(func() {
+							controllerInstallationsHealthyCondition.Status = gardencorev1beta1.ConditionTrue
+						})
+
+						It("should set ControllerInstallationsRunning condition to Progressing if time is within threshold duration", func() {
+							fakeClock.Step(30 * time.Second)
+
+							updatedConditions := NewHealth(
+								extension,
+								runtimeClient,
+								gardenClientSet,
+								fakeClock,
+								map[gardencorev1beta1.ConditionType]time.Duration{
+									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
+								},
+								gardenNamespace,
+							).Check(ctx, extensionConditions)
+
+							Expect(updatedConditions).ToNot(BeEmpty())
+							Expect(updatedConditions).To(ContainElements(
+								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
+							))
+						})
+					})
+
+					Context("condition is currently Progressing", func() {
+						BeforeEach(func() {
+							controllerInstallationsHealthyCondition.Status = gardencorev1beta1.ConditionProgressing
+						})
+
+						It("should not set ExtensionComponentsRunning condition to Progressing if Progressing threshold duration has not expired", func() {
+							fakeClock.Step(30 * time.Second)
+
+							updatedConditions := NewHealth(
+								extension,
+								runtimeClient,
+								gardenClientSet,
+								fakeClock,
+								map[gardencorev1beta1.ConditionType]time.Duration{
+									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
+								},
+								gardenNamespace,
+							).Check(ctx, extensionConditions)
+
+							Expect(updatedConditions).ToNot(BeEmpty())
+							Expect(updatedConditions).To(ContainElements(
+								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionProgressing, reason, message),
+							))
+						})
+
+						It("should set ControllerInstallationsRunning condition to false if Progressing threshold duration has expired", func() {
+							fakeClock.Step(90 * time.Second)
+
+							updatedConditions := NewHealth(
+								extension,
+								runtimeClient,
+								gardenClientSet,
+								fakeClock,
+								map[gardencorev1beta1.ConditionType]time.Duration{
+									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
+									operatorv1alpha1.ExtensionAdmissionHealthy:      time.Minute,
+								},
+								gardenNamespace,
+							).Check(ctx, extensionConditions)
+
+							Expect(updatedConditions).ToNot(BeEmpty())
+							Expect(updatedConditions).To(ContainElements(
+								beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionFalse, reason, message),
+							))
+						})
+					})
+				}
+			)
+
+			Context("when all controller installations are unhealthy", func() {
+				JustBeforeEach(func() {
+					Expect(gardenClientSet.Client().Create(ctx, unhealthyControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
+				})
+
+				tests("NotHealthy", "Controller installation is not healthy")
+			})
+
+			Context("when all controller installations are not installed", func() {
+				JustBeforeEach(func() {
+					Expect(gardenClientSet.Client().Create(ctx, notInstalledControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
+				})
+
+				tests("NotInstalled", "Controller installation is not installed")
+			})
+
+			Context("when all controller installations are outdated", func() {
+				JustBeforeEach(func() {
+					Expect(gardenClientSet.Client().Create(ctx, outdatedControllerInstallation("foo", controllerRegistration.Name))).To(Succeed())
+				})
+
+				tests("OutdatedControllerRegistration", "observed resource version of controller registration 'foo' in controller installation 'foo' outdated (0/1)")
+			})
+
+			Context("when all controller installations are still progressing", func() {
+				JustBeforeEach(func() {
+					Expect(gardenClientSet.Client().Create(ctx, progressingControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
+				})
+
+				tests("Progressing", "Controller installation is progressing")
+			})
+
+			Context("when all controller installations are deployed but not all required conditions are present", func() {
+				JustBeforeEach(func() {
+					Expect(gardenClientSet.Client().Create(ctx, controllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion, []gardencorev1beta1.Condition{{
+						Type:   resourcesv1alpha1.ResourcesApplied,
+						Status: gardencorev1beta1.ConditionTrue}},
+					))).To(Succeed())
+				})
+
+				tests("MissingControllerInstallationCondition", "is missing the following condition(s)")
+			})
+		})
 	})
 
 	Describe("ExtensionConditions", func() {
@@ -308,6 +501,7 @@ var _ = Describe("Extension health", func() {
 				Expect(conditions.ConvertToSlice()).To(ConsistOf(
 					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -316,6 +510,7 @@ var _ = Describe("Extension health", func() {
 				conditions := NewExtensionConditions(fakeClock, extension)
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
+					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					OfType("ExtensionHealthy"),
 					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
@@ -327,6 +522,7 @@ var _ = Describe("Extension health", func() {
 				conditions := NewExtensionConditions(fakeClock, extension)
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
+					OfType("ControllerInstallationsHealthy"),
 					OfType("ExtensionHealthy"),
 					OfType("ExtensionAdmissionHealthy"),
 				))
@@ -338,6 +534,7 @@ var _ = Describe("Extension health", func() {
 				conditions := NewExtensionConditions(fakeClock, extension)
 
 				Expect(conditions.ConditionTypes()).To(HaveExactElements(
+					gardencorev1beta1.ConditionType("ControllerInstallationsHealthy"),
 					gardencorev1beta1.ConditionType("ExtensionHealthy"),
 					gardencorev1beta1.ConditionType("ExtensionAdmissionHealthy"),
 				))
@@ -458,6 +655,134 @@ func managedResource(namespace, name string, classSeed bool, conditions []garden
 			Class: class,
 		},
 		Status: resourcesv1alpha1.ManagedResourceStatus{
+			Conditions: conditions,
+		},
+	}
+}
+
+func healthyControllerInstallation(name, controllerRegistrationName, controllerRegistrationResourceVersion string) *gardencorev1beta1.ControllerInstallation {
+	return controllerInstallation(
+		name,
+		controllerRegistrationName,
+		controllerRegistrationResourceVersion,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:   gardencorev1beta1.ControllerInstallationInstalled,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		})
+}
+
+func notInstalledControllerInstallation(name, controllerRegistrationName, controllerRegistrationResourceVersion string) *gardencorev1beta1.ControllerInstallation {
+	return controllerInstallation(
+		name,
+		controllerRegistrationName,
+		controllerRegistrationResourceVersion,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:    gardencorev1beta1.ControllerInstallationInstalled,
+				Reason:  "NotInstalled",
+				Message: "Controller installation is not installed",
+				Status:  gardencorev1beta1.ConditionFalse,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		})
+}
+
+func outdatedControllerInstallation(name, controllerRegistrationName string) *gardencorev1beta1.ControllerInstallation {
+	return controllerInstallation(
+		name,
+		controllerRegistrationName,
+		"0",
+		[]gardencorev1beta1.Condition{
+			{
+				Type:   gardencorev1beta1.ControllerInstallationInstalled,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		})
+}
+
+func progressingControllerInstallation(name, controllerRegistrationName, controllerRegistrationResourceVersion string) *gardencorev1beta1.ControllerInstallation {
+	return controllerInstallation(
+		name,
+		controllerRegistrationName,
+		controllerRegistrationResourceVersion,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:   gardencorev1beta1.ControllerInstallationInstalled,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:    gardencorev1beta1.ControllerInstallationProgressing,
+				Reason:  "Progressing",
+				Message: "Controller installation is progressing",
+				Status:  gardencorev1beta1.ConditionTrue,
+			},
+		})
+}
+
+func unhealthyControllerInstallation(name, controllerRegistrationName, controllerRegistrationResourceVersion string) *gardencorev1beta1.ControllerInstallation {
+	return controllerInstallation(
+		name,
+		controllerRegistrationName,
+		controllerRegistrationResourceVersion,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:   gardencorev1beta1.ControllerInstallationInstalled,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:    gardencorev1beta1.ControllerInstallationHealthy,
+				Reason:  "NotHealthy",
+				Message: "Controller installation is not healthy",
+				Status:  gardencorev1beta1.ConditionFalse,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		})
+}
+
+func controllerInstallation(name, controllerRegistrationName, controllerRegistrationResourceVersion string, conditions []gardencorev1beta1.Condition) *gardencorev1beta1.ControllerInstallation {
+	return &gardencorev1beta1.ControllerInstallation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: gardencorev1beta1.ControllerInstallationSpec{
+			RegistrationRef: corev1.ObjectReference{
+				Name:            controllerRegistrationName,
+				ResourceVersion: controllerRegistrationResourceVersion,
+			},
+		},
+		Status: gardencorev1beta1.ControllerInstallationStatus{
 			Conditions: conditions,
 		},
 	}

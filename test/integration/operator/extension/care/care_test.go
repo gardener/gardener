@@ -288,6 +288,104 @@ var _ = Describe("Extension Care controller tests", func() {
 			))
 		})
 	})
+
+	Context("when Controller Registration and Installation exist", func() {
+		extensionName := "foobar"
+		controllerinstallationName := "foobar"
+
+		BeforeEach(func() {
+			By("Create Extension")
+			extension = &operatorv1alpha1.Extension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: extensionName,
+				},
+			}
+			Expect(testClient.Create(ctx, extension)).To(Succeed())
+			log.Info("Created Extension for test", "extension", client.ObjectKeyFromObject(extension))
+
+			By("Set Extension to status required")
+			now := metav1.Now()
+			extension.Status = operatorv1alpha1.ExtensionStatus{
+				Conditions: []gardencorev1beta1.Condition{
+					{Type: operatorv1alpha1.ExtensionRequiredVirtual, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: now, LastUpdateTime: now},
+				},
+			}
+			Expect(testClient.Status().Update(ctx, extension)).To(Succeed())
+
+			DeferCleanup(func() {
+				By("Delete Extension")
+				Expect(testClient.Delete(ctx, &operatorv1alpha1.Extension{ObjectMeta: metav1.ObjectMeta{Name: extensionName}})).To(Succeed())
+			})
+
+			By("Create ControllerRegistration")
+			controllerRegistration := &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foobar",
+				},
+			}
+			Expect(testClient.Create(ctx, controllerRegistration)).To(Succeed())
+			log.Info("Created ControllerRegistration", "controllerRegistration", client.ObjectKeyFromObject(controllerRegistration))
+
+			DeferCleanup(func() {
+				By("Delete ControllerRegistration")
+				Expect(testClient.Delete(ctx, &gardencorev1beta1.ControllerRegistration{ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration.Name}})).To(Succeed())
+			})
+
+			By("Create ControllerInstallation")
+			controllerInstallation := &gardencorev1beta1.ControllerInstallation{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: controllerinstallationName,
+				},
+				Spec: gardencorev1beta1.ControllerInstallationSpec{
+					RegistrationRef: corev1.ObjectReference{
+						Name:            controllerRegistration.Name,
+						ResourceVersion: controllerRegistration.ResourceVersion,
+					},
+					SeedRef: corev1.ObjectReference{
+						Name:            "foo",
+						ResourceVersion: "0",
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, controllerInstallation)).To(Succeed())
+			log.Info("Created ControllerInstallation", "controllerInstallation", client.ObjectKeyFromObject(controllerInstallation))
+
+			DeferCleanup(func() {
+				By("Delete ControllerInstallation")
+				Expect(testClient.Delete(ctx, &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: controllerinstallationName}})).To(Succeed())
+			})
+		})
+
+		It("should set condition to False because all ControllerRegistrations are outdated", func() {
+			updateControllerInstallationToOutdated(controllerinstallationName)
+
+			By("Expect ExtensionHealthy condition to be False")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+				return extension.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ControllerInstallationsHealthy),
+				WithStatus(gardencorev1beta1.ConditionFalse),
+				WithReason("OutdatedControllerRegistration"),
+				WithMessageSubstrings("observed resource version of controller registration"),
+			))
+		})
+
+		It("should set condition to True because all ControllerInstallations statuses are healthy", func() {
+			updateControllerInstallationStatusToHealthy(controllerinstallationName)
+
+			By("Expect ExtensionHealthy condition to be True")
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)).To(Succeed())
+				return extension.Status.Conditions
+			}).Should(ContainCondition(
+				OfType(operatorv1alpha1.ControllerInstallationsHealthy),
+				WithStatus(gardencorev1beta1.ConditionTrue),
+				WithReason("ControllerInstallationsRunning"),
+				WithMessageSubstrings("All controller installations are healthy."),
+			))
+		})
+	})
 })
 
 func updateManagedResourceStatusToHealthy(name string) {
@@ -302,4 +400,27 @@ func updateManagedResourceStatusToHealthy(name string) {
 		{Type: resourcesv1alpha1.ResourcesProgressing, Status: gardencorev1beta1.ConditionFalse, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 	}
 	ExpectWithOffset(1, testClient.Status().Update(ctx, managedResource)).To(Succeed())
+}
+
+func updateControllerInstallationStatusToHealthy(name string) {
+	By("Update status to healthy for ControllerInstallation " + name)
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+
+	controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{
+		{Type: gardencorev1beta1.ControllerInstallationInstalled, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+		{Type: gardencorev1beta1.ControllerInstallationHealthy, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+		{Type: gardencorev1beta1.ControllerInstallationProgressing, Status: gardencorev1beta1.ConditionFalse, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+	}
+	ExpectWithOffset(1, testClient.Status().Update(ctx, controllerInstallation)).To(Succeed())
+}
+
+func updateControllerInstallationToOutdated(name string) {
+	By("Update ControllerInstallation " + name + " to outdated")
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
+
+	controllerInstallation.Spec.RegistrationRef.ResourceVersion = "0"
+
+	ExpectWithOffset(1, testClient.Update(ctx, controllerInstallation)).To(Succeed())
 }

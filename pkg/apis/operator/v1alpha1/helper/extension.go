@@ -57,6 +57,12 @@ func ExtensionRuntimeNamespaceName(extensionName string) string {
 	return fmt.Sprintf("runtime-extension-%s", extensionName)
 }
 
+// IsControllerInstallationInVirtualRequired returns true if the extension requires a controller installation in the virtual cluster.
+func IsControllerInstallationInVirtualRequired(extension *operatorv1alpha1.Extension) bool {
+	requiredCondition := v1beta1helper.GetCondition(extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredVirtual)
+	return requiredCondition != nil && requiredCondition.Status == gardencorev1beta1.ConditionTrue
+}
+
 // IsDeploymentInRuntimeRequired returns true if the extension requires a deployment in the runtime cluster.
 func IsDeploymentInRuntimeRequired(extension *operatorv1alpha1.Extension) bool {
 	requiredCondition := v1beta1helper.GetCondition(extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
