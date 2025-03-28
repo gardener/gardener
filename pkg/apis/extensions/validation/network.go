@@ -5,6 +5,7 @@
 package validation
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -141,19 +142,6 @@ func ValidateIPFamiliesUpdate(newIPFamilies, oldIPFamilies []extensionsv1alpha1.
 		}
 	}
 
-	if len(oldIPFamilies) == 2 && oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 && oldIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv6 {
-		if len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv4 {
-			// Allow transition from [IPv4, IPv6] to [IPv6, IPv4]
-			return allErrs
-		}
-	}
-
-	if len(oldIPFamilies) == 2 && oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 && oldIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv4 {
-		if len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv6 {
-			// Allow transition from [IPv6, IPv4] to [IPv4, IPv6]
-			return allErrs
-		}
-	}
 	if len(oldIPFamilies) == 1 && oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 {
 		if len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv6 {
 			// Allow transition from [IPv4] to [IPv4, IPv6]
@@ -162,7 +150,8 @@ func ValidateIPFamiliesUpdate(newIPFamilies, oldIPFamilies []extensionsv1alpha1.
 	}
 
 	if !apiequality.Semantic.DeepEqual(newIPFamilies, oldIPFamilies) {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "unsupported IP family update"))
+		allErrs = append(allErrs, field.Forbidden(fldPath,
+			fmt.Sprintf("unsupported IP family update: oldIPFamilies=%v, newIPFamilies=%v", oldIPFamilies, newIPFamilies)))
 	}
 
 	return allErrs

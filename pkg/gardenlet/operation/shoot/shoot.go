@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -551,25 +550,6 @@ func getPrimaryCIDRs(cidrs []net.IPNet, ipFamilies []gardencorev1beta1.IPFamily)
 		}
 	}
 	return result
-}
-
-// CheckDualStackMigrateNetworks checks if the shoot should be migrated to dual-stack networking and sets the shoot status accoridingly.
-func (s *Shoot) CheckDualStackMigrateNetworks(ctx context.Context, gardenClient client.Client, clock clock.Clock) error {
-	shoot := s.GetInfo()
-
-	condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
-	if condition == nil && len(shoot.Spec.Networking.IPFamilies) == 2 && shoot.Status.Networking != nil && len(shoot.Status.Networking.Nodes) == 1 {
-		err := s.UpdateInfoStatus(ctx, gardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
-			condition := v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
-			condition = v1beta1helper.UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionFalse, "DualStackMigration", "The shoot is migrating to dual-stack networking.")
-			shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // ToNetworks return a network with computed cidrs and ClusterIPs
