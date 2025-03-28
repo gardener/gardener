@@ -655,13 +655,36 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
 		})
 
-		// FAIL
-
-		It("should fail because it cannot find a seed cluster due to network disjointedness", func() {
+		It("should find the best seed cluster even with network disjointedness (non-HA control plane)", func() {
 			shoot.Spec.Networking = &gardencorev1beta1.Networking{
 				Pods:     &seed.Spec.Networks.Pods,
 				Services: &seed.Spec.Networks.Services,
 				Nodes:    seed.Spec.Networks.Nodes,
+			}
+
+			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
+			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
+
+			bestSeed, err := reconciler.DetermineSeed(ctx, log, shoot)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(bestSeed.Name).To(Equal(seed.Name))
+		})
+
+		// FAIL
+
+		It("should fail because it cannot find a seed cluster due to network disjointedness (HA control plane)", func() {
+			shoot.Spec.Networking = &gardencorev1beta1.Networking{
+				Pods:     &seed.Spec.Networks.Pods,
+				Services: &seed.Spec.Networks.Services,
+				Nodes:    seed.Spec.Networks.Nodes,
+			}
+
+			shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{
+				HighAvailability: &gardencorev1beta1.HighAvailability{
+					FailureTolerance: gardencorev1beta1.FailureTolerance{
+						Type: gardencorev1beta1.FailureToleranceTypeZone,
+					},
+				},
 			}
 
 			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())

@@ -7,6 +7,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -40,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -75,6 +77,16 @@ type ReversedVPNValues struct {
 	IPFamilies []gardencorev1beta1.IPFamily
 }
 
+// NetworkValues contains the configuration values for the network.
+type NetworkValues struct {
+	// PodCIDRs are the CIDRs of the pod network.
+	PodCIDRs []net.IPNet
+	// ServiceCIDR are the CIDRs of the service network.
+	ServiceCIDRs []net.IPNet
+	// NodeCIDRs are the CIDRs of the node network.
+	NodeCIDRs []net.IPNet
+}
+
 // Values is a set of configuration values for the VPNShoot component.
 type Values struct {
 	// Image is the container image used for vpnShoot.
@@ -87,8 +99,10 @@ type Values struct {
 	VPAUpdateDisabled bool
 	// ReversedVPN contains the configuration values for the ReversedVPN.
 	ReversedVPN ReversedVPNValues
-	// SeedPodNetwork is the pod CIDR of the seed.
-	SeedPodNetwork string
+	// SeedPodNetworkV4 is the v4 pod CIDR of the seed.
+	SeedPodNetworkV4 string
+	// Network contains the configuration values for the network.
+	Network NetworkValues
 	// HighAvailabilityEnabled marks whether HA is enabled for VPN.
 	HighAvailabilityEnabled bool
 	// HighAvailabilityNumberOfSeedServers is the number of VPN seed servers used for HA.
@@ -97,13 +111,21 @@ type Values struct {
 	HighAvailabilityNumberOfShootClients int
 }
 
+// Interface contains functions for a VPNShoot deployer.
+type Interface interface {
+	component.DeployWaiter
+	SetNodeNetworkCIDRs(nodes []net.IPNet)
+	SetServiceNetworkCIDRs(services []net.IPNet)
+	SetPodNetworkCIDRs(pods []net.IPNet)
+}
+
 // New creates a new instance of DeployWaiter for vpnshoot
 func New(
 	client client.Client,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	values Values,
-) component.DeployWaiter {
+) Interface {
 	return &vpnShoot{
 		client:         client,
 		namespace:      namespace,
@@ -310,6 +332,18 @@ func (v *vpnShoot) Destroy(ctx context.Context) error {
 	}
 
 	return managedresources.DeleteForShoot(ctx, v.client, v.namespace, managedResourceName)
+}
+
+func (v *vpnShoot) SetNodeNetworkCIDRs(nodes []net.IPNet) {
+	v.values.Network.NodeCIDRs = nodes
+}
+
+func (v *vpnShoot) SetServiceNetworkCIDRs(services []net.IPNet) {
+	v.values.Network.ServiceCIDRs = services
+}
+
+func (v *vpnShoot) SetPodNetworkCIDRs(pods []net.IPNet) {
+	v.values.Network.PodCIDRs = pods
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -733,8 +767,20 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			Value: "true",
 		},
 		corev1.EnvVar{
-			Name:  "SEED_POD_NETWORK",
-			Value: v.values.SeedPodNetwork,
+			Name:  "SEED_POD_NETWORK_V4",
+			Value: v.values.SeedPodNetworkV4,
+		},
+		corev1.EnvVar{
+			Name:  "SHOOT_POD_NETWORKS",
+			Value: netutils.JoinByComma(v.values.Network.PodCIDRs),
+		},
+		corev1.EnvVar{
+			Name:  "SHOOT_SERVICE_NETWORKS",
+			Value: netutils.JoinByComma(v.values.Network.ServiceCIDRs),
+		},
+		corev1.EnvVar{
+			Name:  "SHOOT_NODE_NETWORKS",
+			Value: netutils.JoinByComma(v.values.Network.NodeCIDRs),
 		},
 	)
 
