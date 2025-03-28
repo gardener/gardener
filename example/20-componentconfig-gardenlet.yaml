@@ -73,6 +73,8 @@ controllers:
   shootState:
     concurrentSyncs: 5
     syncPeriod: 6h
+  shootStatus:
+    concurrentSyncs: 5
   seed:
     syncPeriod: 1h
   # leaseResyncSeconds: 2
