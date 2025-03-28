@@ -35,6 +35,7 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 }
 
 func SetObjectDefaults_CloudProfile(in *CloudProfile) {
+	SetDefaults_CloudProfile(in)
 	for i := range in.Spec.MachineImages {
 		a := &in.Spec.MachineImages[i]
 		SetDefaults_MachineImage(a)

@@ -95,6 +95,13 @@ const (
 	// owner: @oliver-goetz
 	// alpha: v1.114.0
 	IstioTLSTermination featuregate.Feature = "IstioTLSTermination"
+
+	// CloudProfileCapabilities enables the usage of capabilities in the CloudProfile. Capabilities are used to create a relation between
+	// machineTypes and machineImages. It allows to validate worker groups of a shoot ensuring the selected image and machine combination
+	// will boot up successfully. Capabilities are also used to determine valid upgrade paths during automated maintenance operations.
+	// owner: @roncossek
+	// alpha: v1.116.0
+	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -133,6 +140,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
 	RemoveAPIServerProxyLegacyPort:           {Default: true, PreRelease: featuregate.Beta},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
+	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
