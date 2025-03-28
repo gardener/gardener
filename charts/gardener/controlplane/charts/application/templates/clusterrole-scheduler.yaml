@@ -13,6 +13,7 @@ metadata:
   name: gardener.cloud:system:scheduler
   labels:
     app: gardener
+    role: scheduler
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
