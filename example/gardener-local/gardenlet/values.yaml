@@ -39,6 +39,7 @@ config:
     DefaultSeccompProfile: true
     NewWorkerPoolHash: true
     IstioTLSTermination: true
+    RemoveAPIServerProxyLegacyPort: true
   logging:
     enabled: true
     vali:
