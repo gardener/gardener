@@ -785,12 +785,12 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList *
 	}
 
 	if checkScaleUp {
-		if err := CheckNodesScalingUp(machineList, readyNodes, desiredMachines); err != nil {
+		if err := checkNodesScalingUp(machineList, readyNodes, desiredMachines); err != nil {
 			return "NodesScalingUp", err
 		}
 	}
 
-	if err := CheckNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
+	if err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
 		return "NodesScalingDown", err
 	}
 
@@ -798,7 +798,7 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList *
 }
 
 // CheckNodesScalingUp returns an error if nodes are being scaled up.
-func CheckNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) error {
+func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) error {
 	if readyNodes == desiredMachines {
 		return nil
 	}
@@ -833,7 +833,7 @@ func CheckNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 }
 
 // CheckNodesScalingDown returns an error if nodes are being scaled down.
-func CheckNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *corev1.NodeList, registeredNodes, desiredMachines int) error {
+func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *corev1.NodeList, registeredNodes, desiredMachines int) error {
 	if registeredNodes == desiredMachines {
 		return nil
 	}
