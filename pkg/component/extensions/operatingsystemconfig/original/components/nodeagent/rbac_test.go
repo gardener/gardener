@@ -27,8 +27,11 @@ var _ = Describe("RBAC", func() {
 			clusterRoleBindingSelfNodeClientYAML   string
 		)
 
-		BeforeEach(func() {
-			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+		When("NodeAgentAuthorizer feature gate is disabled", func() {
+			BeforeEach(func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
+
+				clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -58,7 +61,7 @@ rules:
   - update
 `
 
-			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
@@ -76,7 +79,7 @@ subjects:
   name: gardener.cloud:node-agents
 `
 
-			roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
@@ -108,7 +111,7 @@ rules:
   - update
 `
 
-			roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   creationTimestamp: null
@@ -129,7 +132,7 @@ subjects:
   name: gardener.cloud:node-agents
 `
 
-			clusterRoleBindingNodeBootstrapperYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				clusterRoleBindingNodeBootstrapperYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
@@ -144,7 +147,7 @@ subjects:
   name: system:bootstrappers
 `
 
-			clusterRoleBindingNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				clusterRoleBindingNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
@@ -158,7 +161,7 @@ subjects:
   kind: Group
   name: system:bootstrappers
 `
-			clusterRoleBindingSelfNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
+				clusterRoleBindingSelfNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
@@ -172,33 +175,32 @@ subjects:
   kind: Group
   name: system:nodes
 `
-		})
+			})
 
-		It("should generate the expected RBAC resources", func() {
-			dataMap, err := RBACResourcesData([]string{"osc-secret1", "osc-secret2"})
-			Expect(err).NotTo(HaveOccurred())
+			It("should generate the expected RBAC resources", func() {
+				dataMap, err := RBACResourcesData([]string{"osc-secret1", "osc-secret2"})
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(dataMap).To(HaveKey("data.yaml.br"))
-			compressedData := dataMap["data.yaml.br"]
-			data, err := test.BrotliDecompression(compressedData)
-			Expect(err).NotTo(HaveOccurred())
+				Expect(dataMap).To(HaveKey("data.yaml.br"))
+				compressedData := dataMap["data.yaml.br"]
+				data, err := test.BrotliDecompression(compressedData)
+				Expect(err).NotTo(HaveOccurred())
 
-			manifests := strings.Split(string(data), "---\n")
-			Expect(manifests).To(ConsistOf(
-				clusterRoleYAML,
-				clusterRoleBindingYAML,
-				roleYAML,
-				roleBindingYAML,
-				clusterRoleBindingNodeBootstrapperYAML,
-				clusterRoleBindingNodeClientYAML,
-				clusterRoleBindingSelfNodeClientYAML,
-			))
+				manifests := strings.Split(string(data), "---\n")
+				Expect(manifests).To(ConsistOf(
+					clusterRoleYAML,
+					clusterRoleBindingYAML,
+					roleYAML,
+					roleBindingYAML,
+					clusterRoleBindingNodeBootstrapperYAML,
+					clusterRoleBindingNodeClientYAML,
+					clusterRoleBindingSelfNodeClientYAML,
+				))
+			})
 		})
 
 		When("NodeAgentAuthorizer feature gate is enabled", func() {
 			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, true))
-
 				clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

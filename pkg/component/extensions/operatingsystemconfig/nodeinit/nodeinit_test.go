@@ -96,12 +96,9 @@ controllers:
     kubernetesVersion: ` + kubernetesVersion.String() + `
     secretName: ` + oscSecretName + `
   token:
-    syncConfigs:
-    - path: /var/lib/gardener-node-agent/credentials/token
-      secretName: gardener-node-agent
     syncPeriod: 12h0m0s
 featureGates:
-  NodeAgentAuthorizer: false
+  NodeAgentAuthorizer: true
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
@@ -140,6 +137,16 @@ echo "> Bootstrap gardener-node-agent"
 exec "/opt/bin/gardener-node-agent" bootstrap --config="/var/lib/gardener-node-agent/config.yaml"
 `)),
 							},
+						},
+					},
+					extensionsv1alpha1.File{
+						Path:        "/var/lib/gardener-node-agent/machine-name",
+						Permissions: ptr.To[uint32](0640),
+						Content: extensionsv1alpha1.FileContent{
+							Inline: &extensionsv1alpha1.FileContentInline{
+								Data: "<<MACHINE_NAME>>",
+							},
+							TransmitUnencoded: ptr.To(true),
 						},
 					},
 				))
@@ -187,12 +194,9 @@ controllers:
     kubernetesVersion: ` + kubernetesVersion.String() + `
     secretName: ` + oscSecretName + `
   token:
-    syncConfigs:
-    - path: /var/lib/gardener-node-agent/credentials/token
-      secretName: gardener-node-agent
     syncPeriod: 12h0m0s
 featureGates:
-  NodeAgentAuthorizer: false
+  NodeAgentAuthorizer: true
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
@@ -214,9 +218,9 @@ server: {}
 			})
 		})
 
-		When("NodeAgentAuthorizer feature gate is enabled", func() {
+		When("NodeAgentAuthorizer feature gate is disabled", func() {
 			BeforeEach(func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, true))
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
 				config = nodeagentcomponent.ComponentConfig(oscSecretName, kubernetesVersion, apiServerURL, caBundle, nil)
 			})
 
@@ -242,29 +246,17 @@ controllers:
     kubernetesVersion: ` + kubernetesVersion.String() + `
     secretName: ` + oscSecretName + `
   token:
+    syncConfigs:
+    - path: /var/lib/gardener-node-agent/credentials/token
+      secretName: gardener-node-agent
     syncPeriod: 12h0m0s
 featureGates:
-  NodeAgentAuthorizer: true
+  NodeAgentAuthorizer: false
 kind: NodeAgentConfiguration
 logFormat: ""
 logLevel: ""
 server: {}
 `))}},
-				}))
-			})
-
-			It("should contain the file with <<MACHINE_NAME>> magic string", func() {
-				_, files, err := Config(worker, image, config)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(files).To(ContainElement(extensionsv1alpha1.File{
-					Path:        "/var/lib/gardener-node-agent/machine-name",
-					Permissions: ptr.To[uint32](0640),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Data: "<<MACHINE_NAME>>",
-						},
-						TransmitUnencoded: ptr.To(true),
-					},
 				}))
 			})
 		})

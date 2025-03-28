@@ -26,7 +26,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootCredentialsBinding                  | `false` | `Alpha` | `1.98`  | `1.106` |
 | ShootCredentialsBinding                  | `true`  | `Beta`  | `1.107` |         |
 | NewWorkerPoolHash                        | `false` | `Alpha` | `1.98`  |         |
-| NodeAgentAuthorizer                      | `false` | `Alpha` | `1.109` |         |
+| NodeAgentAuthorizer                      | `false` | `Alpha` | `1.109` | `1.115` |
+| NodeAgentAuthorizer                      | `true`  | `Beta`  | `1.116` |         |
 | CredentialsRotationWithoutWorkersRollout | `false` | `Alpha` | `1.112` |         |
 | InPlaceNodeUpdates                       | `false` | `Alpha` | `1.113` |         |
 | RemoveAPIServerProxyLegacyPort           | `false` | `Alpha` | `1.113` | `1.115` |

@@ -62,6 +62,7 @@ const (
 	// Enabling this feature gate restricts the permissions of each gardener-node-agent instance to the objects belonging to its own node only.
 	// owner: @oliver-goetz
 	// alpha: v1.109.0
+	// beta: v1.116.0
 	NodeAgentAuthorizer featuregate.Feature = "NodeAgentAuthorizer"
 
 	// CredentialsRotationWithoutWorkersRollout enables starting the credentials rotation without immediately causing
@@ -127,7 +128,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},
 	NewVPN:                                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	NodeAgentAuthorizer:                      {Default: false, PreRelease: featuregate.Alpha},
+	NodeAgentAuthorizer:                      {Default: true, PreRelease: featuregate.Beta},
 	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
 	RemoveAPIServerProxyLegacyPort:           {Default: true, PreRelease: featuregate.Beta},
