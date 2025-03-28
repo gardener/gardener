@@ -124,7 +124,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	}
 
 	if hasNodesCIDR {
-		err := o.Shoot.CheckDualStackMigrateNetworks(ctx, botanist.GardenClient, botanist.Clock)
+		err := botanist.UpdateDualStackMigrationConditionIfNeeded(ctx)
 		if err != nil {
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 		}
