@@ -7,17 +7,21 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"path/filepath"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -129,4 +133,38 @@ func (b *AutonomousBotanist) populateStaticAdminTokenToAccessTokenSecret(ctx con
 	secret.Data["token"] = []byte(adminToken.Token)
 
 	return b.SeedClientSet.Client().Update(ctx, secret)
+}
+
+// CreateClientSet creates a client set for the control plane.
+func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.Interface, error) {
+	clientSet, err := kubernetes.NewClientFromFile("", PathKubeconfig,
+		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+		kubernetes.WithClientConnectionOptions(componentbaseconfigv1alpha1.ClientConnectionConfiguration{QPS: 100, Burst: 130}),
+	)
+	if err != nil {
+		b.Logger.Info("Waiting for kube-apiserver to start", "error", err.Error())
+		return nil, fmt.Errorf("failed creating client set: %w", err)
+	}
+
+	clientSet.Start(ctx)
+
+	waitContext, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	if !clientSet.WaitForCacheSync(waitContext) {
+		return nil, fmt.Errorf("timed out waiting for caches")
+	}
+
+	result := clientSet.RESTClient().Get().AbsPath("/readyz").Do(ctx)
+	if result.Error() != nil {
+		return nil, fmt.Errorf("failed to GET /readyz endpoint of kube-apiserver: %w", result.Error())
+	}
+
+	var statusCode int
+	result.StatusCode(&statusCode)
+	if statusCode != http.StatusOK {
+		b.Logger.Info("The kube-apiserver does not report readiness yet", "statusCode", statusCode)
+		return nil, fmt.Errorf("kube-apiserver does not report readiness yet")
+	}
+
+	return clientSet, nil
 }

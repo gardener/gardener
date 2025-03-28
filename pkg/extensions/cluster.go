@@ -29,10 +29,6 @@ func SyncClusterResourceToSeed(
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	seed *gardencorev1beta1.Seed,
 ) error {
-	if shoot.Spec.SeedName == nil {
-		return nil
-	}
-
 	var (
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{

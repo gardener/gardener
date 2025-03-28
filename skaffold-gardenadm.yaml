@@ -69,6 +69,19 @@ build:
             - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcds.yaml
             - pkg/component/extensions/containerruntime
             - pkg/component/extensions/controlplane
+            - pkg/component/extensions/crds
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_backupbuckets.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_backupentries.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_bastions.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_clusters.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_containerruntimes.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_controlplanes.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_dnsrecords.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_extensions.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_infrastructures.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_networks.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_operatingsystemconfigs.yaml
+            - pkg/component/extensions/crds/assets/crd-extensions.gardener.cloud_workers.yaml
             - pkg/component/extensions/dnsrecord
             - pkg/component/extensions/extension
             - pkg/component/extensions/infrastructure

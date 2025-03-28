@@ -130,7 +130,6 @@ func SetupPortForwarder(ctx context.Context, config *rest.Config, namespace, nam
 	var (
 		readyChan = make(chan struct{}, 1)
 		out       = io.Discard
-		localPort int
 	)
 
 	client, err := corev1client.NewForConfig(config)
@@ -147,13 +146,13 @@ func SetupPortForwarder(ctx context.Context, config *rest.Config, namespace, nam
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", u)
 
 	if local == 0 {
-		localPort, err = utils.FindFreePort()
+		local, err = utils.FindFreePort()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	fw, err := portforward.New(dialer, []string{fmt.Sprintf("%d:%d", localPort, remote)}, ctx.Done(), readyChan, out, out)
+	fw, err := portforward.New(dialer, []string{fmt.Sprintf("%d:%d", local, remote)}, ctx.Done(), readyChan, out, out)
 	if err != nil {
 		return nil, err
 	}
