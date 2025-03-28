@@ -95,6 +95,9 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.ManagedSeedSet != nil {
 		SetDefaults_ManagedSeedSetControllerConfiguration(in.Controllers.ManagedSeedSet)
 	}
+	if in.Controllers.ShootState != nil {
+		SetDefaults_ShootStateControllerConfiguration(in.Controllers.ShootState)
+	}
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
 	}

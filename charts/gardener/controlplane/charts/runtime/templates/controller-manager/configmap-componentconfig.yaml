@@ -154,6 +154,8 @@ data:
         maxShootRetries: {{ .Values.global.controller.config.controllers.managedSeedSet.maxShootRetries }}
         {{- end }}
         syncPeriod: {{ required ".Values.global.controller.config.controllers.managedSeedSet.syncPeriod is required" .Values.global.controller.config.controllers.managedSeedSet.syncPeriod }}
+      shootState:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootState.concurrentSyncs is required" .Values.global.controller.config.controllers.shootState.concurrentSyncs }}
       {{- if .Values.global.controller.config.controllers.exposureClass }}
       exposureClass:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.exposureClass.concurrentSyncs is required" .Values.global.controller.config.controllers.exposureClass.concurrentSyncs }}
