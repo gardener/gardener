@@ -211,28 +211,7 @@ rules:
   - settings.gardener.cloud
   - operations.gardener.cloud
   resources:
-  - backupbuckets
-  - backupentrie
-  - cloudprofiles
-  - controllerdeployments
-  - controllerinstallations
-  - controllerregistrations
-  - exposureclasse
-  - internalsecrets
-  - namespacedcloudprofiles
-  - projects
-  - quotas
-  - secretbindings
-  - seeds
-  - shoots
-  - shootstates
-  - gardenlets
-  - managedseeds
-  - managedseedsets
-  - terminals
-  - clusteropenidconnectpresets
-  - openidconnectpresets
-  - bastions
+  - '*'
   verbs:
   - get
   - list
