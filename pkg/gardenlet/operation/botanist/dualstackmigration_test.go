@@ -241,4 +241,99 @@ var _ = Describe("DualStackMigration", func() {
 		})
 
 	})
+
+	Describe("#UpdateDualStackMigrationConditionIfNeeded", func() {
+		It("Adds the constraint when migration is required", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{"IPv4", "IPv6"},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Nodes: []string{"0.0.0.0"},
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(shoot)
+
+			updatedShoot := shoot.DeepCopy()
+			condition := v1beta1helper.GetOrInitConditionWithClock(mockClock, updatedShoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+			condition = v1beta1helper.UpdatedConditionWithClock(mockClock, condition, gardencorev1beta1.ConditionFalse, "DualStackMigration", "The shoot is migrating to dual-stack networking.")
+			updatedShoot.Status.Constraints = v1beta1helper.MergeConditions(updatedShoot.Status.Constraints, condition)
+
+			gardenClient.EXPECT().Status().Return(mockStatusWriter).AnyTimes()
+			test.EXPECTStatusPatch(ctx, mockStatusWriter, updatedShoot, shoot, types.StrategicMergePatchType).AnyTimes()
+
+			err := botanist.UpdateDualStackMigrationConditionIfNeeded(ctx)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Does not add the constraint when migration is not required", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{"IPv4"},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Nodes: []string{"0.0.0.0"},
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(shoot)
+
+			err := botanist.UpdateDualStackMigrationConditionIfNeeded(ctx)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Does not add the constraint when already migrated", func() {
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{"IPv4", "IPv6"},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Nodes: []string{"0.0.0.0", "2001:db8::1"},
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(shoot)
+
+			err := botanist.UpdateDualStackMigrationConditionIfNeeded(ctx)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Does not change the constraint when it is already set, even if the configuration requires an update", func() {
+			originalCondition := v1beta1helper.InitConditionWithClock(mockClock, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+			originalCondition = v1beta1helper.UpdatedConditionWithClock(mockClock, originalCondition, gardencorev1beta1.ConditionTrue, "DualStackMigration", "The shoot is migrating to dual-stack networking.")
+
+			shoot := &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: &gardencorev1beta1.Networking{
+						IPFamilies: []gardencorev1beta1.IPFamily{"IPv4", "IPv6"},
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					Constraints: []gardencorev1beta1.Condition{originalCondition},
+					Networking: &gardencorev1beta1.NetworkingStatus{
+						Nodes: []string{"0.0.0.0"},
+					},
+				},
+			}
+			botanist.Shoot.SetInfo(shoot)
+
+			gardenClient.EXPECT().Status().Return(mockStatusWriter).Times(0)
+
+			err := botanist.UpdateDualStackMigrationConditionIfNeeded(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(shoot.Status.Constraints).To(HaveLen(1))
+			Expect(shoot.Status.Constraints[0]).To(Equal(originalCondition))
+		})
+	})
 })
