@@ -83,6 +83,7 @@
 * [`NodeLocalDNS` feature](usage/networking/node-local-dns.md)
 * [Shoot `KUBERNETES_SERVICE_HOST` Environment Variable Injection](usage/networking/shoot_kubernetes_service_host_injection.md)
 * [Shoot Networking](usage/networking/shoot_networking.md)
+* [Dual-Stack Network Migration](usage/networking/dual-stack-networking-migration.md)
 
 ### Autoscaling
 
