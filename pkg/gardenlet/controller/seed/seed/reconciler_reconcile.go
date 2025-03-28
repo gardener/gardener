@@ -739,7 +739,7 @@ const managedResourceNamePrefix = "referenced-resources-"
 func (r *Reconciler) deployReferencedResources(ctx context.Context, seed *seedpkg.Seed) error {
 	unstructuredObjs, err := gardenerutils.PrepareReferencedResourcesForSeedCopy(ctx, r.GardenClient, seed.GetInfo().Spec.Resources, r.GardenNamespace, r.GardenNamespace)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare referenced resources for seed copy: %w", err)
 	}
 
 	return managedresources.CreateFromUnstructured(ctx, r.SeedClientSet.Client(), r.GardenNamespace, managedResourceNamePrefix+seed.GetInfo().Name,

@@ -13,5 +13,5 @@ import (
 
 func TestReference(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager Controller Shoot Reference Suite")
+	RunSpecs(t, "ControllerManager Controller Seed Reference Suite")
 }

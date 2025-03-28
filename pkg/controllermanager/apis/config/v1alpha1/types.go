@@ -87,7 +87,7 @@ type ControllerManagerControllerConfiguration struct {
 	// SeedBackupBucketsCheck defines the configuration of the SeedBackupBucketsCheck controller.
 	// +optional
 	SeedBackupBucketsCheck *SeedBackupBucketsCheckControllerConfiguration `json:"seedBackupBucketsCheck,omitempty"`
-	// ShootReference defines the configuration of the ShootReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	// SeedReference defines the configuration of the SeedReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
 	// +optional
 	SeedReference *SeedReferenceControllerConfiguration `json:"seedReference,omitempty"`
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.

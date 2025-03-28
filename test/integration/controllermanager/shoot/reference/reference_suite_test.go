@@ -36,7 +36,7 @@ func TestReference(t *testing.T) {
 	RunSpecs(t, "Test Integration ControllerManager Shoot Reference Suite")
 }
 
-const testID = "reference-controller-test"
+const testID = "shoot-reference-controller-test"
 
 var (
 	ctx = context.Background()

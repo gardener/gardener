@@ -6,6 +6,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,7 +21,7 @@ const managedResourceName = "referenced-resources"
 func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 	unstructuredObjs, err := gardenerutils.PrepareReferencedResourcesForSeedCopy(ctx, b.GardenClient, b.Shoot.GetInfo().Spec.Resources, b.Shoot.GetInfo().Namespace, b.Shoot.ControlPlaneNamespace)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to prepare referenced resources for seed copy: %w", err)
 	}
 
 	// Create managed resource from the slice of unstructured objects

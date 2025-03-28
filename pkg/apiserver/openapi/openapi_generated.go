@@ -8364,7 +8364,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 					},
 					"extensions": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Extensions contain type and provider information for Shoot extensions.",
+							Description: "Extensions contain type and provider information for Seed extensions.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

@@ -311,6 +311,22 @@ In case a `Lease` is not renewed for the configured amount in `config.controller
    because a striking `gardenlet` won't be able to maintain these conditions any more.
 3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed`, then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate.
 
+#### ["Reference" Reconciler](../../pkg/controllermanager/controller/seed/reference)
+
+Seed objects may specify references to other objects in the `garden` namespace in the garden cluster which are required for certain features.
+For example, operators can configure additional data for extensions via `.spec.resources[]`.
+Such objects need a special protection against deletion requests as long as they are still being referenced by one or multiple seeds.
+
+Therefore, this reconciler checks `Seed`s for referenced objects and adds the finalizer `gardener.cloud/reference-protection` to their `.metadata.finalizers` list.
+The reconciled `Seed` also gets this finalizer to enable a proper garbage collection in case the `gardener-controller-manager` is offline at the moment of an incoming deletion request.
+When an object is not actively referenced anymore because the `Seed` specification has changed or all related seeds were deleted (are in deletion), the controller will remove the added finalizer again so that the object can safely be deleted or garbage collected.
+
+This reconciler inspects the following references:
+
+- `Secret`s and `ConfigMap`s from `.spec.resources[]`
+
+The checks naturally grow with the number of references that are added to the `Seed` specification.
+
 ### [`Shoot` Controller](../../pkg/controllermanager/controller/shoot)
 
 #### ["Conditions" Reconciler](../../pkg/controllermanager/controller/shoot/conditions)
@@ -336,7 +352,7 @@ If the shoot cluster is older than the configured lifetime, then it gets deleted
 It maintains the expiration time of the `Shoot` in the value of the `shoot.gardener.cloud/expiration-timestamp` annotation.
 This annotation might be overridden, however only by at most twice the value of the `.spec.clusterLifetimeDays`.
 
-#### ["Shoot-Reference" Reconciler](../../pkg/controllermanager/controller/shoot/reference)
+#### ["Reference" Reconciler](../../pkg/controllermanager/controller/shoot/reference)
 
 Shoot objects may specify references to other objects in the garden cluster which are required for certain features.
 For example, users can configure various DNS providers via `.spec.dns.providers` and usually need to refer to a corresponding `Secret` with valid DNS provider credentials inside.
@@ -357,16 +373,6 @@ This reconciler inspects the following references:
 - `Secret`s and `ConfigMap`s from `.spec.resources[]`
 
 The checks naturally grow with the number of references that are added to the `Shoot` specification.
-
-#### ["Seed-Reference" Reconciler](../../pkg/controllermanager/controller/shoot/reference)
-
-Same as [Shoot-Reference Reconciler](#-shoot-reference--reconciler), but for `Seed` objects.
-
-This reconciler inspects the following references:
-
-- `Secret`s and `ConfigMap`s from `.spec.resources[]`
-
-The checks naturally grow with the number of references that are added to the `Seed` specification.
 
 #### ["Retry" Reconciler](../../pkg/controllermanager/controller/shoot/retry)
 

@@ -6,9 +6,9 @@ Some of these extensions might need to create global resources in the seed (e.g.
 
 Consequently, this page should help answering some general questions that might come up when it comes to developing an extension.
 
-## Extension `Class`es
+## Extension Classes
 
-Each extension resource has a `class` (`spec.class`) field that is used to distinguish between different instances of the same extension type.
+Each extension resource has a `.spec.class` field that is used to distinguish between different instances of the same extension type.
 For extensions configured in `Shoot`s the class is named `shoot` (or unspecified for backwards compatibility), for `Seed`s the class is named `seed`.
 
 Extension controllers ought to use the `class` field for event filtering (see [HasClass Predicate](https://github.com/gardener/gardener/blob/7361a19f4c3830a9f5134c073d3bfd72f4dcfa49/extensions/pkg/predicate/predicate.go#L60)) and during reconciliation.

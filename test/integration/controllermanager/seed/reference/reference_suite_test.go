@@ -36,7 +36,7 @@ func TestReference(t *testing.T) {
 	RunSpecs(t, "Test Integration ControllerManager Seed Reference Suite")
 }
 
-const testID = "reference-controller-test"
+const testID = "seed-reference-controller-test"
 
 var (
 	ctx = context.Background()

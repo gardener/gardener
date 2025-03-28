@@ -1746,7 +1746,7 @@ Ingress
 </td>
 <td>
 <em>(Optional)</em>
-<p>Extensions contain type and provider information for Shoot extensions.</p>
+<p>Extensions contain type and provider information for Seed extensions.</p>
 </td>
 </tr>
 <tr>
@@ -11376,7 +11376,7 @@ Ingress
 </td>
 <td>
 <em>(Optional)</em>
-<p>Extensions contain type and provider information for Shoot extensions.</p>
+<p>Extensions contain type and provider information for Seed extensions.</p>
 </td>
 </tr>
 <tr>
@@ -11759,7 +11759,7 @@ Ingress
 </td>
 <td>
 <em>(Optional)</em>
-<p>Extensions contain type and provider information for Shoot extensions.</p>
+<p>Extensions contain type and provider information for Seed extensions.</p>
 </td>
 </tr>
 <tr>

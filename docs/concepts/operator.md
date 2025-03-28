@@ -521,7 +521,7 @@ The following table explains which `ManagedResource`s are considered for which c
 | `VirtualComponentsHealthy`       | `.spec.class` unset or `care.gardener.cloud/condition-type` label set to `VirtualComponentsHealthy`                  |
 | `ObservabilityComponentsHealthy` | `care.gardener.cloud/condition-type` label set to `ObservabilityComponentsHealthy`                                   |
 
-#### [`Garden-Reference` Reconciler](../../pkg/operator/controller/garden/reference)
+#### [`Reference` Reconciler](../../pkg/operator/controller/garden/reference)
 
 `Garden` objects may specify references to other objects in the Garden cluster which are required for certain features.
 For example, operators can configure a secret for ETCD backup via `.spec.virtualCluster.etcd.main.backup.secretRef.name` or an audit policy `ConfigMap` via `.spec.virtualCluster.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name`.

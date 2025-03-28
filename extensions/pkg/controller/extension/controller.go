@@ -50,10 +50,6 @@ type AddArgs struct {
 	// If the annotation is not ignored, the extension controller will only reconcile
 	// with a present operation annotation typically set during a reconcile (e.g. in the maintenance time) by the Gardenlet
 	IgnoreOperationAnnotation bool
-	// ExtensionClass defines the extension class this extension is responsible for.
-	// Deprecated: Use ExtensionClasses instead.
-	// TODO(timuthy): Remove fallback after Gardener v1.116 was released.
-	ExtensionClass extensionsv1alpha1.ExtensionClass
 	// ExtensionClasses defines the extension classes this extension is responsible for.
 	ExtensionClasses []extensionsv1alpha1.ExtensionClass
 }
@@ -70,14 +66,7 @@ func DefaultPredicates(ctx context.Context, mgr manager.Manager, ignoreOperation
 
 func add(mgr manager.Manager, args AddArgs) error {
 	predicates := []predicate.Predicate{extensionspredicate.HasType(args.Type)}
-
-	// TODO(timuthy): Remove fallback after Gardener v1.116 was released.
-	extensionClasses := args.ExtensionClasses
-	if len(args.ExtensionClass) > 0 {
-		extensionClasses = []extensionsv1alpha1.ExtensionClass{args.ExtensionClass}
-	}
-
-	predicates = append(predicates, extensionspredicate.HasClass(extensionClasses...))
+	predicates = append(predicates, extensionspredicate.HasClass(args.ExtensionClasses...))
 	predicates = append(predicates, args.Predicates...)
 
 	c, err := builder.
