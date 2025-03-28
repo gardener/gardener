@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -19,12 +20,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	"github.com/gardener/gardener/pkg/operator/mapper"
 	"github.com/gardener/gardener/pkg/operator/predicate"
 )
 
@@ -65,6 +68,14 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 		).Build(r)
 	if err != nil {
 		return err
+	}
+
+	r.registerControllerInstallationWatchFunc = func(virtualClusterCache cache.Cache) error {
+		return c.Watch(source.Kind[client.Object](
+			virtualClusterCache,
+			&v1beta1.ControllerInstallation{},
+			handler.EnqueueRequestsFromMapFunc(mapper.MapControllerInstallationToExtension(r.RuntimeClient, mgr.GetLogger().WithValues("controller", ControllerName))),
+		))
 	}
 
 	r.registerManagedResourceWatchFunc = func() error {

@@ -38,6 +38,16 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
+	Describe("#IsControllerInstallationInVirtualRequired", func() {
+		It("should return true if the extension requires a controller installation in the virtual cluster", func() {
+			Expect(IsControllerInstallationInVirtualRequired(&operatorv1alpha1.Extension{
+				Status: operatorv1alpha1.ExtensionStatus{
+					Conditions: []gardencorev1beta1.Condition{{Type: "RequiredVirtual", Status: "True"}},
+				},
+			})).To(BeTrue())
+		})
+	})
+
 	Describe("#IsDeploymentInRuntimeRequired", func() {
 		It("should return true if the extension requires a deployment in the runtime cluster", func() {
 			Expect(IsDeploymentInRuntimeRequired(&operatorv1alpha1.Extension{

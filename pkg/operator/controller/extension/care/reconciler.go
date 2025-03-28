@@ -12,6 +12,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -39,8 +40,10 @@ type Reconciler struct {
 	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for usage in tests.
 	GardenClientMap clientmap.ClientMap
 
-	registerManagedResourceWatchFunc func() error
-	managedResourceWatchRegistered   bool
+	registerControllerInstallationWatchFunc func(cache.Cache) error
+	registerManagedResourceWatchFunc        func() error
+	controllerInstallationWatchRegistered   bool
+	managedResourceWatchRegistered          bool
 }
 
 // Reconcile reconciles Extension resources and executes health check operations.
@@ -85,6 +88,19 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 		}
 	}
 
+	gardenClientSet, err := r.GardenClientMap.GetClient(reconcileCtx, keys.ForGarden(garden))
+	if err != nil {
+		log.V(1).Info("Could not get garden client", "error", err)
+	}
+
+	if !r.controllerInstallationWatchRegistered && r.registerControllerInstallationWatchFunc != nil && gardenClientSet != nil {
+		if err := r.registerControllerInstallationWatchFunc(gardenClientSet.Cache()); err != nil {
+			log.Error(err, "Failed registering watch for core.gardener.cloud/v1beta1.ControllerInstallation now that a operator.gardener.cloud/v1alpha1.Garden object has been created")
+		} else {
+			r.controllerInstallationWatchRegistered = true
+		}
+	}
+
 	ctx, cancel := controllerutils.GetChildReconciliationContext(reconcileCtx, r.Config.Controllers.ExtensionCare.SyncPeriod.Duration)
 	defer cancel()
 
@@ -92,11 +108,6 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 
 	// Initialize conditions based on the current status.
 	extensionConditions := NewExtensionConditions(r.Clock, extension)
-
-	gardenClientSet, err := r.GardenClientMap.GetClient(reconcileCtx, keys.ForGarden(garden))
-	if err != nil {
-		log.V(1).Info("Could not get garden client", "error", err)
-	}
 
 	updatedConditions := NewHealthCheck(
 		extension,

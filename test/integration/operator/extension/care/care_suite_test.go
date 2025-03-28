@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -27,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
@@ -37,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/extension/care"
 	"github.com/gardener/gardener/pkg/operator/features"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestExtension(t *testing.T) {
@@ -51,7 +54,7 @@ var (
 	log logr.Logger
 
 	restConfig    *rest.Config
-	testEnv       *envtest.Environment
+	testEnv       *gardenerenvtest.GardenerTestEnvironment
 	testClient    client.Client
 	testClientSet kubernetes.Interface
 	mgrClient     client.Client
@@ -68,15 +71,22 @@ var _ = BeforeSuite(func() {
 	features.RegisterFeatureGates()
 
 	By("Start test environment")
-	testEnv = &envtest.Environment{
-		CRDInstallOptions: envtest.CRDInstallOptions{
-			Paths: []string{
-				filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
-				filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
-				filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+	testEnv = &gardenerenvtest.GardenerTestEnvironment{
+		Environment: &envtest.Environment{
+			CRDInstallOptions: envtest.CRDInstallOptions{
+				Paths: []string{
+					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_extensions.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
+					filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
+				},
+			},
+			ErrorIfCRDPathMissing: true,
+		},
+		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
+			Args: []string{
+				"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,SeedValidator",
 			},
 		},
-		ErrorIfCRDPathMissing: true,
 	}
 
 	var err error
@@ -89,8 +99,15 @@ var _ = BeforeSuite(func() {
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 
+	testSchemeBuilder := runtime.NewSchemeBuilder(
+		operatorclient.AddRuntimeSchemeToScheme,
+		operatorclient.AddVirtualSchemeToScheme,
+	)
+	testScheme := runtime.NewScheme()
+	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())
+
 	By("Create test client")
-	testClient, err = client.New(restConfig, client.Options{Scheme: operatorclient.RuntimeScheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Create test Namespaces")
@@ -111,7 +128,7 @@ var _ = BeforeSuite(func() {
 
 	By("Setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:  operatorclient.RuntimeScheme,
+		Scheme:  testScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
@@ -125,6 +142,8 @@ var _ = BeforeSuite(func() {
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
+	Expect(indexer.AddControllerInstallationRegistrationRefName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+
 	mgrClient = mgr.GetClient()
 
 	By("Create test clientset")
