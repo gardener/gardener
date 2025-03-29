@@ -89,7 +89,7 @@ var (
 	initOnceFn sync.Once
 )
 
-func initializeCRDSchemeAndCodec() {
+func init() {
 	crdScheme = runtime.NewScheme()
 	utilruntime.Must(apiextensionsv1.AddToScheme(crdScheme))
 	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, crdScheme, crdScheme, json.SerializerOptions{
@@ -103,10 +103,9 @@ func initializeCRDSchemeAndCodec() {
 
 // DecodeCRD decodes a CRD from a YAML string.
 func DecodeCRD(crdYAML string) (*apiextensionsv1.CustomResourceDefinition, error) {
-	initOnceFn.Do(initializeCRDSchemeAndCodec)
 	obj, err := runtime.Decode(crdCodec, []byte(crdYAML))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode CRD: %w", err)
 	}
 	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
 	if !ok {

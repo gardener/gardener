@@ -48,10 +48,19 @@ var _ component.Deployer = (*crd)(nil)
 func (c *crd) Deploy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
-	for _, resource := range c.crdGetter.GetAllCRDs() {
-		r := resource.DeepCopy()
+	for crdName, resource := range c.crdGetter.GetAllCRDs() {
+		r := &apiextensionsv1.CustomResourceDefinition{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: crdName,
+			},
+		}
 		fns = append(fns, func(ctx context.Context) error {
-			_, err := controllerutil.CreateOrPatch(ctx, c.client, r, nil)
+			_, err := controllerutil.CreateOrPatch(ctx, c.client, r, func() error {
+				r.ObjectMeta.Labels = resource.ObjectMeta.Labels
+				r.ObjectMeta.Annotations = resource.ObjectMeta.Annotations
+				r.Spec = resource.Spec
+				return nil
+			})
 			return err
 		})
 	}
@@ -117,7 +126,7 @@ var _ CRDGetter = (*crdGetter)(nil)
 func NewCRDGetter(k8sVersion *semver.Version) (CRDGetter, error) {
 	crdResources, err := getEtcdCRDs(k8sVersion)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get etcd-druid CRDs for Kubernetes version %s: %w", k8sVersion, err)
+		return nil, err
 	}
 	return &crdGetter{
 		crdResources: crdResources,
@@ -139,13 +148,13 @@ func (c *crdGetter) GetCRD(name string) (*apiextensionsv1.CustomResourceDefiniti
 func getEtcdCRDs(k8sVersion *semver.Version) (map[string]*apiextensionsv1.CustomResourceDefinition, error) {
 	crdYAMLs, err := druidcorecrds.GetAll(k8sVersion.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get etcd-druid CRDs for Kubernetes version %s: %w", k8sVersion, err)
 	}
 	var crdResources = make(map[string]*apiextensionsv1.CustomResourceDefinition, len(crdYAMLs))
 	for crdName, crdYAML := range crdYAMLs {
 		crdObj, err := kubernetesutils.DecodeCRD(crdYAML)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed decode etcd-druid CRD: %s: %w", crdName, err)
 		}
 		metav1.SetMetaDataLabel(&crdObj.ObjectMeta, gardenerutils.DeletionProtected, "true")
 		crdResources[crdName] = crdObj
