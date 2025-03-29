@@ -7,7 +7,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -84,9 +83,8 @@ func WaitUntilCRDManifestsDestroyed(ctx context.Context, c client.Client, crdNam
 }
 
 var (
-	crdScheme  *runtime.Scheme
-	crdCodec   runtime.Codec
-	initOnceFn sync.Once
+	crdScheme *runtime.Scheme
+	crdCodec  runtime.Codec
 )
 
 func init() {
