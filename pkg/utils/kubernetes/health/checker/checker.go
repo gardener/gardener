@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,7 +99,7 @@ func (h *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, 
 	return nil
 }
 
-func (h *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition, requiredNames sets.Set[string], objects []druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
+func (h *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition, requiredNames sets.Set[string], objects []druidcorev1alpha1.Etcd) *gardencorev1beta1.Condition {
 	actualNames := sets.New[string]()
 	for _, object := range objects {
 		actualNames.Insert(object.Name)
@@ -108,7 +108,7 @@ func (h *HealthChecker) checkRequiredEtcds(condition gardencorev1beta1.Condition
 	return h.checkRequiredResourceNames(condition, requiredNames, actualNames, "EtcdMissing", "Missing required etcds")
 }
 
-func (h *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, objects []druidv1alpha1.Etcd) *gardencorev1beta1.Condition {
+func (h *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, objects []druidcorev1alpha1.Etcd) *gardencorev1beta1.Condition {
 	for _, object := range objects {
 		if err := health.CheckEtcd(&object); err != nil {
 			var (
@@ -297,7 +297,7 @@ func (h *HealthChecker) CheckControlPlane(
 		return nil, err
 	}
 
-	etcdList := &druidv1alpha1.EtcdList{}
+	etcdList := &druidcorev1alpha1.EtcdList{}
 	if err := h.reader.List(ctx, etcdList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: controlPlaneSelector}); err != nil {
 		return nil, err
 	}

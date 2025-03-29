@@ -74,8 +74,6 @@ config:
       # backupLeaderElection:
       #   reelectionPeriod: 5s
       #   etcdConnectionTimeout: 5s
-      # featureGates:
-      #   UseEtcdWrapper: true
     gardenCare:
       syncPeriod: 1m
       conditionThresholds:

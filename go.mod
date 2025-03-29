@@ -14,7 +14,7 @@ require (
 	github.com/fluent/fluent-operator/v3 v3.3.0
 	github.com/gardener/cert-management v0.17.5
 	github.com/gardener/dependency-watchdog v1.4.0
-	github.com/gardener/etcd-druid v0.27.0
+	github.com/gardener/etcd-druid/api v0.28.0
 	github.com/gardener/machine-controller-manager v0.57.1
 	github.com/gardener/terminal-controller-manager v0.34.0
 	github.com/go-jose/go-jose/v4 v4.0.5

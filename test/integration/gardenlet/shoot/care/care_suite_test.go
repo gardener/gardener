@@ -10,11 +10,13 @@ import (
 	"testing"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/features"
@@ -84,13 +87,21 @@ var _ = BeforeSuite(func() {
 
 	features.RegisterFeatureGates()
 
+	var err error
+	By("Fetch Etcd CRD")
+	k8sVersion, err := gardenerenvtest.GetK8SVersion()
+	Expect(err).NotTo(HaveOccurred())
+	etcdCRDGetter, err := etcd.NewCRDGetter(k8sVersion)
+	Expect(err).NotTo(HaveOccurred())
+	etcdCRD, err := etcdCRDGetter.GetCRD(druidcorecrds.ResourceNameEtcd)
+	Expect(err).NotTo(HaveOccurred())
+
 	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		Environment: &envtest.Environment{
 			CRDInstallOptions: envtest.CRDInstallOptions{
 				Paths: []string{
 					filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
-					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-druid.gardener.cloud_etcds.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_backupentries.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_clusters.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_containerruntimes.yaml"),
@@ -102,6 +113,7 @@ var _ = BeforeSuite(func() {
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_operatingsystemconfigs.yaml"),
 					filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-extensions.gardener.cloud_workers.yaml"),
 				},
+				CRDs: []*apiextensionsv1.CustomResourceDefinition{etcdCRD},
 			},
 			ErrorIfCRDPathMissing: true,
 		},
@@ -110,7 +122,6 @@ var _ = BeforeSuite(func() {
 		},
 	}
 
-	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
@@ -124,7 +135,7 @@ var _ = BeforeSuite(func() {
 		kubernetes.AddGardenSchemeToScheme,
 		extensionsv1alpha1.AddToScheme,
 		resourcesv1alpha1.AddToScheme,
-		druidv1alpha1.AddToScheme,
+		druidcorev1alpha1.AddToScheme,
 	)
 	testScheme := runtime.NewScheme()
 	Expect(testSchemeBuilder.AddToScheme(testScheme)).To(Succeed())

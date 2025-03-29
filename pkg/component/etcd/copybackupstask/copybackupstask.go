@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/extensions"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -34,9 +35,9 @@ const (
 type Interface interface {
 	component.DeployWaiter
 	// SetSourceStore sets the specifications for the object store provider from which backups will be copied.
-	SetSourceStore(druidv1alpha1.StoreSpec)
+	SetSourceStore(druidcorev1alpha1.StoreSpec)
 	// SetTargetStore sets the specifications for the object store provider to which backups will be copied.
-	SetTargetStore(druidv1alpha1.StoreSpec)
+	SetTargetStore(druidcorev1alpha1.StoreSpec)
 }
 
 // Values contains the values used to create an EtcdCopyBackupsTask resources.
@@ -46,15 +47,15 @@ type Values struct {
 	// Namespace is the namespace of the EtcdCopyBackupsTask.
 	Namespace string
 	// SourceStore is the specification of the object store from which etcd backups will be copied.
-	SourceStore druidv1alpha1.StoreSpec
+	SourceStore druidcorev1alpha1.StoreSpec
 	// TargetStore is the specification of the object store to which etcd backups will be copied.
-	TargetStore druidv1alpha1.StoreSpec
+	TargetStore druidcorev1alpha1.StoreSpec
 	// MaxBackups is the maximum number of backups that will be copied starting with the most recent ones.
 	MaxBackups *uint32
 	// MaxBackupAge is the maximum age in days that a backup must have in order to be copied.
 	MaxBackupAge *uint32
 	// WaitForFinalSnapshot defines the parameters for waiting for a final full snapshot before copying backups.
-	WaitForFinalSnapshot *druidv1alpha1.WaitForFinalSnapshotSpec
+	WaitForFinalSnapshot *druidcorev1alpha1.WaitForFinalSnapshotSpec
 }
 
 type etcdCopyBackupsTask struct {
@@ -65,7 +66,7 @@ type etcdCopyBackupsTask struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
-	task *druidv1alpha1.EtcdCopyBackupsTask
+	task *druidcorev1alpha1.EtcdCopyBackupsTask
 }
 
 // New creates a new instance of Interface
@@ -84,7 +85,7 @@ func New(
 		waitInterval,
 		waitSevereThreshold,
 		waitTimeout,
-		&druidv1alpha1.EtcdCopyBackupsTask{
+		&druidcorev1alpha1.EtcdCopyBackupsTask{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      values.Name,
 				Namespace: values.Namespace,
@@ -100,6 +101,10 @@ func (e *etcdCopyBackupsTask) Deploy(ctx context.Context) error {
 	e.task.Spec.SourceStore = e.values.SourceStore
 	e.task.Spec.TargetStore = e.values.TargetStore
 	e.task.Spec.WaitForFinalSnapshot = e.values.WaitForFinalSnapshot
+	e.task.Spec.PodLabels = map[string]string{
+		v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+		v1beta1constants.LabelNetworkPolicyToPublicNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
+	}
 	return e.client.Create(ctx, e.task)
 }
 
@@ -132,20 +137,20 @@ func (e *etcdCopyBackupsTask) WaitCleanup(ctx context.Context) error {
 }
 
 // SetSourceStore sets the specifications for the object store provider from which backups will be copied.
-func (e *etcdCopyBackupsTask) SetSourceStore(store druidv1alpha1.StoreSpec) {
+func (e *etcdCopyBackupsTask) SetSourceStore(store druidcorev1alpha1.StoreSpec) {
 	e.values.SourceStore = store
 }
 
 // SetTargetStore sets the specifications for the object store provider to which backups will be copied.
-func (e *etcdCopyBackupsTask) SetTargetStore(store druidv1alpha1.StoreSpec) {
+func (e *etcdCopyBackupsTask) SetTargetStore(store druidcorev1alpha1.StoreSpec) {
 	e.values.TargetStore = store
 }
 
 // waitForConditions waits until the EtcdCopyBackupsTask conditions have been populated by the etcd-druid.
 func waitForConditions(obj client.Object) error {
-	task, ok := obj.(*druidv1alpha1.EtcdCopyBackupsTask)
+	task, ok := obj.(*druidcorev1alpha1.EtcdCopyBackupsTask)
 	if !ok {
-		return fmt.Errorf("expected *druidv1alpha1.EtcdCopyBackupsTask but got %T", obj)
+		return fmt.Errorf("expected *druidcorev1alpha1.EtcdCopyBackupsTask but got %T", obj)
 	}
 	if task.DeletionTimestamp != nil {
 		return fmt.Errorf("task %s has a deletion timestamp", client.ObjectKeyFromObject(task))
@@ -165,18 +170,18 @@ func waitForConditions(obj client.Object) error {
 	}
 
 	for _, condition := range task.Status.Conditions {
-		if (condition.Type == druidv1alpha1.EtcdCopyBackupsTaskSucceeded || condition.Type == druidv1alpha1.EtcdCopyBackupsTaskFailed) &&
-			condition.Status == druidv1alpha1.ConditionTrue {
+		if (condition.Type == druidcorev1alpha1.EtcdCopyBackupsTaskSucceeded || condition.Type == druidcorev1alpha1.EtcdCopyBackupsTaskFailed) &&
+			condition.Status == druidcorev1alpha1.ConditionTrue {
 			return nil
 		}
 	}
-	return fmt.Errorf("expected condition %s or %s, has not been reported yet", druidv1alpha1.EtcdCopyBackupsTaskSucceeded, druidv1alpha1.EtcdCopyBackupsTaskFailed)
+	return fmt.Errorf("expected condition %s or %s, has not been reported yet", druidcorev1alpha1.EtcdCopyBackupsTaskSucceeded, druidcorev1alpha1.EtcdCopyBackupsTaskFailed)
 }
 
 // checkConditions checks the EtcdCopyBackupsTask conditions to determine if the copy operation has completed successfully or not.
 func (e *etcdCopyBackupsTask) checkConditions() error {
 	for _, condition := range e.task.Status.Conditions {
-		if condition.Type == druidv1alpha1.EtcdCopyBackupsTaskFailed && condition.Status == druidv1alpha1.ConditionTrue {
+		if condition.Type == druidcorev1alpha1.EtcdCopyBackupsTaskFailed && condition.Status == druidcorev1alpha1.ConditionTrue {
 			return fmt.Errorf("condition %s has status %s: %s", condition.Type, condition.Status, condition.Message)
 		}
 	}

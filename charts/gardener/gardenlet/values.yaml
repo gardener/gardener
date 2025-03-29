@@ -195,8 +195,6 @@ config:
 #   backupLeaderElection:
 #     reelectionPeriod: 5s
 #     etcdConnectionTimeout: 5s
-#   featureGates:
-#     UseEtcdWrapper: true
 # logging:
 #   enabled: false
 # monitoring:

@@ -5,10 +5,12 @@
 package envtest
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
@@ -151,4 +153,13 @@ func (e *GardenerTestEnvironment) useExistingGardener() bool {
 		return strings.ToLower(os.Getenv(envUseExistingGardener)) == "true"
 	}
 	return *e.UseExistingGardener
+}
+
+// GetK8SVersion returns the Kubernetes version used for running envtest.
+func GetK8SVersion() (*semver.Version, error) {
+	k8sVersion, ok := os.LookupEnv("ENVTEST_K8S_VERSION")
+	if !ok {
+		return nil, errors.New("error fetching k8s version from environment")
+	}
+	return semver.NewVersion(k8sVersion)
 }
