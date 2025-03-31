@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-config
+  namespace: registry
+data:
+  config.yml: |
+    version: 0.1
+    log:
+      fields:
+        service: registry
+    storage:
+      delete:
+        enabled: true
+      filesystem:
+        rootdirectory: /var/lib/registry
+      tag:
+        concurrencylimit: 5
+    http:
+      addr: :5000
+    health:
+      storagedriver:
+        enabled: true
+        interval: 10s
+        threshold: 3

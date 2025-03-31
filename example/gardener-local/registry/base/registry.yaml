@@ -20,11 +20,15 @@ spec:
         env:
         - name: REGISTRY_HTTP_ADDR
           value: :5001
+        - name: OTEL_TRACES_EXPORTER
+          value: none
         securityContext:
           allowPrivilegeEscalation: false
         volumeMounts:
         - name: cache
           mountPath: /var/lib/registry
+        - name: config
+          mountPath: /etc/distribution
       hostNetwork: true
       nodeSelector:
         node-role.kubernetes.io/control-plane: ""
@@ -38,3 +42,6 @@ spec:
         hostPath:
           path: /etc/gardener/local-registry
           type: DirectoryOrCreate
+      - name: config
+        configMap:
+          name: registry-config
