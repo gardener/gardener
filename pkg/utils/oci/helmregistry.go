@@ -145,7 +145,7 @@ func cacheKeyFromRef(ref name.Reference, opts ...remote.Option) (string, error) 
 		if gErr != nil {
 			return "", fmt.Errorf("failed get manifest from remote trying to determine digest: %w", errors.Join(gErr, hErr))
 		}
-		digest = rd.Descriptor.Digest
+		digest = rd.Digest
 	}
 	return ref.Context().Digest(digest.String()).Name(), nil
 }

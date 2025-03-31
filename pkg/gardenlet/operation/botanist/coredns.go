@@ -87,7 +87,7 @@ func (b *Botanist) getCoreDNSRestartedAtAnnotations(ctx context.Context) (map[st
 		return nil, err
 	}
 
-	if val, ok := deployment.Spec.Template.ObjectMeta.Annotations[key]; ok {
+	if val, ok := deployment.Spec.Template.Annotations[key]; ok {
 		return map[string]string{key: val}, nil
 	}
 

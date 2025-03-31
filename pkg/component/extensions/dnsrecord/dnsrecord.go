@@ -347,7 +347,7 @@ func (d *dnsRecord) isTimestampInvalidOrAfterLastUpdateTime() bool {
 			return true
 		}
 
-		if parsedTimestamp.Truncate(time.Second).UTC().After(d.dnsRecord.Status.LastOperation.LastUpdateTime.Time.UTC()) {
+		if parsedTimestamp.Truncate(time.Second).UTC().After(d.dnsRecord.Status.LastOperation.LastUpdateTime.UTC()) {
 			return true
 		}
 	}

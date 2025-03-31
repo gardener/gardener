@@ -450,7 +450,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						}
 						botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("foo.bar.example.cloud")
-						botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
+						botanist.Shoot.GetInfo().UID = "some-uuid"
 						botanist.Shoot.GetInfo().Annotations = map[string]string{
 							"authentication.gardener.cloud/issuer": "managed",
 						}
@@ -481,7 +481,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				}
 				botanist.Shoot.ServiceAccountIssuerHostname = nil
-				botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
+				botanist.Shoot.GetInfo().UID = "some-uuid"
 				botanist.Shoot.GetInfo().Annotations = map[string]string{
 					"authentication.gardener.cloud/issuer": "managed",
 				}

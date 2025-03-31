@@ -164,7 +164,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("not a ManagedSeedSet")
 	}
-	return labels.Set(managedSeedSet.ObjectMeta.Labels), ToSelectableFields(managedSeedSet), nil
+	return labels.Set(managedSeedSet.Labels), ToSelectableFields(managedSeedSet), nil
 }
 
 // ToSelectableFields returns a field set that represents the object.

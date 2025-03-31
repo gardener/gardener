@@ -286,7 +286,7 @@ var _ = Describe("Extension", func() {
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
 			patch := client.MergeFrom(beforeExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
-			beforeExtension.ObjectMeta.Annotations = map[string]string{
+			beforeExtension.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			// set last operation
@@ -331,7 +331,7 @@ var _ = Describe("Extension", func() {
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(beforeExtension), beforeExtension)).To(Succeed())
 			patch := client.MergeFrom(beforeExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
-			beforeExtension.ObjectMeta.Annotations = map[string]string{
+			beforeExtension.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			// set last operation
@@ -381,7 +381,7 @@ var _ = Describe("Extension", func() {
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(defaultExtension), defaultExtension)).To(Succeed())
 			patch := client.MergeFrom(defaultExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
-			defaultExtension.ObjectMeta.Annotations = map[string]string{
+			defaultExtension.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			// set last operation
@@ -424,7 +424,7 @@ var _ = Describe("Extension", func() {
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(afterWorkerExtension), afterWorkerExtension)).To(Succeed())
 			patch := client.MergeFrom(afterWorkerExtension.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
-			afterWorkerExtension.ObjectMeta.Annotations = map[string]string{
+			afterWorkerExtension.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			// set last operation
@@ -728,7 +728,7 @@ var _ = Describe("Extension", func() {
 
 		It("should return error if one resources is not migrated successfully and others are", func() {
 			afterExtension1 := afterExtension.DeepCopy()
-			afterExtension1.ObjectMeta.Name = "after1"
+			afterExtension1.Name = "after1"
 			afterExtension1.Spec.Type = "after1"
 			afterExtension.Status.LastError = nil
 			afterExtension.Status.LastOperation = &gardencorev1beta1.LastOperation{

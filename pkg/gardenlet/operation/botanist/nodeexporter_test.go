@@ -106,7 +106,7 @@ var _ = Describe("NodeExporter", func() {
 
 		Context("Shoot monitoring disabled", func() {
 			BeforeEach(func() {
-				botanist.Operation.Config.Monitoring.Shoot.Enabled = ptr.To(false)
+				botanist.Config.Monitoring.Shoot.Enabled = ptr.To(false)
 			})
 
 			It("should fail when the destroy function fails", func() {

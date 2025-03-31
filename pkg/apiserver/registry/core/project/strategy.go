@@ -117,7 +117,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("not a project")
 	}
-	return project.ObjectMeta.Labels, ToSelectableFields(project), nil
+	return project.Labels, ToSelectableFields(project), nil
 }
 
 // MatchProject returns a generic matcher for a given label and field selector.

@@ -70,7 +70,7 @@ func (b *AutonomousBotanist) deployOperatingSystemConfig(ctx context.Context) (*
 		return nil, "", fmt.Errorf("failed appending admin kubeconfig to list of files: %w", err)
 	}
 
-	if err := b.Botanist.DeployOperatingSystemConfig(ctx); err != nil {
+	if err := b.DeployOperatingSystemConfig(ctx); err != nil {
 		return nil, "", fmt.Errorf("failed deploying OperatingSystemConfig resource: %w", err)
 	}
 

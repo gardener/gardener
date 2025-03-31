@@ -574,7 +574,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig != nil {
-		encryptionConfig = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.EncryptionConfig
+		encryptionConfig = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig
 	}
 	if garden.Spec.VirtualCluster.Gardener.APIServer != nil && garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig != nil {
 		gardenerEncryptionConfig = garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig
@@ -704,13 +704,13 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 		gAPIServerEncryptionConfigFldPath    = field.NewPath("spec", "virtualCluster", "gardener", "gardenerAPIServer", "encryptionConfig")
 	)
 
-	if oldKubeAPIServer := oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; oldKubeAPIServer != nil && oldKubeAPIServer.KubeAPIServerConfig != nil && oldKubeAPIServer.KubeAPIServerConfig.EncryptionConfig != nil {
-		if err := gardenCoreScheme.Convert(oldKubeAPIServer.KubeAPIServerConfig.EncryptionConfig, oldKubeAPIServerEncryptionConfig, nil); err != nil {
+	if oldKubeAPIServer := oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; oldKubeAPIServer != nil && oldKubeAPIServer.KubeAPIServerConfig != nil && oldKubeAPIServer.EncryptionConfig != nil {
+		if err := gardenCoreScheme.Convert(oldKubeAPIServer.EncryptionConfig, oldKubeAPIServerEncryptionConfig, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(kubeAPIServerEncryptionConfigFldPath, err))
 		}
 	}
-	if newKubeAPIServer := newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; newKubeAPIServer != nil && newKubeAPIServer.KubeAPIServerConfig != nil && newKubeAPIServer.KubeAPIServerConfig.EncryptionConfig != nil {
-		if err := gardenCoreScheme.Convert(newKubeAPIServer.KubeAPIServerConfig.EncryptionConfig, newKubeAPIServerEncryptionConfig, nil); err != nil {
+	if newKubeAPIServer := newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; newKubeAPIServer != nil && newKubeAPIServer.KubeAPIServerConfig != nil && newKubeAPIServer.EncryptionConfig != nil {
+		if err := gardenCoreScheme.Convert(newKubeAPIServer.EncryptionConfig, newKubeAPIServerEncryptionConfig, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(kubeAPIServerEncryptionConfigFldPath, err))
 		}
 	}

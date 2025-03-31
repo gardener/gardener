@@ -70,7 +70,7 @@ func mustRetryNow(shoot *gardencorev1beta1.Shoot, retryPeriod metav1.Duration, j
 	}
 
 	var (
-		lastReconciliation                = shoot.Status.LastOperation.LastUpdateTime.Time.UTC()
+		lastReconciliation                = shoot.Status.LastOperation.LastUpdateTime.UTC()
 		lastReconciliationPlusRetryPeriod = lastReconciliation.Add(retryPeriod.Duration)
 		now                               = time.Now().UTC()
 	)

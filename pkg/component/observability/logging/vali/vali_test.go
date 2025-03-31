@@ -1287,8 +1287,8 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 	}
 
 	if isRBACProxyEnabled {
-		sts.Spec.Template.ObjectMeta.Labels["networking.gardener.cloud/to-dns"] = "allowed"
-		sts.Spec.Template.ObjectMeta.Labels["networking.resources.gardener.cloud/to-kube-apiserver-tcp-443"] = "allowed"
+		sts.Spec.Template.Labels["networking.gardener.cloud/to-dns"] = "allowed"
+		sts.Spec.Template.Labels["networking.resources.gardener.cloud/to-kube-apiserver-tcp-443"] = "allowed"
 
 		sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, []corev1.Container{
 			{

@@ -46,7 +46,7 @@ func (b *Botanist) WaitUntilShootManagedResourcesDeleted(ctx context.Context) er
 		}
 		for _, mr := range mrList.Items {
 			if mr.Spec.Class == nil || *mr.Spec.Class == "" {
-				allErrs = multierror.Append(allErrs, fmt.Errorf("shoot managed resource %s/%s still exists", mr.ObjectMeta.Namespace, mr.ObjectMeta.Name))
+				allErrs = multierror.Append(allErrs, fmt.Errorf("shoot managed resource %s/%s still exists", mr.Namespace, mr.Name))
 			}
 		}
 

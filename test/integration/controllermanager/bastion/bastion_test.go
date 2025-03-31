@@ -115,7 +115,7 @@ var _ = Describe("Bastion controller tests", func() {
 
 		if shoot != nil {
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(bastion), bastion)).To(Succeed())
-			fakeClock.SetTime(bastion.CreationTimestamp.Time.Truncate(time.Second))
+			fakeClock.SetTime(bastion.CreationTimestamp.Truncate(time.Second))
 		}
 
 		DeferCleanup(func() {
@@ -202,7 +202,7 @@ var _ = Describe("Bastion controller tests", func() {
 
 			It("should delete Bastion if its expiration timestamp has passed", func() {
 				By("Step the clock to pass expirationTimeStamp")
-				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Time.Add(time.Second))
+				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Add(time.Second))
 				patch := client.MergeFrom(bastion.DeepCopy())
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 				Expect(client.IgnoreNotFound(testClient.Patch(ctx, bastion, patch))).To(Succeed())
@@ -214,7 +214,7 @@ var _ = Describe("Bastion controller tests", func() {
 			})
 
 			It("should requeue and delete Bastion if its expiration timestamp is about to pass", func() {
-				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Time.Add(-time.Second))
+				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Add(-time.Second))
 				patch := client.MergeFrom(bastion.DeepCopy())
 				metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 				Expect(testClient.Patch(ctx, bastion, patch)).To(Succeed())
@@ -225,7 +225,7 @@ var _ = Describe("Bastion controller tests", func() {
 				}).Should(Succeed())
 
 				By("Ensure Bastion is deleted")
-				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Time.Add(time.Second))
+				fakeClock.SetTime(bastion.Status.ExpirationTimestamp.Add(time.Second))
 				Eventually(logBuffer).Should(gbytes.Say("Deleting expired bastion"))
 
 				Eventually(func() error {

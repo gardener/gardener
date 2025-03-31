@@ -268,7 +268,7 @@ frontend:
 
 				if gitHub.PollInterval != nil {
 					configRaw += `
-  pollIntervalSeconds: ` + fmt.Sprintf("%d", int64(gitHub.PollInterval.Duration.Seconds()))
+  pollIntervalSeconds: ` + fmt.Sprintf("%d", int64(gitHub.PollInterval.Seconds()))
 				}
 
 				configRaw += `

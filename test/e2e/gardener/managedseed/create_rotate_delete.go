@@ -286,7 +286,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 		},
 	}
 	if os.Getenv("IPFAMILY") == "ipv6" {
-		gardenletConfig.SeedConfig.SeedTemplate.Spec.Networks.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
+		gardenletConfig.SeedConfig.Spec.Networks.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
 	}
 	rawGardenletConfig, err := encoding.EncodeGardenletConfiguration(gardenletConfig)
 	if err != nil {

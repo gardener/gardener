@@ -801,7 +801,7 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 		v1beta1constants.ShootOperationRotateSSHKeypair,
 		v1beta1constants.OperationRotateCredentialsStart,
 		v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
-	).Has(c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]) {
+	).Has(c.shoot.Annotations[v1beta1constants.GardenerOperation]) {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 
@@ -2048,10 +2048,10 @@ func addDNSRecordDeploymentTasks(shoot *core.Shoot) {
 }
 
 func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
-	if shoot.ObjectMeta.Annotations == nil {
-		shoot.ObjectMeta.Annotations = make(map[string]string)
+	if shoot.Annotations == nil {
+		shoot.Annotations = make(map[string]string)
 	}
-	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, tasks...)
+	controllerutils.AddTasks(shoot.Annotations, tasks...)
 }
 
 // wasShootRescheduledToNewSeed returns true if the shoot.Spec.SeedName has been changed, but the migration operation has not started yet.

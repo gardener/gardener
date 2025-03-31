@@ -108,9 +108,9 @@ func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) 
 	}
 
 	// Decode object
-	t, ok := h.typesMap[req.AdmissionRequest.Kind]
+	t, ok := h.typesMap[req.Kind]
 	if !ok {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", req.AdmissionRequest.Kind))
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", req.Kind))
 	}
 
 	return handle(ctx, req, mut, t, h.decoder, h.logger)

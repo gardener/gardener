@@ -356,7 +356,7 @@ var _ = Describe("validator", func() {
 		Context("name/project length checks", func() {
 			It("should reject create operations on Shoot resources in projects which shall be deleted", func() {
 				deletionTimestamp := metav1.NewTime(time.Now())
-				project.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+				project.DeletionTimestamp = &deletionTimestamp
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())

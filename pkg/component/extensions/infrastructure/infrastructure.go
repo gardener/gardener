@@ -307,7 +307,7 @@ func (i *infrastructure) isTimestampInvalidOrAfterLastUpdateTime() bool {
 			return true
 		}
 
-		if parsedTimestamp.Truncate(time.Second).UTC().After(i.infrastructure.Status.LastOperation.LastUpdateTime.Time.UTC()) {
+		if parsedTimestamp.Truncate(time.Second).UTC().After(i.infrastructure.Status.LastOperation.LastUpdateTime.UTC()) {
 			return true
 		}
 	}

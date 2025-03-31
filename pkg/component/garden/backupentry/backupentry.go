@@ -162,7 +162,7 @@ func (b *backupEntry) reconcile(ctx context.Context, backupEntry *gardencorev1be
 		}
 
 		if b.values.OwnerReference != nil {
-			backupEntry.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*b.values.OwnerReference}
+			backupEntry.OwnerReferences = []metav1.OwnerReference{*b.values.OwnerReference}
 		}
 
 		backupEntry.Spec.BucketName = bucketName

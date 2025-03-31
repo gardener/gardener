@@ -123,7 +123,7 @@ func AllNodeCriticalDaemonPodsAreScheduled(log logr.Logger, recorder record.Even
 	// filter for DaemonSets that were not scheduled to the node yet
 	var unscheduledDaemonSets []client.ObjectKey
 	for _, daemonSet := range daemonSets {
-		if daemonSet.Spec.Template.ObjectMeta.Labels[v1beta1constants.LabelNodeCriticalComponent] != "true" {
+		if daemonSet.Spec.Template.Labels[v1beta1constants.LabelNodeCriticalComponent] != "true" {
 			continue
 		}
 

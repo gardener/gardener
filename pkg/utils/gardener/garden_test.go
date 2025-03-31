@@ -318,11 +318,11 @@ var _ = Describe("Garden", func() {
 			config := PrepareGardenClientRestConfig(baseConfig, ptr.To("other"), []byte("ca2"))
 			Expect(config).NotTo(BeIdenticalTo(baseConfig))
 			Expect(config.Host).To(Equal("other"))
-			Expect(config.TLSClientConfig.CAData).To(BeEquivalentTo("ca2"))
+			Expect(config.CAData).To(BeEquivalentTo("ca2"))
 
 			// everything else should be equal
 			config.Host = baseConfig.Host
-			config.TLSClientConfig.CAData = baseConfig.TLSClientConfig.CAData
+			config.CAData = baseConfig.CAData
 			Expect(config).To(Equal(baseConfig))
 		})
 	})

@@ -65,7 +65,7 @@ var _ = Describe("Predicate", func() {
 			time := metav1.Now()
 
 			BeforeEach(func() {
-				shoot.ObjectMeta.DeletionTimestamp = &time
+				shoot.DeletionTimestamp = &time
 			})
 
 			It("should be true", func() {

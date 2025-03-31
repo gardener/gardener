@@ -729,8 +729,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 						// Getting the object from the client results in the location set to the local timezone
 						if obj.Spec.InPlaceUpdates != nil && obj.Spec.InPlaceUpdates.CredentialsRotation != nil {
-							actual.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime = &metav1.Time{Time: actual.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime.Time.UTC()}
-							actual.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime = &metav1.Time{Time: actual.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime.Time.UTC()}
+							actual.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime = &metav1.Time{Time: actual.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime.UTC()}
+							actual.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime = &metav1.Time{Time: actual.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime.UTC()}
 						}
 
 						Expect(actual).To(Equal(obj))
@@ -942,7 +942,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for i := range expected {
 					Expect(c.Delete(ctx, expected[i])).To(Succeed())
 					// remove operation annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{
+					expected[i].Annotations = map[string]string{
 						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
@@ -972,7 +972,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for i := range expected {
 					patch := client.MergeFrom(expected[i].DeepCopy())
 					// remove operation annotation, add old timestamp annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{
+					expected[i].Annotations = map[string]string{
 						v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
@@ -1020,7 +1020,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for i := range expected {
 					patch := client.MergeFrom(expected[i].DeepCopy())
 					// remove operation annotation, add up-to-date timestamp annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{
+					expected[i].Annotations = map[string]string{
 						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
@@ -1101,7 +1101,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				for i := range expected {
 					// remove operation annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{
+					expected[i].Annotations = map[string]string{
 						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation

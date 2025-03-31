@@ -2331,13 +2331,13 @@ subjects:
 				}
 
 				// Remove controlplane label from resources
-				delete(serviceAccount.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(clusterRole.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(clusterRoleBinding.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(service.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(deployment.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(vpa.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(pdb.ObjectMeta.Labels, v1beta1constants.GardenRole)
+				delete(serviceAccount.Labels, v1beta1constants.GardenRole)
+				delete(clusterRole.Labels, v1beta1constants.GardenRole)
+				delete(clusterRoleBinding.Labels, v1beta1constants.GardenRole)
+				delete(service.Labels, v1beta1constants.GardenRole)
+				delete(deployment.Labels, v1beta1constants.GardenRole)
+				delete(vpa.Labels, v1beta1constants.GardenRole)
+				delete(pdb.Labels, v1beta1constants.GardenRole)
 				// Remove networking label from deployment template
 				delete(deployment.Spec.Template.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
 
@@ -2433,13 +2433,13 @@ subjects:
 				}
 
 				// Remove controlplane label from resources
-				delete(serviceAccount.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(clusterRole.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(clusterRoleBinding.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(service.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(deployment.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(vpa.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(pdb.ObjectMeta.Labels, v1beta1constants.GardenRole)
+				delete(serviceAccount.Labels, v1beta1constants.GardenRole)
+				delete(clusterRole.Labels, v1beta1constants.GardenRole)
+				delete(clusterRoleBinding.Labels, v1beta1constants.GardenRole)
+				delete(service.Labels, v1beta1constants.GardenRole)
+				delete(deployment.Labels, v1beta1constants.GardenRole)
+				delete(vpa.Labels, v1beta1constants.GardenRole)
+				delete(pdb.Labels, v1beta1constants.GardenRole)
 				// Remove networking label from deployment template
 				delete(deployment.Spec.Template.Labels, "networking.resources.gardener.cloud/to-kube-apiserver-tcp-443")
 

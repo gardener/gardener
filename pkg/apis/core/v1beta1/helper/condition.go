@@ -75,7 +75,7 @@ func FailedCondition(
 		if lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && clock.Now().UTC().Sub(lastOperation.LastUpdateTime.UTC()) <= threshold {
 			return UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
-		if delta := clock.Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= threshold {
+		if delta := clock.Now().UTC().Sub(condition.LastTransitionTime.UTC()); delta <= threshold {
 			return UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
 		return UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)

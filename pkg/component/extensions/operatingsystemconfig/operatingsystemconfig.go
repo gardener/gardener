@@ -1067,12 +1067,12 @@ func KeyV2(
 	if !inPlaceUpdate && credentialsRotation != nil {
 		if credentialsRotation.CertificateAuthorities != nil {
 			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(worker.Name, credentialsRotation.CertificateAuthorities.PendingWorkersRollouts, credentialsRotation.CertificateAuthorities.LastInitiationTime); lastInitiationTime != nil {
-				data = append(data, lastInitiationTime.Time.String())
+				data = append(data, lastInitiationTime.String())
 			}
 		}
 		if credentialsRotation.ServiceAccountKey != nil {
 			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(worker.Name, credentialsRotation.ServiceAccountKey.PendingWorkersRollouts, credentialsRotation.ServiceAccountKey.LastInitiationTime); lastInitiationTime != nil {
-				data = append(data, lastInitiationTime.Time.String())
+				data = append(data, lastInitiationTime.String())
 			}
 		}
 	}

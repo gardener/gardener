@@ -142,12 +142,12 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 	if status := cluster.Shoot.Status; status.Credentials != nil && status.Credentials.Rotation != nil {
 		if status.Credentials.Rotation.CertificateAuthorities != nil {
 			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(pool.Name, status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime); lastInitiationTime != nil {
-				data = append(data, lastInitiationTime.Time.String())
+				data = append(data, lastInitiationTime.String())
 			}
 		}
 		if status.Credentials.Rotation.ServiceAccountKey != nil {
 			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(pool.Name, status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime); lastInitiationTime != nil {
-				data = append(data, lastInitiationTime.Time.String())
+				data = append(data, lastInitiationTime.String())
 			}
 		}
 	}

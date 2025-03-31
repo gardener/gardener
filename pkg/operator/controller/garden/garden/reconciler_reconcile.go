@@ -771,7 +771,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 
 		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
 			if apiServer.ServiceAccountConfig != nil {
-				serviceAccountConfig = apiServer.KubeAPIServerConfig.ServiceAccountConfig
+				serviceAccountConfig = apiServer.ServiceAccountConfig
 			}
 
 			if apiServer.SNI != nil {
@@ -1115,7 +1115,7 @@ func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []stri
 	var encryptionConfig *gardencorev1beta1.EncryptionConfig
 
 	if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil && apiServer.KubeAPIServerConfig != nil {
-		encryptionConfig = apiServer.KubeAPIServerConfig.EncryptionConfig
+		encryptionConfig = apiServer.EncryptionConfig
 	}
 
 	return shared.GetResourcesForEncryptionFromConfig(encryptionConfig)

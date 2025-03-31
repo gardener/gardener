@@ -16,7 +16,7 @@ func SeedNameFromSeedConfig(seedConfig *gardenletconfigv1alpha1.SeedConfig) stri
 	if seedConfig == nil {
 		return ""
 	}
-	return seedConfig.SeedTemplate.Name
+	return seedConfig.Name
 }
 
 // StaleExtensionHealthChecksThreshold returns nil if the given config is nil or the check

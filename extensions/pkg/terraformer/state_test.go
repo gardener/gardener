@@ -61,9 +61,9 @@ var _ = Describe("terraformer", func() {
 		DescribeTable(
 			"Should respect terraformer finalizer as non-empty state",
 			func(stateFinalizers, configFinalizers, variableFinalizers []string, infraState *string, expectation bool) {
-				state.ObjectMeta.Finalizers = stateFinalizers
-				config.ObjectMeta.Finalizers = configFinalizers
-				variable.ObjectMeta.Finalizers = variableFinalizers
+				state.Finalizers = stateFinalizers
+				config.Finalizers = configFinalizers
+				variable.Finalizers = variableFinalizers
 
 				if infraState != nil {
 					state.Data = map[string]string{
@@ -90,7 +90,7 @@ var _ = Describe("terraformer", func() {
 		DescribeTable(
 			"Should ignore already gone resources",
 			func(stateFinalizers []string, infraState *string, expectation bool) {
-				state.ObjectMeta.Finalizers = stateFinalizers
+				state.Finalizers = stateFinalizers
 
 				if infraState != nil {
 					state.Data = map[string]string{

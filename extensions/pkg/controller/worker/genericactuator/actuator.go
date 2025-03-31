@@ -202,7 +202,7 @@ func isMachineControllerStuck(machineSets []machinev1alpha1.MachineSet, machineD
 		}
 
 		// do not consider machine deployments that have just recently been created
-		if time.Now().UTC().Sub(machineDeployment.ObjectMeta.CreationTimestamp.UTC()) < stuckMCMThreshold {
+		if time.Now().UTC().Sub(machineDeployment.CreationTimestamp.UTC()) < stuckMCMThreshold {
 			continue
 		}
 

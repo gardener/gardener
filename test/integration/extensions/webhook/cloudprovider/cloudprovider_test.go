@@ -69,7 +69,7 @@ var _ = Describe("CloudProvider tests", func() {
 
 		Context("purpose label present", func() {
 			BeforeEach(func() {
-				secret.ObjectMeta.Labels = map[string]string{
+				secret.Labels = map[string]string{
 					v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
 				}
 			})

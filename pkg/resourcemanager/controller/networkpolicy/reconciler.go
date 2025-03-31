@@ -49,15 +49,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	networkPolicyList := &metav1.PartialObjectMetadataList{}
 	networkPolicyList.SetGroupVersionKind(networkingv1.SchemeGroupVersion.WithKind("NetworkPolicyList"))
 	if err := r.TargetClient.List(ctx, networkPolicyList, client.MatchingLabels{
-		resourcesv1alpha1.NetworkingServiceName:      request.NamespacedName.Name,
-		resourcesv1alpha1.NetworkingServiceNamespace: request.NamespacedName.Namespace,
+		resourcesv1alpha1.NetworkingServiceName:      request.Name,
+		resourcesv1alpha1.NetworkingServiceNamespace: request.Namespace,
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed listing network policies for service %s: %w", request.NamespacedName, err)
 	}
 
-	isNamespaceHandled, err := r.namespaceIsHandled(ctx, request.NamespacedName.Namespace)
+	isNamespaceHandled, err := r.namespaceIsHandled(ctx, request.Namespace)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed checking whether namespace %s is handled: %w", request.NamespacedName.Namespace, err)
+		return reconcile.Result{}, fmt.Errorf("failed checking whether namespace %s is handled: %w", request.Namespace, err)
 	}
 
 	onlyDeleteStalePolicies := !isNamespaceHandled

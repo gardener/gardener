@@ -328,7 +328,7 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 
 			Expect(cert.Subject.CommonName).To(Equal(userName))
 			Expect(cert.Subject.Organization).To(organizationMatcher)
-			Expect(cert.NotAfter.Unix()).To(Equal(getExpirationTimestamp(actual).Time.Unix())) // certificates do not have nano seconds in them
+			Expect(cert.NotAfter.Unix()).To(Equal(getExpirationTimestamp(actual).Unix())) // certificates do not have nano seconds in them
 			Expect(cert.NotBefore.UTC()).To(Equal(secretsutils.AdjustToClockSkew(time.Unix(10, 0).UTC())))
 			Expect(cert.Issuer.CommonName).To(Equal(clientCACertName))
 		})

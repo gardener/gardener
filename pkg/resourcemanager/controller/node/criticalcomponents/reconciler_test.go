@@ -256,14 +256,14 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should return the correct number of drivers if there are node-critical pods with the wait-for-csi-node annotation", func() {
-			pods[0].ObjectMeta.Annotations = map[string]string{
+			pods[0].Annotations = map[string]string{
 				"node.gardener.cloud/wait-for-csi-node-foo": "foo.driver.example.com",
 				"unrelated.k8s.io/something":                "true",
 			}
-			pods[1].ObjectMeta.Annotations = map[string]string{
+			pods[1].Annotations = map[string]string{
 				"node.gardener.cloud/wait-for-csi-node-foo": "foo.driver.example.com", // duplicate driver should only be considered once
 			}
-			pods[2].ObjectMeta.Annotations = map[string]string{
+			pods[2].Annotations = map[string]string{
 				"node.gardener.cloud/wait-for-csi-node-bar": "bar.driver.example.com",
 				"unrelated.k8s.io/something-else":           "false",
 			}

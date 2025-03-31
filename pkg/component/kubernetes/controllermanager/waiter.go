@@ -94,7 +94,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 			return retry.SevereError(fmt.Errorf("could not check whether controller %s is active: %w", v1beta1constants.DeploymentNameKubeControllerManager, err))
 		}
 
-		lastRenew := metav1.Now().UTC().Sub(leaderElectionRecord.RenewTime.Time.UTC())
+		lastRenew := metav1.Now().UTC().Sub(leaderElectionRecord.RenewTime.UTC())
 		defaultRenewalTime := 2 * time.Second
 		if lastRenew <= defaultRenewalTime*2 {
 			return retry.Ok()

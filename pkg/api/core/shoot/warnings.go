@@ -116,7 +116,7 @@ func completionDue(lastInitiationFinishedTime, lastCompletionTriggeredTime *meta
 	if lastInitiationFinishedTime == nil {
 		return false
 	}
-	if lastCompletionTriggeredTime != nil && lastCompletionTriggeredTime.Time.UTC().After(lastInitiationFinishedTime.Time.UTC()) {
+	if lastCompletionTriggeredTime != nil && lastCompletionTriggeredTime.UTC().After(lastInitiationFinishedTime.UTC()) {
 		return false
 	}
 	return isOldEnough(lastInitiationFinishedTime.Time, threshold)

@@ -154,7 +154,7 @@ var _ = Describe("BackupEntry", func() {
 
 		It("should return no error when is ready", func() {
 			expected.Status.LastError = nil
-			expected.ObjectMeta.Annotations = map[string]string{}
+			expected.Annotations = map[string]string{}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
