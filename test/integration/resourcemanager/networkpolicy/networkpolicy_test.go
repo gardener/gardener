@@ -175,6 +175,8 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		logBuffer.Reset()
+
 		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "test-ns-" + testRunID,
@@ -602,6 +604,43 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			By("Wait until all policies are deleted")
 			ensureNetworkPoliciesDoNotGetDeleted()
 			ensureCrossNamespaceNetworkPoliciesGetDeleted()
+		})
+
+		It("should do nothing when the namespace is terminating", func() {
+			By("Wait until all policies are created")
+			ensureNetworkPoliciesGetCreated()
+
+			DeferCleanup(func() {
+				By("Remove finalizer from namespace to unblock deletion")
+				patch := client.MergeFrom(namespace.DeepCopy())
+				namespace.Finalizers = nil
+				Expect(testClient.Patch(ctx, namespace, patch)).To(Succeed())
+			})
+
+			By("Add finalizer to namespace to block deletion")
+			patch := client.MergeFrom(namespace.DeepCopy())
+			namespace.Finalizers = append(namespace.Finalizers, finalizer)
+			Expect(testClient.Patch(ctx, namespace, patch)).To(Succeed())
+
+			By("Delete Namespace")
+			Expect(testClient.Delete(ctx, namespace)).To(Succeed())
+
+			By("Delete all NetworkPolicies")
+			Expect(testClient.DeleteAllOf(ctx, &networkingv1.NetworkPolicy{}, client.InNamespace(namespace.Name))).To(Succeed())
+
+			By("Reset log buffer")
+			logBuffer.Reset()
+
+			By("Add new port to Service (this should trigger the controller)")
+			patch = client.MergeFrom(service.DeepCopy())
+			service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "newport", Port: 7636, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(6367)})
+			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
+
+			By("Ensure controller does not try to create new content in terminating namespace")
+			Eventually(func() string { return logBuffer.String() }).ShouldNot(Or(
+				ContainSubstring("unable to create new content in namespace"),
+				ContainSubstring("because it is being terminated"),
+			))
 		})
 
 		It("should create the expected cross-namespace policies as soon as a new namespace appears", func() {

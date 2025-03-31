@@ -5,13 +5,16 @@
 package networkpolicy_test
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"testing"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -36,12 +39,16 @@ func TestNetworkPolicy(t *testing.T) {
 	RunSpecs(t, "Test Integration ResourceManager NetworkPolicy Suite")
 }
 
-// testID is used for generating test namespace names and other IDs
-const testID = "networkpolicy-controller-test"
+const (
+	// testID is used for generating test namespace names and other IDs
+	testID    = "networkpolicy-controller-test"
+	finalizer = "test.gardener.cloud/integration"
+)
 
 var (
-	ctx = context.Background()
-	log logr.Logger
+	ctx       = context.Background()
+	log       logr.Logger
+	logBuffer bytes.Buffer
 
 	restConfig *rest.Config
 	testEnv    *envtest.Environment
@@ -55,7 +62,7 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(GinkgoWriter)))
+	logf.SetLogger(logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, zap.WriteTo(io.MultiWriter(GinkgoWriter, &logBuffer))))
 	log = logf.Log.WithName(testID)
 
 	By("Start test environment")
@@ -102,7 +109,7 @@ var _ = BeforeSuite(func() {
 	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	// We create and delete namespace in every test, so let's ensure they get finalized.
-	Expect((&namespacefinalizer.Reconciler{}).AddToManager(mgr)).To(Succeed())
+	Expect((&namespacefinalizer.Reconciler{Exceptions: sets.New(finalizer)}).AddToManager(mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
