@@ -797,7 +797,6 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList *
 	return "", nil
 }
 
-// CheckNodesScalingUp returns an error if nodes are being scaled up.
 func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) error {
 	if readyNodes == desiredMachines {
 		return nil
@@ -832,7 +831,6 @@ func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 	return fmt.Errorf("%s provisioning and should join the cluster soon", cosmeticMachineMessage(pendingMachines))
 }
 
-// CheckNodesScalingDown returns an error if nodes are being scaled down.
 func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *corev1.NodeList, registeredNodes, desiredMachines int) error {
 	if registeredNodes == desiredMachines {
 		return nil

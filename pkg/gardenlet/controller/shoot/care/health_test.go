@@ -425,12 +425,10 @@ var _ = Describe("health check", func() {
 	Describe("#CheckNodesScaling", func() {
 		var (
 			ctrl *gomock.Controller
-			c    *mockclient.MockClient
 		)
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
 		})
 
 		AfterEach(func() {
@@ -616,12 +614,19 @@ var _ = Describe("health check", func() {
 
 			It("should return progressing for a regular scale down", func() {
 				var (
-					nodeName          = "foo"
-					deletionTimestamp = metav1.Now()
+					nodeName = "foo"
 
 					machineList = &machinev1alpha1.MachineList{
 						Items: []machinev1alpha1.Machine{
-							{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace, DeletionTimestamp: &deletionTimestamp, Labels: map[string]string{"node": nodeName}}},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:         "foo",
+									GenerateName: "obj-",
+									Namespace:    controlPlaneNamespace,
+									Labels:       map[string]string{"node": nodeName},
+									Finalizers:   []string{"foo"},
+								},
+							},
 						},
 					}
 					nodeList = &corev1.NodeList{
@@ -633,23 +638,30 @@ var _ = Describe("health check", func() {
 						},
 					}
 				)
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *machinev1alpha1.MachineList, _ ...client.ListOption) error {
-					*list = *machineList
-					return nil
-				})
-				msg, err := CheckNodesScaling(ctx, c, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+					Expect(fakeClient.Delete(ctx, &machine)).To(Succeed())
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingDown"))
 				Expect(err).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
 			})
 
 			It("should ignore node not managed by MCM and return progressing for a regular scale down", func() {
 				var (
-					nodeName          = "foo"
-					deletionTimestamp = metav1.Now()
+					nodeName = "foo"
 
 					machineList = &machinev1alpha1.MachineList{
 						Items: []machinev1alpha1.Machine{
-							{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &deletionTimestamp, Labels: map[string]string{"node": nodeName}}},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:         "foo",
+									GenerateName: "obj-",
+									Namespace:    controlPlaneNamespace,
+									Labels:       map[string]string{"node": nodeName},
+									Finalizers:   []string{"foo"},
+								},
+							},
 						},
 					}
 					nodeList = &corev1.NodeList{
@@ -660,18 +672,18 @@ var _ = Describe("health check", func() {
 							},
 							{
 								ObjectMeta: metav1.ObjectMeta{
-									Name:        "bar",
+									Name:        nodeName,
 									Annotations: map[string]string{"node.machine.sapcloud.io/not-managed-by-mcm": "1"},
 								},
 							},
 						},
 					}
 				)
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&machinev1alpha1.MachineList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *machinev1alpha1.MachineList, _ ...client.ListOption) error {
-					*list = *machineList
-					return nil
-				})
-				msg, err := CheckNodesScaling(ctx, c, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+					Expect(fakeClient.Delete(ctx, &machine)).To(Succeed())
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingDown"))
 				Expect(err).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
 			})
