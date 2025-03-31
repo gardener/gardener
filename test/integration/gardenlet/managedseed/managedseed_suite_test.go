@@ -225,7 +225,7 @@ var _ = BeforeSuite(func() {
 		GardenNamespaceGarden: gardenNamespaceGarden.Name,
 		GardenNamespaceShoot:  gardenNamespaceShoot,
 		ShootClientMap:        shootClientMap,
-	}).AddToManager(ctx, mgr, mgr, mgr)).To(Succeed())
+	}).AddToManager(mgr, mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
