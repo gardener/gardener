@@ -179,8 +179,6 @@ etcdConfig:
 # backupLeaderElection:
 #   reelectionPeriod: 5s
 #   etcdConnectionTimeout: 5s
-# featureGates:
-#   UseEtcdWrapper: true
 # monitoring:
 #   shoot:
 #     enabled: true

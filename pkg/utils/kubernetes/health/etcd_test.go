@@ -5,7 +5,7 @@
 package health_test
 
 import (
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -17,21 +17,21 @@ import (
 
 var _ = Describe("Etcd", func() {
 	DescribeTable("Ready field",
-		func(etcd *druidv1alpha1.Etcd, matcher types.GomegaMatcher) {
+		func(etcd *druidcorev1alpha1.Etcd, matcher types.GomegaMatcher) {
 			Expect(health.CheckEtcd(etcd)).To(matcher)
 		},
-		Entry("nil", &druidv1alpha1.Etcd{}, MatchError(ContainSubstring("is not ready yet"))),
-		Entry("false", &druidv1alpha1.Etcd{Status: druidv1alpha1.EtcdStatus{Ready: ptr.To(false)}}, MatchError(ContainSubstring("is not ready yet"))),
-		Entry("true", &druidv1alpha1.Etcd{Status: druidv1alpha1.EtcdStatus{Ready: ptr.To(true)}}, BeNil()),
+		Entry("nil", &druidcorev1alpha1.Etcd{}, MatchError(ContainSubstring("is not ready yet"))),
+		Entry("false", &druidcorev1alpha1.Etcd{Status: druidcorev1alpha1.EtcdStatus{Ready: ptr.To(false)}}, MatchError(ContainSubstring("is not ready yet"))),
+		Entry("true", &druidcorev1alpha1.Etcd{Status: druidcorev1alpha1.EtcdStatus{Ready: ptr.To(true)}}, BeNil()),
 	)
 
 	DescribeTable("Backup condition",
 		func(backupReady *bool, matcher types.GomegaMatcher) {
-			etcd := &druidv1alpha1.Etcd{
+			etcd := &druidcorev1alpha1.Etcd{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "etcd-foo",
 				},
-				Status: druidv1alpha1.EtcdStatus{
+				Status: druidcorev1alpha1.EtcdStatus{
 					Ready: ptr.To(true),
 				},
 			}
@@ -39,16 +39,16 @@ var _ = Describe("Etcd", func() {
 			if backupReady != nil {
 				var (
 					message string
-					status  = druidv1alpha1.ConditionTrue
+					status  = druidcorev1alpha1.ConditionTrue
 				)
 				if !*backupReady {
 					message = "backup bucket is not accessible"
-					status = druidv1alpha1.ConditionFalse
+					status = druidcorev1alpha1.ConditionFalse
 				}
 
-				etcd.Status.Conditions = []druidv1alpha1.Condition{
+				etcd.Status.Conditions = []druidcorev1alpha1.Condition{
 					{
-						Type:    druidv1alpha1.ConditionTypeBackupReady,
+						Type:    druidcorev1alpha1.ConditionTypeBackupReady,
 						Status:  status,
 						Message: message,
 					},

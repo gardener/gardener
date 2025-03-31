@@ -9,7 +9,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/coreos/go-systemd/v22/unit"
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
@@ -54,7 +54,7 @@ func (e *NoopEnsurer) EnsureClusterAutoscalerDeployment(_ context.Context, _ ext
 }
 
 // EnsureETCD ensures that the etcd stateful sets conform to the provider requirements.
-func (e *NoopEnsurer) EnsureETCD(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *druidv1alpha1.Etcd) error {
+func (e *NoopEnsurer) EnsureETCD(_ context.Context, _ extensionscontextwebhook.GardenContext, _, _ *druidcorev1alpha1.Etcd) error {
 	return nil
 }
 

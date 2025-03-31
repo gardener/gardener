@@ -443,9 +443,6 @@ spec:
         concurrentSyncs: 0
     featureGates:
       DefaultSeccompProfile: true
-    etcdConfig:
-      featureGates:
-        UseEtcdWrapper: true
     logging:
       enabled: true
       vali:

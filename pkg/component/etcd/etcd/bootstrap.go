@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -188,12 +188,12 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 				{
-					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
+					APIGroups: []string{druidcorev1alpha1.SchemeGroupVersion.Group},
 					Resources: []string{"etcds", "etcdcopybackupstasks"},
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 				{
-					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
+					APIGroups: []string{druidcorev1alpha1.SchemeGroupVersion.Group},
 					Resources: []string{"etcds/status", "etcds/finalizers", "etcdcopybackupstasks/status", "etcdcopybackupstasks/finalizers"},
 					Verbs:     []string{"get", "update", "patch", "create"},
 				},
@@ -324,7 +324,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					TimeoutSeconds:          ptr.To[int32](10),
 					AdmissionReviewVersions: []string{"v1", "v1beta1"},
 					ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-						druidv1alpha1.LabelManagedByKey: druidv1alpha1.LabelManagedByValue,
+						druidcorev1alpha1.LabelManagedByKey: druidcorev1alpha1.LabelManagedByValue,
 					}},
 					Rules: []admissionregistrationv1.RuleWithOperations{
 						{
@@ -610,23 +610,23 @@ func getDruidDeployArgs(etcdConfig *gardenletconfigv1alpha1.ETCDConfig, webhookS
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
-	etcdList := &druidv1alpha1.EtcdList{}
+	etcdList := &druidcorev1alpha1.EtcdList{}
 	// Need to check for both error types. The DynamicRestMapper can hold a stale cache returning a path to a non-existing api-resource leading to a NotFound error.
 	if err := b.client.List(ctx, etcdList); err != nil && !meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	if len(etcdList.Items) > 0 {
-		return errors.New("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
+		return errors.New("cannot debootstrap etcd-druid because there are still druidcorev1alpha1.Etcd resources left in the cluster")
 	}
 
-	etcdCopyBackupsTaskList := &druidv1alpha1.EtcdCopyBackupsTaskList{}
+	etcdCopyBackupsTaskList := &druidcorev1alpha1.EtcdCopyBackupsTaskList{}
 	if err := b.client.List(ctx, etcdCopyBackupsTaskList); err != nil && !meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	if len(etcdCopyBackupsTaskList.Items) > 0 {
-		return errors.New("cannot debootstrap etcd-druid because there are still druidv1alpha1.EtcdCopyBackupsTask resources left in the cluster")
+		return errors.New("cannot debootstrap etcd-druid because there are still druidcorev1alpha1.EtcdCopyBackupsTask resources left in the cluster")
 	}
 
 	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceControlName)
