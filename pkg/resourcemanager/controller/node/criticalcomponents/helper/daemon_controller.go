@@ -51,7 +51,7 @@ func NodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1.DaemonSet) (bool, bool
 	pod := NewPod(ds, node.Name)
 
 	// If the daemon set specifies a node name, check that it matches with node.Name.
-	if !(ds.Spec.Template.Spec.NodeName == "" || ds.Spec.Template.Spec.NodeName == node.Name) {
+	if ds.Spec.Template.Spec.NodeName != "" && ds.Spec.Template.Spec.NodeName != node.Name {
 		return false, false
 	}
 

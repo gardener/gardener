@@ -91,9 +91,9 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	// - for all node-critical DaemonSets: check whether a daemon pod has already been scheduled to the node
 	// - for all scheduled node-critical Pods on the node: check their readiness
 	// - for all drivers required by csi-driver-node pods: check if they exist
-	if !(AllNodeCriticalDaemonPodsAreScheduled(log, r.Recorder, node, daemonSetList.Items, podList.Items) &&
-		AllNodeCriticalPodsAreReady(log, r.Recorder, node, podList.Items) &&
-		AllCSINodeDriversAreReady(log, r.Recorder, node, requiredDrivers, existingDrivers)) {
+	if !AllNodeCriticalDaemonPodsAreScheduled(log, r.Recorder, node, daemonSetList.Items, podList.Items) ||
+		!AllNodeCriticalPodsAreReady(log, r.Recorder, node, podList.Items) ||
+		!AllCSINodeDriversAreReady(log, r.Recorder, node, requiredDrivers, existingDrivers) {
 		backoff := r.Config.Backoff.Duration
 		log.V(1).Info("Checking node again after backoff", "backoff", backoff)
 		return reconcile.Result{RequeueAfter: backoff}, nil

@@ -39,7 +39,7 @@ func ReadManifests(log logr.Logger, fsys fs.FS) (*gardencorev1beta1.CloudProfile
 			return fmt.Errorf("failed walking directory: %w", err)
 		}
 
-		if d.IsDir() || !(strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".json")) {
+		if d.IsDir() || !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".json") {
 			return nil
 		}
 

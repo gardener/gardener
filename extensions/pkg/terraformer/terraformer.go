@@ -151,7 +151,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 	// this when the command is 'destroy'. This is because the CleanupConfiguration() function could have already
 	// deleted some of the resources (but not all). Hence, without the toleration we would end up in a deadlock and
 	// manual action would be required.
-	if !(t.configurationInitialized && t.stateInitialized) {
+	if !t.configurationInitialized || !t.stateInitialized {
 		numberOfExistingResources, err := t.NumberOfResources(ctx)
 		if err != nil {
 			return err
