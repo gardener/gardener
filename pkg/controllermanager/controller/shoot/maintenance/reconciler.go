@@ -464,8 +464,8 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) string {
 		return ""
 	}
 
-	switch {
-	case shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed:
+	switch shoot.Status.LastOperation.State {
+	case gardencorev1beta1.LastOperationStateFailed:
 		if needsRetry(shoot) {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
 			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
