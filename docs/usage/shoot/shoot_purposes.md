@@ -19,6 +19,7 @@ The following enlists the differences in the way the shoot clusters are set up b
 
 * `testing` shoot clusters **do not** get a monitoring or a logging stack as part of their control planes.
 * for `production` and `infrastructure` shoot clusters auto-scaling scale down of the main ETCD is disabled.
+* shoot addons like `nginxIngress` and `kubernetesDashboard` can only be enabled for `evaluation` shoot clusters.
 
 There are also differences with respect to how `testing` shoots are scheduled after creation, please consult the [Scheduler documentation](../../concepts/scheduler.md).
 
