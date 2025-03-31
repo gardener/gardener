@@ -24,6 +24,11 @@ rules:
   - watch
   - patch
   - update
+  - manage-members
+  - modify-spec-tolerations-whitelist
+  - modify-spec-kubernetes
+  - modify-spec-machineimages
+  - modify-spec-providerconfig
 - apiGroups:
   - security.gardener.cloud
   resources:

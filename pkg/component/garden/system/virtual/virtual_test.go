@@ -176,7 +176,7 @@ var _ = Describe("Virtual", func() {
 						"operations.gardener.cloud",
 					},
 					Resources: []string{"*"},
-					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "manage-members", "modify-spec-tolerations-whitelist", "modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig"},
 				},
 				{
 					APIGroups: []string{"security.gardener.cloud"},
