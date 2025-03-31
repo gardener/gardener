@@ -81,7 +81,7 @@ SKAFFOLD_VERSION ?= v2.14.2
 # renovate: datasource=github-releases depName=mikefarah/yq
 YQ_VERSION ?= v4.45.1
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
-VGOPATH_VERSION ?= v0.1.7
+VGOPATH_VERSION ?= v0.1.8
 # renovate: datasource=github-releases depName=crate-ci/typos
 TYPOS_VERSION ?= v1.31.0
 
