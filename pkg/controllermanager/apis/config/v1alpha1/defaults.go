@@ -220,6 +220,13 @@ func SetDefaults_SeedBackupBucketsCheckControllerConfiguration(obj *SeedBackupBu
 	}
 }
 
+// SetDefaults_SeedReferenceControllerConfiguration sets defaults for the SeedReferenceControllerConfiguration.
+func SetDefaults_SeedReferenceControllerConfiguration(obj *SeedReferenceControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(DefaultControllerConcurrentSyncs)
+	}
+}
+
 // SetDefaults_ShootHibernationControllerConfiguration sets defaults for the ShootHibernationControllerConfiguration.
 func SetDefaults_ShootHibernationControllerConfiguration(obj *ShootHibernationControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
@@ -350,6 +357,9 @@ func SetDefaults_ControllerManagerControllerConfiguration(obj *ControllerManager
 	}
 	if obj.SeedBackupBucketsCheck == nil {
 		obj.SeedBackupBucketsCheck = &SeedBackupBucketsCheckControllerConfiguration{}
+	}
+	if obj.SeedReference == nil {
+		obj.SeedReference = &SeedReferenceControllerConfiguration{}
 	}
 	if obj.ShootQuota == nil {
 		obj.ShootQuota = &ShootQuotaControllerConfiguration{}

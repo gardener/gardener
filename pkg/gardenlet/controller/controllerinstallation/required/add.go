@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 )
@@ -96,7 +97,15 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenCluster, seedCluste
 			return err
 		}
 
-		if err := c.Watch(source.Kind[client.Object](seedCluster.GetCache(), extension.object, eventHandler, extensions.ObjectPredicate(), extensionspredicate.HasClass(extensionsv1alpha1.ExtensionClassShoot))); err != nil {
+		if err := c.Watch(
+			source.Kind[client.Object](
+				seedCluster.GetCache(),
+				extension.object,
+				eventHandler,
+				extensions.ObjectPredicate(),
+				extensionspredicate.HasClass(extensionsv1alpha1.ExtensionClassShoot, extensionsv1alpha1.ExtensionClassSeed),
+			),
+		); err != nil {
 			return err
 		}
 	}
@@ -133,11 +142,11 @@ func (r *Reconciler) MapObjectKindToControllerInstallations(log logr.Logger, obj
 				return err
 			}
 
-			if ptr.Deref(obj.GetExtensionSpec().GetExtensionClass(), extensionsv1alpha1.ExtensionClassShoot) != extensionsv1alpha1.ExtensionClassShoot {
-				return nil
+			extensionClass := extensionsv1alpha1helper.GetExtensionClassOrDefault(obj.GetExtensionSpec().GetExtensionClass())
+			if extensionClass == extensionsv1alpha1.ExtensionClassShoot || extensionClass == extensionsv1alpha1.ExtensionClassSeed {
+				newRequiredTypes.Insert(obj.GetExtensionSpec().GetExtensionType())
 			}
 
-			newRequiredTypes.Insert(obj.GetExtensionSpec().GetExtensionType())
 			return nil
 		}); err != nil {
 			log.Error(err, "Failed while iterating over extension objects")

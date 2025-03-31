@@ -27,7 +27,7 @@ func AddToManager(mgr manager.Manager, gardenNamespace string) error {
 		GetReferencedSecretNames:    getReferencedSecretNames,
 		GetReferencedConfigMapNames: getReferencedConfigMapNames,
 		ReferenceChangedPredicate:   Predicate,
-	}).AddToManager(mgr)
+	}).AddToManager(mgr, "garden")
 }
 
 // Predicate is a predicate function for checking whether a reference changed in the Garden specification.

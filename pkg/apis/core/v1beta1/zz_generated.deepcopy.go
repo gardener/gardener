@@ -4825,6 +4825,18 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 		*out = make([]AccessRestriction, len(*in))
 		copy(*out, *in)
 	}
+	if in.Extensions != nil {
+		in, out := &in.Extensions, &out.Extensions
+		*out = make([]Extension, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = make([]NamedResourceReference, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
@@ -31,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
+	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -85,6 +87,7 @@ type components struct {
 	clusterIdentity          component.DeployWaiter
 	gardenerResourceManager  component.DeployWaiter
 	system                   component.DeployWaiter
+	extension                extension.Interface
 	istio                    component.DeployWaiter
 	istioDefaultLabels       map[string]string
 	istioDefaultNamespace    string
@@ -158,6 +161,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.system, err = r.newSystem(seed.GetInfo())
+	if err != nil {
+		return
+	}
+	c.extension, err = r.newExtensions(ctx, log, seed)
 	if err != nil {
 		return
 	}
@@ -837,4 +844,8 @@ func (r *Reconciler) newKubeAPIServerIngress(seed *seedpkg.Seed, wildCardCertSec
 	}
 
 	return c
+}
+
+func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, seed *seedpkg.Seed) (extension.Interface, error) {
+	return sharedcomponent.NewExtension(ctx, log, r.GardenClient, r.SeedClientSet.Client(), r.GardenNamespace, extensionsv1alpha1.ExtensionClassSeed, seed.GetInfo().Spec.Extensions, true)
 }

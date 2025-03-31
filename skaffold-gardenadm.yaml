@@ -411,6 +411,7 @@ build:
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/certificatesigningrequest
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
             - pkg/utils/retry

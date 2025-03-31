@@ -72,6 +72,9 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.SeedBackupBucketsCheck != nil {
 		SetDefaults_SeedBackupBucketsCheckControllerConfiguration(in.Controllers.SeedBackupBucketsCheck)
 	}
+	if in.Controllers.SeedReference != nil {
+		SetDefaults_SeedReferenceControllerConfiguration(in.Controllers.SeedReference)
+	}
 	SetDefaults_ShootMaintenanceControllerConfiguration(&in.Controllers.ShootMaintenance)
 	if in.Controllers.ShootQuota != nil {
 		SetDefaults_ShootQuotaControllerConfiguration(in.Controllers.ShootQuota)

@@ -1058,7 +1058,7 @@ func newDeployment(name, namespace string) *appsv1.Deployment {
 func patchExtensionStatus(cl client.Client, name, namespace string, lastOp gardencorev1beta1.LastOperationState) {
 	var ext = &extensionsv1alpha1.Extension{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      "garden-" + name,
 			Namespace: namespace,
 		},
 	}

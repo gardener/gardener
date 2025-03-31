@@ -40,6 +40,7 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -264,6 +265,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:           c.system.Deploy,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
+		deployReferencedResources = g.Add(flow.Task{
+			Name: "Deploying referenced resources",
+			Fn: func(ctx context.Context) error {
+				return r.deployReferencedResources(ctx, seed)
+			},
+			Dependencies: flow.NewTaskIDs(deploySystemResources),
+		})
 		waitUntilRequiredExtensionsReady = g.Add(flow.Task{
 			Name: "Waiting until required extensions are ready",
 			Fn: func(ctx context.Context) error {
@@ -275,7 +283,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 					return retry.Ok()
 				})
 			},
-			Dependencies: flow.NewTaskIDs(deploySystemResources),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources),
 		})
 		// Use the managed resource for cluster-identity only if there is no cluster-identity config map in kube-system namespace from a different origin than seed.
 		// This prevents gardenlet from deleting the config map accidentally on seed deletion when it was created by a different party (gardener-apiserver or shoot).
@@ -284,6 +292,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Fn:           c.clusterIdentity.Deploy,
 			Dependencies: flow.NewTaskIDs(waitUntilRequiredExtensionsReady),
 			SkipIf:       !seedIsOriginOfClusterIdentity,
+		})
+		deployExtensionResources = g.Add(flow.Task{
+			Name:         "Deploying extension resources",
+			Fn:           c.extension.Deploy,
+			Dependencies: flow.NewTaskIDs(waitUntilRequiredExtensionsReady),
+		})
+		waitUntilExtensionResourcesReady = g.Add(flow.Task{
+			Name:         "Waiting until extension resources are ready",
+			Fn:           c.extension.Wait,
+			Dependencies: flow.NewTaskIDs(deployExtensionResources),
 		})
 		cleanupOrphanedExposureClassHandlers = g.Add(flow.Task{
 			Name: "Cleaning up orphan ExposureClass handler resources",
@@ -296,6 +314,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployGardenerResourceManager,
 			deployClusterIdentity,
 			cleanupOrphanedExposureClassHandlers,
+			waitUntilExtensionResourcesReady,
 		)
 
 		deployIstio = g.Add(flow.Task{
@@ -468,6 +487,16 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Deploying Alertmanager",
 			Fn:           c.alertManager.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		deleteStaleExtensionResources = g.Add(flow.Task{
+			Name:         "Deleting stale extension resources",
+			Fn:           flow.TaskFn(c.extension.DeleteStaleResources),
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until stale extension resources are deleted",
+			Fn:           c.extension.WaitCleanupStaleResources,
+			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
 	)
 
@@ -703,4 +732,20 @@ func (r *Reconciler) deployNginxIngressAndWaitForIstioServiceAndGetDNSComponent(
 	}
 
 	return r.newIngressDNSRecord(ctx, log, seed, ingressLoadBalancerAddress)
+}
+
+const managedResourceNamePrefix = "referenced-resources-"
+
+func (r *Reconciler) deployReferencedResources(ctx context.Context, seed *seedpkg.Seed) error {
+	unstructuredObjs, err := gardenerutils.PrepareReferencedResourcesForSeedCopy(ctx, r.GardenClient, seed.GetInfo().Spec.Resources, r.GardenNamespace, r.GardenNamespace)
+	if err != nil {
+		return fmt.Errorf("failed to prepare referenced resources for seed copy: %w", err)
+	}
+
+	return managedresources.CreateFromUnstructured(ctx, r.SeedClientSet.Client(), r.GardenNamespace, managedResourceNamePrefix+seed.GetInfo().Name,
+		false, v1beta1constants.SeedResourceManagerClass, unstructuredObjs, false, nil)
+}
+
+func (r *Reconciler) destroyReferencedResources(ctx context.Context, seed *seedpkg.Seed) error {
+	return client.IgnoreNotFound(managedresources.Delete(ctx, r.SeedClientSet.Client(), r.GardenNamespace, managedResourceNamePrefix+seed.GetInfo().Name, false))
 }

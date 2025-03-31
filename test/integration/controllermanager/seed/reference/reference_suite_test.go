@@ -25,7 +25,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot/reference"
+	"github.com/gardener/gardener/pkg/controllermanager/controller/seed/reference"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	gardenerenvtest "github.com/gardener/gardener/test/envtest"
@@ -33,10 +33,10 @@ import (
 
 func TestReference(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test Integration ControllerManager Shoot Reference Suite")
+	RunSpecs(t, "Test Integration ControllerManager Seed Reference Suite")
 }
 
-const testID = "shoot-reference-controller-test"
+const testID = "seed-reference-controller-test"
 
 var (
 	ctx = context.Background()
@@ -57,7 +57,7 @@ var _ = BeforeSuite(func() {
 	By("Start test environment")
 	testEnv = &gardenerenvtest.GardenerTestEnvironment{
 		GardenerAPIServer: &gardenerenvtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction,ShootDNS"},
+			Args: []string{"--disable-admission-plugins=DeletionConfirmation,ResourceReferenceManager,ExtensionValidator,SeedValidator"},
 		},
 	}
 
@@ -105,7 +105,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Register controller")
-	Expect(reference.AddToManager(mgr, controllermanagerconfigv1alpha1.ShootReferenceControllerConfiguration{
+	Expect(reference.AddToManager(mgr, testNamespace.Name, controllermanagerconfigv1alpha1.SeedReferenceControllerConfiguration{
 		ConcurrentSyncs: ptr.To(5),
 	})).To(Succeed())
 
