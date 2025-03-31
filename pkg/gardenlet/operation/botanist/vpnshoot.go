@@ -34,7 +34,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
-		SeedPodNetworkV4:                     b.Seed.GetInfo().Spec.Networks.Pods,
+		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
 	}
 
 	return vpnshoot.New(

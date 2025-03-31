@@ -77,7 +77,7 @@ var _ = Describe("VPNShoot", func() {
 				Header:      reversedVPNHeader,
 				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
-			SeedPodNetworkV4: "10.1.0.0/16",
+			SeedPodNetwork: "10.1.0.0/16",
 			Network: NetworkValues{
 				PodCIDRs:     []net.IPNet{{IP: net.ParseIP("10.0.1.0"), Mask: net.CIDRMask(24, 32)}},
 				ServiceCIDRs: []net.IPNet{{IP: net.ParseIP("10.0.0.0"), Mask: net.CIDRMask(24, 32)}},
@@ -460,8 +460,8 @@ var _ = Describe("VPNShoot", func() {
 						Value: "true",
 					},
 					corev1.EnvVar{
-						Name:  "SEED_POD_NETWORK_V4",
-						Value: values.SeedPodNetworkV4,
+						Name:  "SEED_POD_NETWORK",
+						Value: values.SeedPodNetwork,
 					},
 					corev1.EnvVar{
 						Name:  "SHOOT_POD_NETWORKS",
