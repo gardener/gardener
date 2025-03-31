@@ -89,13 +89,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				GetETCDSecretNamespace: func() string {
 					return namespace
 				},
-				ListETCDEncryptionSecretsFunc: func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error) {
-					secretList := &corev1.SecretList{}
-					if err := runtimeClient.List(ctx, secretList, namespace, matchLabels); err != nil {
-						return nil, err
-					}
-
-					return secretList, nil
+				GetRuntimeClient: func() client.Client {
+					return runtimeClient
 				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
@@ -108,9 +103,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				GetETCDSecretNamespace: func() string {
 					return namespace
 				},
-				ListETCDEncryptionSecretsFunc: func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error) {
-					secretList := &corev1.SecretList{}
-					return secretList, runtimeClient.List(ctx, secretList, namespace, matchLabels)
+				GetRuntimeClient: func() client.Client {
+					return runtimeClient
 				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
@@ -123,9 +117,8 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				GetServiceAccountKeySecretNamespace: func() string {
 					return namespace
 				},
-				ListServiceAccountKeySecretsFunc: func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error) {
-					secretList := &corev1.SecretList{}
-					return secretList, runtimeClient.List(ctx, secretList, namespace, matchLabels)
+				GetRuntimeClient: func() client.Client {
+					return runtimeClient
 				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetServiceAccountKeyRotation: func() *gardencorev1beta1.ServiceAccountKeyRotation {

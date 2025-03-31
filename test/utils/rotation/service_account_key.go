@@ -20,7 +20,7 @@ import (
 type ServiceAccountKeyVerifier struct {
 	SecretsManagerLabelSelector         client.MatchingLabels
 	GetServiceAccountKeyRotation        func() *gardencorev1beta1.ServiceAccountKeyRotation
-	ListServiceAccountKeySecretsFunc    func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error)
+	GetRuntimeClient                    func() client.Client
 	GetServiceAccountKeySecretNamespace func() string
 
 	secretsBefore   SecretConfigNamesToSecrets
@@ -34,10 +34,12 @@ const (
 
 // Before is called before the rotation is started.
 func (v *ServiceAccountKeyVerifier) Before(ctx context.Context) {
+	runtimeClient := v.GetRuntimeClient()
+
 	By("Verify old service account key secret")
 	Eventually(func(g Gomega) {
-		secretList, err := v.ListServiceAccountKeySecretsFunc(ctx, client.InNamespace(v.GetServiceAccountKeySecretNamespace()), v.SecretsManagerLabelSelector)
-		g.Expect(err).NotTo(HaveOccurred())
+		secretList := &corev1.SecretList{}
+		Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetServiceAccountKeySecretNamespace()), v.SecretsManagerLabelSelector)).To(Succeed())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[serviceAccountKey]).To(HaveLen(1), "service account key secret should get created, but not rotated yet")
@@ -80,10 +82,11 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 	Expect(serviceAccountKeyRotation.LastInitiationFinishedTime).NotTo(BeNil())
 	Expect(serviceAccountKeyRotation.LastInitiationFinishedTime.After(serviceAccountKeyRotation.LastInitiationTime.Time)).To(BeTrue())
 
+	runtimeClient := v.GetRuntimeClient()
 	By("Verify service account key bundle secret")
 	Eventually(func(g Gomega) {
-		secretList, err := v.ListServiceAccountKeySecretsFunc(ctx, client.InNamespace(v.GetServiceAccountKeySecretNamespace()), v.SecretsManagerLabelSelector)
-		g.Expect(err).NotTo(HaveOccurred())
+		secretList := &corev1.SecretList{}
+		Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetServiceAccountKeySecretNamespace()), v.SecretsManagerLabelSelector)).To(Succeed())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[serviceAccountKey]).To(HaveLen(2), "service account key secret should get rotated, but old service account key is kept")
@@ -112,10 +115,11 @@ func (v *ServiceAccountKeyVerifier) AfterCompleted(ctx context.Context) {
 	Expect(serviceAccountKeyRotation.LastInitiationFinishedTime).To(BeNil())
 	Expect(serviceAccountKeyRotation.LastCompletionTriggeredTime).To(BeNil())
 
+	runtimeClient := v.GetRuntimeClient()
 	By("Verify new service account key secret")
 	Eventually(func(g Gomega) {
-		secretList, err := v.ListServiceAccountKeySecretsFunc(ctx, client.InNamespace(v.GetServiceAccountKeySecretNamespace()), v.SecretsManagerLabelSelector)
-		g.Expect(err).NotTo(HaveOccurred())
+		secretList := &corev1.SecretList{}
+		Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetServiceAccountKeySecretNamespace()), v.SecretsManagerLabelSelector)).To(Succeed())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[serviceAccountKey]).To(HaveLen(1), "old service account key secret should get cleaned up")

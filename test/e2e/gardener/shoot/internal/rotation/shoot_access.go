@@ -256,6 +256,8 @@ func (v *ShootAccessVerifier) AfterCompleted(_ context.Context) {
 
 // Cleanup is passed to ginkgo.DeferCleanup.
 func (v *ShootAccessVerifier) Cleanup() {
+	// TODO(Wieneo): drop this lookup and use the new flags from the e2e package once the test/e2e/gardener package no longer uses
+	// the test framework (when finishing https://github.com/gardener/gardener/issues/11379)
 	if flag.Lookup("existing-shoot-name").Value.String() == "" {
 		// we only have to clean up if we are using an existing shoot, otherwise the shoot will be deleted
 		return

@@ -33,7 +33,7 @@ import (
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
-func testCredentialRotation(s *ShootContext, shootVerifiers rotationutils.Verifiers, utilsverifiers rotationutils.Verifiers, startRotationAnnotation, completeRotationAnnotation string) {
+func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rotationutils.Verifiers, startRotationAnnotation, completeRotationAnnotation string) {
 	// the verifier interface requires that we pass a context to some of the verifier functions
 	// this is not needed anymore for refactored tests as these use the SpecContext supplied by the "It" statement
 	// Also we cannot pass a nil as the context argument as this makes the linter unhappy :(
@@ -47,7 +47,7 @@ func testCredentialRotation(s *ShootContext, shootVerifiers rotationutils.Verifi
 	// This is a problem as we removed the "top-level" "It" statements during the refactoring of this test
 	// Until all verifiers are refactored, we need to instantiate separate "It" statements for all shared verifiers to allow for assertions
 	for _, k := range utilsverifiers {
-		It(fmt.Sprintf("Verify before for %s", reflect.TypeOf(k).String()), func(ctx SpecContext) {
+		It(fmt.Sprintf("Verify before for %T", k), func(ctx SpecContext) {
 			k.Before(ctx)
 		}, SpecTimeout(5*time.Minute))
 	}
@@ -57,9 +57,9 @@ func testCredentialRotation(s *ShootContext, shootVerifiers rotationutils.Verifi
 			v1beta1constants.GardenerOperation: startRotationAnnotation,
 		})
 
-		itShouldEventuallyNotHaveOperationAnnotation(s)
+		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Shoot)
 
-		It("Rotation in preparing status", func(ctx SpecContext) {
+		It("Rotation should be in preparing status", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) {
 				g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Shoot), s.Shoot)).To(Succeed())
 				shootVerifiers.ExpectPreparingStatus(g)
@@ -70,7 +70,7 @@ func testCredentialRotation(s *ShootContext, shootVerifiers rotationutils.Verifi
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
 		shootVerifiers.AfterPrepared(context.TODO())
 		for _, k := range utilsverifiers {
-			It(fmt.Sprintf("Verify after prepared for %s", reflect.TypeOf(k).String()), func(ctx SpecContext) {
+			It(fmt.Sprintf("Verify after prepared for %T", k), func(ctx SpecContext) {
 				k.AfterPrepared(ctx)
 			})
 		}
@@ -79,13 +79,13 @@ func testCredentialRotation(s *ShootContext, shootVerifiers rotationutils.Verifi
 	testCredentialRotationComplete(s, shootVerifiers, utilsverifiers, completeRotationAnnotation)
 }
 
-func testCredentialRotationComplete(s *ShootContext, shootVerifiers rotationutils.Verifiers, utilsverifiers rotationutils.Verifiers, completeRotationAnnotation string) {
+func testCredentialRotationComplete(s *ShootContext, shootVerifiers, utilsverifiers rotationutils.Verifiers, completeRotationAnnotation string) {
 	if completeRotationAnnotation != "" {
 		ItShouldAnnotateShoot(s, map[string]string{
 			v1beta1constants.GardenerOperation: completeRotationAnnotation,
 		})
 
-		itShouldEventuallyNotHaveOperationAnnotation(s)
+		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Shoot)
 
 		It("Rotation in completing status", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) {
@@ -99,7 +99,7 @@ func testCredentialRotationComplete(s *ShootContext, shootVerifiers rotationutil
 
 		shootVerifiers.AfterCompleted(context.TODO())
 		for _, k := range utilsverifiers {
-			It(fmt.Sprintf("Verify after completed for %s", reflect.TypeOf(k).String()), func(ctx SpecContext) {
+			It(fmt.Sprintf("Verify after completed for %T", k), func(ctx SpecContext) {
 				k.AfterCompleted(ctx)
 			})
 		}
@@ -118,7 +118,7 @@ func testCredentialRotationComplete(s *ShootContext, shootVerifiers rotationutil
 func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers rotationutils.Verifiers, utilsverifiers rotationutils.Verifiers) {
 	shootVerifiers.Before(context.TODO())
 	for _, k := range utilsverifiers {
-		It(fmt.Sprintf("Verify before for %s", reflect.TypeOf(k).String()), func(ctx SpecContext) {
+		It(fmt.Sprintf("Verify before for %T", k), func(ctx SpecContext) {
 			k.Before(ctx)
 		}, SpecTimeout(5*time.Minute))
 	}
@@ -141,7 +141,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
 	})
 
-	itShouldEventuallyNotHaveOperationAnnotation(s)
+	ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Shoot)
 
 	It("Rotation in preparing without workers rollout status", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
@@ -171,7 +171,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 			afterStartMachinePodNames.Insert(item.Name)
 		}
 
-		Expect(beforeStartMachinePodNames.Equal(afterStartMachinePodNames)).To(BeTrue())
+		Expect(beforeStartMachinePodNames.UnsortedList()).To(ConsistOf(afterStartMachinePodNames.UnsortedList()))
 	}, SpecTimeout(time.Minute))
 
 	It("Ensure all worker pools are marked as 'pending for roll out'", func() {
@@ -241,13 +241,6 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 	testCredentialRotationComplete(s, shootVerifiers, utilsverifiers, v1beta1constants.OperationRotateCredentialsComplete)
 }
 
-func itShouldEventuallyNotHaveOperationAnnotation(s *ShootContext) {
-	It("Should not have operation annotation", func(ctx SpecContext) {
-		Eventually(ctx, s.GardenKomega.Object(s.Shoot)).WithPolling(2 * time.Second).Should(
-			HaveField("ObjectMeta.Annotations", Not(HaveKey(v1beta1constants.GardenerOperation))))
-	}, SpecTimeout(time.Minute))
-}
-
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
 		test := func(s *ShootContext, withoutWorkersRollout bool) {
@@ -291,9 +284,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					GetETCDSecretNamespace: func() string {
 						return s.Shoot.Status.TechnicalID
 					},
-					ListETCDEncryptionSecretsFunc: func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error) {
-						secretList := &corev1.SecretList{}
-						return secretList, s.SeedClient.List(ctx, secretList, namespace, matchLabels)
+					GetRuntimeClient: func() client.Client {
+						return s.SeedClient
 					},
 					SecretsManagerLabelSelector: rotation.ManagedByGardenletSecretsManager,
 					GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
@@ -306,9 +298,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					GetServiceAccountKeySecretNamespace: func() string {
 						return s.Shoot.Status.TechnicalID
 					},
-					ListServiceAccountKeySecretsFunc: func(ctx context.Context, namespace client.InNamespace, matchLabels client.MatchingLabels) (*corev1.SecretList, error) {
-						secretList := &corev1.SecretList{}
-						return secretList, s.SeedClient.List(ctx, secretList, namespace, matchLabels)
+					GetRuntimeClient: func() client.Client {
+						return s.SeedClient
 					},
 					SecretsManagerLabelSelector: rotation.ManagedByGardenletSecretsManager,
 					GetServiceAccountKeyRotation: func() *gardencorev1beta1.ServiceAccountKeyRotation {
@@ -355,8 +346,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldWaitForShootToBeDeleted(s)
 		}
 
-		Context("Shoot with workers", Label("basic"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false)
+		Context("Shoot with workers", Label("basic"), func() {
+			Context("with workers rollout", Label("with-workers-rollout"), Ordered, func() {
+				test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false)
+			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, func() {
 				var s *ShootContext
