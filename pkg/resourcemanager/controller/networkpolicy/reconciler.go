@@ -200,6 +200,13 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 		}
 	)
 
+	// If the namespace of the Service is terminating, we don't want to create or maintain any policies. The Service
+	// itself is expected to disappear soon (namespace controller cleans up all resources on namespace deletion), so
+	// whatever we would do here will become obsolete very soon.
+	if !namespaceNames.Has(service.Namespace) {
+		return nil, nil, nil
+	}
+
 	for _, p := range service.Spec.Ports {
 		port := p
 		addTasksForRelevantNamespacesAndPort(networkingv1.NetworkPolicyPort{Protocol: &port.Protocol, Port: &port.TargetPort}, "")
