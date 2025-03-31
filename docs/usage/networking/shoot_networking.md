@@ -68,7 +68,6 @@ A smaller IP range per node means more `podCIDRs` and thus the ability to provis
 apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 spec:
-spec:
   kubernetes:
     kubeControllerManager:
       nodeCIDRMaskSize: 24 # (default)
@@ -92,27 +91,28 @@ With the configuration above, a Shoot cluster can at most have **32 nodes** whic
 
 Some network ranges are reserved for specific use-cases in the communication between seeds and shoots.
 
-| IPv  | CIDR                  | Name                         | Purpose                                                                                                                              |
-|------|-----------------------|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| IPv6 | fd8f:6d53:b97a:1::/96 | Default VPN Range            |                                                                                                                                      |
-| IPv4 | 240.0.0.0/8           | Kube-ApiServer Mapping Range | Used for the `kubernetes.default.svc.cluster.local` service in a shoot                                                               |
-| IPv4 | 241.0.0.0/8           | Seed Pod Mapping Range       | Used for allowing overlapping IPv4 networks between shoot and seed. Requires `NewVPN` feature flag enabled + non-HA control plane.   |
-| IPv4 | 242.0.0.0/8           | Shoot Node Mapping Range     |                                                                                                                                      |
-| IPv4 | 243.0.0.0/8           | Shoot Service Mapping Range  |                                                                                                                                      |
-| IPv4 | 244.0.0.0/8           | Shoot Pod Mapping Range      |                                                                                                                                      |
+| IPv  | CIDR                  | Name                         | Purpose                                                                                                                           |
+|------|-----------------------|------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| IPv6 | fd8f:6d53:b97a:1::/96 | Default VPN Range            |                                                                                                                                   |
+| IPv4 | 240.0.0.0/8           | Kube-ApiServer Mapping Range | Used for the `kubernetes.default.svc.cluster.local` service in a shoot                                                            |
+| IPv4 | 241.0.0.0/8           | Seed Pod Mapping Range       | Used for allowing overlapping IPv4 networks between shoot and seed. Requires non-HA control plane. Only used within the vpn pods  |
+| IPv4 | 242.0.0.0/8           | Shoot Node Mapping Range     | Used for allowing overlapping IPv4 networks between shoot and seed. Requires non-HA control plane. Only used within the vpn pods  |
+| IPv4 | 243.0.0.0/8           | Shoot Service Mapping Range  | Used for allowing overlapping IPv4 networks between shoot and seed. Requires non-HA control plane. Only used within the vpn pods  |
+| IPv4 | 244.0.0.0/8           | Shoot Pod Mapping Range      | Used for allowing overlapping IPv4 networks between shoot and seed. Requires non-HA control plane. Only used within the vpn pods  |
 
 > :warning: Do not use any of the CIDR ranges mentioned above for any of the node, pod or service networks.
 > Gardener will prevent their creation. Pre-existing shoots using reserved ranges will still work, though it is recommended
 > to recreate them with compatible network ranges.
 
-## Overlapping Networks between Seed and Shoot
-By default, the seed and shoot clusters must have non-overlapping network ranges and gardener will enforce disjunct ranges.
-However, under certain conditions it is possible to allow overlapping network ranges:
-1. The feature gate `NewVPN` must be enabled.
-2. The seed cluster must have a single control plane (non-HA).
-3. The shoot cluster must be either single-stack IPv4 or dual-stack IPv4/IPv6.
-4. The shoot cluster networks don't use the reserved ranges mentioned above.
+## Overlapping IPv4 Networks between Seed and Shoot
+By default, the seed and shoot clusters must have non-overlapping IPv4 network ranges and gardener will enforce disjunct ranges.
+However, under certain conditions it is possible to allow overlapping IPv4 network ranges:
+1. The seed cluster must have a single control plane (non-HA).
+2. The shoot cluster need be either single-stack IPv4 or dual-stack IPv4/IPv6.
+3. The shoot cluster networks don't use the reserved ranges mentioned above.
 
-> **Note:** if the shoot cluster is single-stack IPv6, the network ranges should be non-overlapping by default.
+> **Note:** single-stack IPv6 shoots are usually not affected due to the vastly larger address space. However, 
+> Gardener still enforces the non-overlapping condition for IPv6 networks to avoid any potential issues.
 
-If all conditions are met, the seed and shoot clusters can have overlapping (v4) network ranges. The overlapping ranges are mapped to the reserved ranges mentioned above within the VPN network.
+If all conditions are met, the seed and shoot clusters can have overlapping (IPv4) network ranges.
+The overlapping ranges are mapped to the reserved ranges mentioned above within the VPN network.
