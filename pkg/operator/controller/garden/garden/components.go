@@ -1541,5 +1541,7 @@ func (r *Reconciler) newx509CertificateExporter(garden *operatorv1alpha1.Garden)
 		x509certificateexporter.SuffixRuntime,
 		"garden",
 		garden.Spec.RuntimeCluster.WorkerGroups,
+		garden.Spec.RuntimeCluster.CertificateConfigMapKeys,
+		garden.Spec.RuntimeCluster.CertificateSecretKeys,
 	)
 }

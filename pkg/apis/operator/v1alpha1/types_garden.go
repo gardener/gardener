@@ -104,6 +104,10 @@ type RuntimeCluster struct {
 	// WorkerGroups contains the worker group representations
 	// +optional
 	WorkerGroups map[string]WorkerGroup `json:"workerGroups,omitempty"`
+	// CertificateSecretKeys is a list of secret keys that will be monitored for certificate expirations
+	CertificateSecretKeys []string `json:"certificateSecretKeys,omitempty"`
+	// CertificateConfigMapKeys is a list of configmap keys that will be monitored for certificate expirations
+	CertificateConfigMapKeys []string `json:"certificateConfigMapKeys,omitempty"`
 }
 
 // Ingress configures the Ingress specific settings of the runtime cluster.
@@ -184,6 +188,7 @@ type HostCertificates struct {
 }
 
 // WorkerGroup describes worker groups and configures paths to host certificates
+// Parameters are fed to the x509-certificate-exporter DaemonSet
 type WorkerGroup struct {
 	// Selector is a label selector that selects the worker nodes of this group.
 	// +optional

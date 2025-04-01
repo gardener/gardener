@@ -27,6 +27,7 @@ func NewX509CertificateExporter(
 	suffix string,
 	prometheusInstanceName string,
 	workerGroups map[string]operatorv1alpha1.WorkerGroup,
+	configmapkeys, secretkeys []string,
 ) (
 	component.DeployWaiter,
 	error,
@@ -37,11 +38,8 @@ func NewX509CertificateExporter(
 	}
 
 	return x.New(c, nil, gardenNamespaceName, x.Values{
-		SecretTypes: x.SecretTypeList{
-			x.SecretType{Type: "kubernetes.io/tls", Key: `.*.crt`},
-			x.SecretType{Type: "istio.io/ca-root", Key: `.*cert.*\.pem`},
-		},
-		ConfigMapKeys:             x.ConfigMapKeys{"ca.crt", "root-cert.pem"},
+		SecretTypes:               secretkeys,
+		ConfigMapKeys:             configmapkeys,
 		CacheDuration:             metav1.Duration{Duration: 24 * time.Hour},
 		Image:                     image.String(),
 		PriorityClassName:         priorityClassName,

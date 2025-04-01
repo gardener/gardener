@@ -39,7 +39,7 @@ const (
 	SuffixRuntime                    = "-runtime"
 	SuffixShoot                      = "-shoot"
 	labelComponent                   = "x509-certificate-exporter"
-	defaultCertificateRenewalDays   = 14
+	defaultCertificateRenewalDays    = 14
 	defaultCertificateExpirationDays = 7
 	defaultReplicas                  = 1
 	defaultCertCacheDuration         = 24 * time.Hour
@@ -55,9 +55,9 @@ type x509CertificateExporter struct {
 // Configurations for the x509 certificate exporter
 type Values struct {
 	// SecretTypes that should be watched by the exporter.
-	SecretTypes SecretTypeList
+	SecretTypes []string
 	// ConfigMapKeys that should be watched by the exporter.
-	ConfigMapKeys ConfigMapKeys
+	ConfigMapKeys []string
 	// CacheDuration sets cache lifespan, usually cache is
 	// regenerated a bit more than half that value.
 	CacheDuration metav1.Duration
@@ -71,14 +71,14 @@ type Values struct {
 	NameSuffix string
 	// IncludeNamespaces are namespaces from which secrets are monitored.
 	// If non-zero length excludes all else.
-	IncludeNamespaces IncludeNamespaces
+	IncludeNamespaces []string
 	// ExcludeNamespaces namespaces from which secrets are not monitored.
 	// If non-zero length includes all else.
-	ExcludeNamespaces ExcludeNamespaces
+	ExcludeNamespaces []string
 	// IncludeLabels includes labels, similar to the namespaces vars.
-	IncludeLabels IncludeLabels
+	IncludeLabels []string
 	// ExcludeLabels exludes labels, similar to the namespaces vars.
-	ExcludeLabels ExcludeLabels
+	ExcludeLabels []string
 	// WorkerGroups that should be monitored from nodes
 	WorkerGroups map[string]operatorv1alpha1.WorkerGroup
 	// CertificateExpirationDays is the number of days before expiration that will trigger a critical alert
