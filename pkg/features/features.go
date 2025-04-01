@@ -87,7 +87,6 @@ const (
 	// proxy protocol headers of untrusted clients on the apiserver-proxy port.
 	// owner: @Wieneo @timebertt
 	// alpha: v1.113.0
-	// beta: v1.116.0
 	RemoveAPIServerProxyLegacyPort featuregate.Feature = "RemoveAPIServerProxyLegacyPort"
 
 	// IstioTLSTermination enables TLS termination for the Istio Ingress Gateway instead of TLS termination at the kube-apiserver.
@@ -131,7 +130,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	NodeAgentAuthorizer:                      {Default: true, PreRelease: featuregate.Beta},
 	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
-	RemoveAPIServerProxyLegacyPort:           {Default: true, PreRelease: featuregate.Beta},
+	RemoveAPIServerProxyLegacyPort:           {Default: false, PreRelease: featuregate.Alpha},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
 }
 
