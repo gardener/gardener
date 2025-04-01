@@ -422,6 +422,27 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy2), networkPolicy1)).To(BeNotFoundError())
 			}).Should(Succeed())
 		})
+
+		When("label selector exceeds maximum length of 63 characters for labels", func() {
+			BeforeEach(func() {
+				service.Name = "this-is-a-very-long-svc-name-which-will-exceed-max-length"
+			})
+
+			It("should run into failures", func() {
+				By("Ensure no policies are created")
+				Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
+					networkPolicyList := &networkingv1.NetworkPolicyList{}
+					g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
+					return networkPolicyList.Items
+				}).Should(BeEmpty())
+
+				By("Ensure controller fails creating policies because selector is too long")
+				Eventually(func() string { return logBuffer.String() }).Should(And(
+					ContainSubstring("spec.ingress[0].from[0].podSelector.matchLabels: Invalid value:"),
+					ContainSubstring("name part must be no more than 63 characters"),
+				))
+			})
+		})
 	})
 
 	Context("service in non-handled namespace", func() {
