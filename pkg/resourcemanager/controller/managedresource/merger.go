@@ -100,10 +100,7 @@ func merge(origin string, desired, current *unstructured.Unstructured, forceOver
 	if annotations[resourcesv1alpha1.PreserveReplicas] == "true" {
 		preserveReplicas = true
 	}
-	var preserveResources bool
-	if annotations[resourcesv1alpha1.PreserveResources] == "true" {
-		preserveResources = true
-	}
+	preserveResources := annotations[resourcesv1alpha1.PreserveResources] == "true"
 
 	switch newObject.GroupVersionKind().GroupKind() {
 	case appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind(), extensionsv1beta1.SchemeGroupVersion.WithKind("Deployment").GroupKind():
