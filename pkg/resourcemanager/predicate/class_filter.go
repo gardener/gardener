@@ -42,7 +42,7 @@ func NewClassFilter(class string) *ClassFilter {
 	}
 
 	finalizer := FinalizerName + "-" + class
-	if class == resourcemanagerconfigv1alpha1.DefaultResourceClass {
+	if class == resourcemanagerconfigv1alpha1.DefaultResourceClass || class == resourcemanagerconfigv1alpha1.AllResourceClass {
 		finalizer = FinalizerName
 	}
 
@@ -64,6 +64,10 @@ func (f *ClassFilter) FinalizerName() string {
 
 // Responsible checks whether an object should be managed by the actual controller instance
 func (f *ClassFilter) Responsible(o runtime.Object) bool {
+	if f.resourceClass == resourcemanagerconfigv1alpha1.AllResourceClass {
+		return true
+	}
+
 	r := o.(*resourcesv1alpha1.ManagedResource)
 	c := ptr.Deref(r.Spec.Class, "")
 	return c == f.resourceClass || (c == "" && f.resourceClass == resourcemanagerconfigv1alpha1.DefaultResourceClass)
@@ -78,11 +82,11 @@ func (f *ClassFilter) IsTransferringResponsibility(mr *resourcesv1alpha1.Managed
 func (f *ClassFilter) IsWaitForCleanupRequired(mr *resourcesv1alpha1.ManagedResource) bool {
 	for _, finalizer := range mr.GetFinalizers() {
 		if strings.HasPrefix(finalizer, FinalizerName) {
-			// mr has a controller responsible for it's resources deletion
+			// mr has a controller responsible for its resources deletion
 			return f.Responsible(mr) && finalizer != f.objectFinalizer
 		}
 	}
-	// mr doesn't have a controller responsible for it's resources deletion
+	// mr doesn't have a controller responsible for its resources deletion
 	return false
 }
 
