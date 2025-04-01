@@ -65,7 +65,10 @@ var _ = Describe("ShootState controller test", func() {
 
 		addFinalizer = func(shootState *gardencorev1beta1.ShootState) {
 			By("Add ShootState finalizer")
-			Expect(controllerutils.AddFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
+			EventuallyWithOffset(1, func(g Gomega) {
+				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+				g.ExpectWithOffset(1, controllerutils.AddFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
+			}).Should(Succeed())
 		}
 
 		By("Create Shoot")
@@ -90,7 +93,10 @@ var _ = Describe("ShootState controller test", func() {
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 
 			By("Delete ShootState")
-			Expect(controllerutils.RemoveFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+				g.Expect(controllerutils.RemoveFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
+			}).Should(Succeed())
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootState))).To(Succeed())
 
 			By("Ensure ShootState is gone")
