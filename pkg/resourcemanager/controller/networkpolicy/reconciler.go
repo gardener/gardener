@@ -162,7 +162,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 			port networkingv1.NetworkPolicyPort,
 			policyID string,
 			namespaceName string,
-			podSelector metav1.LabelSelector,
+			podLabelSelector metav1.LabelSelector,
 			ingressObjectMetaFunc func(string, string, string) metav1.ObjectMeta,
 			egressObjectMetaFunc func(string, string, string) metav1.ObjectMeta,
 		) {
@@ -178,7 +178,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 				desiredObjectMetaKeys = append(desiredObjectMetaKeys, key(objectMeta))
 
 				taskFns = append(taskFns, func(ctx context.Context) error {
-					return reconcileFn(ctx, service, port, objectMeta, namespaceName, podSelector)
+					return reconcileFn(ctx, service, port, objectMeta, namespaceName, podLabelSelector)
 				})
 			}
 		}
@@ -281,21 +281,16 @@ func (r *Reconciler) reconcileIngressPolicy(
 	port networkingv1.NetworkPolicyPort,
 	networkPolicyObjectMeta metav1.ObjectMeta,
 	namespaceName string,
-	podSelector metav1.LabelSelector,
+	podLabelSelector metav1.LabelSelector,
 ) error {
-	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
-		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
-		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
-
+	return r.reconcilePolicy(ctx, service, networkPolicyObjectMeta, podLabelSelector, func(networkPolicy *networkingv1.NetworkPolicy, podLabelSelector metav1.LabelSelector) {
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
 			"ingress %s traffic to port %s for pods selected by the %s service selector from pods running in namespace %s labeled "+
-			"with %s.", *port.Protocol, port.Port.String(), client.ObjectKeyFromObject(service), namespaceName, podSelector))
+			"with %s.", *port.Protocol, port.Port.String(), client.ObjectKeyFromObject(service), namespaceName, podLabelSelector))
 
 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
 			From: []networkingv1.NetworkPolicyPeer{{
-				PodSelector:       &podSelector,
+				PodSelector:       &podLabelSelector,
 				NamespaceSelector: ingressNamespaceSelectorFor(service.Namespace, namespaceName),
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{port},
@@ -303,11 +298,7 @@ func (r *Reconciler) reconcileIngressPolicy(
 		networkPolicy.Spec.Egress = nil
 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: service.Spec.Selector}
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
-
-		return nil
-	}, controllerutils.SkipEmptyPatch{})
-
-	return err
+	})
 }
 
 func (r *Reconciler) reconcileEgressPolicy(
@@ -318,12 +309,7 @@ func (r *Reconciler) reconcileEgressPolicy(
 	namespaceName string,
 	podLabelSelector metav1.LabelSelector,
 ) error {
-	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
-		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
-		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
-
+	return r.reconcilePolicy(ctx, service, networkPolicyObjectMeta, podLabelSelector, func(networkPolicy *networkingv1.NetworkPolicy, podLabelSelector metav1.LabelSelector) {
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
 			"egress %s traffic to port %s from pods running in namespace %s labeled with %s to pods selected by the %s service "+
 			"selector.", *port.Protocol, port.Port.String(), namespaceName, podLabelSelector, client.ObjectKeyFromObject(service)))
@@ -338,7 +324,23 @@ func (r *Reconciler) reconcileEgressPolicy(
 		}}
 		networkPolicy.Spec.PodSelector = podLabelSelector
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
+	})
+}
 
+func (r *Reconciler) reconcilePolicy(
+	ctx context.Context,
+	service *corev1.Service,
+	networkPolicyObjectMeta metav1.ObjectMeta,
+	podLabelSelector metav1.LabelSelector,
+	mutate func(*networkingv1.NetworkPolicy, metav1.LabelSelector),
+) error {
+	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
+		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
+		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
+
+		mutate(networkPolicy, podLabelSelector)
 		return nil
 	}, controllerutils.SkipEmptyPatch{})
 
