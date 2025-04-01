@@ -386,7 +386,7 @@ var _ = Describe("ResourceManager", func() {
 					ClusterID:     &clusterIdentity,
 					ResourceClass: &resourceClass,
 					GarbageCollector: resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{
-						Enabled:    true,
+						Enabled:    !bootstrapControlPlaneNode,
 						SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 					},
 					Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
@@ -532,6 +532,7 @@ var _ = Describe("ResourceManager", func() {
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
 								"projected-token-mount.resources.gardener.cloud/skip":           "true",
+								"system-components-config.resources.gardener.cloud/skip":        "true",
 								"networking.gardener.cloud/to-dns":                              "allowed",
 								"networking.gardener.cloud/to-runtime-apiserver":                "allowed",
 								"networking.resources.gardener.cloud/to-kube-apiserver-tcp-443": "allowed",
@@ -696,12 +697,15 @@ var _ = Describe("ResourceManager", func() {
 			}
 
 			if bootstrapControlPlaneNode {
+				deployment.Spec.Replicas = ptr.To[int32](1)
+				deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
 				deployment.Spec.Template.Spec.Tolerations = append(deployment.Spec.Template.Spec.Tolerations,
 					corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
 					corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
 				)
 				deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}}
 				deployment.Spec.Template.Spec.HostNetwork = true
+				deployment.Spec.Template.Spec.PriorityClassName = "system-cluster-critical"
 			} else {
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 					MountPath: secretMountPathRootCA,
@@ -2524,6 +2528,10 @@ subjects:
 
 			When("bootstrap control plane node is set to true", func() {
 				BeforeEach(func() {
+					DeferCleanup(test.WithVar(&SuggestPort, func(string) (int, string, error) {
+						return 10250, "", nil
+					}))
+
 					configMap = configMapFor(&watchedNamespace, ForSourceAndTarget, false, true)
 					cfg.BootstrapControlPlaneNode = true
 					resourceManager = New(c, deployNamespace, sm, cfg)

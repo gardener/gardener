@@ -7,7 +7,6 @@ package botanist
 import (
 	"context"
 
-	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -22,42 +21,49 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-// DefaultResourceManager returns an instance of Gardener Resource Manager with defaults configured for being deployed in a Shoot namespace
+// DefaultResourceManager returns an instance of Gardener Resource Manager with defaults configured for being deployed
+// in a Shoot namespace.
 func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
-	seedVersion, err := semver.NewVersion(b.SeedClientSet.Version())
-	if err != nil {
-		return nil, err
-	}
-
 	var defaultNotReadyTolerationSeconds, defaultUnreachableTolerationSeconds *int64
 	if b.Config != nil && b.Config.NodeToleration != nil {
-		nodeToleration := b.Config.NodeToleration
-		defaultNotReadyTolerationSeconds = nodeToleration.DefaultNotReadyTolerationSeconds
-		defaultUnreachableTolerationSeconds = nodeToleration.DefaultUnreachableTolerationSeconds
+		defaultNotReadyTolerationSeconds = b.Config.NodeToleration.DefaultNotReadyTolerationSeconds
+		defaultUnreachableTolerationSeconds = b.Config.NodeToleration.DefaultUnreachableTolerationSeconds
 	}
 
-	return shared.NewTargetGardenerResourceManager(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, resourcemanager.Values{
-		ClusterIdentity:                           b.Seed.GetInfo().Status.ClusterIdentity,
-		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
-		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
-		IsWorkerless:                              b.Shoot.IsWorkerless,
-		KubernetesServiceHost:                     ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
-		LogLevel:                                  logger.InfoLevel,
-		LogFormat:                                 logger.FormatJSON,
-		NodeAgentReconciliationMaxDelay:           b.Shoot.OSCSyncJitterPeriod,
-		NodeAgentAuthorizerEnabled:                true,
-		NodeAgentAuthorizerAuthorizeWithSelectors: ptr.To(gardenerutils.IsAuthorizeWithSelectorsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, b.Shoot.KubernetesVersion)),
-		// TODO(shafeeqes): Remove PodTopologySpreadConstraints webhook once the
-		// MatchLabelKeysInPodTopologySpread feature gate is locked to true.
-		PodTopologySpreadConstraintsEnabled: gardenerutils.IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(b.Shoot.GetInfo()),
-		PriorityClassName:                   v1beta1constants.PriorityClassNameShootControlPlane400,
-		RuntimeKubernetesVersion:            seedVersion,
-		SchedulingProfile:                   v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
-		SecretNameServerCA:                  v1beta1constants.SecretNameCACluster,
-		SystemComponentTolerations:          gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
-		TargetNamespaces:                    []string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
-		TopologyAwareRoutingEnabled:         b.Shoot.TopologyAwareRoutingEnabled,
-	})
+	var (
+		newFunc = shared.NewTargetGardenerResourceManager
+		values  = resourcemanager.Values{
+			ClusterIdentity:                           b.Seed.GetInfo().Status.ClusterIdentity,
+			DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
+			DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
+			IsWorkerless:                              b.Shoot.IsWorkerless,
+			KubernetesServiceHost:                     ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
+			LogLevel:                                  logger.InfoLevel,
+			LogFormat:                                 logger.FormatJSON,
+			NodeAgentReconciliationMaxDelay:           b.Shoot.OSCSyncJitterPeriod,
+			NodeAgentAuthorizerEnabled:                true,
+			NodeAgentAuthorizerAuthorizeWithSelectors: ptr.To(gardenerutils.IsAuthorizeWithSelectorsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, b.Shoot.KubernetesVersion)),
+			// TODO(shafeeqes): Remove PodTopologySpreadConstraints webhook once the
+			// MatchLabelKeysInPodTopologySpread feature gate is locked to true.
+			PodTopologySpreadConstraintsEnabled: gardenerutils.IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(b.Shoot.GetInfo()),
+			PriorityClassName:                   v1beta1constants.PriorityClassNameShootControlPlane400,
+			RuntimeKubernetesVersion:            b.Seed.KubernetesVersion,
+			SchedulingProfile:                   v1beta1helper.ShootSchedulingProfile(b.Shoot.GetInfo()),
+			SecretNameServerCA:                  v1beta1constants.SecretNameCACluster,
+			SystemComponentTolerations:          gardenerutils.ExtractSystemComponentsTolerations(b.Shoot.GetInfo().Spec.Provider.Workers),
+			TargetNamespaces:                    []string{metav1.NamespaceSystem, v1beta1constants.KubernetesDashboardNamespace, corev1.NamespaceNodeLease},
+			TopologyAwareRoutingEnabled:         b.Shoot.TopologyAwareRoutingEnabled,
+		}
+	)
+
+	if b.Shoot.RunsControlPlane() {
+		newFunc = shared.NewCombinedGardenerResourceManager
+		values.NodeAgentAuthorizerEnabled = false // TODO(rfranzke): Revisit this once autonomous shoot clusters progress.
+		values.TargetNamespaces = nil
+		values.KubernetesServiceHost = nil
+	}
+
+	return newFunc(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, values)
 }
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager

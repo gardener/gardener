@@ -36,8 +36,27 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
-// NewRuntimeGardenerResourceManager instantiates a new `gardener-resource-manager` component
-// configured to reconcile objects in the runtime (seed) cluster.
+func runtimeGardenerResourceManagerDefaultValues() resourcemanager.Values {
+	return resourcemanager.Values{
+		ConcurrentSyncs:                   ptr.To(20),
+		HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
+		MaxConcurrentNetworkPolicyWorkers: ptr.To(20),
+		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
+			Namespace: v1beta1constants.GardenNamespace,
+			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
+				v1beta1constants.LabelApp:      nginxingress.LabelAppValue,
+				nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
+			}},
+		},
+		PodTopologySpreadConstraintsEnabled: false,
+		Replicas:                            ptr.To[int32](2),
+		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
+		ResponsibilityMode:                  resourcemanager.ForSource,
+	}
+}
+
+// NewRuntimeGardenerResourceManager instantiates a new `gardener-resource-manager` component configured to reconcile
+// objects in the runtime (seed) cluster.
 func NewRuntimeGardenerResourceManager(
 	c client.Client,
 	gardenNamespaceName string,
@@ -53,30 +72,28 @@ func NewRuntimeGardenerResourceManager(
 	}
 	image.WithOptionalTag(version.Get().GitVersion)
 
-	defaultValues := resourcemanager.Values{
-		ConcurrentSyncs:                   ptr.To(20),
-		HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
-		Image:                             image.String(),
-		MaxConcurrentNetworkPolicyWorkers: ptr.To(20),
-		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
-			Namespace: v1beta1constants.GardenNamespace,
-			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
-				v1beta1constants.LabelApp:      nginxingress.LabelAppValue,
-				nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
-			}},
-		},
-		PodTopologySpreadConstraintsEnabled: false,
-		Replicas:                            ptr.To[int32](2),
-		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
-		ResponsibilityMode:                  resourcemanager.ForSource,
-	}
+	defaultValues := runtimeGardenerResourceManagerDefaultValues()
+	defaultValues.Image = image.String()
 
 	applyDefaults(&values, defaultValues)
 	return resourcemanager.New(c, gardenNamespaceName, secretsManager, values), nil
 }
 
-// NewTargetGardenerResourceManager instantiates a new `gardener-resource-manager` component
-// configured to reconcile object in a target (shoot) cluster.
+func targetGardenerResourceManagerDefaultValues(namespaceName *string) resourcemanager.Values {
+	return resourcemanager.Values{
+		AlwaysUpdate:                       ptr.To(true),
+		ConcurrentSyncs:                    ptr.To(20),
+		HealthSyncPeriod:                   &metav1.Duration{Duration: time.Minute},
+		MaxConcurrentCSRApproverWorkers:    ptr.To(5),
+		MaxConcurrentHealthWorkers:         ptr.To(10),
+		MaxConcurrentTokenRequestorWorkers: ptr.To(5),
+		ResponsibilityMode:                 resourcemanager.ForTarget,
+		WatchedNamespace:                   namespaceName,
+	}
+}
+
+// NewTargetGardenerResourceManager instantiates a new `gardener-resource-manager` component configured to reconcile
+// objects in a target (shoot) cluster.
 func NewTargetGardenerResourceManager(
 	c client.Client,
 	namespaceName string,
@@ -92,17 +109,50 @@ func NewTargetGardenerResourceManager(
 	}
 	image.WithOptionalTag(version.Get().GitVersion)
 
-	defaultValues := resourcemanager.Values{
-		AlwaysUpdate:                       ptr.To(true),
-		ConcurrentSyncs:                    ptr.To(20),
-		HealthSyncPeriod:                   &metav1.Duration{Duration: time.Minute},
-		Image:                              image.String(),
-		MaxConcurrentCSRApproverWorkers:    ptr.To(5),
-		MaxConcurrentHealthWorkers:         ptr.To(10),
-		MaxConcurrentTokenRequestorWorkers: ptr.To(5),
-		ResponsibilityMode:                 resourcemanager.ForTarget,
-		WatchedNamespace:                   &namespaceName,
+	defaultValues := targetGardenerResourceManagerDefaultValues(&namespaceName)
+	defaultValues.Image = image.String()
+
+	applyDefaults(&values, defaultValues)
+	return resourcemanager.New(c, namespaceName, secretsManager, values), nil
+}
+
+func combinedGardenerResourceManagerDefaultValues() resourcemanager.Values {
+	var (
+		values        = resourcemanager.Values{}
+		runtimeValues = runtimeGardenerResourceManagerDefaultValues()
+		targetValues  = targetGardenerResourceManagerDefaultValues(nil)
+	)
+
+	applyDefaults(&values, runtimeValues)
+	applyDefaults(&values, targetValues)
+
+	values.ResourceClass = ptr.To(resourcemanagerconfigv1alpha1.AllResourceClass)
+	values.ResponsibilityMode = resourcemanager.ForSourceAndTarget
+	// TODO(rfranzke): Later, we should deploy two replicas (as usual) when there are at least two nodes in the
+	//  autonomous shoot cluster.
+	values.Replicas = ptr.To[int32](1)
+
+	return values
+}
+
+// NewCombinedGardenerResourceManager instantiates a new `gardener-resource-manager` component configured to reconcile
+// objects in an autonomous shoot cluster.
+func NewCombinedGardenerResourceManager(c client.Client,
+	namespaceName string,
+	secretsManager secretsmanager.Interface,
+	values resourcemanager.Values,
+) (
+	resourcemanager.Interface,
+	error,
+) {
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerResourceManager)
+	if err != nil {
+		return nil, err
 	}
+	image.WithOptionalTag(version.Get().GitVersion)
+
+	defaultValues := combinedGardenerResourceManagerDefaultValues()
+	defaultValues.Image = image.String()
 
 	applyDefaults(&values, defaultValues)
 	return resourcemanager.New(c, namespaceName, secretsManager, values), nil

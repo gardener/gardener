@@ -126,8 +126,9 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-machine-0")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-controller-manager-machine-0")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-scheduler-machine-0")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("gardener-resource-manager")})}),
 			))
-		}, SpecTimeout(5*time.Second))
+		}, SpecTimeout(time.Minute))
 
 		It("should join as worker node", func(ctx SpecContext) {
 			_, stdErr, err := execute(ctx, 1,
