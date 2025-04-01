@@ -16,7 +16,6 @@ set -o pipefail
 #     -p <file-name-prefix>               File name prefix for manifest files (e.g. '10-crd-')
 #     -l (Optional)                       If this argument is given then the generated CRDs will have label gardener.cloud/deletion-protected: "true"
 #     -k (Optional)                       If this argument is given then the generated CRDs will have annotation resources.gardener.cloud/keep-object: "true"
-#     -r <reason> (Optional)              If this argument is given then the generated CRDs will have annotation api-approved.kubernetes.io: "<reason>"
 #     --allow-dangerous-types (Optional)  If this argument is given then the CRD generation will tolerate issues related to dangerous types.
 #     --custom-package <group>=<package>  If this argument is given it supports generation for a package not listed explicitly, i.e. in another project reusing this script.
 #     <group>                             List of groups to generate (generate all if unset)
@@ -30,7 +29,6 @@ output_dir="$(pwd)"
 output_dir_temp="$(mktemp -d)"
 add_deletion_protection_label=false
 add_keep_object_annotation=false
-k8s_io_api_approval_reason="unapproved, temporarily squatting"
 crd_options=""
 declare -A custom_packages=()
 
@@ -201,11 +199,6 @@ parse_flags() {
     case "$1" in
     -p)
       file_name_prefix="$2"
-      shift
-      shift
-      ;;
-    -r)
-      k8s_io_api_approval_reason="$2"
       shift
       shift
       ;;
