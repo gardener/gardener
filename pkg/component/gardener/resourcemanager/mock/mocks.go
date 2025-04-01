@@ -97,6 +97,18 @@ func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
 }
 
+// SetBootstrapControlPlaneNode mocks base method.
+func (m *MockInterface) SetBootstrapControlPlaneNode(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetBootstrapControlPlaneNode", arg0)
+}
+
+// SetBootstrapControlPlaneNode indicates an expected call of SetBootstrapControlPlaneNode.
+func (mr *MockInterfaceMockRecorder) SetBootstrapControlPlaneNode(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetBootstrapControlPlaneNode", reflect.TypeOf((*MockInterface)(nil).SetBootstrapControlPlaneNode), arg0)
+}
+
 // SetReplicas mocks base method.
 func (m *MockInterface) SetReplicas(arg0 *int32) {
 	m.ctrl.T.Helper()

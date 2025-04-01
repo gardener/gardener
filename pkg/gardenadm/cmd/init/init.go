@@ -94,6 +94,21 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           flow.TaskFn(b.ApproveKubeletServerCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
 			Dependencies: flow.NewTaskIDs(bootstrapKubelet),
 		})
+		deployGardenerResourceManager = g.Add(flow.Task{
+			// TODO: Do this only when Network is not available on control plane nodes, i.e., only when
+			//  CNI/kube-proxy/CoreDNS are not ready/available yet.
+			Name: "Deploying gardener-resource-manager with bootstrap mode",
+			Fn: func(ctx context.Context) error {
+				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(true)
+				return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until gardener-resource-manager reports readiness",
+			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
