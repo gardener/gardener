@@ -5,6 +5,8 @@
 package v1beta1
 
 import (
+	"encoding/json"
+	"fmt"
 	"slices"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -160,11 +162,11 @@ func (v *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, ar
 		return slices.Contains(v.Architectures, architecture)
 	}
 	for _, capability := range v.CapabilitySets {
-		if slices.Contains(capability.Capabilities[constants.ArchitectureKey].Values, architecture) {
+		if slices.Contains(capability.Capabilities[constants.ArchitectureKey], architecture) {
 			return true
 		}
 	}
-	return slices.Contains(capabilities[constants.ArchitectureKey].Values, architecture)
+	return slices.Contains(capabilities[constants.ArchitectureKey], architecture)
 }
 
 // GetArchitectures returns the list of supported architectures for the machine image version.
@@ -213,8 +215,8 @@ type MachineType struct {
 
 // GetArchitecture returns the architecture of the machine type.
 func (m *MachineType) GetArchitecture() string {
-	if len(m.Capabilities[constants.ArchitectureKey].Values) == 1 {
-		return m.Capabilities[constants.ArchitectureKey].Values[0]
+	if len(m.Capabilities[constants.ArchitectureKey]) == 1 {
+		return m.Capabilities[constants.ArchitectureKey][0]
 	}
 	return ptr.Deref(m.Architecture, "")
 }
@@ -360,24 +362,43 @@ type InPlaceUpdates struct {
 
 // CapabilityValues contains capability values.
 // This is a workaround as the Protobuf generator can't handle a map with slice values.
-type CapabilityValues struct {
-	Values []string `json:"values,omitempty" protobuf:"bytes,1,rep,name=values"`
+// +protobuf.nullable=true
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+type CapabilityValues []string
+
+func (t CapabilityValues) String() string {
+	return fmt.Sprintf("%v", []string(t))
 }
 
 // Capabilities of a machine type or machine image.
+// +protobuf.options.(gogoproto.goproto_stringer)=false
 type Capabilities map[string]CapabilityValues
+
+func (t Capabilities) String() string {
+	return fmt.Sprintf("%v", map[string]CapabilityValues(t))
+}
 
 // CapabilitySet is a wrapper for Capabilities.
 // This is a workaround as the Protobuf generator can't handle a slice of maps.
 type CapabilitySet struct {
-	Capabilities `json:"capabilities,omitempty" protobuf:"bytes,1,rep,name=capabilities,casttype=Capabilities"`
+	Capabilities `json:"-" protobuf:"bytes,1,rep,name=capabilities,casttype=Capabilities"`
+}
+
+// UnmarshalJSON unmarshals the given data to a CapabilitySet.
+func (c *CapabilitySet) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &c.Capabilities)
+}
+
+// MarshalJSON marshals the CapabilitySet object to JSON.
+func (c *CapabilitySet) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.Capabilities)
 }
 
 // ExtractArchitectures extracts the architectures from the given capability sets.
 func ExtractArchitectures(capabilities []CapabilitySet) []string {
 	var architectures []string
 	for _, capabilitySet := range capabilities {
-		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey].Values {
+		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey] {
 			if !slices.Contains(architectures, architectureValue) {
 				architectures = append(architectures, architectureValue)
 			}

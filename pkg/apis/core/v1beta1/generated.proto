@@ -350,8 +350,12 @@ message CapabilitySet {
 
 // CapabilityValues contains capability values.
 // This is a workaround as the Protobuf generator can't handle a map with slice values.
+// +protobuf.nullable=true
+// +protobuf.options.(gogoproto.goproto_stringer)=false
 message CapabilityValues {
-  repeated string values = 1;
+  // items, if empty, will result in an empty slice
+
+  repeated string items = 1;
 }
 
 // CloudProfile represents certain properties about a provider environment.
