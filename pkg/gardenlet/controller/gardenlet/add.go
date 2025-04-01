@@ -5,8 +5,6 @@
 package gardenlet
 
 import (
-	"fmt"
-
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,11 +51,7 @@ func (r *Reconciler) AddToManager(
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 	if r.HelmRegistry == nil {
-		var err error
-		r.HelmRegistry, err = oci.NewHelmRegistry(r.GardenClient)
-		if err != nil {
-			return fmt.Errorf("failed creating new Helm registry: %w", err)
-		}
+		r.HelmRegistry = oci.NewHelmRegistry(r.GardenClient)
 	}
 	if r.ValuesHelper == nil {
 		r.ValuesHelper = gardenletdeployer.NewValuesHelper(&r.Config)
