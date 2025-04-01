@@ -20,4 +20,4 @@ spec:
     -mr-exclude-list="$MR_EXCLUDE_LIST"
     -resources-with-generated-name="$RESOURCES_WITH_GENERATED_NAME"
     -add-test-run-taint="$ADD_TEST_RUN_TAINT"
-  image: golang:1.24.1
+  image: golang:1.24.2
