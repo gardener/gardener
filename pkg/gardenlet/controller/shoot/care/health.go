@@ -730,6 +730,7 @@ func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinatio
 	return nil
 }
 
+// CheckNodesScaling returns an error and a string describing the scaling if there is a scaling happening
 func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList *corev1.NodeList, machineDeploymentList *machinev1alpha1.MachineDeploymentList, controlPlaneNamespace string) (string, error) {
 	var (
 		readyNodes          int
