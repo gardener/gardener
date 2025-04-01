@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -104,10 +105,22 @@ func run(ctx context.Context, opts *Options) error {
 			},
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
-		_ = g.Add(flow.Task{
+		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
 			Name:         "Waiting until gardener-resource-manager reports readiness",
 			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Wait,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying seed system resources",
+			Fn: func(ctx context.Context) error {
+				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{}).Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying shoot system resources",
+			Fn:           b.DeployShootSystem,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 	)
 
