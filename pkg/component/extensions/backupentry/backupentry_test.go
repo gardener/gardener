@@ -159,7 +159,7 @@ var _ = Describe("#BackupEntry", func() {
 			patch := client.MergeFrom(expected.DeepCopy())
 			expected.Status.LastError = nil
 			// remove operation annotation, add old timestamp annotation
-			expected.ObjectMeta.Annotations = map[string]string{
+			expected.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: fakeClock.Now().Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -180,7 +180,7 @@ var _ = Describe("#BackupEntry", func() {
 			patch := client.MergeFrom(expected.DeepCopy())
 			expected.Status.LastError = nil
 			// remove operation annotation, add up-to-date timestamp annotation
-			expected.ObjectMeta.Annotations = map[string]string{
+			expected.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: fakeClock.Now().UTC().Format(time.RFC3339Nano),
 			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{

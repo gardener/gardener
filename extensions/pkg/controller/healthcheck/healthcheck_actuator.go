@@ -199,9 +199,15 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, log logr.Log
 	for conditionType, result := range groupedHealthCheckResults {
 		if len(result.unsuccessfulChecks) > 0 || len(result.failedChecks) > 0 {
 			var details strings.Builder
-			result.appendFailedChecksDetails(&details)
-			result.appendUnsuccessfulChecksDetails(&details)
-			result.appendProgressingChecksDetails(&details)
+			if err := result.appendFailedChecksDetails(&details); err != nil {
+				return nil, err
+			}
+			if err := result.appendUnsuccessfulChecksDetails(&details); err != nil {
+				return nil, err
+			}
+			if err := result.appendProgressingChecksDetails(&details); err != nil {
+				return nil, err
+			}
 
 			checkResults = append(checkResults, Result{
 				HealthConditionType: conditionType,

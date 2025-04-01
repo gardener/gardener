@@ -156,7 +156,7 @@ func createOrUpdateNodeCriticalManagedResource(ctx context.Context, seedClient, 
 	}
 
 	if annotateAsCSINodePod {
-		daemonSet.Spec.Template.ObjectMeta.Annotations = map[string]string{
+		daemonSet.Spec.Template.Annotations = map[string]string{
 			waitForCSINodeAnnotation: driverName,
 		}
 	}

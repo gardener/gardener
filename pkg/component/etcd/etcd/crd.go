@@ -56,8 +56,8 @@ func (c *crd) Deploy(ctx context.Context) error {
 		}
 		fns = append(fns, func(ctx context.Context) error {
 			_, err := controllerutil.CreateOrPatch(ctx, c.client, r, func() error {
-				r.ObjectMeta.Labels = resource.ObjectMeta.Labels
-				r.ObjectMeta.Annotations = resource.ObjectMeta.Annotations
+				r.Labels = resource.Labels
+				r.Annotations = resource.Annotations
 				r.Spec = resource.Spec
 				return nil
 			})

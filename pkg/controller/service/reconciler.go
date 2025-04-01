@@ -78,8 +78,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		patch          = client.MergeFrom(service.DeepCopy())
 	)
 
-	switch {
-	case key == keyIstioIngressGateway:
+	switch key {
+	case keyIstioIngressGateway:
 		nodePort = nodePortIstioIngressGateway
 		nodePortTunnel = nodePortTunnelIstioIngressGateway
 		if r.IsMultiZone {
@@ -104,19 +104,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// We append this IP behind the nodeIPs because the gardenlet puts the last ingress IP into the DNSRecords
 		// and we need a change in the DNSRecords if the control-plane moved from one zone to another to update the coredns-custom configMap.
 		ips = append(ips, r.HostIP)
-	case key == keyIstioIngressGatewayZone0:
+	case keyIstioIngressGatewayZone0:
 		nodePort = nodePortIstioIngressGatewayZone0
 		nodePortTunnel = nodePortTunnelIstioIngressGatewayZone0
 		ips = append(ips, r.Zone0IP)
-	case key == keyIstioIngressGatewayZone1:
+	case keyIstioIngressGatewayZone1:
 		nodePort = nodePortIstioIngressGatewayZone1
 		nodePortTunnel = nodePortTunnelIstioIngressGatewayZone1
 		ips = append(ips, r.Zone1IP)
-	case key == keyIstioIngressGatewayZone2:
+	case keyIstioIngressGatewayZone2:
 		nodePort = nodePortIstioIngressGatewayZone2
 		nodePortTunnel = nodePortTunnelIstioIngressGatewayZone2
 		ips = append(ips, r.Zone2IP)
-	case key == keyVirtualGardenIstioIngressGateway:
+	case keyVirtualGardenIstioIngressGateway:
 		nodePort = nodePortVirtualGardenKubeAPIServer
 		if r.IsMultiZone {
 			// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.

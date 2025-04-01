@@ -225,7 +225,7 @@ func computeKindTypesForShoots(
 			defer wg.Done()
 
 			externalDomain, err := gardenerutils.ConstructExternalDomain(ctx, c, shoot, &corev1.Secret{}, defaultDomains)
-			if err != nil && !(gardenerutils.IsIncompleteDNSConfigError(err) && shoot.DeletionTimestamp != nil && len(shoot.Status.UID) == 0) {
+			if err != nil && !gardenerutils.IsIncompleteDNSConfigError(err) || shoot.DeletionTimestamp == nil || len(shoot.Status.UID) != 0 {
 				log.Info("Could not determine external domain for shoot", "err", err, "shoot", client.ObjectKeyFromObject(shoot))
 			}
 

@@ -136,7 +136,7 @@ var _ = Describe("GardenKubeconfig", func() {
 					newCABundle := []byte("bar")
 					runner.Config.GardenClientConnection.GardenClusterCACert = newCABundle
 
-					restConfig.TLSClientConfig.CAData = newCABundle
+					restConfig.CAData = newCABundle
 					updatedKubeconfig, err := gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
 					Expect(err).ToNot(HaveOccurred())
 

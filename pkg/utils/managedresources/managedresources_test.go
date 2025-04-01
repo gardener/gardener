@@ -475,7 +475,7 @@ var _ = Describe("managedresources", func() {
 		It("should return error when the managed resource is not healthy yet (observed generation does not match)", func() {
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
-				mr.ObjectMeta.Generation = 2
+				mr.Generation = 2
 				mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 				}
@@ -489,7 +489,7 @@ var _ = Describe("managedresources", func() {
 		It("should return error when the managed resource is not healthy yet (ResourcesApplied is not true)", func() {
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
-				mr.ObjectMeta.Generation = 1
+				mr.Generation = 1
 				mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 					Conditions: []gardencorev1beta1.Condition{
@@ -510,7 +510,7 @@ var _ = Describe("managedresources", func() {
 		It("should return error when the managed resource is not healthy yet (ResourcesHealthy is not true)", func() {
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
-				mr.ObjectMeta.Generation = 1
+				mr.Generation = 1
 				mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 					Conditions: []gardencorev1beta1.Condition{
@@ -535,7 +535,7 @@ var _ = Describe("managedresources", func() {
 		It("should succeed when the managed resource is healthy", func() {
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
-				mr.ObjectMeta.Generation = 1
+				mr.Generation = 1
 				mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 					Conditions: []gardencorev1beta1.Condition{
@@ -567,7 +567,7 @@ var _ = Describe("managedresources", func() {
 		It("should return error when the managed resource is not healthy yet (observed generation does not match)", func() {
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
-				mr.ObjectMeta.Generation = 2
+				mr.Generation = 2
 				mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 				}
@@ -581,7 +581,7 @@ var _ = Describe("managedresources", func() {
 		It("should return error when the managed resource is not healthy yet (ResourcesApplied is not true)", func() {
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
-				mr.ObjectMeta.Generation = 1
+				mr.Generation = 1
 				mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 					Conditions: []gardencorev1beta1.Condition{
@@ -602,7 +602,7 @@ var _ = Describe("managedresources", func() {
 		It("should return error when the managed resource is not healthy yet (ResourcesHealthy is not true)", func() {
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
-				mr.ObjectMeta.Generation = 1
+				mr.Generation = 1
 				mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 					Conditions: []gardencorev1beta1.Condition{
@@ -627,7 +627,7 @@ var _ = Describe("managedresources", func() {
 		It("should return error when the managed resource is not healthy yet (ResourcesProgressing is not false)", func() {
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
-				mr.ObjectMeta.Generation = 1
+				mr.Generation = 1
 				mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 					Conditions: []gardencorev1beta1.Condition{
@@ -656,7 +656,7 @@ var _ = Describe("managedresources", func() {
 		It("should succeed when the managed resource is healthy and not progressing", func() {
 			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
 			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, fakeClient, mr, func() error {
-				mr.ObjectMeta.Generation = 1
+				mr.Generation = 1
 				mr.Status = resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
 					Conditions: []gardencorev1beta1.Condition{

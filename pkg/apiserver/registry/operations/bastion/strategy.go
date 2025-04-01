@@ -172,7 +172,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("not a bastion")
 	}
-	return labels.Set(bastion.ObjectMeta.Labels), ToSelectableFields(bastion), nil
+	return labels.Set(bastion.Labels), ToSelectableFields(bastion), nil
 }
 
 // MatchBastion returns a generic matcher for a given label and field selector.

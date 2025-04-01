@@ -102,7 +102,7 @@ var _ = Describe("Handler", func() {
 			mutator := extensionsmockwebhook.NewMockMutator(ctrl)
 
 			oldSvc := svc.DeepCopy()
-			oldSvc.ObjectMeta.Generation = 2
+			oldSvc.Generation = 2
 
 			mutator.EXPECT().Mutate(context.TODO(), svc, oldSvc).Return(nil)
 
@@ -111,8 +111,8 @@ var _ = Describe("Handler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(err).NotTo(HaveOccurred())
 
-			req.AdmissionRequest.Operation = admissionv1.Update
-			req.AdmissionRequest.OldObject = runtime.RawExtension{Raw: encode(oldSvc)}
+			req.Operation = admissionv1.Update
+			req.OldObject = runtime.RawExtension{Raw: encode(oldSvc)}
 
 			// Call Handle and check response
 			resp := h.Handle(context.TODO(), req)

@@ -2351,11 +2351,12 @@ func ValidatePositiveIntOrPercent(intOrPercent *intstr.IntOrString, fldPath *fie
 		return allErrs
 	}
 
-	if intOrPercent.Type == intstr.String {
+	switch intOrPercent.Type {
+	case intstr.String:
 		if validation.IsValidPercent(intOrPercent.StrVal) != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, intOrPercent, "must be an integer or percentage (e.g '5%')"))
 		}
-	} else if intOrPercent.Type == intstr.Int {
+	case intstr.Int:
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(intOrPercent.IntValue()), fldPath)...)
 	}
 

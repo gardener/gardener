@@ -309,7 +309,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("not a shoot")
 	}
-	return shoot.ObjectMeta.Labels, ToSelectableFields(shoot), nil
+	return shoot.Labels, ToSelectableFields(shoot), nil
 }
 
 // MatchShoot returns a generic matcher for a given label and field selector.

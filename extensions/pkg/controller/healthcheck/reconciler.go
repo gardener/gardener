@@ -221,7 +221,7 @@ func extensionConditionUnsuccessful(conditionBuilder v1beta1helper.ConditionBuil
 			status = gardencorev1beta1.ConditionProgressing
 			reason = ReasonProgressing
 		} else if oldCondition.Status != gardencorev1beta1.ConditionFalse {
-			delta := time.Now().UTC().Sub(oldCondition.LastTransitionTime.Time.UTC())
+			delta := time.Now().UTC().Sub(oldCondition.LastTransitionTime.UTC())
 			if oldCondition.Status == gardencorev1beta1.ConditionTrue || delta <= *healthCheckResult.ProgressingThreshold {
 				status = gardencorev1beta1.ConditionProgressing
 				reason = ReasonProgressing

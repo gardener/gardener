@@ -137,7 +137,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, errors.New("not a backupBucket")
 	}
-	return labels.Set(backupBucket.ObjectMeta.Labels), ToSelectableFields(backupBucket), nil
+	return labels.Set(backupBucket.Labels), ToSelectableFields(backupBucket), nil
 }
 
 // MatchBackupBucket returns a generic matcher for a given label and field selector.

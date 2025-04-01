@@ -38,12 +38,12 @@ func (b *Botanist) DefaultPlutono() (plutono.Interface, error) {
 // DeployPlutono deploys the plutono in the Seed cluster.
 func (b *Botanist) DeployPlutono(ctx context.Context) error {
 	// disable plutono if no observability components are needed
-	if !b.Operation.WantsObservabilityComponents() {
+	if !b.WantsObservabilityComponents() {
 		return b.Shoot.Components.ControlPlane.Plutono.Destroy(ctx)
 	}
 
 	if b.ControlPlaneWildcardCert != nil {
-		b.Operation.Shoot.Components.ControlPlane.Plutono.SetWildcardCertName(ptr.To(b.ControlPlaneWildcardCert.GetName()))
+		b.Shoot.Components.ControlPlane.Plutono.SetWildcardCertName(ptr.To(b.ControlPlaneWildcardCert.GetName()))
 	}
 
 	return b.Shoot.Components.ControlPlane.Plutono.Deploy(ctx)

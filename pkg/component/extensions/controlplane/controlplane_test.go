@@ -191,7 +191,7 @@ var _ = Describe("ControlPlane", func() {
 			By("Patch object")
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
-			cp.ObjectMeta.Annotations = map[string]string{
+			cp.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -214,7 +214,7 @@ var _ = Describe("ControlPlane", func() {
 			By("Patch object")
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add up-to-date timestamp annotation
-			cp.ObjectMeta.Annotations = map[string]string{
+			cp.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -242,7 +242,7 @@ var _ = Describe("ControlPlane", func() {
 			By("Patch object")
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add old timestamp annotation
-			cp.ObjectMeta.Annotations = map[string]string{
+			cp.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -269,7 +269,7 @@ var _ = Describe("ControlPlane", func() {
 			By("Patch object")
 			patch := client.MergeFrom(cp.DeepCopy())
 			// remove operation annotation, add up-to-date timestamp annotation
-			cp.ObjectMeta.Annotations = map[string]string{
+			cp.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			cp.Status.LastOperation = &gardencorev1beta1.LastOperation{

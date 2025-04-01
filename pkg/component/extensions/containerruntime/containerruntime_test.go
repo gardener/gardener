@@ -187,7 +187,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			for i := range expected {
 				patch := client.MergeFrom(expected[i].DeepCopy())
 				// remove operation annotation, add old timestamp annotation
-				expected[i].ObjectMeta.Annotations = map[string]string{
+				expected[i].Annotations = map[string]string{
 					v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 				}
 				// set last operation
@@ -215,7 +215,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			for i := range expected {
 				patch := client.MergeFrom(expected[i].DeepCopy())
 				// remove operation annotation, add up-to-date timestamp annotation
-				expected[i].ObjectMeta.Annotations = map[string]string{
+				expected[i].Annotations = map[string]string{
 					v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 				}
 				// set last operation

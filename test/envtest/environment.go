@@ -50,10 +50,10 @@ func (e *GardenerTestEnvironment) Start() (*rest.Config, error) {
 
 	if e.useExistingGardener() {
 		log.V(1).Info("Using existing gardener setup")
-		e.Environment.UseExistingCluster = ptr.To(true)
+		e.UseExistingCluster = ptr.To(true)
 	} else {
 		// manage k-api cert dir by ourselves, we will add aggregator certs to it
-		kubeAPIServer := e.Environment.ControlPlane.GetAPIServer()
+		kubeAPIServer := e.ControlPlane.GetAPIServer()
 		var err error
 		e.certDir, err = os.MkdirTemp("", "k8s_test_framework_")
 		if err != nil {
@@ -81,7 +81,7 @@ func (e *GardenerTestEnvironment) Start() (*rest.Config, error) {
 		}
 
 		// add gardener-apiserver user
-		gardenerAPIServerUser, err := e.Environment.ControlPlane.AddUser(envtest.User{
+		gardenerAPIServerUser, err := e.ControlPlane.AddUser(envtest.User{
 			Name: "gardener-apiserver",
 			// TODO: bootstrap gardener RBAC and bind to ClusterRole/gardener.cloud:system:apiserver
 			Groups: []string{"system:masters"},
@@ -110,7 +110,7 @@ func (e *GardenerTestEnvironment) Start() (*rest.Config, error) {
 		}
 		// reuse etcd from envtest ControlPlane if not overwritten
 		if e.GardenerAPIServer.EtcdURL == nil {
-			e.GardenerAPIServer.EtcdURL = e.Environment.ControlPlane.Etcd.URL
+			e.GardenerAPIServer.EtcdURL = e.ControlPlane.Etcd.URL
 		}
 
 		if err := e.GardenerAPIServer.Start(); err != nil {

@@ -276,7 +276,8 @@ var _ = Describe("Etcd", func() {
 				},
 			}
 
-			if class == ClassImportant {
+			switch class {
+			case ClassImportant:
 				if replicas == 1 {
 					obj.Spec.Annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 				}
@@ -288,7 +289,7 @@ var _ = Describe("Etcd", func() {
 				}
 				obj.Spec.Etcd.Metrics = &metricsExtensive
 				obj.Spec.VolumeClaimTemplate = ptr.To(testRole + "-etcd")
-			} else if class == ClassNormal {
+			case ClassNormal:
 				metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "resources.druid.gardener.cloud/allow-unhealthy-pod-eviction", "")
 			}
 

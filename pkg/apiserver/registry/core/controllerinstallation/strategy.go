@@ -132,7 +132,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("not a ControllerInstallation")
 	}
-	return controllerInstallation.ObjectMeta.Labels, ToSelectableFields(controllerInstallation), nil
+	return controllerInstallation.Labels, ToSelectableFields(controllerInstallation), nil
 }
 
 // MatchControllerInstallation returns a generic matcher for a given label and field selector.

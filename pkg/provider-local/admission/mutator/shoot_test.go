@@ -59,7 +59,7 @@ var _ = Describe("Shoot mutator", func() {
 		Context("Mutate shoot", func() {
 			It("should set test value", func() {
 				shootExpected := shoot.DeepCopy()
-				shootExpected.ObjectMeta.Annotations = map[string]string{
+				shootExpected.Annotations = map[string]string{
 					"extensions.gardener.cloud/processed-by": "admission-webhook-local-provider",
 				}
 				err := shootMutator.Mutate(ctx, shoot, nil)

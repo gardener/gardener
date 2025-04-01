@@ -386,7 +386,7 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(f.Shoot))
 
 	if f.GardenerFramework.Config.ExistingShootName != "" {
-		shootKey := client.ObjectKey{Namespace: f.GardenerFramework.ProjectNamespace, Name: f.GardenerFramework.Config.ExistingShootName}
+		shootKey := client.ObjectKey{Namespace: f.ProjectNamespace, Name: f.GardenerFramework.Config.ExistingShootName}
 		if err := f.GardenClient.Client().Get(ctx, shootKey, f.Shoot); err != nil {
 			return fmt.Errorf("failed to get existing shoot %q: %w", shootKey, err)
 		}
@@ -406,7 +406,7 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 			return err
 		}
 
-		if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot, true); err != nil {
+		if err := f.CreateShoot(ctx, f.Shoot, true); err != nil {
 			log.Error(err, "Failed creating shoot")
 
 			dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)

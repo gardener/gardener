@@ -137,9 +137,9 @@ func calcKubeletHTTP2Timeouts(nodeMonitorGracePeriod metav1.Duration) (int, int)
 	http2ReadIdleTimeSeconds := int(30)
 	http2PingTimeSeconds := int(15)
 
-	if nodeMonitorGracePeriod.Duration.Seconds() < 46 {
-		http2ReadIdleTimeSeconds = positiveOrZero(int((nodeMonitorGracePeriod.Duration.Seconds() - 2) * 2 / 3))
-		http2PingTimeSeconds = positiveOrZero(int((nodeMonitorGracePeriod.Duration.Seconds() - 2) * 1 / 3))
+	if nodeMonitorGracePeriod.Seconds() < 46 {
+		http2ReadIdleTimeSeconds = positiveOrZero(int((nodeMonitorGracePeriod.Seconds() - 2) * 2 / 3))
+		http2PingTimeSeconds = positiveOrZero(int((nodeMonitorGracePeriod.Seconds() - 2) * 1 / 3))
 	}
 	return http2ReadIdleTimeSeconds, http2PingTimeSeconds
 }

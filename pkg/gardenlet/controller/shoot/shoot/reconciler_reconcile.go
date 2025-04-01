@@ -1024,7 +1024,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		o.Logger.Info("Removing skip-readiness annotation")
 
 		if err := o.Shoot.UpdateInfo(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
-			delete(shoot.ObjectMeta.Annotations, v1beta1constants.AnnotationShootSkipReadiness)
+			delete(shoot.Annotations, v1beta1constants.AnnotationShootSkipReadiness)
 			return nil
 		}); err != nil {
 			return nil

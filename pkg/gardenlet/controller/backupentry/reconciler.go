@@ -290,7 +290,7 @@ func (r *Reconciler) deleteBackupEntry(
 	}
 
 	gracePeriod := computeGracePeriod(*r.Config.DeletionGracePeriodHours, r.Config.DeletionGracePeriodShootPurposes, gardencorev1beta1.ShootPurpose(backupEntry.Annotations[v1beta1constants.ShootPurpose]))
-	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
+	present, _ := strconv.ParseBool(backupEntry.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
 	if present || r.Clock.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
 		operationType := v1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
 		if updateErr := r.updateBackupEntryStatusOperationStart(gardenCtx, backupEntry, operationType); updateErr != nil {
@@ -377,7 +377,7 @@ func (r *Reconciler) deleteBackupEntry(
 		return reconcile.Result{}, nil
 	}
 
-	if updateErr := r.updateBackupEntryStatusPending(gardenCtx, backupEntry, fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Time.Add(gracePeriod))); updateErr != nil {
+	if updateErr := r.updateBackupEntryStatusPending(gardenCtx, backupEntry, fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Add(gracePeriod))); updateErr != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update status after deletion success: %w", updateErr)
 	}
 

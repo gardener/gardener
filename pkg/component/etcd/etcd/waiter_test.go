@@ -157,7 +157,7 @@ var _ = Describe("#Wait", func() {
 		patch := client.MergeFrom(expected.DeepCopy())
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add old timestamp annotation
-		expected.ObjectMeta.Annotations = map[string]string{
+		expected.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 		}
 		expected.Status.Conditions = []druidcorev1alpha1.Condition{
@@ -188,7 +188,7 @@ var _ = Describe("#Wait", func() {
 		expected.Status.ObservedGeneration = ptr.To[int64](0)
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
-		expected.ObjectMeta.Annotations = map[string]string{
+		expected.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
 		// assume that condition checks and readiness are false, to show that these don't matter when replicas is 0
@@ -220,7 +220,7 @@ var _ = Describe("#Wait", func() {
 		expected.Status.ObservedGeneration = ptr.To[int64](0)
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
-		expected.ObjectMeta.Annotations = map[string]string{
+		expected.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
 		expected.Status.Ready = ptr.To(true)
@@ -245,7 +245,7 @@ var _ = Describe("#Wait", func() {
 		expected.Status.ObservedGeneration = ptr.To[int64](0)
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
-		expected.ObjectMeta.Annotations = map[string]string{
+		expected.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
 		expected.Status.Conditions = []druidcorev1alpha1.Condition{
@@ -276,7 +276,7 @@ var _ = Describe("#Wait", func() {
 		expected.Status.ObservedGeneration = ptr.To[int64](0)
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
-		expected.ObjectMeta.Annotations = map[string]string{
+		expected.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
 		expected.Status.Conditions = []druidcorev1alpha1.Condition{
@@ -308,7 +308,7 @@ var _ = Describe("#Wait", func() {
 		expected.Status.ObservedGeneration = ptr.To[int64](0)
 		expected.Status.LastErrors = nil
 		// remove operation annotation, add up-to-date timestamp annotation
-		expected.ObjectMeta.Annotations = map[string]string{
+		expected.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 		}
 		expected.Status.Conditions = []druidcorev1alpha1.Condition{

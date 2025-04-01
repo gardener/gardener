@@ -51,7 +51,7 @@ type configFuncMatcher struct {
 
 func (m *configFuncMatcher) Match(actual any) (success bool, err error) {
 	if m.expected == nil {
-		return false, fmt.Errorf("Refusing to compare <nil> to <nil>.\nBe explicit and use BeNil() instead.  This is to avoid mistakes where both sides of an assertion are erroneously uninitialized.") //nolint:revive
+		return false, fmt.Errorf("Refusing to compare <nil> to <nil>.\nBe explicit and use BeNil() instead.  This is to avoid mistakes where both sides of an assertion are erroneously uninitialized.") //nolint:revive,staticcheck
 	}
 	if actual == nil {
 		return false, nil

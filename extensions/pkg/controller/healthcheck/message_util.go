@@ -28,51 +28,75 @@ func getSingularOrPlural(count int) string {
 }
 
 // appendUnsuccessfulChecksDetails appends a formatted detail message to the given string builder
-func (h *checkResultForConditionType) appendUnsuccessfulChecksDetails(details *strings.Builder) {
+func (h *checkResultForConditionType) appendUnsuccessfulChecksDetails(details *strings.Builder) error {
 	if len(h.unsuccessfulChecks) > 0 && (len(h.progressingChecks) != 0 || len(h.failedChecks) != 0) {
-		details.WriteString(fmt.Sprintf("Failed %s: ", getSingularOrPlural(len(h.unsuccessfulChecks))))
+		if _, err := fmt.Fprintf(details, "Failed %s: ", getSingularOrPlural(len(h.unsuccessfulChecks))); err != nil {
+			return err
+		}
 	}
 
 	if len(h.unsuccessfulChecks) == 1 {
-		details.WriteString(fmt.Sprintf("%s ", ensureTrailingDot(h.unsuccessfulChecks[0].detail)))
-		return
+		if _, err := fmt.Fprintf(details, "%s ", ensureTrailingDot(h.unsuccessfulChecks[0].detail)); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	for index, check := range h.unsuccessfulChecks {
-		details.WriteString(fmt.Sprintf("%d) %s ", index+1, ensureTrailingDot(check.detail)))
+		if _, err := fmt.Fprintf(details, "%d) %s ", index+1, ensureTrailingDot(check.detail)); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // appendProgressingChecksDetails appends a formatted detail message to the given string builder
-func (h *checkResultForConditionType) appendProgressingChecksDetails(details *strings.Builder) {
+func (h *checkResultForConditionType) appendProgressingChecksDetails(details *strings.Builder) error {
 	if len(h.progressingChecks) > 0 && (len(h.unsuccessfulChecks) != 0 || len(h.failedChecks) != 0) {
-		details.WriteString(fmt.Sprintf("Progressing %s: ", getSingularOrPlural(len(h.progressingChecks))))
+		if _, err := fmt.Fprintf(details, "Progressing %s: ", getSingularOrPlural(len(h.progressingChecks))); err != nil {
+			return err
+		}
 	}
 
 	if len(h.progressingChecks) == 1 {
-		details.WriteString(fmt.Sprintf("%s ", ensureTrailingDot(h.progressingChecks[0].detail)))
-		return
+		if _, err := fmt.Fprintf(details, "%s ", ensureTrailingDot(h.progressingChecks[0].detail)); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	for index, check := range h.progressingChecks {
-		details.WriteString(fmt.Sprintf("%d) %s ", index+1, ensureTrailingDot(check.detail)))
+		if _, err := fmt.Fprintf(details, "%d) %s ", index+1, ensureTrailingDot(check.detail)); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // appendFailedChecksDetails appends a formatted detail message to the given string builder
-func (h *checkResultForConditionType) appendFailedChecksDetails(details *strings.Builder) {
+func (h *checkResultForConditionType) appendFailedChecksDetails(details *strings.Builder) error {
 	if len(h.failedChecks) > 0 && (len(h.unsuccessfulChecks) != 0 || len(h.progressingChecks) != 0) {
-		details.WriteString(fmt.Sprintf("Unable to execute %s: ", getSingularOrPlural(len(h.failedChecks))))
+		if _, err := fmt.Fprintf(details, "Unable to execute %s: ", getSingularOrPlural(len(h.failedChecks))); err != nil {
+			return err
+		}
 	}
 
 	if len(h.failedChecks) == 1 {
-		details.WriteString(fmt.Sprintf("%s ", ensureTrailingDot(h.failedChecks[0].Error())))
-		return
+		if _, err := fmt.Fprintf(details, "%s ", ensureTrailingDot(h.failedChecks[0].Error())); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	for index, check := range h.failedChecks {
-		details.WriteString(fmt.Sprintf("%d) %s ", index+1, ensureTrailingDot(check.Error())))
+		if _, err := fmt.Fprintf(details, "%d) %s ", index+1, ensureTrailingDot(check.Error())); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // ensureTrailingDot adds a trailing dot if it does not exist

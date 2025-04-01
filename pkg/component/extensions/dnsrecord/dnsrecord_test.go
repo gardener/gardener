@@ -599,7 +599,7 @@ var _ = Describe("DNSRecord", func() {
 		})
 
 		It("should fail if the resource is not ready", func() {
-			dns.ObjectMeta.Annotations = map[string]string{
+			dns.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			dns.Status.LastError = &gardencorev1beta1.LastError{
@@ -614,7 +614,7 @@ var _ = Describe("DNSRecord", func() {
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
 			patch := client.MergeFrom(dns.DeepCopy())
-			dns.ObjectMeta.Annotations = map[string]string{
+			dns.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 			}
 			dns.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -629,7 +629,7 @@ var _ = Describe("DNSRecord", func() {
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
 			patch := client.MergeFrom(dns.DeepCopy())
-			dns.ObjectMeta.Annotations = map[string]string{
+			dns.Annotations = map[string]string{
 				v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 			}
 			dns.Status.LastOperation = &gardencorev1beta1.LastOperation{

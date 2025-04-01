@@ -143,7 +143,7 @@ var _ = Describe("NamespacedCloudProfile Validation Tests ", func() {
 			DescribeTable("namespacedCloudProfile metadata",
 				func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
 					namespacedCloudProfile.ObjectMeta = objectMeta
-					namespacedCloudProfile.ObjectMeta.Namespace = "default"
+					namespacedCloudProfile.Namespace = "default"
 
 					errorList := ValidateNamespacedCloudProfile(namespacedCloudProfile)
 

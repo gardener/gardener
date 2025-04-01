@@ -43,13 +43,13 @@ var _ = Describe("SystemComponentsConfig tests", func() {
 
 	JustBeforeEach(func() {
 		for _, node := range nodes {
-			node.ObjectMeta.GenerateName = "test-"
+			node.GenerateName = "test-"
 
-			if node.ObjectMeta.Labels == nil {
-				node.ObjectMeta.Labels = nodeLabels()
+			if node.Labels == nil {
+				node.Labels = nodeLabels()
 			}
 
-			node.ObjectMeta.Labels = utils.MergeStringMaps(node.ObjectMeta.Labels, cleanupNodeLabel())
+			node.Labels = utils.MergeStringMaps(node.Labels, cleanupNodeLabel())
 
 			Expect(testClient.Create(ctx, &node)).To(Succeed())
 		}

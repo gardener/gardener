@@ -52,7 +52,7 @@ func (o *Options) Validate() error {
 // Complete completes the options.
 func (o *Options) Complete() error {
 	var err error
-	o.Log, err = logger.NewZapLogger(o.LogLevel, o.LogFormat, logzap.WriteTo(o.IOStreams.ErrOut))
+	o.Log, err = logger.NewZapLogger(o.LogLevel, o.LogFormat, logzap.WriteTo(o.ErrOut))
 	if err != nil {
 		return fmt.Errorf("error instantiating zap logger: %w", err)
 	}

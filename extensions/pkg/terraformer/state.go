@@ -139,15 +139,15 @@ func getOutputVariables(stateConfigMap []byte) (map[string]outputState, error) {
 	}
 
 	var outputVariables map[string]outputState
-	switch {
-	case version == 2 || version == 3:
+	switch version {
+	case 2, 3:
 		var state terraformStateV3
 		if err := json.Unmarshal(stateConfigMap, &state); err != nil {
 			return nil, err
 		}
 
 		outputVariables = state.Modules[0].Outputs
-	case version == 4:
+	case 4:
 		var state terraformStateV4
 		if err := json.Unmarshal(stateConfigMap, &state); err != nil {
 			return nil, err

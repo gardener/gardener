@@ -72,8 +72,8 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 		return true
 	}
 
-	oldPresent, _ := strconv.ParseBool(oldBackupEntry.ObjectMeta.Annotations[core.BackupEntryForceDeletion])
-	newPresent, _ := strconv.ParseBool(newBackupEntry.ObjectMeta.Annotations[core.BackupEntryForceDeletion])
+	oldPresent, _ := strconv.ParseBool(oldBackupEntry.Annotations[core.BackupEntryForceDeletion])
+	newPresent, _ := strconv.ParseBool(newBackupEntry.Annotations[core.BackupEntryForceDeletion])
 	if oldPresent != newPresent && newPresent {
 		return true
 	}
@@ -165,7 +165,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, errors.New("not a backupEntry")
 	}
-	return backupEntry.ObjectMeta.Labels, ToSelectableFields(backupEntry), nil
+	return backupEntry.Labels, ToSelectableFields(backupEntry), nil
 }
 
 // MatchBackupEntry returns a generic matcher for a given label and field selector.

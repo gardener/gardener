@@ -620,7 +620,7 @@ func PrepareGardenletChartValues(
 	}
 
 	// Set the seed name
-	gardenletConfig.SeedConfig.SeedTemplate.Name = obj.GetName()
+	gardenletConfig.SeedConfig.Name = obj.GetName()
 
 	// Get gardenlet chart values
 	return vp.GetGardenletChartValues(

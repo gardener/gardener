@@ -140,8 +140,8 @@ var _ = Describe("Deployments", func() {
 		It("UpdatedReplicas isn't matching with desired", func() {
 			var (
 				replicas          int32 = 5
-				updatedReplicas   int32 = replicas - 1
-				availableReplicas int32 = updatedReplicas
+				updatedReplicas         = replicas - 1
+				availableReplicas       = updatedReplicas
 				generation        int64 = 10
 			)
 
@@ -181,8 +181,8 @@ var _ = Describe("Deployments", func() {
 		It("AvailableReplicas isn't matching with desired", func() {
 			var (
 				replicas          int32 = 5
-				updatedReplicas   int32 = replicas
-				availableReplicas int32 = replicas - 1
+				updatedReplicas         = replicas
+				availableReplicas       = replicas - 1
 				generation        int64 = 10
 			)
 

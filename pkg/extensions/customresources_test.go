@@ -369,7 +369,7 @@ var _ = Describe("extensions", func() {
 	Describe("#DeleteExtensionObjects", func() {
 		It("should delete all extension objects", func() {
 			deletionTimestamp := metav1.Now()
-			expected.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+			expected.DeletionTimestamp = &deletionTimestamp
 
 			expected2 := expected.DeepCopy()
 			expected2.Name = "worker2"
@@ -490,7 +490,7 @@ var _ = Describe("extensions", func() {
 
 		It("should return error if extension object is not deleted", func() {
 			deletionTimestamp := metav1.Now()
-			expected.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+			expected.DeletionTimestamp = &deletionTimestamp
 
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
 			err := WaitUntilExtensionObjectDeleted(ctx, c, log,
@@ -502,7 +502,7 @@ var _ = Describe("extensions", func() {
 
 		It("should return error with codes if extension object has status.lastError.codes", func() {
 			deletionTimestamp := metav1.Now()
-			expected.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+			expected.DeletionTimestamp = &deletionTimestamp
 			expected.Status.LastError = &gardencorev1beta1.LastError{
 				Description: "invalid credentials",
 				Codes:       []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthorized},
@@ -698,7 +698,7 @@ var _ = Describe("extensions", func() {
 						Name:      fmt.Sprintf("containerruntime-%d", i),
 					},
 				}
-				Expect(c.Create(ctx, containerRuntimeExtension)).To(Succeed(), containerRuntimeExtension.ObjectMeta.Name+" should get created")
+				Expect(c.Create(ctx, containerRuntimeExtension)).To(Succeed(), containerRuntimeExtension.Name+" should get created")
 			}
 
 			Expect(
@@ -711,11 +711,11 @@ var _ = Describe("extensions", func() {
 			Expect(c.List(ctx, containerRuntimeList, client.InNamespace(namespace))).To(Succeed())
 			Expect(containerRuntimeList.Items).To(HaveLen(4))
 			for _, item := range containerRuntimeList.Items {
-				if item.ObjectMeta.Name == "containerruntime-2" {
-					Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate), item.ObjectMeta.Name+" should have gardener.cloud/operation annotation")
+				if item.Name == "containerruntime-2" {
+					Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate), item.Name+" should have gardener.cloud/operation annotation")
 				} else {
 					_, ok := item.Annotations[v1beta1constants.GardenerOperation]
-					Expect(ok).To(BeFalse(), item.ObjectMeta.Name+" should not have gardener.cloud/operation annotation")
+					Expect(ok).To(BeFalse(), item.Name+" should not have gardener.cloud/operation annotation")
 				}
 			}
 		})

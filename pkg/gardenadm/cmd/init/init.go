@@ -102,7 +102,7 @@ func run(ctx context.Context, opts *Options) error {
 		return flow.Errors(err)
 	}
 
-	fmt.Fprintf(opts.IOStreams.Out, `
+	fmt.Fprintf(opts.Out, `
 Your Shoot cluster control-plane has initialized successfully!
 
 To start using your cluster, you need to run the following as a regular user:

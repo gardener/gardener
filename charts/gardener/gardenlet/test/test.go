@@ -1078,11 +1078,11 @@ func ComputeExpectedGardenletDeploymentSpec(
 		}
 
 		if deploymentConfiguration.PodLabels != nil {
-			deployment.Template.ObjectMeta.Labels = utils.MergeStringMaps(deployment.Template.ObjectMeta.Labels, deploymentConfiguration.PodLabels)
+			deployment.Template.Labels = utils.MergeStringMaps(deployment.Template.Labels, deploymentConfiguration.PodLabels)
 		}
 
 		if deploymentConfiguration.PodAnnotations != nil {
-			deployment.Template.ObjectMeta.Annotations = utils.MergeStringMaps(deployment.Template.ObjectMeta.Annotations, deploymentConfiguration.PodAnnotations)
+			deployment.Template.Annotations = utils.MergeStringMaps(deployment.Template.Annotations, deploymentConfiguration.PodAnnotations)
 		}
 
 		if deploymentConfiguration.Resources != nil {
@@ -1238,7 +1238,7 @@ func VerifyGardenletDeployment(ctx context.Context,
 		deployment,
 	)).ToNot(HaveOccurred())
 
-	Expect(deployment.ObjectMeta.Labels).To(DeepEqual(expectedDeployment.ObjectMeta.Labels))
+	Expect(deployment.Labels).To(DeepEqual(expectedDeployment.Labels))
 
 	assertResourceReferenceExists(uniqueName["gardenlet-configmap"], "configmap-", deployment.Spec.Template.Annotations)
 

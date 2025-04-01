@@ -77,12 +77,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 					hasProviderLabel, providerLabel := getProviderLabel(secret.Labels)
 					if hasProviderLabel || metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
 						patch := client.MergeFrom(secret.DeepCopy())
-						delete(secret.ObjectMeta.Labels, v1beta1constants.LabelSecretBindingReference)
+						delete(secret.Labels, v1beta1constants.LabelSecretBindingReference)
 
 						// The secret can be still referenced by a credentialsbinding so
 						// only remove the provider label if there is no credentialsbinding reference label
 						if !metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
-							delete(secret.ObjectMeta.Labels, providerLabel)
+							delete(secret.Labels, providerLabel)
 						}
 
 						if err := r.Client.Patch(ctx, secret, patch); err != nil {
@@ -227,7 +227,7 @@ func (r *Reconciler) removeLabelFromQuotas(ctx context.Context, quotas []corev1.
 		// Remove 'referred by a secret binding' label
 		if metav1.HasLabel(quota.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
 			patch := client.MergeFromWithOptions(quota.DeepCopy(), client.MergeFromWithOptimisticLock{})
-			delete(quota.ObjectMeta.Labels, v1beta1constants.LabelSecretBindingReference)
+			delete(quota.Labels, v1beta1constants.LabelSecretBindingReference)
 			if err := r.Client.Patch(ctx, quota, patch); err != nil {
 				return fmt.Errorf("failed to remove referred label from Quota: %w", err)
 			}

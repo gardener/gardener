@@ -192,7 +192,7 @@ func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, sh
 		} else if spec.Weight >= matchedPreset.Spec.Weight {
 			if spec.Weight > matchedPreset.Spec.Weight {
 				matchedPreset = oidc
-			} else if strings.Compare(oidc.ObjectMeta.Name, matchedPreset.ObjectMeta.Name) > 0 {
+			} else if strings.Compare(oidc.Name, matchedPreset.Name) > 0 {
 				matchedPreset = oidc
 			}
 		}

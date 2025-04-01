@@ -80,7 +80,7 @@ func (a *actuator) Restore(ctx context.Context, log logr.Logger, worker *extensi
 		return fmt.Errorf("failed deleting no longer existing machines after restoration: %w", err)
 	}
 
-	return a.Actuator.Reconcile(ctx, log, worker, cluster)
+	return a.Reconcile(ctx, log, worker, cluster)
 }
 
 func (a *actuator) deleteNoLongerNeededMachines(ctx context.Context, log logr.Logger, namespace string) error {

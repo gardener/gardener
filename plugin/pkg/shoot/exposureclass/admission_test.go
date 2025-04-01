@@ -110,7 +110,7 @@ var _ = Describe("exposureclass", func() {
 
 			It("should unite the matching labels of seed selector from Shoot and ExposureClass", func() {
 				shoot.Spec.SeedSelector.MatchLabels = map[string]string{"abc": "abc"}
-				exposureClass.Scheduling.SeedSelector.LabelSelector.MatchLabels = map[string]string{"xyz": "xyz"}
+				exposureClass.Scheduling.SeedSelector.MatchLabels = map[string]string{"xyz": "xyz"}
 				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -125,7 +125,7 @@ var _ = Describe("exposureclass", func() {
 
 			It("should fail as seed selector from Shoot and ExposureClass have conflicting labels", func() {
 				shoot.Spec.SeedSelector.MatchLabels = map[string]string{"abc": "abc"}
-				exposureClass.Scheduling.SeedSelector.LabelSelector.MatchLabels = map[string]string{"abc": "xyz"}
+				exposureClass.Scheduling.SeedSelector.MatchLabels = map[string]string{"abc": "xyz"}
 				Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(exposureClass)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -140,7 +140,7 @@ var _ = Describe("exposureclass", func() {
 					Operator: metav1.LabelSelectorOpIn,
 					Values:   []string{"abc", "def"},
 				}}
-				exposureClass.Scheduling.SeedSelector.LabelSelector.MatchExpressions = []metav1.LabelSelectorRequirement{{
+				exposureClass.Scheduling.SeedSelector.MatchExpressions = []metav1.LabelSelectorRequirement{{
 					Key:      "abc",
 					Operator: metav1.LabelSelectorOpIn,
 					Values:   []string{"xyz"},

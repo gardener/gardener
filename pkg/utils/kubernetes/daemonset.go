@@ -12,7 +12,7 @@ import (
 
 // PodManagedByDaemonSet returns 'true' if the given pod is managed by a DaemonSet, determined by the existing owner references.
 func PodManagedByDaemonSet(pod *corev1.Pod) bool {
-	for _, ownerRef := range pod.ObjectMeta.OwnerReferences {
+	for _, ownerRef := range pod.OwnerReferences {
 		if ownerRef.APIVersion == appsv1.SchemeGroupVersion.String() &&
 			ownerRef.Kind == "DaemonSet" &&
 			ptr.Deref(ownerRef.Controller, false) {
