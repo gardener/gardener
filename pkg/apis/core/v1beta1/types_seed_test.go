@@ -35,9 +35,10 @@ var _ = Describe("Seed", func() {
 				f := obj.Field(i)
 
 				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
-				if protobufNum == "3" {
+				switch protobufNum {
+				case "3":
 					Fail("protobuf 3 in SeedSettings is reserved for removed shootDNS field")
-				} else if protobufNum == "6" {
+				case "6":
 					Fail("protobuf 6 in SeedSettings is reserved for removed ownerChecks field")
 				}
 			}
@@ -65,9 +66,10 @@ var _ = Describe("Seed", func() {
 				f := obj.Field(i)
 
 				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
-				if protobufNum == "3" {
+				switch protobufNum {
+				case "3":
 					Fail("protobuf 3 in SeedDNSProvider is reserved for removed domains field")
-				} else if protobufNum == "4" {
+				case "4":
 					Fail("protobuf 4 in SeedDNSProvider is reserved for removed zones field")
 				}
 			}
@@ -81,9 +83,10 @@ var _ = Describe("Seed", func() {
 				f := obj.Field(i)
 
 				protobufNum := strings.Split(f.Tag.Get("protobuf"), ",")[1]
-				if protobufNum == "1" {
+				switch protobufNum {
+				case "1":
 					Fail("protobuf 1 in SeedSettingDependencyWatchdog is reserved for removed endpoint field")
-				} else if protobufNum == "2" {
+				case "2":
 					Fail("protobuf 2 in SeedSettingDependencyWatchdog is reserved for removed probe field")
 				}
 			}

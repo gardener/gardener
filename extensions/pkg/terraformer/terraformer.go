@@ -230,11 +230,12 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 
 		// Wait for the Terraform apply/destroy Pod to be completed
 		status, terminationMessage := t.waitForPod(ctx, logger, pod)
-		if status == podStatusSucceeded {
+		switch status {
+		case podStatusSucceeded:
 			podLogger.Info("Terraformer pod finished successfully")
-		} else if status == podStatusCreationTimeout {
+		case podStatusCreationTimeout:
 			podLogger.Info("Terraformer pod creation timed out")
-		} else {
+		default:
 			podLogger.Info("Terraformer pod finished with error")
 
 			if terminationMessage != "" {

@@ -185,13 +185,14 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		}
 	)
 
-	if v.values.ClusterType == component.ClusterTypeSeed {
+	switch v.values.ClusterType {
+	case component.ClusterTypeSeed:
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Name:      vpaconstants.AdmissionControllerServiceName,
 			Namespace: v.namespace,
 			Port:      ptr.To(admissionControllerServicePort),
 		}
-	} else if v.values.ClusterType == component.ClusterTypeShoot {
+	case component.ClusterTypeShoot:
 		// the port is only respected if register-by-url is true, that's why it's in this if-block
 		// if it's false it will not set the port during registration, i.e., it will be defaulted to 443,
 		// so the servicePort has to be 443 in this case

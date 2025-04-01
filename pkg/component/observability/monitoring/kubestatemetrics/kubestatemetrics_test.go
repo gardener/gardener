@@ -251,7 +251,8 @@ var _ = Describe("KubeStateMetrics", func() {
 					"networking.gardener.cloud/to-dns": "allowed",
 					"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 				}
-				if values.NameSuffix == SuffixSeed {
+				switch values.NameSuffix {
+				case SuffixSeed:
 					args = []string{
 						"--port=8080",
 						"--telemetry-port=8081",
@@ -319,7 +320,7 @@ var _ = Describe("KubeStateMetrics", func() {
 							"^kube_customresource_verticalpodautoscaler_spec_updatepolicy_updatemode$",
 						"--custom-resource-state-config-file=/config/custom-resource-state.yaml",
 					}
-				} else if values.NameSuffix == SuffixRuntime {
+				case SuffixRuntime:
 					args = []string{
 						"--port=8080",
 						"--telemetry-port=8081",

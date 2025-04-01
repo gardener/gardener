@@ -98,13 +98,14 @@ func (k *kubeStateMetrics) getResourcesForSeed() ([]client.Object, error) {
 		}
 	)
 
-	if k.values.NameSuffix == SuffixSeed {
+	switch k.values.NameSuffix {
+	case SuffixSeed:
 		resources = append(
 			resources,
 			k.scrapeConfigSeed(),
 			k.scrapeConfigCache(),
 		)
-	} else if k.values.NameSuffix == SuffixRuntime {
+	case SuffixRuntime:
 		resources = append(
 			resources,
 			k.scrapeConfigGarden(),

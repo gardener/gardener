@@ -655,7 +655,8 @@ var _ = Describe("VPA", func() {
 				},
 			}
 
-			if clusterType == "seed" {
+			switch clusterType {
+			case "seed":
 				if isGardenCluster {
 					obj.Annotations = map[string]string{
 						"networking.resources.gardener.cloud/from-all-garden-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
@@ -665,7 +666,7 @@ var _ = Describe("VPA", func() {
 						"networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
 					}
 				}
-			} else if clusterType == "shoot" {
+			case "shoot":
 				obj.Annotations = map[string]string{
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":8942}]`,
 				}

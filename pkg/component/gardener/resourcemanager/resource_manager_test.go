@@ -1070,7 +1070,8 @@ var _ = Describe("ResourceManager", func() {
 				},
 			)
 
-			if responsibilityMode == ForSource {
+			switch responsibilityMode {
+			case ForSource:
 				obj.Webhooks = append(obj.Webhooks,
 					admissionregistrationv1.MutatingWebhook{
 						Name: "endpoint-slice-hints.resources.gardener.cloud",
@@ -1108,7 +1109,7 @@ var _ = Describe("ResourceManager", func() {
 						TimeoutSeconds:          ptr.To[int32](10),
 					},
 				)
-			} else if responsibilityMode == ForSourceAndTarget {
+			case ForSourceAndTarget:
 				obj.Webhooks = append(obj.Webhooks,
 					admissionregistrationv1.MutatingWebhook{
 						Name: "system-components-config.resources.gardener.cloud",

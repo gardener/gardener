@@ -559,9 +559,10 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(values.Replicas).To(v.expectedReplicas)
 	Expect(values.DefragmentationSchedule).To(v.expectedDefragmentationSchedule)
 	Expect(values.HighAvailabilityEnabled).To(v.expectedHighAvailabilityEnabled)
-	if values.Role == v1beta1constants.ETCDRoleMain {
+	switch values.Role {
+	case v1beta1constants.ETCDRoleMain:
 		Expect(values.StorageCapacity).To(v.expectedETCDMainStorageCapacity)
-	} else if values.Role == v1beta1constants.ETCDRoleEvents {
+	case v1beta1constants.ETCDRoleEvents:
 		Expect(values.StorageCapacity).To(v.expectedETCDEventsStorageCapacity)
 	}
 	if v.expectedAutoscalingConfiguration != nil {

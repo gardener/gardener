@@ -710,9 +710,10 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 		},
 	}
 
-	if p.values.ClusterType == component.ClusterTypeSeed {
+	switch p.values.ClusterType {
+	case component.ClusterTypeSeed:
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
-	} else if p.values.ClusterType == component.ClusterTypeShoot {
+	case component.ClusterTypeShoot:
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
 	}
 	utilruntime.Must(references.InjectAnnotations(deployment))
@@ -869,13 +870,14 @@ func (p *plutono) getPodLabels() map[string]string {
 		return labels
 	}
 
-	if p.values.ClusterType == component.ClusterTypeSeed {
+	switch p.values.ClusterType {
+	case component.ClusterTypeSeed:
 		labels = utils.MergeStringMaps(labels, map[string]string{
 			v1beta1constants.LabelRole:                                     v1beta1constants.LabelMonitoring,
 			gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
 		})
-	} else if p.values.ClusterType == component.ClusterTypeShoot {
+	case component.ClusterTypeShoot:
 		labels = utils.MergeStringMaps(labels, map[string]string{
 			v1beta1constants.GardenRole:                                v1beta1constants.GardenRoleMonitoring,
 			gardenerutils.NetworkPolicyLabel("prometheus-shoot", 9090): v1beta1constants.LabelNetworkPolicyAllowed,

@@ -855,13 +855,14 @@ func getPodLabels(values Values) map[string]string {
 		return labels
 	}
 
-	if values.ClusterType == comp.ClusterTypeSeed {
+	switch values.ClusterType {
+	case comp.ClusterTypeSeed:
 		labels = utils.MergeStringMaps(labels, map[string]string{
 			v1beta1constants.LabelRole:                                     v1beta1constants.LabelMonitoring,
 			gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
 		})
-	} else if values.ClusterType == comp.ClusterTypeShoot {
+	case comp.ClusterTypeShoot:
 		labels = utils.MergeStringMaps(labels, map[string]string{
 			v1beta1constants.GardenRole:                                v1beta1constants.GardenRoleMonitoring,
 			gardenerutils.NetworkPolicyLabel("prometheus-shoot", 9090): v1beta1constants.LabelNetworkPolicyAllowed,

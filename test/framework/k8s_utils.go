@@ -356,13 +356,12 @@ func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string
 	}
 
 	if shoot.Status.LastOperation != nil {
-		if shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
-			shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile ||
-			shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore {
+		switch shoot.Status.LastOperation.Type {
+		case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile, gardencorev1beta1.LastOperationTypeRestore:
 			if shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 				return false, "last operation type was create, reconcile or restore but state was not succeeded"
 			}
-		} else if shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate {
+		case gardencorev1beta1.LastOperationTypeMigrate:
 			return false, "last operation type was migrate, the migration process is not finished yet"
 		}
 	}
