@@ -70,15 +70,11 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 		return reconcile.Result{}, fmt.Errorf("error retrieving Garden object: %w", err)
 	}
 
-	var garden *operatorv1alpha1.Garden
-	if len(gardenList.Items) != 0 {
-		garden = &gardenList.Items[0]
-	}
-
-	if garden == nil {
+	if len(gardenList.Items) == 0 {
 		log.V(1).Info("No garden found, stop reconciling")
 		return reconcile.Result{}, nil
 	}
+	garden := &gardenList.Items[0]
 
 	if !r.managedResourceWatchRegistered && r.registerManagedResourceWatchFunc != nil {
 		if err := r.registerManagedResourceWatchFunc(); err != nil {
