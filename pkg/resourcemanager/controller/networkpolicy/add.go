@@ -38,6 +38,9 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 	if r.TargetClient == nil {
 		r.TargetClient = targetCluster.GetClient()
 	}
+	if r.Recorder == nil {
+		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
+	}
 
 	for _, n := range r.Config.NamespaceSelectors {
 		namespaceSelector := n

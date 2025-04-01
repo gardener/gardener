@@ -428,19 +428,20 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				service.Name = "this-is-a-very-long-svc-name-which-will-exceed-max-length"
 			})
 
-			It("should run into failures", func() {
-				By("Ensure no policies are created")
-				Eventually(func(g Gomega) []networkingv1.NetworkPolicy {
-					networkPolicyList := &networkingv1.NetworkPolicyList{}
-					g.Expect(testClient.List(ctx, networkPolicyList, client.InNamespace(service.Namespace))).To(Succeed())
-					return networkPolicyList.Items
-				}).Should(BeEmpty())
+			It("should shorten the label selector key", func() {
+				By("Ensure expected policies are created with shortened label selector key")
+				Eventually(func(g Gomega) {
+					ingressPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port1Suffix, Namespace: service.Namespace}}
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ingressPolicy), ingressPolicy)).To(Succeed())
+					g.Expect(ingressPolicy.Spec.Ingress[0].From[0].PodSelector.MatchLabels).To(Equal(map[string]string{"networking.resources.gardener.cloud/to-this-is-a-very-long-svc-name-which-will-exceed-max-len-7c268": "allowed"}))
 
-				By("Ensure controller fails creating policies because selector is too long")
-				Eventually(func() string { return logBuffer.String() }).Should(And(
-					ContainSubstring("spec.ingress[0].from[0].podSelector.matchLabels: Invalid value:"),
-					ContainSubstring("name part must be no more than 63 characters"),
-				))
+					egressPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Name + port1Suffix, Namespace: service.Namespace}}
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(egressPolicy), egressPolicy)).To(Succeed())
+					g.Expect(egressPolicy.Spec.PodSelector.MatchLabels).To(Equal(map[string]string{"networking.resources.gardener.cloud/to-this-is-a-very-long-svc-name-which-will-exceed-max-len-7c268": "allowed"}))
+				}).Should(Succeed())
+
+				By("Ensure controller prints information about mutated pod label selector")
+				Eventually(func() string { return logBuffer.String() }).Should(ContainSubstring("Usual pod label selector contained at least one key exceeding 63 characters - it had to be mutated"))
 			})
 		})
 	})
