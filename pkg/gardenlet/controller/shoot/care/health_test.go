@@ -439,7 +439,7 @@ var _ = Describe("health check", func() {
 			It("should return true if number of ready nodes equal number of desired machines", func() {
 				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{}, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
 				Expect(msg).To(Equal(""))
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should return an error if not enough machine objects as desired were created", func() {
@@ -564,7 +564,7 @@ var _ = Describe("health check", func() {
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal(""))
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should return an error if the machine for a cordoned node is not found", func() {
