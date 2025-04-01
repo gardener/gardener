@@ -32,6 +32,25 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
+	DescribeTable("#ExtensionForManagedResourceName", func(managedResourceName string, expectedExtensionName string, expectedIsExtension bool) {
+		extensionName, isExtension := ExtensionForManagedResourceName(managedResourceName)
+		Expect(extensionName).To(Equal(expectedExtensionName))
+		Expect(isExtension).To(Equal(expectedIsExtension))
+	},
+
+		Entry("it should recognize a managed resource of an extension", "extension-foobar-garden", "foobar", true),
+
+		Entry("it should recognize a managed resource of an extension admission for runtime cluster", "extension-admission-runtime-foobar", "foobar", true),
+
+		Entry("it should recognize a managed resource of an extension admission for virtual cluster", "extension-admission-virtual-foobar", "foobar", true),
+
+		Entry("it should not recognize a random managed resource as an extension", "foobar", "", false),
+
+		Entry("it should not recognize a managed resource with a matching prefix only as an extension", "extension-foobar", "", false),
+
+		Entry("it should not recognize a managed resource with a matching suffix only as an extension", "foobar-garden", "", false),
+	)
+
 	Describe("#ExtensionRuntimeNamespaceName", func() {
 		It("should return the expected namespace name", func() {
 			Expect(ExtensionRuntimeNamespaceName("provider-test")).To(Equal("runtime-extension-provider-test"))

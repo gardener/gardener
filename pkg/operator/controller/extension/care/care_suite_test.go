@@ -13,5 +13,5 @@ import (
 
 func TestCare(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Care Suite")
+	RunSpecs(t, "Operator Controller Extension Care Suite")
 }

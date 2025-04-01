@@ -413,7 +413,7 @@ type ExtensionCondition struct {
 	LastHeartbeatTime  *metav1.MicroTime
 }
 
-// CheckControllerInstallations checks multiple controller installation in case the provided filter func returns true. If their state
+// CheckControllerInstallations checks multiple controller installations in case the provided filter func returns true. If their state
 // indicates issues then this is reflected in the state of the provided condition. If there are no issues, nil is returned.
 func (h *HealthChecker) CheckControllerInstallations(
 	ctx context.Context,

@@ -13,5 +13,5 @@ import (
 
 func TestMapper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Mapper Suite")
+	RunSpecs(t, "Operator Mapper Suite")
 }
