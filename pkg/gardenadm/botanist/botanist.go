@@ -46,7 +46,7 @@ type AutonomousBotanist struct {
 func NewAutonomousBotanist(
 	ctx context.Context,
 	log logr.Logger,
-	seedClientSet kubernetes.Interface,
+	clientSet kubernetes.Interface,
 	project *gardencorev1beta1.Project,
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
@@ -75,20 +75,21 @@ func NewAutonomousBotanist(
 	}
 
 	keysAndValues := []any{"cloudProfile", cloudProfile, "project", project, "shoot", shoot}
-	if seedClientSet == nil {
-		seedClientSet = newFakeSeedClientSet(seedObj.KubernetesVersion.String())
+	if clientSet == nil {
+		clientSet = newFakeSeedClientSet(seedObj.KubernetesVersion.String())
 		log.Info("Initializing autonomous botanist with fake client set", keysAndValues...) //nolint:logcheck
 	} else {
 		log.Info("Initializing autonomous botanist with control plane client set", keysAndValues...) //nolint:logcheck
 	}
 
 	b, err := botanistpkg.New(ctx, &operation.Operation{
-		Logger:        log,
-		GardenClient:  newFakeGardenClient(),
-		SeedClientSet: seedClientSet,
-		Garden:        gardenObj,
-		Seed:          seedObj,
-		Shoot:         shootObj,
+		Logger:         log,
+		GardenClient:   newFakeGardenClient(),
+		SeedClientSet:  clientSet,
+		ShootClientSet: clientSet,
+		Garden:         gardenObj,
+		Seed:           seedObj,
+		Shoot:          shootObj,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
