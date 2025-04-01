@@ -149,7 +149,7 @@ func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilit
 	allErrs = append(allErrs, validateMachineTypes(machineTypes, capabilities, fldPath)...)
 
 	for i, machineType := range machineTypes {
-		if ptr.Deref(machineType.Architecture, "") == "" && (len(capabilities) == 0 || len(machineType.Capabilities[v1beta1constants.ArchitectureKey].Values) == 0) {
+		if ptr.Deref(machineType.Architecture, "") == "" && (len(capabilities) == 0 || len(machineType.Capabilities[v1beta1constants.ArchitectureKey]) == 0) {
 			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("architecture"), "must provide an architecture"))
 		}
 		if len(capabilities) == 0 && len(machineType.Capabilities) > 0 {
@@ -427,7 +427,7 @@ func validateCapabilities(capabilities core.Capabilities, fldPath *field.Path) f
 	if !ok {
 		allErrs = append(allErrs, field.Required(fldPath.Child(v1beta1constants.ArchitectureKey), "architecture capability is required"))
 	} else {
-		for _, v := range val.Values {
+		for _, v := range val {
 			if !slices.Contains(v1beta1constants.ValidArchitectures, v) {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child(v1beta1constants.ArchitectureKey), v, "allowed architectures are: "+strings.Join(v1beta1constants.ValidArchitectures, ", ")))
 			}
@@ -439,10 +439,10 @@ func validateCapabilities(capabilities core.Capabilities, fldPath *field.Path) f
 		if key == "" {
 			allErrs = append(allErrs, field.Required(fldPath, "capability keys must not be empty"))
 		}
-		if len(value.Values) == 0 {
+		if len(value) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child(key), "capability values must not be empty"))
 		}
-		for i, v := range value.Values {
+		for i, v := range value {
 			if v == "" {
 				allErrs = append(allErrs, field.Required(fldPath.Child(key).Index(i), "capability values must not be empty"))
 			}

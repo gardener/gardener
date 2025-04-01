@@ -208,17 +208,17 @@ var _ = Describe("Strategy", func() {
 			}
 			newCloudProfile := oldCloudProfile.DeepCopy()
 			newCloudProfile.Spec.Capabilities = core.Capabilities{
-				"architecture": core.CapabilityValues{Values: []string{"amd64"}},
+				"architecture": []string{"amd64"},
 			}
 
 			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)
 
 			Expect(newCloudProfile.Spec.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
-			Expect(newCloudProfile.Spec.MachineTypes[0].Capabilities["architecture"].Values).To(ConsistOf("amd64"))
+			Expect(newCloudProfile.Spec.MachineTypes[0].Capabilities["architecture"]).To(ConsistOf("amd64"))
 
 			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64"))
 			Expect(newCloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets).To(ConsistOf(core.CapabilitySet{
-				Capabilities: core.Capabilities{"architecture": core.CapabilityValues{Values: []string{"amd64"}}},
+				Capabilities: core.Capabilities{"architecture": []string{"amd64"}},
 			}))
 		})
 	})
@@ -274,14 +274,14 @@ var _ = Describe("Strategy", func() {
 			cloudProfile := &core.CloudProfile{
 				Spec: core.CloudProfileSpec{
 					Capabilities: core.Capabilities{
-						"architecture": core.CapabilityValues{Values: []string{"amd64"}},
+						"architecture": []string{"amd64"},
 					},
 					MachineImages: []core.MachineImage{{Versions: []core.MachineImageVersion{
 						{CapabilitySets: []core.CapabilitySet{{Capabilities: core.Capabilities{
-							"architecture": core.CapabilityValues{Values: []string{"amd64"}}}}}},
+							"architecture": []string{"amd64"}}}}},
 					}}},
 					MachineTypes: []core.MachineType{{Capabilities: core.Capabilities{
-						"architecture": core.CapabilityValues{Values: []string{"amd64"}},
+						"architecture": []string{"amd64"},
 					}}},
 				},
 			}

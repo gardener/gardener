@@ -3466,7 +3466,7 @@ This is a workaround as the Protobuf generator can&rsquo;t handle a slice of map
 <tbody>
 <tr>
 <td>
-<code>Capabilities</code></br>
+<code>-</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.Capabilities">
 Capabilities
@@ -3479,31 +3479,11 @@ Capabilities
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.CapabilityValues">CapabilityValues
-</h3>
+(<code>[]string</code> alias)</p></h3>
 <p>
 <p>CapabilityValues contains capability values.
 This is a workaround as the Protobuf generator can&rsquo;t handle a map with slice values.</p>
 </p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>Values</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.CloudProfileReference">CloudProfileReference
 </h3>
 <p>

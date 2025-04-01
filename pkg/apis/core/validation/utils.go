@@ -358,9 +358,9 @@ func validateMachineImageVersionCapabilities(machineImageVersion core.MachineIma
 					allErrs = append(allErrs, field.NotSupported(capabilitySetFldPath, capabilityKey, supportedCapabilityKeys))
 					continue
 				}
-				for valueIndex, value := range capability.Values {
+				for valueIndex, value := range capability {
 					if !supportedValues.Contains(value) {
-						allErrs = append(allErrs, field.NotSupported(capabilitySetFldPath.Child(capabilityKey).Index(valueIndex), value, supportedValues.Values))
+						allErrs = append(allErrs, field.NotSupported(capabilitySetFldPath.Child(capabilityKey).Index(valueIndex), value, supportedValues))
 					}
 				}
 			}
@@ -377,7 +377,7 @@ func validateMachineImageVersionArchitecture(machineImageVersion core.MachineIma
 
 	// assert that the architecture values defined do not conflict
 	if len(capabilities) > 0 {
-		supportedArchitectures = capabilities[v1beta1constants.ArchitectureKey].Values
+		supportedArchitectures = capabilities[v1beta1constants.ArchitectureKey]
 		allCapabilityArchitectures := core.ExtractArchitectures(machineImageVersion.CapabilitySets)
 
 		if len(machineImageVersion.Architectures) > 0 && !areSlicesEqual(allCapabilityArchitectures, machineImageVersion.Architectures) {
@@ -420,9 +420,9 @@ func validateMachineTypeCapabilities(machineType core.MachineType, capabilities 
 				allErrs = append(allErrs, field.NotSupported(capabilitiesPath, capabilityKey, supportedCapabilityKeys))
 				continue
 			}
-			for i, value := range capability.Values {
+			for i, value := range capability {
 				if !supportedValues.Contains(value) {
-					allErrs = append(allErrs, field.NotSupported(capabilitiesPath.Child(capabilityKey).Index(i), value, supportedValues.Values))
+					allErrs = append(allErrs, field.NotSupported(capabilitiesPath.Child(capabilityKey).Index(i), value, supportedValues))
 				}
 			}
 		}
@@ -439,7 +439,7 @@ func validateMachineTypeArchitecture(machineType core.MachineType, capabilities 
 	)
 
 	if len(capabilities) > 0 {
-		architectureCapabilityValues := machineType.Capabilities[v1beta1constants.ArchitectureKey].Values
+		architectureCapabilityValues := machineType.Capabilities[v1beta1constants.ArchitectureKey]
 		if len(architectureCapabilityValues) > 1 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("capabilities.architecture"), architectureCapabilityValues, "must not define more than one architecture"))
 		}
