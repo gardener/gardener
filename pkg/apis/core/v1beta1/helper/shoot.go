@@ -17,7 +17,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // HibernationIsEnabled checks if the given shoot's desired state is hibernated.
@@ -662,11 +661,6 @@ func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStra
 
 // IsShootIstioTLSTerminationEnabled returns true if the Istio TLS termination for the shoot kube-apiserver is enabled.
 func IsShootIstioTLSTerminationEnabled(shoot *gardencorev1beta1.Shoot) bool {
-	shootKubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
-	if err != nil || versionutils.ConstraintK8sLess131.Check(shootKubernetesVersion) {
-		return false
-	}
-
 	value, ok := shoot.Annotations[v1beta1constants.ShootDisableIstioTLSTermination]
 	if !ok {
 		return true

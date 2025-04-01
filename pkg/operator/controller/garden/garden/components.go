@@ -523,7 +523,7 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 	deployer := []component.Deployer{r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, "")}
 
 	mutualTLSService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.MutualTLSServiceNameSuffix)
-	if isIstioTLSTerminationEnabled(garden) {
+	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
 		deployer = append(deployer, mutualTLSService)
 	} else {
 		deployer = append(deployer, component.OpDestroy(mutualTLSService))
@@ -863,7 +863,7 @@ func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden
 					Namespace: ingressGatewayValues[0].Namespace,
 					Labels:    ingressGatewayValues[0].Labels,
 				},
-				IstioTLSTermination:   isIstioTLSTerminationEnabled(garden),
+				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 				WildcardConfiguration: wildcardConfiguration,
 			}
 		},
