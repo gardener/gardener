@@ -391,13 +391,13 @@ const placeholder = "replica-name"
 
 func replacePlaceholdersInShootSpec(spec *gardencorev1beta1.ShootSpec, name string) {
 	if spec.DNS != nil && spec.DNS.Domain != nil {
-		spec.DNS.Domain = ptr.To(strings.Replace(*spec.DNS.Domain, placeholder, name, -1))
+		spec.DNS.Domain = ptr.To(strings.ReplaceAll(*spec.DNS.Domain, placeholder, name))
 	}
 }
 
 func replacePlaceholdersInSeedSpec(spec *gardencorev1beta1.SeedSpec, name string) {
 	if spec.Ingress != nil {
-		spec.Ingress.Domain = strings.Replace(spec.Ingress.Domain, placeholder, name, -1)
+		spec.Ingress.Domain = strings.ReplaceAll(spec.Ingress.Domain, placeholder, name)
 	}
 }
 

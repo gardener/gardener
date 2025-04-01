@@ -92,7 +92,7 @@ func CheckVersionMeetsConstraint(version, constraint string) (bool, error) {
 }
 
 func normalize(version string) string {
-	v := strings.Replace(version, "v", "", -1)
+	v := strings.ReplaceAll(version, "v", "")
 	idx := strings.IndexAny(v, "-+")
 	if idx != -1 {
 		v = v[:idx]

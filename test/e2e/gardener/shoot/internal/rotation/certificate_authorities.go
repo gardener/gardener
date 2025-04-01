@@ -176,7 +176,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 		g.Expect(configMap.Data["ca.crt"]).To(ContainSubstring(string(v.oldCACert)), "CA bundle should contain the old CA cert")
 		v.caBundle = []byte(configMap.Data["ca.crt"])
 
-		v.newCACert = []byte(strings.Replace(string(v.caBundle), string(v.oldCACert), "", -1))
+		v.newCACert = []byte(strings.ReplaceAll(string(v.caBundle), string(v.oldCACert), ""))
 		Expect(v.newCACert).NotTo(BeEmpty())
 	}).Should(Succeed(), "CA bundle should be synced to garden")
 
@@ -192,7 +192,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 		caBundle := secret.Data["ca.crt"]
 		Expect(caBundle).To(Equal(v.caBundle), "ca-cluster secret in garden should contain the same bundle as ca-cluster config map in garden")
 
-		newCACert := []byte(strings.Replace(string(caBundle), string(v.oldCACert), "", -1))
+		newCACert := []byte(strings.ReplaceAll(string(caBundle), string(v.oldCACert), ""))
 		Expect(newCACert).To(Equal(v.newCACert), "new CA bundle from secret in garden should match new CA bundle from config map in garden")
 	}).Should(Succeed(), "CA bundle should be synced to garden")
 

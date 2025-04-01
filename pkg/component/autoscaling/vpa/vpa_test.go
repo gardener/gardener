@@ -1620,7 +1620,7 @@ var _ = Describe("VPA", func() {
 					clusterRoleBindingGeneralActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.RoleRef.Name)
 					clusterRoleBindingGeneralTargetReader.Name = replaceTargetSubstrings(clusterRoleBindingGeneralTargetReader.Name)
 					clusterRoleBindingGeneralTargetReader.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralTargetReader.RoleRef.Name)
-					mutatingWebhookConfiguration.Name = strings.Replace(mutatingWebhookConfiguration.Name, "-target", "-source", -1)
+					mutatingWebhookConfiguration.Name = strings.ReplaceAll(mutatingWebhookConfiguration.Name, "-target", "-source")
 					mutatingWebhookConfiguration.Webhooks[0].ClientConfig = admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "vpa-webhook",
@@ -2297,7 +2297,7 @@ var _ = Describe("VPA", func() {
 })
 
 func replaceTargetSubstrings(in string) string {
-	return strings.Replace(in, ":target:", ":source:", -1)
+	return strings.ReplaceAll(in, ":target:", ":source:")
 }
 
 func adaptNetworkPolicyLabelsForClusterTypeSeed(labels map[string]string) {

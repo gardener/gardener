@@ -215,6 +215,6 @@ func (r *Registry) objectName(obj client.Object) (string, error) {
 		"%s__%s__%s",
 		strings.ToLower(gvk.String()),
 		obj.GetNamespace(),
-		strings.Replace(obj.GetName(), ":", "_", -1),
+		strings.ReplaceAll(obj.GetName(), ":", "_"),
 	), nil
 }
