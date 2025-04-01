@@ -774,16 +774,29 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 	// (e.g., in case of a rolling-update).
 
 	checkScaleUp := false
+	checkRollingUpdate := false
 	for _, deployment := range machineDeploymentList.Items {
 		if len(deployment.Status.FailedMachines) > 0 {
 			break
 		}
 
 		for _, condition := range deployment.Status.Conditions {
+			// First check for rolling update since it overrules the remaining checks.
+			if condition.Type == machinev1alpha1.MachineDeploymentProgressing && condition.Status == machinev1alpha1.ConditionTrue && condition.Reason != "NewMachineSetAvailable" {
+				checkRollingUpdate = true
+				break
+			}
 			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
 				checkScaleUp = true
 				break
 			}
+		}
+	}
+
+	if checkRollingUpdate {
+		// Use the checkNodesScalingUp function since it checks for machines that may be stuck in the pending state, which can happen when rolling out critical components that are stuck.
+		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
+			return "NodeRollOut", err
 		}
 	}
 
