@@ -100,7 +100,7 @@ func merge(origin string, desired, current *unstructured.Unstructured, forceOver
 	if annotations[resourcesv1alpha1.PreserveReplicas] == "true" {
 		preserveReplicas = true
 	}
-	preserveResources := false
+	var preserveResources bool
 	if annotations[resourcesv1alpha1.PreserveResources] == "true" {
 		preserveResources = true
 	}
