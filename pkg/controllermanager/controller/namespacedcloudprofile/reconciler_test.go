@@ -186,7 +186,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				},
 			}
 			cloudProfile.Spec.Capabilities = gardencorev1beta1.Capabilities{
-				"architecture": gardencorev1beta1.CapabilityValues{Values: []string{"amd64", "arm64"}},
+				"architecture": []string{"amd64", "arm64"},
 			}
 
 			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {

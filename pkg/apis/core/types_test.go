@@ -49,9 +49,7 @@ var _ = Describe("API Types", func() {
 			var values CapabilityValues
 
 			BeforeEach(func() {
-				values = CapabilityValues{
-					Values: []string{"a", "b", "c"},
-				}
+				values = []string{"a", "b", "c"}
 			})
 
 			Describe("#Contains", func() {
@@ -70,15 +68,15 @@ var _ = Describe("API Types", func() {
 
 			Describe("#IsSubsetOf", func() {
 				It("should return true if it is a subset", func() {
-					Expect(values.IsSubsetOf(CapabilityValues{Values: []string{"a", "b", "c", "d"}})).To(BeTrue())
+					Expect(values.IsSubsetOf([]string{"a", "b", "c", "d"})).To(BeTrue())
 				})
 
 				It("should return true if both contain the same values", func() {
-					Expect(values.IsSubsetOf(CapabilityValues{Values: []string{"a", "b", "c"}})).To(BeTrue())
+					Expect(values.IsSubsetOf([]string{"a", "b", "c"})).To(BeTrue())
 				})
 
 				It("should return false if it is not a subset", func() {
-					Expect(values.IsSubsetOf(CapabilityValues{Values: []string{"a", "b"}})).To(BeFalse())
+					Expect(values.IsSubsetOf([]string{"a", "b"})).To(BeFalse())
 				})
 			})
 		})
@@ -86,7 +84,7 @@ var _ = Describe("API Types", func() {
 		Describe("Capabilities", func() {
 			Describe("#len", func() {
 				It("should return true if it has capabilities defined", func() {
-					Expect(Capabilities{"fooCap": CapabilityValues{Values: []string{"a", "b", "c"}}}).NotTo(BeEmpty())
+					Expect(Capabilities{"fooCap": []string{"a", "b", "c"}}).NotTo(BeEmpty())
 				})
 
 				It("should return false if it hasn't capabilities defined", func() {

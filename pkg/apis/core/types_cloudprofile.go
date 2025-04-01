@@ -73,7 +73,7 @@ type CloudProfileSpec struct {
 	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
-	Capabilities Capabilities
+	Capabilities map[string]CapabilityValues
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -131,11 +131,11 @@ func (m *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, ar
 		return slices.Contains(m.Architectures, architecture)
 	}
 	for _, capability := range m.CapabilitySets {
-		if slices.Contains(capability.Capabilities[constants.ArchitectureKey].Values, architecture) {
+		if slices.Contains(capability.Capabilities[constants.ArchitectureKey], architecture) {
 			return true
 		}
 	}
-	return slices.Contains(capabilities[constants.ArchitectureKey].Values, architecture)
+	return slices.Contains(capabilities[constants.ArchitectureKey], architecture)
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -170,8 +170,8 @@ type MachineType struct {
 
 // GetArchitecture returns the architecture of the machine type.
 func (m *MachineType) GetArchitecture() string {
-	if len(m.Capabilities[constants.ArchitectureKey].Values) == 1 {
-		return m.Capabilities[constants.ArchitectureKey].Values[0]
+	if len(m.Capabilities[constants.ArchitectureKey]) == 1 {
+		return m.Capabilities[constants.ArchitectureKey][0]
 	}
 	return ptr.Deref(m.Architecture, "")
 }
@@ -301,14 +301,12 @@ type InPlaceUpdates struct {
 
 // CapabilityValues contains capability values.
 // This is a workaround as the Protobuf generator can't handle a map with slice values.
-type CapabilityValues struct {
-	Values []string
-}
+type CapabilityValues []string
 
 // Contains checks if the CapabilityValues contains all values.
-func (c *CapabilityValues) Contains(values ...string) bool {
+func (c CapabilityValues) Contains(values ...string) bool {
 	for _, value := range values {
-		if !slices.Contains(c.Values, value) {
+		if !slices.Contains(c, value) {
 			return false
 		}
 	}
@@ -316,8 +314,8 @@ func (c *CapabilityValues) Contains(values ...string) bool {
 }
 
 // IsSubsetOf checks if the CapabilityValues is a subset of another CapabilityValues.
-func (c *CapabilityValues) IsSubsetOf(other CapabilityValues) bool {
-	for _, value := range c.Values {
+func (c CapabilityValues) IsSubsetOf(other CapabilityValues) bool {
+	for _, value := range c {
 		if !other.Contains(value) {
 			return false
 		}
@@ -338,7 +336,7 @@ type CapabilitySet struct {
 func ExtractArchitectures(capabilities []CapabilitySet) []string {
 	var architectures []string
 	for _, capabilitySet := range capabilities {
-		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey].Values {
+		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey] {
 			if !slices.Contains(architectures, architectureValue) {
 				architectures = append(architectures, architectureValue)
 			}

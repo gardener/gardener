@@ -274,9 +274,7 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 				newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets,
 					core.CapabilitySet{
 						Capabilities: core.Capabilities{
-							constants.ArchitectureKey: core.CapabilityValues{
-								Values: version.Architectures,
-							},
+							constants.ArchitectureKey: version.Architectures,
 						},
 					})
 				continue
@@ -297,7 +295,7 @@ func syncMachineTypeArchitectureCapabilities(newMachineTypes, oldMachineTypes []
 		oldMachineType, oldMachineTypeExists := oldMachineTypesMap[machineType.Name]
 		architectureValue := ptr.Deref(machineType.Architecture, "")
 		oldArchitectureValue := ptr.Deref(oldMachineType.Architecture, "")
-		capabilityArchitectures := machineType.Capabilities[constants.ArchitectureKey].Values
+		capabilityArchitectures := machineType.Capabilities[constants.ArchitectureKey]
 
 		// Skip any architecture field syncing if
 		// - architecture field has been modified and changed to any value other than empty.
@@ -315,9 +313,7 @@ func syncMachineTypeArchitectureCapabilities(newMachineTypes, oldMachineTypes []
 			if newMachineTypes[i].Capabilities == nil {
 				newMachineTypes[i].Capabilities = make(core.Capabilities)
 			}
-			newMachineTypes[i].Capabilities[constants.ArchitectureKey] = core.CapabilityValues{
-				Values: []string{architectureValue},
-			}
+			newMachineTypes[i].Capabilities[constants.ArchitectureKey] = []string{architectureValue}
 			continue
 		}
 

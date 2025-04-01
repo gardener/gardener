@@ -58,7 +58,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CARotation":                                 schema_pkg_apis_core_v1beta1_CARotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI":                                        schema_pkg_apis_core_v1beta1_CRI(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilitySet":                              schema_pkg_apis_core_v1beta1_CapabilitySet(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues":                           schema_pkg_apis_core_v1beta1_CapabilityValues(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfile":                               schema_pkg_apis_core_v1beta1_CloudProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileList":                           schema_pkg_apis_core_v1beta1_CloudProfileList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference":                      schema_pkg_apis_core_v1beta1_CloudProfileReference(ref),
@@ -1975,51 +1974,6 @@ func schema_pkg_apis_core_v1beta1_CapabilitySet(ref common.ReferenceCallback) co
 			SchemaProps: spec.SchemaProps{
 				Description: "CapabilitySet is a wrapper for Capabilities. This is a workaround as the Protobuf generator can't handle a slice of maps.",
 				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"capabilities": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_CapabilityValues(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CapabilityValues contains capability values. This is a workaround as the Protobuf generator can't handle a map with slice values.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"values": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
-				},
 			},
 		},
 	}
@@ -2290,8 +2244,16 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
+										Type: []string{"array"},
+										Items: &spec.SchemaOrArray{
+											Schema: &spec.Schema{
+												SchemaProps: spec.SchemaProps{
+													Default: "",
+													Type:    []string{"string"},
+													Format:  "",
+												},
+											},
+										},
 									},
 								},
 							},
@@ -2302,7 +2264,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Bastion", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -5782,8 +5744,16 @@ func schema_pkg_apis_core_v1beta1_MachineType(ref common.ReferenceCallback) comm
 								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues"),
+										Type: []string{"array"},
+										Items: &spec.SchemaOrArray{
+											Schema: &spec.Schema{
+												SchemaProps: spec.SchemaProps{
+													Default: "",
+													Type:    []string{"string"},
+													Format:  "",
+												},
+											},
+										},
 									},
 								},
 							},
@@ -5794,7 +5764,7 @@ func schema_pkg_apis_core_v1beta1_MachineType(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CapabilityValues", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 
