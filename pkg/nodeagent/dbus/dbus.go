@@ -44,7 +44,7 @@ type db struct {
 func New(log logr.Logger) DBus {
 	return &db{log: log.WithName("dbus")}
 }
-func (_ *db) Reboot() error {
+func (*db) Reboot() error {
 	login, err := login1.New()
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -55,7 +55,7 @@ func (_ *db) Reboot() error {
 	return nil
 }
 
-func (_ *db) Enable(ctx context.Context, unitNames ...string) error {
+func (*db) Enable(ctx context.Context, unitNames ...string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -66,7 +66,7 @@ func (_ *db) Enable(ctx context.Context, unitNames ...string) error {
 	return err
 }
 
-func (_ *db) Disable(ctx context.Context, unitNames ...string) error {
+func (*db) Disable(ctx context.Context, unitNames ...string) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)
@@ -107,7 +107,7 @@ func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node ru
 	return d.runCommand(ctx, recorder, node, unitName, dbc.RestartUnitContext, "SystemDUnitRestart", "restart")
 }
 
-func (_ *db) DaemonReload(ctx context.Context) error {
+func (*db) DaemonReload(ctx context.Context) error {
 	dbc, err := dbus.NewWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to dbus: %w", err)

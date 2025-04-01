@@ -40,7 +40,7 @@ func (d *localDriver) GenerateMachineClassForMigration(_ context.Context, _ *dri
 }
 
 // InitializeMachine is not implemented.
-func (_ *localDriver) InitializeMachine(context.Context, *driver.InitializeMachineRequest) (*driver.InitializeMachineResponse, error) {
+func (*localDriver) InitializeMachine(context.Context, *driver.InitializeMachineRequest) (*driver.InitializeMachineResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "InitializeMachine is not yet implemented")
 }
 
