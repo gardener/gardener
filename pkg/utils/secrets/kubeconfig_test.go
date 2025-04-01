@@ -21,6 +21,7 @@ var _ = Describe("Kubeconfig Secrets", func() {
 		contextName = "shoot--foo--bar"
 		cluster     = clientcmdv1.Cluster{Server: "server", CertificateAuthority: "/some/path"}
 		authInfo    = clientcmdv1.AuthInfo{Token: "token"}
+		namespace   = "default"
 	)
 
 	Describe("Configuration", func() {
@@ -32,6 +33,7 @@ var _ = Describe("Kubeconfig Secrets", func() {
 				ContextName: contextName,
 				Cluster:     cluster,
 				AuthInfo:    authInfo,
+				Namespace:   namespace,
 			}
 		})
 
@@ -49,8 +51,11 @@ var _ = Describe("Kubeconfig Secrets", func() {
 				kubeconfig, ok := obj.(*Kubeconfig)
 				Expect(ok).To(BeTrue())
 
+				expected := kubernetesutils.NewKubeconfig(contextName, cluster, authInfo)
+				expected.Contexts[0].Context.Namespace = namespace
+
 				Expect(kubeconfig.Name).To(Equal(name))
-				Expect(kubeconfig.Kubeconfig).To(Equal(kubernetesutils.NewKubeconfig(contextName, cluster, authInfo)))
+				Expect(kubeconfig.Kubeconfig).To(Equal(expected))
 			})
 		})
 
