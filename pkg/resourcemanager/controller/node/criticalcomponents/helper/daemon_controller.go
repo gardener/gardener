@@ -197,10 +197,10 @@ var Semantic = conversion.EqualitiesOrDie(
 		return a.Cmp(b) == 0
 	},
 	func(a, b metav1.MicroTime) bool {
-		return a.UTC() == b.UTC()
+		return a.Time.Equal(b.Time)
 	},
 	func(a, b metav1.Time) bool {
-		return a.UTC() == b.UTC()
+		return a.Time.Equal(b.Time)
 	},
 	func(a, b labels.Selector) bool {
 		return a.String() == b.String()
