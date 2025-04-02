@@ -6,6 +6,7 @@ package customverbauthorizer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -19,9 +20,13 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -60,16 +65,36 @@ func NewFactory(_ io.Reader) (admission.Interface, error) {
 // CustomVerbAuthorizer contains an admission handler and listers.
 type CustomVerbAuthorizer struct {
 	*admission.Handler
-	authorizer authorizer.Authorizer
+	cloudProfileLister gardencorev1beta1listers.CloudProfileLister
+	authorizer         authorizer.Authorizer
+	readyFunc          admission.ReadyFunc
 }
 
-var _ = admissioninitializer.WantsAuthorizer(&CustomVerbAuthorizer{})
+var (
+	_          = admissioninitializer.WantsAuthorizer(&CustomVerbAuthorizer{})
+	_          = admissioninitializer.WantsCoreInformerFactory(&CustomVerbAuthorizer{})
+	readyFuncs []admission.ReadyFunc
+)
 
 // New creates a new CustomVerbAuthorizer admission plugin.
 func New() (*CustomVerbAuthorizer, error) {
 	return &CustomVerbAuthorizer{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
+}
+
+// AssignReadyFunc assigns the ready function to the admission handler.
+func (c *CustomVerbAuthorizer) AssignReadyFunc(f admission.ReadyFunc) {
+	c.readyFunc = f
+	c.SetReadyFunc(f)
+}
+
+// SetCoreInformerFactory gets Lister from SharedInformerFactory.
+func (c *CustomVerbAuthorizer) SetCoreInformerFactory(f gardencoreinformers.SharedInformerFactory) {
+	cloudProfileInformer := f.Core().V1beta1().CloudProfiles()
+	c.cloudProfileLister = cloudProfileInformer.Lister()
+
+	readyFuncs = append(readyFuncs, cloudProfileInformer.Informer().HasSynced)
 }
 
 // SetAuthorizer gets the authorizer.
@@ -79,6 +104,9 @@ func (c *CustomVerbAuthorizer) SetAuthorizer(authorizer authorizer.Authorizer) {
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (c *CustomVerbAuthorizer) ValidateInitialization() error {
+	if c.cloudProfileLister == nil {
+		return errors.New("missing cloudProfile lister")
+	}
 	return nil
 }
 
@@ -86,6 +114,21 @@ var _ admission.ValidationInterface = &CustomVerbAuthorizer{}
 
 // Validate makes admissions decisions based on custom verbs.
 func (c *CustomVerbAuthorizer) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+	// Wait until the caches have been synced
+	if c.readyFunc == nil {
+		c.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !c.WaitForReady() {
+		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	}
+
 	switch a.GetKind().GroupKind() {
 	case core.Kind("Project"):
 		return c.admitProjects(ctx, a)
@@ -138,6 +181,12 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 		return apierrors.NewBadRequest("could not convert resource into NamespacedCloudProfile object")
 	}
 
+	parentCloudProfileName := obj.Spec.Parent.Name
+	parentCloudProfile, err := c.cloudProfileLister.Get(parentCloudProfileName)
+	if err != nil {
+		return apierrors.NewBadRequest("parent CloudProfile could not be found")
+	}
+
 	if a.GetOperation() == admission.Update {
 		oldObj, ok = a.GetOldObject().(*core.NamespacedCloudProfile)
 		if !ok {
@@ -166,7 +215,7 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 		}
 	}
 
-	if mustCheckLimits(oldObj.Spec.Limits, obj.Spec.Limits) {
+	if mustCheckLimits(oldObj.Spec.Limits, obj.Spec.Limits, parentCloudProfile) {
 		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileRaiseLimits, "modify .spec.limits")
 		if err != nil {
 			return err
@@ -292,6 +341,10 @@ func mustCheckProviderConfig(oldProviderConfig, providerConfig *runtime.RawExten
 	return !apiequality.Semantic.DeepEqual(oldProviderConfig, providerConfig)
 }
 
-func mustCheckLimits(oldLimits, limits *core.Limits) bool {
-	return !apiequality.Semantic.DeepEqual(oldLimits, limits)
+func mustCheckLimits(oldLimits, limits *core.Limits, parentCloudProfile *v1beta1.CloudProfile) bool {
+	return limits != nil &&
+		!apiequality.Semantic.DeepEqual(oldLimits, limits) &&
+		parentCloudProfile.Spec.Limits != nil &&
+		parentCloudProfile.Spec.Limits.MaxNodesTotal != nil &&
+		ptr.Deref(limits.MaxNodesTotal, 0) > ptr.Deref(parentCloudProfile.Spec.Limits.MaxNodesTotal, 0)
 }

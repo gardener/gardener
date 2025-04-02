@@ -21,6 +21,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
 	mockauthorizer "github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer"
 )
@@ -37,8 +39,9 @@ var _ = Describe("customverbauthorizer", func() {
 		var (
 			ctx = context.Background()
 
-			attrs            admission.Attributes
-			admissionHandler *CustomVerbAuthorizer
+			attrs               admission.Attributes
+			admissionHandler    *CustomVerbAuthorizer
+			coreInformerFactory gardencoreinformers.SharedInformerFactory
 
 			userInfo            = &user.DefaultInfo{Name: "foo"}
 			authorizeAttributes authorizer.AttributesRecord
@@ -47,6 +50,9 @@ var _ = Describe("customverbauthorizer", func() {
 		BeforeEach(func() {
 			admissionHandler, _ = New()
 			admissionHandler.SetAuthorizer(auth)
+			admissionHandler.AssignReadyFunc(func() bool { return true })
+			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 		})
 
 		Context("Projects", func() {
@@ -357,14 +363,28 @@ var _ = Describe("customverbauthorizer", func() {
 
 		Context("NamespacedCloudProfiles", func() {
 			var (
+				parentCloudProfile     *v1beta1.CloudProfile
 				namespacedCloudProfile *core.NamespacedCloudProfile
 			)
 
 			BeforeEach(func() {
+				parentCloudProfile = &v1beta1.CloudProfile{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "parent-cloud-profile",
+					},
+				}
+				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+
 				namespacedCloudProfile = &core.NamespacedCloudProfile{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "dummy",
 						Namespace: "dummy-namespace",
+					},
+					Spec: core.NamespacedCloudProfileSpec{
+						Parent: core.CloudProfileReference{
+							Name: parentCloudProfile.Name,
+							Kind: "CloudProfile",
+						},
 					},
 				}
 
@@ -633,6 +653,93 @@ var _ = Describe("customverbauthorizer", func() {
 					})
 				})
 			})
+
+			Context("raise-spec-limits verb", func() {
+				BeforeEach(func() {
+					authorizeAttributes.Verb = CustomVerbNamespacedCloudProfileRaiseLimits
+				})
+
+				It("should always allow creating a NamespacedCloudProfile without limits", func() {
+					attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+
+				It("should always allow creating a NamespacedCloudProfile without limits.MaxNodesTotal", func() {
+					namespacedCloudProfile.Spec.Limits = &core.Limits{}
+					attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+
+				It("should always allow creating a NamespacedCloudProfile with any limits.MaxNodesTotal if there is no limit in the parent CloudProfile", func() {
+					namespacedCloudProfile.Spec.Limits = &core.Limits{
+						MaxNodesTotal: ptr.To(int32(15)),
+					}
+					attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+
+				It("should always allow removing a NamespacedCloudProfile's limits section", func() {
+					namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: ptr.To(int32(15))}
+					oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+					namespacedCloudProfile.Spec.Limits = nil
+
+					attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+
+				It("should always allow decreasing a NamespacedCloudProfile's limits.maxNodesTotal to a lower or equal to value than in CloudProfile's limits", func() {
+					parentCloudProfile.Spec.Limits = &v1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+
+					namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: ptr.To(int32(15))}
+					oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+					namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: ptr.To(int32(10))}
+
+					attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+				})
+
+				Describe("permissions granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
+
+						parentCloudProfile.Spec.Limits = &v1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+					})
+
+					It("should allow creating a NamespacedCloudProfile with limits above parent CloudProfile limits", func() {
+						namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: ptr.To(int32(15))}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+					})
+				})
+
+				Describe("permissions not granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
+
+						parentCloudProfile.Spec.Limits = &v1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+						Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
+					})
+
+					It("should forbid creating a NamespacedCloudProfile with a higher limits.maxNodesTotal value", func() {
+						namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: ptr.To(int32(15))}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, nil, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
+					})
+
+					It("should forbid modification of a NamespacedCloudProfile's limits.maxNodesTotal to a value still too high", func() {
+						namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: ptr.To(int32(15))}
+						oldNamespacedCloudProfile := namespacedCloudProfile.DeepCopy()
+						namespacedCloudProfile.Spec.Limits = &core.Limits{MaxNodesTotal: ptr.To(int32(13))}
+
+						attrs = admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("namespacedcloudprofiles").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(ctx, attrs, nil)).NotTo(Succeed())
+					})
+				})
+			})
 		})
 	})
 
@@ -669,8 +776,9 @@ var _ = Describe("customverbauthorizer", func() {
 	})
 
 	Describe("#ValidateInitialization", func() {
-		It("should not return error if", func() {
+		It("should not return error", func() {
 			cva, _ := New()
+			cva.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			Expect(cva.ValidateInitialization()).To(Succeed())
 		})
 	})
