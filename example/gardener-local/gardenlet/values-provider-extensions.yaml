@@ -19,3 +19,6 @@ config:
         - name: gardenlet-bootstrap
           user:
             token: 07401d.f395accd246ae52d
+  seedConfig:
+    spec:
+      extensions: []
