@@ -4041,6 +4041,7 @@ Kubernetes core/v1.ResourceList
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>VirtualCapacity represents the expected Node &lsquo;virtual&rsquo; capacity ie comprising virtual extended resources.</p>
 </td>
 </tr>
