@@ -96,7 +96,6 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 		SeccompDefault:                   params.SeccompDefault,
 		SerializeImagePulls:              params.SerializeImagePulls,
 		ServerTLSBootstrap:               true,
-		StaticPodPath:                    FilePathKubernetesManifests,
 		StreamingConnectionIdleTimeout:   *params.StreamingConnectionIdleTimeout,
 		RegisterWithTaints:               nodeTaints,
 		RegistryPullQPS:                  params.RegistryPullQPS,
@@ -109,6 +108,10 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 
 	if params.MemorySwap != nil {
 		config.MemorySwap = *params.MemorySwap
+	}
+
+	if params.WithStaticPodPath {
+		config.StaticPodPath = FilePathKubernetesManifests
 	}
 
 	return config
