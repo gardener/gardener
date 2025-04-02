@@ -173,28 +173,18 @@ type Settings struct {
 	TopologyAwareRouting *SettingTopologyAwareRouting `json:"topologyAwareRouting,omitempty"`
 }
 
-// HostCertificates describes certificates that will be configured for monitoring
-// from the host nodes
-type HostCertificates struct {
-	// MountPath is the host path that will be mounted
-	MountPath string
-	// CertificatePaths is a list of certificates within the specified mount
-	// All relative paths are configured based on the specified mount
-	// +optional
-	CertificatePaths []string `json:"certificatePaths,omitempty"`
-	// CertificateDirPaths are similar to CertificatePaths but for dirs
-	// +optional
-	CertificateDirPaths []string `json:"certificateDirPaths,omitempty"`
-}
-
 // WorkerGroup describes worker groups and configures paths to host certificates
 // Parameters are fed to the x509-certificate-exporter DaemonSet
 type WorkerGroup struct {
 	// Selector is a label selector that selects the worker nodes of this group.
 	// +optional
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
-	// HostCertificates contains the definition of the host certificates.
-	HostCertificates []HostCertificates `json:"hostCertificates,omitempty"`
+	// MountPaths are the host paths that will be mounted within the
+	MountPaths []string
+	// CertificatePaths is a list of certificates within the specified mount
+	// All relative paths are configured based on the specified mount
+	// +optional
+	CertificatePaths []string `json:"certificatePaths,omitempty"`
 }
 
 // SettingLoadBalancerServices controls certain settings for services of type load balancer that are created in the

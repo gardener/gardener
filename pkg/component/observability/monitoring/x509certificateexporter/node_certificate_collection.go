@@ -6,7 +6,6 @@ package x509certificateexporter
 
 import (
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"sort"
 
@@ -15,74 +14,47 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
 func (x *x509CertificateExporter) daemonSetList(resNamePrefix string, sa *corev1.ServiceAccount) ([]client.Object, error) {
 	if len(x.values.WorkerGroups) == 0 {
 		return nil, nil
 	}
-	var (
-		daemonSets          []client.Object = make([]client.Object, 0, len(x.values.WorkerGroups))
-		getHostCertificates                 = func(group operatorv1alpha1.WorkerGroup) ([]HostCertificates, error) {
-			newHostCertificates := make([]HostCertificates, 0, len(group.HostCertificates))
-			for idx, hc := range group.HostCertificates {
-				certs, err := NewHostCertificates(hc.MountPath, hc.CertificatePaths, hc.CertificateDirPaths)
-				if err != nil {
-					return nil, fmt.Errorf("failed to create HostCertificates object from %v: %w", hc, err)
-				}
-				newHostCertificates[idx] = *certs
-			}
-			return newHostCertificates, nil
-		}
-	)
+	daemonSets := make([]client.Object, 0, len(x.values.WorkerGroups))
 
 	for name, group := range x.values.WorkerGroups {
-		hostCertificates, err := getHostCertificates(group)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create HostCertificates object for worker group %s: %w", name, err)
+		if len(group.MountPaths) == 0 {
+			return nil, fmt.Errorf("no mount paths provided for worker group %s", name)
 		}
-		ds, err := x.daemonSet(fmt.Sprintf("%s-%s", resNamePrefix, name), sa, hostCertificates, group.Selector)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create DaemonSet: %w", err)
+		if len(group.CertificatePaths) == 0 {
+			return nil, fmt.Errorf("no certificate paths provided for worker group %s", name)
 		}
-		daemonSets = append(daemonSets, ds)
+		certificatesToMonitor, certificateDirsToMonitor, err := getPathArgs(group.CertificatePaths)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create certificate path args for worker group %s: %w", name, err)
+		}
+		daemonSets = append(daemonSets, x.daemonSet(fmt.Sprintf("%s-%s", resNamePrefix, name), sa, certificatesToMonitor, certificateDirsToMonitor, group.Selector))
 	}
 
 	return daemonSets, nil
 }
 
 func (x *x509CertificateExporter) daemonSet(
-	resName string, sa *corev1.ServiceAccount, hostCerts []HostCertificates, selector *metav1.LabelSelector,
-) (*appsv1.DaemonSet, error) {
-	if len(x.values.WorkerGroups) == 0 {
-		return nil, errors.New("No workergroups defined")
-	}
-
+	resName string, sa *corev1.ServiceAccount,
+	hostPaths []string, certArgs []string,
+	selector *metav1.LabelSelector,
+) *appsv1.DaemonSet {
 	var (
 		hostPathType = corev1.HostPathDirectory
 		labelz       = x.getGenericLabels(nodeCertificateLabelValue)
-		hostPaths    []string
-		args         []string
+		args         = certArgs
 		volumeMounts []corev1.VolumeMount
 		volumes      []corev1.Volume
 		podSpec      corev1.PodSpec
 	)
 
-	hostPaths, args = func() ([]string, []string) {
-		paths := []string{}
-		certArgs := []string{}
-		for _, hc := range hostCerts {
-			paths = append(paths, hc.MountPath)
-			certArgs = append(certArgs, hc.AsArgs()...)
-		}
-		return paths, certArgs
-	}()
-
 	args = append(args,
 		"--expose-relative-metrics",
-		"--watch-kube-secrets",
 		"--expose-per-cert-error-metrics",
 		fmt.Sprintf("--listen-address=:%d", port),
 	)
@@ -135,7 +107,7 @@ func (x *x509CertificateExporter) daemonSet(
 				Spec: podSpec,
 			},
 		},
-	}, nil
+	}
 }
 
 func (x *x509CertificateExporter) getHostCertificateMonitoringResources() ([]client.Object, error) {
