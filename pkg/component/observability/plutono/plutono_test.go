@@ -701,7 +701,7 @@ status:
 					})
 
 					It("should successfully deploy all resources", func() {
-						checkDeployedResources("plutono-dashboards-garden", 31)
+						checkDeployedResources("plutono-dashboards-garden", 32)
 					})
 				})
 
@@ -712,7 +712,7 @@ status:
 
 					It("should successfully deploy all resources", func() {
 						dashboardConfigMapName := "plutono-dashboards-garden"
-						dashboardCount := 28
+						dashboardCount := 29
 
 						Expect(manifests).To(ConsistOf(
 							dataSourceConfigMapYAMLFor(values),
@@ -731,7 +731,7 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards-garden", 28)
+					checkDeployedResources("plutono-dashboards-garden", 29)
 				})
 			})
 		})
