@@ -4,12 +4,26 @@
 
 package x509certificateexporter
 
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
+)
+
 func stringsToArgs(argName string, values []string) []string {
-	args := make([]string, len(values))
-	for i, value := range values {
-		args[i] = "--" + argName + "=" + value
+	for _, value := range values {
+		value = "--" + argName + "=" + value
 	}
-	return args
+	return values
+}
+func stringsToPathArgs(argName string, values []string) ([]string, error) {
+	for _, value := range values {
+		if !filepath.IsAbs(value) {
+			return nil, fmt.Errorf("value %s is not an absolute path", value)
+		}
+		value = "--" + argName + "=" + value
+	}
+	return values, nil
 }
 
 func secretTypesAsArgs(secretTypes []string) []string {
@@ -36,3 +50,32 @@ func excludedNamespacesAsArgs(excludedNamespaces []string) []string {
 	return stringsToArgs("exclude-namespace", excludedNamespaces)
 }
 
+func getCertificateFileAsArg(filenames []string) ([]string, error) {
+	return stringsToPathArgs("watch-file", filenames)
+}
+
+func getCertificateDirAsArg(directories []string) ([]string, error) {
+	return stringsToPathArgs("watch-dir", directories)
+}
+
+func getPathArgs(paths []string) ([]string, []string, error) {
+	var (
+		certificateFileArgs []string
+		certificateDirArgs  []string
+		err                 error
+	)
+	for _, path := range paths {
+		if strings.HasSuffix(path, "/") {
+			certificateDirArgs = append(certificateDirArgs, path)
+			continue
+		}
+		certificateFileArgs = append(certificateFileArgs, path)
+	}
+	if certificateFileArgs, err = getCertificateFileAsArg(certificateFileArgs); err != nil {
+		return nil, nil, err
+	}
+	if certificateDirArgs, err = getCertificateDirAsArg(certificateDirArgs); err != nil {
+		return nil, nil, err
+	}
+	return certificateFileArgs, certificateDirArgs, nil
+}
