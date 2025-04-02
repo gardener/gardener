@@ -180,7 +180,9 @@ type WorkerGroup struct {
 	// +optional
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 	// MountPaths are the host paths that will be mounted within the
-	MountPaths []string
+	// x509-certificate-exporter DaemonSet
+	// +optional
+	MountPaths []string `json:"mountPaths,omitempty"`
 	// CertificatePaths is a list of certificates within the specified mount
 	// All relative paths are configured based on the specified mount
 	// +optional
