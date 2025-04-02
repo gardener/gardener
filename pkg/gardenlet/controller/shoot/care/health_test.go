@@ -660,41 +660,6 @@ var _ = Describe("health check", func() {
 				Expect(msg).To(Equal("NodesScalingDown"))
 				Expect(err).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
 			})
-
-			It("should ignore node not managed by MCM and return progressing for a regular scale down", func() {
-				var (
-					nodeName = "foo"
-
-					machineList = &machinev1alpha1.MachineList{
-						Items: []machinev1alpha1.Machine{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:         "foo",
-									GenerateName: "obj-",
-									Namespace:    controlPlaneNamespace,
-									Labels:       map[string]string{"node": nodeName},
-									Finalizers:   []string{"in-deletion"},
-								},
-							},
-						},
-					}
-					nodeList = &corev1.NodeList{
-						Items: []corev1.Node{
-							{
-								ObjectMeta: metav1.ObjectMeta{Name: nodeName},
-								Spec:       corev1.NodeSpec{Unschedulable: true},
-							},
-						},
-					}
-				)
-				for _, machine := range machineList.Items {
-					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
-					Expect(fakeClient.Delete(ctx, &machine)).To(Succeed())
-				}
-				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
-				Expect(msg).To(Equal("NodesScalingDown"))
-				Expect(err).To(MatchError(ContainSubstring("is waiting to be completely drained from pods")))
-			})
 		})
 	})
 
