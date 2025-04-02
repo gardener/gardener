@@ -36,6 +36,10 @@ func NewX509CertificateExporter(
 	if err != nil {
 		return nil, err
 	}
+	if len(workerGroups) == 0 && len(secretkeys) == 0 && len(configmapkeys) == 0 {
+		// no monitoring targets for x509 certifica exporter provided, nothing to deploy
+		return nil, nil
+	}
 
 	return x.New(c, nil, gardenNamespaceName, x.Values{
 		SecretTypes:               secretkeys,
