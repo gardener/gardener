@@ -116,8 +116,8 @@ func New(
 }
 
 func (x *x509CertificateExporter) Deploy(ctx context.Context) error {
-	if x.values.NameSuffix != SuffixRuntime && x.values.NameSuffix != SuffixSeed {
-		return errors.New("x509CertificateExporter is currently supported only on the seed and runtime clusters")
+	if x.values.NameSuffix != SuffixRuntime {
+		return errors.New("x509CertificateExporter is currently supported only on the runtime cluster")
 	}
 
 	if x.values.WorkerGroups == nil && len(x.values.SecretTypes) == 0 && len(x.values.ConfigMapKeys) == 0 {
