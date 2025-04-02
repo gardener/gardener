@@ -150,7 +150,6 @@ var _ = Describe("Config", func() {
 			RuntimeRequestTimeout:          metav1.Duration{Duration: 2 * time.Minute},
 			SerializeImagePulls:            ptr.To(true),
 			ServerTLSBootstrap:             true,
-			StaticPodPath:                  "/etc/kubernetes/manifests",
 			StreamingConnectionIdleTimeout: metav1.Duration{Duration: time.Hour * 4},
 			SyncFrequency:                  metav1.Duration{Duration: time.Minute},
 			VolumeStatsAggPeriod:           metav1.Duration{Duration: time.Minute},
@@ -283,7 +282,6 @@ var _ = Describe("Config", func() {
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
 				cfg.ProtectKernelDefaults = true
 				cfg.StreamingConnectionIdleTimeout = metav1.Duration{Duration: time.Minute * 5}
-				cfg.StaticPodPath = ""
 			},
 		),
 		Entry(
@@ -311,7 +309,6 @@ var _ = Describe("Config", func() {
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
 				cfg.ProtectKernelDefaults = true
 				cfg.StreamingConnectionIdleTimeout = metav1.Duration{Duration: time.Minute * 5}
-				cfg.StaticPodPath = ""
 			},
 		),
 		Entry(
@@ -340,7 +337,6 @@ var _ = Describe("Config", func() {
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
 				cfg.ProtectKernelDefaults = true
 				cfg.StreamingConnectionIdleTimeout = metav1.Duration{Duration: time.Minute * 5}
-				cfg.StaticPodPath = ""
 			},
 		),
 		Entry(
