@@ -198,6 +198,8 @@ type ClusterAutoscalerOptions struct {
 type NodeTemplate struct {
 	// Capacity represents the expected Node capacity.
 	Capacity corev1.ResourceList `json:"capacity"`
+	// VirtualCapacity represents the expected Node 'virtual' capacity ie comprising virtual extended resources.
+	VirtualCapacity corev1.ResourceList `json:"virtualCapacity"`
 }
 
 // MachineImage contains logical information about the name and the version of the machie image that

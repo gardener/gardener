@@ -7,128 +7,128 @@
 package imagevector
 
 const (
-	// ContainerImageNameAlertmanager is a constant for an image in the image vector with name 'alertmanager'.
-	ContainerImageNameAlertmanager = "alertmanager"
-	// ContainerImageNameAlpineConntrack is a constant for an image in the image vector with name 'alpine-conntrack'.
-	ContainerImageNameAlpineConntrack = "alpine-conntrack"
-	// ContainerImageNameApiserverProxy is a constant for an image in the image vector with name 'apiserver-proxy'.
-	ContainerImageNameApiserverProxy = "apiserver-proxy"
-	// ContainerImageNameApiserverProxySidecar is a constant for an image in the image vector with name 'apiserver-proxy-sidecar'.
-	ContainerImageNameApiserverProxySidecar = "apiserver-proxy-sidecar"
-	// ContainerImageNameBlackboxExporter is a constant for an image in the image vector with name 'blackbox-exporter'.
-	ContainerImageNameBlackboxExporter = "blackbox-exporter"
-	// ContainerImageNameClusterAutoscaler is a constant for an image in the image vector with name 'cluster-autoscaler'.
-	ContainerImageNameClusterAutoscaler = "cluster-autoscaler"
-	// ContainerImageNameClusterProportionalAutoscaler is a constant for an image in the image vector with name 'cluster-proportional-autoscaler'.
-	ContainerImageNameClusterProportionalAutoscaler = "cluster-proportional-autoscaler"
-	// ContainerImageNameConfigmapReloader is a constant for an image in the image vector with name 'configmap-reloader'.
-	ContainerImageNameConfigmapReloader = "configmap-reloader"
-	// ContainerImageNameCoredns is a constant for an image in the image vector with name 'coredns'.
-	ContainerImageNameCoredns = "coredns"
-	// ContainerImageNameCortex is a constant for an image in the image vector with name 'cortex'.
-	ContainerImageNameCortex = "cortex"
-	// ContainerImageNameDependencyWatchdog is a constant for an image in the image vector with name 'dependency-watchdog'.
-	ContainerImageNameDependencyWatchdog = "dependency-watchdog"
-	// ContainerImageNameEtcd is a constant for an image in the image vector with name 'etcd'.
-	ContainerImageNameEtcd = "etcd"
-	// ContainerImageNameEtcdDruid is a constant for an image in the image vector with name 'etcd-druid'.
-	ContainerImageNameEtcdDruid = "etcd-druid"
-	// ContainerImageNameEventLogger is a constant for an image in the image vector with name 'event-logger'.
-	ContainerImageNameEventLogger = "event-logger"
-	// ContainerImageNameExtAuthzServer is a constant for an image in the image vector with name 'ext-authz-server'.
-	ContainerImageNameExtAuthzServer = "ext-authz-server"
-	// ContainerImageNameFluentBit is a constant for an image in the image vector with name 'fluent-bit'.
-	ContainerImageNameFluentBit = "fluent-bit"
-	// ContainerImageNameFluentBitPluginInstaller is a constant for an image in the image vector with name 'fluent-bit-plugin-installer'.
-	ContainerImageNameFluentBitPluginInstaller = "fluent-bit-plugin-installer"
-	// ContainerImageNameFluentOperator is a constant for an image in the image vector with name 'fluent-operator'.
-	ContainerImageNameFluentOperator = "fluent-operator"
-	// ContainerImageNameGardenerAdmissionController is a constant for an image in the image vector with name 'gardener-admission-controller'.
-	ContainerImageNameGardenerAdmissionController = "gardener-admission-controller"
-	// ContainerImageNameGardenerApiserver is a constant for an image in the image vector with name 'gardener-apiserver'.
-	ContainerImageNameGardenerApiserver = "gardener-apiserver"
-	// ContainerImageNameGardenerControllerManager is a constant for an image in the image vector with name 'gardener-controller-manager'.
-	ContainerImageNameGardenerControllerManager = "gardener-controller-manager"
-	// ContainerImageNameGardenerDashboard is a constant for an image in the image vector with name 'gardener-dashboard'.
-	ContainerImageNameGardenerDashboard = "gardener-dashboard"
-	// ContainerImageNameGardenerDiscoveryServer is a constant for an image in the image vector with name 'gardener-discovery-server'.
-	ContainerImageNameGardenerDiscoveryServer = "gardener-discovery-server"
-	// ContainerImageNameGardenerMetricsExporter is a constant for an image in the image vector with name 'gardener-metrics-exporter'.
-	ContainerImageNameGardenerMetricsExporter = "gardener-metrics-exporter"
-	// ContainerImageNameGardenerNodeAgent is a constant for an image in the image vector with name 'gardener-node-agent'.
-	ContainerImageNameGardenerNodeAgent = "gardener-node-agent"
-	// ContainerImageNameGardenerResourceManager is a constant for an image in the image vector with name 'gardener-resource-manager'.
-	ContainerImageNameGardenerResourceManager = "gardener-resource-manager"
-	// ContainerImageNameGardenerScheduler is a constant for an image in the image vector with name 'gardener-scheduler'.
-	ContainerImageNameGardenerScheduler = "gardener-scheduler"
-	// ContainerImageNameGardenlet is a constant for an image in the image vector with name 'gardenlet'.
-	ContainerImageNameGardenlet = "gardenlet"
-	// ContainerImageNameHyperkube is a constant for an image in the image vector with name 'hyperkube'.
-	ContainerImageNameHyperkube = "hyperkube"
-	// ContainerImageNameIngressDefaultBackend is a constant for an image in the image vector with name 'ingress-default-backend'.
-	ContainerImageNameIngressDefaultBackend = "ingress-default-backend"
-	// ContainerImageNameIstioIstiod is a constant for an image in the image vector with name 'istio-istiod'.
-	ContainerImageNameIstioIstiod = "istio-istiod"
-	// ContainerImageNameIstioProxy is a constant for an image in the image vector with name 'istio-proxy'.
-	ContainerImageNameIstioProxy = "istio-proxy"
-	// ContainerImageNameKubeApiserver is a constant for an image in the image vector with name 'kube-apiserver'.
-	ContainerImageNameKubeApiserver = "kube-apiserver"
-	// ContainerImageNameKubeControllerManager is a constant for an image in the image vector with name 'kube-controller-manager'.
-	ContainerImageNameKubeControllerManager = "kube-controller-manager"
-	// ContainerImageNameKubeProxy is a constant for an image in the image vector with name 'kube-proxy'.
-	ContainerImageNameKubeProxy = "kube-proxy"
-	// ContainerImageNameKubeRbacProxy is a constant for an image in the image vector with name 'kube-rbac-proxy'.
-	ContainerImageNameKubeRbacProxy = "kube-rbac-proxy"
-	// ContainerImageNameKubeScheduler is a constant for an image in the image vector with name 'kube-scheduler'.
-	ContainerImageNameKubeScheduler = "kube-scheduler"
-	// ContainerImageNameKubeStateMetrics is a constant for an image in the image vector with name 'kube-state-metrics'.
-	ContainerImageNameKubeStateMetrics = "kube-state-metrics"
-	// ContainerImageNameKubernetesDashboard is a constant for an image in the image vector with name 'kubernetes-dashboard'.
-	ContainerImageNameKubernetesDashboard = "kubernetes-dashboard"
-	// ContainerImageNameKubernetesDashboardMetricsScraper is a constant for an image in the image vector with name 'kubernetes-dashboard-metrics-scraper'.
-	ContainerImageNameKubernetesDashboardMetricsScraper = "kubernetes-dashboard-metrics-scraper"
-	// ContainerImageNameMachineControllerManager is a constant for an image in the image vector with name 'machine-controller-manager'.
-	ContainerImageNameMachineControllerManager = "machine-controller-manager"
-	// ContainerImageNameMetricsServer is a constant for an image in the image vector with name 'metrics-server'.
-	ContainerImageNameMetricsServer = "metrics-server"
-	// ContainerImageNameNginxIngressController is a constant for an image in the image vector with name 'nginx-ingress-controller'.
-	ContainerImageNameNginxIngressController = "nginx-ingress-controller"
-	// ContainerImageNameNodeExporter is a constant for an image in the image vector with name 'node-exporter'.
-	ContainerImageNameNodeExporter = "node-exporter"
-	// ContainerImageNameNodeLocalDns is a constant for an image in the image vector with name 'node-local-dns'.
-	ContainerImageNameNodeLocalDns = "node-local-dns"
-	// ContainerImageNameNodeProblemDetector is a constant for an image in the image vector with name 'node-problem-detector'.
-	ContainerImageNameNodeProblemDetector = "node-problem-detector"
-	// ContainerImageNamePauseContainer is a constant for an image in the image vector with name 'pause-container'.
-	ContainerImageNamePauseContainer = "pause-container"
-	// ContainerImageNamePlutono is a constant for an image in the image vector with name 'plutono'.
-	ContainerImageNamePlutono = "plutono"
-	// ContainerImageNamePlutonoDashboardRefresher is a constant for an image in the image vector with name 'plutono-dashboard-refresher'.
-	ContainerImageNamePlutonoDashboardRefresher = "plutono-dashboard-refresher"
-	// ContainerImageNamePrometheus is a constant for an image in the image vector with name 'prometheus'.
-	ContainerImageNamePrometheus = "prometheus"
-	// ContainerImageNamePrometheusOperator is a constant for an image in the image vector with name 'prometheus-operator'.
-	ContainerImageNamePrometheusOperator = "prometheus-operator"
-	// ContainerImageNameTelegraf is a constant for an image in the image vector with name 'telegraf'.
-	ContainerImageNameTelegraf = "telegraf"
-	// ContainerImageNameTerminalControllerManager is a constant for an image in the image vector with name 'terminal-controller-manager'.
-	ContainerImageNameTerminalControllerManager = "terminal-controller-manager"
-	// ContainerImageNameTune2fs is a constant for an image in the image vector with name 'tune2fs'.
-	ContainerImageNameTune2fs = "tune2fs"
-	// ContainerImageNameVali is a constant for an image in the image vector with name 'vali'.
-	ContainerImageNameVali = "vali"
-	// ContainerImageNameValiCurator is a constant for an image in the image vector with name 'vali-curator'.
-	ContainerImageNameValiCurator = "vali-curator"
-	// ContainerImageNameValitail is a constant for an image in the image vector with name 'valitail'.
-	ContainerImageNameValitail = "valitail"
-	// ContainerImageNameVpaAdmissionController is a constant for an image in the image vector with name 'vpa-admission-controller'.
-	ContainerImageNameVpaAdmissionController = "vpa-admission-controller"
-	// ContainerImageNameVpaRecommender is a constant for an image in the image vector with name 'vpa-recommender'.
-	ContainerImageNameVpaRecommender = "vpa-recommender"
-	// ContainerImageNameVpaUpdater is a constant for an image in the image vector with name 'vpa-updater'.
-	ContainerImageNameVpaUpdater = "vpa-updater"
-	// ContainerImageNameVpnClient is a constant for an image in the image vector with name 'vpn-client'.
-	ContainerImageNameVpnClient = "vpn-client"
-	// ContainerImageNameVpnServer is a constant for an image in the image vector with name 'vpn-server'.
-	ContainerImageNameVpnServer = "vpn-server"
+	// ContainerImageNameUalertmanager is a constant for an image in the image vector with name 'alertmanager'.
+	ContainerImageNameUalertmanager = "alertmanager"
+	// ContainerImageNameUalpineUconntrack is a constant for an image in the image vector with name 'alpine-conntrack'.
+	ContainerImageNameUalpineUconntrack = "alpine-conntrack"
+	// ContainerImageNameUapiserverUproxy is a constant for an image in the image vector with name 'apiserver-proxy'.
+	ContainerImageNameUapiserverUproxy = "apiserver-proxy"
+	// ContainerImageNameUapiserverUproxyUsidecar is a constant for an image in the image vector with name 'apiserver-proxy-sidecar'.
+	ContainerImageNameUapiserverUproxyUsidecar = "apiserver-proxy-sidecar"
+	// ContainerImageNameUblackboxUexporter is a constant for an image in the image vector with name 'blackbox-exporter'.
+	ContainerImageNameUblackboxUexporter = "blackbox-exporter"
+	// ContainerImageNameUclusterUautoscaler is a constant for an image in the image vector with name 'cluster-autoscaler'.
+	ContainerImageNameUclusterUautoscaler = "cluster-autoscaler"
+	// ContainerImageNameUclusterUproportionalUautoscaler is a constant for an image in the image vector with name 'cluster-proportional-autoscaler'.
+	ContainerImageNameUclusterUproportionalUautoscaler = "cluster-proportional-autoscaler"
+	// ContainerImageNameUconfigmapUreloader is a constant for an image in the image vector with name 'configmap-reloader'.
+	ContainerImageNameUconfigmapUreloader = "configmap-reloader"
+	// ContainerImageNameUcoredns is a constant for an image in the image vector with name 'coredns'.
+	ContainerImageNameUcoredns = "coredns"
+	// ContainerImageNameUcortex is a constant for an image in the image vector with name 'cortex'.
+	ContainerImageNameUcortex = "cortex"
+	// ContainerImageNameUdependencyUwatchdog is a constant for an image in the image vector with name 'dependency-watchdog'.
+	ContainerImageNameUdependencyUwatchdog = "dependency-watchdog"
+	// ContainerImageNameUetcd is a constant for an image in the image vector with name 'etcd'.
+	ContainerImageNameUetcd = "etcd"
+	// ContainerImageNameUetcdUdruid is a constant for an image in the image vector with name 'etcd-druid'.
+	ContainerImageNameUetcdUdruid = "etcd-druid"
+	// ContainerImageNameUeventUlogger is a constant for an image in the image vector with name 'event-logger'.
+	ContainerImageNameUeventUlogger = "event-logger"
+	// ContainerImageNameUextUauthzUserver is a constant for an image in the image vector with name 'ext-authz-server'.
+	ContainerImageNameUextUauthzUserver = "ext-authz-server"
+	// ContainerImageNameUfluentUbit is a constant for an image in the image vector with name 'fluent-bit'.
+	ContainerImageNameUfluentUbit = "fluent-bit"
+	// ContainerImageNameUfluentUbitUpluginUinstaller is a constant for an image in the image vector with name 'fluent-bit-plugin-installer'.
+	ContainerImageNameUfluentUbitUpluginUinstaller = "fluent-bit-plugin-installer"
+	// ContainerImageNameUfluentUoperator is a constant for an image in the image vector with name 'fluent-operator'.
+	ContainerImageNameUfluentUoperator = "fluent-operator"
+	// ContainerImageNameUgardenerUadmissionUcontroller is a constant for an image in the image vector with name 'gardener-admission-controller'.
+	ContainerImageNameUgardenerUadmissionUcontroller = "gardener-admission-controller"
+	// ContainerImageNameUgardenerUapiserver is a constant for an image in the image vector with name 'gardener-apiserver'.
+	ContainerImageNameUgardenerUapiserver = "gardener-apiserver"
+	// ContainerImageNameUgardenerUcontrollerUmanager is a constant for an image in the image vector with name 'gardener-controller-manager'.
+	ContainerImageNameUgardenerUcontrollerUmanager = "gardener-controller-manager"
+	// ContainerImageNameUgardenerUdashboard is a constant for an image in the image vector with name 'gardener-dashboard'.
+	ContainerImageNameUgardenerUdashboard = "gardener-dashboard"
+	// ContainerImageNameUgardenerUdiscoveryUserver is a constant for an image in the image vector with name 'gardener-discovery-server'.
+	ContainerImageNameUgardenerUdiscoveryUserver = "gardener-discovery-server"
+	// ContainerImageNameUgardenerUmetricsUexporter is a constant for an image in the image vector with name 'gardener-metrics-exporter'.
+	ContainerImageNameUgardenerUmetricsUexporter = "gardener-metrics-exporter"
+	// ContainerImageNameUgardenerUnodeUagent is a constant for an image in the image vector with name 'gardener-node-agent'.
+	ContainerImageNameUgardenerUnodeUagent = "gardener-node-agent"
+	// ContainerImageNameUgardenerUresourceUmanager is a constant for an image in the image vector with name 'gardener-resource-manager'.
+	ContainerImageNameUgardenerUresourceUmanager = "gardener-resource-manager"
+	// ContainerImageNameUgardenerUscheduler is a constant for an image in the image vector with name 'gardener-scheduler'.
+	ContainerImageNameUgardenerUscheduler = "gardener-scheduler"
+	// ContainerImageNameUgardenlet is a constant for an image in the image vector with name 'gardenlet'.
+	ContainerImageNameUgardenlet = "gardenlet"
+	// ContainerImageNameUhyperkube is a constant for an image in the image vector with name 'hyperkube'.
+	ContainerImageNameUhyperkube = "hyperkube"
+	// ContainerImageNameUingressUdefaultUbackend is a constant for an image in the image vector with name 'ingress-default-backend'.
+	ContainerImageNameUingressUdefaultUbackend = "ingress-default-backend"
+	// ContainerImageNameUistioUistiod is a constant for an image in the image vector with name 'istio-istiod'.
+	ContainerImageNameUistioUistiod = "istio-istiod"
+	// ContainerImageNameUistioUproxy is a constant for an image in the image vector with name 'istio-proxy'.
+	ContainerImageNameUistioUproxy = "istio-proxy"
+	// ContainerImageNameUkubeUapiserver is a constant for an image in the image vector with name 'kube-apiserver'.
+	ContainerImageNameUkubeUapiserver = "kube-apiserver"
+	// ContainerImageNameUkubeUcontrollerUmanager is a constant for an image in the image vector with name 'kube-controller-manager'.
+	ContainerImageNameUkubeUcontrollerUmanager = "kube-controller-manager"
+	// ContainerImageNameUkubeUproxy is a constant for an image in the image vector with name 'kube-proxy'.
+	ContainerImageNameUkubeUproxy = "kube-proxy"
+	// ContainerImageNameUkubeUrbacUproxy is a constant for an image in the image vector with name 'kube-rbac-proxy'.
+	ContainerImageNameUkubeUrbacUproxy = "kube-rbac-proxy"
+	// ContainerImageNameUkubeUscheduler is a constant for an image in the image vector with name 'kube-scheduler'.
+	ContainerImageNameUkubeUscheduler = "kube-scheduler"
+	// ContainerImageNameUkubeUstateUmetrics is a constant for an image in the image vector with name 'kube-state-metrics'.
+	ContainerImageNameUkubeUstateUmetrics = "kube-state-metrics"
+	// ContainerImageNameUkubernetesUdashboard is a constant for an image in the image vector with name 'kubernetes-dashboard'.
+	ContainerImageNameUkubernetesUdashboard = "kubernetes-dashboard"
+	// ContainerImageNameUkubernetesUdashboardUmetricsUscraper is a constant for an image in the image vector with name 'kubernetes-dashboard-metrics-scraper'.
+	ContainerImageNameUkubernetesUdashboardUmetricsUscraper = "kubernetes-dashboard-metrics-scraper"
+	// ContainerImageNameUmachineUcontrollerUmanager is a constant for an image in the image vector with name 'machine-controller-manager'.
+	ContainerImageNameUmachineUcontrollerUmanager = "machine-controller-manager"
+	// ContainerImageNameUmetricsUserver is a constant for an image in the image vector with name 'metrics-server'.
+	ContainerImageNameUmetricsUserver = "metrics-server"
+	// ContainerImageNameUnginxUingressUcontroller is a constant for an image in the image vector with name 'nginx-ingress-controller'.
+	ContainerImageNameUnginxUingressUcontroller = "nginx-ingress-controller"
+	// ContainerImageNameUnodeUexporter is a constant for an image in the image vector with name 'node-exporter'.
+	ContainerImageNameUnodeUexporter = "node-exporter"
+	// ContainerImageNameUnodeUlocalUdns is a constant for an image in the image vector with name 'node-local-dns'.
+	ContainerImageNameUnodeUlocalUdns = "node-local-dns"
+	// ContainerImageNameUnodeUproblemUdetector is a constant for an image in the image vector with name 'node-problem-detector'.
+	ContainerImageNameUnodeUproblemUdetector = "node-problem-detector"
+	// ContainerImageNameUpauseUcontainer is a constant for an image in the image vector with name 'pause-container'.
+	ContainerImageNameUpauseUcontainer = "pause-container"
+	// ContainerImageNameUplutono is a constant for an image in the image vector with name 'plutono'.
+	ContainerImageNameUplutono = "plutono"
+	// ContainerImageNameUplutonoUdashboardUrefresher is a constant for an image in the image vector with name 'plutono-dashboard-refresher'.
+	ContainerImageNameUplutonoUdashboardUrefresher = "plutono-dashboard-refresher"
+	// ContainerImageNameUprometheus is a constant for an image in the image vector with name 'prometheus'.
+	ContainerImageNameUprometheus = "prometheus"
+	// ContainerImageNameUprometheusUoperator is a constant for an image in the image vector with name 'prometheus-operator'.
+	ContainerImageNameUprometheusUoperator = "prometheus-operator"
+	// ContainerImageNameUtelegraf is a constant for an image in the image vector with name 'telegraf'.
+	ContainerImageNameUtelegraf = "telegraf"
+	// ContainerImageNameUterminalUcontrollerUmanager is a constant for an image in the image vector with name 'terminal-controller-manager'.
+	ContainerImageNameUterminalUcontrollerUmanager = "terminal-controller-manager"
+	// ContainerImageNameUtune2fs is a constant for an image in the image vector with name 'tune2fs'.
+	ContainerImageNameUtune2fs = "tune2fs"
+	// ContainerImageNameUvali is a constant for an image in the image vector with name 'vali'.
+	ContainerImageNameUvali = "vali"
+	// ContainerImageNameUvaliUcurator is a constant for an image in the image vector with name 'vali-curator'.
+	ContainerImageNameUvaliUcurator = "vali-curator"
+	// ContainerImageNameUvalitail is a constant for an image in the image vector with name 'valitail'.
+	ContainerImageNameUvalitail = "valitail"
+	// ContainerImageNameUvpaUadmissionUcontroller is a constant for an image in the image vector with name 'vpa-admission-controller'.
+	ContainerImageNameUvpaUadmissionUcontroller = "vpa-admission-controller"
+	// ContainerImageNameUvpaUrecommender is a constant for an image in the image vector with name 'vpa-recommender'.
+	ContainerImageNameUvpaUrecommender = "vpa-recommender"
+	// ContainerImageNameUvpaUupdater is a constant for an image in the image vector with name 'vpa-updater'.
+	ContainerImageNameUvpaUupdater = "vpa-updater"
+	// ContainerImageNameUvpnUclient is a constant for an image in the image vector with name 'vpn-client'.
+	ContainerImageNameUvpnUclient = "vpn-client"
+	// ContainerImageNameUvpnUserver is a constant for an image in the image vector with name 'vpn-server'.
+	ContainerImageNameUvpnUserver = "vpn-server"
 )

@@ -7,6 +7,6 @@
 package imagevector
 
 const (
-	// ChartImageNameGardenlet is a constant for an image in the image vector with name 'gardenlet'.
-	ChartImageNameGardenlet = "gardenlet"
+	// ChartImageNameUgardenlet is a constant for an image in the image vector with name 'gardenlet'.
+	ChartImageNameUgardenlet = "gardenlet"
 )

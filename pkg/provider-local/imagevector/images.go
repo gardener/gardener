@@ -7,10 +7,10 @@
 package imagevector
 
 const (
-	// ImageNameLocalPathHelper is a constant for an image in the image vector with name 'local-path-helper'.
-	ImageNameLocalPathHelper = "local-path-helper"
-	// ImageNameLocalPathProvisioner is a constant for an image in the image vector with name 'local-path-provisioner'.
-	ImageNameLocalPathProvisioner = "local-path-provisioner"
-	// ImageNameMachineControllerManagerProviderLocal is a constant for an image in the image vector with name 'machine-controller-manager-provider-local'.
-	ImageNameMachineControllerManagerProviderLocal = "machine-controller-manager-provider-local"
+	// ImageNameUlocalUpathUhelper is a constant for an image in the image vector with name 'local-path-helper'.
+	ImageNameUlocalUpathUhelper = "local-path-helper"
+	// ImageNameUlocalUpathUprovisioner is a constant for an image in the image vector with name 'local-path-provisioner'.
+	ImageNameUlocalUpathUprovisioner = "local-path-provisioner"
+	// ImageNameUmachineUcontrollerUmanagerUproviderUlocal is a constant for an image in the image vector with name 'machine-controller-manager-provider-local'.
+	ImageNameUmachineUcontrollerUmanagerUproviderUlocal = "machine-controller-manager-provider-local"
 )
