@@ -1136,7 +1136,7 @@ Limits
 <td>
 <em>(Optional)</em>
 <p>Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
-If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+Any limits specified here override those set in the parent CloudProfile.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
 </td>
 </tr>
@@ -8824,7 +8824,7 @@ Limits
 <td>
 <em>(Optional)</em>
 <p>Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
-If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+Any limits specified here override those set in the parent CloudProfile.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
 </td>
 </tr>
