@@ -75,8 +75,8 @@ func ShootNeedsForceInPlaceUpdate(shoot *core.Shoot) bool {
 		return false
 	}
 
-	forceDelete, _ := strconv.ParseBool(value)
-	return forceDelete
+	forceInPlaceUpdate, _ := strconv.ParseBool(value)
+	return forceInPlaceUpdate
 }
 
 // IsHAControlPlaneConfigured returns true if HA configuration for the shoot control plane has been set.

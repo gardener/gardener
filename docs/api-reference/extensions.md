@@ -3604,14 +3604,14 @@ OSUpdate
 <tbody>
 <tr>
 <td>
-<code>workerPoolHash</code></br>
+<code>workerPoolToHashMap</code></br>
 <em>
 map[string]string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>WorkerPoolHash is a map of worker pool names to their corresponding hash.</p>
+<p>WorkerPoolToHashMap is a map of worker pool names to their corresponding hash.</p>
 </td>
 </tr>
 </tbody>

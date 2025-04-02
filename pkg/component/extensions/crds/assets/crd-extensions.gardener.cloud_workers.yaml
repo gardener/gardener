@@ -790,11 +790,11 @@ spec:
                 description: InPlaceUpdates contains the configuration for in-place
                   updates.
                 properties:
-                  workerPoolHash:
+                  workerPoolToHashMap:
                     additionalProperties:
                       type: string
-                    description: WorkerPoolHash is a map of worker pool names to their
-                      corresponding hash.
+                    description: WorkerPoolToHashMap is a map of worker pool names
+                      to their corresponding hash.
                     type: object
                 type: object
               lastError:

@@ -313,7 +313,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines,
-			numDesiredManualInPlace, numUpdatedManualInPlace, numNeedUpdatedManualInPlace, numOldMachineSetNotUpdateCandidateManualInPlace int32
+			numDesiredManualInPlace, numUpdatedManualInPlace, numNeedUpdatedManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace int32
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
@@ -400,7 +400,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 					for _, machine := range machines {
 						cond := extensionsworkercontroller.GetMachineCondition(&machine, machinev1alpha1.NodeInPlaceUpdate)
 						if cond != nil && cond.Reason != machinev1alpha1.UpdateCandidate {
-							numOldMachineSetNotUpdateCandidateManualInPlace++
+							numOldMachinesNotUpdateCandidateManualInPlace++
 						}
 					}
 				}
@@ -423,7 +423,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
 			if numUnavailable == 0 && (numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
-				numOldMachineSetNotUpdateCandidateManualInPlace == 0 {
+				numOldMachinesNotUpdateCandidateManualInPlace == 0 {
 				return retryutils.Ok()
 			}
 
@@ -431,12 +431,12 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				msg = fmt.Sprintf("Waiting until all old machines are drained and terminated. Waiting for %d machine(s)...", numberOfAwakeMachines-numUpdated)
 			}
 
-			if numOldMachineSetNotUpdateCandidateManualInPlace > 0 {
+			if numOldMachinesNotUpdateCandidateManualInPlace > 0 {
 				if msg != "" {
 					msg += "\n"
 				}
 
-				msg += fmt.Sprintf("Waiting until %d old machines are updated...", numOldMachineSetNotUpdateCandidateManualInPlace)
+				msg += fmt.Sprintf("Waiting until %d old machines are updated...", numOldMachinesNotUpdateCandidateManualInPlace)
 				break
 			}
 

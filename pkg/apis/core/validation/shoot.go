@@ -2603,14 +2603,8 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
-		if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkersRollouts != nil {
-			if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate) > 0 {
-				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if status.inPlaceUpdates.pendingWorkersRollouts.autoInPlaceUpdate is not empty"))
-			}
-			if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) > 0 {
-				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if status.inPlaceUpdates.pendingWorkersRollouts.manualInPlaceUpdate is not empty"))
-			}
-		}
+		allErrs = append(allErrs, validatePendingWorkersRollouts(shoot, fldPath, "rotation of all credentials")...)
+
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
@@ -2629,14 +2623,8 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootCARotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
 		}
-		if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkersRollouts != nil {
-			if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate) > 0 {
-				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if status.inPlaceUpdates.pendingWorkersRollouts.autoInPlaceUpdate is not empty"))
-			}
-			if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) > 0 {
-				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if status.inPlaceUpdates.pendingWorkersRollouts.manualInPlaceUpdate is not empty"))
-			}
-		}
+		allErrs = append(allErrs, validatePendingWorkersRollouts(shoot, fldPath, "CA rotation")...)
+
 	case v1beta1constants.OperationRotateCAComplete:
 		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
@@ -2649,14 +2637,8 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Completed'"))
 		}
-		if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkersRollouts != nil {
-			if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate) > 0 {
-				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if status.inPlaceUpdates.pendingWorkersRollouts.autoInPlaceUpdate is not empty"))
-			}
-			if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) > 0 {
-				allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if status.inPlaceUpdates.pendingWorkersRollouts.manualInPlaceUpdate is not empty"))
-			}
-		}
+		allErrs = append(allErrs, validatePendingWorkersRollouts(shoot, fldPath, "service account key rotation")...)
+
 	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
 		if helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
@@ -2697,6 +2679,23 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 			}) {
 				allErrs = append(allErrs, field.Invalid(fldPath, poolName, "worker pool name "+poolName+" does not exist in .spec.provider.workers[]"))
 			}
+		}
+	}
+
+	return allErrs
+}
+
+// validatePendingWorkersRollouts checks if there are pending workers rollouts in the Shoot's status and returns an error if any are found.
+func validatePendingWorkersRollouts(shoot *core.Shoot, fldPath *field.Path, operation string) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	var forbiddenPendingWorkersRolloutsMessageTemplate = "cannot start %s if status.inPlaceUpdates.pendingWorkersRollouts.%s is not empty"
+	if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkersRollouts != nil {
+		if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf(forbiddenPendingWorkersRolloutsMessageTemplate, operation, "autoInPlaceUpdate")))
+		}
+		if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf(forbiddenPendingWorkersRolloutsMessageTemplate, operation, "manualInPlaceUpdate")))
 		}
 	}
 
@@ -2779,22 +2778,22 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		}
 
 		oldWorkerIndexPath := field.NewPath("spec", "provider", "workers").Index(oldWorkerIndex)
-		oldControlPlaneVersion, err := semver.NewVersion(oldShoot.Spec.Kubernetes.Version)
+		oldControlPlaneKubernetesVersion, err := semver.NewVersion(oldShoot.Spec.Kubernetes.Version)
 		if err != nil {
-			allErrs = append(allErrs, field.Forbidden(oldWorkerIndexPath, "old control plane version is not a valid semver version"))
+			allErrs = append(allErrs, field.Forbidden(oldWorkerIndexPath, "old control plane kubernetes version is not a valid semver version"))
 			continue
 		}
-		oldKubernetesVersion, err := helper.CalculateEffectiveKubernetesVersion(oldControlPlaneVersion, oldWorker.Kubernetes)
+		oldKubernetesVersion, err := helper.CalculateEffectiveKubernetesVersion(oldControlPlaneKubernetesVersion, oldWorker.Kubernetes)
 		if err != nil {
 			allErrs = append(allErrs, field.Forbidden(oldWorkerIndexPath, "failed to calculate effective kubernetes version for old worker"))
 			continue
 		}
-		newControlPlaneVersion, err := semver.NewVersion(newShoot.Spec.Kubernetes.Version)
+		newControlPlaneKubernetesVersion, err := semver.NewVersion(newShoot.Spec.Kubernetes.Version)
 		if err != nil {
-			allErrs = append(allErrs, field.Forbidden(idxPath, "new control plane version is not a valid semver version"))
+			allErrs = append(allErrs, field.Forbidden(idxPath, "new control plane kubernetes version is not a valid semver version"))
 			continue
 		}
-		newKubernetesVersion, err := helper.CalculateEffectiveKubernetesVersion(newControlPlaneVersion, worker.Kubernetes)
+		newKubernetesVersion, err := helper.CalculateEffectiveKubernetesVersion(newControlPlaneKubernetesVersion, worker.Kubernetes)
 		if err != nil {
 			allErrs = append(allErrs, field.Forbidden(idxPath, "failed to calculate effective kubernetes version for new worker"))
 			continue
