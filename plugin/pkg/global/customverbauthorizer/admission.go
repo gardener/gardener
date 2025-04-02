@@ -216,7 +216,7 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 	}
 
 	if mustCheckLimits(oldObj.Spec.Limits, obj.Spec.Limits, parentCloudProfile) {
-		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileRaiseLimits, "modify .spec.limits")
+		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileRaiseLimits, "increase .spec.limits above parent CloudProfile limits")
 		if err != nil {
 			return err
 		}
