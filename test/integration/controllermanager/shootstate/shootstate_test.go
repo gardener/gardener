@@ -89,20 +89,20 @@ var _ = Describe("ShootState controller test", func() {
 		Expect(testClient.Create(ctx, shootState)).To(Succeed())
 
 		DeferCleanup(func() {
-			By("Delete Shoot")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
-
 			By("Delete ShootState")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootState))).To(Succeed())
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Or(BeNotFoundError(), Succeed()))
 				g.Expect(controllerutils.RemoveFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
 			}).Should(Succeed())
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootState))).To(Succeed())
 
 			By("Ensure ShootState is gone")
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)
 			}).Should(BeNotFoundError())
+
+			By("Delete Shoot")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 
 			By("Ensure Shoot is gone")
 			Eventually(func() error {
