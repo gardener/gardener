@@ -22,8 +22,6 @@ var _ = Describe("ShootState controller test", func() {
 		shoot          *gardencorev1beta1.Shoot
 		shootState     *gardencorev1beta1.ShootState
 		targetSeedName = "target-seed"
-
-		addFinalizer func(shootState *gardencorev1beta1.ShootState)
 	)
 
 	BeforeEach(func() {
@@ -61,14 +59,6 @@ var _ = Describe("ShootState controller test", func() {
 				},
 				SeedName: ptr.To("source-seed"),
 			},
-		}
-
-		addFinalizer = func(shootState *gardencorev1beta1.ShootState) {
-			By("Add ShootState finalizer")
-			EventuallyWithOffset(1, func(g Gomega) {
-				g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
-				g.ExpectWithOffset(1, controllerutils.AddFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
-			}).Should(Succeed())
 		}
 
 		By("Create Shoot")
@@ -229,3 +219,11 @@ var _ = Describe("ShootState controller test", func() {
 		})
 	})
 })
+
+func addFinalizer(shootState *gardencorev1beta1.ShootState) {
+	By("Add ShootState finalizer")
+	EventuallyWithOffset(1, func(g Gomega) {
+		g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+		g.ExpectWithOffset(1, controllerutils.AddFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
+	}).Should(Succeed())
+}
