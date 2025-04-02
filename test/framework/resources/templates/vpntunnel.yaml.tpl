@@ -25,7 +25,7 @@ spec:
         image: registry.k8s.io/e2e-test-images/agnhost:2.40
         command: ["/bin/sh", "-c"]
         args:
-        - /agnhost logs-generator --logtostderr --log-lines-total={{ .LogsCount }} --run-duration={{ .LogsDuration }} && /agnhost pause
+        - /agnhost logs-generator --logtostderr --log-lines-total={{ .LogsCount }} --run-duration={{ .LogsDuration }} && sleep infinity
       securityContext:
         fsGroup: 65532
         runAsUser: 65532
