@@ -433,7 +433,19 @@ var _ = Describe("health check", func() {
 						},
 					},
 				}
-				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{Items: []corev1.Node{{}}}, machineDeploymentList, controlPlaneNamespace)
+				nodeList := &corev1.NodeList{Items: []corev1.Node{
+					{
+						Status: corev1.NodeStatus{
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:   corev1.NodeReady,
+									Status: corev1.ConditionTrue,
+								},
+							},
+						},
+					},
+				}}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal(""))
 				Expect(err).ToNot(HaveOccurred())
 			})
