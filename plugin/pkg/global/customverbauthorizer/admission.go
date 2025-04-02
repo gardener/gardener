@@ -42,6 +42,9 @@ const (
 	// CustomVerbNamespacedCloudProfileModifyProviderConfig is a constant for the custom verb that allows modifying the
 	// `.spec.providerConfig` field in `NamespacedCloudProfile` resources.
 	CustomVerbNamespacedCloudProfileModifyProviderConfig = "modify-spec-providerconfig"
+	// CustomVerbNamespacedCloudProfileRaiseLimits is a constant for the custom verb that allows raising the
+	// `.spec.limits` limits in `NamespacedCloudProfile` resources above values defined in the parent `CloudProfile`.
+	CustomVerbNamespacedCloudProfileRaiseLimits = "raise-spec-limits"
 )
 
 // Register registers a plugin.
@@ -158,6 +161,13 @@ func (c *CustomVerbAuthorizer) admitNamespacedCloudProfiles(ctx context.Context,
 
 	if mustCheckProviderConfig(oldObj.Spec.ProviderConfig, obj.Spec.ProviderConfig) {
 		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileModifyProviderConfig, "modify .spec.providerConfig")
+		if err != nil {
+			return err
+		}
+	}
+
+	if mustCheckLimits(oldObj.Spec.Limits, obj.Spec.Limits) {
+		err := c.authorize(ctx, a, CustomVerbNamespacedCloudProfileRaiseLimits, "modify .spec.limits")
 		if err != nil {
 			return err
 		}
@@ -280,4 +290,8 @@ func mustCheckMachineImages(oldMachineImages, machineImages []core.MachineImage)
 
 func mustCheckProviderConfig(oldProviderConfig, providerConfig *runtime.RawExtension) bool {
 	return !apiequality.Semantic.DeepEqual(oldProviderConfig, providerConfig)
+}
+
+func mustCheckLimits(oldLimits, limits *core.Limits) bool {
+	return !apiequality.Semantic.DeepEqual(oldLimits, limits)
 }
