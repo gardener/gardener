@@ -646,6 +646,14 @@ func (h *Health) CheckClusterNodes(
 	}
 
 	nodeList := convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes)
+	// only nodes that are managed by MCM are considered
+	nodesManagedByMCM := &corev1.NodeList{}
+	for _, node := range nodeList.Items {
+		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
+			continue
+		}
+		nodesManagedByMCM.Items = append(nodesManagedByMCM.Items, node)
+	}
 	if msg, err := CheckNodesScaling(ctx, h.seedClient.Client(), nodeList, machineDeploymentList, h.shoot.ControlPlaneNamespace); err != nil {
 		if msg == "" {
 			return nil, err
@@ -733,32 +741,24 @@ func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinatio
 // CheckNodesScaling returns an error and a string describing the scaling if there is a scaling happening
 func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList *corev1.NodeList, machineDeploymentList *machinev1alpha1.MachineDeploymentList, controlPlaneNamespace string) (string, error) {
 	var (
-		readyNodes          int
-		registeredNodes     = len(nodeList.Items)
-		desiredMachines     = getDesiredMachineCount(machineDeploymentList.Items)
-		nodeNotManagedByMCM int
+		readyAndSchedulableNodes int
+		registeredNodes          = len(nodeList.Items)
+		desiredMachines          = getDesiredMachineCount(machineDeploymentList.Items)
 	)
 
 	for _, node := range nodeList.Items {
-		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
-			nodeNotManagedByMCM++
-			continue
-		}
 		if node.Spec.Unschedulable {
 			continue
 		}
 		for _, condition := range node.Status.Conditions {
 			if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
-				readyNodes++
+				readyAndSchedulableNodes++
 			}
 		}
 	}
 
-	// only nodes that are managed by MCM is considered
-	registeredNodes = registeredNodes - nodeNotManagedByMCM
-
 	machineList := &machinev1alpha1.MachineList{}
-	if registeredNodes == desiredMachines && readyNodes == desiredMachines {
+	if registeredNodes == desiredMachines && readyAndSchedulableNodes == desiredMachines {
 		return "", nil
 	}
 
@@ -786,7 +786,7 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList *
 	}
 
 	if checkScaleUp {
-		if err := checkNodesScalingUp(machineList, readyNodes, desiredMachines); err != nil {
+		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
 			return "NodesScalingUp", err
 		}
 	}
@@ -848,9 +848,6 @@ func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *c
 
 	var cordonedNodes int
 	for _, node := range nodeList.Items {
-		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
-			continue
-		}
 		if node.Spec.Unschedulable {
 			machine, ok := nodeNameToMachine[node.Name]
 			if !ok {

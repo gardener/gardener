@@ -423,32 +423,31 @@ var _ = Describe("health check", func() {
 	})
 
 	Describe("#CheckNodesScaling", func() {
-		var (
-			ctrl *gomock.Controller
-		)
-
-		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
 		Describe("Scaling up", func() {
 			It("should return true if number of ready nodes equal number of desired machines", func() {
-				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{}, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+						},
+					},
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{Items: []corev1.Node{{}}}, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal(""))
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should return an error if not enough machine objects as desired were created", func() {
-				machineDeployment := machinev1alpha1.MachineDeployment{
-					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
-					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+						},
+					},
 				}
-				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
 				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{}, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("not enough machine objects created yet")))
@@ -468,14 +467,17 @@ var _ = Describe("health check", func() {
 				for _, machine := range machineList.Items {
 					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
 				}
-				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
-				machineDeployment := machinev1alpha1.MachineDeployment{
-					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
-					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+						},
+					},
 				}
-				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
-				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{}, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("is erroneous")))
 			})
@@ -495,12 +497,15 @@ var _ = Describe("health check", func() {
 					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
 				}
 				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
-				machineDeployment := machinev1alpha1.MachineDeployment{
-					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
-					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+						},
+					},
 				}
-				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("not enough ready worker nodes registered in the cluster")))
@@ -521,12 +526,15 @@ var _ = Describe("health check", func() {
 					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
 				}
 				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
-				machineDeployment := machinev1alpha1.MachineDeployment{
-					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
-					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+						},
+					},
 				}
-				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("provisioning and should join the cluster soon")))
@@ -542,12 +550,15 @@ var _ = Describe("health check", func() {
 					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
 				}
 				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
-				machineDeployment := machinev1alpha1.MachineDeployment{
-					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
-					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-					Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+						},
+					},
 				}
-				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("provisioning and should join the cluster soon")))
@@ -557,11 +568,14 @@ var _ = Describe("health check", func() {
 		Describe("Scaling down", func() {
 			It("should return true if number of registered nodes equal number of desired machines", func() {
 				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
-				machineDeployment := machinev1alpha1.MachineDeployment{
-					ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
-					Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						machinev1alpha1.MachineDeployment{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+						},
+					},
 				}
-				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{machineDeployment}}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal(""))
 				Expect(err).ToNot(HaveOccurred())
@@ -624,7 +638,7 @@ var _ = Describe("health check", func() {
 									GenerateName: "obj-",
 									Namespace:    controlPlaneNamespace,
 									Labels:       map[string]string{"node": nodeName},
-									Finalizers:   []string{"foo"},
+									Finalizers:   []string{"in-deletion"},
 								},
 							},
 						},
@@ -659,7 +673,7 @@ var _ = Describe("health check", func() {
 									GenerateName: "obj-",
 									Namespace:    controlPlaneNamespace,
 									Labels:       map[string]string{"node": nodeName},
-									Finalizers:   []string{"foo"},
+									Finalizers:   []string{"in-deletion"},
 								},
 							},
 						},
@@ -669,12 +683,6 @@ var _ = Describe("health check", func() {
 							{
 								ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 								Spec:       corev1.NodeSpec{Unschedulable: true},
-							},
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:        nodeName,
-									Annotations: map[string]string{"node.machine.sapcloud.io/not-managed-by-mcm": "1"},
-								},
 							},
 						},
 					}
