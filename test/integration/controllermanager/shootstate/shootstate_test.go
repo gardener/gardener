@@ -82,7 +82,7 @@ var _ = Describe("ShootState controller test", func() {
 			By("Delete ShootState")
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootState))).To(Succeed())
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Or(BeNotFoundError(), Succeed()))
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Or(Succeed(), BeNotFoundError()))
 				g.Expect(controllerutils.RemoveFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
 			}).Should(Succeed())
 
