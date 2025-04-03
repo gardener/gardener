@@ -490,7 +490,7 @@ var _ = Describe("#SNI", func() {
 				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
 					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
 					CredentialName: namespace + "-kube-apiserver-istio-mtls",
-					Sni:            expectedDestinationRule.Spec.Host,
+					Sni:            "kubernetes.default.svc.cluster.local",
 				}
 
 				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
@@ -536,7 +536,7 @@ var _ = Describe("#SNI", func() {
 				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
 					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
 					CredentialName: namespace + "-kube-apiserver-istio-mtls",
-					Sni:            expectedDestinationRule.Spec.Host,
+					Sni:            "kubernetes.default.svc.cluster.local",
 				}
 
 				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
@@ -598,7 +598,7 @@ var _ = Describe("#SNI", func() {
 				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
 					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
 					CredentialName: namespace + "-kube-apiserver-istio-mtls",
-					Sni:            expectedDestinationRule.Spec.Host,
+					Sni:            "kubernetes.default.svc.cluster.local",
 				}
 
 				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
