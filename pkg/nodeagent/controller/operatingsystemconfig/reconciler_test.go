@@ -238,7 +238,7 @@ PRETTY_NAME="Garden Linux 1592"
 			}
 
 			oscChanges = &operatingSystemConfigChanges{
-				InPlaceUpdates: inPlaceUpates{
+				InPlaceUpdates: inPlaceUpdates{
 					OperatingSystem: true,
 				},
 			}
@@ -357,7 +357,7 @@ PRETTY_NAME="Garden Linux 1592"
 			Expect(node.Annotations).To(HaveKeyWithValue(machinev1alpha1.AnnotationKeyMachineUpdateFailedReason, ContainSubstring("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", "1.2.4", "1.2.3")))
 		})
 
-		It("should not patch the node as update successful or delete the pods if the node deoes not have InPlaceUpdate condition with reason ReadyForUpdate", func() {
+		It("should not patch the node as update successful or delete the pods if the node does not have InPlaceUpdate condition with reason ReadyForUpdate", func() {
 			pods := []*corev1.Pod{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -518,7 +518,7 @@ PRETTY_NAME="Garden Linux 1592"
 			})
 
 			oscChanges = &operatingSystemConfigChanges{
-				InPlaceUpdates: inPlaceUpates{
+				InPlaceUpdates: inPlaceUpdates{
 					Kubelet: kubelet{
 						MinorVersion:     true,
 						Config:           true,
@@ -711,7 +711,7 @@ kind: NodeAgentConfiguration
 
 			DeferCleanup(test.WithVar(
 				&RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, _ afero.Afero, restConfig *rest.Config, _ string) error {
-					newKubeConfig := getNodeAgentKubeConfig(restConfig.TLSClientConfig.CAData, nodeAgentConfig.APIServer.Server, "new-cert")
+					newKubeConfig := getNodeAgentKubeConfig(restConfig.CAData, nodeAgentConfig.APIServer.Server, "new-cert")
 
 					Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(newKubeConfig), 0600)).To(Succeed())
 

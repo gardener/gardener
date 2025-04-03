@@ -25,7 +25,7 @@ type operatingSystemConfigChanges struct {
 	Containerd                    containerd `json:"containerd"`
 	MustRestartNodeAgent          bool       `json:"mustRestartNodeAgent"`
 
-	InPlaceUpdates inPlaceUpates `json:"inPlaceUpdates"`
+	InPlaceUpdates inPlaceUpdates `json:"inPlaceUpdates"`
 }
 
 type units struct {
@@ -67,7 +67,7 @@ type containerdRegistries struct {
 	Deleted []extensionsv1alpha1.RegistryConfig `json:"deleted,omitempty"`
 }
 
-type inPlaceUpates struct {
+type inPlaceUpdates struct {
 	OperatingSystem                bool                           `json:"operatingSystem"`
 	Kubelet                        kubelet                        `json:"kubelet"`
 	CertificateAuthoritiesRotation certificateAuthoritiesRotation `json:"certificateAuthoritiesRotation"`

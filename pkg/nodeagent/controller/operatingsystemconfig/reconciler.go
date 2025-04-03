@@ -871,7 +871,7 @@ func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log l
 	}
 
 	// Use the updated CA Bundle
-	restConfig.TLSClientConfig.CAData = nodeAgentConfig.APIServer.CABundle
+	restConfig.CAData = nodeAgentConfig.APIServer.CABundle
 
 	return RequestAndStoreKubeconfig(ctx, log, r.FS, restConfig, r.MachineName)
 }
