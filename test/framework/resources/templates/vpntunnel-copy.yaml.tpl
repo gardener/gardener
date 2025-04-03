@@ -17,8 +17,8 @@ spec:
         app: {{ .AppLabel }}
     spec:
       initContainers:
-      - image: registry.k8s.io/e2e-test-images/busybox:1.29-4
-        name: data-generator
+      - name: data-generator
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
         command:
         - dd
         - if=/dev/urandom
@@ -28,22 +28,20 @@ spec:
         volumeMounts:
         - name: source-data
           mountPath: /data
-      # TODO(ialidzhikov): There is a kubectl image (registry.k8s.io/kubectl), available in K8s 1.28+.
-      # In future, use the kubectl image, instead of downloading kubectl via init container.
-      - image: registry.k8s.io/e2e-test-images/busybox:1.29-4
-        name: install-kubectl
+      - name: install-kubectl
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
         command:
         - /bin/sh
         - -c
         - |-
-          wget https://storage.googleapis.com/kubernetes-release/release/v{{ .KubeVersion }}/bin/linux/{{ .Architecture }}/kubectl -O /data/kubectl;
+          wget https://dl.k8s.io/release/v{{ .KubeVersion }}/bin/linux/{{ .Architecture }}/kubectl -O /data/kubectl;
           chmod +x /data/kubectl;
         volumeMounts:
         - name: source-data
           mountPath: /data
       containers:
-      - image: registry.k8s.io/e2e-test-images/busybox:1.29-4
-        name: source-container
+      - name: source-container
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
         command:
         - sleep
         - "3600"
@@ -55,8 +53,8 @@ spec:
           mountPath: /data
         - name: kubecfg
           mountPath: /secret
-      - image: registry.k8s.io/e2e-test-images/busybox:1.29-4
-        name: target-container
+      - name: target-container
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
         command:
         - sleep
         - "3600"

@@ -14,7 +14,7 @@ spec:
         app: load
     spec:
       containers:
-      - image: registry.k8s.io/e2e-test-images/busybox:1.29-4
+      - image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
         name: load
         command: ["sh", "-c"]
         args:
