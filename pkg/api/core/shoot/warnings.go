@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // GetWarnings returns warnings for the provided shoot.
@@ -38,6 +41,11 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 
 	if helper.IsLegacyAnonymousAuthenticationEnabled(shoot.Spec.Kubernetes.KubeAPIServer) {
 		warnings = append(warnings, "you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.31 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")
+	}
+
+	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err == nil && versionutils.ConstraintK8sGreaterEqual133.Check(kubernetesVersion) && ptr.Deref(shoot.Spec.CloudProfileName, "") != "" {
+		warnings = append(warnings, "you are setting the spec.cloudProfileName field. The field is deprecated and will be force set empty starting with Kubernetes 1.34. Instead, use the spec.cloudProfile.name field.")
 	}
 
 	return warnings
