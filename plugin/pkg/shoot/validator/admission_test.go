@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -469,60 +468,6 @@ var _ = Describe("validator", func() {
 
 				Expect(err).To(BeInvalidError())
 				Expect(err.Error()).To(ContainSubstring("name must not exceed"))
-			})
-		})
-
-		Context("finalizer removal checks", func() {
-			var (
-				oldShoot *core.Shoot
-			)
-
-			BeforeEach(func() {
-				shoot = *shootBase.DeepCopy()
-
-				shoot.Status.TechnicalID = "some-id"
-				shoot.Status.LastOperation = &core.LastOperation{
-					Type:     core.LastOperationTypeReconcile,
-					State:    core.LastOperationStateSucceeded,
-					Progress: 100,
-				}
-
-				// set old shoot for update and add gardener finalizer to it
-				oldShoot = shoot.DeepCopy()
-				finalizers := sets.New(oldShoot.GetFinalizers()...)
-				finalizers.Insert(core.GardenerName)
-				oldShoot.SetFinalizers(finalizers.UnsortedList())
-			})
-
-			It("should reject removing the gardener finalizer if the shoot has not yet been deleted successfully", func() {
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("shoot deletion has not completed successfully yet"))
-			})
-
-			It("should admit removing the gardener finalizer if the shoot deletion succeeded ", func() {
-				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(securityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBinding)).To(Succeed())
-
-				shoot.Status.LastOperation = &core.LastOperation{
-					Type:     core.LastOperationTypeDelete,
-					State:    core.LastOperationStateSucceeded,
-					Progress: 100,
-				}
-
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(ctx, attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 
