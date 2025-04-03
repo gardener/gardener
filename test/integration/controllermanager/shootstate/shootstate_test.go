@@ -22,8 +22,6 @@ var _ = Describe("ShootState controller test", func() {
 		shoot          *gardencorev1beta1.Shoot
 		shootState     *gardencorev1beta1.ShootState
 		targetSeedName = "target-seed"
-
-		addFinalizer func(shootState *gardencorev1beta1.ShootState)
 	)
 
 	BeforeEach(func() {
@@ -63,11 +61,6 @@ var _ = Describe("ShootState controller test", func() {
 			},
 		}
 
-		addFinalizer = func(shootState *gardencorev1beta1.ShootState) {
-			By("Add ShootState finalizer")
-			Expect(controllerutils.AddFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
-		}
-
 		By("Create Shoot")
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 
@@ -86,17 +79,20 @@ var _ = Describe("ShootState controller test", func() {
 		Expect(testClient.Create(ctx, shootState)).To(Succeed())
 
 		DeferCleanup(func() {
-			By("Delete Shoot")
-			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
-
 			By("Delete ShootState")
-			Expect(controllerutils.RemoveFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
 			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shootState))).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Or(Succeed(), BeNotFoundError()))
+				g.Expect(controllerutils.RemoveFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
+			}).Should(Succeed())
 
 			By("Ensure ShootState is gone")
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)
 			}).Should(BeNotFoundError())
+
+			By("Delete Shoot")
+			Expect(client.IgnoreNotFound(testClient.Delete(ctx, shoot))).To(Succeed())
 
 			By("Ensure Shoot is gone")
 			Eventually(func() error {
@@ -223,3 +219,11 @@ var _ = Describe("ShootState controller test", func() {
 		})
 	})
 })
+
+func addFinalizer(shootState *gardencorev1beta1.ShootState) {
+	By("Add ShootState finalizer")
+	EventuallyWithOffset(1, func(g Gomega) {
+		g.ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+		g.ExpectWithOffset(1, controllerutils.AddFinalizers(ctx, testClient, shootState, shootstate.FinalizerName)).To(Succeed())
+	}).Should(Succeed())
+}

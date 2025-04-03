@@ -124,7 +124,6 @@ serializeImagePulls: true
 serverTLSBootstrap: true
 shutdownGracePeriod: 0s
 shutdownGracePeriodCriticalPods: 0s
-staticPodPath: /etc/kubernetes/manifests
 streamingConnectionIdleTimeout: 5m0s
 syncFrequency: 1m0s
 volumePluginDir: /var/lib/kubelet/volumeplugins

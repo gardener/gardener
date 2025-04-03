@@ -50,6 +50,7 @@ var _ = Describe("Config", func() {
 			PodPidsLimit:                     ptr.To[int64](101),
 			SystemReserved:                   map[string]string{"memory": "321"},
 			StreamingConnectionIdleTimeout:   &metav1.Duration{Duration: time.Minute * 12},
+			WithStaticPodPath:                true,
 		}
 
 		taints = []corev1.Taint{{
@@ -149,7 +150,6 @@ var _ = Describe("Config", func() {
 			RuntimeRequestTimeout:          metav1.Duration{Duration: 2 * time.Minute},
 			SerializeImagePulls:            ptr.To(true),
 			ServerTLSBootstrap:             true,
-			StaticPodPath:                  "/etc/kubernetes/manifests",
 			StreamingConnectionIdleTimeout: metav1.Duration{Duration: time.Hour * 4},
 			SyncFrequency:                  metav1.Duration{Duration: time.Minute},
 			VolumeStatsAggPeriod:           metav1.Duration{Duration: time.Minute},
