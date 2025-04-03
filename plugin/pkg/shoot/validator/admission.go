@@ -609,21 +609,6 @@ func (c *validationContext) validateDeletion(a admission.Attributes) error {
 		}
 	}
 
-	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
-	if len(c.shoot.Status.TechnicalID) > 0 && c.shoot.Status.LastOperation != nil {
-		oldFinalizers := sets.New(c.oldShoot.Finalizers...)
-		newFinalizers := sets.New(c.shoot.Finalizers...)
-
-		if oldFinalizers.Has(core.GardenerName) && !newFinalizers.Has(core.GardenerName) {
-			lastOperation := c.shoot.Status.LastOperation
-			deletionSucceeded := lastOperation.Type == core.LastOperationTypeDelete && lastOperation.State == core.LastOperationStateSucceeded && lastOperation.Progress == 100
-
-			if !deletionSucceeded {
-				return admission.NewForbidden(a, fmt.Errorf("finalizer %q cannot be removed because shoot deletion has not completed successfully yet", core.GardenerName))
-			}
-		}
-	}
-
 	return nil
 }
 

@@ -203,6 +203,7 @@ build:
             - plugin/pkg/global/deletionconfirmation
             - plugin/pkg/global/extensionlabels
             - plugin/pkg/global/extensionvalidation
+            - plugin/pkg/global/finalizerremoval
             - plugin/pkg/global/resourcereferencemanager
             - plugin/pkg/managedseed/shoot
             - plugin/pkg/managedseed/validator
