@@ -67,7 +67,8 @@ type ShootSpec struct {
 	Addons *Addons `json:"addons,omitempty" protobuf:"bytes,1,opt,name=addons"`
 	// CloudProfileName is a name of a CloudProfile object.
 	// Deprecated: This field will be removed in a future version of Gardener. Use `CloudProfile` instead.
-	// Until removed, this field is synced with the `CloudProfile` field.
+	// Until Kubernetes v1.33, this field is synced with the `CloudProfile` field.
+	// Starting with Kubernetes v1.34, this field is set to empty string and must not be provided anymore.
 	// +optional
 	CloudProfileName *string `json:"cloudProfileName,omitempty" protobuf:"bytes,2,opt,name=cloudProfileName"`
 	// DNS contains information about the DNS settings of the Shoot.
