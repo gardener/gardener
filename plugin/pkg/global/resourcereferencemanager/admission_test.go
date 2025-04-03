@@ -213,6 +213,9 @@ var _ = Describe("resourcereferencemanager", func() {
 						Namespace: namespace,
 					},
 				},
+				Provider: security.CredentialsBindingProvider{
+					Type: "test",
+				},
 			}
 			credentialsBindingRefSecret = securityv1alpha1.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
@@ -230,6 +233,9 @@ var _ = Describe("resourcereferencemanager", func() {
 						Name:      quotaName,
 						Namespace: namespace,
 					},
+				},
+				Provider: securityv1alpha1.CredentialsBindingProvider{
+					Type: "test",
 				},
 			}
 			securityCredentialsBindingRefWorkloadIdentity = security.CredentialsBinding{
@@ -533,9 +539,34 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
+				kubeClient.AddReactor("create", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, nil, nil
+				})
+
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because the sanity check fails", func() {
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: secret.Namespace,
+							Name:      secret.Name,
+						},
+					}, nil
+				})
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				kubeClient.AddReactor("create", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf("sanity check failed")
+				})
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("test provider secret sanity check failed: sanity check failed")))
 			})
 
 			It("should reject because the referenced secret does not exist", func() {
@@ -685,9 +716,34 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
+				kubeClient.AddReactor("create", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, nil, nil
+				})
+
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because the sanity check fails", func() {
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+				kubeClient.AddReactor("get", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: secret.Namespace,
+							Name:      secret.Name,
+						},
+					}, nil
+				})
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				kubeClient.AddReactor("create", "secrets", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf("sanity check failed")
+				})
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("test provider secret sanity check failed: sanity check failed")))
 			})
 
 			It("should reject because the referenced secret does not exist", func() {
