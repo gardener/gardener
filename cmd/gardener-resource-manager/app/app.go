@@ -116,6 +116,9 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 		Scheme:                  managerScheme,
 		GracefulShutdownTimeout: ptr.To(5 * time.Second),
 		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Pod{}: {Namespaces: map[string]cache.Config{cache.AllNamespaces: {}}},
+			},
 			DefaultNamespaces: getCacheConfig(cfg.SourceClientConnection.Namespaces),
 			SyncPeriod:        &cfg.SourceClientConnection.CacheResyncPeriod.Duration,
 		},
