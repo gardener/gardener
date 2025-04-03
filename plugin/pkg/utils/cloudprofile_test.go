@@ -336,7 +336,7 @@ var _ = Describe("CloudProfile", func() {
 		})
 
 		It("should default the cloudProfile to the cloudProfileName value", func() {
-			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile")}}
+			shoot.Spec.CloudProfileName = ptr.To("profile")
 			SyncCloudProfileFields(nil, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
@@ -344,7 +344,7 @@ var _ = Describe("CloudProfile", func() {
 		})
 
 		It("should default the cloudProfileName to the cloudProfile value and to kind CloudProfile", func() {
-			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfile: &core.CloudProfileReference{Name: "profile"}}}
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
 			SyncCloudProfileFields(nil, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
@@ -352,7 +352,8 @@ var _ = Describe("CloudProfile", func() {
 		})
 
 		It("should override the cloudProfileName from the cloudProfile", func() {
-			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile-name"), CloudProfile: &core.CloudProfileReference{Name: "profile"}}}
+			shoot.Spec.CloudProfileName = ptr.To("profile-name")
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile"}
 			SyncCloudProfileFields(nil, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
@@ -360,7 +361,8 @@ var _ = Describe("CloudProfile", func() {
 		})
 
 		It("should override cloudProfile from cloudProfileName as with disabledFeatureToggle reference to NamespacedCloudProfile is ignored", func() {
-			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile"), CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}}}
+			shoot.Spec.CloudProfileName = ptr.To("profile")
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}
 			SyncCloudProfileFields(nil, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
@@ -369,7 +371,8 @@ var _ = Describe("CloudProfile", func() {
 
 		It("should remove the cloudProfileName if a NamespacedCloudProfile is given and the feature is enabled", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile"), CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}}}
+			shoot.Spec.CloudProfileName = ptr.To("profile")
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}
 			SyncCloudProfileFields(nil, shoot)
 			Expect(shoot.Spec.CloudProfileName).To(BeNil())
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("namespacedprofile"))
@@ -377,7 +380,8 @@ var _ = Describe("CloudProfile", func() {
 		})
 
 		It("should remove the cloudProfileName and leave the cloudProfile untouched for an invalid kind (failure is evaluated at another point in the validation chain, fields are only synced here)", func() {
-			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile"), CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile-secret", Kind: "Secret"}}}
+			shoot.Spec.CloudProfileName = ptr.To("profile")
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile-secret", Kind: "Secret"}
 			SyncCloudProfileFields(nil, shoot)
 			Expect(shoot.Spec.CloudProfileName).To(BeNil())
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("namespacedprofile-secret"))
@@ -386,7 +390,8 @@ var _ = Describe("CloudProfile", func() {
 
 		It("should remove the cloudProfileName and leave the cloudProfile untouched for an invalid kind with enabled nscpfl feature toggle (failure is evaluated at another point in the validation chain, fields are only synced here)", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
-			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile"), CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile-secret", Kind: "Secret"}}}
+			shoot.Spec.CloudProfileName = ptr.To("profile")
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile-secret", Kind: "Secret"}
 			SyncCloudProfileFields(nil, shoot)
 			Expect(shoot.Spec.CloudProfileName).To(BeNil())
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("namespacedprofile-secret"))
@@ -396,7 +401,7 @@ var _ = Describe("CloudProfile", func() {
 		It("should keep changes to the cloudProfile reference if it changes from a NamespacedCloudProfile to a CloudProfile to enable further validations to return an error", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
 			oldShoot := &core.Shoot{Spec: core.ShootSpec{CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}}}
-			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfile: &core.CloudProfileReference{Name: "profile", Kind: "CloudProfile"}}}
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "profile", Kind: "CloudProfile"}
 			SyncCloudProfileFields(oldShoot, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
@@ -405,8 +410,8 @@ var _ = Describe("CloudProfile", func() {
 
 		It("should keep a NamespacedCloudProfile reference if it has been enabled before", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
-			oldShoot := &core.Shoot{Spec: core.ShootSpec{CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}}}
-			shoot := oldShoot.DeepCopy()
+			shoot.Spec.CloudProfile = &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}
+			oldShoot := shoot.DeepCopy()
 			SyncCloudProfileFields(oldShoot, shoot)
 			Expect(shoot.Spec.CloudProfileName).To(BeNil())
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("namespacedprofile"))
