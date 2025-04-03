@@ -175,6 +175,8 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		logBuffer.Reset()
+
 		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "test-ns-" + testRunID,
@@ -420,6 +422,28 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(networkPolicy2), networkPolicy1)).To(BeNotFoundError())
 			}).Should(Succeed())
 		})
+
+		When("label selector exceeds maximum length of 63 characters for labels", func() {
+			BeforeEach(func() {
+				service.Name = "this-is-a-very-long-svc-name-which-will-exceed-max-length"
+			})
+
+			It("should shorten the label selector key", func() {
+				By("Ensure expected policies are created with shortened label selector key")
+				Eventually(func(g Gomega) {
+					ingressPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "ingress-to-" + service.Name + port1Suffix, Namespace: service.Namespace}}
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(ingressPolicy), ingressPolicy)).To(Succeed())
+					g.Expect(ingressPolicy.Spec.Ingress[0].From[0].PodSelector.MatchLabels).To(Equal(map[string]string{"networking.resources.gardener.cloud/to-this-is-a-very-long-svc-name-which-will-exceed-max-len-7c268": "allowed"}))
+
+					egressPolicy := &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "egress-to-" + service.Name + port1Suffix, Namespace: service.Namespace}}
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(egressPolicy), egressPolicy)).To(Succeed())
+					g.Expect(egressPolicy.Spec.PodSelector.MatchLabels).To(Equal(map[string]string{"networking.resources.gardener.cloud/to-this-is-a-very-long-svc-name-which-will-exceed-max-len-7c268": "allowed"}))
+				}).Should(Succeed())
+
+				By("Ensure controller prints information about mutated pod label selector")
+				Eventually(func() string { return logBuffer.String() }).Should(ContainSubstring("Usual pod label selector contained at least one key exceeding 63 characters - it had to be mutated"))
+			})
+		})
 	})
 
 	Context("service in non-handled namespace", func() {
@@ -602,6 +626,43 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 			By("Wait until all policies are deleted")
 			ensureNetworkPoliciesDoNotGetDeleted()
 			ensureCrossNamespaceNetworkPoliciesGetDeleted()
+		})
+
+		It("should do nothing when the namespace is terminating", func() {
+			By("Wait until all policies are created")
+			ensureNetworkPoliciesGetCreated()
+
+			DeferCleanup(func() {
+				By("Remove finalizer from namespace to unblock deletion")
+				patch := client.MergeFrom(namespace.DeepCopy())
+				namespace.Finalizers = nil
+				Expect(testClient.Patch(ctx, namespace, patch)).To(Succeed())
+			})
+
+			By("Add finalizer to namespace to block deletion")
+			patch := client.MergeFrom(namespace.DeepCopy())
+			namespace.Finalizers = append(namespace.Finalizers, finalizer)
+			Expect(testClient.Patch(ctx, namespace, patch)).To(Succeed())
+
+			By("Delete Namespace")
+			Expect(testClient.Delete(ctx, namespace)).To(Succeed())
+
+			By("Delete all NetworkPolicies")
+			Expect(testClient.DeleteAllOf(ctx, &networkingv1.NetworkPolicy{}, client.InNamespace(namespace.Name))).To(Succeed())
+
+			By("Reset log buffer")
+			logBuffer.Reset()
+
+			By("Add new port to Service (this should trigger the controller)")
+			patch = client.MergeFrom(service.DeepCopy())
+			service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{Name: "newport", Port: 7636, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(6367)})
+			Expect(testClient.Patch(ctx, service, patch)).To(Succeed())
+
+			By("Ensure controller does not try to create new content in terminating namespace")
+			Eventually(func() string { return logBuffer.String() }).ShouldNot(Or(
+				ContainSubstring("unable to create new content in namespace"),
+				ContainSubstring("because it is being terminated"),
+			))
 		})
 
 		It("should create the expected cross-namespace policies as soon as a new namespace appears", func() {
