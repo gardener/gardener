@@ -354,7 +354,7 @@ func (r *Reconciler) reconcilePolicy(
 	}, controllerutils.SkipEmptyPatch{})
 
 	if mutated {
-		log.Info("Usual pod label selector contained at least one key exceeding 63 characters - it had to be mutated", "usualPodLabelSelector", podLabelSelector, "mutatedPodLabelSelector", effectivePodLabelSelector)
+		log.V(2).Info("Usual pod label selector contained at least one key exceeding 63 characters - it had to be mutated", "usualPodLabelSelector", podLabelSelector, "mutatedPodLabelSelector", effectivePodLabelSelector)
 		r.Recorder.Eventf(service, corev1.EventTypeWarning, "PodLabelSelectorKey(s)TooLong", "Usual pod label selector has at least one key exceeding 63 characters and had to be mutated - consider shortening the namespace name or the service name (%+v was mutated to %+v)", podLabelSelector, effectivePodLabelSelector)
 	}
 
