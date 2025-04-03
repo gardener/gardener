@@ -502,6 +502,7 @@ func verifyExpectations(ctx context.Context, fakeClient client.Client, consistOf
 		clusterRole(),
 		clusterRoleBinding(),
 		validatingWebhookConfiguration(namespace, caGardener.Data["bundle.crt"], testValues),
+		mutatingWebhookConfiguration(namespace, caGardener.Data["bundle.crt"]),
 	))
 
 	virtualManagedResourceSecret := &corev1.Secret{
@@ -1311,4 +1312,43 @@ func validatingWebhookConfiguration(namespace string, caBundle []byte, testValue
 	}
 
 	return webhookConfig
+}
+
+func mutatingWebhookConfiguration(namespace string, caBundle []byte) *admissionregistrationv1.MutatingWebhookConfiguration {
+	var (
+		failurePolicyFail = admissionregistrationv1.Fail
+		sideEffectsNone   = admissionregistrationv1.SideEffectClassNone
+	)
+
+	return &admissionregistrationv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "gardener-admission-controller",
+		},
+		Webhooks: []admissionregistrationv1.MutatingWebhook{
+			{
+				Name:                    "sync-provider-secret-labels.gardener.cloud",
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				TimeoutSeconds:          ptr.To[int32](10),
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{""},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"secrets"},
+					},
+				}},
+				FailurePolicy: &failurePolicyFail,
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"gardener.cloud/role": "project",
+					},
+				},
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+					URL:      ptr.To("https://gardener-admission-controller." + namespace + "/webhooks/sync-provider-secret-labels"),
+					CABundle: caBundle,
+				},
+				SideEffects: &sideEffectsNone,
+			},
+		},
+	}
 }
