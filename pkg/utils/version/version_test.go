@@ -64,10 +64,25 @@ var _ = Describe("Version", func() {
 		Entry("ConstraintK8sGreaterEqual132, success w/ suffix", ConstraintK8sGreaterEqual132, semver.MustParse("v1.32.0-foo.12"), BeTrue()),
 		Entry("ConstraintK8sGreaterEqual132, failure w/ suffix", ConstraintK8sGreaterEqual132, semver.MustParse("v1.31.0-foo.12"), BeFalse()),
 
+		Entry("ConstraintK8sLess133, success", ConstraintK8sLess133, semver.MustParse("1.32.1"), BeTrue()),
+		Entry("ConstraintK8sLess133, failure", ConstraintK8sLess133, semver.MustParse("1.33.0"), BeFalse()),
+		Entry("ConstraintK8sLess133, success w/ suffix", ConstraintK8sLess133, semver.MustParse("v1.32.1-foo.12"), BeTrue()),
+		Entry("ConstraintK8sLess133, failure w/ suffix", ConstraintK8sLess133, semver.MustParse("v1.33.0-foo.12"), BeFalse()),
+
 		Entry("ConstraintK8sGreaterEqual133, success", ConstraintK8sGreaterEqual133, semver.MustParse("1.33.0"), BeTrue()),
 		Entry("ConstraintK8sGreaterEqual133, failure", ConstraintK8sGreaterEqual133, semver.MustParse("1.32.0"), BeFalse()),
 		Entry("ConstraintK8sGreaterEqual133, success w/ suffix", ConstraintK8sGreaterEqual133, semver.MustParse("v1.33.0-foo.12"), BeTrue()),
 		Entry("ConstraintK8sGreaterEqual133, failure w/ suffix", ConstraintK8sGreaterEqual133, semver.MustParse("v1.32.0-foo.12"), BeFalse()),
+
+		Entry("ConstraintK8sLess134, success", ConstraintK8sLess134, semver.MustParse("1.33.1"), BeTrue()),
+		Entry("ConstraintK8sLess134, failure", ConstraintK8sLess134, semver.MustParse("1.34.0"), BeFalse()),
+		Entry("ConstraintK8sLess134, success w/ suffix", ConstraintK8sLess134, semver.MustParse("v1.33.1-foo.12"), BeTrue()),
+		Entry("ConstraintK8sLess134, failure w/ suffix", ConstraintK8sLess134, semver.MustParse("v1.34.0-foo.12"), BeFalse()),
+
+		Entry("ConstraintK8sGreaterEqual134, success", ConstraintK8sGreaterEqual134, semver.MustParse("1.34.0"), BeTrue()),
+		Entry("ConstraintK8sGreaterEqual134, failure", ConstraintK8sGreaterEqual134, semver.MustParse("1.33.0"), BeFalse()),
+		Entry("ConstraintK8sGreaterEqual134, success w/ suffix", ConstraintK8sGreaterEqual134, semver.MustParse("v1.34.0-foo.12"), BeTrue()),
+		Entry("ConstraintK8sGreaterEqual134, failure w/ suffix", ConstraintK8sGreaterEqual134, semver.MustParse("v1.33.0-foo.12"), BeFalse()),
 	)
 
 	DescribeTable("#CompareVersions",
