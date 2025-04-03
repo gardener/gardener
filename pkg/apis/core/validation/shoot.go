@@ -232,11 +232,12 @@ func ValidateShootObjectMetaUpdate(_, _ metav1.ObjectMeta, _ *field.Path) field.
 // ValidateShootSpec validates the specification of a Shoot object.
 func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	var (
-		allErrs    = field.ErrorList{}
-		workerless = len(spec.Provider.Workers) == 0
+		allErrs       = field.ErrorList{}
+		workerless    = len(spec.Provider.Workers) == 0
+		k8sVersion, _ = semver.NewVersion(spec.Kubernetes.Version)
 	)
 
-	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, fldPath.Child("cloudProfile"))...)
+	allErrs = append(allErrs, ValidateCloudProfileReference(spec.CloudProfile, spec.CloudProfileName, k8sVersion, fldPath)...)
 	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, spec.Networking, workerless, fldPath.Child("provider"), inTemplate)...)
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Purpose, workerless, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
@@ -289,7 +290,10 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 
 // ValidateShootSpecUpdate validates the specification of a Shoot object.
 func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs       = field.ErrorList{}
+		k8sVersion, _ = semver.NewVersion(newSpec.Kubernetes.Version)
+	)
 
 	if newObjectMeta.DeletionTimestamp != nil && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
 		diff := deep.Equal(newSpec, oldSpec)
@@ -297,7 +301,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
-	allErrs = append(allErrs, ValidateCloudProfileReference(newSpec.CloudProfile, newSpec.CloudProfileName, fldPath.Child("cloudProfile"))...)
+	allErrs = append(allErrs, ValidateCloudProfileReference(newSpec.CloudProfile, newSpec.CloudProfileName, k8sVersion, fldPath)...)
 
 	if oldSpec.CredentialsBindingName != nil && len(ptr.Deref(newSpec.CredentialsBindingName, "")) == 0 {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsBindingName"), "the field cannot be unset"))
@@ -1232,8 +1236,14 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, version string
 }
 
 // ValidateCloudProfileReference validates the given CloudProfileReference fields.
-func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileReference, cloudProfileName *string, fldPath *field.Path) field.ErrorList {
+func ValidateCloudProfileReference(cloudProfileReference *core.CloudProfileReference, cloudProfileName *string, k8sVersion *semver.Version, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if k8sVersion != nil && versionutils.ConstraintK8sGreaterEqual134.Check(k8sVersion) && ptr.Deref(cloudProfileName, "") != "" {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("cloudProfileName"), "starting with k8s v1.34, cloudProfileName must not be set. Instead, use spec.cloudProfile.name"))
+	}
+
+	fldPath = fldPath.Child("cloudProfile")
 
 	// TODO(LucaBernstein): For backwards-compatibility, also to test shoots still specifying only cloudProfileName
 	//  to be removed after cloudProfileName is deprecated
