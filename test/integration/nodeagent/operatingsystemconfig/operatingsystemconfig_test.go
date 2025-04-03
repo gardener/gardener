@@ -978,7 +978,7 @@ kind: NodeAgentConfiguration
 						},
 					}
 
-					newKubeConfig := getNodeAgentKubeConfig(restConfig.TLSClientConfig.CAData, nodeAgentConfig.APIServer.Server, "new-cert")
+					newKubeConfig := getNodeAgentKubeConfig(restConfig.CAData, nodeAgentConfig.APIServer.Server, "new-cert")
 
 					Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(newKubeConfig), 0600)).To(Succeed())
 
@@ -1006,7 +1006,7 @@ kind: NodeAgentConfiguration
 			Expect(testClient.Status().Patch(ctx, node, patch)).To(Succeed())
 		})
 
-		It("should succesfully update the OS", func() {
+		It("should successfully update the OS", func() {
 			operatingSystemConfig.Spec.InPlaceUpdates.OperatingSystemVersion = "1.2.4"
 			operatingSystemConfig.Status.InPlaceUpdates = &extensionsv1alpha1.InPlaceUpdatesStatus{
 				OSUpdate: &extensionsv1alpha1.OSUpdate{
