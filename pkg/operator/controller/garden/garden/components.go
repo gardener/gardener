@@ -523,8 +523,10 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 	deployer := []component.Deployer{r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, "")}
 
 	mutualTLSService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.MutualTLSServiceNameSuffix)
+	upgradeService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.UpgradeServiceNameSuffix)
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
 		deployer = append(deployer, mutualTLSService)
+		deployer = append(deployer, upgradeService)
 	} else {
 		deployer = append(deployer, component.OpDestroy(mutualTLSService))
 	}
