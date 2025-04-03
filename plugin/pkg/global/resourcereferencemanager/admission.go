@@ -789,6 +789,7 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		credentialsName       string
 		credentialsKind       string
 	)
+
 	switch attributes.GetKind().GroupKind() {
 	case core.Kind("SecretBinding"):
 		b, ok := binding.(*core.SecretBinding)
@@ -847,6 +848,10 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		if err := r.lookupSecret(ctx, credentialsNamespace, credentialsName); err != nil {
 			return err
 		}
+		if err := r.sanityCheckProviderSecret(ctx, credentialsNamespace, credentialsName, providerTypes); err != nil {
+			return err
+		}
+
 	case "WorkloadIdentity":
 		if err := r.lookupWorkloadIdentity(ctx, credentialsNamespace, credentialsName); err != nil {
 			return err
@@ -1348,5 +1353,31 @@ func (r *ReferenceManager) ensureResourceReferences(ctx context.Context, attribu
 			return fmt.Errorf("failed to resolve resource reference %q: %w", resource.Name, err)
 		}
 	}
+	return nil
+}
+
+func (r *ReferenceManager) sanityCheckProviderSecret(ctx context.Context, namespace, name string, providerTypes []string) error {
+	secret, err := r.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
+	if err != nil {
+		return err
+	}
+
+	for _, providerType := range providerTypes {
+		dummySecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: name,
+				Namespace:    namespace,
+				Annotations:  secret.Annotations,
+				Labels:       gardenerutils.MergeStringMaps(secret.Labels, map[string]string{v1beta1constants.LabelShootProviderPrefix + providerType: "true"}),
+			},
+			Type: secret.Type,
+			Data: secret.Data,
+		}
+
+		if _, err := r.kubeClient.CoreV1().Secrets(dummySecret.Namespace).Create(ctx, dummySecret, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}}); err != nil {
+			return fmt.Errorf("%s provider secret sanity check failed: %w", providerType, err)
+		}
+	}
+
 	return nil
 }
