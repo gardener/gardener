@@ -19,7 +19,6 @@ import (
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -293,19 +292,6 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 			}
 		)
 
-		for _, name := range s.getServiceAccountNamesToInvalidate() {
-			if err := registry.Add(&corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        name,
-					Namespace:   metav1.NamespaceSystem,
-					Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
-				},
-				AutomountServiceAccountToken: ptr.To(false),
-			}); err != nil {
-				return nil, err
-			}
-		}
-
 		if err := registry.Add(
 			shootInfoConfigMap,
 			networkPolicyAllowToShootAPIServer,
@@ -328,86 +314,6 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 	}
 
 	return registry.SerializedObjects()
-}
-
-func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
-	// Well-known {kube,cloud}-controller-manager controllers using a token for ServiceAccounts in the shoot
-	// To maintain this list for each new Kubernetes version:
-	// * Run hack/compare-k8s-controllers.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-controllers.sh 1.26 1.27').
-	//   It will present 2 lists of controllers: those added and those removed in <new-version> compared to <old-version>.
-	// * Double check whether such ServiceAccount indeed appears in the kube-system namespace when creating a cluster
-	//   with <new-version>. Note that it sometimes might be hidden behind a default-off feature gate.
-	//   If it appears, add all added controllers to the list if the Kubernetes version is high enough.
-	// * For any removed controllers, add them only to the Kubernetes version if it is low enough.
-	kubeControllerManagerServiceAccountNames := []string{
-		"attachdetach-controller",
-		"bootstrap-signer",
-		"certificate-controller",
-		"clusterrole-aggregation-controller",
-		"controller-discovery",
-		"cronjob-controller",
-		"daemon-set-controller",
-		"deployment-controller",
-		"disruption-controller",
-		"endpoint-controller",
-		"endpointslice-controller",
-		"expand-controller",
-		"generic-garbage-collector",
-		"horizontal-pod-autoscaler",
-		"job-controller",
-		"metadata-informers",
-		"namespace-controller",
-		"persistent-volume-binder",
-		"pod-garbage-collector",
-		"pv-protection-controller",
-		"pvc-protection-controller",
-		"replicaset-controller",
-		"replication-controller",
-		"resourcequota-controller",
-		"resource-claim-controller",
-		"root-ca-cert-publisher",
-		"service-account-controller",
-		"shared-informers",
-		"statefulset-controller",
-		"token-cleaner",
-		"tokens-controller",
-		"ttl-after-finished-controller",
-		"ttl-controller",
-		"endpointslicemirroring-controller",
-		"ephemeral-volume-controller",
-		"storage-version-garbage-collector",
-		"node-controller",
-		"route-controller",
-		"service-controller",
-	}
-
-	if versionutils.ConstraintK8sGreaterEqual128.Check(s.values.KubernetesVersion) {
-		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
-			"legacy-service-account-token-cleaner",
-			"validatingadmissionpolicy-status-controller",
-		)
-	}
-
-	if versionutils.ConstraintK8sGreaterEqual129.Check(s.values.KubernetesVersion) {
-		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
-			"service-cidrs-controller",
-		)
-	}
-
-	if versionutils.ConstraintK8sGreaterEqual130.Check(s.values.KubernetesVersion) {
-		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
-			"storage-version-migrator-controller",
-		)
-	}
-
-	if versionutils.ConstraintK8sGreaterEqual132.Check(s.values.KubernetesVersion) {
-		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
-			"kube-apiserver-serving-clustertrustbundle-publisher",
-			"volumeattributesclass-protection-controller",
-		)
-	}
-
-	return append(kubeControllerManagerServiceAccountNames, "default")
 }
 
 // remember to update docs/development/priority-classes.md when making changes here
