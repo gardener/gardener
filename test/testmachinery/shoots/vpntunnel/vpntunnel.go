@@ -175,7 +175,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 
 			ginkgo.By("Copy data to target-container in pod " + pod.Name)
 			stdout, _, err := f.ShootClient.PodExecutor().Execute(ctx, pod.Namespace, pod.Name, "source-container",
-				"/data/kubectl", "cp", "/data/data", pod.Namespace+"/"+pod.Name, "/data/data", "-c", "target-container",
+				"/data/kubectl", "cp", "/data/data", pod.Namespace+"/"+pod.Name+":/data/data", "-c", "target-container",
 			)
 			if apierrors.IsNotFound(err) {
 				log.Error(err, "Aborting as pod was not found anymore")
