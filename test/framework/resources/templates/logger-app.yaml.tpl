@@ -23,10 +23,13 @@ spec:
         image: europe-docker.pkg.dev/gardener-project/releases/3rd/agnhost:2.40
         command: ["/bin/sh", "-c"]
         args:
-{{ if .DeltaLogsCount }}
-        - /agnhost logs-generator --log-lines-total={{ .DeltaLogsCount }} --run-duration={{ .DeltaLogsDuration }} && /agnhost pause
+        - |-
+{{- if .DeltaLogsCount }}
+          /agnhost logs-generator --log-lines-total={{ .DeltaLogsCount }} --run-duration={{ .DeltaLogsDuration }}
 {{- end }}
-        - /agnhost logs-generator --log-lines-total={{ .LogsCount }} --run-duration={{ .LogsDuration }} && /agnhost pause
+          /agnhost logs-generator --log-lines-total={{ .LogsCount }} --run-duration={{ .LogsDuration }}
+
+          sleep infinity
         resources:
           limits:
             cpu: 8m
