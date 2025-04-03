@@ -11,6 +11,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/Masterminds/semver/v3"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -26,6 +27,7 @@ import (
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // ImagesContext is a helper struct to consume cloud profile images and their versions.
@@ -242,6 +244,24 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 		return
 	}
 
+	shootK8sVersion, _ := semver.NewVersion(newShoot.Spec.Kubernetes.Version)
+
+	// Starting with k8s v1.34, no more syncing is taking place. Only the cloudprofile kind will be defaulted if unset.
+	if shootK8sVersion != nil && version.ConstraintK8sGreaterEqual134.Check(shootK8sVersion) {
+		// default empty cloudprofile kind to CloudProfile
+		if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == "" {
+			newShoot.Spec.CloudProfile.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
+		}
+		// For update operations, an unchanged cloudProfileName will be set to nil if it equals the value in cloudProfile.name.
+		if oldShoot != nil && newShoot.Spec.CloudProfileName != nil && newShoot.Spec.CloudProfile != nil &&
+			newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile &&
+			ptr.Deref(newShoot.Spec.CloudProfileName, "") == ptr.Deref(oldShoot.Spec.CloudProfileName, "") &&
+			ptr.Deref(newShoot.Spec.CloudProfileName, "") == newShoot.Spec.CloudProfile.Name {
+			newShoot.Spec.CloudProfileName = nil
+		}
+		return
+	}
+
 	// clear cloudProfile if namespacedCloudProfile is newly provided but feature toggle is disabled
 	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) &&
 		(oldShoot == nil || oldShoot.Spec.CloudProfile == nil || oldShoot.Spec.CloudProfile.Kind != v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile) {
@@ -261,14 +281,15 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 		newShoot.Spec.CloudProfile.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
 	}
 
-	// fill cloudProfileName from cloudProfile if provided and kind is CloudProfile
-	// for backwards compatibility (esp. Dashboard), the CloudProfileName field is synced here with the referenced CloudProfile
-	// TODO(LucaBernstein): Remove this block as soon as the CloudProfileName field is deprecated.
-	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile {
+	// As long as shoot k8s version < v1.33: fill cloudProfileName from cloudProfile if provided and kind is CloudProfile.
+	// For backwards compatibility (esp. Dashboard), the cloudProfileName field is synced here with the referenced CloudProfile.
+	cloudProfileName := ptr.Deref(newShoot.Spec.CloudProfileName, "")
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile &&
+		(shootK8sVersion == nil || version.ConstraintK8sLess133.Check(shootK8sVersion) || cloudProfileName != "" && cloudProfileName != newShoot.Spec.CloudProfile.Name) {
 		newShoot.Spec.CloudProfileName = &newShoot.Spec.CloudProfile.Name
 	}
 
-	// if other than CloudProfile is provided, unset cloudProfileName
+	// Unset cloudProfileName if kind other than CloudProfile is provided.
 	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind != v1beta1constants.CloudProfileReferenceKindCloudProfile {
 		newShoot.Spec.CloudProfileName = nil
 	}
