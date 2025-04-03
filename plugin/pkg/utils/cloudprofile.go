@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"slices"
 
-	apiequality "github.com/Masterminds/semver/v3"
-	"k8s.io/apimachinery/pkg/api/equality"
+	"github.com/Masterminds/semver/v3"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
