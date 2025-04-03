@@ -523,7 +523,7 @@ func DeployRootPod(ctx context.Context, c client.Client, namespace string, noden
 			Containers: []corev1.Container{
 				{
 					Name:  "root-container",
-					Image: "registry.k8s.io/e2e-test-images/busybox:1.29-4",
+					Image: "registry.k8s.io/e2e-test-images/busybox:1.36.1-1",
 					Command: []string{
 						"sleep",
 						"10000000",
