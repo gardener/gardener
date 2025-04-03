@@ -406,7 +406,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				}
 
 				numDesiredManualInPlace += deployment.Spec.Replicas
-				numNeedUpdatedManualInPlace += int32(oldMachineSetsTotalReplicas)
+				numNeedUpdatedManualInPlace += int32(oldMachineSetsTotalReplicas) // #nosec: G115 - `oldMachineSetsTotalReplicas` cannot be higher than max int32.
 				numUpdatedManualInPlace += deployment.Status.UpdatedReplicas
 			} else {
 				numDesired += deployment.Spec.Replicas

@@ -845,12 +845,12 @@ func CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName string, kubernetesVe
 	if credentials != nil && credentials.Rotation != nil {
 		if credentials.Rotation.CertificateAuthorities != nil {
 			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(workerPoolName, credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, credentials.Rotation.CertificateAuthorities.LastInitiationTime); lastInitiationTime != nil {
-				data = append(data, lastInitiationTime.Time.String())
+				data = append(data, lastInitiationTime.String())
 			}
 		}
 		if credentials.Rotation.ServiceAccountKey != nil {
 			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(workerPoolName, credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, credentials.Rotation.ServiceAccountKey.LastInitiationTime); lastInitiationTime != nil {
-				data = append(data, lastInitiationTime.Time.String())
+				data = append(data, lastInitiationTime.String())
 			}
 		}
 	}
