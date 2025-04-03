@@ -441,7 +441,7 @@ var _ = Describe("NetworkPolicy Controller tests", func() {
 				}).Should(Succeed())
 
 				By("Ensure controller prints information about mutated pod label selector")
-				Eventually(func() string { return logBuffer.String() }).Should(ContainSubstring("Usual pod label selector contained at least one key exceeding 63 characters - it had to be mutated"))
+				Eventually(func() string { return logBuffer.String() }).Should(ContainSubstring("Usual pod label selector has at least one key exceeding 63 characters and had to be mutated"))
 			})
 		})
 	})
