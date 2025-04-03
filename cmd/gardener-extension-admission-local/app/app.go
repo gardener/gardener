@@ -26,8 +26,9 @@ import (
 	extensionscmdcontroller "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionscmdwebhook "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
-	"github.com/gardener/gardener/pkg/apis/core/install"
+	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityinstall "github.com/gardener/gardener/pkg/apis/security/install"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	admissioncmd "github.com/gardener/gardener/pkg/provider-local/admission/cmd"
 	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
@@ -123,7 +124,8 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
 
-			install.Install(mgr.GetScheme())
+			gardencoreinstall.Install(mgr.GetScheme())
+			securityinstall.Install(mgr.GetScheme())
 
 			if err := localinstall.AddToScheme(mgr.GetScheme()); err != nil {
 				return fmt.Errorf("could not update manager scheme: %w", err)
