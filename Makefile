@@ -170,6 +170,7 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 	@hack/check-skaffold-deps.sh
 	@hack/check-plutono-dashboards.sh
 	@hack/check-typos.sh
+	@hack/check-file-names.sh
 
 .PHONY: logcheck-symlinks
 logcheck-symlinks:
