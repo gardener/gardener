@@ -273,13 +273,9 @@ func (r *reconciler) migrate(
 }
 
 func (r *reconciler) reconcileOSCResultSecret(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, userData []byte) (*corev1.Secret, error) {
-	// For backwards-compatibility, we have to always create a secret since gardenlet expects to find it - even if the
-	// user data is nil/empty (which should always be the case when purpose=reconcile).
-	// https://github.com/gardener/gardener/blob/328e10d975c7b6caa5db139badcc42ac8f772d31/pkg/component/extensions/operatingsystemconfig/operatingsystemconfig.go#L257-L259
-	// TODO(rfranzke): Activate the `if`-block after Gardener v1.112 has been released.
-	// if userData == nil {
-	// 	return nil, nil
-	// }
+	if userData == nil {
+		return nil, nil
+	}
 
 	secret := &corev1.Secret{ObjectMeta: SecretObjectMetaForConfig(osc)}
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, r.client, secret, func() error {

@@ -6,6 +6,7 @@ package managedseed
 
 import (
 	"context"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -26,7 +27,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -34,7 +34,6 @@ const ControllerName = "managedseed"
 
 // AddToManager adds Reconciler to the given manager.
 func (r *Reconciler) AddToManager(
-	ctx context.Context,
 	mgr manager.Manager,
 	gardenCluster cluster.Cluster,
 	seedCluster cluster.Cluster,
@@ -74,120 +73,30 @@ func (r *Reconciler) AddToManager(
 			gardenCluster.GetCache(),
 			&seedmanagementv1alpha1.ManagedSeed{},
 			r.EnqueueWithJitterDelay(),
-			r.ManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
 			&predicate.GenerationChangedPredicate{},
 		)).
 		WatchesRawSource(source.Kind[client.Object](
 			gardenCluster.GetCache(),
 			&gardencorev1beta1.Seed{},
 			handler.EnqueueRequestsFromMapFunc(r.MapSeedToManagedSeed),
-			r.SeedOfManagedSeedPredicate(ctx, r.Config.SeedConfig.SeedTemplate.Name),
+			r.SeedPredicate(),
 		)).
 		Complete(r)
 }
 
-// ManagedSeedPredicate returns the predicate for ManagedSeed events.
-func (r *Reconciler) ManagedSeedPredicate(ctx context.Context, seedName string) predicate.Predicate {
-	// TODO(rfranzke): Drop this predicate (in favor of the label selector on manager.Manager level) after v1.113 has
-	//  been released.
-	return &managedSeedPredicate{
-		ctx:      ctx,
-		reader:   r.GardenClient,
-		seedName: seedName,
-	}
-}
-
-type managedSeedPredicate struct {
-	ctx      context.Context
-	reader   client.Reader
-	seedName string
-}
-
-func (p *managedSeedPredicate) Create(e event.CreateEvent) bool {
-	return p.filterManagedSeed(e.Object)
-}
-
-func (p *managedSeedPredicate) Update(e event.UpdateEvent) bool {
-	return p.filterManagedSeed(e.ObjectNew)
-}
-
-func (p *managedSeedPredicate) Delete(e event.DeleteEvent) bool {
-	return p.filterManagedSeed(e.Object)
-}
-
-func (p *managedSeedPredicate) Generic(_ event.GenericEvent) bool { return false }
-
-// filterManagedSeed is filtering func for ManagedSeeds that checks if the ManagedSeed references a Shoot scheduled on a Seed,
-// for which the gardenlet is responsible.
-func (p *managedSeedPredicate) filterManagedSeed(obj client.Object) bool {
-	managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
-	if !ok {
-		return false
-	}
-
-	return filterManagedSeed(p.ctx, p.reader, managedSeed, p.seedName)
-}
-
-// SeedOfManagedSeedPredicate returns the predicate for Seed events.
-func (r *Reconciler) SeedOfManagedSeedPredicate(ctx context.Context, seedName string) predicate.Predicate {
-	return &seedOfManagedSeedPredicate{
-		ctx:             ctx,
-		reader:          r.GardenClient,
-		gardenNamespace: r.GardenNamespaceGarden,
-		seedName:        seedName,
-	}
-}
-
-type seedOfManagedSeedPredicate struct {
-	ctx             context.Context
-	reader          client.Reader
-	gardenNamespace string
-	seedName        string
-}
-
-func (p *seedOfManagedSeedPredicate) Create(e event.CreateEvent) bool {
-	return p.filterSeedOfManagedSeed(e.Object)
-}
-
-func (p *seedOfManagedSeedPredicate) Update(e event.UpdateEvent) bool {
-	return p.filterSeedOfManagedSeed(e.ObjectNew)
-}
-
-func (p *seedOfManagedSeedPredicate) Delete(e event.DeleteEvent) bool {
-	return p.filterSeedOfManagedSeed(e.Object)
-}
-
-func (p *seedOfManagedSeedPredicate) Generic(_ event.GenericEvent) bool { return false }
-
-// filterSeedOfManagedSeed is filtering func for Seeds that checks if the Seed is owned by a ManagedSeed that references a Shoot
-// scheduled on a Seed, for which the gardenlet is responsible.
-func (p *seedOfManagedSeedPredicate) filterSeedOfManagedSeed(obj client.Object) bool {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return false
-	}
-
-	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := p.reader.Get(p.ctx, client.ObjectKey{Namespace: p.gardenNamespace, Name: seed.Name}, managedSeed); err != nil {
-		return false
-	}
-
-	return filterManagedSeed(p.ctx, p.reader, managedSeed, p.seedName)
-}
-
-func filterManagedSeed(ctx context.Context, reader client.Reader, managedSeed *seedmanagementv1alpha1.ManagedSeed, seedName string) bool {
-	if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
-		return false
-	}
-
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := reader.Get(ctx, client.ObjectKey{Namespace: managedSeed.Namespace, Name: managedSeed.Spec.Shoot.Name}, shoot); err != nil {
-		return false
-	}
-
-	specSeedName, statusSeedName := gardenerutils.GetShootSeedNames(shoot)
-
-	return gardenerutils.GetResponsibleSeedName(specSeedName, statusSeedName) == seedName
+// SeedPredicate returns true when the Seed is a ManagedSeed controlled by this gardenlet. ManagedSeeds always have two
+// `name.seed.gardener.cloud/` labels, and since the cache for Seeds is already limited on manager.Manager level to only
+// contain Seeds relevant for this gardenlet, we can make this simple check here.
+func (r *Reconciler) SeedPredicate() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(object client.Object) bool {
+		count := 0
+		for key := range object.GetLabels() {
+			if strings.HasPrefix(key, v1beta1constants.LabelPrefixSeedName) {
+				count++
+			}
+		}
+		return count > 1
+	})
 }
 
 // MapSeedToManagedSeed is a handler.MapFunc for mapping a Seed to the owning ManagedSeed.

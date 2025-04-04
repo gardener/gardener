@@ -37,11 +37,6 @@ var _ = Describe("Add", func() {
 		fakeClient client.Client
 		reconciler *Reconciler
 		p          predicate.Predicate
-
-		managedSeed            *seedmanagementv1alpha1.ManagedSeed
-		managedSeedShoot       *seedmanagementv1alpha1.Shoot
-		shoot                  *gardencorev1beta1.Shoot
-		seedNameFromSeedConfig string
 	)
 
 	BeforeEach(func() {
@@ -50,230 +45,35 @@ var _ = Describe("Add", func() {
 			GardenClient:          fakeClient,
 			GardenNamespaceGarden: v1beta1constants.GardenNamespace,
 		}
-
-		shoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-		}
-
-		managedSeedShoot = &seedmanagementv1alpha1.Shoot{
-			Name: name,
-		}
-
-		seedNameFromSeedConfig = "test-seed"
 	})
 
-	Describe("#ManagedSeedPredicate", func() {
+	Describe("#SeedPredicate", func() {
 		var (
-			oldManagedSeed, newManagedSeed *seedmanagementv1alpha1.ManagedSeed
+			seed *gardencorev1beta1.Seed
 		)
 
 		BeforeEach(func() {
-			p = reconciler.ManagedSeedPredicate(ctx, seedNameFromSeedConfig)
+			seed = &gardencorev1beta1.Seed{}
+			p = reconciler.SeedPredicate()
+		})
 
-			oldManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-				},
+		It("should return true", func() {
+			seed.Labels = map[string]string{
+				"name.seed.gardener.cloud/foo": "true",
+				"name.seed.gardener.cloud/bar": "true",
 			}
 
-			newManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-				},
-			}
+			Expect(p.Create(event.TypedCreateEvent[client.Object]{Object: seed})).To(BeTrue())
+			Expect(p.Update(event.TypedUpdateEvent[client.Object]{ObjectNew: seed})).To(BeTrue())
+			Expect(p.Delete(event.TypedDeleteEvent[client.Object]{Object: seed})).To(BeTrue())
+			Expect(p.Generic(event.TypedGenericEvent[client.Object]{Object: seed})).To(BeTrue())
 		})
 
-		It("should return false when ManagedSeed does not reference any shoot", func() {
-			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when shoot referenced by ManagedSeed is not present", func() {
-			oldManagedSeed.Spec.Shoot = managedSeedShoot
-			newManagedSeed.Spec.Shoot = managedSeedShoot
-			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when shoot referenced by ManagedSeed does not reference any seed", func() {
-			oldManagedSeed.Spec.Shoot = managedSeedShoot
-			newManagedSeed.Spec.Shoot = managedSeedShoot
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return true when shoot referenced by ManagedSeed references a seed which is same as the seed mentioned in gardenlet configuration", func() {
-			oldManagedSeed.Spec.Shoot = managedSeedShoot
-			newManagedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = ptr.To(seedNameFromSeedConfig)
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeTrue())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeTrue())
-			Expect(p.Delete(event.DeleteEvent{Object: newManagedSeed})).To(BeTrue())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when shoot referenced by ManagedSeed references a seed which is not same as the seed mentioned in gardenlet configuration", func() {
-			oldManagedSeed.Spec.Shoot = managedSeedShoot
-			newManagedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = ptr.To("test")
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when shoot referenced by ManagedSeed has seed name in status field which is not same as the seed mentioned in gardenlet configuration", func() {
-			oldManagedSeed.Spec.Shoot = managedSeedShoot
-			newManagedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = ptr.To("test")
-			shoot.Status.SeedName = ptr.To("other-seed")
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newManagedSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return true when shoot referenced by ManagedSeed has seed name in status field which is same as the seed mentioned in gardenlet configuration", func() {
-			oldManagedSeed.Spec.Shoot = managedSeedShoot
-			newManagedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = ptr.To("test")
-			shoot.Status.SeedName = ptr.To(seedNameFromSeedConfig)
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newManagedSeed})).To(BeTrue())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldManagedSeed, ObjectNew: newManagedSeed})).To(BeTrue())
-			Expect(p.Delete(event.DeleteEvent{Object: newManagedSeed})).To(BeTrue())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-	})
-
-	Describe("#SeedOfManagedSeedPredicate", func() {
-		var (
-			oldSeed, newSeed *gardencorev1beta1.Seed
-		)
-
-		BeforeEach(func() {
-			p = reconciler.SeedOfManagedSeedPredicate(ctx, seedNameFromSeedConfig)
-
-			oldSeed = &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: name,
-				},
-			}
-
-			newSeed = &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: name,
-				},
-			}
-
-			managedSeed = &seedmanagementv1alpha1.ManagedSeed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-				},
-			}
-		})
-
-		It("should return false if the object is not seed", func() {
-			Expect(p.Create(event.CreateEvent{Object: &seedmanagementv1alpha1.ManagedSeed{}})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: &seedmanagementv1alpha1.ManagedSeed{}, ObjectNew: &seedmanagementv1alpha1.ManagedSeed{}})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: &seedmanagementv1alpha1.ManagedSeed{}})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when ManagedSeed is not present", func() {
-			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: newSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when ManagedSeed does not reference any shoot", func() {
-			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: newSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when shoot referenced by ManagedSeed is not present", func() {
-			managedSeed.Spec.Shoot = managedSeedShoot
-			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: newSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when shoot referenced by ManagedSeed does not reference any seed", func() {
-			managedSeed.Spec.Shoot = managedSeedShoot
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: newSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return true when shoot referenced by ManagedSeed references a seed which is same as the seed mentioned in gardenlet configuration", func() {
-			managedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = ptr.To(seedNameFromSeedConfig)
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeTrue())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: newSeed})).To(BeTrue())
-			Expect(p.Delete(event.DeleteEvent{Object: newSeed})).To(BeTrue())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when shoot referenced by ManagedSeed references a seed which is not same as the seed mentioned in gardenlet configuration", func() {
-			managedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = ptr.To("test")
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: newSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return false when shoot referenced by ManagedSeed has seed name in status field which is not same as shoot's spec.seedName field and the seed mentioned in gardenlet configuration", func() {
-			managedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = ptr.To("test")
-			shoot.Status.SeedName = ptr.To("other-seed")
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: newSeed})).To(BeFalse())
-			Expect(p.Delete(event.DeleteEvent{Object: newSeed})).To(BeFalse())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
-		})
-
-		It("should return true when shoot referenced by ManagedSeed has seed name in status field which is not same as shoot's spec.seedName field but same as the seed mentioned in gardenlet configuration", func() {
-			managedSeed.Spec.Shoot = managedSeedShoot
-			shoot.Spec.SeedName = ptr.To("test")
-			shoot.Status.SeedName = ptr.To(seedNameFromSeedConfig)
-			Expect(fakeClient.Create(ctx, shoot)).To(Succeed())
-			Expect(fakeClient.Create(ctx, managedSeed)).To(Succeed())
-			Expect(p.Create(event.CreateEvent{Object: newSeed})).To(BeTrue())
-			Expect(p.Update(event.UpdateEvent{ObjectOld: oldSeed, ObjectNew: newSeed})).To(BeTrue())
-			Expect(p.Delete(event.DeleteEvent{Object: newSeed})).To(BeTrue())
-			Expect(p.Generic(event.GenericEvent{})).To(BeFalse())
+		It("should return false", func() {
+			Expect(p.Create(event.TypedCreateEvent[client.Object]{Object: seed})).To(BeFalse())
+			Expect(p.Update(event.TypedUpdateEvent[client.Object]{ObjectNew: seed})).To(BeFalse())
+			Expect(p.Delete(event.TypedDeleteEvent[client.Object]{Object: seed})).To(BeFalse())
+			Expect(p.Generic(event.TypedGenericEvent[client.Object]{Object: seed})).To(BeFalse())
 		})
 	})
 

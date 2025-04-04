@@ -241,10 +241,9 @@ func (g *garden) Start(ctx context.Context) error {
 				&gardencorev1beta1.ControllerInstallation{}: {
 					Field: fields.SelectorFromSet(fields.Set{gardencore.SeedRefName: g.config.SeedConfig.Name}),
 				},
-				// TODO(rfranzke): Enable the label selector for Seeds after Gardener v1.114 has been released.
-				// &gardencorev1beta1.Seed{}: {
-				// 	Label: labels.SelectorFromSet(labels.Set{v1beta1constants.LabelPrefixSeedName + g.config.SeedConfig.Name: "true"}),
-				// },
+				&gardencorev1beta1.Seed{}: {
+					Label: labels.SelectorFromSet(labels.Set{v1beta1constants.LabelPrefixSeedName + g.config.SeedConfig.Name: "true"}),
+				},
 				&gardencorev1beta1.Shoot{}: {
 					Label: labels.SelectorFromSet(labels.Set{v1beta1constants.LabelPrefixSeedName + g.config.SeedConfig.Name: "true"}),
 				},
@@ -258,10 +257,9 @@ func (g *garden) Start(ctx context.Context) error {
 				&corev1.ServiceAccount{}: {
 					Namespaces: map[string]cache.Config{seedNamespace: {}},
 				},
-				// TODO(rfranzke): Enable the label selector for Seeds after Gardener v1.113 has been released.
-				// &seedmanagementv1alpha1.ManagedSeed{}: {
-				// 	Label: labels.SelectorFromSet(labels.Set{v1beta1constants.LabelPrefixSeedName + g.config.SeedConfig.Name: "true"}),
-				// },
+				&seedmanagementv1alpha1.ManagedSeed{}: {
+					Label: labels.SelectorFromSet(labels.Set{v1beta1constants.LabelPrefixSeedName + g.config.SeedConfig.Name: "true"}),
+				},
 				&seedmanagementv1alpha1.Gardenlet{}: {
 					Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: g.config.SeedConfig.Name}),
 					Namespaces: map[string]cache.Config{v1beta1constants.GardenNamespace: {}},
