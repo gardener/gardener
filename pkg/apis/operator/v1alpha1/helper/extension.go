@@ -63,8 +63,8 @@ func IsControllerInstallationInVirtualRequired(extension *operatorv1alpha1.Exten
 	return requiredCondition != nil && requiredCondition.Status == gardencorev1beta1.ConditionTrue
 }
 
-// IsDeploymentInRuntimeRequired returns true if the extension requires a deployment in the runtime cluster.
-func IsDeploymentInRuntimeRequired(extension *operatorv1alpha1.Extension) bool {
+// IsExtensionInRuntimeRequired returns true if the extension requires a deployment in the runtime cluster.
+func IsExtensionInRuntimeRequired(extension *operatorv1alpha1.Extension) bool {
 	requiredCondition := v1beta1helper.GetCondition(extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
 	return requiredCondition != nil && requiredCondition.Status == gardencorev1beta1.ConditionTrue
 }

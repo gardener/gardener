@@ -171,7 +171,7 @@ func (e ExtensionConditions) ConvertToSlice() []gardencorev1beta1.Condition {
 }
 
 // ConditionTypes returns all extension condition types.
-func (e ExtensionConditions) ConditionTypes() []gardencorev1beta1.ConditionType {
+func ConditionTypes() []gardencorev1beta1.ConditionType {
 	return []gardencorev1beta1.ConditionType{
 		operatorv1alpha1.ControllerInstallationsHealthy,
 		operatorv1alpha1.ExtensionHealthy,
@@ -188,7 +188,7 @@ func NewExtensionConditions(clock clock.Clock, extension *operatorv1alpha1.Exten
 		extensionConditions.controllerInstallationsHealthy = ptr.To(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ControllerInstallationsHealthy))
 	}
 
-	if helper.IsDeploymentInRuntimeRequired(extension) {
+	if helper.IsExtensionInRuntimeRequired(extension) {
 		extensionConditions.extensionHealthy = ptr.To(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ExtensionHealthy))
 	}
 

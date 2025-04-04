@@ -134,6 +134,9 @@ type ExtensionControllerConfiguration struct {
 
 // ExtensionCareControllerConfiguration defines the configuration of the ExtensionCare controller.
 type ExtensionCareControllerConfiguration struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check is performed).
 	// +optional

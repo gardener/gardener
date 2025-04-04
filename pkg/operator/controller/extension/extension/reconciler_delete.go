@@ -64,7 +64,7 @@ func (r *Reconciler) delete(
 		return reconcile.Result{}, errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
 	}
 
-	if helper.IsDeploymentInRuntimeRequired(extension) {
+	if helper.IsExtensionInRuntimeRequired(extension) {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionTrue, ReasonInstalledInRuntime, "Extension is still required in runtime cluster")
 		return reconcile.Result{}, r.updateExtensionStatus(ctx, log, extension, conditions)
 	}

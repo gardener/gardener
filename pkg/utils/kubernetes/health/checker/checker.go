@@ -441,6 +441,7 @@ func (h *HealthChecker) CheckControllerInstallations(
 // CheckControllerInstallation checks the conditions of the given controller installation and reflects the state in the returned condition.
 func (h *HealthChecker) CheckControllerInstallation(ctx context.Context, gardenReader client.Reader, condition gardencorev1beta1.Condition, controllerInstallation *gardencorev1beta1.ControllerInstallation, controllerInstallationProgressingThreshold *metav1.Duration) (*gardencorev1beta1.Condition, error) {
 	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
+		gardencorev1beta1.ControllerInstallationValid:       defaultSuccessfulCheck(),
 		gardencorev1beta1.ControllerInstallationInstalled:   defaultSuccessfulCheck(),
 		gardencorev1beta1.ControllerInstallationHealthy:     defaultSuccessfulCheck(),
 		gardencorev1beta1.ControllerInstallationProgressing: resourcesNotProgressingCheck(h.clock, controllerInstallationProgressingThreshold),
@@ -469,6 +470,7 @@ func (h *HealthChecker) checkControllerInstallationConditions(
 	}
 
 	for _, condType := range []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.ControllerInstallationValid,
 		gardencorev1beta1.ControllerInstallationInstalled,
 		gardencorev1beta1.ControllerInstallationHealthy,
 		gardencorev1beta1.ControllerInstallationProgressing,

@@ -119,7 +119,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 
 	var existingConditions []gardencorev1beta1.Condition
 	for _, condition := range extension.Status.Conditions {
-		if slices.Contains(extensionConditions.ConditionTypes(), condition.Type) {
+		if slices.Contains(ConditionTypes(), condition.Type) {
 			existingConditions = append(existingConditions, condition)
 		}
 	}
@@ -127,10 +127,10 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 	// Update extension status conditions if necessary
 	if v1beta1helper.ConditionsNeedUpdate(existingConditions, updatedConditions) {
 		log.Info("Updating extension status conditions")
-		patch := client.MergeFrom(extension.DeepCopy())
+		patch := client.MergeFromWithOptions(extension.DeepCopy(), client.MergeFromWithOptimisticLock{})
 		// Rebuild extension conditions to ensure that only the conditions with the
 		// correct types will be updated, and any other conditions will remain intact
-		extension.Status.Conditions = v1beta1helper.BuildConditions(extension.Status.Conditions, updatedConditions, extensionConditions.ConditionTypes())
+		extension.Status.Conditions = v1beta1helper.BuildConditions(extension.Status.Conditions, updatedConditions, ConditionTypes())
 
 		if err := r.RuntimeClient.Status().Patch(reconcileCtx, extension, patch); err != nil {
 			log.Error(err, "Could not update extension status")

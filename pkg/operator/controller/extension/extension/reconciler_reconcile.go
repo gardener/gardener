@@ -136,7 +136,7 @@ func (r *Reconciler) reconcile(
 }
 
 func (r *Reconciler) deployExtensionInRuntime(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	if !helper.IsDeploymentInRuntimeRequired(extension) {
+	if !helper.IsExtensionInRuntimeRequired(extension) {
 		log.V(1).Info("Deployment in runtime cluster not required")
 		return r.runtime.Delete(ctx, log, extension)
 	}
