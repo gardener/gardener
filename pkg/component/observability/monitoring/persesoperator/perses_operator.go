@@ -49,7 +49,9 @@ type persesOperator struct {
 func (p *persesOperator) Deploy(ctx context.Context) error {
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	resources, err := registry.AddAllAndSerialize()
+	resources, err := registry.AddAllAndSerialize(
+		p.serviceAccount(),
+	)
 	if err != nil {
 		return err
 	}

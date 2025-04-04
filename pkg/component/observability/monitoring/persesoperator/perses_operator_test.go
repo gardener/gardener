@@ -45,6 +45,8 @@ var _ = Describe("PersesOperator", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		serviceAccount *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
@@ -72,6 +74,14 @@ var _ = Describe("PersesOperator", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-" + managedResource.Name,
 				Namespace: namespace,
+			},
+		}
+
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "perses-operator",
+				Namespace: namespace,
+				Labels:    map[string]string{"app": "perses-operator"},
 			},
 		}
 	})
@@ -131,7 +141,9 @@ var _ = Describe("PersesOperator", func() {
 			})
 
 			It("should successfully deploy all resources", func() {
-				Expect(managedResource).To(consistOf())
+				Expect(managedResource).To(consistOf(
+					serviceAccount,
+				))
 			})
 		})
 	})
