@@ -36,7 +36,7 @@ var _ = Describe("Controller", func() {
 		)
 
 		BeforeEach(func() {
-			ctx = context.TODO()
+			ctx = context.Background()
 			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 			machineDeployment = &machinev1alpha1.MachineDeployment{

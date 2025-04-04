@@ -251,7 +251,7 @@ type WorkerStatus struct {
 	// MachineDeploymentsLastUpdateTime is the timestamp when the status.MachineDeployments slice was last updated.
 	// +optional
 	MachineDeploymentsLastUpdateTime *metav1.Time `json:"machineDeploymentsLastUpdateTime,omitempty"`
-	// InPlaceUpdates contains the configuration for in-place updates.
+	// InPlaceUpdates contains the status for in-place updates.
 	// +optional
 	InPlaceUpdates *InPlaceUpdatesWorkerStatus `json:"inPlaceUpdates,omitempty"`
 }

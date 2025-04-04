@@ -2750,9 +2750,20 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	}
 
 	pendingWorkerNames := sets.New[string]()
-
 	pendingWorkerNames.Insert(newShoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate...)
 	pendingWorkerNames.Insert(newShoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...)
+
+	oldControlPlaneKubernetesVersion, err := semver.NewVersion(oldShoot.Spec.Kubernetes.Version)
+	if err != nil {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), "old control plane kubernetes version is not a valid semver version"))
+		return allErrs
+	}
+
+	newControlPlaneKubernetesVersion, err := semver.NewVersion(newShoot.Spec.Kubernetes.Version)
+	if err != nil {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), "new control plane kubernetes version is not a valid semver version"))
+		return allErrs
+	}
 
 	for i, worker := range newShoot.Spec.Provider.Workers {
 		if !helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
@@ -2778,24 +2789,15 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		}
 
 		oldWorkerIndexPath := field.NewPath("spec", "provider", "workers").Index(oldWorkerIndex)
-		oldControlPlaneKubernetesVersion, err := semver.NewVersion(oldShoot.Spec.Kubernetes.Version)
-		if err != nil {
-			allErrs = append(allErrs, field.Forbidden(oldWorkerIndexPath, "old control plane kubernetes version is not a valid semver version"))
-			continue
-		}
+
 		oldKubernetesVersion, err := helper.CalculateEffectiveKubernetesVersion(oldControlPlaneKubernetesVersion, oldWorker.Kubernetes)
 		if err != nil {
-			allErrs = append(allErrs, field.Forbidden(oldWorkerIndexPath, "failed to calculate effective kubernetes version for old worker"))
-			continue
-		}
-		newControlPlaneKubernetesVersion, err := semver.NewVersion(newShoot.Spec.Kubernetes.Version)
-		if err != nil {
-			allErrs = append(allErrs, field.Forbidden(idxPath, "new control plane kubernetes version is not a valid semver version"))
+			allErrs = append(allErrs, field.Forbidden(oldWorkerIndexPath, fmt.Sprintf("failed to calculate effective kubernetes version for old worker: %v", err)))
 			continue
 		}
 		newKubernetesVersion, err := helper.CalculateEffectiveKubernetesVersion(newControlPlaneKubernetesVersion, worker.Kubernetes)
 		if err != nil {
-			allErrs = append(allErrs, field.Forbidden(idxPath, "failed to calculate effective kubernetes version for new worker"))
+			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("failed to calculate effective kubernetes version for new worker: %v", err)))
 			continue
 		}
 
@@ -2803,7 +2805,7 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		newKubeletConfig := helper.CalculateEffectiveKubeletConfiguration(newShoot.Spec.Kubernetes.Kubelet, worker.Kubernetes)
 
 		if !apiequality.Semantic.DeepEqual(oldWorker, worker) || !oldKubernetesVersion.Equal(newKubernetesVersion) || !apiequality.Semantic.DeepEqual(oldKubeletConfig, newKubeletConfig) {
-			allErrs = append(allErrs, field.Forbidden(idxPath, "the worker pool is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration."))
+			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("the worker pool %q is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration.", worker.Name)))
 		}
 	}
 
