@@ -330,6 +330,7 @@ spec:
         - --path.procfs=/host/proc
         - --path.sysfs=/host/sys
         - --path.rootfs=/host
+        - --path.udev.data=/host/run/udev/data
         - --log.level=error
         - --collector.disable-defaults
         - --collector.conntrack
