@@ -233,9 +233,10 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
 		deploySourceBackupEntry = g.Add(flow.Task{
-			Name:   "Deploying source backup entry",
-			Fn:     botanist.DeploySourceBackupEntry,
-			SkipIf: !isCopyOfBackupsRequired,
+			Name:         "Deploying source backup entry",
+			Fn:           botanist.DeploySourceBackupEntry,
+			SkipIf:       !isCopyOfBackupsRequired,
+			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		waitUntilSourceBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the source backup entry has been reconciled",
