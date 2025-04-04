@@ -13,6 +13,8 @@ RUN rm -f /etc/systemd/system/kubelet.service && \
 
 # copy containerd hosts configurations for local registry mirrors
 COPY containerd /etc/containerd/certs.d/
+# names with colon are not allowed in the directory name checked into Git as it breaks go mod if gardener/gardener is used as a module
+RUN mv /etc/containerd/certs.d/garden.local.gardener.cloud_5001 /etc/containerd/certs.d/garden.local.gardener.cloud:5001
 
 # add our userdata executor unit
 COPY run-userdata.sh /run-userdata.sh
