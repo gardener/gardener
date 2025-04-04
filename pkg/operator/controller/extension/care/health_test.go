@@ -448,6 +448,14 @@ var _ = Describe("Extension health", func() {
 				tests("NotHealthy", "Controller installation is not healthy")
 			})
 
+			Context("when all controller installations are invalid", func() {
+				JustBeforeEach(func() {
+					Expect(gardenClientSet.Client().Create(ctx, inValidControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
+				})
+
+				tests("Invalid", "Controller installation is invalid")
+			})
+
 			Context("when all controller installations are not installed", func() {
 				JustBeforeEach(func() {
 					Expect(gardenClientSet.Client().Create(ctx, notInstalledControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
@@ -506,12 +514,12 @@ var _ = Describe("Extension health", func() {
 			})
 
 			It("should only initialize missing conditions", func() {
-				extension.Status.Conditions = append(extension.Status.Conditions, gardencorev1beta1.Condition{Type: "ExtensionHealthy"}, gardencorev1beta1.Condition{Type: "Foo"})
+				extension.Status.Conditions = append(extension.Status.Conditions, gardencorev1beta1.Condition{Type: "Healthy"}, gardencorev1beta1.Condition{Type: "Foo"})
 				conditions := NewExtensionConditions(fakeClock, extension)
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
-					OfType("ExtensionHealthy"),
+					OfType("Healthy"),
 					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
@@ -523,20 +531,18 @@ var _ = Describe("Extension health", func() {
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					OfType("ControllerInstallationsHealthy"),
-					OfType("ExtensionHealthy"),
-					OfType("ExtensionAdmissionHealthy"),
+					OfType("Healthy"),
+					OfType("AdmissionHealthy"),
 				))
 			})
 		})
 
 		Describe("#ConditionTypes", func() {
 			It("should return the expected condition types", func() {
-				conditions := NewExtensionConditions(fakeClock, extension)
-
-				Expect(conditions.ConditionTypes()).To(HaveExactElements(
+				Expect(ConditionTypes()).To(HaveExactElements(
 					gardencorev1beta1.ConditionType("ControllerInstallationsHealthy"),
-					gardencorev1beta1.ConditionType("ExtensionHealthy"),
-					gardencorev1beta1.ConditionType("ExtensionAdmissionHealthy"),
+					gardencorev1beta1.ConditionType("Healthy"),
+					gardencorev1beta1.ConditionType("AdmissionHealthy"),
 				))
 			})
 		})
@@ -667,6 +673,37 @@ func healthyControllerInstallation(name, controllerRegistrationName, controllerR
 		controllerRegistrationResourceVersion,
 		[]gardencorev1beta1.Condition{
 			{
+				Type:   gardencorev1beta1.ControllerInstallationValid,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationInstalled,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.ControllerInstallationProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		})
+}
+
+func inValidControllerInstallation(name, controllerRegistrationName, controllerRegistrationResourceVersion string) *gardencorev1beta1.ControllerInstallation {
+	return controllerInstallation(
+		name,
+		controllerRegistrationName,
+		controllerRegistrationResourceVersion,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:    gardencorev1beta1.ControllerInstallationValid,
+				Reason:  "Invalid",
+				Message: "Controller installation is invalid",
+				Status:  gardencorev1beta1.ConditionFalse,
+			},
+			{
 				Type:   gardencorev1beta1.ControllerInstallationInstalled,
 				Status: gardencorev1beta1.ConditionTrue,
 			},
@@ -687,6 +724,10 @@ func notInstalledControllerInstallation(name, controllerRegistrationName, contro
 		controllerRegistrationName,
 		controllerRegistrationResourceVersion,
 		[]gardencorev1beta1.Condition{
+			{
+				Type:   gardencorev1beta1.ControllerInstallationValid,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
 			{
 				Type:    gardencorev1beta1.ControllerInstallationInstalled,
 				Reason:  "NotInstalled",
@@ -711,6 +752,10 @@ func outdatedControllerInstallation(name, controllerRegistrationName string) *ga
 		"0",
 		[]gardencorev1beta1.Condition{
 			{
+				Type:   gardencorev1beta1.ControllerInstallationValid,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
 				Type:   gardencorev1beta1.ControllerInstallationInstalled,
 				Status: gardencorev1beta1.ConditionTrue,
 			},
@@ -731,6 +776,10 @@ func progressingControllerInstallation(name, controllerRegistrationName, control
 		controllerRegistrationName,
 		controllerRegistrationResourceVersion,
 		[]gardencorev1beta1.Condition{
+			{
+				Type:   gardencorev1beta1.ControllerInstallationValid,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
 			{
 				Type:   gardencorev1beta1.ControllerInstallationInstalled,
 				Status: gardencorev1beta1.ConditionTrue,
@@ -754,6 +803,10 @@ func unhealthyControllerInstallation(name, controllerRegistrationName, controlle
 		controllerRegistrationName,
 		controllerRegistrationResourceVersion,
 		[]gardencorev1beta1.Condition{
+			{
+				Type:   gardencorev1beta1.ControllerInstallationValid,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
 			{
 				Type:   gardencorev1beta1.ControllerInstallationInstalled,
 				Status: gardencorev1beta1.ConditionTrue,

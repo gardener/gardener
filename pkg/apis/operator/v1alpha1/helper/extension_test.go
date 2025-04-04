@@ -67,9 +67,9 @@ var _ = Describe("Extension", func() {
 		})
 	})
 
-	Describe("#IsDeploymentInRuntimeRequired", func() {
+	Describe("#IsExtensionInRuntimeRequired", func() {
 		It("should return true if the extension requires a deployment in the runtime cluster", func() {
-			Expect(IsDeploymentInRuntimeRequired(&operatorv1alpha1.Extension{
+			Expect(IsExtensionInRuntimeRequired(&operatorv1alpha1.Extension{
 				Status: operatorv1alpha1.ExtensionStatus{
 					Conditions: []gardencorev1beta1.Condition{{Type: "RequiredRuntime", Status: "True"}},
 				},

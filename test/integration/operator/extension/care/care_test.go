@@ -89,7 +89,7 @@ var _ = Describe("Extension Care controller tests", func() {
 		})
 	})
 
-	Context("when Extension exists", func() {
+	When("Extension exists", func() {
 		extensionName := "foo"
 		managedResourceName := "extension-foo-garden"
 
@@ -408,6 +408,7 @@ func updateControllerInstallationStatusToHealthy(name string) {
 	ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(controllerInstallation), controllerInstallation)).To(Succeed())
 
 	controllerInstallation.Status.Conditions = []gardencorev1beta1.Condition{
+		{Type: gardencorev1beta1.ControllerInstallationValid, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 		{Type: gardencorev1beta1.ControllerInstallationInstalled, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 		{Type: gardencorev1beta1.ControllerInstallationHealthy, Status: gardencorev1beta1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 		{Type: gardencorev1beta1.ControllerInstallationProgressing, Status: gardencorev1beta1.ConditionFalse, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
