@@ -2603,7 +2603,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
-		allErrs = append(allErrs, validatePendingWorkersRollouts(shoot, fldPath, "rotation of all credentials")...)
+		allErrs = append(allErrs, validatePendingWorkerUpdates(shoot, fldPath, "rotation of all credentials")...)
 
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
@@ -2623,7 +2623,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootCARotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
 		}
-		allErrs = append(allErrs, validatePendingWorkersRollouts(shoot, fldPath, "CA rotation")...)
+		allErrs = append(allErrs, validatePendingWorkerUpdates(shoot, fldPath, "CA rotation")...)
 
 	case v1beta1constants.OperationRotateCAComplete:
 		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
@@ -2637,7 +2637,7 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 		if phase := helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Completed'"))
 		}
-		allErrs = append(allErrs, validatePendingWorkersRollouts(shoot, fldPath, "service account key rotation")...)
+		allErrs = append(allErrs, validatePendingWorkerUpdates(shoot, fldPath, "service account key rotation")...)
 
 	case v1beta1constants.OperationRotateServiceAccountKeyComplete:
 		if helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
@@ -2685,17 +2685,17 @@ func validateShootOperationContext(operation string, shoot *core.Shoot, fldPath 
 	return allErrs
 }
 
-// validatePendingWorkersRollouts checks if there are pending workers rollouts in the Shoot's status and returns an error if any are found.
-func validatePendingWorkersRollouts(shoot *core.Shoot, fldPath *field.Path, operation string) field.ErrorList {
+// validatePendingWorkerUpdates checks if there are pending workers rollouts in the Shoot's status and returns an error if any are found.
+func validatePendingWorkerUpdates(shoot *core.Shoot, fldPath *field.Path, operation string) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	var forbiddenPendingWorkersRolloutsMessageTemplate = "cannot start %s if status.inPlaceUpdates.pendingWorkersRollouts.%s is not empty"
-	if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkersRollouts != nil {
-		if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate) > 0 {
-			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf(forbiddenPendingWorkersRolloutsMessageTemplate, operation, "autoInPlaceUpdate")))
+	var forbiddenPendingWorkerUpdatesMessageTemplate = "cannot start %s if status.inPlaceUpdates.PendingWorkerUpdates.%s is not empty"
+	if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
+		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf(forbiddenPendingWorkerUpdatesMessageTemplate, operation, "autoInPlaceUpdate")))
 		}
-		if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) > 0 {
-			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf(forbiddenPendingWorkersRolloutsMessageTemplate, operation, "manualInPlaceUpdate")))
+		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0 {
+			allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf(forbiddenPendingWorkerUpdatesMessageTemplate, operation, "manualInPlaceUpdate")))
 		}
 	}
 
@@ -2745,14 +2745,14 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		return allErrs
 	}
 
-	if newShoot.Status.InPlaceUpdates == nil || newShoot.Status.InPlaceUpdates.PendingWorkersRollouts == nil {
+	if newShoot.Status.InPlaceUpdates == nil || newShoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
 		return allErrs
 	}
 
 	pendingWorkerNames := sets.New[string]()
 
-	pendingWorkerNames.Insert(newShoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate...)
-	pendingWorkerNames.Insert(newShoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate...)
+	pendingWorkerNames.Insert(newShoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate...)
+	pendingWorkerNames.Insert(newShoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...)
 
 	for i, worker := range newShoot.Spec.Provider.Workers {
 		if !helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {

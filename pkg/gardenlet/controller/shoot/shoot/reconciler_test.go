@@ -77,7 +77,7 @@ var _ = Describe("Reconciler", func() {
 					},
 				},
 				InPlaceUpdates: &gardencorev1beta1.InPlaceUpdatesStatus{
-					PendingWorkersRollouts: &gardencorev1beta1.InPlaceUpdatePendingWorkers{
+					PendingWorkerUpdates: &gardencorev1beta1.PendingWorkerUpdates{
 						AutoInPlaceUpdate:   []string{"worker1", "worker4"},
 						ManualInPlaceUpdate: []string{"worker2", "worker5"},
 					},
@@ -105,8 +105,8 @@ var _ = Describe("Reconciler", func() {
 				gardencorev1beta1.PendingWorkersRollout{Name: "worker4"},
 			))
 
-			Expect(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate).To(ConsistOf("worker4"))
-			Expect(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate).To(ConsistOf("worker5"))
+			Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker4"))
+			Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("worker5"))
 		})
 
 		It("should remove all worker pools from pending workers rollouts if hibernation is enabled", func() {
@@ -160,7 +160,7 @@ var _ = Describe("Reconciler", func() {
 		It("should set the rotation status to Prepared if current status is Preparing and manual in-place update pending workers are empty", func() {
 			shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationPreparing
 			shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase = gardencorev1beta1.RotationPreparing
-			shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate = nil
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
@@ -191,7 +191,7 @@ var _ = Describe("Reconciler", func() {
 		It("should not set the rotation status to Prepared if current status is WaitingForWorkersRollout and certificateAuthorities.PendingWorkersRollouts are present", func() {
 			shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationWaitingForWorkersRollout
 			shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase = gardencorev1beta1.RotationWaitingForWorkersRollout
-			shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate = nil
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())
@@ -208,7 +208,7 @@ var _ = Describe("Reconciler", func() {
 			shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase = gardencorev1beta1.RotationWaitingForWorkersRollout
 			shoot.Status.Credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts = nil
 			shoot.Status.Credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts = nil
-			shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate = nil
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
 			Expect(gardenClient.Status().Update(ctx, shoot)).To(Succeed())
 
 			Expect(reconciler.patchShootStatusOperationSuccess(ctx, shoot, nil, gardencorev1beta1.LastOperationTypeReconcile)).To(Succeed())

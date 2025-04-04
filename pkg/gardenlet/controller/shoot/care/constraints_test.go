@@ -572,7 +572,7 @@ var _ = Describe("Constraints", func() {
 						},
 					}
 					shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{
-						PendingWorkersRollouts: &gardencorev1beta1.InPlaceUpdatePendingWorkers{
+						PendingWorkerUpdates: &gardencorev1beta1.PendingWorkerUpdates{
 							ManualInPlaceUpdate: []string{"worker1"},
 						},
 					}

@@ -895,7 +895,7 @@ func (r *Reconciler) patchShootStatusOperationError(
 }
 
 func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.Shoot, hibernationEnabled bool) {
-	if (shoot.Status.Credentials == nil || shoot.Status.Credentials.Rotation == nil) && (shoot.Status.InPlaceUpdates == nil || shoot.Status.InPlaceUpdates.PendingWorkersRollouts == nil) {
+	if (shoot.Status.Credentials == nil || shoot.Status.Credentials.Rotation == nil) && (shoot.Status.InPlaceUpdates == nil || shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil) {
 		return
 	}
 
@@ -920,20 +920,20 @@ func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.S
 		}
 	}
 
-	if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkersRollouts != nil {
-		shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate, func(workerName string) bool {
+	if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
+		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, func(workerName string) bool {
 			return !poolNames.Has(workerName)
 		})
 
-		shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate, func(workerName string) bool {
+		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, func(workerName string) bool {
 			return !poolNames.Has(workerName)
 		})
 
-		if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate) == 0 && len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) == 0 {
-			shoot.Status.InPlaceUpdates.PendingWorkersRollouts = nil
+		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0 && len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
 		}
 
-		if shoot.Status.InPlaceUpdates.PendingWorkersRollouts == nil {
+		if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
 			shoot.Status.InPlaceUpdates = nil
 		}
 	}
@@ -1173,5 +1173,5 @@ func reportMetrics(shoot *gardencorev1beta1.Shoot, operationType gardencorev1bet
 }
 
 func manualInPlacePendingWorkersPresent(inPlaceUpdates *gardencorev1beta1.InPlaceUpdatesStatus) bool {
-	return inPlaceUpdates != nil && inPlaceUpdates.PendingWorkersRollouts != nil && len(inPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) > 0
+	return inPlaceUpdates != nil && inPlaceUpdates.PendingWorkerUpdates != nil && len(inPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0
 }

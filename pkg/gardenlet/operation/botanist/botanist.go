@@ -324,9 +324,9 @@ func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *e
 	}
 
 	if b.Shoot.GetInfo().Status.InPlaceUpdates != nil &&
-		b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts != nil &&
-		autoInPlaceUpdatePendingWorkers.Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate...)) &&
-		manualInPlaceUpdatePendingWorkers.Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate...)) {
+		b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates != nil &&
+		autoInPlaceUpdatePendingWorkers.Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate...)) &&
+		manualInPlaceUpdatePendingWorkers.Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...)) {
 		return nil
 	}
 
@@ -335,22 +335,22 @@ func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *e
 			shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{}
 		}
 
-		if shoot.Status.InPlaceUpdates.PendingWorkersRollouts == nil {
-			shoot.Status.InPlaceUpdates.PendingWorkersRollouts = &gardencorev1beta1.InPlaceUpdatePendingWorkers{}
+		if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = &gardencorev1beta1.PendingWorkerUpdates{}
 		}
 
 		for poolName := range autoInPlaceUpdatePendingWorkers {
-			if slices.Contains(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate, poolName) {
+			if slices.Contains(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, poolName) {
 				continue
 			}
-			shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate = append(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate, poolName)
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = append(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, poolName)
 		}
 
 		for poolName := range manualInPlaceUpdatePendingWorkers {
-			if slices.Contains(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate, poolName) {
+			if slices.Contains(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, poolName) {
 				continue
 			}
-			shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate = append(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate, poolName)
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = append(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, poolName)
 		}
 
 		return nil

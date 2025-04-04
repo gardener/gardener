@@ -252,8 +252,8 @@ func (c *Constraint) checkIfManualInPlaceWorkersUpdated() (gardencorev1beta1.Con
 			"Shoot is workerless"
 	}
 
-	if c.shoot.GetInfo().Status.InPlaceUpdates == nil || c.shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts == nil ||
-		len(c.shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) == 0 {
+	if c.shoot.GetInfo().Status.InPlaceUpdates == nil || c.shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates == nil ||
+		len(c.shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
 		return gardencorev1beta1.ConditionTrue,
 			"NoWorkerPoolsWithManualInPlaceUpdateStrategyPending",
 			"No worker pools with manual in-place update strategy are pending"
@@ -262,7 +262,7 @@ func (c *Constraint) checkIfManualInPlaceWorkersUpdated() (gardencorev1beta1.Con
 	return gardencorev1beta1.ConditionFalse,
 		"WorkerPoolsWithManualInPlaceUpdateStrategyPending",
 		fmt.Sprintf("Some worker pools in your Shoot with update strategy ManualInPlaceUpdate are pending update: %s",
-			strings.Join(c.shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate, ", "))
+			strings.Join(c.shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, ", "))
 }
 
 // checkIfCRDsWithProblematicConversionWebhooksPresent checks whether there are CRDs with multiple stored versions and

@@ -297,7 +297,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 		patch := client.MergeFrom(shoot.DeepCopy())
 		shoot.Status.TechnicalID = shootTechnicalID
 		shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{
-			PendingWorkersRollouts: &gardencorev1beta1.InPlaceUpdatePendingWorkers{
+			PendingWorkerUpdates: &gardencorev1beta1.PendingWorkerUpdates{
 				AutoInPlaceUpdate:   []string{"worker2"},
 				ManualInPlaceUpdate: []string{"worker1", "worker3", "worker5"},
 			},
@@ -329,17 +329,17 @@ var _ = Describe("Shoot Status controller tests", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkersRollouts).NotTo(BeNil())
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
 			// worker3 hash does not match, worker5 is not present in the worker status
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate).To(ConsistOf("worker3", "worker5"))
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("worker3", "worker5"))
 			// No change for auto in-place update workers
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate).To(ConsistOf("worker2"))
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
 			g.Expect(shoot.Annotations).To(HaveKey(v1beta1constants.AnnotationForceInPlaceUpdate))
 		}).Should(Succeed())
 	})
 
 	It("should remove the manual in-place update workers from Shoot status and remove the force-update annotation if all hashes match", func() {
-		shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate = nil
+		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = nil
 		Expect(testClient.Status().Update(ctx, shoot)).To(Succeed())
 
 		patch := client.MergeFrom(worker.DeepCopy())
@@ -393,9 +393,9 @@ var _ = Describe("Shoot Status controller tests", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkersRollouts).NotTo(BeNil())
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate).To(BeNil())
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate).To(ConsistOf("worker2"))
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(BeNil())
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
 			g.Expect(shoot.Annotations).To(HaveKey(v1beta1constants.AnnotationForceInPlaceUpdate))
 		}).Should(Succeed())
 	})

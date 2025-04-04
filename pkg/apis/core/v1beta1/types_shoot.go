@@ -251,13 +251,13 @@ type NetworkingStatus struct {
 
 // InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.
 type InPlaceUpdatesStatus struct {
-	// PendingWorkersRollouts contains information about worker pools pending in-place updates.
+	// PendingWorkerUpdates contains information about worker pools pending in-place updates.
 	// +optional
-	PendingWorkersRollouts *InPlaceUpdatePendingWorkers `json:"pendingWorkersRollouts,omitempty" protobuf:"bytes,1,opt,name=pendingWorkersRollouts"`
+	PendingWorkerUpdates *PendingWorkerUpdates `json:"pendingWorkerUpdates,omitempty" protobuf:"bytes,1,opt,name=pendingWorkerUpdates"`
 }
 
-// InPlaceUpdatePendingWorkers contains information about a worker pool pending in-place update.
-type InPlaceUpdatePendingWorkers struct {
+// PendingWorkerUpdates contains information about worker pools pending in-place update.
+type PendingWorkerUpdates struct {
 	// AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.
 	// +optional
 	AutoInPlaceUpdate []string `json:"autoInPlaceUpdate,omitempty" protobuf:"bytes,1,rep,name=autoInPlaceUpdate"`

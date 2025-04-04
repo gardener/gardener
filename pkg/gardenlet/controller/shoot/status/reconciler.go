@@ -76,7 +76,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// If there are no manual in-place update workers in the shoot status, then nothing to do
-	if shoot.Status.InPlaceUpdates == nil || shoot.Status.InPlaceUpdates.PendingWorkersRollouts == nil || len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) == 0 {
+	if shoot.Status.InPlaceUpdates == nil || shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil || len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
 		return reconcile.Result{}, nil
 	}
 
@@ -123,25 +123,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// If both the slices are equal, then nothing to do here
-	if sets.New(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate...).Equal(manualInPlacePendingWorkers) {
+	if sets.New(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...).Equal(manualInPlacePendingWorkers) {
 		log.Info("Manual in-place pending workers are already up-to-date")
 		return reconcile.Result{}, nil
 	}
 
 	patch := client.StrategicMergeFrom(shoot.DeepCopy())
-	shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate, func(pool string) bool {
+	shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, func(pool string) bool {
 		return !manualInPlacePendingWorkers.Has(pool)
 	})
 
-	if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) == 0 {
-		shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate = nil
+	if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
 
-		if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate) == 0 {
-			shoot.Status.InPlaceUpdates.PendingWorkersRollouts = nil
+		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0 {
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
 		}
 	}
 
-	if shoot.Status.InPlaceUpdates.PendingWorkersRollouts == nil {
+	if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
 		shoot.Status.InPlaceUpdates = nil
 	}
 

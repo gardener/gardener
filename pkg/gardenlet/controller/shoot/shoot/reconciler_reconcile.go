@@ -834,13 +834,13 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				// If the worker is ready, all the AutoInPlaceUpdate worker pools should be updated already, so we can remove them from the status.
 				if shootHasPendingInPlaceUpdateWorkers(o.Shoot.GetInfo()) {
 					if err := botanist.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
-						shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate = nil
+						shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = nil
 
-						if len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) == 0 {
-							shoot.Status.InPlaceUpdates.PendingWorkersRollouts = nil
+						if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+							shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
 						}
 
-						if shoot.Status.InPlaceUpdates.PendingWorkersRollouts == nil {
+						if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
 							shoot.Status.InPlaceUpdates = nil
 						}
 
@@ -851,7 +851,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				}
 
 				// If there are no pending workers rollouts for in-place updates, we can remove the force in-place update annotation.
-				if (o.Shoot.GetInfo().Status.InPlaceUpdates == nil || o.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts == nil) &&
+				if (o.Shoot.GetInfo().Status.InPlaceUpdates == nil || o.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates == nil) &&
 					metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationForceInPlaceUpdate) {
 					return botanist.Shoot.UpdateInfo(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
 						delete(shoot.Annotations, v1beta1constants.AnnotationForceInPlaceUpdate)
@@ -1135,6 +1135,6 @@ func deleteGardenerNodeAgentShootAccess(ctx context.Context, o *operation.Operat
 }
 
 func shootHasPendingInPlaceUpdateWorkers(shoot *gardencorev1beta1.Shoot) bool {
-	return shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkersRollouts != nil &&
-		(len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate) > 0 || len(shoot.Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate) > 0)
+	return shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil &&
+		(len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) > 0 || len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) > 0)
 }

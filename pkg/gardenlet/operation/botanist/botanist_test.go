@@ -175,9 +175,9 @@ var _ = Describe("Botanist", func() {
 			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, nil)).To(Succeed())
 
 			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
 		})
 
 		It("should set the in-place update pending workers when worker does not contain this worker pool", func(ctx context.Context) {
@@ -190,8 +190,8 @@ var _ = Describe("Botanist", func() {
 			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, worker)).To(Succeed())
 
 			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate).To(ConsistOf("pool-2", "pool-4"))
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2", "pool-4"))
 		})
 
 		It("should set the in-place update pending workers when worker is not nil but worker status map does not contain this worker pool", func(ctx context.Context) {
@@ -202,17 +202,17 @@ var _ = Describe("Botanist", func() {
 			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, worker)).To(Succeed())
 
 			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
 		})
 
 		It("should set the in-place update pending workers when worker is not nil and hash is different", func(ctx context.Context) {
 			Expect(botanist.SetInPlaceUpdatePendingWorkers(ctx, worker)).To(Succeed())
 
 			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts).NotTo(BeNil())
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
-			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkersRollouts.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("pool-1"))
+			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("pool-2"))
 		})
 
 		It("should not set the in-place update pending workers when worker is not nil and hash is same", func(ctx context.Context) {

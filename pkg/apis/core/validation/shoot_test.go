@@ -4236,7 +4236,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeReconcile,
 					},
 					InPlaceUpdates: &core.InPlaceUpdatesStatus{
-						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
 							AutoInPlaceUpdate: []string{"worker-1"},
 						},
 					},
@@ -4246,7 +4246,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeReconcile,
 					},
 					InPlaceUpdates: &core.InPlaceUpdatesStatus{
-						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
 							ManualInPlaceUpdate: []string{"worker-1"},
 						},
 					},
@@ -4559,7 +4559,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeReconcile,
 					},
 					InPlaceUpdates: &core.InPlaceUpdatesStatus{
-						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
 							AutoInPlaceUpdate: []string{"worker-1"},
 						},
 					},
@@ -4569,7 +4569,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeReconcile,
 					},
 					InPlaceUpdates: &core.InPlaceUpdatesStatus{
-						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
 							ManualInPlaceUpdate: []string{"worker-1"},
 						},
 					},
@@ -4750,7 +4750,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeReconcile,
 					},
 					InPlaceUpdates: &core.InPlaceUpdatesStatus{
-						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
 							AutoInPlaceUpdate: []string{"worker-1"},
 						},
 					},
@@ -4760,7 +4760,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeReconcile,
 					},
 					InPlaceUpdates: &core.InPlaceUpdatesStatus{
-						PendingWorkersRollouts: &core.InPlaceUpdatePendingWorkers{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
 							ManualInPlaceUpdate: []string{"worker-1"},
 						},
 					},
