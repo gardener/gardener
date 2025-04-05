@@ -549,17 +549,12 @@ var _ = Describe("Admission", func() {
 				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})
 
-			It("should fail creating a NamespacedCloudProfile with a higher limit than in the CloudProfile", func() {
+			It("should allow creating a NamespacedCloudProfile with a higher limit than in the CloudProfile", func() {
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(parentCloudProfile)).To(Succeed())
 				namespacedCloudProfile.Spec.Limits.MaxNodesTotal = ptr.To(int32(6))
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, nil, gardencorev1beta1.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, gardencorev1beta1.Resource("namespacedcloudprofile").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":     Equal(field.ErrorTypeInvalid),
-					"Field":    Equal("spec.limits.maxNodesTotal"),
-					"BadValue": BeEquivalentTo(6),
-					"Detail":   ContainSubstring("overriding value must be less than or equal to value set in parent CloudProfile"),
-				}))))
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})
 
 			It("should allow updating a NamespacedCloudProfile without changing the already higher value compared to the CloudProfile", func() {

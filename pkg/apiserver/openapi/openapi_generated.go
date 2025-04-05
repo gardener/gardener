@@ -6102,7 +6102,7 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 					},
 					"limits": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile. If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.",
+							Description: "Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile. Any limits specified here override those set in the parent CloudProfile. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits"),
 						},
 					},

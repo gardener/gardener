@@ -844,13 +844,13 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
 				})
 
-				It("should ignore a higher value from the NamespacedCloudProfile", func() {
+				It("should apply the higher overridden value from the NamespacedCloudProfile", func() {
 					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
 					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(99))}
 
 					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
 
-					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(99))))
 				})
 
 				It("should apply a lower value from the NamespacedCloudProfile", func() {

@@ -407,7 +407,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(5))))
 			})
 
-			It("should not update the NamespacedCloudProfile status with an increased limit", func() {
+			It("should update the NamespacedCloudProfile status with an increased limit", func() {
 				By("Set limit in parent cloud profile")
 				cloudProfilePatch := client.MergeFrom(parentCloudProfile.DeepCopy())
 				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
@@ -418,18 +418,15 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				}).Should(Succeed())
 
 				By("Patch the NamespacedCloudProfile with an increased limit")
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-					namespacedCloudProfilePatch := client.StrategicMergeFrom(namespacedCloudProfile.DeepCopy())
-					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
-						MaxNodesTotal: ptr.To(int32(24)),
-					}
-					g.Expect(testClient.Patch(ctx, namespacedCloudProfile, namespacedCloudProfilePatch)).To(MatchError(ContainSubstring(
-						"spec.limits.maxNodesTotal: Invalid value: 24: overriding value must be less than or equal to value set in parent CloudProfile")))
-				}).Should(Succeed())
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
+				namespacedCloudProfilePatch := client.StrategicMergeFrom(namespacedCloudProfile.DeepCopy())
+				namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(24)),
+				}
+				Expect(testClient.Patch(ctx, namespacedCloudProfile, namespacedCloudProfilePatch)).To(Succeed())
 			})
 
-			It("should update the NamespacedCloudProfile status if a limit from the parent CloudProfile is increased again", func() {
+			It("should always override the limits value with the value provided in the NamespacedCloudProfile", func() {
 				By("Set a limit in the NamespacedCloudProfile")
 				namespacedCloudProfilePatch := client.StrategicMergeFrom(namespacedCloudProfile.DeepCopy())
 				namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
@@ -442,7 +439,7 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
 
-				By("Set limit in parent cloud profile")
+				By("Set a lower limit in parent cloud profile")
 				cloudProfilePatch := client.MergeFrom(parentCloudProfile.DeepCopy())
 				parentCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
 					MaxNodesTotal: ptr.To(int32(9)),
@@ -451,10 +448,9 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 					return testClient.Patch(ctx, parentCloudProfile, cloudProfilePatch)
 				}).Should(Succeed())
 
-				By("Wait for NamespacedCloudProfile status to be updated by the controller")
-				Eventually(func(g Gomega) {
+				Consistently(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
-					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(9))))
+					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
 				}).Should(Succeed())
 
 				By("Increase the limit in the parent cloud profile")
@@ -467,11 +463,12 @@ var _ = Describe("NamespacedCloudProfile controller tests", func() {
 				}).Should(Succeed())
 
 				By("Wait for NamespacedCloudProfile status to be updated by the controller")
-				Eventually(func(g Gomega) {
+				Consistently(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 					g.Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
 				}).Should(Succeed())
 			})
+
 		})
 	})
 

@@ -575,6 +575,9 @@ var _ = Describe("Project controller tests", func() {
 						MachineTypes: []gardencorev1beta1.MachineType{{Name: "large"}},
 						Regions:      []gardencorev1beta1.Region{{Name: "some-region"}},
 						Type:         "provider-type",
+						Limits: &gardencorev1beta1.Limits{
+							MaxNodesTotal: ptr.To(int32(100)),
+						},
 					},
 				}
 
@@ -735,6 +738,13 @@ var _ = Describe("Project controller tests", func() {
 				updatedNamespacedCloudProfile = namespacedCloudProfile.DeepCopy()
 				updatedNamespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"foo": "bar"}`)}
 				Expect(testUserClient.Update(ctx, updatedNamespacedCloudProfile)).To(BeForbiddenError())
+
+				By("Ensure admin without proper role cannot increase NamespacedCloudProfile.Spec.Limits above value from parent CloudProfile")
+				updatedNamespacedCloudProfile = namespacedCloudProfile.DeepCopy()
+				updatedNamespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(200)),
+				}
+				Expect(testUserClient.Update(ctx, updatedNamespacedCloudProfile)).To(BeForbiddenError())
 			})
 
 			It("should allow gardener operators to modify a project's NamespacedCloudProfiles including special fields", func() {
@@ -753,7 +763,12 @@ var _ = Describe("Project controller tests", func() {
 						{
 							APIGroups: []string{"core.gardener.cloud"},
 							Resources: []string{"namespacedcloudprofiles"},
-							Verbs:     []string{"modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig"},
+							Verbs: []string{
+								"modify-spec-kubernetes",
+								"modify-spec-machineimages",
+								"modify-spec-providerconfig",
+								"raise-spec-limits",
+							},
 						},
 					},
 				}
@@ -774,7 +789,7 @@ var _ = Describe("Project controller tests", func() {
 				})
 				Expect(testClient.Patch(ctx, project, patch)).To(Succeed())
 
-				By("Ensure admin with proper role can update NamespacedCloudProfile.Spec.{Kubernetes,MachineImages,ProviderConfig}")
+				By("Ensure admin with proper role can update NamespacedCloudProfile.Spec.{Kubernetes,MachineImages,ProviderConfig,Limits}")
 				namespacedCloudProfile.Spec.Kubernetes = &gardencorev1beta1.KubernetesSettings{
 					Versions: []gardencorev1beta1.ExpirableVersion{{Version: "1.25.1", ExpirationDate: futureExpirationDate}},
 				}
@@ -784,6 +799,9 @@ var _ = Describe("Project controller tests", func() {
 					}},
 				}
 				namespacedCloudProfile.Spec.ProviderConfig = &runtime.RawExtension{Raw: []byte(`{"foo": "bar"}`)}
+				namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{
+					MaxNodesTotal: ptr.To(int32(200)),
+				}
 				Eventually(func() error {
 					return testUserClient.Update(ctx, namespacedCloudProfile)
 				}).Should(Succeed())
