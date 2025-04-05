@@ -142,6 +142,12 @@ var _ = Describe("Worker", func() {
 		values           *worker.Values
 
 		emptyAutoscalerOptions = &extensionsv1alpha1.ClusterAutoscalerOptions{}
+		kubeletConfig          = &gardencorev1beta1.KubeletConfig{
+			CPUManagerPolicy: ptr.To("static"),
+		}
+		workerKubeletConfig = &gardencorev1beta1.KubeletConfig{
+			CPUManagerPolicy: ptr.To("none"),
+		}
 	)
 
 	BeforeEach(func() {
@@ -160,6 +166,7 @@ var _ = Describe("Worker", func() {
 			Type:                         extensionType,
 			Region:                       region,
 			KubernetesVersion:            kubernetesVersion,
+			KubeletConfig:                kubeletConfig,
 			MachineTypes:                 machineTypes,
 			SSHPublicKey:                 sshPublicKey,
 			InfrastructureProviderStatus: infrastructureProviderStatus,
@@ -211,7 +218,10 @@ var _ = Describe("Worker", func() {
 						},
 					},
 					KubeletDataVolumeName: &worker1KubeletDataVolumeName,
-					SystemComponents:      &gardencorev1beta1.WorkerSystemComponents{Allow: false},
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Kubelet: workerKubeletConfig,
+					},
+					SystemComponents: &gardencorev1beta1.WorkerSystemComponents{Allow: false},
 					CRI: &gardencorev1beta1.CRI{
 						Name:              worker1CRIName,
 						ContainerRuntimes: []gardencorev1beta1.ContainerRuntime{{Type: worker1CRIContainerRuntime1Type}},
@@ -311,6 +321,7 @@ var _ = Describe("Worker", func() {
 						},
 					},
 					KubeletDataVolumeName:            &worker1KubeletDataVolumeName,
+					KubeletConfig:                    workerKubeletConfig,
 					KubernetesVersion:                ptr.To(kubernetesVersion.String()),
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					MachineControllerManagerSettings: worker1MCMSettings,
@@ -341,6 +352,7 @@ var _ = Describe("Worker", func() {
 						Version: worker2MachineImageVersion,
 					},
 					KubernetesVersion: &workerKubernetesVersion,
+					KubeletConfig:     kubeletConfig,
 					UserDataSecretRef: corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: worker2UserDataSecretName}, Key: "cloud_config"},
 					NodeTemplate:      workerPool2NodeTemplate,
 					Architecture:      worker2Arch,
@@ -383,6 +395,7 @@ var _ = Describe("Worker", func() {
 				Spec: wSpec,
 			}))
 		})
+
 		It("should initialize nodeTemplate when it exists for pool in worker resource, but absent in cloudProfile", func() {
 			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()

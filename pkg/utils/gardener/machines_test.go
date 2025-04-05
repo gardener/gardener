@@ -124,6 +124,23 @@ var _ = Describe("Machines", func() {
 		}),
 	)
 
+	DescribeTable("#BuildMachineSetToMachinesMap", func(machines []machinev1alpha1.Machine, expected map[string][]machinev1alpha1.Machine) {
+		result := BuildMachineSetToMachinesMap(machines)
+		Expect(result).To(Equal(expected))
+	},
+		Entry("should map using reference kind = `MachineSet`", []machinev1alpha1.Machine{machineSetReference}, map[string][]machinev1alpha1.Machine{
+			machineSetName: {machineSetReference},
+		}),
+
+		Entry("should not map if reference kind is not `MachineSet`", []machinev1alpha1.Machine{machineDeploymentReference}, map[string][]machinev1alpha1.Machine{}),
+
+		Entry("should map multiple machines to the same MachineSet", []machinev1alpha1.Machine{machineSetReference, machineSetReference}, map[string][]machinev1alpha1.Machine{
+			machineSetName: {machineSetReference, machineSetReference},
+		}),
+
+		Entry("should not map machines without owner references", []machinev1alpha1.Machine{machineLabelReference}, map[string][]machinev1alpha1.Machine{}),
+	)
+
 	Describe("#WaitUntilMachineResourcesDeleted", func() {
 		var (
 			ctx        = context.TODO()
@@ -173,4 +190,42 @@ var _ = Describe("Machines", func() {
 			Expect(WaitUntilMachineResourcesDeleted(ctx, log, fakeClient, namespace)).To(MatchError(ContainSubstring("waiting until the following machine resources have been deleted: 0 machines, 0 machine sets, 0 machine deployments, 0 machine classes, 1 machine class secrets")))
 		})
 	})
+
+	DescribeTable("#IsMachineDeploymentStrategyManualInPlace", func(strategy machinev1alpha1.MachineDeploymentStrategy, expected bool) {
+		Expect(IsMachineDeploymentStrategyManualInPlace(strategy)).To(Equal(expected))
+	},
+		Entry("strategy type is not InPlaceUpdate",
+			machinev1alpha1.MachineDeploymentStrategy{
+				Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
+			},
+			false,
+		),
+
+		Entry("strategy type is InPlaceUpdate but InPlaceUpdate field is nil",
+			machinev1alpha1.MachineDeploymentStrategy{
+				Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+			},
+			false,
+		),
+
+		Entry("strategy type is InPlaceUpdate but orchestration type is not Manual",
+			machinev1alpha1.MachineDeploymentStrategy{
+				Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+				InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
+					OrchestrationType: machinev1alpha1.OrchestrationTypeAuto,
+				},
+			},
+			false,
+		),
+
+		Entry("strategy type is InPlaceUpdate and orchestration type is Manual",
+			machinev1alpha1.MachineDeploymentStrategy{
+				Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+				InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
+					OrchestrationType: machinev1alpha1.OrchestrationTypeManual,
+				},
+			},
+			true,
+		),
+	)
 })
