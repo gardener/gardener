@@ -544,6 +544,17 @@ func sortByIPFamilies(ipfamilies []gardencorev1beta1.IPFamily, cidr []net.IPNet)
 	return result
 }
 
+func getPrimaryCIDRs(cidrs []net.IPNet, ipFamilies []gardencorev1beta1.IPFamily) []net.IPNet {
+	var result []net.IPNet
+	isIPv4 := ipFamilies[0] == gardencorev1beta1.IPFamilyIPv4
+	for _, c := range cidrs {
+		if (isIPv4 && c.IP.To4() != nil) || (!isIPv4 && c.IP.To4() == nil) {
+			result = append(result, c)
+		}
+	}
+	return result
+}
+
 // ToNetworks return a network with computed cidrs and ClusterIPs
 // for a Shoot
 func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, error) {
@@ -598,6 +609,14 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 		} else {
 			nodes = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
+	}
+
+	// During dual-stack migration, until nodes are migrated to  dual-stack, we only use the primary addresses.
+	condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+	if condition != nil && condition.Status != gardencorev1beta1.ConditionTrue {
+		nodes = getPrimaryCIDRs(nodes, shoot.Spec.Networking.IPFamilies)
+		services = getPrimaryCIDRs(services, shoot.Spec.Networking.IPFamilies)
+		pods = getPrimaryCIDRs(pods, shoot.Spec.Networking.IPFamilies)
 	}
 
 	for _, cidr := range services {
