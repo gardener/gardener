@@ -588,6 +588,16 @@ spec:
                             x-kubernetes-int-or-string: true
                           description: Capacity represents the expected Node capacity.
                           type: object
+                        virtualCapacity:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: VirtualCapacity represents the expected Node
+                            'virtual' capacity ie comprising virtual extended resources.
+                          type: object
                       required:
                       - capacity
                       type: object
