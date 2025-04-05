@@ -59,6 +59,7 @@ After restarting all units, the annotation is removed.
 This controller contains the main logic of `gardener-node-agent`.
 It watches `Secret`s whose `data` map contains the [`OperatingSystemConfig`](../extensions/resources/operatingsystemconfig.md#reconcile-purpose) which consists of all systemd units and files that are relevant for the node configuration.
 Amongst others, a prominent example is the configuration file for `kubelet` and its unit file for the `kubelet.service`.
+It also watches `Node`s and requeues the corresponding `Secret` when the reason of the node condition `InPlaceUpdate` changes to `ReadyForUpdate`.
 
 The controller decodes the configuration and computes the files and units that have changed since its last reconciliation.
 It writes or update the files and units to the file system, removes no longer needed files and units, reloads the systemd daemon, and starts or stops the units accordingly.
@@ -78,6 +79,7 @@ Whenever the `.data.token` field changes, it writes the new content to a file on
 This mechanism is used to download its own access token for the shoot cluster, but also the access tokens of other `systemd` components (e.g., `valitail`).
 Since the underlying client is based on `k8s.io/client-go` and the kubeconfig points to this token file, it is dynamically reloaded without the necessity of explicit configuration or code changes.
 This procedure ensures that the most up-to-date tokens are always present on the host and used by the `gardener-node-agent` and the other `systemd` components.
+The controller is also triggered via a source channel, which is done by the `Operating System Config` controller during an in-place service account key rotation.
 
 ## Reasoning
 

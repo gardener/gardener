@@ -17,6 +17,7 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,6 +43,7 @@ var (
 	eventResource                     = eventsv1.Resource("events")
 	leaseResource                     = coordinationv1.Resource("leases")
 	nodeResource                      = corev1.Resource("nodes")
+	podResource                       = corev1.Resource("pods")
 	secretsResource                   = corev1.Resource("secrets")
 )
 
@@ -81,6 +83,8 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 			return a.authorizeLease(ctx, requestLog, machineName, attrs)
 		case nodeResource:
 			return a.authorizeNode(ctx, requestLog, machineName, attrs)
+		case podResource:
+			return a.authorizePod(ctx, requestLog, machineName, attrs)
 		case secretsResource:
 			return a.authorizeSecret(ctx, requestLog, machineName, attrs)
 		}
@@ -181,6 +185,59 @@ func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machine
 	if machine.Labels[machinev1alpha1.NodeLabelKey] != attrs.GetName() {
 		log.Info("Denying request because node belongs to a different machine", "nodeName", attrs.GetName(), "machineName", machineName)
 		return auth.DecisionDeny, fmt.Sprintf("node %q does not belong to machine %q", attrs.GetName(), machineName), nil
+	}
+
+	return auth.DecisionAllow, "", nil
+}
+
+func (a *authorizer) authorizePod(ctx context.Context, log logr.Logger, machineName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if ok, reason := a.checkSubresource(log, attrs); !ok {
+		return auth.DecisionDeny, reason, nil
+	}
+
+	allowedVerbs := []string{"get", "list", "watch", "delete"}
+	if allowed, reason := a.checkVerb(log, attrs, allowedVerbs...); !allowed {
+		return auth.DecisionDeny, reason, nil
+	}
+
+	machine := &machinev1alpha1.Machine{}
+	if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: a.machineNamespace}, machine); err != nil {
+		return auth.DecisionDeny, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
+	}
+
+	nodeName, ok := machine.Labels[machinev1alpha1.NodeLabelKey]
+	if !ok {
+		return auth.DecisionDeny, fmt.Sprintf(`"node" label not found on machine %q`, machineName), nil
+	}
+
+	switch attrs.GetVerb() {
+	case "list", "watch":
+		// allow a scoped fieldSelector
+		reqs, _ := attrs.GetFieldSelector()
+		for _, req := range reqs {
+			if req.Field == "spec.nodeName" && req.Operator == selection.Equals && req.Value == nodeName {
+				return auth.DecisionAllow, "", nil
+			}
+		}
+
+		log.Info("Denying request because only listing/watching pods with spec.nodeName field selector is allowed", "nodeName", nodeName)
+		return auth.DecisionDeny, "can only list/watch pods with spec.nodeName field selector", nil
+
+	case "get", "delete":
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      attrs.GetName(),
+				Namespace: attrs.GetNamespace(),
+			},
+		}
+		if err := a.targetClient.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
+			return auth.DecisionDeny, "", fmt.Errorf("error getting pod %q: %w", client.ObjectKeyFromObject(pod), err)
+		}
+
+		if pod.Spec.NodeName != nodeName {
+			log.Info("Denying request because pod belongs to a different node", "podName", attrs.GetName(), "podNamespace", attrs.GetNamespace(), "podNodeName", pod.Spec.NodeName)
+			return auth.DecisionDeny, fmt.Sprintf("pod %q does not belong to node %q", client.ObjectKeyFromObject(pod), nodeName), nil
+		}
 	}
 
 	return auth.DecisionAllow, "", nil
