@@ -645,37 +645,20 @@ func (h *Health) CheckClusterNodes(
 		return nil, err
 	}
 
-	var (
-		nodeList            = convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes)
-		readyNodes          int
-		registeredNodes     = len(nodeList.Items)
-		desiredMachines     = getDesiredMachineCount(machineDeploymentList.Items)
-		nodeNotManagedByMCM int
-	)
-
+	nodeList := convertWorkerPoolToNodesMappingToNodeList(workerPoolToNodes)
+	// only nodes that are managed by MCM are considered
+	nodesManagedByMCM := &corev1.NodeList{}
 	for _, node := range nodeList.Items {
 		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
-			nodeNotManagedByMCM++
 			continue
 		}
-		if node.Spec.Unschedulable {
-			continue
-		}
-		for _, condition := range node.Status.Conditions {
-			if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
-				readyNodes++
-			}
-		}
+		nodesManagedByMCM.Items = append(nodesManagedByMCM.Items, node)
 	}
-
-	// only nodes that are managed by MCM is considered
-	registeredNodes = registeredNodes - nodeNotManagedByMCM
-
-	machineList := &machinev1alpha1.MachineList{}
-	if registeredNodes != desiredMachines || readyNodes != desiredMachines {
-		if err := h.seedClient.Client().List(ctx, machineList, client.InNamespace(h.shoot.ControlPlaneNamespace)); err != nil {
+	if msg, err := CheckNodesScaling(ctx, h.seedClient.Client(), nodeList, machineDeploymentList, h.shoot.ControlPlaneNamespace); err != nil {
+		if msg == "" {
 			return nil, err
 		}
+		return ptr.To(v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, msg, err.Error())), nil
 	}
 
 	leaseList := &coordinationv1.LeaseList{}
@@ -685,37 +668,6 @@ func (h *Health) CheckClusterNodes(
 
 	if err := CheckNodeAgentLeases(nodeList, leaseList, h.clock); err != nil {
 		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodeAgentUnhealthy", err.Error())
-		return &c, nil
-	}
-
-	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
-	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
-	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
-	// (e.g., in case of a rolling-update).
-
-	checkScaleUp := false
-	for _, deployment := range machineDeploymentList.Items {
-		if len(deployment.Status.FailedMachines) > 0 {
-			break
-		}
-
-		for _, condition := range deployment.Status.Conditions {
-			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
-				checkScaleUp = true
-				break
-			}
-		}
-	}
-
-	if checkScaleUp {
-		if err := CheckNodesScalingUp(machineList, readyNodes, desiredMachines); err != nil {
-			c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodesScalingUp", err.Error())
-			return &c, nil
-		}
-	}
-
-	if err := CheckNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
-		c := v1beta1helper.FailedCondition(h.clock, h.shoot.GetInfo().Status.LastOperation, h.conditionThresholds, condition, "NodesScalingDown", err.Error())
 		return &c, nil
 	}
 
@@ -786,8 +738,67 @@ func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinatio
 	return nil
 }
 
-// CheckNodesScalingUp returns an error if nodes are being scaled up.
-func CheckNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) error {
+// CheckNodesScaling returns an error and a string describing the scaling if there is a scaling happening
+func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList *corev1.NodeList, machineDeploymentList *machinev1alpha1.MachineDeploymentList, controlPlaneNamespace string) (string, error) {
+	var (
+		readyAndSchedulableNodes int
+		registeredNodes          = len(nodeList.Items)
+		desiredMachines          = getDesiredMachineCount(machineDeploymentList.Items)
+	)
+
+	for _, node := range nodeList.Items {
+		if node.Spec.Unschedulable {
+			continue
+		}
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
+				readyAndSchedulableNodes++
+			}
+		}
+	}
+
+	machineList := &machinev1alpha1.MachineList{}
+	if registeredNodes == desiredMachines && readyAndSchedulableNodes == desiredMachines {
+		return "", nil
+	}
+
+	if err := seedClient.List(ctx, machineList, client.InNamespace(controlPlaneNamespace)); err != nil {
+		return "", err
+	}
+
+	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
+	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
+	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
+	// (e.g., in case of a rolling-update).
+
+	checkScaleUp := false
+	for _, deployment := range machineDeploymentList.Items {
+		if len(deployment.Status.FailedMachines) > 0 {
+			break
+		}
+
+		for _, condition := range deployment.Status.Conditions {
+			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
+				checkScaleUp = true
+				break
+			}
+		}
+	}
+
+	if checkScaleUp {
+		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
+			return "NodesScalingUp", err
+		}
+	}
+
+	if err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); err != nil {
+		return "NodesScalingDown", err
+	}
+
+	return "", nil
+}
+
+func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) error {
 	if readyNodes == desiredMachines {
 		return nil
 	}
@@ -821,8 +832,7 @@ func CheckNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 	return fmt.Errorf("%s provisioning and should join the cluster soon", cosmeticMachineMessage(pendingMachines))
 }
 
-// CheckNodesScalingDown returns an error if nodes are being scaled down.
-func CheckNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *corev1.NodeList, registeredNodes, desiredMachines int) error {
+func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *corev1.NodeList, registeredNodes, desiredMachines int) error {
 	if registeredNodes == desiredMachines {
 		return nil
 	}
@@ -838,9 +848,6 @@ func CheckNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *c
 
 	var cordonedNodes int
 	for _, node := range nodeList.Items {
-		if metav1.HasAnnotation(node.ObjectMeta, annotationKeyNotManagedByMCM) && node.Annotations[annotationKeyNotManagedByMCM] == "1" {
-			continue
-		}
 		if node.Spec.Unschedulable {
 			machine, ok := nodeNameToMachine[node.Name]
 			if !ok {
