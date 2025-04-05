@@ -107,9 +107,9 @@ stringData:
       ctr snapshot rm seed-registry-cache
     fi
     echo "Pulling registry-cache image"
-    ctr image pull europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-rc.2
+    ctr image pull europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-rc.4
     echo "Starting registry-cache"
-    ctr run --detach --mount type=bind,src=/var/opt/docker/seed-registry-cache-config.yml,dst=/etc/distribution/config.yml,options=rbind:ro --net-host europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-rc.2 seed-registry-cache
+    ctr run --detach --mount type=bind,src=/var/opt/docker/seed-registry-cache-config.yml,dst=/etc/distribution/config.yml,options=rbind:ro --net-host europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-rc.4 seed-registry-cache
   stop-seed-registry-cache.sh: |
     #!/usr/bin/env bash
     echo "stopping seed-registry-cache"
