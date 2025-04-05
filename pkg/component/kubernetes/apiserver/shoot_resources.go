@@ -38,11 +38,11 @@ func (k *kubeAPIServer) computeShootResourcesData() (map[string][]byte, error) {
 						"nodes/spec",
 						"nodes/metrics",
 					},
-					Verbs: []string{"*"},
+					Verbs: []string{"create", "get", "update", "patch", "delete"},
 				},
 				{
 					NonResourceURLs: []string{"*"},
-					Verbs:           []string{"*"},
+					Verbs:           []string{"create", "get", "update", "patch", "delete"},
 				},
 			},
 		}

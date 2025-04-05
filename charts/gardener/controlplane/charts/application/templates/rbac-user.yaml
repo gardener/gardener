@@ -16,14 +16,33 @@ rules:
   resources:
   - '*'
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - manage-members
+  - modify-spec-tolerations-whitelist
+  - modify-spec-kubernetes
+  - modify-spec-machineimages
+  - modify-spec-providerconfig
 - apiGroups:
   - security.gardener.cloud
   resources:
   - credentialsbindings
   - workloadidentities # Do not use wildcard here to avoid granting users with permissions to send `create workloadidentity/token` requests.
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - ""
   resources:
@@ -31,13 +50,27 @@ rules:
   - namespaces
   - resourcequotas
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - events.k8s.io
   resources:
   - events
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -60,31 +93,68 @@ rules:
   - mutatingwebhookconfigurations
   - validatingwebhookconfigurations
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - apiregistration.k8s.io
   resources:
   - apiservices
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - coordination.k8s.io
   resources:
   - leases
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - certificates.k8s.io
   resources:
   - certificatesigningrequests
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - approve
+  - deny
 
 # Aggregated cluster role specifying garden administrators.
 # IMPORTANT: You need to define a corresponding ClusterRoleBinding binding specific users
@@ -95,6 +165,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:administrators
+  labels:
+    gardener.cloud/role: administrators
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
@@ -221,6 +293,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: gardener.cloud:system:viewers
+  labels:
+    gardener.cloud/role: viewers
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
