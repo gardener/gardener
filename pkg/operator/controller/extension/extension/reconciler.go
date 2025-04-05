@@ -129,11 +129,6 @@ func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, exten
 	return nil
 }
 
-func (r *Reconciler) isDeploymentInRuntimeRequired(extension *operatorv1alpha1.Extension) bool {
-	requiredCondition := v1beta1helper.GetCondition(extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
-	return requiredCondition != nil && requiredCondition.Status == gardencorev1beta1.ConditionTrue
-}
-
 // Conditions contains all conditions of the extension status subresource.
 type Conditions struct {
 	installed gardencorev1beta1.Condition

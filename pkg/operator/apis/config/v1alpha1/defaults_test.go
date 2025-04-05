@@ -283,6 +283,28 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 
+		Describe("ExtensionCare controller defaulting", func() {
+			It("should default the ExtensionCare controller config", func() {
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.GardenCare.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+			})
+
+			It("should not overwrite already set values for ExtensionCare controller config", func() {
+				obj = &OperatorConfiguration{
+					Controllers: ControllerConfiguration{
+						ExtensionCare: ExtensionCareControllerConfiguration{
+							SyncPeriod: &metav1.Duration{Duration: time.Second},
+						},
+					},
+				}
+
+				SetObjectDefaults_OperatorConfiguration(obj)
+
+				Expect(obj.Controllers.ExtensionCare.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Second})))
+			})
+		})
+
 		Describe("ExtensionRequiredRuntime controller defaulting", func() {
 			It("should default the ExtensionRequiredRuntime controller config", func() {
 				SetObjectDefaults_OperatorConfiguration(obj)
