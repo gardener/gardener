@@ -33,7 +33,10 @@ func DestinationRuleWithTLSTermination(destinationRule *istionetworkingv1beta1.D
 		&istioapinetworkingv1beta1.ClientTLSSettings{
 			Mode:           mode,
 			CredentialName: caSecret,
-			Sni:            destinationHost,
+			// SNI needs to be set for the wildcard certificate case. The wildcard cert is not signed by the cluster CA
+			// so it would cause a certificate error otherwise.
+			// `kubernetes.default.svc.cluster.local` is part of any kube-apiserver certificate, so we select this one.
+			Sni: "kubernetes.default.svc.cluster.local",
 		},
 	)
 }

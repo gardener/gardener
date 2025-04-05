@@ -25,8 +25,10 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 		b.defaultKubeAPIServerServiceWithSuffix("", true),
 	}
 	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
+	upgradeService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.UpgradeServiceNameSuffix, false)
 	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()) {
 		deployer = append(deployer, mutualTLSService)
+		deployer = append(deployer, upgradeService)
 	} else {
 		deployer = append(deployer, component.OpDestroy(mutualTLSService))
 	}
