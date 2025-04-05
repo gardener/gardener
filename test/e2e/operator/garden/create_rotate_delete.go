@@ -86,8 +86,12 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				},
 			},
 			&rotationutils.ETCDEncryptionKeyVerifier{
-				RuntimeClient:               runtimeClient,
-				Namespace:                   namespace,
+				GetETCDSecretNamespace: func() string {
+					return namespace
+				},
+				GetRuntimeClient: func() client.Client {
+					return runtimeClient
+				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 					return garden.Status.Credentials.Rotation.ETCDEncryptionKey
@@ -96,8 +100,12 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
 			},
 			&rotationutils.ETCDEncryptionKeyVerifier{
-				RuntimeClient:               runtimeClient,
-				Namespace:                   namespace,
+				GetETCDSecretNamespace: func() string {
+					return namespace
+				},
+				GetRuntimeClient: func() client.Client {
+					return runtimeClient
+				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
 					return garden.Status.Credentials.Rotation.ETCDEncryptionKey
@@ -106,8 +114,12 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 				RoleLabelValue: v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration,
 			},
 			&rotationutils.ServiceAccountKeyVerifier{
-				RuntimeClient:               runtimeClient,
-				Namespace:                   namespace,
+				GetServiceAccountKeySecretNamespace: func() string {
+					return namespace
+				},
+				GetRuntimeClient: func() client.Client {
+					return runtimeClient
+				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetServiceAccountKeyRotation: func() *gardencorev1beta1.ServiceAccountKeyRotation {
 					return garden.Status.Credentials.Rotation.ServiceAccountKey
