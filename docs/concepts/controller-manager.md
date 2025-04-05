@@ -60,13 +60,13 @@ The controller ensures that `NamespacedCloudProfile`s in-use remain present in t
 
 ### [`ControllerDeployment` Controller](../../pkg/controllermanager/controller/controllerdeployment)
 
-Extensions are registered in the garden cluster via `ControllerRegistration` and deployment of respective extensions are specified via `ControllerDeployment`. For more info refer to [Registering Extension Controllers](../extensions/controllerregistration.md).
+Extensions are registered in the garden cluster via `ControllerRegistration` and deployment of respective extensions are specified via `ControllerDeployment`. For more info refer to [Registering Extension Controllers](../extensions/registration.md).
 
 This controller ensures that `ControllerDeployment` in-use always exists until the last `ControllerRegistration` referencing them gets deleted. The controller adds a finalizer which is only released when there is no `ControllerRegistration` referencing the `ControllerDeployment` anymore.
 
 ### [`ControllerRegistration` Controller](../../pkg/controllermanager/controller/controllerregistration)
 
-The `ControllerRegistration` controller makes sure that the required [Gardener Extensions](../README.md#extensions) specified by the [`ControllerRegistration`](../extensions/controllerregistration.md) resources are present in the seed clusters.
+The `ControllerRegistration` controller makes sure that the required [Gardener Extensions](../README.md#extensions) specified by the [`ControllerRegistration`](../extensions/registration.md#controllerregistrations) resources are present in the seed clusters.
 It also takes care of the creation and deletion of `ControllerInstallation` objects for a given seed cluster.
 The controller has three reconciliation loops.
 
@@ -78,7 +78,7 @@ For this, the controller examines a live list of `ControllerRegistration`s, `Con
 For example, it examines the shoots running on the seed and deducts the kind/type, like `Infrastructure/gcp`.
 The seed (`seed.spec.provider.type`) and DNS (`seed.spec.dns.provider.type`) provider types are considered when calculating the list of required `ControllerRegistration`s, as well.
 It also decides whether they should always be deployed based on the `.spec.deployment.policy`.
-For the configuration options, please see this [section](../extensions/controllerregistration.md#deployment-configuration-options).
+For the configuration options, please see this [section](../extensions/registration.md#deployment-configuration-options).
 
 Based on these required combinations, each of them are mapped to `ControllerRegistration` objects and then to their corresponding `ControllerInstallation` objects (if existing).
 The controller then creates or updates the required `ControllerInstallation` objects for the given seed.

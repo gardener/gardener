@@ -266,7 +266,7 @@ Reference documentation:
 
 In order to make an extension known to a Gardener landscape, two resources have to be applied to the virtual Garden cluster - firstly, a `ControllerDeployment` and secondly, a matching `ControllerRegistration`. With both in place, Gardener-managed `ControllerInstallation`s take care of the actual deployment of the extension to the target environment.
 
-Check the [controller registration documentation](../extensions/controllerregistration.md) for more details.
+Check the [extension registration documentation](../extensions/registration.md) for more details.
 
 Now, the classical way of installing `ControllerDeployment` and `ControllerRegistration` is to prepare the resources and apply them to the virtual Garden cluster. The `ControllerDeployment` references an OCI repository containing the extension's helm chart.
 

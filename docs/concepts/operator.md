@@ -104,9 +104,9 @@ Each one is described in more details below.
 #### Configuration for Extension Deployment
 
 `.spec.deployment.extension` contains configuration for the registration of an extension in the garden cluster.
-`gardener-operator` follows the same principles described by [this document](../extensions/controllerregistration.md#registering-extension-controllers):
+`gardener-operator` follows the same principles described by [this document](../extensions/registration.md):
 - `.spec.deployment.extension.helm` and `.spec.deployment.extension.values` are used when creating the `ControllerDeployment` in the garden cluster.
-- `.spec.deployment.extension.policy` and `.spec.deployment.extension.seedSelector` define the extension's installation policy as per the [`ControllerDeployment's` respective fields](../extensions/controllerregistration.md#deployment-configuration-options)
+- `.spec.deployment.extension.policy` and `.spec.deployment.extension.seedSelector` define the extension's installation policy as per the [`ControllerDeployment's` respective fields](../extensions/registration.md#deployment-configuration-options)
 
 ##### Runtime
 
@@ -128,7 +128,7 @@ As soon as a `Garden` object is created and `runtimeValues` are configured, the 
 
 ##### Extension Registration
 
-When the virtual garden cluster is available, the `Extension` controller manages [`ControllerRegistration`/`ControllerDeployment` resources](../extensions/controllerregistration.md#registering-extension-controllers)
+When the virtual garden cluster is available, the `Extension` controller manages [`ControllerRegistration`/`ControllerDeployment` resources](../extensions/registration.md#controllerregistrations)
 to register extensions for shoots.  The fields of `.spec.deployment.extension` include their configuration options. 
 
 #### Configuration for Admission Deployment
@@ -169,7 +169,7 @@ Therefore, Gardener automatically injects a kubeconfig into the admission deploy
 ### Configuration for Extension Resources
 
 The `.spec.resources` field refers to the extension resources as defined by Gardener in the `extensions.gardener.cloud/v1alpha1` API.
-These include both well-known types such as `Infrastructure`, `Worker` etc. and [generic resources](https://github.com/gardener/gardener/blob/master/docs/extensions/controllerregistration.md#extension-resource-configurations).
+These include both well-known types such as `Infrastructure`, `Worker` etc. and [generic resources](https://github.com/gardener/gardener/blob/master/docs/extensions/registration.md#extension-resource-configurations).
 The field will be used to populate the respective field in the resulting `ControllerRegistration` in the garden cluster.
 
 ## Controllers

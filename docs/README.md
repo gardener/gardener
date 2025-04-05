@@ -183,7 +183,7 @@
 ## Extensions
 
 * [Extensibility overview](extensions/overview.md)
-* [Extension controller registration](extensions/controllerregistration.md)
+* [Extension registration](extensions/registration.md)
 * [`Cluster` resource](extensions/cluster.md)
 * Extension points
   * [General conventions](extensions/conventions.md)
