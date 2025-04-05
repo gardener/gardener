@@ -333,7 +333,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 	validationContext.addMetadataAnnotations(a)
 
 	allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
-	allErrs = append(allErrs, validationContext.validateShootNetworks(a, helper.IsWorkerless(shoot))...)
+	allErrs = append(allErrs, validationContext.validateShootNetworks(a, helper.IsWorkerless(shoot), helper.IsHAVPNEnabled(shoot))...)
 	allErrs = append(allErrs, validationContext.validateKubernetes(a)...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateAccessRestrictions()...)
@@ -905,7 +905,7 @@ func cidrMatchesIPFamily(cidr string, ipfamilies []core.IPFamily) bool {
 	return ip != nil && (ip.To4() != nil && slices.Contains(ipfamilies, core.IPFamilyIPv4) || ip.To4() == nil && slices.Contains(ipfamilies, core.IPFamilyIPv6))
 }
 
-func (c *validationContext) validateShootNetworks(a admission.Attributes, workerless bool) field.ErrorList {
+func (c *validationContext) validateShootNetworks(a admission.Attributes, workerless, haVPN bool) field.ErrorList {
 	var (
 		allErrs field.ErrorList
 		path    = field.NewPath("spec", "networking")
@@ -946,6 +946,22 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 				workerless,
 			)...)
 
+			// validate network disjointedness with seed networks if HA VPN is enabled
+			// TODO (domdom82): Remove this check once HA VPN also supports overlapping CIDR ranges with the seed
+			if haVPN {
+				allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+					path,
+					c.shoot.Spec.Networking.Nodes,
+					c.shoot.Spec.Networking.Pods,
+					c.shoot.Spec.Networking.Services,
+					c.seed.Spec.Networks.Nodes,
+					c.seed.Spec.Networks.Pods,
+					c.seed.Spec.Networks.Services,
+					workerless,
+					!haVPN,
+				)...)
+			}
+
 			// validate network disjointedness with seed networks if shoot is being (re)scheduled
 			if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
 				allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
@@ -957,6 +973,7 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 					c.seed.Spec.Networks.Pods,
 					c.seed.Spec.Networks.Services,
 					workerless,
+					!haVPN,
 				)...)
 
 				// validate network disjointedness with seed networks if networking status is non-empty
@@ -973,6 +990,7 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 							c.seed.Spec.Networks.Pods,
 							c.seed.Spec.Networks.Services,
 							workerless,
+							!haVPN,
 						)...)
 					}
 				}

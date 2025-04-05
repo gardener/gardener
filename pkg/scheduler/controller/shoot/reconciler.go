@@ -505,6 +505,7 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 
 		errorMessages []string
 		workerless    = v1beta1helper.IsWorkerless(shoot)
+		haVPN         = v1beta1helper.IsHAVPNEnabled(shoot)
 	)
 
 	if seed.Spec.Networks.ShootDefaults != nil {
@@ -525,6 +526,7 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 		seed.Spec.Networks.Pods,
 		seed.Spec.Networks.Services,
 		workerless,
+		!haVPN,
 	) {
 		errorMessages = append(errorMessages, e.ErrorBody())
 	}
@@ -539,6 +541,7 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 			seed.Spec.Networks.Pods,
 			seed.Spec.Networks.Services,
 			workerless,
+			!haVPN,
 		) {
 			errorMessages = append(errorMessages, e.ErrorBody())
 		}

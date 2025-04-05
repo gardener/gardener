@@ -6,8 +6,11 @@ package seedserver_test
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net"
+	"strings"
+	"text/template"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,10 +44,26 @@ import (
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
+
+var (
+	tplNameEnvoy = "envoy.yaml.tpl"
+	//go:embed templates/envoy.yaml.tpl
+	tplContentEnvoy string
+	tplEnvoy        *template.Template
+)
+
+func init() {
+	var err error
+	tplEnvoy, err = template.
+		New(tplNameEnvoy).
+		Parse(tplContentEnvoy)
+	utilruntime.Must(err)
+}
 
 var _ = Describe("VpnSeedServer", func() {
 	var (
@@ -66,9 +86,12 @@ var _ = Describe("VpnSeedServer", func() {
 
 		secretNameTLSAuth = "vpn-seed-server-tlsauth-a1d0aa00"
 
-		listenAddress   = "0.0.0.0"
-		listenAddressV6 = "::"
-		dnsLookUpFamily = "ALL"
+		listenAddress        = "0.0.0.0"
+		listenAddressV6      = "::"
+		dnsLookUpFamily      = "ALL"
+		volumeMountPathCerts = "/srv/secrets/vpn-server"
+		fileNameCABundle     = "ca.crt"
+		metricsPort          = 15000
 
 		expectedConfigMap *corev1.ConfigMap
 	)
@@ -134,6 +157,10 @@ var _ = Describe("VpnSeedServer", func() {
 								{
 									Name:  "NODE_NETWORKS",
 									Value: nodes,
+								},
+								{
+									Name:  "SEED_POD_NETWORK",
+									Value: values.SeedPodNetwork,
 								},
 								{
 									Name: "LOCAL_NODE_IP",
@@ -394,6 +421,8 @@ var _ = Describe("VpnSeedServer", func() {
 								"all",
 							},
 						},
+						RunAsUser:    ptr.To(int64(v1beta1constants.EnvoyNonRootUserId)),
+						RunAsNonRoot: ptr.To(true),
 					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
@@ -793,7 +822,7 @@ var _ = Describe("VpnSeedServer", func() {
 			HighAvailabilityNumberOfShootClients: 1,
 		}
 
-		expectedConfigMap = seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, namespace)
+		expectedConfigMap = seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, volumeMountPathCerts, fileNameCABundle, namespace, metricsPort)
 	})
 
 	JustBeforeEach(func() {
@@ -1101,7 +1130,22 @@ var _ = Describe("VpnSeedServer", func() {
 	})
 })
 
-func seedConfigMap(listenAddress, listenAddressV6 string, dnsLookUpFamily string, namespace string) *corev1.ConfigMap {
+func seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, volumeMountPathCerts, fileNameCABundle, namespace string, metricsPort int) *corev1.ConfigMap {
+	values := map[string]any{
+		"listenAddress":   listenAddress,
+		"listenAddressV6": listenAddressV6,
+		"dnsLookupFamily": dnsLookUpFamily,
+		"envoyPort":       EnvoyPort,
+		"certChain":       volumeMountPathCerts + `/` + secretsutils.DataKeyCertificate,
+		"privateKey":      volumeMountPathCerts + `/` + secretsutils.DataKeyPrivateKey,
+		"caCert":          volumeMountPathCerts + `/` + fileNameCABundle,
+		"metricsPort":     metricsPort,
+	}
+
+	var envoyConfig strings.Builder
+	err := tplEnvoy.Execute(&envoyConfig, values)
+	Expect(err).ToNot(HaveOccurred())
+
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "vpn-seed-server-envoy-config",
@@ -1109,151 +1153,7 @@ func seedConfigMap(listenAddress, listenAddressV6 string, dnsLookUpFamily string
 			ResourceVersion: "1",
 		},
 		Data: map[string]string{
-			"envoy.yaml": `static_resources:
-  listeners:
-  - name: listener_0
-    address:
-      socket_address:
-        protocol: TCP
-        address: "` + listenAddress + `"
-        port_value: 9443
-    additional_addresses:
-    - address:
-        socket_address:
-          address: "` + listenAddressV6 + `"
-          port_value: 9443
-    listener_filters:
-    - name: "envoy.filters.listener.tls_inspector"
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-    filter_chains:
-    - transport_socket:
-        name: envoy.transport_sockets.tls
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-          common_tls_context:
-            tls_certificates:
-            - certificate_chain: { filename: "/srv/secrets/vpn-server/tls.crt" }
-              private_key: { filename: "/srv/secrets/vpn-server/tls.key" }
-            validation_context:
-              trusted_ca:
-                filename: /srv/secrets/vpn-server/ca.crt
-      filters:
-      - name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          stat_prefix: ingress_http
-          access_log:
-          - name: envoy.access_loggers.stdout
-            filter:
-              or_filter:
-                filters:
-                - status_code_filter:
-                    comparison:
-                      op: GE
-                      value:
-                        default_value: 500
-                        runtime_key: "null"
-                - duration_filter:
-                    comparison:
-                      op: GE
-                      value:
-                        default_value: 1000
-                        runtime_key: "null"
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
-              log_format:
-                text_format_source:
-                  inline_string: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% rx %BYTES_SENT% tx %DURATION%ms \"%DOWNSTREAM_REMOTE_ADDRESS%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
-          route_config:
-            name: local_route
-            virtual_hosts:
-            - name: local_service
-              domains:
-              - "*"
-              routes:
-              - match:
-                  connect_matcher: {}
-                route:
-                  cluster: dynamic_forward_proxy_cluster
-                  upgrade_configs:
-                  - upgrade_type: CONNECT
-                    connect_config: {}
-          http_filters:
-          - name: envoy.filters.http.dynamic_forward_proxy
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.dynamic_forward_proxy.v3.FilterConfig
-              dns_cache_config:
-                name: dynamic_forward_proxy_cache_config
-                dns_lookup_family: ` + dnsLookUpFamily + `
-                max_hosts: 8192
-          - name: envoy.filters.http.router
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-          http_protocol_options:
-            accept_http_10: true
-          upgrade_configs:
-          - upgrade_type: CONNECT
-  - name: metrics_listener
-    address:
-      socket_address:
-        address: "` + listenAddress + `"
-        port_value: 15000
-    filter_chains:
-    - filters:
-      - name: envoy.filters.network.http_connection_manager
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-          stat_prefix: stats_server
-          route_config:
-            virtual_hosts:
-            - name: admin_interface
-              domains:
-              - "*"
-              routes:
-              - match:
-                  prefix: "/metrics"
-                  headers:
-                  - name: ":method"
-                    string_match:
-                      exact: GET
-                route:
-                  cluster: prometheus_stats
-                  prefix_rewrite: "/stats/prometheus"
-          http_filters:
-          - name: envoy.filters.http.router
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-  clusters:
-  - name: dynamic_forward_proxy_cluster
-    connect_timeout: 20s
-    circuitBreakers:
-      thresholds:
-      - maxConnections: 8192
-    lb_policy: CLUSTER_PROVIDED
-    cluster_type:
-      name: envoy.clusters.dynamic_forward_proxy
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
-        dns_cache_config:
-          name: dynamic_forward_proxy_cache_config
-          dns_lookup_family: ` + dnsLookUpFamily + `
-          max_hosts: 8192
-  - name: prometheus_stats
-    connect_timeout: 0.25s
-    type: static
-    load_assignment:
-      cluster_name: prometheus_stats
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              pipe:
-                path: /home/nonroot/envoy.admin
-admin:
-  address:
-    pipe:
-      path: /home/nonroot/envoy.admin`,
+			"envoy.yaml": envoyConfig.String(),
 		},
 	}
 	Expect(kubernetesutils.MakeUnique(configMap)).To(Succeed())
