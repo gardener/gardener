@@ -50,7 +50,6 @@ func Components(sshAccessEnabled bool) []components.Component {
 		varlibkubeletmount.New(),
 		rootcertificates.New(),
 		containerd.New(),
-		containerd.NewInitializer(),
 		journald.New(),
 		kernelconfig.New(),
 		kubelet.New(),
