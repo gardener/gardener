@@ -66,6 +66,28 @@ spec:
         enabled: false
   # volume:
   #   minimumSize: 20Gi
+  # Following options allow monitoring for certificate expiration dates
+  # Workergroup names are user defined
+  # workerGroups:
+  #   default:
+  #     # Selector is optional. If not passed, configuration will be deployed on all workers
+  #     selector:
+  #       matchExpressions:
+  #         - key: my.baremetal.node/distribution-version
+  #           operator: In
+  #           values:
+  #             - specific-os-version
+  #     mountPaths:
+  #       - /var/lib
+  #     # Certificate paths are file/dir paths that should be monitored.
+  #     # Paths should match the paths on the node and should be mounted with `mountPaths`
+  #     certificatePaths:
+  #       - /var/lib/some-specific-dir/tmp/
+  # certificateSecretKeys:
+  #   - kubernetes.io/tls:.*crt
+  #   - istio.io/ca-root:.*cert.*\.pem
+  # certificateConfigMapKeys:
+  #   - ca.crt
   virtualCluster:
   # controlPlane:
   #   highAvailability: {}

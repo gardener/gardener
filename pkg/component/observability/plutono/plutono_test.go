@@ -679,12 +679,12 @@ status:
 					})
 
 					It("should successfully deploy all resources", func() {
-						checkDeployedResources("plutono-dashboards-garden", 26)
+						checkDeployedResources("plutono-dashboards-garden", 27)
 					})
 				})
 
 				It("should successfully deploy all resources", func() {
-					checkDeployedResources("plutono-dashboards-garden", 23)
+					checkDeployedResources("plutono-dashboards-garden", 24)
 				})
 			})
 		})
