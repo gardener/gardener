@@ -5256,7 +5256,7 @@ InPlaceUpdatesWorkerStatus
 </td>
 <td>
 <em>(Optional)</em>
-<p>InPlaceUpdates contains the configuration for in-place updates.</p>
+<p>InPlaceUpdates contains the status for in-place updates.</p>
 </td>
 </tr>
 </tbody>

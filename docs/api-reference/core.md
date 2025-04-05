@@ -5986,49 +5986,6 @@ float64
 <p>
 <p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
 </p>
-<h3 id="core.gardener.cloud/v1beta1.InPlaceUpdatePendingWorkers">InPlaceUpdatePendingWorkers
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.InPlaceUpdatesStatus">InPlaceUpdatesStatus</a>)
-</p>
-<p>
-<p>InPlaceUpdatePendingWorkers contains information about a worker pool pending in-place update.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>autoInPlaceUpdate</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>manualInPlaceUpdate</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.InPlaceUpdates">InPlaceUpdates
 </h3>
 <p>
@@ -6090,16 +6047,16 @@ string
 <tbody>
 <tr>
 <td>
-<code>pendingWorkersRollouts</code></br>
+<code>pendingWorkerUpdates</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.InPlaceUpdatePendingWorkers">
-InPlaceUpdatePendingWorkers
+<a href="#core.gardener.cloud/v1beta1.PendingWorkerUpdates">
+PendingWorkerUpdates
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>PendingWorkersRollouts contains information about worker pools pending in-place updates.</p>
+<p>PendingWorkerUpdates contains information about worker pools pending in-place updates.</p>
 </td>
 </tr>
 </tbody>
@@ -9574,6 +9531,49 @@ string
 <td>
 <em>(Optional)</em>
 <p>The client Secret for the OpenID Connect client.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.PendingWorkerUpdates">PendingWorkerUpdates
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.InPlaceUpdatesStatus">InPlaceUpdatesStatus</a>)
+</p>
+<p>
+<p>PendingWorkerUpdates contains information about worker pools pending in-place update.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>autoInPlaceUpdate</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>manualInPlaceUpdate</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.</p>
 </td>
 </tr>
 </tbody>

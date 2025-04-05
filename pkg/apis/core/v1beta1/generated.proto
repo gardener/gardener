@@ -1132,17 +1132,6 @@ message HorizontalPodAutoscalerConfig {
   optional double tolerance = 6;
 }
 
-// InPlaceUpdatePendingWorkers contains information about a worker pool pending in-place update.
-message InPlaceUpdatePendingWorkers {
-  // AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.
-  // +optional
-  repeated string autoInPlaceUpdate = 1;
-
-  // ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.
-  // +optional
-  repeated string manualInPlaceUpdate = 2;
-}
-
 // InPlaceUpdates contains the configuration for in-place updates for a machine image version.
 message InPlaceUpdates {
   // Supported indicates whether in-place updates are supported for this machine image version.
@@ -1155,9 +1144,9 @@ message InPlaceUpdates {
 
 // InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.
 message InPlaceUpdatesStatus {
-  // PendingWorkersRollouts contains information about worker pools pending in-place updates.
+  // PendingWorkerUpdates contains information about worker pools pending in-place updates.
   // +optional
-  optional InPlaceUpdatePendingWorkers pendingWorkersRollouts = 1;
+  optional PendingWorkerUpdates pendingWorkerUpdates = 1;
 }
 
 // Ingress configures the Ingress specific settings of the cluster
@@ -2229,6 +2218,17 @@ message OpenIDConnectClientAuthentication {
   // The client Secret for the OpenID Connect client.
   // +optional
   optional string secret = 2;
+}
+
+// PendingWorkerUpdates contains information about worker pools pending in-place update.
+message PendingWorkerUpdates {
+  // AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.
+  // +optional
+  repeated string autoInPlaceUpdate = 1;
+
+  // ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.
+  // +optional
+  repeated string manualInPlaceUpdate = 2;
 }
 
 // PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to

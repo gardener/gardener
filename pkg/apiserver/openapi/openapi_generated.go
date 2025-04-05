@@ -106,7 +106,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                        schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HighAvailability":                           schema_pkg_apis_core_v1beta1_HighAvailability(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig":              schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatePendingWorkers":                schema_pkg_apis_core_v1beta1_InPlaceUpdatePendingWorkers(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdates":                             schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatesStatus":                       schema_pkg_apis_core_v1beta1_InPlaceUpdatesStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress":                                    schema_pkg_apis_core_v1beta1_Ingress(ref),
@@ -155,6 +154,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig":                                 schema_pkg_apis_core_v1beta1_OIDCConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ObservabilityRotation":                      schema_pkg_apis_core_v1beta1_ObservabilityRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication":          schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkerUpdates":                       schema_pkg_apis_core_v1beta1_PendingWorkerUpdates(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkersRollout":                      schema_pkg_apis_core_v1beta1_PendingWorkersRollout(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Project":                                    schema_pkg_apis_core_v1beta1_Project(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ProjectList":                                schema_pkg_apis_core_v1beta1_ProjectList(ref),
@@ -4140,49 +4140,6 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_InPlaceUpdatePendingWorkers(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "InPlaceUpdatePendingWorkers contains information about a worker pool pending in-place update.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"autoInPlaceUpdate": {
-						SchemaProps: spec.SchemaProps{
-							Description: "AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
-					"manualInPlaceUpdate": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
 func schema_pkg_apis_core_v1beta1_InPlaceUpdates(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4219,17 +4176,17 @@ func schema_pkg_apis_core_v1beta1_InPlaceUpdatesStatus(ref common.ReferenceCallb
 				Description: "InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"pendingWorkersRollouts": {
+					"pendingWorkerUpdates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PendingWorkersRollouts contains information about worker pools pending in-place updates.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatePendingWorkers"),
+							Description: "PendingWorkerUpdates contains information about worker pools pending in-place updates.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkerUpdates"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.InPlaceUpdatePendingWorkers"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.PendingWorkerUpdates"},
 	}
 }
 
@@ -6656,6 +6613,49 @@ func schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref common.R
 							Description: "The client Secret for the OpenID Connect client.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_PendingWorkerUpdates(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PendingWorkerUpdates contains information about worker pools pending in-place update.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"autoInPlaceUpdate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoInPlaceUpdate contains the names of the worker pools pending Auto In-Place Updates.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"manualInPlaceUpdate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ManualInPlaceUpdate contains the names of the worker pools pending Manual In-Place Updates.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 				},
