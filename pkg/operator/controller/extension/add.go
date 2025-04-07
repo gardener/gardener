@@ -11,7 +11,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/operator/controller/extension/care"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension"
 )
 
@@ -22,12 +21,6 @@ func AddToManager(mgr manager.Manager, cfg *operatorconfigv1alpha1.OperatorConfi
 		GardenClientMap: gardenClientMap,
 	}).AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed adding main reconciler: %w", err)
-	}
-
-	if err := (&care.Reconciler{
-		Config: *cfg,
-	}).AddToManager(mgr, gardenClientMap); err != nil {
-		return fmt.Errorf("failed adding care reconciler: %w", err)
 	}
 
 	return nil

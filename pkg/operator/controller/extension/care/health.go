@@ -19,7 +19,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
@@ -29,7 +28,7 @@ type health struct {
 	extension           *operatorv1alpha1.Extension
 	gardenNamespace     string
 	runtimeClient       client.Client
-	gardenClientSet     kubernetes.Interface
+	virtualClient       client.Client
 	clock               clock.Clock
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration
 	healthChecker       *healthchecker.HealthChecker
@@ -39,7 +38,7 @@ type health struct {
 func NewHealth(
 	extension *operatorv1alpha1.Extension,
 	runtimeClient client.Client,
-	gardenClientSet kubernetes.Interface,
+	virtualClient client.Client,
 	clock clock.Clock,
 	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
 	gardenNamespace string,
@@ -48,7 +47,7 @@ func NewHealth(
 		extension:           extension,
 		gardenNamespace:     gardenNamespace,
 		runtimeClient:       runtimeClient,
-		gardenClientSet:     gardenClientSet,
+		virtualClient:       virtualClient,
 		clock:               clock,
 		conditionThresholds: conditionThresholds,
 		healthChecker:       healthchecker.NewHealthChecker(runtimeClient, clock, conditionThresholds, nil),
@@ -89,16 +88,12 @@ func (h *health) Check(ctx context.Context, conditions ExtensionConditions) []ga
 }
 
 func (h *health) checkControllerInstallations(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
-	if h.gardenClientSet == nil {
-		return nil, fmt.Errorf("garden client set is not available")
-	}
-
 	controllerInstallations := &gardencorev1beta1.ControllerInstallationList{}
-	if err := h.gardenClientSet.Client().List(ctx, controllerInstallations, client.MatchingFields{gardencore.RegistrationRefName: h.extension.Name}); err != nil {
+	if err := h.virtualClient.List(ctx, controllerInstallations, client.MatchingFields{gardencore.RegistrationRefName: h.extension.Name}); err != nil {
 		return nil, fmt.Errorf("failed to list controller installations: %w", err)
 	}
 
-	if exitCondition, err := h.healthChecker.CheckControllerInstallations(ctx, h.gardenClientSet.Client(), condition, controllerInstallations.Items, func(ci gardencorev1beta1.ControllerInstallation) bool {
+	if exitCondition, err := h.healthChecker.CheckControllerInstallations(ctx, h.virtualClient, condition, controllerInstallations.Items, func(ci gardencorev1beta1.ControllerInstallation) bool {
 		return ci.Spec.RegistrationRef.Name == h.extension.Name
 	}, nil); err != nil {
 		return nil, fmt.Errorf("failed to check controller installations: %w", err)

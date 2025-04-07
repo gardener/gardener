@@ -13,8 +13,8 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -26,7 +26,6 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/operator/mapper"
 	"github.com/gardener/gardener/pkg/operator/predicate"
@@ -36,7 +35,7 @@ import (
 const ControllerName = "extension-care"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap.ClientMap) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, virtualCluster cluster.Cluster) error {
 	if r.RuntimeClient == nil {
 		r.RuntimeClient = mgr.GetClient()
 	}
@@ -46,12 +45,12 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 	if r.GardenNamespace == "" {
 		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
-	if gardenClientMap == nil {
-		return fmt.Errorf("gardenClientMap must not be nil")
+	if virtualCluster == nil {
+		return fmt.Errorf("virtualCluster must not be nil")
 	}
-	r.GardenClientMap = gardenClientMap
+	r.VirtualClient = virtualCluster.GetClient()
 
-	c, err := builder.
+	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
 		WithOptions(controller.Options{
@@ -66,29 +65,19 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 			&operatorv1alpha1.Extension{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.ExtensionRequirementsChanged()),
-		).Build(r)
-	if err != nil {
-		return err
-	}
-
-	r.registerControllerInstallationWatchFunc = func(virtualClusterCache cache.Cache) error {
-		return c.Watch(source.Kind[client.Object](
-			virtualClusterCache,
-			&v1beta1.ControllerInstallation{},
-			handler.EnqueueRequestsFromMapFunc(mapper.MapControllerInstallationToExtension(r.RuntimeClient, mgr.GetLogger().WithValues("controller", ControllerName))),
-		))
-	}
-
-	r.registerManagedResourceWatchFunc = func() error {
-		return c.Watch(source.Kind[client.Object](
-			mgr.GetCache(),
+		).
+		Watches(
 			&resourcesv1alpha1.ManagedResource{},
 			handler.EnqueueRequestsFromMapFunc(r.MapManagedResourceToExtension),
-			predicateutils.ManagedResourceConditionsChanged(),
-		))
-	}
-
-	return nil
+			builder.WithPredicates(predicateutils.ManagedResourceConditionsChanged()),
+		).
+		WatchesRawSource(
+			source.Kind[client.Object](
+				virtualCluster.GetCache(),
+				&v1beta1.ControllerInstallation{},
+				handler.EnqueueRequestsFromMapFunc(mapper.MapControllerInstallationToExtension(r.RuntimeClient, mgr.GetLogger().WithValues("controller", ControllerName))),
+			)).
+		Complete(r)
 }
 
 // MapManagedResourceToExtension is a handler.MapFunc for mapping a ManagedResource to the owning Extension.
