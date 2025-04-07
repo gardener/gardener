@@ -171,13 +171,22 @@ func ValidateControllerRegistrationSpecUpdate(new, old *core.ControllerRegistrat
 		return apivalidation.ValidateImmutableField(new, old, fldPath)
 	}
 
-	kindTypeToPrimary := make(map[string]*bool, len(old.Resources))
-	for _, resource := range old.Resources {
+	allErrs = append(allErrs, ValidateControllerResourceUpdate(new.Resources, old.Resources, fldPath.Child("resources"))...)
+
+	return allErrs
+}
+
+// ValidateControllerResourceUpdate validates the update of ControllerResource objects.
+func ValidateControllerResourceUpdate(new, old []core.ControllerResource, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	kindTypeToPrimary := make(map[string]*bool, len(old))
+	for _, resource := range old {
 		kindTypeToPrimary[resource.Kind+resource.Type] = resource.Primary
 	}
-	for i, resource := range new.Resources {
+	for i, resource := range new {
 		if primary, ok := kindTypeToPrimary[resource.Kind+resource.Type]; ok {
-			allErrs = append(allErrs, apivalidation.ValidateImmutableField(resource.Primary, primary, fldPath.Child("resources").Index(i).Child("primary"))...)
+			allErrs = append(allErrs, apivalidation.ValidateImmutableField(resource.Primary, primary, fldPath.Index(i).Child("primary"))...)
 		}
 	}
 
