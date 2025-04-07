@@ -178,6 +178,9 @@ var _ = Describe("resourcereferencemanager", func() {
 						Namespace: namespace,
 					},
 				},
+				Provider: &core.SecretBindingProvider{
+					Type: "test",
+				},
 			}
 			secretBinding = gardencorev1beta1.SecretBinding{
 				ObjectMeta: metav1.ObjectMeta{
@@ -194,6 +197,9 @@ var _ = Describe("resourcereferencemanager", func() {
 						Name:      quotaName,
 						Namespace: namespace,
 					},
+				},
+				Provider: &gardencorev1beta1.SecretBindingProvider{
+					Type: "test",
 				},
 			}
 			securityCredentialsBindingRefSecret = security.CredentialsBinding{
@@ -250,6 +256,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:       workloadIdentityName,
 					Namespace:  namespace,
 				},
+				Provider: security.CredentialsBindingProvider{Type: "wiprovider"},
 				Quotas: []corev1.ObjectReference{
 					{
 						Name:      quotaName,
@@ -457,6 +464,8 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			err = gardencorev1beta1.Convert_core_Project_To_v1beta1_Project(&coreProject, &project, nil)
 			Expect(err).To(Succeed())
+
+			workloadIdentity.Spec.TargetSystem = securityv1alpha1.TargetSystem{Type: "wiprovider"}
 		})
 
 		It("should return nil because the resource is not BackupBucket and operation is delete", func() {
@@ -687,6 +696,19 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).To(HaveOccurred())
 			})
+
+			It("should reject because provider types do not match with shoot type", func() {
+				coreSecretBinding.Provider.Type = "another-provider"
+				coreSecretBinding.Quotas = nil
+				shoot.Spec.Provider.Type = "local"
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(`SecretBinding is referenced by shoot "shoot-1", but provider types ([another-provider]) do not match with the shoot provider type "local"`)))
+			})
 		})
 
 		Context("tests for CredentialsBinding objects referencing Secret", func() {
@@ -864,6 +886,19 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).To(HaveOccurred())
 			})
+
+			It("should reject because provider types do not match with shoot type", func() {
+				securityCredentialsBindingRefSecret.Provider.Type = "another-provider"
+				securityCredentialsBindingRefSecret.Quotas = nil
+				shoot.Spec.Provider.Type = "local"
+
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(`CredentialsBinding is referenced by shoot "shoot-1", but provider types ([another-provider]) do not match with the shoot provider type "local"`)))
+			})
 		})
 
 		Context("tests for CredentialsBinding objects referencing WorkloadIdentity", func() {
@@ -882,12 +917,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should accept because all referenced objects have been found (workloadidentity looked up live)", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, &securityv1alpha1.WorkloadIdentity{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: workloadIdentity.Namespace,
-							Name:      workloadIdentity.Name,
-						},
-					}, nil
+					return true, &workloadIdentity, nil
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
@@ -896,6 +926,19 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because the provider type does not match in WorkloadIdentity and CredentialsBinding", func() {
+				workloadIdentity.Spec.TargetSystem.Type = "foo"
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("does not match with WorkloadIdentity provider type")))
 			})
 
 			It("should reject because the referenced workload identity does not exist", func() {
@@ -970,6 +1013,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				quotaRefList = append(quotaRefList, quota2Ref)
 				securityCredentialsBindingRefWorkloadIdentity.Quotas = quotaRefList
 
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
 				Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota2)).To(Succeed())
