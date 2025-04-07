@@ -3909,7 +3909,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
-				"Detail": Equal("Maintenance.AutoUpdate.KubernetesVersion: false != true"),
+				"Detail": Equal("can't edit shoot while it's in deletion. Requested changes: Maintenance.AutoUpdate.KubernetesVersion: false != true"),
 			}))))
 		})
 
