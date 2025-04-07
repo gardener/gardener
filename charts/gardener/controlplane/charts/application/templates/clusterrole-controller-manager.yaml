@@ -6,6 +6,7 @@ metadata:
   name: gardener.cloud:system:controller-manager
   labels:
     app: gardener
+    role: controller-manager
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"

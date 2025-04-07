@@ -176,24 +176,24 @@ var _ = Describe("Virtual", func() {
 						"operations.gardener.cloud",
 					},
 					Resources: []string{"*"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "manage-members", "modify-spec-tolerations-whitelist", "modify-spec-kubernetes", "modify-spec-machineimages", "modify-spec-providerconfig"},
 				},
 				{
 					APIGroups: []string{"security.gardener.cloud"},
 					Resources: []string{
 						"credentialsbindings",
 						"workloadidentities"},
-					Verbs: []string{"*"},
+					Verbs: []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{""},
 					Resources: []string{"events", "namespaces", "resourcequotas"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{"events.k8s.io"},
 					Resources: []string{"events"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{"rbac.authorization.k8s.io"},
@@ -203,27 +203,27 @@ var _ = Describe("Virtual", func() {
 				{
 					APIGroups: []string{"admissionregistration.k8s.io"},
 					Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{"apiregistration.k8s.io"},
 					Resources: []string{"apiservices"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{"apiextensions.k8s.io"},
 					Resources: []string{"customresourcedefinitions"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{"coordination.k8s.io"},
 					Resources: []string{"leases"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 				},
 				{
 					APIGroups: []string{"certificates.k8s.io"},
 					Resources: []string{"certificatesigningrequests"},
-					Verbs:     []string{"*"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update", "approve", "deny"},
 				},
 			},
 		}
@@ -244,7 +244,8 @@ var _ = Describe("Virtual", func() {
 		}
 		clusterRoleGardenerAdminAggregated = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:system:administrators",
+				Name:   "gardener.cloud:system:administrators",
+				Labels: map[string]string{"gardener.cloud/role": "administrators"},
 			},
 			AggregationRule: &rbacv1.AggregationRule{
 				ClusterRoleSelectors: []metav1.LabelSelector{
@@ -329,7 +330,8 @@ var _ = Describe("Virtual", func() {
 		}
 		clusterRoleGardenerViewerAggregated = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "gardener.cloud:system:viewers",
+				Name:   "gardener.cloud:system:viewers",
+				Labels: map[string]string{"gardener.cloud/role": "viewers"},
 			},
 			AggregationRule: &rbacv1.AggregationRule{
 				ClusterRoleSelectors: []metav1.LabelSelector{
