@@ -644,7 +644,11 @@ It prevents creating a second `Garden` when there is already one in the system.
 
 #### `Extension`
 
-This webhook handler denies `DELETE` requests for `Extension` resources that are reported as required (also see [required-runtime](#required-runtime-reconciler) and [required-virtual](#required-virtual-reconciler)).
+This webhook handler validates `UPDATE` and `DELETE` operations on `Extension` resources.
+
+In an `UPDATE` request, the configured `.spec.resources` are validated to ensure the `primary` field remains immutable.
+
+`DELETE` requests for `Extension` resources are denied if they are reported as required (also see [required-runtime](#required-runtime-reconciler) and [required-virtual](#required-virtual-reconciler)).
 These deletions often happen accidentally, and this handler safeguards the system from such actions.
 
 ### Defaulting

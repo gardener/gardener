@@ -443,7 +443,7 @@ var _ = Describe("validation", func() {
 
 		It("should allow adding a new resource", func() {
 			newResources := slices.Clone(resources)
-			newResources = append(resources, core.ControllerResource{
+			newResources = append(newResources, core.ControllerResource{
 				Kind:    extensionsv1alpha1.ExtensionResource,
 				Type:    "baz",
 				Primary: ptr.To(true),

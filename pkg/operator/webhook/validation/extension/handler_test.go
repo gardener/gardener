@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -26,6 +27,44 @@ var _ = Describe("Handler", func() {
 		ctx = context.Background()
 		handler = &Handler{}
 		extension = &operatorv1alpha1.Extension{}
+	})
+
+	Describe("#ValidateUpdate", func() {
+		var resources []gardencorev1beta1.ControllerResource
+
+		BeforeEach(func() {
+			resources = []gardencorev1beta1.ControllerResource{
+				{Kind: "Worker", Type: "test"},
+			}
+			extension.Spec.Resources = resources
+		})
+
+		It("should return success if the extension resources are not updated", func() {
+			newExtension := extension.DeepCopy()
+
+			warning, err := handler.ValidateUpdate(ctx, extension, newExtension)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
+		})
+
+		It("should return success if the extension resources are added", func() {
+			newExtension := extension.DeepCopy()
+			newExtension.Spec.Resources = append(newExtension.Spec.Resources, gardencorev1beta1.ControllerResource{Kind: "NewResource", Type: "test", Primary: ptr.To(false)})
+
+			warning, err := handler.ValidateUpdate(ctx, extension, newExtension)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
+		})
+
+		It("should prevent changing the primary field", func() {
+			extension.Spec.Resources[0].Primary = ptr.To(true)
+			newExtension := extension.DeepCopy()
+			newExtension.Spec.Resources[0].Primary = ptr.To(false)
+
+			warning, err := handler.ValidateUpdate(ctx, extension, newExtension)
+			Expect(warning).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("field is immutable")))
+		})
 	})
 
 	Describe("#ValidateDelete", func() {
