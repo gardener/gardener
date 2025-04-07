@@ -17,7 +17,7 @@ require (
 	github.com/gardener/etcd-druid/api v0.28.0
 	github.com/gardener/machine-controller-manager v0.57.1
 	github.com/gardener/terminal-controller-manager v0.34.0
-	github.com/go-jose/go-jose/v4 v4.0.5
+	github.com/go-jose/go-jose/v4 v4.1.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-test/deep v1.1.0
 	github.com/gogo/protobuf v1.3.2
