@@ -19,75 +19,7 @@ import (
 )
 
 var _ = Describe("Extension Care controller tests", func() {
-	var (
-		garden    *operatorv1alpha1.Garden
-		extension *operatorv1alpha1.Extension
-	)
-
-	BeforeEach(func() {
-		garden = &operatorv1alpha1.Garden{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   gardenName,
-				Labels: map[string]string{testID: testRunID},
-			},
-			Spec: operatorv1alpha1.GardenSpec{
-				RuntimeCluster: operatorv1alpha1.RuntimeCluster{
-					Networking: operatorv1alpha1.RuntimeNetworking{
-						Pods:     []string{"10.1.0.0/16"},
-						Services: []string{"10.2.0.0/16"},
-					},
-					Ingress: operatorv1alpha1.Ingress{
-						Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.runtime-garden.local.gardener.cloud"}},
-						Controller: gardencorev1beta1.IngressController{
-							Kind: "nginx",
-						},
-					},
-					Provider: operatorv1alpha1.Provider{
-						Zones: []string{"a", "b", "c"},
-					},
-					Settings: &operatorv1alpha1.Settings{
-						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-							Enabled: ptr.To(true),
-						},
-					},
-				},
-				VirtualCluster: operatorv1alpha1.VirtualCluster{
-					DNS: operatorv1alpha1.DNS{
-						Domains: []operatorv1alpha1.DNSDomain{{Name: "virtual-garden.local.gardener.cloud"}},
-					},
-					Gardener: operatorv1alpha1.Gardener{
-						ClusterIdentity: "test",
-					},
-					Kubernetes: operatorv1alpha1.Kubernetes{
-						Version: "1.31.1",
-					},
-					Maintenance: operatorv1alpha1.Maintenance{
-						TimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
-							Begin: "220000+0100",
-							End:   "230000+0100",
-						},
-					},
-					Networking: operatorv1alpha1.Networking{
-						Services: []string{"100.64.0.0/13"},
-					},
-				},
-			},
-		}
-
-		By("Create Garden")
-		Expect(testClient.Create(ctx, garden)).To(Succeed())
-		log.Info("Created Garden for test", "garden", garden.Name)
-
-		DeferCleanup(func() {
-			By("Delete Garden")
-			Expect(testClient.Delete(ctx, garden)).To(Succeed())
-
-			By("Ensure Garden is gone")
-			Eventually(func() error {
-				return mgrClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
-			}).Should(BeNotFoundError())
-		})
-	})
+	var extension *operatorv1alpha1.Extension
 
 	When("Extension exists", func() {
 		extensionName := "foo"

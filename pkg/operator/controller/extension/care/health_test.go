@@ -23,8 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	. "github.com/gardener/gardener/pkg/operator/controller/extension/care"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -32,10 +30,10 @@ import (
 
 var _ = Describe("Extension health", func() {
 	var (
-		ctx             context.Context
-		runtimeClient   client.Client
-		gardenClientSet kubernetes.Interface
-		fakeClock       *testclock.FakeClock
+		ctx           context.Context
+		runtimeClient client.Client
+		virtualClient client.Client
+		fakeClock     *testclock.FakeClock
 
 		controllerRegistration *gardencorev1beta1.ControllerRegistration
 		extension              *operatorv1alpha1.Extension
@@ -50,11 +48,11 @@ var _ = Describe("Extension health", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		runtimeClient = fakeclient.NewClientBuilder().WithScheme(operatorclient.RuntimeScheme).Build()
-		gardenClient := fakeclient.NewClientBuilder().
+		virtualClient = fakeclient.NewClientBuilder().
 			WithScheme(operatorclient.VirtualScheme).
 			WithIndex(&gardencorev1beta1.ControllerInstallation{}, core.RegistrationRefName, indexer.ControllerInstallationRegistrationRefNameIndexerFunc).
 			Build()
-		gardenClientSet = fakekubernetes.NewClientSetBuilder().WithClient(gardenClient).Build()
+
 		fakeClock = testclock.NewFakeClock(time.Now())
 
 		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
@@ -62,7 +60,7 @@ var _ = Describe("Extension health", func() {
 				Name: "foo",
 			},
 		}
-		Expect(gardenClient.Create(ctx, controllerRegistration)).To(Succeed())
+		Expect(virtualClient.Create(ctx, controllerRegistration)).To(Succeed())
 
 		extension = &operatorv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{
@@ -117,14 +115,14 @@ var _ = Describe("Extension health", func() {
 				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-foo-garden", true))).To(Succeed())
 				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-admission-virtual-foo", false))).To(Succeed())
 				Expect(runtimeClient.Create(ctx, healthyManagedResource(gardenNamespace, "extension-admission-runtime-foo", true))).To(Succeed())
-				Expect(gardenClientSet.Client().Create(ctx, healthyControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
+				Expect(virtualClient.Create(ctx, healthyControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
 			})
 
 			It("should set ExtensionComponentsRunning condition to true", func() {
 				updatedConditions := NewHealth(
 					extension,
 					runtimeClient,
-					gardenClientSet,
+					virtualClient,
 					fakeClock,
 					nil,
 					gardenNamespace,
@@ -146,7 +144,7 @@ var _ = Describe("Extension health", func() {
 						updatedConditions := NewHealth(
 							extension,
 							runtimeClient,
-							gardenClientSet,
+							virtualClient,
 							fakeClock,
 							nil,
 							gardenNamespace,
@@ -171,7 +169,7 @@ var _ = Describe("Extension health", func() {
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
-								gardenClientSet,
+								virtualClient,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
 									operatorv1alpha1.ExtensionHealthy:          time.Minute,
@@ -200,7 +198,7 @@ var _ = Describe("Extension health", func() {
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
-								gardenClientSet,
+								virtualClient,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
 									operatorv1alpha1.ExtensionHealthy:          time.Minute,
@@ -229,7 +227,7 @@ var _ = Describe("Extension health", func() {
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
-								gardenClientSet,
+								virtualClient,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
 									operatorv1alpha1.ExtensionHealthy:          time.Minute,
@@ -251,7 +249,7 @@ var _ = Describe("Extension health", func() {
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
-								gardenClientSet,
+								virtualClient,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
 									operatorv1alpha1.ExtensionHealthy:          time.Minute,
@@ -327,7 +325,7 @@ var _ = Describe("Extension health", func() {
 						updatedConditions := NewHealth(
 							extension,
 							runtimeClient,
-							gardenClientSet,
+							virtualClient,
 							fakeClock,
 							nil,
 							gardenNamespace,
@@ -350,7 +348,7 @@ var _ = Describe("Extension health", func() {
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
-								gardenClientSet,
+								virtualClient,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
 									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
@@ -376,7 +374,7 @@ var _ = Describe("Extension health", func() {
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
-								gardenClientSet,
+								virtualClient,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
 									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
@@ -402,7 +400,7 @@ var _ = Describe("Extension health", func() {
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
-								gardenClientSet,
+								virtualClient,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
 									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
@@ -422,7 +420,7 @@ var _ = Describe("Extension health", func() {
 							updatedConditions := NewHealth(
 								extension,
 								runtimeClient,
-								gardenClientSet,
+								virtualClient,
 								fakeClock,
 								map[gardencorev1beta1.ConditionType]time.Duration{
 									operatorv1alpha1.ControllerInstallationsHealthy: time.Minute,
@@ -442,7 +440,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all controller installations are unhealthy", func() {
 				JustBeforeEach(func() {
-					Expect(gardenClientSet.Client().Create(ctx, unhealthyControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
+					Expect(virtualClient.Create(ctx, unhealthyControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
 				})
 
 				tests("NotHealthy", "Controller installation is not healthy")
@@ -450,7 +448,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all controller installations are invalid", func() {
 				JustBeforeEach(func() {
-					Expect(gardenClientSet.Client().Create(ctx, inValidControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
+					Expect(virtualClient.Create(ctx, inValidControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
 				})
 
 				tests("Invalid", "Controller installation is invalid")
@@ -458,7 +456,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all controller installations are not installed", func() {
 				JustBeforeEach(func() {
-					Expect(gardenClientSet.Client().Create(ctx, notInstalledControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
+					Expect(virtualClient.Create(ctx, notInstalledControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
 				})
 
 				tests("NotInstalled", "Controller installation is not installed")
@@ -466,7 +464,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all controller installations are outdated", func() {
 				JustBeforeEach(func() {
-					Expect(gardenClientSet.Client().Create(ctx, outdatedControllerInstallation("foo", controllerRegistration.Name))).To(Succeed())
+					Expect(virtualClient.Create(ctx, outdatedControllerInstallation("foo", controllerRegistration.Name))).To(Succeed())
 				})
 
 				tests("OutdatedControllerRegistration", "observed resource version of controller registration 'foo' in controller installation 'foo' outdated (0/1)")
@@ -474,7 +472,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all controller installations are still progressing", func() {
 				JustBeforeEach(func() {
-					Expect(gardenClientSet.Client().Create(ctx, progressingControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
+					Expect(virtualClient.Create(ctx, progressingControllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion))).To(Succeed())
 				})
 
 				tests("Progressing", "Controller installation is progressing")
@@ -482,7 +480,7 @@ var _ = Describe("Extension health", func() {
 
 			Context("when all controller installations are deployed but not all required conditions are present", func() {
 				JustBeforeEach(func() {
-					Expect(gardenClientSet.Client().Create(ctx, controllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion, []gardencorev1beta1.Condition{{
+					Expect(virtualClient.Create(ctx, controllerInstallation("foo", controllerRegistration.Name, controllerRegistration.ResourceVersion, []gardencorev1beta1.Condition{{
 						Type:   resourcesv1alpha1.ResourcesApplied,
 						Status: gardencorev1beta1.ConditionTrue}},
 					))).To(Succeed())

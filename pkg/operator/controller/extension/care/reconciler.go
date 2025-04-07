@@ -12,7 +12,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -20,8 +19,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 )
@@ -37,13 +34,7 @@ type Reconciler struct {
 	Config          operatorconfigv1alpha1.OperatorConfiguration
 	Clock           clock.Clock
 	GardenNamespace string
-	// GardenClientMap is the ClientMap used to communicate with the virtual garden cluster. It should be set by AddToManager function but the field is still public for usage in tests.
-	GardenClientMap clientmap.ClientMap
-
-	registerControllerInstallationWatchFunc func(cache.Cache) error
-	registerManagedResourceWatchFunc        func() error
-	controllerInstallationWatchRegistered   bool
-	managedResourceWatchRegistered          bool
+	VirtualClient   client.Client
 }
 
 // Reconcile reconciles Extension resources and executes health check operations.
@@ -64,39 +55,6 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	gardenList := &operatorv1alpha1.GardenList{}
-	// We limit one result because we expect only a single Garden object to be there.
-	if err := r.RuntimeClient.List(reconcileCtx, gardenList, client.Limit(1)); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error retrieving Garden object: %w", err)
-	}
-
-	if len(gardenList.Items) == 0 {
-		log.V(1).Info("No garden found, stop reconciling")
-		return reconcile.Result{}, nil
-	}
-	garden := &gardenList.Items[0]
-
-	if !r.managedResourceWatchRegistered && r.registerManagedResourceWatchFunc != nil {
-		if err := r.registerManagedResourceWatchFunc(); err != nil {
-			log.Error(err, "Failed registering watch for resources.gardener.cloud/v1alpha1.ManagedResource now that a operator.gardener.cloud/v1alpha1.Garden object has been created")
-		} else {
-			r.managedResourceWatchRegistered = true
-		}
-	}
-
-	gardenClientSet, err := r.GardenClientMap.GetClient(reconcileCtx, keys.ForGarden(garden))
-	if err != nil {
-		log.V(1).Info("Could not get garden client", "error", err)
-	}
-
-	if !r.controllerInstallationWatchRegistered && r.registerControllerInstallationWatchFunc != nil && gardenClientSet != nil {
-		if err := r.registerControllerInstallationWatchFunc(gardenClientSet.Cache()); err != nil {
-			log.Error(err, "Failed registering watch for core.gardener.cloud/v1beta1.ControllerInstallation now that a operator.gardener.cloud/v1alpha1.Garden object has been created")
-		} else {
-			r.controllerInstallationWatchRegistered = true
-		}
-	}
-
 	ctx, cancel := controllerutils.GetChildReconciliationContext(reconcileCtx, r.Config.Controllers.ExtensionCare.SyncPeriod.Duration)
 	defer cancel()
 
@@ -108,7 +66,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 	updatedConditions := NewHealthCheck(
 		extension,
 		r.RuntimeClient,
-		gardenClientSet,
+		r.VirtualClient,
 		r.Clock,
 		r.conditionThresholdsToProgressingMapping(),
 		r.GardenNamespace,

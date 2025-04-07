@@ -31,8 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/api/indexer"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
@@ -155,8 +153,6 @@ var _ = BeforeSuite(func() {
 	)
 	Expect(err).NotTo(HaveOccurred())
 
-	gardenClientMap := fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(&operatorv1alpha1.Garden{ObjectMeta: metav1.ObjectMeta{Name: gardenName}}), testClientSet).Build()
-
 	By("Register controller")
 	Expect((&care.Reconciler{
 		Config: operatorconfigv1alpha1.OperatorConfiguration{
@@ -167,7 +163,7 @@ var _ = BeforeSuite(func() {
 			},
 		},
 		GardenNamespace: testNamespace.Name,
-	}).AddToManager(mgr, gardenClientMap)).To(Succeed())
+	}).AddToManager(mgr, mgr)).To(Succeed())
 
 	By("Start manager")
 	mgrContext, mgrCancel := context.WithCancel(ctx)
