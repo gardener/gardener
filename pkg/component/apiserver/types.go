@@ -34,8 +34,6 @@ type Values struct {
 	DisabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 	// Audit contains information for configuring audit settings for the API server.
 	Audit *AuditConfig
-	// Autoscaling contains information for configuring autoscaling settings for the API server.
-	Autoscaling AutoscalingConfig
 	// ETCDEncryption contains configuration for the encryption of resources in etcd.
 	ETCDEncryption ETCDEncryptionConfig
 	// FeatureGates is the set of feature gates.
@@ -46,6 +44,8 @@ type Values struct {
 	Requests *gardencorev1beta1.APIServerRequests
 	// RuntimeVersion is the Kubernetes version of the runtime cluster.
 	RuntimeVersion *semver.Version
+	// RunsAsStaticPod is true when the API server runs as static pod in the same network as the worker nodes.
+	RunsAsStaticPod bool
 	// WatchCacheSizes are the configured sizes for the watch caches.
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
 }
@@ -74,20 +74,6 @@ type AuditWebhook struct {
 	BatchMaxSize *int32
 	// Version is the API group and version used for serializing audit events written to webhook.
 	Version *string
-}
-
-// AutoscalingConfig contains information for configuring autoscaling settings for the API server.
-type AutoscalingConfig struct {
-	// APIServerResources are the resource requirements for the API server container.
-	APIServerResources corev1.ResourceRequirements
-	// Replicas is the number of pod replicas for the API server.
-	Replicas *int32
-	// MinReplicas are the minimum Replicas for horizontal autoscaling.
-	MinReplicas int32
-	// MaxReplicas are the maximum Replicas for horizontal autoscaling.
-	MaxReplicas int32
-	// ScaleDownDisabled states whether scale-down shall be disabled.
-	ScaleDownDisabled bool
 }
 
 // ETCDEncryptionConfig contains configuration for the encryption of resources in etcd.

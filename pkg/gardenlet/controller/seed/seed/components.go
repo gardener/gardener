@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	proberapi "github.com/gardener/dependency-watchdog/api/prober"
 	weederapi "github.com/gardener/dependency-watchdog/api/weeder"
 	"github.com/go-logr/logr"
@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
@@ -31,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/component/extensions"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
+	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
@@ -70,20 +72,22 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 type components struct {
-	machineCRD    component.Deployer
-	extensionCRD  component.Deployer
+	machineCRD    component.DeployWaiter
+	extensionCRD  component.DeployWaiter
 	etcdCRD       component.Deployer
 	istioCRD      component.Deployer
 	vpaCRD        component.Deployer
-	fluentCRD     component.Deployer
+	fluentCRD     component.DeployWaiter
 	prometheusCRD component.DeployWaiter
 
 	clusterIdentity          component.DeployWaiter
 	gardenerResourceManager  component.DeployWaiter
 	system                   component.DeployWaiter
+	extension                extension.Interface
 	istio                    component.DeployWaiter
 	istioDefaultLabels       map[string]string
 	istioDefaultNamespace    string
@@ -130,12 +134,24 @@ func (r *Reconciler) instantiateComponents(
 	err error,
 ) {
 	// crds
-	c.machineCRD = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
-	c.extensionCRD = extensioncrds.NewCRD(r.SeedClientSet.Applier(), !seedIsGarden, true)
-	c.etcdCRD = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	c.machineCRD, err = machinecontrollermanager.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
+	c.extensionCRD, err = extensioncrds.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), !seedIsGarden, true)
+	if err != nil {
+		return
+	}
+	c.etcdCRD, err = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedVersion)
+	if err != nil {
+		return
+	}
 	c.istioCRD = istio.NewCRD(r.SeedClientSet.ChartApplier())
 	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Applier(), nil)
-	c.fluentCRD = fluentoperator.NewCRDs(r.SeedClientSet.Applier())
+	c.fluentCRD, err = fluentoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return
@@ -148,6 +164,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.system, err = r.newSystem(seed.GetInfo())
+	if err != nil {
+		return
+	}
+	c.extension, err = r.newExtensions(ctx, log, seed)
 	if err != nil {
 		return
 	}
@@ -248,11 +268,13 @@ func (r *Reconciler) newGardenerResourceManager(seed *gardencorev1beta1.Seed, se
 		additionalNetworkPolicyNamespaceSelectors = config.AdditionalNamespaceSelectors
 	}
 
+	endpointSliceHintsEnabled := v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.Spec.Settings) && versionutils.ConstraintK8sLess132.Check(r.SeedVersion)
+
 	return sharedcomponent.NewRuntimeGardenerResourceManager(r.SeedClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
 		DefaultSeccompProfileEnabled:              features.DefaultFeatureGate.Enabled(features.DefaultSeccompProfile),
 		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
 		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
-		EndpointSliceHintsEnabled:                 v1beta1helper.SeedSettingTopologyAwareRoutingEnabled(seed.Spec.Settings),
+		EndpointSliceHintsEnabled:                 endpointSliceHintsEnabled,
 		LogLevel:                                  r.Config.LogLevel,
 		LogFormat:                                 r.Config.LogFormat,
 		NetworkPolicyAdditionalNamespaceSelectors: additionalNetworkPolicyNamespaceSelectors,
@@ -825,4 +847,8 @@ func (r *Reconciler) newKubeAPIServerIngress(seed *seedpkg.Seed, wildCardCertSec
 	}
 
 	return c
+}
+
+func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, seed *seedpkg.Seed) (extension.Interface, error) {
+	return sharedcomponent.NewExtension(ctx, log, r.GardenClient, r.SeedClientSet.Client(), r.GardenNamespace, extensionsv1alpha1.ExtensionClassSeed, seed.GetInfo().Spec.Extensions, true)
 }

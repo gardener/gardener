@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -77,6 +78,52 @@ func ItShouldCreateShoot(s *ShootContext) {
 
 			return StopTrying("shoot already exists")
 		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldUpdateShootToHighAvailability updates shoot to high availability configuration with the given failure
+// tolerance type.
+func ItShouldUpdateShootToHighAvailability(s *ShootContext, failureToleranceType gardencorev1beta1.FailureToleranceType) {
+	GinkgoHelper()
+
+	It("Update Shoot to High Availability", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
+			if s.Shoot.Spec.ControlPlane == nil {
+				s.Shoot.Spec.ControlPlane = &gardencorev1beta1.ControlPlane{}
+			}
+
+			s.Shoot.Spec.ControlPlane.HighAvailability = &gardencorev1beta1.HighAvailability{
+				FailureTolerance: gardencorev1beta1.FailureTolerance{
+					Type: failureToleranceType,
+				},
+			}
+		})).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldHibernateShoot hibernates the shoot.
+func ItShouldHibernateShoot(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Hibernate Shoot", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
+			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+				Enabled: ptr.To(true),
+			}
+		})).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldWakeUpShoot wakes up the shoot.
+func ItShouldWakeUpShoot(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Wake Up Shoot", func(ctx SpecContext) {
+		Eventually(ctx, s.GardenKomega.Update(s.Shoot, func() {
+			s.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
+				Enabled: ptr.To(false),
+			}
+		})).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
@@ -146,8 +193,12 @@ func ItShouldInitializeShootClient(s *ShootContext) {
 	It("Initialize Shoot client", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
 			clientSet, err := access.CreateShootClientFromAdminKubeconfig(ctx, s.GardenClientSet, s.Shoot)
+			if err != nil {
+				return err
+			}
+
 			s.WithShootClientSet(clientSet)
-			return err
+			return nil
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
@@ -194,5 +245,23 @@ func ItShouldInitializeSeedClient(s *ShootContext) {
 		)
 		Expect(err).NotTo(HaveOccurred())
 		s.WithSeedClientSet(clientSet)
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldAnnotateShoot sets the given annotation within the shoot metadata to the specified value and patches the shoot object
+func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
+	GinkgoHelper()
+
+	It("Annotate Shoot", func(ctx SpecContext) {
+		patch := client.MergeFrom(s.Shoot.DeepCopy())
+
+		for annotationKey, annotationValue := range annotations {
+			s.Log.Info("Setting annotation", "annotation", annotationKey, "value", annotationValue)
+			metav1.SetMetaDataAnnotation(&s.Shoot.ObjectMeta, annotationKey, annotationValue)
+		}
+
+		Eventually(ctx, func() error {
+			return s.GardenClient.Patch(ctx, s.Shoot, patch)
+		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }

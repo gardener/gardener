@@ -2,6 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-//go:generate ../../../../../../hack/generate-crds.sh -p crd- fluentbit.fluent.io
+//go:generate ../../../../../../hack/generate-crds.sh --allow-dangerous-types -p crd- fluentbit.fluent.io
 
 package assets

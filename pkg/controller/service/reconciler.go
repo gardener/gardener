@@ -28,11 +28,15 @@ var (
 )
 
 const (
-	nodePortIstioIngressGateway        int32 = 30443
-	nodePortIstioIngressGatewayZone0   int32 = 30444
-	nodePortIstioIngressGatewayZone1   int32 = 30445
-	nodePortIstioIngressGatewayZone2   int32 = 30446
-	nodePortVirtualGardenKubeAPIServer int32 = 31443
+	nodePortIstioIngressGateway            int32 = 30443
+	nodePortIstioIngressGatewayZone0       int32 = 30444
+	nodePortIstioIngressGatewayZone1       int32 = 30445
+	nodePortIstioIngressGatewayZone2       int32 = 30446
+	nodePortVirtualGardenKubeAPIServer     int32 = 31443
+	nodePortTunnelIstioIngressGateway      int32 = 32132
+	nodePortTunnelIstioIngressGatewayZone0 int32 = 32133
+	nodePortTunnelIstioIngressGatewayZone1 int32 = 32134
+	nodePortTunnelIstioIngressGatewayZone2 int32 = 32135
 )
 
 // Reconciler is a reconciler for Service resources.
@@ -68,14 +72,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	log.Info("Reconciling service")
 
 	var (
-		ips      []string
-		nodePort int32
-		patch    = client.MergeFrom(service.DeepCopy())
+		ips            []string
+		nodePort       int32
+		nodePortTunnel int32
+		patch          = client.MergeFrom(service.DeepCopy())
 	)
 
-	switch {
-	case key == keyIstioIngressGateway:
+	switch key {
+	case keyIstioIngressGateway:
 		nodePort = nodePortIstioIngressGateway
+		nodePortTunnel = nodePortTunnelIstioIngressGateway
 		if r.IsMultiZone {
 			// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
 			// Setting external traffic policy to local mitigates the issue for multi-node setups, e.g. for gardener-operator.
@@ -98,16 +104,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// We append this IP behind the nodeIPs because the gardenlet puts the last ingress IP into the DNSRecords
 		// and we need a change in the DNSRecords if the control-plane moved from one zone to another to update the coredns-custom configMap.
 		ips = append(ips, r.HostIP)
-	case key == keyIstioIngressGatewayZone0:
+	case keyIstioIngressGatewayZone0:
 		nodePort = nodePortIstioIngressGatewayZone0
+		nodePortTunnel = nodePortTunnelIstioIngressGatewayZone0
 		ips = append(ips, r.Zone0IP)
-	case key == keyIstioIngressGatewayZone1:
+	case keyIstioIngressGatewayZone1:
 		nodePort = nodePortIstioIngressGatewayZone1
+		nodePortTunnel = nodePortTunnelIstioIngressGatewayZone1
 		ips = append(ips, r.Zone1IP)
-	case key == keyIstioIngressGatewayZone2:
+	case keyIstioIngressGatewayZone2:
 		nodePort = nodePortIstioIngressGatewayZone2
+		nodePortTunnel = nodePortTunnelIstioIngressGatewayZone2
 		ips = append(ips, r.Zone2IP)
-	case key == keyVirtualGardenIstioIngressGateway:
+	case keyVirtualGardenIstioIngressGateway:
 		nodePort = nodePortVirtualGardenKubeAPIServer
 		if r.IsMultiZone {
 			// Docker desktop for mac v4.23 breaks traffic going through a port mapping to a different docker container.
@@ -125,13 +134,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		if servicePort.Name == "tcp" {
 			service.Spec.Ports[i].NodePort = nodePort
 		}
+		if servicePort.Name == "tls-tunnel" {
+			service.Spec.Ports[i].NodePort = nodePortTunnel
+		}
 	}
 
 	if err := r.Client.Patch(ctx, service, patch); err != nil {
 		if (apierrors.IsInvalid(err) && strings.Contains(err.Error(), "port is already allocated")) ||
 			// for some reason this error is not of type "Invalid"
 			strings.Contains(err.Error(), "duplicate nodePort") {
-			log.Info("Patching nodePort failed because it is already allocated, enabling auto-remediation")
+			log.Info("Patching nodePort failed because it is already allocated, enabling auto-remediation", "err", err.Error())
 			return reconcile.Result{Requeue: true}, r.remediateAllocatedNodePorts(ctx, log)
 		}
 		return reconcile.Result{}, err
@@ -177,10 +189,19 @@ func (r *Reconciler) remediateAllocatedNodePorts(ctx context.Context, log logr.L
 		)
 
 		for i, port := range service.Spec.Ports {
+			if port.NodePort != 0 {
+				log.Info("Found service with nodePort", "serviceCheckedForAllocation", client.ObjectKeyFromObject(&service), "nodePort", port.NodePort)
+			}
+
 			if port.NodePort == nodePortIstioIngressGateway ||
 				port.NodePort == nodePortIstioIngressGatewayZone0 ||
 				port.NodePort == nodePortIstioIngressGatewayZone1 ||
-				port.NodePort == nodePortIstioIngressGatewayZone2 {
+				port.NodePort == nodePortIstioIngressGatewayZone2 ||
+				port.NodePort == nodePortTunnelIstioIngressGateway ||
+				port.NodePort == nodePortTunnelIstioIngressGatewayZone0 ||
+				port.NodePort == nodePortTunnelIstioIngressGatewayZone1 ||
+				port.NodePort == nodePortTunnelIstioIngressGatewayZone2 ||
+				port.NodePort == nodePortVirtualGardenKubeAPIServer {
 				var (
 					min, max    = 30000, 32767
 					newNodePort = int32(rand.N(max-min) + min) // #nosec: G115 G404 -- Value range limited in previous line, no cryptographic context.

@@ -103,7 +103,7 @@ var _ = Describe("Controller", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: exposureClassName}})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(MatchError(ContainSubstring("Cannot delete ExposureClass")))
+			Expect(err).To(MatchError(ContainSubstring("cannot delete ExposureClass")))
 		})
 
 		It("should remove the finalizer because no Shoot is referencing the ExposureClass", func() {

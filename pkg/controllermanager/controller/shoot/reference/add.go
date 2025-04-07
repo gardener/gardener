@@ -25,7 +25,7 @@ func AddToManager(mgr manager.Manager, cfg controllermanagerconfigv1alpha1.Shoot
 		GetReferencedSecretNames:    getReferencedSecretNames,
 		GetReferencedConfigMapNames: getReferencedConfigMapNames,
 		ReferenceChangedPredicate:   Predicate,
-	}).AddToManager(mgr)
+	}).AddToManager(mgr, "shoot")
 }
 
 // Predicate is a predicate function for checking whether a reference changed in the Shoot
@@ -41,12 +41,12 @@ func Predicate(oldObj, newObj client.Object) bool {
 		return false
 	}
 
-	return !apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
-		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins) ||
-		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig, newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig) ||
-		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication) ||
-		!apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization) ||
-		!v1beta1helper.ShootResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources)
+	return !apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
+		!apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins, newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins) ||
+		!apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig, newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig) ||
+		!apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthentication) ||
+		!apiequality.Semantic.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization, newShoot.Spec.Kubernetes.KubeAPIServer.StructuredAuthorization) ||
+		!v1beta1helper.ResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources)
 }
 
 func getReferencedSecretNames(obj client.Object) []string {

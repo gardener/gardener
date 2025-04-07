@@ -180,7 +180,7 @@ func (m *MaintenanceTimeWindow) Contains(tTime time.Time) bool {
 	t := timeToMaintenanceTime(tTime)
 
 	if m.spansDifferentDays() {
-		return !(t.Compare(m.end) > 0 && t.Compare(m.begin) < 0)
+		return t.Compare(m.end) <= 0 || t.Compare(m.begin) >= 0
 	}
 	return t.Compare(m.begin) >= 0 && t.Compare(m.end) <= 0
 }

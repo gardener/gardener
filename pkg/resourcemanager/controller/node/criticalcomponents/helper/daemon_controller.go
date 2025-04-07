@@ -51,7 +51,7 @@ func NodeShouldRunDaemonPod(node *corev1.Node, ds *appsv1.DaemonSet) (bool, bool
 	pod := NewPod(ds, node.Name)
 
 	// If the daemon set specifies a node name, check that it matches with node.Name.
-	if !(ds.Spec.Template.Spec.NodeName == "" || ds.Spec.Template.Spec.NodeName == node.Name) {
+	if ds.Spec.Template.Spec.NodeName != "" && ds.Spec.Template.Spec.NodeName != node.Name {
 		return false, false
 	}
 
@@ -197,10 +197,10 @@ var Semantic = conversion.EqualitiesOrDie(
 		return a.Cmp(b) == 0
 	},
 	func(a, b metav1.MicroTime) bool {
-		return a.UTC() == b.UTC()
+		return a.Time.Equal(b.Time)
 	},
 	func(a, b metav1.Time) bool {
-		return a.UTC() == b.UTC()
+		return a.Time.Equal(b.Time)
 	},
 	func(a, b labels.Selector) bool {
 		return a.String() == b.String()

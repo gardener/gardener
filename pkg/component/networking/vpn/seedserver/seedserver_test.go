@@ -454,7 +454,7 @@ var _ = Describe("VpnSeedServer", func() {
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             ptr.To(values.Replicas),
-					RevisionHistoryLimit: ptr.To[int32](1),
+					RevisionHistoryLimit: ptr.To[int32](2),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: "vpn-seed-server",
 					}},
@@ -1006,94 +1006,6 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule()), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
-			})
-		})
-
-		Context("High availability (w/o node network) - disable VPN rewrite", func() {
-			BeforeEach(func() {
-				values.Network.NodeCIDRs = nil
-				values.Replicas = 3
-				values.HighAvailabilityEnabled = true
-				values.HighAvailabilityNumberOfSeedServers = 3
-				values.HighAvailabilityNumberOfShootClients = 2
-				values.DisableNewVPN = true
-			})
-
-			JustBeforeEach(func() {
-				deployment := deployment(values.Network.NodeCIDRs)
-				deployment.ResourceVersion = ""
-				Expect(c.Create(ctx, deployment)).To(Succeed())
-
-				dr := destinationRule()
-				dr.ResourceVersion = ""
-				Expect(c.Create(ctx, dr)).To(Succeed())
-
-				svc := expectedService.DeepCopy()
-				svc.ResourceVersion = ""
-				Expect(c.Create(ctx, svc)).To(Succeed())
-
-				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
-
-				actualSecretServer := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, actualSecretServer)).To(Succeed())
-				Expect(actualSecretServer.Immutable).To(PointTo(BeTrue()))
-				Expect(actualSecretServer.Data).NotTo(BeEmpty())
-
-				actualSecretTLSAuth := &corev1.Secret{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretNameTLSAuth}, actualSecretTLSAuth)).To(Succeed())
-				Expect(actualSecretTLSAuth.Immutable).To(PointTo(BeTrue()))
-				Expect(actualSecretTLSAuth.Data).NotTo(BeEmpty())
-
-				for i := 0; i < 2; i++ {
-					actualDestinationRule := &istionetworkingv1beta1.DestinationRule{}
-					expectedDestinationRule := indexedDestinationRule(i)
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedDestinationRule.Namespace, Name: expectedDestinationRule.Name}, actualDestinationRule)).To(Succeed())
-					Expect(actualDestinationRule).To(BeComparableTo(expectedDestinationRule, comptest.CmpOptsForDestinationRule()))
-
-					actualService := &corev1.Service{}
-					expectedService := indexedService(i)
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedService.Namespace, Name: expectedService.Name}, actualService)).To(Succeed())
-					Expect(actualService).To(DeepEqual(expectedService))
-				}
-
-				actualConfigMap := &corev1.ConfigMap{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedConfigMap.Namespace, Name: expectedConfigMap.Name}, actualConfigMap)).To(Succeed())
-				Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
-
-				actualPodDisruptionBudget := &policyv1.PodDisruptionBudget{}
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedPodDisruptionBudget.Namespace, Name: expectedPodDisruptionBudget.Name}, actualPodDisruptionBudget)).To(Succeed())
-				Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
-
-				actualStatefulSet := &appsv1.StatefulSet{}
-				expectedStatefulSet := statefulSet(values.Network.NodeCIDRs, true)
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedStatefulSet.Namespace, Name: expectedStatefulSet.Name}, actualStatefulSet)).To(Succeed())
-				Expect(actualStatefulSet).To(DeepEqual(expectedStatefulSet))
-
-				Expect(c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "vpn-seed-server"}, &appsv1.Deployment{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(destinationRule()), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedService), &corev1.Service{})).To(BeNotFoundError())
-			})
-
-			Context("With VPA update mode set to on", func() {
-				It("should successfully deploy all resources", func() {
-					actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
-					expectedVpa := expectedVPAFor(values.HighAvailabilityEnabled, &vpaUpdateMode)
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVpa.Namespace, Name: expectedVpa.Name}, actualVpa)).To(Succeed())
-					Expect(actualVpa).To(DeepEqual(expectedVpa))
-				})
-			})
-
-			Context("With VPA update mode set to off", func() {
-				BeforeEach(func() {
-					values.VPAUpdateDisabled = true
-				})
-
-				It("should successfully deploy vpa with update mode set to off", func() {
-					actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
-					expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, ptr.To(vpaautoscalingv1.UpdateModeOff))
-					Expect(c.Get(ctx, client.ObjectKey{Namespace: expectedVPA.Namespace, Name: expectedVPA.Name}, actualVPA)).To(Succeed())
-					Expect(actualVPA).To(DeepEqual(expectedVPA))
-				})
 			})
 		})
 	})

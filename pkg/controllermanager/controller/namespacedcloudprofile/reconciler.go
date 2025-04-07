@@ -125,6 +125,20 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 		mergedCABundles := fmt.Sprintf("%s%s", ptr.Deref(namespacedCloudProfile.Status.CloudProfileSpec.CABundle, ""), ptr.Deref(namespacedCloudProfile.Spec.CABundle, ""))
 		namespacedCloudProfile.Status.CloudProfileSpec.CABundle = &mergedCABundles
 	}
+	if namespacedCloudProfile.Spec.Limits != nil {
+		if namespacedCloudProfile.Status.CloudProfileSpec.Limits == nil {
+			namespacedCloudProfile.Status.CloudProfileSpec.Limits = &gardencorev1beta1.Limits{}
+		}
+
+		maxNodesTotalOverride := ptr.Deref(namespacedCloudProfile.Spec.Limits.MaxNodesTotal, 0)
+		var maxNodesTotalParent int32
+		if cloudProfile.Spec.Limits != nil {
+			maxNodesTotalParent = ptr.Deref(cloudProfile.Spec.Limits.MaxNodesTotal, 0)
+		}
+		if maxNodesTotal := utils.MinGreaterThanZero(maxNodesTotalOverride, maxNodesTotalParent); maxNodesTotal > 0 {
+			namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal = ptr.To(maxNodesTotal)
+		}
+	}
 }
 
 var (
@@ -141,19 +155,11 @@ func mergeExpirationDates(base, override gardencorev1beta1.ExpirableVersion) gar
 }
 
 func mergeMachineImages(base, override gardencorev1beta1.MachineImage) gardencorev1beta1.MachineImage {
-	if override.UpdateStrategy == nil {
-		// The NamespacedCloudProfile only extends parent CloudProfile machine image versions by the expiration date.
-		base.Versions = mergeDeep(base.Versions, override.Versions, machineImageVersionKeyFunc, mergeMachineImageVersions, true)
-		return base
+	if ptr.Deref(override.UpdateStrategy, "") != "" {
+		base.UpdateStrategy = override.UpdateStrategy
 	}
-
-	// A formerly new machine image in the NamespacedCloudProfile has been added to the parent CloudProfile by now.
-	// If NamespacedCloudProfile and parent CloudProfile UpdateStrategies conflict, only use NamespacedCloudProfile machine images.
-	if override.UpdateStrategy == base.UpdateStrategy {
-		// Add additional CloudProfile machine image versions to the NamespacedCloudProfile versions without overriding explicitly set expiration dates.
-		override.Versions = mergeDeep(override.Versions, base.Versions, machineImageVersionKeyFunc, nil, true)
-	}
-	return override
+	base.Versions = mergeDeep(base.Versions, override.Versions, machineImageVersionKeyFunc, mergeMachineImageVersions, true)
+	return base
 }
 
 func mergeMachineImageVersions(base, override gardencorev1beta1.MachineImageVersion) gardencorev1beta1.MachineImageVersion {

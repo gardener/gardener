@@ -235,6 +235,15 @@ func (r *Reconciler) runDeleteSeedFlow(
 				return gardenerutils.DeleteVPAForGardenerComponent(ctx, r.SeedClientSet.Client(), v1beta1constants.DeploymentNameGardenlet, r.GardenNamespace)
 			},
 		})
+		destroyExtensionResources = g.Add(flow.Task{
+			Name: "Deleting extension resources",
+			Fn:   c.extension.Destroy,
+		})
+		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension resources have been deleted",
+			Fn:           c.extension.WaitCleanup,
+			Dependencies: flow.NewTaskIDs(destroyExtensionResources),
+		})
 
 		syncPointCleanedUp = flow.NewTaskIDs(
 			destroyDNSRecord,
@@ -262,12 +271,20 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyFluentOperator,
 			destroyVali,
 			destroyGardenletVPA,
+			waitUntilExtensionResourcesDeleted,
 		)
 
 		ensureNoControllerInstallationsExist = g.Add(flow.Task{
 			Name:         "Ensuring all ControllerInstallations are gone",
 			Fn:           ensureNoControllerInstallations(r.GardenClient, seed.GetInfo().Name),
 			Dependencies: flow.NewTaskIDs(syncPointCleanedUp),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deleting referenced resources",
+			Fn: func(ctx context.Context) error {
+				return r.destroyReferencedResources(ctx, seed)
+			},
+			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 		})
 
 		destroyIstioCRDs = g.Add(flow.Task{

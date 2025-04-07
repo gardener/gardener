@@ -144,12 +144,12 @@ func (s *Secret) Reconcile(ctx context.Context, c client.Client) error {
 		s.secret.Type = corev1.SecretTypeOpaque
 
 		// preserve the renew timestamp if present but overwrite all other annotations
-		if v, ok := s.secret.ObjectMeta.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp]; ok {
-			s.secret.ObjectMeta.Annotations = utils.MergeStringMaps(s.annotations, map[string]string{
+		if v, ok := s.secret.Annotations[securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp]; ok {
+			s.secret.Annotations = utils.MergeStringMaps(s.annotations, map[string]string{
 				securityv1alpha1constants.AnnotationWorkloadIdentityTokenRenewTimestamp: v,
 			})
 		} else {
-			s.secret.ObjectMeta.Annotations = s.annotations
+			s.secret.Annotations = s.annotations
 		}
 
 		metav1.SetMetaDataAnnotation(&s.secret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityNamespace, s.workloadIdentityNamespace)
@@ -157,7 +157,7 @@ func (s *Secret) Reconcile(ctx context.Context, c client.Client) error {
 		if len(s.workloadIdentityContextObject) > 0 {
 			metav1.SetMetaDataAnnotation(&s.secret.ObjectMeta, securityv1alpha1constants.AnnotationWorkloadIdentityContextObject, string(s.workloadIdentityContextObject))
 		} else {
-			delete(s.secret.ObjectMeta.Annotations, securityv1alpha1constants.AnnotationWorkloadIdentityContextObject)
+			delete(s.secret.Annotations, securityv1alpha1constants.AnnotationWorkloadIdentityContextObject)
 		}
 
 		s.secret.Labels = utils.MergeStringMaps(s.labels, map[string]string{

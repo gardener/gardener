@@ -44,9 +44,9 @@ import (
 	"github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-	"github.com/gardener/gardener/pkg/utils/test/port"
 )
 
 const (
@@ -230,7 +230,7 @@ func (g *GardenerAPIServer) defaultSettings() error {
 	}
 
 	if g.SecurePort == 0 {
-		g.SecurePort, _, err = port.SuggestPort("")
+		g.SecurePort, _, err = netutils.SuggestPort("")
 		if err != nil {
 			return err
 		}

@@ -27,7 +27,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/mock"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -294,7 +294,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		Describe("#DeployManagedResourceForGardenerNodeAgent", func() {
 			BeforeEach(func() {
-				botanist.SeedClientSet = kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()
+				botanist.SeedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 			})
 
 			It("should fail because the operating system config maps for a worker pool are not available", func() {

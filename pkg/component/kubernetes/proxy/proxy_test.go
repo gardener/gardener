@@ -556,6 +556,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 						},
 					},
 					Spec: appsv1.DaemonSetSpec{
+						RevisionHistoryLimit: ptr.To[int32](2),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"app":     "kubernetes",
@@ -618,8 +619,8 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 											{MountPath: "/var/lib/kube-proxy-kubeconfig", Name: "kubeconfig"},
 											{MountPath: "/var/lib/kube-proxy-config", Name: "kube-proxy-config"},
 											{MountPath: "/etc/ssl/certs", Name: "ssl-certs-hosts", ReadOnly: true},
-											{MountPath: "/var/run/dbus/system_bus_socket", Name: "systembussocket"},
 											{MountPath: "/lib/modules", Name: "kernel-modules"},
+											{MountPath: "/run/xtables.lock", Name: "xtables-lock"},
 										},
 									},
 									{
@@ -704,14 +705,6 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										},
 									},
 									{
-										Name: "systembussocket",
-										VolumeSource: corev1.VolumeSource{
-											HostPath: &corev1.HostPathVolumeSource{
-												Path: "/var/run/dbus/system_bus_socket",
-											},
-										},
-									},
-									{
 										Name: "kernel-modules",
 										VolumeSource: corev1.VolumeSource{
 											HostPath: &corev1.HostPathVolumeSource{
@@ -758,6 +751,15 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 											},
 										},
 									},
+									{
+										Name: "xtables-lock",
+										VolumeSource: corev1.VolumeSource{
+											HostPath: &corev1.HostPathVolumeSource{
+												Path: "/run/xtables.lock",
+												Type: ptr.To(corev1.HostPathFileOrCreate),
+											},
+										},
+									},
 								},
 							},
 						},
@@ -791,8 +793,8 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 							{MountPath: "/var/lib/kube-proxy-kubeconfig", Name: "kubeconfig"},
 							{MountPath: "/var/lib/kube-proxy-config", Name: "kube-proxy-config"},
 							{MountPath: "/etc/ssl/certs", Name: "ssl-certs-hosts", ReadOnly: true},
-							{MountPath: "/var/run/dbus/system_bus_socket", Name: "systembussocket"},
 							{MountPath: "/lib/modules", Name: "kernel-modules"},
+							{MountPath: "/run/xtables.lock", Name: "xtables-lock"},
 						},
 					})
 

@@ -245,9 +245,10 @@ func initializeObject(kind string) client.Object {
 		}
 	)
 
-	if kind == "secret" {
+	switch kind {
+	case "secret":
 		obj = &corev1.Secret{ObjectMeta: meta}
-	} else if kind == "configMap" {
+	case "configMap":
 		obj = &corev1.ConfigMap{ObjectMeta: meta}
 	}
 

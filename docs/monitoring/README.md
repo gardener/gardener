@@ -55,6 +55,66 @@ Deployed in the shoot control plane namespace. Important scrape targets:
 
 **Purpose**: Monitor all relevant components belonging to a shoot cluster managed by Gardener. Shoot owners can view the metrics in Plutono dashboards and receive alerts based on these metrics. For alerting internals refer to [this](alerting.md) document.
 
+#### Federate from the Shoot Prometheus to an External Prometheus
+
+Shoot owners that are interested in collecting metrics for their shoot's control-planes can do so by federating from their shoot Prometheus instances. This allows shoot owners to selectively pull metrics from the shoot Prometheus into their own Prometheus instance. Collecting shoot's control-plane metrics by directly scraping control-plane resources will not work because such resources are managed by Gardener and are either not accessible to shoot owners or are behind a load balancer.
+
+Note Gardener is working on an OpenTelemetry-based approach for observability, but there is no official timeline for its release yet.
+
+##### Step 1: Retrieve Prometheus Credentials and URL
+
+Gardener provides access to the shoot control plane Prometheus instance through a monitoring secret stored in the virtual garden cluster. The necessary credentials can be found in the dashboard or by following these steps:
+
+1. Target the shoot's project using `gardenctl`:
+
+   ```sh
+   gardenctl target --garden <garden-name> --project <project-name>
+   ```
+
+2. Retrieve the shoot's monitoring secret:
+
+   ```sh
+   kubectl get secret <shoot-name>.monitoring -o yaml
+   ```
+
+3. Extract the Prometheus URL from the secret’s annotations:
+
+   ```sh
+   metadata.annotations.prometheus-url
+   ```
+
+4. Extract the credentials from the secret’s data fields:
+
+   ```sh
+   echo "$(kubectl get secret <shoot-name>.monitoring -o jsonpath='{.data.username}' | base64 --decode)"
+   echo "$(kubectl get secret <shoot-name>.monitoring -o jsonpath='{.data.password}' | base64 --decode)"
+
+##### Step 2: Configure Federation in Your Prometheus
+
+Once the Prometheus URL, username, and password are obtained, federation can be configured in the external Prometheus instance.
+
+1. Edit the external Prometheus configuration to add a federation job:
+
+   ```yaml
+   scrape_configs:
+     - job_name: 'gardener-federation'
+       honor_labels: true
+       metrics_path: '/federate'
+       params:
+         'match[]':
+           - '{job="kube-apiserver"}'
+       scheme: https
+       basic_auth:
+         username: '<prometheus-username>'
+         password: '<prometheus-password>'
+       static_configs:
+         - targets:
+           - '<prometheus-url>'
+   ```
+   Replace `<prometheus-username>`, `<prometheus-password>`, and `<prometheus-url>` with the values obtained earlier. In this example, the federation job is configured to federate metrics scraped by the `kube-apiserver` job, but `match[]` entry should be adjusted to the specific use-case.
+
+2. Restart Prometheus to apply the configuration.
+
 ## Collect all shoot Prometheus with remote write
 
 An optional collection of all shoot Prometheus metrics to a central Prometheus (or cortex) instance is possible with the `monitoring.shoot` setting in `GardenletConfiguration`:

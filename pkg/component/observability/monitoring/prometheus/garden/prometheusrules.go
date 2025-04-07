@@ -231,6 +231,7 @@ func gardenPrometheusRule(isGardenerDiscoveryServerEnabled bool) *monitoringv1.P
   )
 ==
   5`),
+			Labels: getLabels("warning"),
 			Annotations: map[string]string{
 				"summary": "A VPA recommendation in the garden cluster is capped.",
 				"description": "The following VPA in the garden cluster shows a " +

@@ -176,6 +176,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 						v1beta1constants.LabelApp: labelValue,
 					}),
 				},
+				RevisionHistoryLimit: ptr.To[int32](2),
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(getLabels(), map[string]string{

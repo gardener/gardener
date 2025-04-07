@@ -7,7 +7,6 @@ package core
 import (
 	"time"
 
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -432,24 +431,6 @@ type DNSIncludeExclude struct {
 // DefaultDomain is the default value in the Shoot's '.spec.dns.domain' when '.spec.dns.provider' is 'unmanaged'
 const DefaultDomain = "cluster.local"
 
-// Extension contains type and provider information for Shoot extensions.
-type Extension struct {
-	// Type is the type of the extension resource.
-	Type string
-	// ProviderConfig is the configuration passed to extension resource.
-	ProviderConfig *runtime.RawExtension
-	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
-	Disabled *bool
-}
-
-// NamedResourceReference is a named reference to a resource.
-type NamedResourceReference struct {
-	// Name of the resource reference.
-	Name string
-	// ResourceRef is a reference to a resource.
-	ResourceRef autoscalingv1.CrossVersionObjectReference
-}
-
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
 	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
@@ -500,6 +481,22 @@ type Kubernetes struct {
 	//
 	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	EnableStaticTokenKubeconfig *bool
+	// ETCD contains configuration for etcds of the shoot cluster.
+	ETCD *ETCD
+}
+
+// ETCD contains configuration for etcds of the shoot cluster.
+type ETCD struct {
+	// Main contains configuration for the main etcd.
+	Main *ETCDConfig
+	// Events contains configuration for the events etcd.
+	Events *ETCDConfig
+}
+
+// ETCDConfig contains etcd configuration.
+type ETCDConfig struct {
+	// Autoscaling contains auto-scaling configuration options for etcd.
+	Autoscaling *ControlPlaneAutoscaling
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -683,6 +680,14 @@ type KubeAPIServerConfig struct {
 	StructuredAuthentication *StructuredAuthentication
 	// StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
 	StructuredAuthorization *StructuredAuthorization
+	// Autoscaling contains auto-scaling configuration options for the kube-apiserver.
+	Autoscaling *ControlPlaneAutoscaling
+}
+
+// ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
+type ControlPlaneAutoscaling struct {
+	// MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.
+	MinAllowed corev1.ResourceList
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs
@@ -1217,9 +1222,13 @@ type Worker struct {
 	Minimum int32
 	// MaxSurge is maximum number of machines that are created during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 0 in case of an in-place update.
+	// Defaults to 1 in case of a rolling update.
 	MaxSurge *intstr.IntOrString
 	// MaxUnavailable is the maximum number of machines that can be unavailable during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 1 in case of an in-place update.
+	// Defaults to 0 in case of a rolling update.
 	MaxUnavailable *intstr.IntOrString
 	// ProviderConfig is the provider-specific configuration for this worker pool.
 	ProviderConfig *runtime.RawExtension
@@ -1295,6 +1304,11 @@ type MachineControllerManagerSettings struct {
 	MaxEvictRetries *int32
 	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
 	NodeConditions []string
+	// MachineInPlaceUpdateTimeout is the timeout after which an in-place update is declared as failed.
+	MachineInPlaceUpdateTimeout *metav1.Duration
+	// DisableHealthTimeout if set to true, health timeout will be ignored, leading to machine never being declared as failed.
+	// This is intended to be used only for in-place updates.
+	DisableHealthTimeout *bool
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

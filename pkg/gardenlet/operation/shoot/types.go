@@ -89,7 +89,6 @@ type Shoot struct {
 	WantsAlertmanager                       bool
 	IgnoreAlerts                            bool
 	HibernationEnabled                      bool
-	UsesNewVPN                              bool
 	VPNHighAvailabilityEnabled              bool
 	VPNHighAvailabilityNumberOfSeedServers  int
 	VPNHighAvailabilityNumberOfShootClients int
@@ -120,13 +119,14 @@ type Components struct {
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
-	Alertmanager             alertmanager.Interface
-	BlackboxExporter         component.DeployWaiter
-	ClusterAutoscaler        clusterautoscaler.Interface
-	EtcdMain                 etcd.Interface
-	EtcdEvents               etcd.Interface
-	EtcdCopyBackupsTask      etcdcopybackupstask.Interface
-	EventLogger              component.Deployer
+	Alertmanager        alertmanager.Interface
+	BlackboxExporter    component.DeployWaiter
+	ClusterAutoscaler   clusterautoscaler.Interface
+	EtcdMain            etcd.Interface
+	EtcdEvents          etcd.Interface
+	EtcdCopyBackupsTask etcdcopybackupstask.Interface
+	EventLogger         component.Deployer
+	// TODO(oliver-goetz): Remove this deployer when Gardener v1.115.0 is released.
 	KubeAPIServerIngress     component.Deployer
 	KubeAPIServerService     component.DeployWaiter
 	KubeAPIServerSNI         component.DeployWaiter

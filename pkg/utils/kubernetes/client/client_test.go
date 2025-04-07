@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	kubernetesfake "k8s.io/client-go/kubernetes/fake"
+	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -571,7 +571,7 @@ var _ = Describe("Cleaner", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 			s = runtime.NewScheme()
-			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
+			Expect(fakekubernetes.AddToScheme(s)).To(Succeed())
 
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
 		})
@@ -609,7 +609,7 @@ var _ = Describe("Cleaner", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 			s = runtime.NewScheme()
-			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
+			Expect(fakekubernetes.AddToScheme(s)).To(Succeed())
 
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
 		})
@@ -666,7 +666,7 @@ var _ = Describe("Cleaner", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
 			s = runtime.NewScheme()
-			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
+			Expect(fakekubernetes.AddToScheme(s)).To(Succeed())
 
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
 		})

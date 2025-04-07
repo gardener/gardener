@@ -58,8 +58,8 @@ var _ = Describe("resourcereservation", func() {
 			cloudProfile        gardencorev1beta1.CloudProfile
 
 			shoot           *core.Shoot
-			namespace       string = "test"
-			machineTypeName string = "n1-standard-2"
+			namespace       = "test"
+			machineTypeName = "n1-standard-2"
 
 			cloudProfileBase = gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{

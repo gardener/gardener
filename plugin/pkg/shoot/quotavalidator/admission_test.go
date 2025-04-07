@@ -43,11 +43,11 @@ var _ = Describe("quotavalidator", func() {
 			quotaProject            gardencorev1beta1.Quota
 			quotaSecret             gardencorev1beta1.Quota
 			cloudProfile            gardencorev1beta1.CloudProfile
-			namespace               string = "test"
-			trialNamespace          string = "trial"
-			machineTypeName         string = "n1-standard-2"
-			machineTypeName2        string = "machtype2"
-			volumeTypeName          string = "pd-standard"
+			namespace               = "test"
+			trialNamespace          = "trial"
+			machineTypeName         = "n1-standard-2"
+			machineTypeName2        = "machtype2"
+			volumeTypeName          = "pd-standard"
 
 			cloudProfileBase = gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{

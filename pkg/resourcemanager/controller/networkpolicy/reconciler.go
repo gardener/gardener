@@ -11,12 +11,14 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -25,6 +27,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -35,6 +38,7 @@ var fromPolicyRegexp = regexp.MustCompile(resourcesv1alpha1.NetworkPolicyFromPol
 type Reconciler struct {
 	TargetClient client.Client
 	Config       resourcemanagerconfigv1alpha1.NetworkPolicyControllerConfig
+	Recorder     record.EventRecorder
 
 	selectors []labels.Selector
 }
@@ -49,15 +53,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	networkPolicyList := &metav1.PartialObjectMetadataList{}
 	networkPolicyList.SetGroupVersionKind(networkingv1.SchemeGroupVersion.WithKind("NetworkPolicyList"))
 	if err := r.TargetClient.List(ctx, networkPolicyList, client.MatchingLabels{
-		resourcesv1alpha1.NetworkingServiceName:      request.NamespacedName.Name,
-		resourcesv1alpha1.NetworkingServiceNamespace: request.NamespacedName.Namespace,
+		resourcesv1alpha1.NetworkingServiceName:      request.Name,
+		resourcesv1alpha1.NetworkingServiceNamespace: request.Namespace,
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed listing network policies for service %s: %w", request.NamespacedName, err)
 	}
 
-	isNamespaceHandled, err := r.namespaceIsHandled(ctx, request.NamespacedName.Namespace)
+	isNamespaceHandled, err := r.namespaceIsHandled(ctx, request.Namespace)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed checking whether namespace %s is handled: %w", request.NamespacedName.Namespace, err)
+		return reconcile.Result{}, fmt.Errorf("failed checking whether namespace %s is handled: %w", request.Namespace, err)
 	}
 
 	onlyDeleteStalePolicies := !isNamespaceHandled
@@ -81,7 +85,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	reconcileTaskFns, desiredObjectMetaKeys, err := r.reconcileDesiredPolicies(ctx, service, namespaceNames)
+	reconcileTaskFns, desiredObjectMetaKeys, err := r.reconcileDesiredPolicies(ctx, log, service, namespaceNames)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -118,11 +122,25 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 		}
 	}
 
-	namespaceNames := sets.New(service.Namespace)
+	var (
+		namespaceNames                    = sets.New[string]()
+		considerNamespaceIfNotTerminating = func(namespaces ...metav1.PartialObjectMetadata) {
+			for _, namespace := range namespaces {
+				if namespace.DeletionTimestamp == nil {
+					namespaceNames.Insert(namespace.Name)
+				}
+			}
+		}
+	)
 
-	for _, n := range namespaceSelectors {
-		namespaceSelector := n
+	namespace := &metav1.PartialObjectMetadata{}
+	namespace.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Namespace"))
+	if err := r.TargetClient.Get(ctx, client.ObjectKey{Name: service.Namespace}, namespace); err != nil {
+		return nil, fmt.Errorf("failed fetching service namespace %s: %w", service.Namespace, err)
+	}
+	considerNamespaceIfNotTerminating(*namespace)
 
+	for _, namespaceSelector := range namespaceSelectors {
 		selector, err := metav1.LabelSelectorAsSelector(&namespaceSelector)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing %s to labels.Selector: %w", namespaceSelector, err)
@@ -133,18 +151,13 @@ func (r *Reconciler) fetchRelevantNamespaceNames(ctx context.Context, service *c
 		if err := r.TargetClient.List(ctx, namespaceList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
 			return nil, fmt.Errorf("failed listing namespaces with selector %s: %w", selector.String(), err)
 		}
-
-		for _, namespace := range namespaceList.Items {
-			if namespace.DeletionTimestamp == nil {
-				namespaceNames.Insert(namespace.Name)
-			}
-		}
+		considerNamespaceIfNotTerminating(namespaceList.Items...)
 	}
 
 	return namespaceNames, nil
 }
 
-func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *corev1.Service, namespaceNames sets.Set[string]) ([]flow.TaskFn, []string, error) {
+func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, log logr.Logger, service *corev1.Service, namespaceNames sets.Set[string]) ([]flow.TaskFn, []string, error) {
 	var (
 		taskFns               []flow.TaskFn
 		desiredObjectMetaKeys []string
@@ -153,13 +166,13 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 			port networkingv1.NetworkPolicyPort,
 			policyID string,
 			namespaceName string,
-			podSelector metav1.LabelSelector,
+			podLabelSelector metav1.LabelSelector,
 			ingressObjectMetaFunc func(string, string, string) metav1.ObjectMeta,
 			egressObjectMetaFunc func(string, string, string) metav1.ObjectMeta,
 		) {
 			for _, fns := range []struct {
 				objectMetaFunc func(string, string, string) metav1.ObjectMeta
-				reconcileFunc  func(context.Context, *corev1.Service, networkingv1.NetworkPolicyPort, metav1.ObjectMeta, string, metav1.LabelSelector) error
+				reconcileFunc  func(context.Context, logr.Logger, *corev1.Service, networkingv1.NetworkPolicyPort, metav1.ObjectMeta, string, metav1.LabelSelector) error
 			}{
 				{objectMetaFunc: ingressObjectMetaFunc, reconcileFunc: r.reconcileIngressPolicy},
 				{objectMetaFunc: egressObjectMetaFunc, reconcileFunc: r.reconcileEgressPolicy},
@@ -169,7 +182,7 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 				desiredObjectMetaKeys = append(desiredObjectMetaKeys, key(objectMeta))
 
 				taskFns = append(taskFns, func(ctx context.Context) error {
-					return reconcileFn(ctx, service, port, objectMeta, namespaceName, podSelector)
+					return reconcileFn(ctx, log, service, port, objectMeta, namespaceName, podLabelSelector)
 				})
 			}
 		}
@@ -190,6 +203,13 @@ func (r *Reconciler) reconcileDesiredPolicies(ctx context.Context, service *core
 			}
 		}
 	)
+
+	// If the namespace of the Service is terminating, we don't want to create or maintain any policies. The Service
+	// itself is expected to disappear soon (namespace controller cleans up all resources on namespace deletion), so
+	// whatever we would do here will become obsolete very soon.
+	if !namespaceNames.Has(service.Namespace) {
+		return nil, nil, nil
+	}
 
 	for _, p := range service.Spec.Ports {
 		port := p
@@ -261,25 +281,21 @@ func (r *Reconciler) deleteStalePolicies(networkPolicyList *metav1.PartialObject
 
 func (r *Reconciler) reconcileIngressPolicy(
 	ctx context.Context,
+	log logr.Logger,
 	service *corev1.Service,
 	port networkingv1.NetworkPolicyPort,
 	networkPolicyObjectMeta metav1.ObjectMeta,
 	namespaceName string,
-	podSelector metav1.LabelSelector,
+	podLabelSelector metav1.LabelSelector,
 ) error {
-	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
-		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
-		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
-
+	return r.reconcilePolicy(ctx, log, service, networkPolicyObjectMeta, podLabelSelector, func(networkPolicy *networkingv1.NetworkPolicy, podLabelSelector metav1.LabelSelector) {
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
 			"ingress %s traffic to port %s for pods selected by the %s service selector from pods running in namespace %s labeled "+
-			"with %s.", *port.Protocol, port.Port.String(), client.ObjectKeyFromObject(service), namespaceName, podSelector))
+			"with %s.", *port.Protocol, port.Port.String(), client.ObjectKeyFromObject(service), namespaceName, podLabelSelector))
 
 		networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{{
 			From: []networkingv1.NetworkPolicyPeer{{
-				PodSelector:       &podSelector,
+				PodSelector:       &podLabelSelector,
 				NamespaceSelector: ingressNamespaceSelectorFor(service.Namespace, namespaceName),
 			}},
 			Ports: []networkingv1.NetworkPolicyPort{port},
@@ -287,27 +303,19 @@ func (r *Reconciler) reconcileIngressPolicy(
 		networkPolicy.Spec.Egress = nil
 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{MatchLabels: service.Spec.Selector}
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
-
-		return nil
-	}, controllerutils.SkipEmptyPatch{})
-
-	return err
+	})
 }
 
 func (r *Reconciler) reconcileEgressPolicy(
 	ctx context.Context,
+	log logr.Logger,
 	service *corev1.Service,
 	port networkingv1.NetworkPolicyPort,
 	networkPolicyObjectMeta metav1.ObjectMeta,
 	namespaceName string,
 	podLabelSelector metav1.LabelSelector,
 ) error {
-	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
-		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
-		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
-
+	return r.reconcilePolicy(ctx, log, service, networkPolicyObjectMeta, podLabelSelector, func(networkPolicy *networkingv1.NetworkPolicy, podLabelSelector metav1.LabelSelector) {
 		metav1.SetMetaDataAnnotation(&networkPolicy.ObjectMeta, v1beta1constants.GardenerDescription, fmt.Sprintf("Allows "+
 			"egress %s traffic to port %s from pods running in namespace %s labeled with %s to pods selected by the %s service "+
 			"selector.", *port.Protocol, port.Port.String(), namespaceName, podLabelSelector, client.ObjectKeyFromObject(service)))
@@ -322,9 +330,33 @@ func (r *Reconciler) reconcileEgressPolicy(
 		}}
 		networkPolicy.Spec.PodSelector = podLabelSelector
 		networkPolicy.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
+	})
+}
 
+func (r *Reconciler) reconcilePolicy(
+	ctx context.Context,
+	log logr.Logger,
+	service *corev1.Service,
+	networkPolicyObjectMeta metav1.ObjectMeta,
+	podLabelSelector metav1.LabelSelector,
+	mutate func(*networkingv1.NetworkPolicy, metav1.LabelSelector),
+) error {
+	networkPolicy := &networkingv1.NetworkPolicy{ObjectMeta: networkPolicyObjectMeta}
+
+	effectivePodLabelSelector, mutated := shortenPodSelectorKeysIfTooLong(podLabelSelector)
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.TargetClient, networkPolicy, func() error {
+		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceName, service.Name)
+		metav1.SetMetaDataLabel(&networkPolicy.ObjectMeta, resourcesv1alpha1.NetworkingServiceNamespace, service.Namespace)
+
+		mutate(networkPolicy, effectivePodLabelSelector)
 		return nil
 	}, controllerutils.SkipEmptyPatch{})
+
+	if mutated {
+		log.V(1).Info("Usual pod label selector contained at least one key exceeding 63 characters - it had to be mutated", "usualPodLabelSelector", podLabelSelector, "mutatedPodLabelSelector", effectivePodLabelSelector)
+		r.Recorder.Eventf(service, corev1.EventTypeWarning, "PodLabelSelectorKey(s)TooLong", "Usual pod label selector has at least one key exceeding 63 characters and had to be mutated - consider shortening the namespace name or the service name (%+v was mutated to %+v)", podLabelSelector, effectivePodLabelSelector)
+	}
 
 	return err
 }
@@ -421,6 +453,8 @@ func policyIDFor(serviceName string, port networkingv1.NetworkPolicyPort) string
 	return fmt.Sprintf("%s-%s-%s", serviceName, strings.ToLower(string(*port.Protocol)), port.Port.String())
 }
 
+const labelSelectorKeyPrefix = "networking.resources.gardener.cloud/"
+
 func matchLabelsForServiceAndNamespace(podLabelSelector string, service *corev1.Service, namespaceName string) map[string]string {
 	var infix string
 
@@ -434,7 +468,28 @@ func matchLabelsForServiceAndNamespace(podLabelSelector string, service *corev1.
 		infix += "-"
 	}
 
-	return map[string]string{"networking.resources.gardener.cloud/to-" + infix + podLabelSelector: v1beta1constants.LabelNetworkPolicyAllowed}
+	return map[string]string{labelSelectorKeyPrefix + "to-" + infix + podLabelSelector: v1beta1constants.LabelNetworkPolicyAllowed}
+}
+
+func shortenPodSelectorKeysIfTooLong(podLabelSelector metav1.LabelSelector) (metav1.LabelSelector, bool) {
+	var (
+		maxLabelKeyLength       = 63
+		mutatedPodLabelSelector = podLabelSelector.DeepCopy()
+		mutated                 bool
+	)
+
+	// We only use matchLabels for the pod selector in this reconciler, so we can ignore match expressions.
+	for k, v := range podLabelSelector.MatchLabels {
+		// The values for the selectors are always "allowed", so we only need to check the keys.
+		if keyWithoutPrefix := strings.TrimPrefix(k, labelSelectorKeyPrefix); len(keyWithoutPrefix) > maxLabelKeyLength {
+			newKey := labelSelectorKeyPrefix + keyWithoutPrefix[:maxLabelKeyLength-6] + "-" + utils.ComputeSHA256Hex([]byte(keyWithoutPrefix))[:5]
+			mutatedPodLabelSelector.MatchLabels[newKey] = v
+			delete(mutatedPodLabelSelector.MatchLabels, k)
+			mutated = true
+		}
+	}
+
+	return *mutatedPodLabelSelector, mutated
 }
 
 func ingressPolicyObjectMetaFor(policyID, serviceNamespace, namespaceName string) metav1.ObjectMeta {

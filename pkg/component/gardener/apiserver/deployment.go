@@ -15,7 +15,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
@@ -45,13 +44,26 @@ func (g *gardenerAPIServer) deployment(
 	configMapAuditPolicy *corev1.ConfigMap,
 	configMapAdmissionConfigs *corev1.ConfigMap,
 ) *appsv1.Deployment {
+	args := []string{
+		"--authorization-always-allow-paths=/healthz",
+		"--cluster-identity=" + g.values.ClusterIdentity,
+		"--authentication-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+		"--authorization-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+		"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+		"--log-level=" + g.values.LogLevel,
+		"--log-format=" + g.values.LogFormat,
+		fmt.Sprintf("--secure-port=%d", port),
+	}
+
+	if g.values.GoAwayChance != nil {
+		args = append(args, fmt.Sprintf("--goaway-chance=%f", *g.values.GoAwayChance))
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      DeploymentName,
 			Namespace: g.namespace,
-			Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
-				resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeServer,
-			}),
+			Labels:    GetLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			MinReadySeconds:      30,
@@ -91,16 +103,7 @@ func (g *gardenerAPIServer) deployment(
 						Name:            containerName,
 						Image:           g.values.Image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						Args: []string{
-							"--authorization-always-allow-paths=/healthz",
-							"--cluster-identity=" + g.values.ClusterIdentity,
-							"--authentication-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
-							"--authorization-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
-							"--kubeconfig=" + gardenerutils.PathGenericKubeconfig,
-							"--log-level=" + g.values.LogLevel,
-							"--log-format=" + g.values.LogFormat,
-							fmt.Sprintf("--secure-port=%d", port),
-						},
+						Args:            args,
 						Ports: []corev1.ContainerPort{{
 							Name:          "https",
 							ContainerPort: port,
@@ -134,6 +137,9 @@ func (g *gardenerAPIServer) deployment(
 							InitialDelaySeconds: 15,
 							PeriodSeconds:       10,
 							TimeoutSeconds:      15,
+						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
 						},
 					}},
 				},

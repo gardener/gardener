@@ -253,8 +253,8 @@ var _ = Describe("Bastion", func() {
 			})
 
 			oldBastion := bastion.DeepCopy()
-			oldBastion.ObjectMeta.Finalizers = []string{"foo"}
-			bastion.ObjectMeta.Finalizers = nil
+			oldBastion.Finalizers = []string{"foo"}
+			bastion.Finalizers = nil
 
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())
@@ -272,8 +272,8 @@ var _ = Describe("Bastion", func() {
 			})
 
 			oldBastion := bastion.DeepCopy()
-			oldBastion.ObjectMeta.Finalizers = []string{"foo"}
-			bastion.ObjectMeta.Finalizers = nil
+			oldBastion.Finalizers = []string{"foo"}
+			bastion.Finalizers = nil
 
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())

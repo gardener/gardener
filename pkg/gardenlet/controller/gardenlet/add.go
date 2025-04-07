@@ -54,7 +54,7 @@ func (r *Reconciler) AddToManager(
 	}
 	if r.HelmRegistry == nil {
 		var err error
-		r.HelmRegistry, err = oci.NewHelmRegistry()
+		r.HelmRegistry, err = oci.NewHelmRegistry(r.GardenClient)
 		if err != nil {
 			return fmt.Errorf("failed creating new Helm registry: %w", err)
 		}

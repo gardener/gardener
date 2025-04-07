@@ -5,25 +5,23 @@
 package defaulting
 
 import (
+	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	"github.com/gardener/gardener/pkg/operator/webhook/defaulting/extension"
+	"github.com/gardener/gardener/pkg/operator/webhook/defaulting/garden"
 )
 
-const (
-	// HandlerName is the name of this admission webhook handler.
-	HandlerName = "defaulter"
-	// WebhookPath is the HTTP handler path for this admission webhook handler.
-	WebhookPath = "/webhooks/default-operator-gardener-cloud-v1alpha1-garden"
-)
+// AddToManager adds all webhook handlers to the given manager.
+func AddToManager(mgr manager.Manager) error {
+	if err := (&garden.Handler{}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", garden.HandlerName, err)
+	}
 
-// AddToManager adds Handler to the given manager.
-func (h *Handler) AddToManager(mgr manager.Manager) error {
-	webhook := admission.
-		WithCustomDefaulter(mgr.GetScheme(), &operatorv1alpha1.Garden{}, h).
-		WithRecoverPanic(true)
+	if err := (&extension.Handler{}).AddToManager(mgr); err != nil {
+		return fmt.Errorf("failed adding %s webhook handler: %w", extension.HandlerName, err)
+	}
 
-	mgr.GetWebhookServer().Register(WebhookPath, webhook)
 	return nil
 }

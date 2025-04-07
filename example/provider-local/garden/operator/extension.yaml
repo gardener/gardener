@@ -2,22 +2,8 @@ apiVersion: operator.gardener.cloud/v1alpha1
 kind: Extension
 metadata:
   name: provider-local
-  annotations:
-    security.gardener.cloud/pod-security-enforce: privileged
 spec:
   deployment:
-    extension:
-      helm:
-        ociRepository:
-          ref: local-skaffold/gardener-extension-provider-local/charts/extension:v0.0.0
-      runtimeClusterValues:
-        logLevel: debug
-      values:
-        logLevel: debug
-        imageVectorOverwrite:
-          images:
-          - name: machine-controller-manager-provider-local
-            ref: local-skaffold/machine-controller-manager-provider-local
     admission:
       runtimeCluster:
         helm:
@@ -27,34 +13,24 @@ spec:
         helm:
           ociRepository:
             ref: local-skaffold/gardener-extension-admission-local/charts/application:v0.0.0
-      values:
-        logLevel: debug
+    extension:
+      helm:
+        ociRepository:
+          ref: local-skaffold/gardener-extension-provider-local/charts/extension:v0.0.0
   resources:
-    - kind: BackupBucket
-      type: local
-    - kind: BackupEntry
-      type: local
-    - kind: DNSRecord
-      type: local
-    - kind: ControlPlane
-      type: local
-    - kind: Infrastructure
-      type: local
-    - kind: OperatingSystemConfig
-      type: local
-    - kind: Worker
-      type: local
-    - kind: Extension
-      lifecycle:
-        delete: AfterKubeAPIServer
-        migrate: AfterKubeAPIServer
-        reconcile: BeforeKubeAPIServer
-      type: local-ext-seed
-      workerlessSupported: true
-    - kind: Extension
-      type: local-ext-shoot
-      workerlessSupported: true
-    - kind: Extension
-      lifecycle:
-        reconcile: AfterWorker
-      type: local-ext-shoot-after-worker
+  - kind: BackupBucket
+    type: local
+  - kind: BackupEntry
+    type: local
+  - kind: Bastion
+    type: local
+  - kind: ControlPlane
+    type: local
+  - kind: DNSRecord
+    type: local
+  - kind: Infrastructure
+    type: local
+  - kind: Worker
+    type: local
+  - kind: OperatingSystemConfig
+    type: local

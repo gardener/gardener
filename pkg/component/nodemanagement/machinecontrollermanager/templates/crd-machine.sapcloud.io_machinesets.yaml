@@ -5,7 +5,7 @@ metadata:
   labels:
     gardener.cloud/deletion-protected: "true"
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: machinesets.machine.sapcloud.io
 spec:
   group: machine.sapcloud.io
@@ -163,6 +163,11 @@ spec:
                         description: MachineCreationTimeout is the timeout after which
                           machinie creation is declared failed.
                         type: string
+                      disableHealthTimeout:
+                        description: |-
+                          DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+                          This is intended to be used only for in-place updates.
+                        type: boolean
                       drainTimeout:
                         description: MachineDraintimeout is the timeout after which
                           machine is forcefully deleted.
@@ -170,6 +175,10 @@ spec:
                       healthTimeout:
                         description: MachineHealthTimeout is the timeout after which
                           machine is declared unhealhty/failed.
+                        type: string
+                      inPlaceUpdateTimeout:
+                        description: MachineInPlaceUpdateTimeout is the timeout after
+                          which in-place update is declared failed.
                         type: string
                       maxEvictRetries:
                         description: MaxEvictRetries is the number of retries that

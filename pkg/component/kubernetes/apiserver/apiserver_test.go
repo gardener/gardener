@@ -30,8 +30,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +42,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
@@ -79,7 +81,7 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi                Interface
 		version             *semver.Version
 		runtimeVersion      *semver.Version
-		autoscalingConfig   apiserver.AutoscalingConfig
+		autoscalingConfig   AutoscalingConfig
 		namePrefix          string
 		consistOf           func(...client.Object) types.GomegaMatcher
 
@@ -137,16 +139,16 @@ var _ = Describe("KubeAPIServer", func() {
 	JustBeforeEach(func() {
 		values = Values{
 			Values: apiserver.Values{
-				Autoscaling:    autoscalingConfig,
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{ResourcesToEncrypt: []string{"secrets"}},
 				RuntimeVersion: runtimeVersion,
 			},
+			Autoscaling:       autoscalingConfig,
 			PriorityClassName: priorityClassName,
 			NamePrefix:        namePrefix,
 			Version:           version,
 			VPN:               VPNConfig{Enabled: true},
 		}
-		kubernetesInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
+		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		kapi = New(kubernetesInterface, namespace, sm, values)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
@@ -205,13 +207,14 @@ var _ = Describe("KubeAPIServer", func() {
 	Describe("#Deploy", func() {
 		Describe("HorizontalPodAutoscaler", func() {
 			DescribeTable("should delete the HPA resource",
-				func(autoscalingConfig apiserver.AutoscalingConfig) {
+				func(autoscalingConfig AutoscalingConfig) {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
-							Autoscaling:    autoscalingConfig,
+
 							RuntimeVersion: runtimeVersion,
 						},
-						Version: version},
+						Autoscaling: autoscalingConfig,
+						Version:     version},
 					)
 
 					Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
@@ -220,12 +223,12 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
 				},
 
-				Entry("replicas is nil", apiserver.AutoscalingConfig{Replicas: nil}),
-				Entry("replicas is 0", apiserver.AutoscalingConfig{Replicas: ptr.To[int32](0)}),
+				Entry("replicas is nil", AutoscalingConfig{Replicas: nil}),
+				Entry("replicas is 0", AutoscalingConfig{Replicas: ptr.To[int32](0)}),
 			)
 
 			It("should successfully deploy the HPA resource", func() {
-				autoscalingConfig := apiserver.AutoscalingConfig{
+				autoscalingConfig := AutoscalingConfig{
 					Replicas:    ptr.To[int32](2),
 					MinReplicas: 4,
 					MaxReplicas: 6,
@@ -277,10 +280,10 @@ var _ = Describe("KubeAPIServer", func() {
 
 				kapi = New(kubernetesInterface, namespace, sm, Values{
 					Values: apiserver.Values{
-						Autoscaling:    autoscalingConfig,
 						RuntimeVersion: runtimeVersion,
 					},
-					Version: version},
+					Autoscaling: autoscalingConfig,
+					Version:     version},
 				)
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(BeNotFoundError())
@@ -312,13 +315,13 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("VerticalPodAutoscaler", func() {
 			DescribeTable("should successfully deploy the VPA resource",
-				func(autoscalingConfig apiserver.AutoscalingConfig, haVPN bool, annotations, labels map[string]string, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy) {
+				func(autoscalingConfig AutoscalingConfig, haVPN bool, annotations, labels map[string]string, containerPolicies []vpaautoscalingv1.ContainerResourcePolicy) {
 					kapi = New(kubernetesInterface, namespace, sm, Values{
 						Values: apiserver.Values{
-							Autoscaling:    autoscalingConfig,
 							RuntimeVersion: runtimeVersion,
 						},
-						Version: version,
+						Autoscaling: autoscalingConfig,
+						Version:     version,
 						VPN: VPNConfig{
 							HighAvailabilityEnabled:             haVPN,
 							HighAvailabilityNumberOfSeedServers: 2,
@@ -352,7 +355,7 @@ var _ = Describe("KubeAPIServer", func() {
 					}))
 				},
 				Entry("default behaviour",
-					apiserver.AutoscalingConfig{},
+					AutoscalingConfig{},
 					false,
 					nil,
 					nil,
@@ -368,7 +371,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 				Entry("HA VPN is enabled",
-					apiserver.AutoscalingConfig{},
+					AutoscalingConfig{},
 					true,
 					nil,
 					nil,
@@ -396,7 +399,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 				Entry("scale-down is disabled",
-					apiserver.AutoscalingConfig{ScaleDownDisabled: true},
+					AutoscalingConfig{ScaleDownDisabled: true},
 					false,
 					map[string]string{"eviction-requirements.autoscaling.gardener.cloud/downscale-restriction": "never"},
 					map[string]string{"autoscaling.gardener.cloud/eviction-requirements": "managed-by-controller"},
@@ -407,6 +410,22 @@ var _ = Describe("KubeAPIServer", func() {
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("20m"),
 								corev1.ResourceMemory: resource.MustParse("200M"),
+							},
+						},
+					},
+				),
+				Entry("minAllowed configured",
+					AutoscalingConfig{MinAllowed: corev1.ResourceList{"memory": resource.MustParse("2Gi")}},
+					false,
+					nil,
+					nil,
+					[]vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "kube-apiserver",
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
 						},
 					},
@@ -487,7 +506,7 @@ var _ = Describe("KubeAPIServer", func() {
 							MetricRelabelConfigs: []monitoringv1.RelabelConfig{{
 								SourceLabels: []monitoringv1.LabelName{"__name__"},
 								Action:       "keep",
-								Regex:        `^(apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_request_total|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_cache_list_.+|apiserver_crd_webhook_conversion_duration_seconds_.+|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_init_events_total|apiserver_latency|apiserver_latency_seconds|apiserver_longrunning_requests|apiserver_request_duration_seconds_.+|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_count|apiserver_request_terminations_total|apiserver_response_sizes_.+|apiserver_storage_db_total_size_in_bytes|apiserver_storage_list_.+|apiserver_storage_objects|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_storage_size_bytes|apiserver_registered_watchers|apiserver_request_count|apiserver_request_total|apiserver_watch_duration|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_request_duration_seconds_.+|go_.+|process_max_fds|process_open_fds|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity)$`,
+								Regex:        `^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_.+|apiserver_admission_webhook_admission_duration_seconds_.+|apiserver_admission_step_admission_duration_seconds_.+|apiserver_admission_webhook_request_total|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_cache_list_.+|apiserver_crd_webhook_conversion_duration_seconds_.+|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_init_events_total|apiserver_latency|apiserver_latency_seconds|apiserver_longrunning_requests|apiserver_request_duration_seconds_.+|apiserver_request_duration_seconds_bucket|apiserver_request_duration_seconds_count|apiserver_request_terminations_total|apiserver_response_sizes_.+|apiserver_storage_db_total_size_in_bytes|apiserver_storage_list_.+|apiserver_storage_objects|apiserver_storage_transformation_duration_seconds_.+|apiserver_storage_transformation_operations_total|apiserver_storage_size_bytes|apiserver_registered_watchers|apiserver_request_count|apiserver_request_total|apiserver_watch_duration|apiserver_watch_events_sizes_.+|apiserver_watch_events_total|etcd_request_duration_seconds_.+|go_.+|process_max_fds|process_open_fds|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity)$`,
 							}},
 						}},
 					},
@@ -2666,7 +2685,7 @@ kind: AuthorizationConfiguration
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
 			})
 
-			haVPNClientContainerFor := func(index int, disableNewVPN bool) corev1.Container {
+			haVPNClientContainerFor := func(index int) corev1.Container {
 
 				var serviceCIDRs, podCIDRs, nodeCIDRs []string
 
@@ -2774,19 +2793,11 @@ kind: AuthorizationConfiguration
 					},
 				}
 
-				if disableNewVPN {
-					container.Env = append(container.Env,
-						corev1.EnvVar{
-							Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-							Value: "true",
-						},
-					)
-				}
 				return container
 			}
 
-			haVPNInitClientContainer := func(disableNewVPN bool) corev1.Container {
-				initContainer := haVPNClientContainerFor(0, disableNewVPN)
+			haVPNInitClientContainer := func() corev1.Container {
+				initContainer := haVPNClientContainerFor(0)
 				initContainer.Name = "vpn-client-init"
 				initContainer.LivenessProbe = nil
 				initContainer.Command = []string{"/bin/vpn-client", "setup"}
@@ -2813,26 +2824,11 @@ kind: AuthorizationConfiguration
 					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
 					ReadOnly:  true,
 				})
-				if !disableNewVPN {
-					initContainer.SecurityContext.Privileged = ptr.To(true)
-				}
-				if disableNewVPN {
-					initContainer.Command = nil
-					initContainer.Env = append(initContainer.Env,
-						corev1.EnvVar{
-							Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-							Value: "true",
-						},
-						corev1.EnvVar{
-							Name:  "CONFIGURE_BONDING",
-							Value: "true",
-						},
-					)
-				}
+				initContainer.SecurityContext.Privileged = ptr.To(true)
 				return initContainer
 			}
 
-			testHAVPN := func(disableNewVPN bool) {
+			testHAVPN := func() {
 				values = Values{
 					Values: apiserver.Values{
 						RuntimeVersion: runtimeVersion,
@@ -2847,20 +2843,19 @@ kind: AuthorizationConfiguration
 						PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
 						NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
 						IPFamilies:                           []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
-						DisableNewVPN:                        disableNewVPN,
 					},
 					Version: version,
 				}
 				kapi = New(kubernetesInterface, namespace, sm, values)
 				deployAndRead()
 
-				initContainer := haVPNInitClientContainer(disableNewVPN)
+				initContainer := haVPNInitClientContainer()
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
 				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
 				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 					labelKey := fmt.Sprintf("networking.resources.gardener.cloud/to-vpn-seed-server-%d-tcp-1194", i)
 					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
-					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i, disableNewVPN)))
+					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i)))
 				}
 
 				var serviceCIDRs, podCIDRs, nodeCIDRs []string
@@ -2936,10 +2931,6 @@ kind: AuthorizationConfiguration
 					TerminationMessagePath:   "/dev/termination-log",
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 				}
-				if disableNewVPN {
-					pathControllerContainer.Command = nil
-					pathControllerContainer.Args = []string{"/path-controller.sh"}
-				}
 				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(pathControllerContainer))
 
 				Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
@@ -3008,11 +2999,7 @@ kind: AuthorizationConfiguration
 			}
 
 			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled", func() {
-				testHAVPN(false)
-			})
-
-			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled and GO VPN rewrite disabled", func() {
-				testHAVPN(true)
+				testHAVPN()
 			})
 
 			Context("kube-apiserver container", func() {
@@ -3046,13 +3033,13 @@ kind: AuthorizationConfiguration
 					values = Values{
 						Values: apiserver.Values{
 							EnabledAdmissionPlugins: admissionPlugins,
-							Autoscaling:             apiserver.AutoscalingConfig{APIServerResources: apiServerResources},
 							Logging: &gardencorev1beta1.APIServerLogging{
 								Verbosity:           ptr.To[int32](3),
 								HTTPAccessVerbosity: ptr.To[int32](3),
 							},
 							RuntimeVersion: runtimeVersion,
 						},
+						Autoscaling:      AutoscalingConfig{APIServerResources: apiServerResources},
 						EventTTL:         &metav1.Duration{Duration: eventTTL},
 						ExternalHostname: externalHostname,
 						Images:           images,
@@ -3424,6 +3411,26 @@ kind: AuthorizationConfiguration
 					))
 				})
 
+				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
+					kapi.EnableStaticTokenKubeconfig()
+
+					deployAndRead()
+
+					secretList := &corev1.SecretList{}
+					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"name": "user-kubeconfig",
+					})).To(Succeed())
+
+					Expect(secretList.Items).To(HaveLen(1))
+					Expect(secretList.Items[0].Data).To(HaveKey("kubeconfig"))
+
+					kubeconfig := &clientcmdv1.Config{}
+					Expect(yaml.Unmarshal(secretList.Items[0].Data["kubeconfig"], kubeconfig)).To(Succeed())
+					Expect(kubeconfig.CurrentContext).To(Equal(namespace))
+					Expect(kubeconfig.AuthInfos).To(HaveLen(1))
+					Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
+				})
+
 				It("should generate kube-apiserver-static-token without system:cluster-admin token", func() {
 					deployAndRead()
 
@@ -3525,6 +3532,23 @@ kind: AuthorizationConfiguration
 
 					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(
 						"--etcd-servers-overrides=networking.k8s.io/networkpolicies#https://etcd-events-client:2379,/events#https://etcd-events-client:2379,apps/daemonsets#https://etcd-events-client:2379",
+					))
+				})
+
+				It("should configure correctly when run as static pod", func() {
+					kapi = New(kubernetesInterface, namespace, sm, Values{
+						Values: apiserver.Values{
+							RuntimeVersion:  runtimeVersion,
+							RunsAsStaticPod: true,
+						},
+						Images:  images,
+						Version: version,
+					})
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElements(
+						"--etcd-servers=https://localhost:2379",
+						"--etcd-servers-overrides=/events#https://localhost:2382",
 					))
 				})
 
@@ -4330,7 +4354,7 @@ kind: AuthenticationConfiguration
 
 		It("should successfully wait for the deployment to be updated", func() {
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{
 				Values: apiserver.Values{
 					RuntimeVersion: runtimeVersion,
@@ -4375,7 +4399,7 @@ kind: AuthenticationConfiguration
 	Describe("#WaitCleanup", func() {
 		It("should successfully wait for the deployment to be deleted", func() {
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			fakeKubernetesInterface := kubernetesfake.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{})
 			deploy := deployment.DeepCopy()
 
@@ -4410,7 +4434,7 @@ kind: AuthenticationConfiguration
 
 			scheme := runtime.NewScheme()
 			clientWithoutScheme := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
-			kubernetesInterface2 := kubernetesfake.NewClientSetBuilder().WithClient(clientWithoutScheme).Build()
+			kubernetesInterface2 := fakekubernetes.NewClientSetBuilder().WithClient(clientWithoutScheme).Build()
 			kapi = New(kubernetesInterface2, namespace, nil, Values{})
 
 			Expect(runtime.IsNotRegisteredError(kapi.WaitCleanup(ctx))).To(BeTrue())

@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	v1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	etcd "github.com/gardener/gardener/pkg/component/etcd/etcd"
 	gomock "go.uber.org/mock/gomock"
 	rest "k8s.io/client-go/rest"

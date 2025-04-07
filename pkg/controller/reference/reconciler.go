@@ -197,17 +197,25 @@ func (r *Reconciler) getUnreferencedResources(
 	[]client.Object,
 	error,
 ) {
-	var listOptions []client.ListOption
+	var (
+		reconciledObjListOptions []client.ListOption
+		resourceListOptions      = []client.ListOption{UserManagedSelector}
+		reconciledObjList        = r.NewObjectListFunc()
+	)
+
 	if namespace := r.GetNamespace(reconciledObj); namespace != "" {
-		listOptions = append(listOptions, client.InNamespace(namespace))
+		resourceListOptions = append(resourceListOptions, client.InNamespace(namespace))
 	}
 
-	if err := r.Client.List(ctx, resourceList, append([]client.ListOption{UserManagedSelector}, listOptions...)...); err != nil {
+	if err := r.Client.List(ctx, resourceList, resourceListOptions...); err != nil {
 		return nil, err
 	}
 
-	reconciledObjList := r.NewObjectListFunc()
-	if err := r.Client.List(ctx, reconciledObjList, listOptions...); err != nil {
+	if namespace := reconciledObj.GetNamespace(); namespace != "" {
+		reconciledObjListOptions = append(reconciledObjListOptions, client.InNamespace(namespace))
+	}
+
+	if err := r.Client.List(ctx, reconciledObjList, reconciledObjListOptions...); err != nil {
 		return nil, err
 	}
 

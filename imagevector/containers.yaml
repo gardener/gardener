@@ -68,7 +68,11 @@ images:
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/etcd-druid
-  tag: "v0.27.0"
+  tag: "v0.28.0"
+- name: etcd
+  sourceRepository: github.com/etcd-io/etcd
+  repository: quay.io/coreos/etcd
+  tag: "v3.5.21"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dependency-watchdog
@@ -76,7 +80,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.12.0"
+  tag: "v1.12.1"
   targetVersion: ">= 1.28"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -90,7 +94,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: registry.k8s.io/ingress-nginx/controller-chroot
-  tag: "v1.11.4"
+  tag: "v1.11.5"
   targetVersion: "1.27.x"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
@@ -136,7 +140,7 @@ images:
 - name: machine-controller-manager
   sourceRepository: github.com/gardener/machine-controller-manager
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager
-  tag: "v0.56.1"
+  tag: "v0.57.1"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -149,8 +153,13 @@ images:
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
+  tag: "v1.31.0"
+  targetVersion: ">= 1.31"
+- name: cluster-autoscaler
+  sourceRepository: github.com/gardener/autoscaler
+  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
   tag: "v1.30.2"
-  targetVersion: ">= 1.30"
+  targetVersion: "1.30.x"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/autoscaler/cluster-autoscaler
@@ -170,17 +179,12 @@ images:
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-server
   tag: "0.36.0"
-# TODO(MartinWeindel): vpn-seed-server is the old server image, remove when NewVPN feature gate is removed
-- name: vpn-seed-server
-  sourceRepository: github.com/gardener/vpn2
-  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-seed-server
-  tag: "0.26.0"
 
 # Monitoring
 - name: prometheus-operator
   sourceRepository: github.com/prometheus-operator/prometheus-operator
   repository: quay.io/prometheus-operator/prometheus-operator
-  tag: v0.80.1
+  tag: v0.81.0
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -197,7 +201,7 @@ images:
 - name: alertmanager
   sourceRepository: github.com/prometheus/alertmanager
   repository: quay.io/prometheus/alertmanager
-  tag: v0.28.0
+  tag: v0.28.1
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -214,7 +218,7 @@ images:
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
-  tag: v2.55.1
+  tag: v3.2.1
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -231,7 +235,7 @@ images:
 - name: configmap-reloader
   sourceRepository: github.com/prometheus-operator/prometheus-operator
   repository: quay.io/prometheus-operator/prometheus-config-reloader
-  tag: v0.80.1
+  tag: v0.81.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -247,7 +251,7 @@ images:
       teamname: 'gardener/monitoring-maintainers'
 - name: cortex
   repository: quay.io/cortexproject/cortex
-  tag: v1.18.1
+  tag: v1.19.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -281,13 +285,13 @@ images:
 - name: gardener-metrics-exporter
   sourceRepository: github.com/gardener/gardener-metrics-exporter
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/metrics-exporter
-  tag: "0.34.0"
+  tag: "0.37.0"
   resourceId:
     name: metrics-exporter
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
-  tag: v1.8.2
+  tag: v1.9.1
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -305,7 +309,7 @@ images:
 - name: plutono
   sourceRepository: github.com/credativ/plutono
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/plutono
-  tag: "v7.5.36"
+  tag: "v7.5.37"
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -322,7 +326,7 @@ images:
 - name: plutono-dashboard-refresher
   sourceRepository: github.com/kiwigrid/k8s-sidecar
   repository: quay.io/kiwigrid/k8s-sidecar
-  tag: "1.30.1"
+  tag: "1.30.3"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -339,7 +343,7 @@ images:
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
-  tag: v0.25.0
+  tag: v0.26.0
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
@@ -377,11 +381,6 @@ images:
   sourceRepository: github.com/gardener/vpn2
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-client
   tag: "0.36.0"
-# TODO(MartinWeindel): vpn-shoot-client is the old client, remove when NewVPN feature gate is removed
-- name: vpn-shoot-client
-  sourceRepository: github.com/gardener/vpn2
-  repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-shoot-client
-  tag: "0.26.0"
 # TODO(DockToFuture): When updating coredns to v1.13.x check if the NET_BIND_SERVICE capability can be removed.
 - name: coredns
   sourceRepository: github.com/coredns/coredns
@@ -464,7 +463,7 @@ images:
 - name: fluent-operator
   sourceRepository: github.com/fluent/fluent-operator
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/fluent-operator/fluent-operator
-  tag: "v3.2.0"
+  tag: "v3.3.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -518,7 +517,7 @@ images:
 - name: vali
   sourceRepository: github.com/credativ/vali
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/credativ/vali
-  tag: "v2.2.21"
+  tag: "v2.2.22"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
@@ -742,7 +741,7 @@ images:
 - name: apiserver-proxy
   sourceRepository: github.com/envoyproxy/envoy
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/envoyproxy/envoy-distroless
-  tag: "v1.33.0"
+  tag: "v1.33.2"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:

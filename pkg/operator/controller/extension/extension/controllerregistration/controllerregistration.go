@@ -72,6 +72,7 @@ func (r *registration) createOrUpdateControllerRegistration(ctx context.Context,
 				Values:        extension.Spec.Deployment.ExtensionDeployment.Values,
 				OCIRepository: extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository,
 			},
+			InjectGardenKubeconfig: extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig,
 		}
 
 		controllerRegistration = &gardencorev1beta1.ControllerRegistration{
@@ -98,8 +99,16 @@ func (r *registration) createOrUpdateControllerRegistration(ctx context.Context,
 	} else {
 		delete(controllerRegistration.Annotations, v1beta1constants.AnnotationPodSecurityEnforce)
 	}
-
-	data, err := registry.AddAllAndSerialize(controllerDeployment, controllerRegistration)
+	objs := []client.Object{controllerDeployment, controllerRegistration}
+	if pullSecretRef := GetExtensionPullSecretRef(extension); pullSecretRef != nil {
+		secret, err := r.createPullSecretCopy(ctx, extension.Name, pullSecretRef)
+		if err != nil {
+			return fmt.Errorf("failed to get pull secret: %w", err)
+		}
+		objs = append(objs, secret)
+		controllerDeployment.Helm.OCIRepository.PullSecretRef.Name = secret.Name
+	}
+	data, err := registry.AddAllAndSerialize(objs...)
 	if err != nil {
 		return err
 	}
@@ -119,6 +128,27 @@ func (r *registration) Delete(ctx context.Context, log logr.Logger, extension *o
 	return managedresources.WaitUntilDeleted(ctx, r.runtimeClient, r.gardenNamespace, mrName)
 }
 
+func (r *registration) createPullSecretCopy(ctx context.Context, extensionName string, pullSecretRef *corev1.LocalObjectReference) (*corev1.Secret, error) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pullSecretRef.Name,
+			Namespace: r.gardenNamespace,
+		},
+	}
+	if err := r.runtimeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		return nil, fmt.Errorf("failed to get pull secret: %w", err)
+	}
+
+	secretCopy := secret.DeepCopy()
+	secretCopy.ObjectMeta = metav1.ObjectMeta{
+		Name:      fmt.Sprintf("%s-%s", extensionName, pullSecretRef.Name),
+		Namespace: v1beta1constants.GardenNamespace,
+		Labels:    secretCopy.Labels,
+	}
+
+	return secretCopy, nil
+}
+
 func managedResourceName(extension *operatorv1alpha1.Extension) string {
 	return fmt.Sprintf("extension-registration-%s", extension.Name)
 }
@@ -131,4 +161,15 @@ func New(runtimeClient client.Client, recorder record.EventRecorder, gardenNames
 
 		gardenNamespace: gardenNamespace,
 	}
+}
+
+// GetExtensionPullSecretRef returns the pull secret reference for the extension's Helm chart.
+func GetExtensionPullSecretRef(extension *operatorv1alpha1.Extension) *corev1.LocalObjectReference {
+	if extension.Spec.Deployment == nil ||
+		extension.Spec.Deployment.ExtensionDeployment == nil ||
+		extension.Spec.Deployment.ExtensionDeployment.Helm == nil ||
+		extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository == nil {
+		return nil
+	}
+	return extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository.PullSecretRef
 }

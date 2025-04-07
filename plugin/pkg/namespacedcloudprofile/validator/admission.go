@@ -11,6 +11,7 @@ import (
 	"io"
 	"reflect"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -149,7 +150,10 @@ func (v *ValidateNamespacedCloudProfile) Validate(_ context.Context, a admission
 	if err := validationContext.validateMachineImageOverrides(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateSimulatedCloudProfileStatusMergeResult(a); err != nil {
+	if err := validationContext.validateLimits(field.NewPath("spec", "limits")); err != nil {
+		return err.ToAggregate()
+	}
+	if err := validationContext.validateSimulatedCloudProfileStatusMergeResult(); err != nil {
 		return err
 	}
 
@@ -251,10 +255,6 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 				}
 			}
 
-			if len(ptr.Deref(image.UpdateStrategy, "")) > 0 && !imageAlreadyExistsInNamespacedCloudProfile {
-				allErrs = append(allErrs, field.Forbidden(imageIndexPath.Child("updateStrategy"), "must not provide an updateStrategy to an extended machine image in NamespacedCloudProfile"))
-			}
-
 			for imageVersionIndex, imageVersion := range image.Versions {
 				if _, isExistingVersion := parentImages.GetImageVersion(image.Name, imageVersion.Version); isExistingVersion {
 					// An image with the specified version is already present in the parent CloudProfile.
@@ -298,7 +298,7 @@ func (c *validationContext) validateMachineImageOverrides(attr admission.Attribu
 			}
 		} else {
 			// There is no entry for this image in the parent CloudProfile yet.
-			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, imageIndexPath)...)
+			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, imageIndexPath, false)...)
 			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, imageIndexPath)...)
 		}
 	}
@@ -324,7 +324,28 @@ func validateNamespacedCloudProfileExtendedMachineImages(machineVersion gardenco
 	return allErrs
 }
 
-func (c *validationContext) validateSimulatedCloudProfileStatusMergeResult(_ admission.Attributes) error {
+func (c *validationContext) validateLimits(limitsPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if c.namespacedCloudProfile.Spec.Limits == nil || c.parentCloudProfile.Spec.Limits == nil {
+		return nil
+	}
+
+	// MaxNodesTotal
+	hasMaxNodesTotalChanged := c.namespacedCloudProfile.Spec.Limits.MaxNodesTotal != nil &&
+		(c.oldNamespacedCloudProfile.Spec.Limits == nil ||
+			!apiequality.Semantic.DeepEqual(c.namespacedCloudProfile.Spec.Limits.MaxNodesTotal, c.oldNamespacedCloudProfile.Spec.Limits.MaxNodesTotal))
+	namespacedCloudProfileMaxNodesTotal := ptr.Deref(c.namespacedCloudProfile.Spec.Limits.MaxNodesTotal, 0)
+	maxNodesTotal := utils.MinGreaterThanZero(namespacedCloudProfileMaxNodesTotal, ptr.Deref(c.parentCloudProfile.Spec.Limits.MaxNodesTotal, 0))
+
+	if hasMaxNodesTotalChanged && maxNodesTotal < namespacedCloudProfileMaxNodesTotal {
+		allErrs = append(allErrs, field.Invalid(limitsPath.Child("maxNodesTotal"), namespacedCloudProfileMaxNodesTotal, "overriding value must be less than or equal to value set in parent CloudProfile"))
+	}
+
+	return allErrs
+}
+
+func (c *validationContext) validateSimulatedCloudProfileStatusMergeResult() error {
 	namespacedCloudProfile := &gardencorev1beta1.NamespacedCloudProfile{}
 	if err := api.Scheme.Convert(c.namespacedCloudProfile, namespacedCloudProfile, nil); err != nil {
 		return err

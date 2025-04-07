@@ -5,7 +5,7 @@ metadata:
   name: gardener-apiserver
   namespace: garden
   annotations:
-    {{- if .Values.global.apiserver.service.topologyAwareRouting.enabled }}
+    {{- if and .Values.global.apiserver.service.topologyAwareRouting.enabled (semverCompare "< 1.31-0" .Capabilities.KubeVersion.Version) }}
     service.kubernetes.io/topology-mode: "auto"
     {{- end }}
   labels:
@@ -14,7 +14,7 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
-    {{- if .Values.global.apiserver.service.topologyAwareRouting.enabled }}
+    {{- if and .Values.global.apiserver.service.topologyAwareRouting.enabled (semverCompare "< 1.32-0" .Capabilities.KubeVersion.Version) }}
     endpoint-slice-hints.resources.gardener.cloud/consider: "true"
     {{- end }}
 spec:
@@ -30,4 +30,7 @@ spec:
   - port: 443
     protocol: TCP
     targetPort: {{ .Values.global.apiserver.securePort | default 8443 }}
+  {{- if and .Values.global.apiserver.service.topologyAwareRouting.enabled (semverCompare ">= 1.31-0" .Capabilities.KubeVersion.Version) }}
+  trafficDistribution: PreferClose
+  {{- end }}
 {{- end }}

@@ -7,6 +7,7 @@ package v1
 import (
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,6 +24,10 @@ type ControllerDeployment struct {
 	// Helm configures that an extension controller is deployed using helm.
 	// +optional
 	Helm *HelmControllerDeployment `json:"helm,omitempty" protobuf:"bytes,2,opt,name=helm"`
+	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+	// resources.
+	// +optional
+	InjectGardenKubeconfig *bool `json:"injectGardenKubeconfig,omitempty" protobuf:"varint,3,opt,name=injectGardenKubeconfig"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -65,6 +70,11 @@ type OCIRepository struct {
 	// The value should be in the format 'sha256:<HASH>'.
 	// +optional
 	Digest *string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
+	// PullSecretRef is a reference to a secret containing the pull secret.
+	// The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+	// For usage in the gardenlet, the secret must have the label `gardener.cloud/role=helm-pull-secret`.
+	// +optional
+	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty" protobuf:"bytes,5,opt,name=pullSecretRef"`
 }
 
 // GetURL returns the fully-qualified OCIRepository URL of the artifact.

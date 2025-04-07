@@ -183,9 +183,10 @@ func (k *kubeStateMetrics) deployment(
 		})
 
 		var metricAllowlist string
-		if k.values.NameSuffix == SuffixSeed {
+		switch k.values.NameSuffix {
+		case SuffixSeed:
 			metricAllowlist = strings.Join(cacheMetricAllowlist, ",")
-		} else if k.values.NameSuffix == SuffixRuntime {
+		case SuffixRuntime:
 			metricAllowlist = strings.Join(gardenMetricAllowlist, ",")
 		}
 

@@ -217,7 +217,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 				preset.Spec.Weight = 100
 				preset.Spec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
 
-				preset2.ObjectMeta.Name = "preset-2"
+				preset2.Name = "preset-2"
 				preset2.Spec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
@@ -227,7 +227,7 @@ var _ = Describe("OpenID Connect Preset", func() {
 
 			It("preset with higher weight", func() {
 				preset2 := preset.DeepCopy()
-				preset2.ObjectMeta.Name = "preset-2"
+				preset2.Name = "preset-2"
 				preset2.Spec.Weight = 100
 				preset2.Spec.Server.ClientID = "client-id-2"
 
@@ -237,9 +237,9 @@ var _ = Describe("OpenID Connect Preset", func() {
 			})
 
 			It("presets ordered lexicographically", func() {
-				preset.ObjectMeta.Name = "01preset"
+				preset.Name = "01preset"
 				preset2 := preset.DeepCopy()
-				preset2.ObjectMeta.Name = "02preset"
+				preset2.Name = "02preset"
 				preset2.Spec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")

@@ -18,6 +18,9 @@
   hostPort: 9443
 {{- end }}
   listenAddress: {{ $listenAddress }}
+- containerPort: {{ add 32132 $i }}
+  hostPort: 8132
+  listenAddress: {{ $listenAddress }}
 {{- end }}
 {{- end }}
 {{- end }}

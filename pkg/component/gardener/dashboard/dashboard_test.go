@@ -268,7 +268,7 @@ frontend:
 
 				if gitHub.PollInterval != nil {
 					configRaw += `
-  pollIntervalSeconds: ` + fmt.Sprintf("%d", int64(gitHub.PollInterval.Duration.Seconds()))
+  pollIntervalSeconds: ` + fmt.Sprintf("%d", int64(gitHub.PollInterval.Seconds()))
 				}
 
 				configRaw += `
@@ -434,6 +434,9 @@ frontend:
 										FailureThreshold:    6,
 										SuccessThreshold:    1,
 										PeriodSeconds:       10,
+									},
+									SecurityContext: &corev1.SecurityContext{
+										AllowPrivilegeEscalation: ptr.To(false),
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{

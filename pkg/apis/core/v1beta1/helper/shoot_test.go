@@ -1207,23 +1207,6 @@ var _ = Describe("Helper", func() {
 		Entry("equality", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: ptr.To("foo")}}}, BeTrue()),
 	)
 
-	DescribeTable("#ShootResourceReferencesEqual",
-		func(oldResources, newResources []gardencorev1beta1.NamedResourceReference, matcher gomegatypes.GomegaMatcher) {
-			Expect(ShootResourceReferencesEqual(oldResources, newResources)).To(matcher)
-		},
-
-		Entry("both nil", nil, nil, BeTrue()),
-		Entry("old empty, new w/o secrets", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{Name: "foo"}}}, BeTrue()),
-		Entry("old empty, new w/ secrets", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeFalse()),
-		Entry("old empty, new w/ configMap", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
-		Entry("old w/o secrets, new empty", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{}, BeTrue()),
-		Entry("old w/ secrets, new empty", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{}, BeFalse()),
-		Entry("difference", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar"}}}, BeFalse()),
-		Entry("difference because no secret", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "bar"}}}, BeFalse()),
-		Entry("difference because new is configMap with same name", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
-		Entry("equality", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeTrue()),
-	)
-
 	DescribeTable("#CalculateEffectiveKubernetesVersion",
 		func(controlPlaneVersion *semver.Version, workerKubernetes *gardencorev1beta1.WorkerKubernetes, expectedRes *semver.Version) {
 			res, err := CalculateEffectiveKubernetesVersion(controlPlaneVersion, workerKubernetes)
@@ -1477,6 +1460,22 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
+	Describe("#ControlPlaneWorkerPoolForShoot", func() {
+		It("should return nil because shoot is not autonomous", func() {
+			shoot := &gardencorev1beta1.Shoot{}
+			Expect(ControlPlaneWorkerPoolForShoot(shoot)).To(BeNil())
+		})
+
+		It("should return the worker pool", func() {
+			worker := gardencorev1beta1.Worker{
+				ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+				Name:         "cp",
+			}
+			shoot := &gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{worker}}}}
+			Expect(ControlPlaneWorkerPoolForShoot(shoot)).To(PointTo(Equal(worker)))
+		})
+	})
+
 	Describe("#ControlPlaneNamespaceForShoot", func() {
 		It("should return kube-system for autonomous shoots", func() {
 			shoot := &gardencorev1beta1.Shoot{
@@ -1503,5 +1502,29 @@ var _ = Describe("Helper", func() {
 		Entry("with AutoRollingUpdate update strategy", ptr.To(gardencorev1beta1.AutoRollingUpdate), false),
 		Entry("with AutoInPlaceUpdate update strategy", ptr.To(gardencorev1beta1.AutoInPlaceUpdate), true),
 		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
+	)
+
+	DescribeTable("#IsShootIstioTLSTerminationEnabled",
+		func(shootKubernetesVersion string, shootAnnotations map[string]string, expected bool) {
+			shoot := &gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: shootAnnotations,
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						Version: shootKubernetesVersion,
+					},
+				},
+			}
+			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(Equal(expected))
+		},
+
+		Entry("shoot with Kubernetes v1.30.0 has no Istio TLS termination", "1.30.0", nil, false),
+		Entry("shoot with Kubernetes v1.31.0 has Istio TLS termination", "1.31.0", nil, true),
+		Entry("shoot with Kubernetes v1.31.0 has no Istio TLS termination if is disabled by annotation", "1.31.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "true"}, false),
+		Entry("shoot with Kubernetes v1.31.0 has no Istio TLS termination if is not disabled by annotation", "1.31.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}, true),
+		Entry("shoot with Kubernetes v1.31.0 has no Istio TLS termination if it is annotated with a bogus value", "1.31.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "foobar"}, true),
+		Entry("shoot with Kubernetes v1.30.0 has no Istio TLS termination even if is not disabled by annotation", "1.30.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}, false),
+		Entry("shoot with bogus Kubernetes version has no Istio TLS termination - this should not happen in reality anyway", "foobar", nil, false),
 	)
 })

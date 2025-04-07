@@ -255,7 +255,7 @@ func (r *Reconciler) removeLabelFromQuotas(ctx context.Context, binding *securit
 		// Remove 'referred by a credentials binding' label
 		if metav1.HasLabel(quota.ObjectMeta, v1beta1constants.LabelCredentialsBindingReference) {
 			patch := client.MergeFromWithOptions(quota.DeepCopy(), client.MergeFromWithOptimisticLock{})
-			delete(quota.ObjectMeta.Labels, v1beta1constants.LabelCredentialsBindingReference)
+			delete(quota.Labels, v1beta1constants.LabelCredentialsBindingReference)
 			if err := r.Client.Patch(ctx, quota, patch); err != nil {
 				return fmt.Errorf("failed to remove referred label from Quota: %w", err)
 			}

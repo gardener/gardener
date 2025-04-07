@@ -17,7 +17,6 @@ spec:
         app: registry
         projected-token-mount.resources.gardener.cloud/skip: "true"
         seccompprofile.resources.gardener.cloud/skip: "true"
-        topology-spread-constraints.resources.gardener.cloud/skip: "true"
     spec:
       # Registry should not be evicted for gardener pods because these rely on Registry to pull their images
       priorityClassName: system-cluster-critical
@@ -46,6 +45,8 @@ spec:
         ports:
         - name: registry
           containerPort: 5000
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: registry-volume
           mountPath: /var/lib/registry

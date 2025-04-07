@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,18 +94,14 @@ var _ = Describe("Seed Validation Tests", func() {
 
 	Describe("#ValidateSeed, #ValidateSeedUpdate", func() {
 		It("should not return any errors", func() {
-			errorList := ValidateSeed(seed)
-
-			Expect(errorList).To(BeEmpty())
+			Expect(ValidateSeed(seed)).To(BeEmpty())
 		})
 
 		DescribeTable("Seed metadata",
 			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
 				seed.ObjectMeta = objectMeta
 
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(matcher)
+				Expect(ValidateSeed(seed)).To(matcher)
 			},
 
 			Entry("should forbid Seed with empty metadata",
@@ -144,6 +141,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			It("should return an error if the operation annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", "foo-bar")
+
 				Expect(ValidateSeed(seed)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
@@ -152,6 +150,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			DescribeTable("should return nothing if the operation annotations is valid", func(operation string) {
 				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", operation)
+
 				Expect(ValidateSeed(seed)).To(BeEmpty())
 			},
 				Entry("reconcile", "reconcile"),
@@ -163,6 +162,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			DescribeTable("should do nothing if a valid operation annotation is added", func(operation string) {
 				newSeed := prepareSeedForUpdate(seed)
 				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", operation)
+
 				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
 			},
 				Entry("reconcile", "reconcile"),
@@ -175,6 +175,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", operation)
 				newSeed := prepareSeedForUpdate(seed)
 				delete(newSeed.Annotations, "gardener.cloud/operation")
+
 				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
 			},
 				Entry("reconcile", "reconcile"),
@@ -186,6 +187,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			DescribeTable("should do nothing if a valid operation annotation does not change during an update", func(operation string) {
 				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", operation)
 				newSeed := prepareSeedForUpdate(seed)
+
 				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
 			},
 				Entry("reconcile", "reconcile"),
@@ -198,6 +200,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				metav1.SetMetaDataAnnotation(&seed.ObjectMeta, "gardener.cloud/operation", "renew-garden-access-secrets")
 				newSeed := prepareSeedForUpdate(seed)
 				metav1.SetMetaDataAnnotation(&newSeed.ObjectMeta, "gardener.cloud/operation", "renew-kubeconfig")
+
 				Expect(ValidateSeedUpdate(newSeed, seed)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
@@ -430,9 +433,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					}
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOfFields(Fields{
+					Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 						"Type":     Equal(field.ErrorTypeInvalid),
 						"Field":    Equal("spec.networks.nodes"),
 						"BadValue": Equal("10.0.0.0/8"),
@@ -465,84 +466,11 @@ var _ = Describe("Seed Validation Tests", func() {
 					}))
 				})
 
-				It("should forbid Seed with overlap to default vpn range (subset)", func() {
-					shootDefaultPodCIDR := "192.168.123.128/28"     // 192.168.123.128 -> 192.168.123.143
-					shootDefaultServiceCIDR := "192.168.123.200/32" // 192.168.123.200 -> 192.168.123.200
-
-					nodesCIDR := "192.168.123.0/27" // 192.168.123.0 -> 192.168.123.31
-					// Nodes network overlaps with default vpn range
-					// Pods CIDR overlaps with default vpn range
-					// Services CIDR overlaps with default vpn range
-					// Shoot default pod CIDR overlaps with default vpn range
-					// Shoot default service CIDR overlaps with default vpn range
-					seed.Spec.Networks = core.SeedNetworks{
-						Nodes:    &nodesCIDR,          // 192.168.123.0  -> 192.168.123.31
-						Pods:     "192.168.123.32/30", // 192.168.123.32 -> 192.168.123.35
-						Services: "192.168.123.64/26", // 192.168.123.64 -> 192.168.123.127
-						ShootDefaults: &core.ShootNetworks{
-							Pods:     &shootDefaultPodCIDR,     // 192.168.123.128 -> 192.168.123.143
-							Services: &shootDefaultServiceCIDR, // 192.168.123.200 -> 192.168.123.200
-						},
-					}
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOfFields(Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.pods"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
-					}, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.services"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
-					}, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.nodes"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
-					}, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.shootDefaults.pods"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
-					}, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.shootDefaults.services"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
-					}))
-				})
-
-				It("should forbid Seed with overlap to default vpn range (equality)", func() {
-					// Services CIDR overlaps with default vpn range
-					seed.Spec.Networks.Services = "192.168.123.0/24" // 192.168.123.0 -> 192.168.123.255
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOfFields(Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.services"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
-					}))
-				})
-
-				It("should forbid Seed with overlap to default vpn range (superset)", func() {
-					// Pods CIDR overlaps with default vpn range
-					seed.Spec.Networks.Pods = "192.168.0.0/16" // 192.168.0.0 -> 192.168.255.255
-
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOfFields(Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.networks.pods"),
-						"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
-					}))
-				})
-
 				It("should forbid Seed with overlap to reserved range", func() {
 					// Service CIDR overlaps with reserved range
 					seed.Spec.Networks.Pods = "240.0.0.0/16" // 240.0.0.0 -> 240.0.255.255
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOfFields(Fields{
+					Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.pods"),
 						"Detail": Equal(`must not overlap with "[]" ("240.0.0.0/8")`),
@@ -553,9 +481,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					// Service CIDR too large
 					seed.Spec.Networks.Services = "90.0.0.0/7" // 90.0.0.0 -> 91.255.255.255
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOfFields(Fields{
+					Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.services"),
 						"Detail": Equal(`cannot be larger than /8`),
@@ -575,8 +501,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
 					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
 
-					errorList := ValidateSeed(seed)
-					Expect(errorList).To(BeEmpty())
+					Expect(ValidateSeed(seed)).To(BeEmpty())
 				})
 
 				It("should forbid invalid network CIDRs", func() {
@@ -588,8 +513,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					seed.Spec.Networks.ShootDefaults.Pods = &invalidCIDR
 					seed.Spec.Networks.ShootDefaults.Services = &invalidCIDR
 
-					errorList := ValidateSeed(seed)
-					Expect(errorList).To(ConsistOfFields(Fields{
+					Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.nodes"),
 						"Detail": ContainSubstring("invalid CIDR address"),
@@ -619,8 +543,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("10.4.0.0/16")
 					seed.Spec.Networks.ShootDefaults.Services = ptr.To("10.5.0.0/16")
 
-					errorList := ValidateSeed(seed)
-					Expect(errorList).To(ConsistOfFields(Fields{
+					Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.networks.nodes"),
 						"Detail": ContainSubstring("must be a valid IPv6 address"),
@@ -650,9 +573,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					seed.Spec.Networks.ShootDefaults.Pods = ptr.To("2001:db8:1::/48")
 					seed.Spec.Networks.ShootDefaults.Services = ptr.To("2001:db8:3::/48")
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(BeEmpty())
+					Expect(ValidateSeed(seed)).To(BeEmpty())
 				})
 			})
 		})
@@ -670,9 +591,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				newSeed := prepareSeedForUpdate(oldSeed)
 				newSeed.Spec.Networks.IPFamilies = []core.IPFamily{core.IPFamilyIPv6}
 
-				errorList := ValidateSeedUpdate(newSeed, oldSeed)
-
-				Expect(errorList).To(ContainElement(HaveFields(Fields{
+				Expect(ValidateSeedUpdate(newSeed, oldSeed)).To(ContainElement(HaveFields(Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.networks.ipFamilies"),
 					"Detail": ContainSubstring(`field is immutable`),
@@ -686,18 +605,14 @@ var _ = Describe("Seed Validation Tests", func() {
 				newSeed := prepareSeedForUpdate(oldSeed)
 				newSeed.Spec.Networks.Nodes = &nodesCIDR
 
-				errorList := ValidateSeedUpdate(newSeed, oldSeed)
-
-				Expect(errorList).To(BeEmpty())
+				Expect(ValidateSeedUpdate(newSeed, oldSeed)).To(BeEmpty())
 			})
 
 			It("should forbid removing the nodes CIDR", func() {
 				newSeed := prepareSeedForUpdate(oldSeed)
 				newSeed.Spec.Networks.Nodes = nil
 
-				errorList := ValidateSeedUpdate(newSeed, oldSeed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeedUpdate(newSeed, oldSeed)).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.networks.nodes"),
 					"Detail": Equal(`field is immutable`),
@@ -710,9 +625,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				differentNodesCIDR := "12.1.0.0/16"
 				newSeed.Spec.Networks.Nodes = &differentNodesCIDR
 
-				errorList := ValidateSeedUpdate(newSeed, oldSeed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeedUpdate(newSeed, oldSeed)).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.networks.nodes"),
 					"Detail": Equal(`field is immutable`),
@@ -757,9 +670,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					}
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(BeEmpty())
+					Expect(ValidateSeed(seed)).To(BeEmpty())
 				})
 
 				It("should not allow configs with no resources", func() {
@@ -769,9 +680,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					}
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOf(
+					Expect(ValidateSeed(seed)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeRequired),
 							"Field": Equal("spec.settings.excessCapacityReservation.configs[0].resources"),
@@ -786,9 +695,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					}
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOf(
+					Expect(ValidateSeed(seed)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.settings.excessCapacityReservation.configs[0].resources.cpu"),
@@ -812,9 +719,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					}
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOf(
+					Expect(ValidateSeed(seed)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeNotSupported),
 							"Field": Equal("spec.settings.excessCapacityReservation.configs[0].tolerations[0].effect"),
@@ -849,9 +754,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					}
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(BeEmpty())
+					Expect(ValidateSeed(seed)).To(BeEmpty())
 				})
 
 				It("should prevent invalid load balancer service annotations", func() {
@@ -866,9 +769,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					}
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOf(
+					Expect(ValidateSeed(seed)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.settings.loadBalancerServices.annotations"),
@@ -897,9 +798,7 @@ var _ = Describe("Seed Validation Tests", func() {
 							},
 						}
 
-						errorList := ValidateSeed(seed)
-
-						Expect(errorList).To(BeEmpty(), fmt.Sprintf("seed validation should succeed with load balancer service traffic policy '%s' and have no errors", p))
+						Expect(ValidateSeed(seed)).To(BeEmpty(), fmt.Sprintf("seed validation should succeed with load balancer service traffic policy '%s' and have no errors", p))
 					}
 				})
 
@@ -911,9 +810,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					}
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOf(
+					Expect(ValidateSeed(seed)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeNotSupported),
 							"Field": Equal("spec.settings.loadBalancerServices.externalTrafficPolicy"),
@@ -950,9 +847,7 @@ var _ = Describe("Seed Validation Tests", func() {
 							},
 						}
 
-						errorList := ValidateSeed(seed)
-
-						Expect(errorList).To(BeEmpty(), fmt.Sprintf("seed validation should succeed with valid zonal load balancer traffic policy '%s' and have no errors", p))
+						Expect(ValidateSeed(seed)).To(BeEmpty(), fmt.Sprintf("seed validation should succeed with valid zonal load balancer traffic policy '%s' and have no errors", p))
 					}
 				})
 
@@ -981,9 +876,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						},
 					}
 
-					errorList := ValidateSeed(seed)
-
-					Expect(errorList).To(ConsistOf(
+					Expect(ValidateSeed(seed)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
 							"Field": Equal("spec.settings.loadBalancerServices.zones"),
@@ -1032,9 +925,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					},
 				}
 
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOf(
+				Expect(ValidateSeed(seed)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.settings.topologyAwareRouting.enabled"),
@@ -1051,9 +942,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					},
 				}
 
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(BeEmpty())
+				Expect(ValidateSeed(seed)).To(BeEmpty())
 			})
 		})
 
@@ -1070,9 +959,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			newSeed.Spec.Backup.Provider = "other-provider"
 			newSeed.Spec.Backup.Region = &otherRegion
 
-			errorList := ValidateSeedUpdate(newSeed, seed)
-
-			Expect(errorList).To(ConsistOfFields(Fields{
+			Expect(ValidateSeedUpdate(newSeed, seed)).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.pods"),
 				"Detail": Equal(`field is immutable`),
@@ -1101,18 +988,14 @@ var _ = Describe("Seed Validation Tests", func() {
 				newSeed := prepareSeedForUpdate(seed)
 				newSeed.Spec.Backup = backup
 
-				errorList := ValidateSeedUpdate(newSeed, seed)
-
-				Expect(errorList).To(BeEmpty())
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
 			})
 
 			It("should forbid removing backup profile", func() {
 				newSeed := prepareSeedForUpdate(seed)
 				newSeed.Spec.Backup = nil
 
-				errorList := ValidateSeedUpdate(newSeed, seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.backup"),
 					"Detail": Equal(`field is immutable`),
@@ -1141,9 +1024,7 @@ var _ = Describe("Seed Validation Tests", func() {
 				newSeed := prepareSeedForUpdate(seed)
 				newSeed.Spec.Ingress.Domain = "other-domain"
 
-				errorList := ValidateSeedUpdate(newSeed, seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.ingress.domain"),
 					"Detail": Equal(`field is immutable`),
@@ -1157,9 +1038,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			It("ingress is nil", func() {
 				seed.Spec.Ingress = nil
 
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  Equal("spec.ingress"),
 					"Detail": ContainSubstring("cannot be empty"),
@@ -1169,9 +1048,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			It("requires to specify a DNS provider if ingress is specified", func() {
 				seed.Spec.DNS.Provider = nil
 
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.dns.provider"),
 				}))
@@ -1180,9 +1057,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			It("should fail if kind is different to nginx", func() {
 				seed.Spec.Ingress.Controller.Kind = "new-kind"
 
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.ingress.controller.kind"),
 				}))
@@ -1191,9 +1066,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			It("should fail if the ingress domain is invalid", func() {
 				seed.Spec.Ingress.Domain = "invalid_dns1123-subdomain"
 
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.ingress.domain"),
 				}))
@@ -1202,9 +1075,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			It("should fail if the ingress domain is empty", func() {
 				seed.Spec.Ingress.Domain = ""
 
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  Equal("spec.ingress.domain"),
 					"Detail": ContainSubstring("cannot be empty"),
@@ -1214,9 +1085,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			It("should fail if DNS provider config is invalid", func() {
 				seed.Spec.DNS.Provider = &core.SeedDNSProvider{}
 
-				errorList := ValidateSeed(seed)
-
-				Expect(errorList).To(ConsistOfFields(Fields{
+				Expect(ValidateSeed(seed)).To(ConsistOfFields(Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.dns.provider.type"),
 				}, Fields{
@@ -1228,6 +1097,155 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))
 			})
 		})
+
+		Context("Extensions validation", func() {
+			It("should forbid passing an extension w/o type information", func() {
+				extension := core.Extension{}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension)
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.extensions[0].type"),
+					}))))
+			})
+
+			It("should allow passing an extension w/ type information", func() {
+				extension := core.Extension{
+					Type: "arbitrary",
+				}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension)
+
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+
+			It("should forbid passing an extension of same type more than once", func() {
+				extension := core.Extension{
+					Type: "arbitrary",
+				}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension, extension)
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.extensions[1].type"),
+					}))))
+			})
+
+			It("should allow passing more than one extension of different type", func() {
+				extension := core.Extension{
+					Type: "arbitrary",
+				}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension, extension)
+				seed.Spec.Extensions[1].Type = "arbitrary-2"
+
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+
+			It("should forbid setting the 'disabled' field", func() {
+				extension := core.Extension{
+					Type:     "arbitrary",
+					Disabled: ptr.To(true),
+				}
+				seed.Spec.Extensions = append(seed.Spec.Extensions, extension)
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.extensions[0].disabled"),
+					}))))
+			})
+		})
+
+		Context("Resources validation", func() {
+			It("should forbid resources w/o names or w/ invalid references", func() {
+				ref := core.NamedResourceReference{}
+				seed.Spec.Resources = append(seed.Spec.Resources, ref)
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].resourceRef.kind"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].resourceRef.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.resources[0].resourceRef.apiVersion"),
+					})),
+				))
+			})
+
+			It("should forbid resources of kind other than Secret/ConfigMap", func() {
+				ref := core.NamedResourceReference{
+					Name: "test",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "ServiceAccount",
+						Name:       "test-sa",
+						APIVersion: "v1",
+					},
+				}
+				seed.Spec.Resources = append(seed.Spec.Resources, ref)
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeNotSupported),
+						"Field":    Equal("spec.resources[0].resourceRef.kind"),
+						"BadValue": Equal("ServiceAccount"),
+					})),
+				))
+			})
+
+			It("should forbid resources with non-unique names", func() {
+				ref := core.NamedResourceReference{
+					Name: "test",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Secret",
+						Name:       "test-secret",
+						APIVersion: "v1",
+					},
+				}
+				seed.Spec.Resources = append(seed.Spec.Resources, ref, ref)
+
+				Expect(ValidateSeed(seed)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal("spec.resources[1].name"),
+					})),
+				))
+			})
+
+			It("should allow resources w/ names and valid references", func() {
+				ref := core.NamedResourceReference{
+					Name: "test",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "Secret",
+						Name:       "test-secret",
+						APIVersion: "v1",
+					},
+				}
+
+				ref2 := core.NamedResourceReference{
+					Name: "test-cm",
+					ResourceRef: autoscalingv1.CrossVersionObjectReference{
+						Kind:       "ConfigMap",
+						Name:       "test-cm",
+						APIVersion: "v1",
+					},
+				}
+
+				seed.Spec.Resources = append(seed.Spec.Resources, ref, ref2)
+
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+		})
+
 	})
 
 	Describe("#ValidateSeedStatusUpdate", func() {
@@ -1242,8 +1260,8 @@ var _ = Describe("Seed Validation Tests", func() {
 				oldSeed := &core.Seed{Status: core.SeedStatus{
 					ClusterIdentity: ptr.To("clusterIdentityExists"),
 				}}
-				allErrs := ValidateSeedStatusUpdate(newSeed, oldSeed)
-				Expect(allErrs).To(ConsistOfFields(Fields{
+
+				Expect(ValidateSeedStatusUpdate(newSeed, oldSeed)).To(ConsistOfFields(Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("status.clusterIdentity"),
 					"Detail": Equal(`field is immutable`),
@@ -1252,8 +1270,8 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			It("should not fail to update seed status cluster identity if it is missing", func() {
 				oldSeed := &core.Seed{}
-				allErrs := ValidateSeedStatusUpdate(newSeed, oldSeed)
-				Expect(allErrs).To(BeEmpty())
+
+				Expect(ValidateSeedStatusUpdate(newSeed, oldSeed)).To(BeEmpty())
 			})
 		})
 	})
@@ -1270,9 +1288,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			seedTemplate.Annotations = map[string]string{"foo!": "bar"}
 			seedTemplate.Spec.Networks.Nodes = ptr.To("")
 
-			errorList := ValidateSeedTemplate(seedTemplate, nil)
-
-			Expect(errorList).To(ConsistOf(
+			Expect(ValidateSeedTemplate(seedTemplate, nil)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("metadata.labels"),
@@ -1291,18 +1307,14 @@ var _ = Describe("Seed Validation Tests", func() {
 
 	Describe("#ValidateSeedTemplateUpdate", func() {
 		It("should allow valid updates", func() {
-			errorList := ValidateSeedTemplateUpdate(seedTemplate, seedTemplate, nil)
-
-			Expect(errorList).To(BeEmpty())
+			Expect(ValidateSeedTemplateUpdate(seedTemplate, seedTemplate, nil)).To(BeEmpty())
 		})
 
 		It("should forbid changes to immutable fields in spec", func() {
 			newSeedTemplate := *seedTemplate
 			newSeedTemplate.Spec.Networks.Pods = "100.97.0.0/11"
 
-			errorList := ValidateSeedTemplateUpdate(&newSeedTemplate, seedTemplate, nil)
-
-			Expect(errorList).To(ConsistOf(
+			Expect(ValidateSeedTemplateUpdate(&newSeedTemplate, seedTemplate, nil)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.networks.pods"),

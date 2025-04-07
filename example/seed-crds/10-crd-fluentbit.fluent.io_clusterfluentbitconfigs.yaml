@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: clusterfluentbitconfigs.fluentbit.fluent.io
 spec:
   group: fluentbit.fluent.io
@@ -42,6 +42,14 @@ spec:
           spec:
             description: FluentBitConfigSpec defines the desired state of ClusterFluentBitConfig
             properties:
+              configFileFormat:
+                description: |-
+                  ConfigFileFormat defines the format of the config file, default is "classic",
+                  available options are "classic" and "yaml"
+                enum:
+                - classic
+                - yaml
+                type: string
               filterSelector:
                 description: Select filter plugins
                 properties:
@@ -293,8 +301,7 @@ spec:
                     type: string
                   flushSeconds:
                     description: Interval to flush output
-                    format: int64
-                    type: integer
+                    type: number
                   graceSeconds:
                     description: Wait time on exit
                     format: int64
@@ -328,6 +335,9 @@ spec:
                     description: 'enable Health check feature at http://127.0.0.1:2020/api/v1/health
                       Note: Enabling this will not automatically configure kubernetes
                       to use fluentbit''s healthcheck endpoint'
+                    type: boolean
+                  hotReload:
+                    description: If true enable reloading via HTTP
                     type: boolean
                   httpListen:
                     description: Address to listen

@@ -372,6 +372,34 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 		}
 		err = r.ensureShootReferences(ctx, a, oldShoot, shoot)
 
+	case core.Kind("Seed"):
+		var (
+			oldSeed, seed *core.Seed
+			ok            bool
+		)
+
+		seed, ok = a.GetObject().(*core.Seed)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into Seed object")
+		}
+		if utils.SkipVerification(operation, seed.ObjectMeta) {
+			return nil
+		}
+
+		switch a.GetOperation() {
+		case admission.Create:
+			oldSeed = &core.Seed{}
+		case admission.Update:
+			oldSeed, ok = a.GetOldObject().(*core.Seed)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old resource into Seed object")
+			}
+			if reflect.DeepEqual(oldSeed.Spec, seed.Spec) {
+				return nil
+			}
+		}
+		err = r.ensureSeedReferences(ctx, a, oldSeed, seed)
+
 	case core.Kind("Project"):
 		project, ok := a.GetObject().(*core.Project)
 		if !ok {
@@ -498,7 +526,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			// getting Machine image versions that have been removed from or added to the CloudProfile
 			removedMachineImages, removedMachineImageVersions, addedMachineImages, addedMachineImageVersions := helper.GetMachineImageDiff(oldCloudProfile.Spec.MachineImages, cloudProfile.Spec.MachineImages)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 {
+			wasLimitAdded := !apiequality.Semantic.DeepEqual(cloudProfile.Spec.Limits, oldCloudProfile.Spec.Limits)
+
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || len(addedMachineImageVersions) > 0 || wasLimitAdded {
 				shootList, err1 := r.shootLister.List(labels.Everything())
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
@@ -585,6 +615,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 								channel <- fmt.Errorf("unable to delete Machine image version '%s/%s' from CloudProfile %q - version is still in use by shoot '%s/%s' by worker %q", worker.Machine.Image.Name, *worker.Machine.Image.Version, cloudProfile.Name, shoot.Namespace, shoot.Name, worker.Name)
 							}
 						}
+						if wasLimitAdded {
+							validateShootWorkerLimits(channel, shoot, cloudProfile.Spec.Limits)
+						}
 					}(s)
 				}
 
@@ -617,16 +650,19 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			removedKubernetesVersions := getRemovedKubernetesVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 			removedMachineImageVersions := getRemovedMachineImageVersions(namespacedCloudProfile, oldNamespacedCloudProfile)
 
-			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 {
+			wasLimitAdded := !apiequality.Semantic.DeepEqual(namespacedCloudProfile.Spec.Limits, oldNamespacedCloudProfile.Spec.Limits)
+
+			if len(removedKubernetesVersions) > 0 || len(removedMachineImageVersions) > 0 || wasLimitAdded {
 				shootList, err1 := r.shootLister.Shoots(namespacedCloudProfile.Namespace).List(labels.Everything())
 				if err1 != nil {
-					return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that Kubernetes and/or Machine image version can be removed: %v", err1))
+					return apierrors.NewInternalError(fmt.Errorf("could not list Shoots to validate NamespacedCloudProfile changes: %v", err1))
 				}
 
 				parentCloudProfile, err1 := r.cloudProfileLister.Get(namespacedCloudProfile.Spec.Parent.Name)
 				if err1 != nil {
 					return apierrors.NewInternalError(fmt.Errorf("could not get parent CloudProfile: %v", err1))
 				}
+
 				parentCloudProfileKubernetesVersions := gardenerutils.CreateMapFromSlice(parentCloudProfile.Spec.Kubernetes.Versions, func(v gardencorev1beta1.ExpirableVersion) string { return v.Version })
 				parentCloudProfileMachineImageVersions := make(map[string]map[string]gardencorev1beta1.MachineImageVersion)
 				for _, image := range parentCloudProfile.Spec.MachineImages {
@@ -653,6 +689,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 						defer wg.Done()
 						validateShootForRemovedKubernetesVersions(channel, shoot, removedKubernetesVersions, parentCloudProfileKubernetesVersions, namespacedCloudProfile)
 						validateShootWorkersForRemovedMachineImageVersions(channel, shoot, removedMachineImageVersions, parentCloudProfileMachineImageVersions, namespacedCloudProfile)
+						if wasLimitAdded {
+							validateShootWorkerLimits(channel, shoot, namespacedCloudProfile.Spec.Limits)
+						}
 					}(s)
 				}
 
@@ -897,50 +936,8 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		}
 	}
 
-	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.Resources, shoot.Spec.Resources) {
-		for _, resource := range shoot.Spec.Resources {
-			// Get the APIResource for the current resource
-			apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
-			if err != nil {
-				return err
-			}
-			if apiResource == nil {
-				return fmt.Errorf("shoot resource reference %q could not be resolved for API resource with version %q and kind %q", resource.Name, resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
-			}
-
-			// Parse APIVersion to GroupVersion
-			gv, err := schema.ParseGroupVersion(resource.ResourceRef.APIVersion)
-			if err != nil {
-				return err
-			}
-
-			// Check if the resource is namespaced
-			if !apiResource.Namespaced {
-				return fmt.Errorf("failed to resolve shoot resource reference %q. Cannot reference a resource that is not namespaced", resource.Name)
-			}
-
-			// Check if the user is allowed to read the resource
-			readAttributes := authorizer.AttributesRecord{
-				User:            attributes.GetUserInfo(),
-				Verb:            "get",
-				APIGroup:        gv.Group,
-				APIVersion:      gv.Version,
-				Resource:        apiResource.Name,
-				Namespace:       shoot.Namespace,
-				Name:            resource.ResourceRef.Name,
-				ResourceRequest: true,
-			}
-			if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
-				return fmt.Errorf("could not authorize read request for shoot resource reference: %w", err)
-			} else if decision != authorizer.DecisionAllow {
-				return errors.New("shoot cannot reference a resource you are not allowed to read")
-			}
-
-			// Check if the resource actually exists
-			if err := r.lookupResource(ctx, gv.WithResource(apiResource.Name), shoot.Namespace, resource.ResourceRef.Name); err != nil {
-				return fmt.Errorf("failed to resolve shoot resource reference %q: %w", resource.Name, err)
-			}
-		}
+	if err := r.ensureResourceReferences(ctx, attributes, shoot.Namespace, oldShoot.Spec.Resources, shoot.Spec.Resources); err != nil {
+		return err
 	}
 
 	if !apiequality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {
@@ -1022,6 +1019,10 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 	}
 
 	return nil
+}
+
+func (r *ReferenceManager) ensureSeedReferences(ctx context.Context, attributes admission.Attributes, oldSeed, seed *core.Seed) error {
+	return r.ensureResourceReferences(ctx, attributes, v1beta1constants.GardenNamespace, oldSeed.Spec.Resources, seed.Spec.Resources)
 }
 
 func (r *ReferenceManager) ensureBackupEntryReferences(oldBackupEntry, backupEntry *core.BackupEntry) error {
@@ -1273,6 +1274,79 @@ func (r *ReferenceManager) getAPIResource(groupVersion, kind string) (*metav1.AP
 func (r *ReferenceManager) lookupResource(ctx context.Context, resource schema.GroupVersionResource, namespace, name string) error {
 	if _, err := r.dynamicClient.Resource(resource).Namespace(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions()); err != nil {
 		return err
+	}
+	return nil
+}
+
+func validateShootWorkerLimits(channel chan error, shoot *gardencorev1beta1.Shoot, limits *core.Limits) {
+	if limits == nil || limits.MaxNodesTotal == nil {
+		return
+	}
+
+	var (
+		maxNodesTotal = *limits.MaxNodesTotal
+		totalMinimum  int32
+	)
+
+	for _, worker := range shoot.Spec.Provider.Workers {
+		totalMinimum += worker.Minimum
+		if worker.Maximum > maxNodesTotal {
+			channel <- fmt.Errorf("the maximum node count of worker pool %q in shoot \"%s/%s\" exceeds the limit of %d total nodes configured in the cloud profile", worker.Name, shoot.Namespace, shoot.Name, maxNodesTotal)
+		}
+	}
+
+	if totalMinimum > maxNodesTotal {
+		channel <- fmt.Errorf("the total minimum node count of all worker pools of shoot \"%s/%s\" must not exceed the limit of %d total nodes configured in the cloud profile", shoot.Namespace, shoot.Name, maxNodesTotal)
+	}
+}
+
+func (r *ReferenceManager) ensureResourceReferences(ctx context.Context, attributes admission.Attributes, namespace string, oldResources, resources []core.NamedResourceReference) error {
+	if apiequality.Semantic.DeepEqual(oldResources, resources) {
+		return nil
+	}
+
+	for _, resource := range resources {
+		// Get the APIResource for the current resource
+		apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
+		if err != nil {
+			return err
+		}
+		if apiResource == nil {
+			return fmt.Errorf("resource reference %q could not be resolved for API resource with version %q and kind %q", resource.Name, resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
+		}
+
+		// Parse APIVersion to GroupVersion
+		gv, err := schema.ParseGroupVersion(resource.ResourceRef.APIVersion)
+		if err != nil {
+			return err
+		}
+
+		// Check if the resource is namespaced
+		if !apiResource.Namespaced {
+			return fmt.Errorf("failed to resolve resource reference %q. Cannot reference a resource that is not namespaced", resource.Name)
+		}
+
+		// Check if the user is allowed to read the resource
+		readAttributes := authorizer.AttributesRecord{
+			User:            attributes.GetUserInfo(),
+			Verb:            "get",
+			APIGroup:        gv.Group,
+			APIVersion:      gv.Version,
+			Resource:        apiResource.Name,
+			Namespace:       namespace,
+			Name:            resource.ResourceRef.Name,
+			ResourceRequest: true,
+		}
+		if decision, _, err := r.authorizer.Authorize(ctx, readAttributes); err != nil {
+			return fmt.Errorf("could not authorize read request for resource reference: %w", err)
+		} else if decision != authorizer.DecisionAllow {
+			return errors.New("cannot reference a resource you are not allowed to read")
+		}
+
+		// Check if the resource actually exists
+		if err := r.lookupResource(ctx, gv.WithResource(apiResource.Name), namespace, resource.ResourceRef.Name); err != nil {
+			return fmt.Errorf("failed to resolve resource reference %q: %w", resource.Name, err)
+		}
 	}
 	return nil
 }

@@ -66,6 +66,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition":                                  schema_pkg_apis_core_v1beta1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime":                           schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlane":                               schema_pkg_apis_core_v1beta1_ControlPlane(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling":                    schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment":                       schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentList":                   schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallation":                     schema_pkg_apis_core_v1beta1_ControllerInstallation(ref),
@@ -87,6 +88,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                                 schema_pkg_apis_core_v1beta1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                              schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DualApprovalForDeletion":                    schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD":                                       schema_pkg_apis_core_v1beta1_ETCD(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig":                                 schema_pkg_apis_core_v1beta1_ETCDConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDEncryptionKeyRotation":                  schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig":                           schema_pkg_apis_core_v1beta1_EncryptionConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                           schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
@@ -879,6 +882,13 @@ func schema_pkg_apis_core_v1_ControllerDeployment(ref common.ReferenceCallback) 
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1.HelmControllerDeployment"),
 						},
 					},
+					"injectGardenKubeconfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload resources.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -1007,9 +1017,17 @@ func schema_pkg_apis_core_v1_OCIRepository(ref common.ReferenceCallback) common.
 							Format:      "",
 						},
 					},
+					"pullSecretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PullSecretRef is a reference to a secret containing the pull secret. The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace. For usage in the gardenlet, the secret must have the label `gardener.cloud/role=helm-pull-secret`.",
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 
@@ -2532,6 +2550,36 @@ func schema_pkg_apis_core_v1beta1_ControlPlane(ref common.ReferenceCallback) com
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ControlPlaneAutoscaling(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"minAllowed": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling.. Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays. Default values are not applied to this field.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"minAllowed"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2572,6 +2620,13 @@ func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallb
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.",
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+					"injectGardenKubeconfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload resources.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
@@ -3396,6 +3451,54 @@ func schema_pkg_apis_core_v1beta1_DualApprovalForDeletion(ref common.ReferenceCa
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ETCD(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ETCD contains configuration for etcds of the shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"main": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Main contains configuration for the main etcd.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig"),
+						},
+					},
+					"events": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Events contains configuration for the events etcd.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCDConfig"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ETCDConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ETCDConfig contains etcd configuration.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains auto-scaling configuration options for etcd.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ETCDEncryptionKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3657,7 +3760,7 @@ func schema_pkg_apis_core_v1beta1_Extension(ref common.ReferenceCallback) common
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Extension contains type and provider information for Shoot extensions.",
+				Description: "Extension contains type and provider information for extensions.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
@@ -4412,11 +4515,17 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization"),
 						},
 					},
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains auto-scaling configuration options for the kube-apiserver.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerLogging", "github.com/gardener/gardener/pkg/apis/core/v1beta1.APIServerRequests", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthentication", "github.com/gardener/gardener/pkg/apis/core/v1beta1.StructuredAuthorization", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -4991,11 +5100,17 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"etcd": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ETCD contains configuration for etcds of the shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ETCD", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"},
 	}
 }
 
@@ -5367,6 +5482,19 @@ func schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref common.Re
 									},
 								},
 							},
+						},
+					},
+					"inPlaceUpdateTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"disableHealthTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed. This is intended to be used only for in-place updates.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
@@ -5972,12 +6100,18 @@ func schema_pkg_apis_core_v1beta1_NamespacedCloudProfileSpec(ref common.Referenc
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
+					"limits": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile. If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile. See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits"),
+						},
+					},
 				},
 				Required: []string{"parent"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Limits", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -6286,9 +6420,17 @@ func schema_pkg_apis_core_v1beta1_OCIRepository(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"pullSecretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PullSecretRef is a reference to a secret containing the pull secret. The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.",
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 
@@ -8220,12 +8362,40 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 							},
 						},
 					},
+					"extensions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Extensions contain type and provider information for Seed extensions.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension"),
+									},
+								},
+							},
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources holds a list of named resource references that can be referred to in extension configs by their names.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume"},
 	}
 }
 
@@ -9955,13 +10125,13 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"maxSurge": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxSurge is maximum number of machines that are created during an update. This value is divided by the number of configured zones for a fair distribution.",
+							Description: "MaxSurge is maximum number of machines that are created during an update. This value is divided by the number of configured zones for a fair distribution. Defaults to 0 in case of an in-place update. Defaults to 1 in case of a rolling update.",
 							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
 						},
 					},
 					"maxUnavailable": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxUnavailable is the maximum number of machines that can be unavailable during an update. This value is divided by the number of configured zones for a fair distribution.",
+							Description: "MaxUnavailable is the maximum number of machines that can be unavailable during an update. This value is divided by the number of configured zones for a fair distribution. Defaults to 1 in case of an in-place update. Defaults to 0 in case of a rolling update.",
 							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
 						},
 					},

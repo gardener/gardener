@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/mock"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
@@ -61,7 +61,7 @@ var _ = Describe("ResourceManager", func() {
 		)
 
 		BeforeEach(func() {
-			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithVersion("v1.30.1").Build()
+			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithVersion("v1.30.1").Build()
 			botanist.SeedClientSet = k8sSeedClient
 
 			botanist.Seed = &seedpkg.Seed{}
@@ -74,6 +74,8 @@ var _ = Describe("ResourceManager", func() {
 			resourceManager, err := botanist.DefaultResourceManager()
 			Expect(resourceManager).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
+			Expect(resourceManager.GetValues().PodTopologySpreadConstraintsEnabled).To(BeFalse())
+
 		})
 
 		It("should consider node toleration configuration", func() {
@@ -92,6 +94,30 @@ var _ = Describe("ResourceManager", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues().DefaultNotReadyToleration).To(Equal(notReadyTolerationSeconds))
 			Expect(resourceManager.GetValues().DefaultUnreachableToleration).To(Equal(unreachableTolerationSeconds))
+		})
+
+		It("should successfully set PodTopologySpreadConstraintsEnabled=true if MatchLabelKeysInPodTopologySpread feature gate is disabled in the Shoot", func() {
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{"MatchLabelKeysInPodTopologySpread": false},
+							},
+						},
+						KubeScheduler: &gardencorev1beta1.KubeSchedulerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{"MatchLabelKeysInPodTopologySpread": false},
+							},
+						},
+					},
+				},
+			})
+
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resourceManager.GetValues().PodTopologySpreadConstraintsEnabled).To(BeTrue())
 		})
 	})
 
@@ -119,7 +145,7 @@ var _ = Describe("ResourceManager", func() {
 			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
 
 			c = mockclient.NewMockClient(ctrl)
-			k8sSeedClient = kubernetesfake.NewClientSetBuilder().WithClient(c).Build()
+			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
 			sm = fakesecretsmanager.New(c, controlPlaneNamespace)
 
 			By("Ensure secrets managed outside of this function for which secretsmanager.Get() will be called")

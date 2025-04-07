@@ -114,7 +114,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(MatchError(ContainSubstring("Cannot delete Quota")))
+			Expect(err).To(MatchError(ContainSubstring("cannot delete Quota")))
 		})
 
 		It("should return an error because CredentialsBinding referencing Quota exists", func() {
@@ -122,7 +122,7 @@ var _ = Describe("Reconciler", func() {
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: quotaName}})
 			Expect(result).To(Equal(reconcile.Result{}))
-			Expect(err).To(MatchError(ContainSubstring("Cannot delete Quota")))
+			Expect(err).To(MatchError(ContainSubstring("cannot delete Quota")))
 		})
 
 		It("should remove the finalizer because no SecretBinding or CredentialsBinding are referencing the Quota", func() {

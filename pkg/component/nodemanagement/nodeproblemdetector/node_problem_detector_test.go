@@ -172,6 +172,7 @@ metadata:
   name: node-problem-detector
   namespace: kube-system
 spec:
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: node-problem-detector

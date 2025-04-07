@@ -5,7 +5,7 @@
 package component
 
 import (
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 )
 
 // Secret is a structure that contains information about a Kubernetes secret which is managed externally.

@@ -21,19 +21,15 @@ spec:
         # A custom agnhost image (europe-docker.pkg.dev/gardener-project/releases/3rd/agnhost) is used instead of the upstream one (registry.k8s.io/e2e-test-images/agnhost)
         # because this Deployment is created in a Seed cluster and the image needs to be signed with particular keys.
         image: europe-docker.pkg.dev/gardener-project/releases/3rd/agnhost:2.40
-        command: ["/bin/sh"]
+        command: ["/bin/sh", "-c"]
         args:
-          - -c
-          - |-
-{{ if .DeltaLogsCount }}
-            /agnhost logs-generator --log-lines-total={{ .DeltaLogsCount }} --run-duration={{ .DeltaLogsDuration }}
+        - |-
+{{- if .DeltaLogsCount }}
+          /agnhost logs-generator --log-lines-total={{ .DeltaLogsCount }} --run-duration={{ .DeltaLogsDuration }}
 {{- end }}
-            /agnhost logs-generator --log-lines-total={{ .LogsCount }} --run-duration={{ .LogsDuration }}
+          /agnhost logs-generator --log-lines-total={{ .LogsCount }} --run-duration={{ .LogsDuration }}
 
-            # Sleep forever to prevent restarts
-            while true; do
-              sleep 3600;
-            done
+          sleep infinity
         resources:
           limits:
             cpu: 8m

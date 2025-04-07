@@ -65,7 +65,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		checkRequiredResources(ctx, shootFramework.SeedClient)
 
 		// Get shoot namespace name
-		shootNamespace.ObjectMeta.Name = shootFramework.ShootSeedNamespace()
+		shootNamespace.Name = shootFramework.ShootSeedNamespace()
 
 		seedClient := shootFramework.SeedClient.Client()
 		// Get the plutono Ingress

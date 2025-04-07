@@ -16,18 +16,18 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-// ControllerName is the name of this controller.
-const ControllerName = "reference"
+// controllerNameSuffix is the suffix added to the controller name.
+const controllerNameSuffix = "-reference"
 
 // AddToManager adds Reconciler to the given manager.
-func (r *Reconciler) AddToManager(mgr manager.Manager) error {
+func (r *Reconciler) AddToManager(mgr manager.Manager, name string) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
 
 	return builder.
 		ControllerManagedBy(mgr).
-		Named(ControllerName).
+		Named(name+controllerNameSuffix).
 		For(r.NewObjectFunc(), builder.WithPredicates(r.Predicate())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.ConcurrentSyncs, 0),

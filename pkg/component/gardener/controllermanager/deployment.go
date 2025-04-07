@@ -97,6 +97,9 @@ func (g *gardenerControllerManager) deployment(secretGenericTokenKubeconfig, sec
 								InitialDelaySeconds: 10,
 								TimeoutSeconds:      5,
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      volumeNameConfig,

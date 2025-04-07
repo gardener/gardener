@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 const (
@@ -55,7 +56,6 @@ type Interface interface {
 // Actuator is a concrete implementation of Interface.
 type Actuator struct {
 	GardenConfig            *rest.Config
-	GardenAPIReader         client.Reader
 	GardenClient            client.Client
 	GetTargetClientFunc     func(ctx context.Context) (kubernetes.Interface, error)
 	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)
@@ -620,7 +620,7 @@ func PrepareGardenletChartValues(
 	}
 
 	// Set the seed name
-	gardenletConfig.SeedConfig.SeedTemplate.Name = obj.GetName()
+	gardenletConfig.SeedConfig.Name = obj.GetName()
 
 	// Get gardenlet chart values
 	return vp.GetGardenletChartValues(
@@ -791,7 +791,7 @@ func createBootstrapKubeconfig(
 		}
 
 		var (
-			tokenID          = gardenletbootstraputil.TokenID(metav1.ObjectMeta{Name: obj.GetName(), Namespace: obj.GetNamespace()})
+			tokenID          = bootstraptoken.TokenID(metav1.ObjectMeta{Name: obj.GetName(), Namespace: obj.GetNamespace()})
 			tokenDescription = gardenletbootstraputil.Description(kind, obj.GetNamespace(), obj.GetName())
 			tokenValidity    = 24 * time.Hour
 		)

@@ -1,0 +1,21 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Extension
+metadata:
+  name: provider-local
+  annotations:
+    security.gardener.cloud/pod-security-enforce: privileged
+spec:
+  deployment:
+    extension:
+      runtimeClusterValues:
+        logLevel: debug
+      values:
+        logLevel: debug
+        imageVectorOverwrite:
+          images:
+          - name: machine-controller-manager-provider-local
+            ref: local-skaffold/machine-controller-manager-provider-local
+      injectGardenKubeconfig: true
+    admission:
+      values:
+        logLevel: debug

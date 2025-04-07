@@ -32,7 +32,7 @@ Kubernetes runs a primary "agent" on every node, the kubelet,
 which is responsible for managing pods and containers on its particular node.
 Decentralizing the responsibility to the kubelet has the advantage that the overall system
 is scalable. Gardener achieves the same for cluster management by using a **gardenlet**
-as а primary "agent" on every seed cluster, and is only responsible for shoot clusters
+as a primary "agent" on every seed cluster, and is only responsible for shoot clusters
 located in its particular seed cluster:
 
 ![Counterparts in the Gardener Architecture and the Kubernetes Architecture](images/gardenlet-architecture-similarities.png)
@@ -494,7 +494,7 @@ Alternatively, it can be disabled by setting the `concurrentSyncs=0` for the con
 
 Please refer to [GEP-22: Improved Usage of the `ShootState` API](../proposals/22-improved-usage-of-shootstate-api.md) for all information.
 
-### [`TokenRequestor` Controller For `ServiceAccount`s](../../pkg/gardenlet/controller/tokenrequestor/serviceaccount)
+### [`TokenRequestor` Controller For `ServiceAccount`s](../../pkg/controller/tokenrequestor)
 
 The `gardenlet` uses an instance of the `TokenRequestor` controller which initially was developed in the context of the `gardener-resource-manager`, please read [this document](resource-manager.md#tokenrequestor-controller) for further information.
 

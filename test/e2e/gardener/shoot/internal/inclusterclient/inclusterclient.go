@@ -6,6 +6,7 @@ package inclusterclient
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"maps"
 	"net"
@@ -32,7 +33,7 @@ import (
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/test/framework"
+	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
 const (
@@ -59,8 +60,10 @@ var labels = map[string]string{"e2e-test": "in-cluster-client"}
 // - one pod disables injection and relies on the default service link env vars
 // - one pod explicitly overwrites the env var
 // See docs/usage/networking/shoot_kubernetes_service_host_injection.md and docs/proposals/08-shoot-apiserver-via-sni.md
-func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.ShootFramework) {
-	if gardencorev1beta1.IsIPv6SingleStack(f.Shoot.Spec.Networking.IPFamilies) && len(f.Shoot.Spec.Provider.Workers) > 1 {
+func VerifyInClusterAccessToAPIServer(s *ShootContext) {
+	GinkgoHelper()
+
+	if gardencorev1beta1.IsIPv6SingleStack(s.Shoot.Spec.Networking.IPFamilies) && len(s.Shoot.Spec.Provider.Workers) > 1 {
 		// On local IPv6 single-stack clusters, the in-cluster DNS resolution can fail if it requires cross-node pod-to-pod
 		// communication, see https://github.com/gardener/gardener/pull/11287#discussion_r1950320268 and
 		// https://github.com/gardener/gardener/pull/11148#issuecomment-2653202171.
@@ -69,35 +72,109 @@ func VerifyInClusterAccessToAPIServer(parentCtx context.Context, f *framework.Sh
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Minute)
-	defer cancel()
+	Describe("in-cluster access to API server", func() {
+		It("should create test objects", func(ctx SpecContext) {
+			Expect(s.ShootClient).NotTo(BeNil(), "ItShouldInitializeShootClient should be called first")
 
-	defer cleanupObjects(f.ShootClient.Client())
-	podNames := prepareObjects(ctx, f.ShootClient.Client(), f.Shoot.Spec.Kubernetes.Version)
+			for _, obj := range getRBACObjects() {
+				Eventually(ctx, func() error {
+					return s.ShootClient.Create(ctx, obj)
+				}).Should(Or(Succeed(), BeAlreadyExistsError()), "should create %T %q", obj, client.ObjectKeyFromObject(obj))
+			}
+		}, SpecTimeout(time.Minute))
 
-	By("Verify access via direct path")
-	// this pod connects to the API server directly, i.e., uses the KUBERNETES_SERVICE_HOST env var injected by gardener
-	verifyAccessFromPod(ctx, f, podNames[podNameDirect], getInternalAPIServerAddress(f.Shoot))
+		var (
+			pods     []*corev1.Pod
+			podNames map[string]string
+		)
 
-	By("Verify access via API server proxy via the kubernetes service's clusterIP")
-	// this pod connects via the API server proxy using the KUBERNETES_SERVICE_HOST env var injected by kubelet, i.e.,
-	// via the clusterIP of kubernetes.default.svc.cluster.local
-	verifyAccessFromPod(ctx, f, podNames[podNameAPIServerProxyIP], getInClusterAPIServerAddress(ctx, f.ShootClient.Client()))
+		It("should create test pods", func(ctx SpecContext) {
+			pods = getPods(s.Shoot.Spec.Kubernetes.Version)
+			podNames = make(map[string]string, len(pods))
 
-	By("Verify access via API server proxy via the kubernetes service's hostname")
-	// this pod connects via the API server proxy via the kubernetes.default.svc.cluster.local hostname
-	verifyAccessFromPod(ctx, f, podNames[podNameAPIServerProxyHostname], "https://kubernetes.default.svc.cluster.local:443")
+			for _, pod := range pods {
+				Eventually(ctx, func(g Gomega) {
+					// if pod has already been created, delete it and try again with a new generated name
+					if pod.Name != "" {
+						g.Expect(s.ShootClient.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
+						pod.Name = ""
+						pod.ResourceVersion = ""
+					}
+
+					g.Expect(s.ShootClient.Create(ctx, pod)).To(Succeed())
+					podNames[pod.GenerateName] = pod.Name
+
+					if pod.Labels[resourcesv1alpha1.KubernetesServiceHostInject] != "disable" {
+						// Verify that gardener successfully injected the KUBERNETES_SERVICE_HOST env var (if not disabled).
+						// The webhook has failurePolicy=Ignore, so we might need to delete the pod and try again until the injection
+						// succeeds.
+						g.Expect(pod.Spec.Containers).To(ConsistOf(
+							HaveField("Env", ContainElement(
+								HaveField("Name", "KUBERNETES_SERVICE_HOST"),
+							)),
+						), "gardener should inject the KUBERNETES_SERVICE_HOST env var into the containers of pod %s", pod.Name)
+					}
+				}).WithPolling(2*time.Second).Should(Succeed(), "should create pod %q", pod.GenerateName)
+			}
+		}, SpecTimeout(time.Minute))
+
+		It("should wait for test pods to be ready", func(ctx SpecContext) {
+			for _, pod := range pods {
+				Eventually(ctx, func(g Gomega) {
+					g.Expect(s.ShootKomega.Get(pod)()).To(Succeed())
+					g.Expect(health.IsPodReady(pod)).To(BeTrue())
+				}).Should(Succeed(), "pod %q should get ready", client.ObjectKeyFromObject(pod))
+			}
+		}, SpecTimeout(time.Minute))
+
+		It("should access the API server via direct path", func(ctx SpecContext) {
+			// this pod connects to the API server directly, i.e., uses the KUBERNETES_SERVICE_HOST env var injected by gardener
+			expectedAddress := getInternalAPIServerAddress(s.Shoot)
+			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameDirect], expectedAddress, *s.Shoot.Status.ClusterIdentity)
+		}, SpecTimeout(time.Minute))
+
+		It("should access the API server via the kubernetes service's clusterIP", func(ctx SpecContext) {
+			// this pod connects via the API server proxy using the KUBERNETES_SERVICE_HOST env var injected by kubelet, i.e.,
+			// via the clusterIP of kubernetes.default.svc.cluster.local
+			expectedAddress := getInClusterAPIServerAddress(ctx, s)
+			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameAPIServerProxyIP], expectedAddress, *s.Shoot.Status.ClusterIdentity)
+		}, SpecTimeout(time.Minute))
+
+		It("should access the API server via the kubernetes service's hostname", func(ctx SpecContext) {
+			// this pod connects via the API server proxy via the kubernetes.default.svc.cluster.local hostname
+			verifyAccessFromPod(ctx, s.ShootClientSet, podNames[podNameAPIServerProxyHostname], "https://kubernetes.default.svc.cluster.local:443", *s.Shoot.Status.ClusterIdentity)
+		}, SpecTimeout(time.Minute))
+
+		AfterAll(func(ctx SpecContext) {
+			By("Clean up test objects")
+			for _, obj := range getRBACObjects() {
+				Eventually(ctx, func() error {
+					return s.ShootClient.Delete(ctx, obj)
+				}).Should(Or(Succeed(), BeNotFoundError()), "should delete %T %q", obj, client.ObjectKeyFromObject(obj))
+			}
+
+			By("Clean up test pods")
+			Eventually(ctx, func() error {
+				return s.ShootClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels(labels))
+			}).Should(Succeed(), "should delete all test pods")
+		}, NodeTimeout(time.Minute))
+	})
 }
 
-func verifyAccessFromPod(ctx context.Context, f *framework.ShootFramework, podName, expectedAddress string) {
+func verifyAccessFromPod(ctx context.Context, clientSet kubernetes.Interface, podName, expectedAddress, expectedClusterIdentity string) {
 	By("Verify we are using the expected path")
-	executeKubectl(ctx, f.ShootClient, podName, []string{"/kubectl", "cluster-info"}, Say(
+	executeKubectl(ctx, clientSet, podName, []string{"/kubectl", "cluster-info"}, Say(
 		"Kubernetes control plane is running at %s", regexp.QuoteMeta(expectedAddress),
 	))
 
 	By("Verify a typical API request works")
-	executeKubectl(ctx, f.ShootClient, podName, []string{"/kubectl", "get", "service", "kubernetes"}, Say(
+	executeKubectl(ctx, clientSet, podName, []string{"/kubectl", "get", "service", "kubernetes"}, Say(
 		`NAME.+\nkubernetes.+\n`,
+	))
+
+	By("Verify we reach the right API server")
+	executeKubectl(ctx, clientSet, podName, []string{"/kubectl", "get", "configmaps", "-n", "kube-system", "cluster-identity", "-o", "yaml"}, Say(
+		fmt.Sprintf("cluster-identity: %s", expectedClusterIdentity),
 	))
 }
 
@@ -111,19 +188,19 @@ func getInternalAPIServerAddress(shoot *gardencorev1beta1.Shoot) string {
 			break
 		}
 	}
-	Expect(address).NotTo(BeEmpty())
+	Expect(address).NotTo(BeEmpty(), "shoot should have an internal API server address")
 
 	return address + ":443"
 }
 
-func getInClusterAPIServerAddress(ctx context.Context, c client.Client) string {
+func getInClusterAPIServerAddress(ctx context.Context, s *ShootContext) string {
 	GinkgoHelper()
 
-	service := corev1.Service{}
-	Expect(c.Get(ctx, client.ObjectKey{Name: "kubernetes", Namespace: metav1.NamespaceDefault}, &service)).To(Succeed())
+	service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kubernetes", Namespace: metav1.NamespaceDefault}}
+	Eventually(ctx, s.ShootKomega.Get(service)).Should(Succeed())
 
 	clusterIP := service.Spec.ClusterIP
-	Expect(clusterIP).NotTo(BeEmpty())
+	Expect(clusterIP).NotTo(BeEmpty(), "kubernetes service should have a ClusterIP")
 
 	var port int32
 	for _, p := range service.Spec.Ports {
@@ -132,71 +209,9 @@ func getInClusterAPIServerAddress(ctx context.Context, c client.Client) string {
 			break
 		}
 	}
-	Expect(port).NotTo(BeZero())
+	Expect(port).NotTo(BeZero(), "kubernetes service should have a port named https")
 
 	return "https://" + net.JoinHostPort(clusterIP, strconv.FormatInt(int64(port), 10))
-}
-
-func prepareObjects(ctx context.Context, c client.Client, kubernetesVersion string) map[string]string {
-	By("Create test objects for verifying in-cluster access to API server")
-	for _, obj := range getRBACObjects() {
-		Eventually(func() error {
-			return client.IgnoreAlreadyExists(c.Create(ctx, obj))
-		}).WithContext(ctx).WithTimeout(time.Minute).Should(Succeed(), "should create %T %q", obj, client.ObjectKeyFromObject(obj))
-	}
-
-	pods := getPods(kubernetesVersion)
-	podGenerateNameToName := map[string]string{}
-	for _, pod := range pods {
-		Eventually(func(g Gomega) {
-			// if pod has already been created, delete it and try again with a new generated name
-			if pod.Name != "" {
-				g.Expect(c.Delete(ctx, pod)).To(Or(Succeed(), BeNotFoundError()))
-				pod.Name = ""
-				pod.ResourceVersion = ""
-			}
-
-			g.Expect(c.Create(ctx, pod)).To(Succeed())
-			podGenerateNameToName[pod.GenerateName] = pod.Name
-
-			if pod.Labels[resourcesv1alpha1.KubernetesServiceHostInject] != "disable" {
-				// Verify that gardener successfully injected the KUBERNETES_SERVICE_HOST env var (if not disabled).
-				// The webhook has failurePolicy=Ignore, so we might need to delete the pod and try again until the injection
-				// succeeds.
-				g.Expect(pod.Spec.Containers).To(ConsistOf(
-					HaveField("Env", ContainElement(
-						HaveField("Name", "KUBERNETES_SERVICE_HOST"),
-					)),
-				), "gardener should inject the KUBERNETES_SERVICE_HOST env var into the containers of pod %s", pod.Name)
-			}
-		}).WithContext(ctx).WithPolling(2*time.Second).WithTimeout(time.Minute).Should(Succeed(), "should create pod %q", pod.GenerateName)
-	}
-
-	By("Wait for test pods to be ready")
-	Eventually(func(g Gomega) {
-		for _, pod := range pods {
-			g.Expect(c.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
-			g.Expect(health.IsPodReady(pod)).To(BeTrue(), "pod %q should get ready", client.ObjectKeyFromObject(pod))
-		}
-	}).WithContext(ctx).WithTimeout(time.Minute).Should(Succeed())
-
-	return podGenerateNameToName
-}
-
-func cleanupObjects(c client.Client) {
-	By("Cleaning up test objects for verifying in-cluster access to API server")
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
-	for _, obj := range getRBACObjects() {
-		Eventually(func() error {
-			return client.IgnoreNotFound(c.Delete(cleanupCtx, obj))
-		}).WithContext(cleanupCtx).Should(Succeed(), "should delete %T %q", obj, client.ObjectKeyFromObject(obj))
-	}
-
-	Eventually(func() error {
-		return c.DeleteAllOf(cleanupCtx, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels(labels))
-	}).WithContext(cleanupCtx).Should(Succeed(), "should delete all test pods")
 }
 
 func executeKubectl(ctx context.Context, clientSet kubernetes.Interface, podName string, command []string, matcher gomegatypes.GomegaMatcher) {
@@ -204,7 +219,7 @@ func executeKubectl(ctx context.Context, clientSet kubernetes.Interface, podName
 
 	// Retry the command execution with a short timeout to reduce flakiness. We better timeout quickly and succeed on the
 	// next try than being stuck in on try.
-	Eventually(func(g Gomega, ctx context.Context) {
+	Eventually(ctx, func(g Gomega) {
 		timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
 		defer cancel()
 
@@ -224,7 +239,7 @@ func executeKubectl(ctx context.Context, clientSet kubernetes.Interface, podName
 
 		// we don't need Eventually here, because the buffer is already closed
 		g.Expect(stdOutBuffer).To(matcher)
-	}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
+	}).Should(Succeed())
 }
 
 func getPods(kubernetesVersion string) []*corev1.Pod {
@@ -332,14 +347,23 @@ func getRBACObjects() []client.Object {
 	}
 	objects = append(objects, roleBinding)
 
-	// permissions used by the test command: kubectl cluster-info
 	roleSystem := role.DeepCopy()
 	roleSystem.Namespace = metav1.NamespaceSystem
-	roleSystem.Rules = []rbacv1.PolicyRule{{
-		APIGroups: []string{""},
-		Resources: []string{"services"},
-		Verbs:     []string{"list"},
-	}}
+	roleSystem.Rules = []rbacv1.PolicyRule{
+		// permissions used by the test command: kubectl cluster-info
+		{
+			APIGroups: []string{""},
+			Resources: []string{"services"},
+			Verbs:     []string{"list"},
+		},
+		// permissions used by the test command: kubectl get configmaps -n kube-system cluster-identity
+		{
+			APIGroups:     []string{""},
+			Resources:     []string{"configmaps"},
+			ResourceNames: []string{"cluster-identity"},
+			Verbs:         []string{"get"},
+		},
+	}
 	objects = append(objects, roleSystem)
 
 	roleBindingSystem := roleBinding.DeepCopy()

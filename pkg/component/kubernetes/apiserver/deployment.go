@@ -37,7 +37,6 @@ import (
 )
 
 const (
-	secretNameServerCert             = "kube-apiserver"
 	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"    // #nosec G101 -- No credential.
 	secretNameKubeAggregator         = "kube-aggregator"           // #nosec G101 -- No credential.
 	secretNameHTTPProxy              = "kube-apiserver-http-proxy" // #nosec G101 -- No credential.
@@ -417,8 +416,8 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyPrivateKey))
 	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateBundle))
 	out = append(out, "--requestheader-extra-headers-prefix=X-Remote-Extra-")
-	out = append(out, "--requestheader-group-headers=X-Remote-Group")
-	out = append(out, "--requestheader-username-headers=X-Remote-User")
+	out = append(out, fmt.Sprintf("--requestheader-group-headers=%s", kubeapiserverconstants.RequestHeaderGroup))
+	out = append(out, fmt.Sprintf("--requestheader-username-headers=%s", kubeapiserverconstants.RequestHeaderUserName))
 
 	if k.values.IsWorkerless {
 		disableAPIs := map[string]bool{
@@ -469,9 +468,14 @@ func (k *kubeAPIServer) etcdServersOverrides() string {
 		return append([]schema.GroupResource{groupResource}, groupResources...)
 	}
 
+	hostName, port := k.values.NamePrefix+etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient
+	if k.values.RunsAsStaticPod {
+		hostName, port = "localhost", etcdconstants.StaticPodPortEtcdEventsClient
+	}
+
 	var overrides []string
 	for _, resource := range addGroupResourceIfNotPresent(k.values.ResourcesToStoreInETCDEvents, schema.GroupResource{Resource: "events"}) {
-		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s%s:%d", resource.Group, resource.Resource, k.values.NamePrefix, etcdconstants.ServiceName(v1beta1constants.ETCDRoleEvents), etcdconstants.PortEtcdClient))
+		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s:%d", resource.Group, resource.Resource, hostName, port))
 	}
 	return strings.Join(overrides, ",")
 }
@@ -749,23 +753,8 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 		},
 	}...)
 
-	if !k.values.VPN.DisableNewVPN {
-		// may need to enable IPv6 in pod network (e.g. for GKE clusters)
-		container.SecurityContext.Privileged = ptr.To(true)
-	}
-
-	if k.values.VPN.DisableNewVPN {
-		container.Command = nil
-		container.Env = append(container.Env,
-			corev1.EnvVar{
-				Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-				Value: "true",
-			},
-			corev1.EnvVar{
-				Name:  "CONFIGURE_BONDING",
-				Value: "true",
-			})
-	}
+	// may need to enable IPv6 in pod network (e.g. for GKE clusters)
+	container.SecurityContext.Privileged = ptr.To(true)
 
 	container.LivenessProbe = nil
 	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
@@ -890,14 +879,6 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 		})
 	}
 
-	if k.values.VPN.DisableNewVPN {
-		container.Command = nil
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-			Value: "true",
-		})
-	}
-
 	return container
 }
 
@@ -919,7 +900,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		podCIDRs = append(podCIDRs, v.String())
 	}
 
-	container := &corev1.Container{
+	return &corev1.Container{
 		Name:            containerNameVPNPathController,
 		Image:           k.values.Images.VPNClient,
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -987,13 +968,6 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 	}
-
-	if k.values.VPN.DisableNewVPN {
-		container.Command = nil
-		container.Args = []string{"/path-controller.sh"}
-	}
-
-	return container
 }
 
 func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv1.Deployment) {

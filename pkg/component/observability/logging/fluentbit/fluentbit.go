@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v2/apis/fluentbit/v1alpha2"
+	fluentbitv1alpha2 "github.com/fluent/fluent-operator/v3/apis/fluentbit/v1alpha2"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -371,6 +371,9 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 				"-c",
 				"/fluent-bit/config/fluent-bit.conf",
 			},
+			ContainerSecurityContext: &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr.To(false),
+			},
 			PriorityClassName: f.values.PriorityClassName,
 			Ports: []corev1.ContainerPort{
 				{
@@ -464,6 +467,9 @@ func (f *fluentBit) getFluentBit() *fluentbitv1alpha2.FluentBit {
 						"/source/plugins/.",
 						"/plugins",
 					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: ptr.To(false),
+					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "plugins",
@@ -498,7 +504,7 @@ func (f *fluentBit) getClusterFluentBitConfig() *fluentbitv1alpha2.ClusterFluent
 		},
 		Spec: fluentbitv1alpha2.FluentBitConfigSpec{
 			Service: &fluentbitv1alpha2.Service{
-				FlushSeconds: ptr.To[int64](30),
+				FlushSeconds: ptr.To[float64](30),
 				Daemon:       ptr.To(false),
 				LogLevel:     "error",
 				ParsersFile:  "parsers.conf",

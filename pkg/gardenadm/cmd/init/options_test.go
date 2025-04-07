@@ -27,8 +27,14 @@ var _ = Describe("Options", func() {
 	})
 
 	Describe("#Validate", func() {
-		It("should return nil", func() {
+		It("should pass for valid options", func() {
+			options.ConfigDir = "some-path-to-config-dir"
+
 			Expect(options.Validate()).To(Succeed())
+		})
+
+		It("should fail because config dir path is not set", func() {
+			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a path to a config directory")))
 		})
 	})
 

@@ -29,12 +29,14 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/features"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 const (
@@ -135,15 +137,17 @@ func (r *Reconciler) ensureAtMostOneGardenExists(ctx context.Context) error {
 	return fmt.Errorf("there can be at most one operator.gardener.cloud/v1alpha1.Garden resource in the system at a time")
 }
 
-func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Garden) flow.ProgressReporter {
+func (r *Reconciler) reportProgress(log logr.Logger, garden *operatorv1alpha1.Garden, reportProgress bool) flow.ProgressReporter {
 	return flow.NewDelayingProgressReporter(clock.RealClock{}, func(ctx context.Context, stats *flow.Stats) {
 		patch := client.MergeFrom(garden.DeepCopy())
 
 		if garden.Status.LastOperation == nil {
 			garden.Status.LastOperation = &gardencorev1beta1.LastOperation{}
 		}
+		if reportProgress {
+			garden.Status.LastOperation.Progress = stats.ProgressPercent()
+		}
 		garden.Status.LastOperation.Description = flow.MakeDescription(stats)
-		garden.Status.LastOperation.Progress = stats.ProgressPercent()
 		garden.Status.LastOperation.LastUpdateTime = metav1.NewTime(r.Clock.Now().UTC())
 
 		if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
@@ -534,4 +538,17 @@ func getValidVolumeSize(volume *operatorv1alpha1.Volume, size string) string {
 	}
 
 	return size
+}
+
+func isIstioTLSTerminationEnabled(garden *operatorv1alpha1.Garden) bool {
+	if !features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) {
+		return false
+	}
+
+	kubernetesVersion, err := semver.NewVersion(garden.Spec.VirtualCluster.Kubernetes.Version)
+	if err != nil {
+		return false
+	}
+
+	return versionutils.ConstraintK8sGreaterEqual131.Check(kubernetesVersion)
 }

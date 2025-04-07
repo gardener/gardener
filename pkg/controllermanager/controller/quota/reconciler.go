@@ -79,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 		message := fmt.Sprintf("Cannot delete Quota, because the following resources are still referencing it: SecretBindings - %+v, CredentialsBindings - %+v", associatedSecretBindings, associatedCredentialsBindings)
 		r.Recorder.Event(quota, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
-		return reconcile.Result{}, fmt.Errorf("Cannot delete Quota, because the following resources are still referencing it: SecretBindings - %+v, CredentialsBindings - %+v", associatedSecretBindings, associatedCredentialsBindings)
+		return reconcile.Result{}, fmt.Errorf("cannot delete Quota, because the following resources are still referencing it: SecretBindings - %+v, CredentialsBindings - %+v", associatedSecretBindings, associatedCredentialsBindings)
 	}
 
 	if !controllerutil.ContainsFinalizer(quota, gardencorev1beta1.GardenerName) {

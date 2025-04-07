@@ -17,6 +17,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // HibernationIsEnabled checks if the given shoot's desired state is hibernated.
@@ -485,29 +486,6 @@ func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) boo
 	return oldNames.Equal(newNames)
 }
 
-// ShootResourceReferencesEqual returns true when at least one of the Secret/ConfigMap resource references inside a Shoot
-// has been changed.
-func ShootResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
-	var (
-		oldNames = sets.New[string]()
-		newNames = sets.New[string]()
-	)
-
-	for _, resource := range oldResources {
-		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
-			oldNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
-		}
-	}
-
-	for _, resource := range newResources {
-		if resource.ResourceRef.APIVersion == "v1" && sets.New("Secret", "ConfigMap").Has(resource.ResourceRef.Kind) {
-			newNames.Insert(resource.ResourceRef.Kind + "/" + resource.ResourceRef.Name)
-		}
-	}
-
-	return oldNames.Equal(newNames)
-}
-
 // CalculateEffectiveKubernetesVersion if a shoot has kubernetes version specified by worker group, return this,
 // otherwise the shoot kubernetes version
 func CalculateEffectiveKubernetesVersion(controlPlaneVersion *semver.Version, workerKubernetes *gardencorev1beta1.WorkerKubernetes) (*semver.Version, error) {
@@ -648,6 +626,22 @@ func IsShootAutonomous(shoot *gardencorev1beta1.Shoot) bool {
 	})
 }
 
+// ControlPlaneWorkerPoolForShoot returns the worker pool running the control plane in case the shoot is autonomous.
+func ControlPlaneWorkerPoolForShoot(shoot *gardencorev1beta1.Shoot) *gardencorev1beta1.Worker {
+	if !IsShootAutonomous(shoot) {
+		return nil
+	}
+
+	idx := slices.IndexFunc(shoot.Spec.Provider.Workers, func(worker gardencorev1beta1.Worker) bool {
+		return worker.ControlPlane != nil
+	})
+	if idx == -1 {
+		return nil
+	}
+
+	return &shoot.Spec.Provider.Workers[idx]
+}
+
 // ControlPlaneNamespaceForShoot returns the control plane namespace for the shoot. If it is an autonomous shoot,
 // kube-system is returned. Otherwise, it is the technical ID of the shoot.
 func ControlPlaneNamespaceForShoot(shoot *gardencorev1beta1.Shoot) string {
@@ -664,4 +658,20 @@ func IsUpdateStrategyInPlace(updateStrategy *gardencorev1beta1.MachineUpdateStra
 	}
 
 	return *updateStrategy == gardencorev1beta1.AutoInPlaceUpdate || *updateStrategy == gardencorev1beta1.ManualInPlaceUpdate
+}
+
+// IsShootIstioTLSTerminationEnabled returns true if the Istio TLS termination for the shoot kube-apiserver is enabled.
+func IsShootIstioTLSTerminationEnabled(shoot *gardencorev1beta1.Shoot) bool {
+	shootKubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil || versionutils.ConstraintK8sLess131.Check(shootKubernetesVersion) {
+		return false
+	}
+
+	value, ok := shoot.Annotations[v1beta1constants.ShootDisableIstioTLSTermination]
+	if !ok {
+		return true
+	}
+
+	noTLSTermination, _ := strconv.ParseBool(value)
+	return !noTLSTermination
 }

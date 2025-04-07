@@ -5,6 +5,7 @@
 package validation
 
 import (
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -45,6 +46,11 @@ func validateControllerManagerControllerConfiguration(conf controllermanagerconf
 		allErrs = append(allErrs, validateProjectControllerConfiguration(conf.Project, projectFldPath)...)
 	}
 
+	shootStateFldPath := fldPath.Child("shootState")
+	if conf.ShootState != nil {
+		allErrs = append(allErrs, validateShootStateControllerConfiguration(conf.ShootState, shootStateFldPath)...)
+	}
+
 	return allErrs
 }
 
@@ -61,5 +67,13 @@ func validateProjectQuotaConfiguration(conf controllermanagerconfigv1alpha1.Quot
 
 	allErrs = append(allErrs, metav1validation.ValidateLabelSelector(conf.ProjectSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, fldPath.Child("projectSelector"))...)
 
+	return allErrs
+}
+
+func validateShootStateControllerConfiguration(conf *controllermanagerconfigv1alpha1.ShootStateControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if conf.ConcurrentSyncs != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*conf.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
+	}
 	return allErrs
 }

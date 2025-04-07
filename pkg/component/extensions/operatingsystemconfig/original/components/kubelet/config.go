@@ -5,6 +5,7 @@
 package kubelet
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -17,6 +18,9 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
+
+// FilePathKubernetesManifests is a constant for a path to a directory containing static pod manifests.
+var FilePathKubernetesManifests = filepath.Join(string(filepath.Separator), "etc", "kubernetes", "manifests")
 
 // Config returns a kubelet config based on the provided parameters and for the provided Kubernetes version.
 func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clusterDomain string, taints []corev1.Taint, params components.ConfigurableKubeletConfigParameters) *kubeletconfigv1beta1.KubeletConfiguration {
@@ -104,6 +108,10 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 
 	if params.MemorySwap != nil {
 		config.MemorySwap = *params.MemorySwap
+	}
+
+	if params.WithStaticPodPath {
+		config.StaticPodPath = FilePathKubernetesManifests
 	}
 
 	return config

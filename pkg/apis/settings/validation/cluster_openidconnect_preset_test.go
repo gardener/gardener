@@ -65,8 +65,8 @@ var _ = Describe("ClusterOpenIDConnectPreset", func() {
 
 		It("should forbid empty object", func() {
 
-			provider.new.ObjectMeta.Name = ""
-			provider.new.ObjectMeta.Namespace = ""
+			provider.new.Name = ""
+			provider.new.Namespace = ""
 			provider.new.Spec = settings.ClusterOpenIDConnectPresetSpec{}
 
 			errorList := provider.providerFunc()
@@ -118,16 +118,16 @@ var _ = Describe("ClusterOpenIDConnectPreset", func() {
 
 		BeforeEach(func() {
 			provider.old = preset.DeepCopy()
-			provider.old.ObjectMeta.ResourceVersion = "2"
+			provider.old.ResourceVersion = "2"
 
 			provider.new = preset.DeepCopy()
-			provider.new.ObjectMeta.ResourceVersion = "2"
+			provider.new.ResourceVersion = "2"
 		})
 
 		It("should forbid update with mutation of objectmeta fields", func() {
 
-			provider.new.ObjectMeta.Name = "changed-name"
-			provider.new.ObjectMeta.ResourceVersion = ""
+			provider.new.Name = "changed-name"
+			provider.new.ResourceVersion = ""
 
 			errorList := provider.providerFunc()
 

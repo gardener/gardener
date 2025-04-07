@@ -10,17 +10,18 @@ import (
 	"testing"
 	"time"
 
+	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -32,12 +33,14 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/logger"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller/garden/care"
 	"github.com/gardener/gardener/pkg/operator/features"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	gardenerenvtest "github.com/gardener/gardener/test/envtest"
 )
 
 func TestGarden(t *testing.T) {
@@ -68,19 +71,27 @@ var _ = BeforeSuite(func() {
 
 	features.RegisterFeatureGates()
 
+	var err error
+	By("Fetch Etcd CRD")
+	k8sVersion, err := gardenerenvtest.GetK8SVersion()
+	Expect(err).NotTo(HaveOccurred())
+	etcdCRDGetter, err := etcd.NewCRDGetter(k8sVersion)
+	Expect(err).NotTo(HaveOccurred())
+	etcdCRD, err := etcdCRDGetter.GetCRD(druidcorecrds.ResourceNameEtcd)
+	Expect(err).NotTo(HaveOccurred())
+
 	By("Start test environment")
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
 				filepath.Join("..", "..", "..", "..", "..", "example", "operator", "10-crd-operator.gardener.cloud_gardens.yaml"),
 				filepath.Join("..", "..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml"),
-				filepath.Join("..", "..", "..", "..", "..", "example", "seed-crds", "10-crd-druid.gardener.cloud_etcds.yaml"),
 			},
+			CRDs: []*apiextensionsv1.CustomResourceDefinition{etcdCRD},
 		},
 		ErrorIfCRDPathMissing: true,
 	}
 
-	var err error
 	restConfig, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
@@ -120,16 +131,10 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("Setup manager")
-	httpClient, err := rest.HTTPClientFor(restConfig)
-	Expect(err).NotTo(HaveOccurred())
-	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient)
-	Expect(err).NotTo(HaveOccurred())
-
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:  operatorclient.RuntimeScheme,
 		Metrics: metricsserver.Options{BindAddress: "0"},
 		Cache: cache.Options{
-			Mapper: mapper,
 			ByObject: map[client.Object]cache.ByObject{
 				&operatorv1alpha1.Garden{}: {
 					Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),

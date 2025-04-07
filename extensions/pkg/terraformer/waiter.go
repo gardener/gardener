@@ -101,7 +101,7 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 			case corev1.PodPending:
 				// Check whether the Pod has been created successfully
 				if containerStateWaiting := containerStatuses[0].State.Waiting; containerStateWaiting != nil && containerStateWaiting.Reason == "ContainerCreating" {
-					if podAge := time.Now().UTC().Sub(pod.CreationTimestamp.Time.UTC()); podAge > t.deadlinePodCreation {
+					if podAge := time.Now().UTC().Sub(pod.CreationTimestamp.UTC()); podAge > t.deadlinePodCreation {
 						status = podStatusCreationTimeout
 						log.Info("Timeout creating pod")
 						return retry.Ok()

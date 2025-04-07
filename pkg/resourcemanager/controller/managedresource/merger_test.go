@@ -399,7 +399,7 @@ var _ = Describe("merger", func() {
 
 		It("should not overwrite old .spec.replicas if preserve-replicas is true", func() {
 			newDeployment.Spec.Replicas = ptr.To[int32](2)
-			newDeployment.ObjectMeta.Annotations["resources.gardener.cloud/preserve-replicas"] = "true"
+			newDeployment.Annotations["resources.gardener.cloud/preserve-replicas"] = "true"
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
 			Expect(s.Convert(newDeployment, desired, nil)).Should(Succeed())
@@ -445,7 +445,7 @@ var _ = Describe("merger", func() {
 				},
 			}
 
-			newDeployment.ObjectMeta.Annotations["resources.gardener.cloud/preserve-resources"] = "true"
+			newDeployment.Annotations["resources.gardener.cloud/preserve-resources"] = "true"
 
 			Expect(s.Convert(old, current, nil)).Should(Succeed())
 			Expect(s.Convert(newDeployment, desired, nil)).Should(Succeed())

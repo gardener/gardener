@@ -25,7 +25,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/component/apiserver"
 	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/component/shared"
@@ -42,14 +41,13 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		}
 	)
 
-	if !b.Shoot.IsWorkerless {
+	if !b.Shoot.IsWorkerless && !b.Shoot.RunsControlPlane() {
 		vpnConfig.Enabled = true
 		vpnConfig.HighAvailabilityEnabled = b.Shoot.VPNHighAvailabilityEnabled
 		vpnConfig.HighAvailabilityNumberOfSeedServers = b.Shoot.VPNHighAvailabilityNumberOfSeedServers
 		vpnConfig.HighAvailabilityNumberOfShootClients = b.Shoot.VPNHighAvailabilityNumberOfShootClients
 		// Pod/service/node network CIDRs are set on deployment to handle dynamic network CIDRs
 		vpnConfig.IPFamilies = b.Seed.GetInfo().Spec.Networks.IPFamilies
-		vpnConfig.DisableNewVPN = !b.Shoot.UsesNewVPN
 	}
 
 	return shared.NewKubeAPIServer(
@@ -67,6 +65,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		vpnConfig,
 		v1beta1constants.PriorityClassNameShootControlPlane500,
 		b.Shoot.IsWorkerless,
+		b.Shoot.RunsControlPlane(),
 		nil,
 		nil,
 		nil,
@@ -74,23 +73,21 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	)
 }
 
-func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.AutoscalingConfig {
+func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.AutoscalingConfig {
 	var (
 		scaleDownDisabled = false
 		// kube-apiserver is a control plane component of type "server".
 		// The HA webhook sets at least 2 replicas to components of type "server" (w/o HA or with w/ HA).
 		// Ref https://github.com/gardener/gardener/blob/master/docs/development/high-availability-of-components.md#control-plane-components.
 		// That's why minReplicas is set to 2.
-		minReplicas        int32 = 2
-		maxReplicas        int32 = 6
-		apiServerResources       = corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("250m"),
-				corev1.ResourceMemory: resource.MustParse("500Mi"),
-			},
-		}
+		minReplicas int32 = 2
+		maxReplicas int32 = 6
+		minAllowed  corev1.ResourceList
 	)
 
+	if apiServerConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; apiServerConfig != nil && apiServerConfig.Autoscaling != nil {
+		minAllowed = apiServerConfig.Autoscaling.MinAllowed
+	}
 	if v1beta1helper.IsHAControlPlaneConfigured(b.Shoot.GetInfo()) {
 		minReplicas = 3
 	}
@@ -106,11 +103,20 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() apiserver.Autoscaling
 		}
 	}
 
-	return apiserver.AutoscalingConfig{
-		APIServerResources: apiServerResources,
-		MinReplicas:        minReplicas,
-		MaxReplicas:        maxReplicas,
-		ScaleDownDisabled:  scaleDownDisabled,
+	return kubeapiserver.AutoscalingConfig{
+		APIServerResources: corev1.ResourceRequirements{
+			Requests: kubernetesutils.MaximumResourcesFromResourceList(
+				corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("250m"),
+					corev1.ResourceMemory: resource.MustParse("500Mi"),
+				},
+				minAllowed,
+			),
+		},
+		MinReplicas:       minReplicas,
+		MaxReplicas:       maxReplicas,
+		ScaleDownDisabled: scaleDownDisabled,
+		MinAllowed:        minAllowed,
 	}
 }
 
@@ -253,8 +259,8 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(externalHostname str
 		if config == nil {
 			config = &gardencorev1beta1.ServiceAccountConfig{}
 		}
-		config.Issuer = ptr.To(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer", *b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID))
-		jwksURI = ptr.To(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer/jwks", *b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().ObjectMeta.UID))
+		config.Issuer = ptr.To(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer", *b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().UID))
+		jwksURI = ptr.To(fmt.Sprintf("https://%s/projects/%s/shoots/%s/issuer/jwks", *b.Shoot.ServiceAccountIssuerHostname, b.Garden.Project.Name, b.Shoot.GetInfo().UID))
 	}
 
 	serviceAccountConfig := kubeapiserver.ComputeKubeAPIServerServiceAccountConfig(
@@ -275,6 +281,8 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	}
 	b.ShootClientSet = nil
 
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
+
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Destroy(ctx)
 }
 
@@ -286,13 +294,13 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
 		return err
 	}
+	if err := b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer); err != nil {
+		return err
+	}
 	if b.ShootUsesDNS() {
 		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
 			return err
 		}
-	}
-	if err := b.DeployKubeAPIServer(ctx, enableNodeAgentAuthorizer); err != nil {
-		return err
 	}
 	if err := kubernetesutils.ScaleDeployment(ctx, b.SeedClientSet.Client(), client.ObjectKey{Namespace: b.Shoot.ControlPlaneNamespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, 1); err != nil {
 		return err

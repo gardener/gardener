@@ -56,8 +56,10 @@ const (
 // Interface contains functions for a machine-controller-manager deployer.
 type Interface interface {
 	component.DeployWaiter
-	// SetNamespaceUID sets the UID of the namespace into which the cluster-autoscaler shall be deployed.
+	// SetNamespaceUID sets the UID of the namespace into which the machine-controller-manager shall be deployed.
 	SetNamespaceUID(types.UID)
+	// SetReplicas sets the replicas.
+	SetReplicas(int32)
 }
 
 // New creates a new instance of DeployWaiter for the machine-controller-manager.
@@ -485,6 +487,7 @@ func (m *machineControllerManager) WaitCleanup(ctx context.Context) error {
 }
 
 func (m *machineControllerManager) SetNamespaceUID(uid types.UID) { m.values.namespaceUID = uid }
+func (m *machineControllerManager) SetReplicas(replicas int32)    { m.values.Replicas = replicas }
 
 func (m *machineControllerManager) computeShootResourcesData(serviceAccountName string) (map[string][]byte, error) {
 	var (

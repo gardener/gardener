@@ -48,6 +48,7 @@ type ConfigurableKubeletConfigParameters struct {
 	PodPidsLimit                     *int64
 	ProtectKernelDefaults            *bool
 	SystemReserved                   map[string]string
+	WithStaticPodPath                bool
 }
 
 const (

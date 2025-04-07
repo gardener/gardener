@@ -5,6 +5,7 @@
 package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,6 +24,10 @@ type ControllerDeployment struct {
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
 	ProviderConfig runtime.RawExtension `json:"providerConfig" protobuf:"bytes,3,opt,name=providerConfig"`
+	// InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+	// resources.
+	// +optional
+	InjectGardenKubeconfig *bool `json:"injectGardenKubeconfig,omitempty" protobuf:"varint,4,opt,name=injectGardenKubeconfig"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -72,4 +77,8 @@ type OCIRepository struct {
 	// Digest of the image to pull, takes precedence over tag.
 	// +optional
 	Digest *string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
+	// PullSecretRef is a reference to a secret containing the pull secret.
+	// The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+	// +optional
+	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty" protobuf:"bytes,5,opt,name=pullSecretRef"`
 }

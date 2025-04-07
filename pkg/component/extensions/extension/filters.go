@@ -12,6 +12,10 @@ import (
 
 type filter func(e Extension) bool
 
+func all(_ Extension) bool {
+	return true
+}
+
 func deployBeforeKubeAPIServer(e Extension) bool {
 	if e.Lifecycle == nil || e.Lifecycle.Reconcile == nil {
 		return false

@@ -81,6 +81,7 @@ var (
 	shootDashboardsPath          = filepath.Join("dashboards", "shoot")
 	gardenAndShootDashboardsPath = filepath.Join("dashboards", "garden-shoot")
 	commonDashboardsPath         = filepath.Join("dashboards", "common")
+	commonVpaDashboardsPath      = filepath.Join(commonDashboardsPath, "vpa")
 )
 
 // Interface contains functions for a Plutono Deployer
@@ -386,6 +387,9 @@ func (p *plutono) getDashboardConfigMap() (*corev1.ConfigMap, error) {
 
 	if p.values.IsGardenCluster {
 		requiredDashboards = map[string]embed.FS{gardenDashboardsPath: gardenDashboards, gardenAndShootDashboardsPath: gardenAndShootDashboards}
+		if p.values.VPAEnabled {
+			requiredDashboards[commonVpaDashboardsPath] = commonDashboards
+		}
 	} else if p.values.ClusterType == component.ClusterTypeSeed {
 		requiredDashboards = map[string]embed.FS{seedDashboardsPath: seedDashboards, commonDashboardsPath: commonDashboards}
 		if !p.values.IncludeIstioDashboards {
@@ -706,9 +710,10 @@ func (p *plutono) getDeployment(providerConfigMap, dataSourceConfigMap *corev1.C
 		},
 	}
 
-	if p.values.ClusterType == component.ClusterTypeSeed {
+	switch p.values.ClusterType {
+	case component.ClusterTypeSeed:
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelMonitoring})
-	} else if p.values.ClusterType == component.ClusterTypeShoot {
+	case component.ClusterTypeShoot:
 		deployment.Labels = utils.MergeStringMaps(deployment.Labels, map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring})
 	}
 	utilruntime.Must(references.InjectAnnotations(deployment))
@@ -865,13 +870,14 @@ func (p *plutono) getPodLabels() map[string]string {
 		return labels
 	}
 
-	if p.values.ClusterType == component.ClusterTypeSeed {
+	switch p.values.ClusterType {
+	case component.ClusterTypeSeed:
 		labels = utils.MergeStringMaps(labels, map[string]string{
 			v1beta1constants.LabelRole:                                     v1beta1constants.LabelMonitoring,
 			gardenerutils.NetworkPolicyLabel("prometheus-aggregate", 9090): v1beta1constants.LabelNetworkPolicyAllowed,
 			gardenerutils.NetworkPolicyLabel("prometheus-seed", 9090):      v1beta1constants.LabelNetworkPolicyAllowed,
 		})
-	} else if p.values.ClusterType == component.ClusterTypeShoot {
+	case component.ClusterTypeShoot:
 		labels = utils.MergeStringMaps(labels, map[string]string{
 			v1beta1constants.GardenRole:                                v1beta1constants.GardenRoleMonitoring,
 			gardenerutils.NetworkPolicyLabel("prometheus-shoot", 9090): v1beta1constants.LabelNetworkPolicyAllowed,

@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -693,4 +694,18 @@ func (c *ComparableTolerations) Transform(toleration corev1.Toleration) corev1.T
 
 	toleration.TolerationSeconds = c.tolerationSeconds[tolerationSeconds]
 	return toleration
+}
+
+// MaximumResourcesFromResourceList merges the given resource lists.
+// If the same resource is defined in both lists, the higher quantity is taken into account.
+func MaximumResourcesFromResourceList(list1, list2 corev1.ResourceList) corev1.ResourceList {
+	resources := maps.Clone(list1)
+
+	for resource, quantity := range list2 {
+		if v, ok := resources[resource]; !ok || v.Cmp(quantity) <= 0 {
+			resources[resource] = quantity
+		}
+	}
+
+	return resources
 }

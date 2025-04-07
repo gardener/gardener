@@ -54,6 +54,8 @@ type Interface interface {
 // Values contains configuration values for the gardener-apiserver resources.
 type Values struct {
 	apiserver.Values
+	// Autoscaling contains information for configuring autoscaling settings for the API server.
+	Autoscaling AutoscalingConfig
 	// ClusterIdentity is the identity of the garden cluster.
 	ClusterIdentity string
 	// Image is the container image used for the gardener-apiserver pods.
@@ -62,12 +64,23 @@ type Values struct {
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
 	LogFormat string
+	// GoAwayChance can be used to prevent HTTP/2 clients from getting stuck on a single apiserver, randomly close a
+	// connection (GOAWAY).
+	GoAwayChance *float64
 	// TopologyAwareRoutingEnabled specifies where the topology-aware feature is enabled.
 	TopologyAwareRoutingEnabled bool
 	// WorkloadIdentityTokenIssuer is the issuer identifier of the workload identity tokens set in the 'iss' claim.
 	WorkloadIdentityTokenIssuer string
 	// WorkloadIdentityKeyRotationPhase is the rotation phase of workload identity key.
 	WorkloadIdentityKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
+}
+
+// AutoscalingConfig contains information for configuring autoscaling settings for the API server.
+type AutoscalingConfig struct {
+	// APIServerResources are the resource requirements for the API server container.
+	APIServerResources corev1.ResourceRequirements
+	// Replicas is the number of pod replicas for the API server.
+	Replicas *int32
 }
 
 // New creates a new instance of DeployWaiter for the gardener-apiserver.
@@ -157,7 +170,6 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
 		g.podDisruptionBudget(),
 		g.serviceRuntime(),
-		g.horizontalPodAutoscaler(),
 		g.verticalPodAutoscaler(),
 		g.deployment(secretCAETCD, secretETCDClient, secretGenericTokenKubeconfig, secretServer, secretAdmissionKubeconfigs, secretETCDEncryptionConfiguration, secretAuditWebhookKubeconfig, secretWorkloadIdentityKey, secretVirtualGardenAccess, configMapAuditPolicy, configMapAdmissionConfigs),
 		g.serviceMonitor(),

@@ -10,12 +10,17 @@ import (
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/komega"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 )
@@ -56,8 +61,13 @@ func NewTestContext() *TestContext {
 		Log: logger.MustNewZapLogger(logger.DebugLevel, logger.FormatText, logzap.WriteTo(GinkgoWriter)),
 	}
 
+	gardenScheme := kubernetes.GardenScheme
+	utilruntime.Must(operatorv1alpha1.AddToScheme(gardenScheme))
+	utilruntime.Must(resourcesv1alpha1.AddToScheme(gardenScheme))
+	utilruntime.Must(apiextensionsscheme.AddToScheme(gardenScheme))
+
 	gardenClientSet, err := kubernetes.NewClientFromFile("", os.Getenv("KUBECONFIG"),
-		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
+		kubernetes.WithClientOptions(client.Options{Scheme: gardenScheme}),
 		kubernetes.WithClientConnectionOptions(componentbaseconfigv1alpha1.ClientConnectionConfiguration{QPS: 100, Burst: 130}),
 		kubernetes.WithAllowedUserFields([]string{kubernetes.AuthTokenFile}),
 		kubernetes.WithDisabledCachedClient(),
@@ -136,5 +146,76 @@ func (s *ShootContext) WithSeedClientSet(clientSet kubernetes.Interface) *ShootC
 	s.SeedClientSet = clientSet
 	s.SeedClient = clientSet.Client()
 	s.SeedKomega = komega.New(s.SeedClient)
+	return s
+}
+
+// ProjectContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
+// same test case, i.e., within the same ordered container.
+// Accordingly, ProjectContext values must not be reused across multiple test cases (ordered containers). Make sure to
+// declare ProjectContext variables within the ordered container and initialize them during ginkgo tree construction,
+// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+//
+// A ProjectContext can be initialized using TestContext.ForProject.
+type ProjectContext struct {
+	TestContext
+	Project *gardencorev1beta1.Project
+}
+
+// ForProject copies the receiver TestContext for deriving a ProjectContext.
+func (t *TestContext) ForProject(project *gardencorev1beta1.Project) *ProjectContext {
+	s := &ProjectContext{
+		TestContext: *t,
+		Project:     project,
+	}
+	s.Log = s.Log.WithValues("project", client.ObjectKeyFromObject(project))
+
+	return s
+}
+
+// GardenContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
+// same test case, i.e., within the same ordered container.
+// Accordingly, GardenContext values must not be reused across multiple test cases (ordered containers). Make sure to
+// declare GardenContext variables within the ordered container and initialize them during ginkgo tree construction,
+// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+//
+// A GardenContext can be initialized using TestContext.ForGarden.
+type GardenContext struct {
+	TestContext
+
+	// Garden object the test is working with
+	Garden *operatorv1alpha1.Garden
+
+	// BackupSecret contains the backup secret the test is working with
+	BackupSecret *corev1.Secret
+
+	// VirtualClusterClientSet is a client for the virtual cluster. It must be initialized via WithVirtualClusterClientSet.
+	VirtualClusterClientSet kubernetes.Interface
+	// VirtualClusterClient is the controller-runtime client of the VirtualClusterClientSet. This is a more convenient equivalent of
+	// VirtualClusterClientSet.Client().
+	VirtualClusterClient client.Client
+	// VirtualClusterKomega is a Komega instance for writing assertions on objects in the virtual cluster. E.g.,
+	//  Eventually(ctx, s.VirtualClusterKomega.ObjectList(&corev1.NodeList{})).Should(
+	//    HaveField("Items", HaveLen(1)),
+	//  )
+	VirtualClusterKomega komega.Komega
+}
+
+// ForGarden copies the receiver TestContext for deriving a GardenContext.
+func (t *TestContext) ForGarden(garden *operatorv1alpha1.Garden, backupSecret *corev1.Secret) *GardenContext {
+	s := &GardenContext{
+		TestContext:  *t,
+		Garden:       garden,
+		BackupSecret: backupSecret,
+	}
+	s.Log = s.Log.WithValues("garden", client.ObjectKeyFromObject(garden))
+
+	return s
+}
+
+// WithVirtualClusterClientSet initializes the virtual cluster clients of this GardenContext from the given client set.
+func (s *GardenContext) WithVirtualClusterClientSet(clientSet kubernetes.Interface) *GardenContext {
+	s.VirtualClusterClientSet = clientSet
+	s.VirtualClusterClient = clientSet.Client()
+	s.VirtualClusterKomega = komega.New(s.VirtualClusterClient)
 	return s
 }

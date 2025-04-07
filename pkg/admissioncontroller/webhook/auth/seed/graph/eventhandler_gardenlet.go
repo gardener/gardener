@@ -19,7 +19,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
-	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 func (g *graph) setupGardenletWatch(ctx context.Context, informer cache.Informer) error {
@@ -95,7 +95,7 @@ func (g *graph) handleGardenletCreateOrUpdate(ctx context.Context, gardenlet *se
 	}
 
 	if allowBootstrap {
-		secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+gardenletbootstraputil.TokenID(gardenlet.ObjectMeta))
+		secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraptoken.TokenID(gardenlet.ObjectMeta))
 		g.addEdge(secretVertex, gardenletVertex)
 	}
 }

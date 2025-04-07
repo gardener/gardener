@@ -36,6 +36,9 @@ func DetermineLatestMachineImageVersions(images []core.MachineImage) (map[string
 	resultMapVersions := make(map[string]core.MachineImageVersion)
 
 	for _, image := range images {
+		if len(image.Versions) == 0 {
+			continue
+		}
 		latestMachineImageVersion, err := DetermineLatestMachineImageVersion(image.Versions, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to determine latest machine image version for image '%s': %w", image.Name, err)

@@ -126,7 +126,7 @@ var _ = Describe("Project defaulting", func() {
 
 			SetObjectDefaults_Project(obj)
 
-			Expect(obj.Spec.Members[0].APIGroup).To(Equal(member1.Subject.APIGroup))
+			Expect(obj.Spec.Members[0].APIGroup).To(Equal(member1.APIGroup))
 			Expect(obj.Spec.Members[1].APIGroup).To(BeEmpty())
 			Expect(obj.Spec.Members[2].APIGroup).To(Equal(rbacv1.GroupName))
 			Expect(obj.Spec.Members[3].APIGroup).To(Equal(rbacv1.GroupName))

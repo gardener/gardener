@@ -41,6 +41,24 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		replicas = ptr.To(getEtcdReplicas(b.Shoot.GetInfo()))
 	}
 
+	var (
+		minAllowed      corev1.ResourceList
+		storageCapacity string
+	)
+
+	switch role {
+	case v1beta1constants.ETCDRoleMain:
+		if etcd := b.Shoot.GetInfo().Spec.Kubernetes.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
+			minAllowed = etcd.Main.Autoscaling.MinAllowed
+		}
+		storageCapacity = "25Gi"
+	case v1beta1constants.ETCDRoleEvents:
+		if etcd := b.Shoot.GetInfo().Spec.Kubernetes.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
+			minAllowed = etcd.Events.Autoscaling.MinAllowed
+		}
+		storageCapacity = "10Gi"
+	}
+
 	e := NewEtcd(
 		b.Logger,
 		b.SeedClientSet.Client(),
@@ -50,9 +68,11 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 			Role:                        role,
 			Class:                       class,
 			Replicas:                    replicas,
-			StorageCapacity:             b.Seed.GetValidVolumeSize("10Gi"),
+			Autoscaling:                 etcd.AutoscalingConfig{MinAllowed: minAllowed},
+			StorageCapacity:             b.Seed.GetValidVolumeSize(storageCapacity),
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials),
+			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
 			MaintenanceTimeWindow:       *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
 			EvictionRequirement:         getEvictionRequirement(class, b.Shoot),
 			PriorityClassName:           v1beta1constants.PriorityClassNameShootControlPlane500,
@@ -110,7 +130,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	// Roll out the new peer CA first so that every member in the cluster trusts the old and the new CA.
 	// This is required because peer certificates which are used for client and server authentication at the same time,
 	// are re-created with the new CA in the `Deploy` step.
-	if sets.New[gardencorev1beta1.CredentialsRotationPhase](
+	if sets.New(
 		gardencorev1beta1.RotationPreparing,
 		gardencorev1beta1.RotationPreparingWithoutWorkersRollout,
 	).Has(v1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials)) {

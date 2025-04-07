@@ -285,6 +285,8 @@ const (
 	GardenRoleExposureClassHandler = "exposureclass-handler"
 	// GardenRoleShootServiceAccountIssuer is the value of the GardenRole key indicating type 'shoot-service-account-issuer'.
 	GardenRoleShootServiceAccountIssuer = "shoot-service-account-issuer"
+	// GardenRoleHelmPullSecret is the value of the GardenRole key indicating type 'helm-pull-secret'.
+	GardenRoleHelmPullSecret = "helm-pull-secret"
 
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
@@ -303,6 +305,9 @@ const (
 	// ShootNoCleanup is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
+	// ShootDisableIstioTLSTermination is a constant for an annotation on a Shoot stating that the Istio TLS termination
+	// for its kube-apiserver shall be disabled.
+	ShootDisableIstioTLSTermination = "shoot.gardener.cloud/disable-istio-tls-termination"
 
 	// ShootAlphaControlPlaneScaleDownDisabled is a constant for an annotation on the Shoot resource stating that the
 	// automatic scale-down shall be disabled for the etcd, kube-apiserver, kube-controller-manager.
@@ -319,10 +324,6 @@ const (
 	// ShootAlphaControlPlaneVPNVPAUpdateDisabled is a constant for an annotation on the Shoot resource to enforce
 	// disabling the vertical pod autoscaler update resources related to the VPN connection.
 	ShootAlphaControlPlaneVPNVPAUpdateDisabled = "alpha.control-plane.shoot.gardener.cloud/vpn-vpa-update-disabled"
-	// ShootAlphaControlPlaneDisableNewVPN is a constant for an annotation on the Shoot resource to disabling the
-	// new Go implementation of VPN.
-	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
-	ShootAlphaControlPlaneDisableNewVPN = "alpha.control-plane.shoot.gardener.cloud/disable-new-vpn"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
@@ -807,8 +808,6 @@ const (
 	// or the specified namespace was not present.
 	NamespaceCreatedByProjectController = "namespace.gardener.cloud/created-by-project-controller"
 
-	// DefaultVPNRange is the default IPv4 network range for the VPN between seed and shoot cluster.
-	DefaultVPNRange = "192.168.123.0/24"
 	// DefaultVPNRangeV6 is the default IPv6 network range for the VPN between seed and shoot cluster.
 	DefaultVPNRangeV6 = "fd8f:6d53:b97a:1::/96"
 	// ReservedKubeApiServerMappingRange is the IPv4 network range for the "kubernetes" service used by apiserver-proxy
@@ -854,9 +853,12 @@ const (
 	AdvertisedAddressInternal = "internal"
 	// AdvertisedAddressUnmanaged is a constant that represents the name of the unmanaged kube-apiserver address.
 	AdvertisedAddressUnmanaged = "unmanaged"
-	// AdvertisedAddressServiceAccountIssuer is a constant that represents the name of the address
-	// that is used as a service account issuer for the kube-apiserver.
+	// AdvertisedAddressServiceAccountIssuer is a constant that represents the name of the address that is used as a
+	// service account issuer for the kube-apiserver.
 	AdvertisedAddressServiceAccountIssuer = "service-account-issuer"
+	// AdvertisedAddressWildcardTLSSeedBound is a constant that represents the name of the address that is
+	// seed-specific (i.e., changes when the Seed changes) and backed by a central wildcard TLS certificate.
+	AdvertisedAddressWildcardTLSSeedBound = "wildcard-tls-seed-bound"
 
 	// CloudProfileReferenceKindCloudProfile is a constant for the CloudProfile kind reference.
 	CloudProfileReferenceKindCloudProfile = "CloudProfile"
@@ -970,4 +972,8 @@ const (
 
 	// GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
 	GardenPurposeMachineClass = "machineclass"
+
+	// LabelInjectGardenKubeconfig is a constant for a label on workload resources that indicates that a kubeconfig to
+	// the garden cluster should be injected.
+	LabelInjectGardenKubeconfig = "extensions.gardener.cloud/inject-garden-kubeconfig"
 )

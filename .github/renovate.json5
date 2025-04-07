@@ -2,6 +2,10 @@
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   extends: [
     'config:recommended',
+    ':semanticCommitsDisabled',
+    'github>gardener/ci-infra//config/renovate/makefile-versions.json5',
+    'github>gardener/ci-infra//config/renovate/imagevector.json5(^imagevector/containers.yaml$)',
+    'github>gardener/ci-infra//config/renovate/automerge-with-tide.json5',
   ],
   labels: [
     'kind/enhancement',
@@ -11,20 +15,9 @@
   ],
   // Add PR footer with empty release note by default.
   prFooter: '**Release note**:\n```other dependency\nNONE\n```',
+  // Only rebase when there are conflicts. Prow tests against the latest state of master branch anyway before merging the PR.
+  rebaseWhen: 'conflicted',
   customManagers: [
-    {
-      // Update `_VERSION` and `_version` variables in Makefiles and scripts.
-      // Inspired by `regexManagers:dockerfileVersions` preset.
-      customType: 'regex',
-      fileMatch: [
-        'Makefile$',
-        '\\.mk$',
-        '\\.sh$',
-      ],
-      matchStrings: [
-        '# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s.+?_(VERSION|version) *[?:]?= *"?(?<currentValue>.+?)"?\\s',
-      ],
-    },
     {
       // Generic detection for pod-like image specifications.
       customType: 'regex',
@@ -63,28 +56,6 @@
       datasourceTemplate: 'docker',
     },
     {
-      // Generic detection of container images in containers.yaml via container registry.
-      customType: 'regex',
-      fileMatch: [
-        '^imagevector/containers.yaml$',
-      ],
-      matchStrings: [
-        '\\s+repository:\\s+(?<depName>.*?)\\n\\s+tag:\\s+["]?(?<currentValue>.*?)["]?\\n',
-      ],
-      datasourceTemplate: 'docker',
-    },
-    {
-      // Generic detection of container images in containers.yaml via github releases.
-      customType: 'regex',
-      fileMatch: [
-        '^imagevector/containers.yaml$',
-      ],
-      matchStrings: [
-        '\\s+sourceRepository:\\s+github.com/(?<depName>.*?)\\n\\s+repository:\\s+.*\\n\\s+tag:\\s+["]?(?<currentValue>.*?)["]?\\n',
-      ],
-      datasourceTemplate: 'github-releases',
-    },
-    {
       // Detection for images with prow like tags (e.g. v20240213-749005b2).
       customType: 'regex',
       fileMatch: [
@@ -98,6 +69,25 @@
   ],
   separateMinorPatch: true,
   packageRules: [
+    {
+      // automerge patch updates
+      matchUpdateTypes: ['patch'],
+      automerge: true,
+    },
+    {
+      // automerge k8s.io/utils updates
+      matchDatasources: ['go'],
+      matchPackageNames: ['k8s.io/utils'],
+      matchUpdateTypes: ['digest'],
+      automerge: true,
+    },
+    {
+      // automerge non-major golang.org/x updates
+      matchDatasources: ['go'],
+      matchPackageNames: ['golang.org/x/*'],
+      matchUpdateTypes: ['minor', 'patch', 'digest'],
+      automerge: true,
+    },
     {
       // Run make generate when Go API packages have been changed because CRDs might have changed.
       matchDatasources: [
@@ -248,6 +238,19 @@
       ],
     },
     {
+      // Group Prometheus blackbox-exporter updates in one PR.
+      groupName: 'blackbox-exporter',
+      matchDatasources: [
+        'docker',
+        'go',
+        'github-releases',
+      ],
+      matchPackageNames: [
+        'github.com/prometheus/blackbox_exporter',
+        'quay.io/prometheus/blackbox-exporter',
+      ],
+    },
+    {
       // Ask for manual approval to create PRs for minor and major updates of dependencies which most likely
       // require manual adaptations of the code.
       matchDatasources: [
@@ -292,10 +295,11 @@
       matchDatasources: [
         'docker',
       ],
-      matchUpdateTypes: [
-        'major',
-        'minor',
-      ],
+      // TODO(marc1404): Enable the code below once kindest/node ships with runc >= v1.2.4 and containerd >= v2.0.3
+//      matchUpdateTypes: [
+//        'major',
+//        'minor',
+//      ],
       dependencyDashboardApproval: true,
       matchPackageNames: [
         '/kindest/node/',
@@ -428,6 +432,33 @@
       matchPackageNames: [
         '/sigs\\.k8s\\.io/controller-runtime/tools/setup-envtest/',
       ],
+    },
+    {
+      // Disable major updates of jsonpatch/v2.
+      // The major version of this dependency should be kept in sync with controller-runtime:
+      // https://github.com/kubernetes-sigs/controller-runtime/blob/main/go.mod
+      matchDatasources: [
+        'go',
+      ],
+      matchPackageNames: [
+        'gomodules.xyz/jsonpatch/v2',
+      ],
+      matchUpdateTypes: [
+        'major',
+      ],
+      enabled: false,
+    },
+    {
+      // TODO(marc1404): Remove when support for Kubernetes v1.27 is dropped.
+      // Restrict updates of ingress-nginx/controller-chroot@v1.11.x for Kubernetes v1.27 to stay below v1.12.0.
+      matchFileNames: [
+        'imagevector/containers.yaml',
+      ],
+      matchPackageNames: [
+        'registry.k8s.io/ingress-nginx/controller-chroot',
+      ],
+      matchCurrentValue: 'v1.11.*',
+      allowedVersions: '<v1.12.0',
     },
     {
       // Ignore paths which most likely create false positives.

@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
@@ -23,6 +24,7 @@ import (
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
@@ -81,6 +83,7 @@ var _ = Describe("ControllerRegistration", func() {
 								},
 							},
 						},
+						InjectGardenKubeconfig: ptr.To(true),
 					},
 				},
 			},
@@ -106,6 +109,7 @@ var _ = Describe("ControllerRegistration", func() {
 							Ref: ptr.To(ociRef),
 						},
 					},
+					InjectGardenKubeconfig: ptr.To(true),
 				},
 				&gardencorev1beta1.ControllerRegistration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -122,6 +126,64 @@ var _ = Describe("ControllerRegistration", func() {
 						},
 					},
 				},
+			))
+		})
+
+		It("should create the expected ControllerRegistration and ControllerInstallation and Secret resources", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: gardenNamespace,
+					Labels:    map[string]string{"gardener.cloud/role": "helm-pull-secret"},
+				},
+				Data: map[string][]byte{
+					".dockerconfigjson": []byte("foo"),
+				},
+				Type: corev1.SecretTypeDockerConfigJson,
+			}
+			expectedSecret := secret.DeepCopy()
+			Expect(c.Create(ctx, secret)).To(Succeed())
+
+			extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository.PullSecretRef = &corev1.LocalObjectReference{Name: secret.Name}
+
+			Expect(controllerRegistration.Reconcile(ctx, log, extension)).To(Succeed())
+
+			managedResource := &resourcesv1alpha1.ManagedResource{}
+			Expect(c.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: "extension-registration-" + extensionName}, managedResource)).To(Succeed())
+
+			expectedSecret.Name = extensionName + "-" + secret.Name
+			expectedSecret.Namespace = v1beta1constants.GardenNamespace // Garden namespace in virtual cluster
+			Expect(managedResource).To(consistOf(
+				&gardencorev1.ControllerDeployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: extensionName,
+					},
+					Helm: &gardencorev1.HelmControllerDeployment{
+						OCIRepository: &gardencorev1.OCIRepository{
+							Ref: ptr.To(ociRef),
+							PullSecretRef: &corev1.LocalObjectReference{
+								Name: expectedSecret.Name,
+							},
+						},
+					},
+					InjectGardenKubeconfig: ptr.To(true),
+				},
+				&gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: extensionName,
+					},
+					Spec: gardencorev1beta1.ControllerRegistrationSpec{
+						Resources: []gardencorev1beta1.ControllerResource{
+							{Kind: extensionKind},
+						},
+						Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
+							DeploymentRefs: []gardencorev1beta1.DeploymentRef{
+								{Name: extensionName},
+							},
+						},
+					},
+				},
+				expectedSecret,
 			))
 		})
 

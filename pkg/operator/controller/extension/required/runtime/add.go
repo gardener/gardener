@@ -6,6 +6,8 @@ package runtime
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -26,10 +28,12 @@ import (
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -64,7 +68,15 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 	c, err := builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
-		For(&operatorv1alpha1.Extension{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(
+			&operatorv1alpha1.Extension{},
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		).
+		Watches(
+			&operatorv1alpha1.Garden{},
+			handler.EnqueueRequestsFromMapFunc(r.MapGardenToExtensions(mgr.GetLogger().WithValues("controller", ControllerName))),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: ptr.Deref(r.Config.ConcurrentSyncs, 0),
 		}).
@@ -94,7 +106,40 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 			return err
 		}
 	}
+
 	return nil
+}
+
+// MapGardenToExtensions returns a mapping function that maps a given garden resource to all related extensions.
+func (r *Reconciler) MapGardenToExtensions(log logr.Logger) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		garden, ok := obj.(*operatorv1alpha1.Garden)
+		if !ok {
+			log.Error(fmt.Errorf("expected Garden but got %#v", obj), "Unable to convert to Garden")
+			return nil
+		}
+
+		extensionList := &operatorv1alpha1.ExtensionList{}
+		if err := r.Client.List(ctx, extensionList); err != nil {
+			log.Error(err, "Failed to list extensions")
+			return nil
+		}
+
+		var (
+			requests           []reconcile.Request
+			requiredExtensions = gardenerutils.ComputeRequiredExtensionsForGarden(garden)
+		)
+
+		for _, extension := range extensionList.Items {
+			if slices.ContainsFunc(extension.Spec.Resources, func(resource gardencorev1beta1.ControllerResource) bool {
+				return requiredExtensions.Has(gardenerutils.ExtensionsID(resource.Kind, resource.Type))
+			}) {
+				requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: extension.Name, Namespace: extension.Namespace}})
+			}
+		}
+
+		return requests
+	}
 }
 
 // MapObjectKindToExtensions returns a mapper function for the given 'extensions.gardener.cloud' extension kind
@@ -147,7 +192,7 @@ func (r *Reconciler) MapObjectKindToExtensions(log logr.Logger, objectKind strin
 		// extension kind this particular reconciler is responsible for.
 		extensionList := &operatorv1alpha1.ExtensionList{}
 		if err := r.Client.List(ctx, extensionList); err != nil {
-			log.Error(err, "Failed to list Extensions")
+			log.Error(err, "Failed to list extensions")
 			return nil
 		}
 

@@ -16,7 +16,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -33,7 +33,7 @@ var _ = Describe("Botanist", func() {
 	BeforeEach(func(ctx context.Context) {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		botanist = &Botanist{Operation: &operation.Operation{}}
-		k8sSeedClient := kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()
+		k8sSeedClient := fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "botanist-"}}
 		Expect(fakeClient.Create(ctx, namespace)).To(Succeed())

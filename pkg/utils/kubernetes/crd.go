@@ -6,10 +6,16 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -19,7 +25,13 @@ import (
 
 var (
 	// WaitTimeout specifies the total time to wait for CRDs to become ready or to be deleted. Exposed for testing.
-	WaitTimeout = 15 * time.Second
+	// While waiting for CRD readiness is parallelized (see WaitUntilCRDManifestsReady below), the controllers
+	// responsible for populating the "readiness" status into the CRD only have one worker each (e.g., see
+	// https://github.com/kubernetes/apiextensions-apiserver/blob/376adbc0c7f0bc548dbbf2ad7c4f3e53840aa08f/pkg/controller/establish/establishing_controller.go#L88-L89).
+	// Therefore, we need to wait for a longer time here  (basically proportional to the
+	// amount of CRDs) in case we create a lot of CRDs in parallel (which happens at Garden or Seed creation), since
+	// they are processed sequentially.
+	WaitTimeout = 2 * time.Minute
 )
 
 // WaitUntilCRDManifestsReady takes names of CRDs and waits for them to get ready with a timeout of 15 seconds.
@@ -68,4 +80,34 @@ func WaitUntilCRDManifestsDestroyed(ctx context.Context, c client.Client, crdNam
 		})
 	}
 	return flow.Parallel(fns...)(ctx)
+}
+
+var (
+	crdScheme *runtime.Scheme
+	crdCodec  runtime.Codec
+)
+
+func init() {
+	crdScheme = runtime.NewScheme()
+	utilruntime.Must(apiextensionsv1.AddToScheme(crdScheme))
+	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, crdScheme, crdScheme, json.SerializerOptions{
+		Yaml:   true,
+		Pretty: false,
+		Strict: false,
+	})
+	versions := schema.GroupVersions([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
+	crdCodec = serializer.NewCodecFactory(crdScheme).CodecForVersions(ser, ser, versions, versions)
+}
+
+// DecodeCRD decodes a CRD from a YAML string.
+func DecodeCRD(crdYAML string) (*apiextensionsv1.CustomResourceDefinition, error) {
+	obj, err := runtime.Decode(crdCodec, []byte(crdYAML))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode CRD: %w", err)
+	}
+	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
+	if !ok {
+		return nil, fmt.Errorf("expected *apiextensionsv1.CustomResourceDefinition, got %T", obj)
+	}
+	return crd, nil
 }

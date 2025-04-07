@@ -25,7 +25,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/controllermanager"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -64,7 +64,7 @@ var _ = Describe("WaiterTest", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		seedClient = mockclient.NewMockClient(ctrl)
-		fakeSeedInterface = kubernetesfake.NewClientSetBuilder().WithAPIReader(seedClient).WithClient(seedClient).Build()
+		fakeSeedInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(seedClient).WithClient(seedClient).Build()
 		shootClient = mockclient.NewMockClient(ctrl)
 	})
 
@@ -197,7 +197,7 @@ var _ = Describe("WaiterTest", func() {
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-			fakeKubernetesInterface = kubernetesfake.NewClientSetBuilder().WithClient(fakeClient).Build()
+			fakeKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot-core-kube-controller-manager",

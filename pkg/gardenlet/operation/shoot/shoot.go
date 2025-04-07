@@ -29,7 +29,6 @@ import (
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils"
@@ -49,7 +48,7 @@ func NewBuilder() *Builder {
 			return nil, fmt.Errorf("shoot credentials object is required but not set")
 		},
 		serviceAccountIssuerHostname: func() (*string, error) {
-			return nil, fmt.Errorf("service account issuer hostname is required but not set")
+			return nil, nil
 		},
 	}
 }
@@ -276,11 +275,6 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		shoot.VPNVPAUpdateDisabled = vpnVPAUpdateDisabled
 	}
 
-	shoot.UsesNewVPN = features.DefaultFeatureGate.Enabled(features.NewVPN)
-	if disableNewVPN, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneDisableNewVPN]); err == nil {
-		shoot.UsesNewVPN = !disableNewVPN
-	}
-
 	needsClusterAutoscaler, err := v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 	if err != nil {
 		return nil, err
@@ -305,12 +299,11 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		shoot.EncryptedResources = sharedcomponent.NormalizeResources(shoot.GetInfo().Status.EncryptedResources)
 	}
 
-	if b.seed == nil {
-		return nil, fmt.Errorf("seed object is required but not set")
+	if b.seed != nil {
+		shoot.TopologyAwareRoutingEnabled = v1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(b.seed, shootObject)
 	}
-	shoot.TopologyAwareRoutingEnabled = v1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(b.seed, shootObject)
 
-	backupEntryName, err := gardenerutils.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.UID)
+	backupEntryName, err := gardenerutils.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.Status.UID, shootObject.UID)
 	if err != nil {
 		return nil, err
 	}
@@ -491,10 +484,15 @@ func (s *Shoot) GetReplicas(wokenUp int32) int32 {
 // ComputeInClusterAPIServerAddress returns the internal address for the shoot API server depending on whether
 // the caller runs in the shoot namespace or not.
 func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) string {
+	if s.RunsControlPlane() {
+		return fmt.Sprintf("kubernetes.%s.svc", metav1.NamespaceDefault)
+	}
+
 	url := v1beta1constants.DeploymentNameKubeAPIServer
 	if !runsInShootNamespace {
 		url = fmt.Sprintf("%s.%s.svc", url, s.ControlPlaneNamespace)
 	}
+
 	return url
 }
 
@@ -505,7 +503,7 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(useInternalClusterDomain boo
 		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
-	if useInternalClusterDomain {
+	if useInternalClusterDomain || s.ExternalClusterDomain == nil {
 		return gardenerutils.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
@@ -640,4 +638,9 @@ func copyUniqueCIDRs(src []string, dst []net.IPNet, networkType string) ([]net.I
 		}
 	}
 	return dst, nil
+}
+
+// RunsControlPlane returns true in case the Kubernetes control plane runs inside the shoot cluster.
+func (s *Shoot) RunsControlPlane() bool {
+	return s.ControlPlaneNamespace == metav1.NamespaceSystem
 }

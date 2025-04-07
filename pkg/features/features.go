@@ -54,12 +54,15 @@ const (
 	// NewVPN enables the new implementation of the VPN (go rewrite) using an IPv6 transfer network.
 	// owner: @MartinWeindel @ScheererJ @axel7born @DockToFuture
 	// alpha: v1.104.0
+	// beta: v1.115.0
+	// GA: v1.116.0
 	NewVPN featuregate.Feature = "NewVPN"
 
 	// NodeAgentAuthorizer enables authorization of requests from gardener-node-agents to shoot kube-apiservers using an authorization webhook.
 	// Enabling this feature gate restricts the permissions of each gardener-node-agent instance to the objects belonging to its own node only.
 	// owner: @oliver-goetz
 	// alpha: v1.109.0
+	// beta: v1.116.0
 	NodeAgentAuthorizer featuregate.Feature = "NodeAgentAuthorizer"
 
 	// CredentialsRotationWithoutWorkersRollout enables starting the credentials rotation without immediately causing
@@ -85,6 +88,12 @@ const (
 	// owner: @Wieneo @timebertt
 	// alpha: v1.113.0
 	RemoveAPIServerProxyLegacyPort featuregate.Feature = "RemoveAPIServerProxyLegacyPort"
+
+	// IstioTLSTermination enables TLS termination for the Istio Ingress Gateway instead of TLS termination at the kube-apiserver.
+	// It allows load-balancing of requests to the kube-apiserver on request level instead of connection level.
+	// owner: @oliver-goetz
+	// alpha: v1.114.0
+	IstioTLSTermination featuregate.Feature = "IstioTLSTermination"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -117,11 +126,12 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.Beta},
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},
-	NewVPN:                                   {Default: false, PreRelease: featuregate.Alpha},
-	NodeAgentAuthorizer:                      {Default: false, PreRelease: featuregate.Alpha},
+	NewVPN:                                   {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	NodeAgentAuthorizer:                      {Default: true, PreRelease: featuregate.Beta},
 	CredentialsRotationWithoutWorkersRollout: {Default: false, PreRelease: featuregate.Alpha},
 	InPlaceNodeUpdates:                       {Default: false, PreRelease: featuregate.Alpha},
 	RemoveAPIServerProxyLegacyPort:           {Default: false, PreRelease: featuregate.Alpha},
+	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

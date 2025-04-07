@@ -77,18 +77,26 @@ spec:
       main:
         backup:
           provider: local
-        # providerConfig:
-        #   <some-provider-specific-config-for-the-backup-buckets>
+    #     bucketName: gardener-operator # if not provided, gardener-operator generates a name
+    #     providerConfig:
+    #       <some-provider-specific-config-for-the-backup-buckets>
           secretRef:
             name: virtual-garden-etcd-main-backup-local
-        # bucketName: gardener-operator # if not provided, gardener-operator generates a name
         storage:
           capacity: 25Gi
-        # className: default
+    #     className: default
+    #   autoscaling:
+    #     minAllowed:
+    #       cpu: "2"
+    #       memory: 6Gi
       events:
         storage:
           capacity: 10Gi
-        # className: default
+    #     className: default
+    #   autoscaling:
+    #     minAllowed:
+    #       cpu: "1"
+    #       memory: 3Gi
     kubernetes:
       version: 1.32.0
     # kubeAPIServer:
@@ -169,6 +177,10 @@ spec:
     #     resources: # secrets are always encrypted
     #     - configmaps
     #     - customresource.fancyoperator.io
+    #   autoscaling:
+    #     minAllowed:
+    #       cpu: "1"
+    #       memory: 3Gi
     #   sni:
     #     secretName: name-of-secret-containing-tls-cert-and-key
     #     domainPatterns:
@@ -203,6 +215,7 @@ spec:
     #     version: audit.k8s.io/v1
     #   featureGates:
     #     SomeGardenerFeature: true
+    #   goAwayChance: 0.001
     #   logging:
     #     verbosity: 2
     #     httpAccessVerbosity: 3

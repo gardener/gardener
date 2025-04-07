@@ -88,8 +88,8 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			By("Use token to access garden")
 			gardenAccessConfig := rest.CopyConfig(restConfig)
 			// drop kind admin client certificate so that we can test other credentials
-			gardenAccessConfig.TLSClientConfig.CertData = nil
-			gardenAccessConfig.TLSClientConfig.KeyData = nil
+			gardenAccessConfig.CertData = nil
+			gardenAccessConfig.KeyData = nil
 			// use the requested token and create a client
 			gardenAccessConfig.BearerToken = string(accessSecret.Data[resourcesv1alpha1.DataKeyToken])
 			gardenAccessClient, err := client.New(gardenAccessConfig, client.Options{})

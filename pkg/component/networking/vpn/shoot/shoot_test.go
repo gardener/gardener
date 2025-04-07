@@ -398,7 +398,7 @@ var _ = Describe("VPNShoot", func() {
 				},
 			}
 
-			containerFor = func(clients int, index *int, vpaEnabled, disableNewVPN, highAvailable bool) *corev1.Container {
+			containerFor = func(clients int, index *int, vpaEnabled, highAvailable bool) *corev1.Container {
 				var (
 					limits       corev1.ResourceList
 					env          []corev1.EnvVar
@@ -522,14 +522,6 @@ var _ = Describe("VPNShoot", func() {
 					},
 					VolumeMounts: volumeMounts,
 				}
-				if disableNewVPN {
-					container.Env = append(container.Env,
-						corev1.EnvVar{
-							Name:  "DO_NOT_CONFIGURE_KERNEL_SETTINGS",
-							Value: "true",
-						},
-					)
-				}
 				return container
 			}
 
@@ -591,7 +583,7 @@ var _ = Describe("VPNShoot", func() {
 				return volumes
 			}
 
-			templateForEx = func(servers int, secretNameClients []string, secretNameCA, secretNameTLSAuth string, vpaEnabled, disableNewVPN, highAvailable bool) *corev1.PodTemplateSpec {
+			templateForEx = func(servers int, secretNameClients []string, secretNameCA, secretNameTLSAuth string, vpaEnabled, highAvailable bool) *corev1.PodTemplateSpec {
 				var (
 					annotations = map[string]string{
 						references.AnnotationKey(references.KindSecret, secretNameCA): secretNameCA,
@@ -681,35 +673,33 @@ var _ = Describe("VPNShoot", func() {
 				}
 
 				if !highAvailable {
-					obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(1, nil, vpaEnabled, disableNewVPN, highAvailable))
+					obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(1, nil, vpaEnabled, highAvailable))
 				} else {
 					for i := 0; i < servers; i++ {
-						obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(len(secretNameClients), &i, vpaEnabled, disableNewVPN, highAvailable))
+						obj.Spec.Containers = append(obj.Spec.Containers, *containerFor(len(secretNameClients), &i, vpaEnabled, highAvailable))
 					}
-					if !disableNewVPN {
-						obj.Spec.Containers = append(obj.Spec.Containers, corev1.Container{
-							Name:    "tunnel-controller",
-							Image:   image,
-							Command: []string{"/bin/tunnel-controller"},
-							SecurityContext: &corev1.SecurityContext{
-								Privileged:               ptr.To(false),
-								AllowPrivilegeEscalation: ptr.To(false),
-								Capabilities: &corev1.Capabilities{
-									Add: []corev1.Capability{"NET_ADMIN"},
-								},
+					obj.Spec.Containers = append(obj.Spec.Containers, corev1.Container{
+						Name:    "tunnel-controller",
+						Image:   image,
+						Command: []string{"/bin/tunnel-controller"},
+						SecurityContext: &corev1.SecurityContext{
+							Privileged:               ptr.To(false),
+							AllowPrivilegeEscalation: ptr.To(false),
+							Capabilities: &corev1.Capabilities{
+								Add: []corev1.Capability{"NET_ADMIN"},
 							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("10m"),
-									corev1.ResourceMemory: resource.MustParse("10Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("20Mi"),
-								},
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("10m"),
+								corev1.ResourceMemory: resource.MustParse("10Mi"),
 							},
-							ImagePullPolicy: corev1.PullIfNotPresent,
-						})
-					}
+							Limits: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("20Mi"),
+							},
+						},
+						ImagePullPolicy: corev1.PullIfNotPresent,
+					})
 				}
 
 				if highAvailable {
@@ -728,22 +718,6 @@ var _ = Describe("VPNShoot", func() {
 						},
 					}...)
 				}
-				if disableNewVPN {
-					initContainer.Command = nil
-					initContainer.Env = append(initContainer.Env,
-						corev1.EnvVar{
-							Name:  "EXIT_AFTER_CONFIGURING_KERNEL_SETTINGS",
-							Value: "true",
-						})
-					if highAvailable {
-						initContainer.Env = append(initContainer.Env,
-							corev1.EnvVar{
-								Name:  "CONFIGURE_BONDING",
-								Value: "true",
-							},
-						)
-					}
-				}
 
 				obj.Spec.InitContainers = []corev1.Container{initContainer}
 
@@ -751,7 +725,7 @@ var _ = Describe("VPNShoot", func() {
 			}
 
 			templateFor = func(secretNameCA, secretNameClient, secretNameTLSAuth string) *corev1.PodTemplateSpec {
-				return templateForEx(1, []string{secretNameClient}, secretNameCA, secretNameTLSAuth, values.VPAEnabled, values.DisableNewVPN, false)
+				return templateForEx(1, []string{secretNameClient}, secretNameCA, secretNameTLSAuth, values.VPAEnabled, false)
 			}
 
 			objectMetaForEx = func(secretNameClients []string, secretNameCA, secretNameTLSAuth string) *metav1.ObjectMeta {
@@ -826,7 +800,7 @@ var _ = Describe("VPNShoot", func() {
 								"app": "vpn-shoot",
 							},
 						},
-						Template: *templateForEx(servers, secretNameClients, secretNameCA, secretNameTLSAuth, values.VPAEnabled, values.DisableNewVPN, true),
+						Template: *templateForEx(servers, secretNameClients, secretNameCA, secretNameTLSAuth, values.VPAEnabled, true),
 					},
 				}
 			}
@@ -934,48 +908,6 @@ var _ = Describe("VPNShoot", func() {
 				})
 			})
 
-			Context("w/ VPA and old VPN", func() {
-				BeforeEach(func() {
-					values.VPAEnabled = true
-					values.DisableNewVPN = true
-				})
-
-				It("should successfully deploy all resources", func() {
-					var (
-						secretNameClient  = expectVPNShootSecret(manifests)
-						secretNameCA      = expectCASecret(manifests)
-						secretNameTLSAuth = expectTLSAuthSecret(manifests)
-					)
-
-					Expect(managedResource).To(contain(
-						vpa,
-						deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth),
-					))
-				})
-
-				Context("w/ VPA update mode set to off", func() {
-					BeforeEach(func() {
-						values.VPAUpdateDisabled = true
-					})
-
-					It("should successfully deploy all resources", func() {
-						var (
-							secretNameClient  = expectVPNShootSecret(manifests)
-							secretNameCA      = expectCASecret(manifests)
-							secretNameTLSAuth = expectTLSAuthSecret(manifests)
-						)
-
-						vpaWithUpdateDisabled := vpa.DeepCopy()
-						vpaWithUpdateDisabled.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
-
-						Expect(managedResource).To(contain(
-							vpaWithUpdateDisabled,
-							deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth),
-						))
-					})
-				})
-			})
-
 			Context("w/ VPA and high availability", func() {
 				BeforeEach(func() {
 					values.VPAEnabled = true
@@ -1028,37 +960,6 @@ var _ = Describe("VPNShoot", func() {
 							statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth),
 						))
 					})
-				})
-
-				AfterEach(func() {
-					values.HighAvailabilityEnabled = false
-				})
-			})
-
-			Context("w/ VPA and high availability and disabled Go rewrite", func() {
-				BeforeEach(func() {
-					values.VPAEnabled = true
-					values.HighAvailabilityEnabled = true
-					values.HighAvailabilityNumberOfSeedServers = 3
-					values.HighAvailabilityNumberOfShootClients = 2
-					values.DisableNewVPN = true
-				})
-
-				It("should successfully deploy all resources", func() {
-					var (
-						secretNameClient0 = expectVPNShootSecret(manifests, "-0")
-						secretNameClient1 = expectVPNShootSecret(manifests, "-1")
-						secretNameCA      = expectCASecret(manifests)
-						secretNameTLSAuth = expectTLSAuthSecret(manifests)
-					)
-
-					vpaCopy := vpaHA.DeepCopy()
-					vpaCopy.Spec.UpdatePolicy.UpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
-
-					Expect(managedResource).To(contain(
-						vpaCopy,
-						statefulSetFor(3, 2, []string{secretNameClient0, secretNameClient1}, secretNameCA, secretNameTLSAuth),
-					))
 				})
 
 				AfterEach(func() {

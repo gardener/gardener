@@ -7,7 +7,6 @@ package v1beta1
 import (
 	"time"
 
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -535,26 +534,6 @@ type DNSIncludeExclude struct {
 // DefaultDomain is the default value in the Shoot's '.spec.dns.domain' when '.spec.dns.provider' is 'unmanaged'
 const DefaultDomain = "cluster.local"
 
-// Extension contains type and provider information for Shoot extensions.
-type Extension struct {
-	// Type is the type of the extension resource.
-	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
-	// ProviderConfig is the configuration passed to extension resource.
-	// +optional
-	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
-	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
-	// +optional
-	Disabled *bool `json:"disabled,omitempty" protobuf:"varint,3,opt,name=disabled"`
-}
-
-// NamedResourceReference is a named reference to a resource.
-type NamedResourceReference struct {
-	// Name of the resource reference.
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// ResourceRef is a reference to a resource.
-	ResourceRef autoscalingv1.CrossVersionObjectReference `json:"resourceRef" protobuf:"bytes,2,opt,name=resourceRef"`
-}
-
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
 	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
@@ -622,6 +601,26 @@ type Kubernetes struct {
 	//
 	// Deprecated: This field is deprecated and will be removed in gardener v1.120
 	EnableStaticTokenKubeconfig *bool `json:"enableStaticTokenKubeconfig,omitempty" protobuf:"varint,10,opt,name=enableStaticTokenKubeconfig"`
+	// ETCD contains configuration for etcds of the shoot cluster.
+	// +optional
+	ETCD *ETCD `json:"etcd,omitempty" protobuf:"bytes,11,opt,name=etcd"`
+}
+
+// ETCD contains configuration for etcds of the shoot cluster.
+type ETCD struct {
+	// Main contains configuration for the main etcd.
+	// +optional
+	Main *ETCDConfig `json:"main,omitempty" protobuf:"bytes,1,opt,name=main"`
+	// Events contains configuration for the events etcd.
+	// +optional
+	Events *ETCDConfig `json:"events,omitempty" protobuf:"bytes,2,opt,name=events"`
+}
+
+// ETCDConfig contains etcd configuration.
+type ETCDConfig struct {
+	// Autoscaling contains auto-scaling configuration options for etcd.
+	// +optional
+	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,1,opt,name=autoscaling"`
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -907,6 +906,17 @@ type KubeAPIServerConfig struct {
 	// This field is only available for Kubernetes v1.30 or later.
 	// +optional
 	StructuredAuthorization *StructuredAuthorization `json:"structuredAuthorization,omitempty" protobuf:"bytes,18,opt,name=structuredAuthorization"`
+	// Autoscaling contains auto-scaling configuration options for the kube-apiserver.
+	// +optional
+	Autoscaling *ControlPlaneAutoscaling `json:"autoscaling,omitempty" protobuf:"bytes,19,opt,name=autoscaling"`
+}
+
+// ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
+type ControlPlaneAutoscaling struct {
+	// MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+	// Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+	// Default values are not applied to this field.
+	MinAllowed corev1.ResourceList `json:"minAllowed" protobuf:"bytes,1,rep,name=minAllowed,casttype=k8s.io/api/core/v1.ResourceList,castkey=k8s.io/api/core/v1.ResourceName"`
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs
@@ -1581,10 +1591,14 @@ type Worker struct {
 	Minimum int32 `json:"minimum" protobuf:"varint,9,opt,name=minimum"`
 	// MaxSurge is maximum number of machines that are created during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 0 in case of an in-place update.
+	// Defaults to 1 in case of a rolling update.
 	// +optional
 	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty" protobuf:"bytes,10,opt,name=maxSurge"`
 	// MaxUnavailable is the maximum number of machines that can be unavailable during an update.
 	// This value is divided by the number of configured zones for a fair distribution.
+	// Defaults to 1 in case of an in-place update.
+	// Defaults to 0 in case of a rolling update.
 	// +optional
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty" protobuf:"bytes,11,opt,name=maxUnavailable"`
 	// ProviderConfig is the provider-specific configuration for this worker pool.
@@ -1684,6 +1698,13 @@ type MachineControllerManagerSettings struct {
 	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
 	// +optional
 	NodeConditions []string `json:"nodeConditions,omitempty" protobuf:"bytes,5,name=nodeConditions"`
+	// MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.
+	// +optional
+	MachineInPlaceUpdateTimeout *metav1.Duration `json:"inPlaceUpdateTimeout,omitempty" protobuf:"bytes,6,opt,name=inPlaceUpdateTimeout"`
+	// DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+	// This is intended to be used only for in-place updates.
+	// +optional
+	DisableHealthTimeout *bool `json:"disableHealthTimeout,omitempty" protobuf:"varint,7,opt,name=disableHealthTimeout"`
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

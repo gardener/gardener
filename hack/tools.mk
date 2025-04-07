@@ -22,6 +22,7 @@ SYSTEM_NAME                := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 SYSTEM_ARCH                := $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin/$(SYSTEM_NAME)-$(SYSTEM_ARCH)
 CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
+EXTENSION_GEN              := $(TOOLS_BIN_DIR)/extension-generator
 GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
 GINKGO                     := $(TOOLS_BIN_DIR)/ginkgo
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
@@ -53,36 +54,36 @@ TYPOS                      := $(TOOLS_BIN_DIR)/typos
 
 # default tool versions
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-GOLANGCI_LINT_VERSION ?= v1.64.5
+GOLANGCI_LINT_VERSION ?= v2.0.2
 # renovate: datasource=github-releases depName=securego/gosec
-GOSEC_VERSION ?= v2.22.1
+GOSEC_VERSION ?= v2.22.3
 # renovate: datasource=github-releases depName=joelanford/go-apidiff
 GO_APIDIFF_VERSION ?= v0.8.2
 # renovate: datasource=github-releases depName=google/addlicense
 GO_ADD_LICENSE_VERSION ?= v1.1.1
 # renovate: datasource=github-releases depName=incu6us/goimports-reviser
-GOIMPORTSREVISER_VERSION ?= v3.9.0
+GOIMPORTSREVISER_VERSION ?= v3.9.1
 GO_VULN_CHECK_VERSION ?= latest
 # renovate: datasource=github-releases depName=helm/helm
-HELM_VERSION ?= v3.17.1
+HELM_VERSION ?= v3.17.2
 # renovate: datasource=github-releases depName=kubernetes-sigs/kind
 KIND_VERSION ?= v0.27.0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-KUBECTL_VERSION ?= v1.32.2
+KUBECTL_VERSION ?= v1.32.3
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 KUSTOMIZE_VERSION ?= v5.3.0
 # renovate: datasource=github-releases depName=prometheus/prometheus
-PROMTOOL_VERSION ?= 2.55.1
+PROMTOOL_VERSION ?= 3.2.1
 # renovate: datasource=github-releases depName=protocolbuffers/protobuf
-PROTOC_VERSION ?= v29.3
+PROTOC_VERSION ?= v30.2
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-SKAFFOLD_VERSION ?= v2.14.1
+SKAFFOLD_VERSION ?= v2.15.0
 # renovate: datasource=github-releases depName=mikefarah/yq
 YQ_VERSION ?= v4.45.1
 # renovate: datasource=github-releases depName=ironcore-dev/vgopath
-VGOPATH_VERSION ?= v0.1.7
+VGOPATH_VERSION ?= v0.1.8
 # renovate: datasource=github-releases depName=crate-ci/typos
-TYPOS_VERSION ?= v1.29.9
+TYPOS_VERSION ?= v1.31.1
 
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
@@ -161,7 +162,7 @@ $(GOIMPORTSREVISER): $(call tool_version_file,$(GOIMPORTSREVISER),$(GOIMPORTSREV
 $(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERSION))
 	@# CGO_ENABLED has to be set to 1 in order for golangci-lint to be able to load plugins
 	@# see https://github.com/golangci/golangci-lint/issues/1276
-	GOBIN=$(abspath $(TOOLS_BIN_DIR)) CGO_ENABLED=1 go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	GOBIN=$(abspath $(TOOLS_BIN_DIR)) CGO_ENABLED=1 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 $(GOSEC): $(call tool_version_file,$(GOSEC),$(GOSEC_VERSION))
 	@GOSEC_VERSION=$(GOSEC_VERSION) bash $(TOOLS_PKG_PATH)/install-gosec.sh
@@ -240,6 +241,14 @@ $(OIDC_METADATA): $(TOOLS_PKG_PATH)/oidcmeta/*.go
 else
 $(OIDC_METADATA): go.mod
 	go build -o $(OIDC_METADATA) github.com/gardener/gardener/hack/tools/oidcmeta
+endif
+
+ifeq ($(strip $(shell go list -m 2>/dev/null)),github.com/gardener/gardener)
+$(EXTENSION_GEN): $(TOOLS_PKG_PATH)/extension-generator/*.go
+	go build -o $(EXTENSION_GEN) $(TOOLS_PKG_PATH)/extension-generator
+else
+$(EXTENSION_GEN): go.mod
+	go build -o $(EXTENSION_GEN) github.com/gardener/gardener/hack/tools/extension-generator
 endif
 
 $(SETUP_ENVTEST): $(call tool_version_file,$(SETUP_ENVTEST),$(CONTROLLER_RUNTIME_VERSION))

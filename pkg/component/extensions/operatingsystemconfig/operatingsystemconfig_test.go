@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	kubernetesfake "k8s.io/client-go/kubernetes/fake"
+	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/gardeneruser"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/sshdensurer"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -387,7 +388,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			s := runtime.NewScheme()
 			Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
-			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
+			Expect(fakekubernetes.AddToScheme(s)).To(Succeed())
 			c = fakeclient.NewClientBuilder().WithScheme(s).Build()
 
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
@@ -453,7 +454,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		Describe("#Deploy", func() {
-			It("should successfully deploy the shoot access secret for the gardener-node-agent", func() {
+			It("should successfully deploy the shoot access secret for the gardener-node-agent when NodeAgentAuthorizer feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
 				DeferCleanup(test.WithVars(
 					&OriginalConfigFn, originalConfigFn,
 				))
@@ -727,8 +729,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 						// Getting the object from the client results in the location set to the local timezone
 						if obj.Spec.InPlaceUpdates != nil && obj.Spec.InPlaceUpdates.CredentialsRotation != nil {
-							actual.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime = &metav1.Time{Time: actual.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime.Time.UTC()}
-							actual.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime = &metav1.Time{Time: actual.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime.Time.UTC()}
+							actual.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime = &metav1.Time{Time: actual.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime.UTC()}
+							actual.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime = &metav1.Time{Time: actual.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime.UTC()}
 						}
 
 						Expect(actual).To(Equal(obj))
@@ -808,7 +810,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 			})
 
-			It("should properly restore the extensions state if it exists", func() {
+			It("should properly restore the extensions state if it exists when NodeAgentAuthorizer feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.NodeAgentAuthorizer, false))
 				defer test.WithVars(
 					&InitConfigFn, initConfigFn,
 					&OriginalConfigFn, originalConfigFn,
@@ -939,7 +942,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for i := range expected {
 					Expect(c.Delete(ctx, expected[i])).To(Succeed())
 					// remove operation annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{
+					expected[i].Annotations = map[string]string{
 						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
@@ -969,7 +972,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for i := range expected {
 					patch := client.MergeFrom(expected[i].DeepCopy())
 					// remove operation annotation, add old timestamp annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{
+					expected[i].Annotations = map[string]string{
 						v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
@@ -1017,7 +1020,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for i := range expected {
 					patch := client.MergeFrom(expected[i].DeepCopy())
 					// remove operation annotation, add up-to-date timestamp annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{
+					expected[i].Annotations = map[string]string{
 						v1beta1constants.GardenerTimestamp: now.UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
@@ -1053,19 +1056,52 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		Describe("WorkerNameToOperatingSystemConfigsMap", func() {
-			It("should return the correct result from the Wait operation", func() {
-				defer test.WithVars(
+			It("should return the correct result from the Deploy and Wait operations", func() {
+				DeferCleanup(test.WithVars(
 					&TimeNow, mockNow.Do,
-				)()
+					&InitConfigFn, initConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+				))
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				// Deploy should fill internal state with the added timestamp annotation
 				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 				for i := range expected {
-					Expect(c.Delete(ctx, expected[i])).To(Succeed())
+					expected[i].ResourceVersion = "1"
+				}
+
+				worker1OSCDownloader := expected[0]
+				worker1OSCOriginal := expected[1]
+				worker2OSCDownloader := expected[2]
+				worker2OSCOriginal := expected[3]
+
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
+					worker1Name: {
+						Init: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
+							Object:                      worker1OSCDownloader,
+						},
+						Original: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
+							Object:                      worker1OSCOriginal,
+						},
+					},
+					worker2Name: {
+						Init: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
+							Object:                      worker2OSCDownloader,
+						},
+						Original: Data{
+							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker2Name + "-d9e53",
+							Object:                      worker2OSCOriginal,
+						},
+					},
+				}))
+
+				for i := range expected {
 					// remove operation annotation
-					expected[i].ObjectMeta.Annotations = map[string]string{
+					expected[i].Annotations = map[string]string{
 						"gardener.cloud/timestamp": now.UTC().Format(time.RFC3339Nano),
 					}
 					// set last operation
@@ -1083,7 +1119,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 							Namespace: expected[i].Name,
 						},
 					}
-					Expect(c.Create(ctx, expected[i])).To(Succeed())
+					Expect(c.Update(ctx, expected[i])).To(Succeed())
 
 					// create cloud-config secret
 					ccSecret := &corev1.Secret{
@@ -1098,15 +1134,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Create(ctx, ccSecret)).To(Succeed())
 				}
 
-				worker1OSCDownloader := expected[0]
-				worker1OSCOriginal := expected[1]
-				worker2OSCDownloader := expected[2]
-				worker2OSCOriginal := expected[3]
-
 				Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
 
-				wn := defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()
-				exp := map[string]*OperatingSystemConfigs{
+				Expect(defaultDepWaiter.WorkerPoolNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Init: Data{
 							GardenerNodeAgentSecretName: "gardener-node-agent-" + worker1Name + "-77ac3",
@@ -1129,8 +1159,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 							Object:                      worker2OSCOriginal,
 						},
 					},
-				}
-				Expect(wn).To(Equal(exp))
+				}))
 			})
 		})
 

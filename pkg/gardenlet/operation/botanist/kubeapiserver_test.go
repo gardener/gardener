@@ -24,15 +24,16 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/component/apiserver"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/mock"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
@@ -96,6 +97,18 @@ var _ = Describe("KubeAPIServer", func() {
 		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
+				Config: &gardenletconfigv1alpha1.GardenletConfiguration{
+					SNI: &gardenletconfigv1alpha1.SNI{
+						Ingress: &gardenletconfigv1alpha1.SNIIngress{
+							Namespace:   ptr.To(v1beta1constants.DefaultSNIIngressNamespace),
+							ServiceName: ptr.To(v1beta1constants.DefaultSNIIngressServiceName),
+							Labels: map[string]string{
+								v1beta1constants.LabelApp: v1beta1constants.DefaultIngressGatewayAppLabelValue,
+								"istio":                   "ingressgateway",
+							},
+						},
+					},
+				},
 				GardenClient:   gardenClient,
 				SeedClientSet:  seedClientSet,
 				SecretsManager: sm,
@@ -168,7 +181,7 @@ var _ = Describe("KubeAPIServer", func() {
 	Describe("#DefaultKubeAPIServer", func() {
 		Describe("AutoscalingConfig", func() {
 			DescribeTable("should have the expected autoscaling config",
-				func(prepTest func(), expectedConfig apiserver.AutoscalingConfig) {
+				func(prepTest func(), expectedConfig kubeapiserver.AutoscalingConfig) {
 					if prepTest != nil {
 						prepTest()
 					}
@@ -180,7 +193,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("default behaviour",
 					nil,
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -196,7 +209,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
 					},
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -212,7 +225,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -235,7 +248,7 @@ var _ = Describe("KubeAPIServer", func() {
 							Replicas: ptr.To[int32](24),
 						}
 					},
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -255,7 +268,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						}
 					},
-					apiserver.AutoscalingConfig{
+					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -265,6 +278,33 @@ var _ = Describe("KubeAPIServer", func() {
 						MinReplicas:       3,
 						MaxReplicas:       6,
 						ScaleDownDisabled: false,
+					},
+				),
+				Entry("shoot configured min allowed",
+					func() {
+						botanist.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+							Autoscaling: &gardencorev1beta1.ControlPlaneAutoscaling{
+								MinAllowed: map[corev1.ResourceName]resource.Quantity{
+									"cpu":    resource.MustParse("200m"),
+									"memory": resource.MustParse("2Gi"),
+								},
+							},
+						}
+					},
+					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("2Gi"),
+							},
+						},
+						MinReplicas:       2,
+						MaxReplicas:       6,
+						ScaleDownDisabled: false,
+						MinAllowed: corev1.ResourceList{
+							"cpu":    resource.MustParse("200m"),
+							"memory": resource.MustParse("2Gi"),
+						},
 					},
 				),
 			)
@@ -410,7 +450,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						}
 						botanist.Shoot.ServiceAccountIssuerHostname = ptr.To("foo.bar.example.cloud")
-						botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
+						botanist.Shoot.GetInfo().UID = "some-uuid"
 						botanist.Shoot.GetInfo().Annotations = map[string]string{
 							"authentication.gardener.cloud/issuer": "managed",
 						}
@@ -441,7 +481,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				}
 				botanist.Shoot.ServiceAccountIssuerHostname = nil
-				botanist.Shoot.GetInfo().ObjectMeta.UID = "some-uuid"
+				botanist.Shoot.GetInfo().UID = "some-uuid"
 				botanist.Shoot.GetInfo().Annotations = map[string]string{
 					"authentication.gardener.cloud/issuer": "managed",
 				}
@@ -519,6 +559,7 @@ users:
 
 			botanist.ShootClientSet = fake.NewClientSetBuilder().WithClient(seedClient).Build()
 
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 			kubeAPIServer.EXPECT().Destroy(ctx)
 
 			Expect(botanist.DeleteKubeAPIServer(ctx)).To(Succeed())

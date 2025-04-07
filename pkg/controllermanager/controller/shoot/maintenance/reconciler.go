@@ -464,8 +464,8 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) string {
 		return ""
 	}
 
-	switch {
-	case shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed:
+	switch shoot.Status.LastOperation.State {
+	case gardencorev1beta1.LastOperationStateFailed:
 		if needsRetry(shoot) {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
 			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
@@ -806,13 +806,14 @@ func determineMachineImageVersion(shootMachineImage *gardencorev1beta1.ShootMach
 		getHigherVersionForceUpdate GetHigherVersion
 	)
 
-	if *machineImage.UpdateStrategy == gardencorev1beta1.UpdateStrategyPatch {
+	switch *machineImage.UpdateStrategy {
+	case gardencorev1beta1.UpdateStrategyPatch:
 		getHigherVersionAutoUpdate = v1beta1helper.GetLatestVersionForPatchAutoUpdate
 		getHigherVersionForceUpdate = v1beta1helper.GetVersionForForcefulUpdateToNextHigherMinor
-	} else if *machineImage.UpdateStrategy == gardencorev1beta1.UpdateStrategyMinor {
+	case gardencorev1beta1.UpdateStrategyMinor:
 		getHigherVersionAutoUpdate = v1beta1helper.GetLatestVersionForMinorAutoUpdate
 		getHigherVersionForceUpdate = v1beta1helper.GetVersionForForcefulUpdateToNextHigherMajor
-	} else {
+	default:
 		// auto-update strategy: "major"
 		getHigherVersionAutoUpdate = v1beta1helper.GetOverallLatestVersionForAutoUpdate
 		// cannot force update the overall latest version if it is expired

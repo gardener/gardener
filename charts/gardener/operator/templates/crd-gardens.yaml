@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: gardens.operator.gardener.cloud
 spec:
   group: operator.gardener.cloud
@@ -355,6 +355,25 @@ spec:
                         description: Events contains configuration for the events
                           etcd.
                         properties:
+                          autoscaling:
+                            description: Autoscaling contains auto-scaling configuration
+                              options for etcd.
+                            properties:
+                              minAllowed:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+                                  Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+                                  Default values are not applied to this field.
+                                type: object
+                            required:
+                            - minAllowed
+                            type: object
                           storage:
                             description: Storage contains storage configuration.
                             properties:
@@ -375,6 +394,25 @@ spec:
                       main:
                         description: Main contains configuration for the main etcd.
                         properties:
+                          autoscaling:
+                            description: Autoscaling contains auto-scaling configuration
+                              options for etcd.
+                            properties:
+                              minAllowed:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+                                  Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+                                  Default values are not applied to this field.
+                                type: object
+                            required:
+                            - minAllowed
+                            type: object
                           backup:
                             description: Backup contains the object store configuration
                               for backups for the virtual garden etcd.
@@ -587,6 +625,16 @@ spec:
                             description: FeatureGates contains information about enabled
                               feature gates.
                             type: object
+                          goAwayChance:
+                            description: |-
+                              GoAwayChance can be used to prevent HTTP/2 clients from getting stuck on a single apiserver, randomly close a
+                              connection (GOAWAY). The client's other in-flight requests won't be affected, and the client will reconnect,
+                              likely landing on a different apiserver after going through the load balancer again. This field sets the fraction
+                              of requests that will be sent a GOAWAY. Min is 0 (off), Max is 0.02 (1/50 requests); 0.001 (1/1000) is a
+                              recommended starting point.
+                            maximum: 0.02
+                            minimum: 0
+                            type: number
                           logging:
                             description: Logging contains configuration for the log
                               level and HTTP access logs.
@@ -1344,6 +1392,25 @@ spec:
                                 required:
                                 - kubeconfigSecretName
                                 type: object
+                            type: object
+                          autoscaling:
+                            description: Autoscaling contains auto-scaling configuration
+                              options for the kube-apiserver.
+                            properties:
+                              minAllowed:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+                                  Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+                                  Default values are not applied to this field.
+                                type: object
+                            required:
+                            - minAllowed
                             type: object
                           defaultNotReadyTolerationSeconds:
                             description: |-

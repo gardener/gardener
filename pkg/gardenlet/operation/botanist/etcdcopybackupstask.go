@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +29,7 @@ func (b *Botanist) DefaultEtcdCopyBackupsTask() etcdcopybackupstask.Interface {
 		&etcdcopybackupstask.Values{
 			Name:      b.Shoot.GetInfo().Name,
 			Namespace: b.Shoot.ControlPlaneNamespace,
-			WaitForFinalSnapshot: &druidv1alpha1.WaitForFinalSnapshotSpec{
+			WaitForFinalSnapshot: &druidcorev1alpha1.WaitForFinalSnapshotSpec{
 				Enabled: true,
 				Timeout: &metav1.Duration{Duration: etcdcopybackupstask.DefaultTimeout},
 			},
@@ -64,18 +64,18 @@ func (b *Botanist) DeployEtcdCopyBackupsTask(ctx context.Context) error {
 		return err
 	}
 
-	sourceProvider := druidv1alpha1.StorageProvider(sourceBackupEntry.Spec.Type)
-	provider := druidv1alpha1.StorageProvider(b.Seed.GetInfo().Spec.Backup.Provider)
+	sourceProvider := druidcorev1alpha1.StorageProvider(sourceBackupEntry.Spec.Type)
+	provider := druidcorev1alpha1.StorageProvider(b.Seed.GetInfo().Spec.Backup.Provider)
 	sourceContainer := string(sourceSecret.Data[v1beta1constants.DataKeyBackupBucketName])
 	container := string(secret.Data[v1beta1constants.DataKeyBackupBucketName])
 
-	b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.SetSourceStore(druidv1alpha1.StoreSpec{
+	b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.SetSourceStore(druidcorev1alpha1.StoreSpec{
 		Provider:  &sourceProvider,
 		SecretRef: &corev1.SecretReference{Name: sourceSecret.Name},
 		Prefix:    fmt.Sprintf("%s/etcd-%s", b.Shoot.BackupEntryName, v1beta1constants.ETCDRoleMain),
 		Container: &sourceContainer,
 	})
-	b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.SetTargetStore(druidv1alpha1.StoreSpec{
+	b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.SetTargetStore(druidcorev1alpha1.StoreSpec{
 		Provider:  &provider,
 		SecretRef: &corev1.SecretReference{Name: secret.Name},
 		Prefix:    fmt.Sprintf("%s/etcd-%s", b.Shoot.BackupEntryName, v1beta1constants.ETCDRoleMain),

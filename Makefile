@@ -170,12 +170,13 @@ check: $(GO_ADD_LICENSE) $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(
 	@hack/check-skaffold-deps.sh
 	@hack/check-plutono-dashboards.sh
 	@hack/check-typos.sh
+	@hack/check-file-names.sh
 
 .PHONY: logcheck-symlinks
 logcheck-symlinks:
 	@LOGCHECK_DIR=$(LOGCHECK_DIR) ./hack/generate-logcheck-symlinks.sh
 
-tools-for-generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC) $(PROTOC_GEN_GOGO) $(YQ) $(VGOPATH)
+tools-for-generate: $(CONTROLLER_GEN) $(EXTENSION_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(HELM) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC) $(PROTOC_GEN_GOGO) $(YQ) $(VGOPATH)
 
 define GENERATE_HELP_INFO
 # Usage: make generate [WHAT="<targets>"] [MODE="<mode>"] [CODEGEN_GROUPS="<groups>"] [MANIFESTS_DIRS="<folders>"]
@@ -355,7 +356,7 @@ gardener-ha-single-zone%: export SKAFFOLD_PROFILE=ha-single-zone
 gardener-ha-multi-zone%: export SKAFFOLD_PROFILE=ha-multi-zone
 
 gardener-up gardener-ha-single-zone-up gardener-ha-multi-zone-up: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
-	$(SKAFFOLD) run --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh)
+	$(SKAFFOLD) run
 gardener-dev gardener-ha-single-zone-dev gardener-ha-multi-zone-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
 	$(SKAFFOLD) dev
 gardener-debug gardener-ha-single-zone-debug gardener-ha-multi-zone-debug: $(SKAFFOLD) $(HELM) $(KUBECTL) $(YQ)
@@ -394,7 +395,7 @@ gardenlet-kind2-down gardenlet-kind2-ha-single-zone-down: $(SKAFFOLD) $(HELM) $(
 operator-%: export SKAFFOLD_FILENAME = skaffold-operator.yaml
 
 operator-up: $(SKAFFOLD) $(HELM) $(KUBECTL)
-	$(SKAFFOLD) run --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh operator)
+	$(SKAFFOLD) run --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh)
 operator-dev: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	$(SKAFFOLD) dev
 operator-debug: $(SKAFFOLD) $(HELM) $(KUBECTL)
@@ -413,17 +414,18 @@ operator-seed-up operator-seed-dev: $(SKAFFOLD) $(HELM) $(KUBECTL) operator-up
 	$(SKAFFOLD) run -m garden-config -f=skaffold-operator-garden.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
 		--status-check=false --platform="linux/$(SYSTEM_ARCH)" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 	$(SKAFFOLD) $(SKAFFOLD_MODE) -m gardenlet -p $(SKAFFOLD_PROFILE) -f=skaffold.yaml --kubeconfig=$(VIRTUAL_GARDEN_KUBECONFIG) \
+		--cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh) \
 		--status-check=false --platform="linux/$(SYSTEM_ARCH)" 	# deployments don't exist in virtual-garden, see https://skaffold.dev/docs/status-check/; nodes don't exist in virtual-garden, ensure skaffold use the host architecture instead of amd64, see https://skaffold.dev/docs/workflows/handling-platforms/
 
 operator-seed-down: $(SKAFFOLD) $(HELM) $(KUBECTL)
 	./hack/operator-seed-down.sh --path-kind-kubeconfig $(KUBECONFIG) --path-garden-kubeconfig $(VIRTUAL_GARDEN_KUBECONFIG)
 
 gardenadm-high-touch-up: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,machine --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh)
+	$(SKAFFOLD) run -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
 gardenadm-high-touch-down: $(SKAFFOLD) $(KUBECTL)
 	$(SKAFFOLD) delete -n gardenadm-high-touch -f=skaffold-gardenadm.yaml
 gardenadm-medium-touch-up: $(SKAFFOLD) $(KUBECTL)
-	$(SKAFFOLD) build -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,provider-local -q | $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -m provider-local-node,provider-local -o ./example/gardenadm-local/medium-touch/config.yaml --cache-artifacts=$(shell ./hack/get-skaffold-cache-artifacts.sh) --build-artifacts -
+	$(SKAFFOLD) build -f=skaffold-gardenadm.yaml -m gardenadm,provider-local-node,provider-local -q | $(SKAFFOLD) render -f=skaffold-gardenadm.yaml -m provider-local-node,provider-local -o ./example/gardenadm-local/medium-touch/config.yaml --build-artifacts -
 gardenadm-medium-touch-down: $(SKAFFOLD) $(KUBECTL)
 	$(SKAFFOLD) delete -n gardenadm-medium-touch -f=skaffold-gardenadm.yaml
 
@@ -438,9 +440,9 @@ test-e2e-local-migration: $(GINKGO)
 test-e2e-local-migration-ha-single-zone: $(GINKGO)
 	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "Shoot && control-plane-migration" ./test/e2e/gardener/...
 test-e2e-local-ha-single-zone: $(GINKGO)
-	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && upgrade-to-node)" ./test/e2e/gardener/...
+	SHOOT_FAILURE_TOLERANCE_TYPE=node ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && update-to-node)" ./test/e2e/gardener/...
 test-e2e-local-ha-multi-zone: $(GINKGO)
-	SHOOT_FAILURE_TOLERANCE_TYPE=zone USE_PROVIDER_LOCAL_COREDNS_SERVER=true ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && upgrade-to-zone)" ./test/e2e/gardener/...
+	SHOOT_FAILURE_TOLERANCE_TYPE=zone USE_PROVIDER_LOCAL_COREDNS_SERVER=true ./hack/test-e2e-local.sh --procs=$(PARALLEL_E2E_TESTS) --label-filter "basic || (high-availability && update-to-zone)" ./test/e2e/gardener/...
 test-e2e-local-operator: $(GINKGO)
 	./hack/test-e2e-local.sh operator --procs=1 --label-filter="default" ./test/e2e/operator/...
 test-e2e-local-operator-seed: $(GINKGO)

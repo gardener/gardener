@@ -82,7 +82,7 @@ This document provides a checklist for them that you can walk through.
 1. **Use a [dedicated `ServiceAccount`](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) and disable auto-mount** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L145-L151))
 
    Components that need to talk to the API server of their runtime cluster must always use a dedicated `ServiceAccount` (do not use `default`), with `automountServiceAccountToken` set to `false`.
-   This makes `gardener-resource-manager`'s [TokenInvalidator](../concepts/resource-manager.md#tokeninvalidator) invalidate the static token secret and its [`ProjectedTokenMount` webhook](../concepts/resource-manager.md#auto-mounting-projected-serviceaccount-tokens) inject a projected token automatically.
+   This makes `gardener-resource-manager`'s [`ProjectedTokenMount` webhook](../concepts/resource-manager.md#auto-mounting-projected-serviceaccount-tokens) inject a projected token automatically.
 
 2. **Use shoot access tokens instead of a client certificates** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/kubescheduler/kube_scheduler.go#L234-L236))
 
@@ -190,9 +190,10 @@ This document provides a checklist for them that you can walk through.
    This should be done inside a dedicated `logging.go` file.
    Extensions should follow the guidelines described in [Fluent-bit log parsers and filters](../extensions/logging-and-monitoring.md#fluent-bit-log-parsers-and-filters).
 
-3. **Set the `revisionHistoryLimit` to `2` for `Deployment`s** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L272))
+3. **Set the `revisionHistoryLimit` to `2` for `Deployment`s and `DaemonSet`s** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L272))
 
-   In order to allow easy inspection of two `ReplicaSet`s to quickly find the changes that lead to a rolling update, the [revision history limit](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#revision-history-limit) should be set to `2`.
+   In order to allow easy inspection of two `ReplicaSet`s / `ControllerRevision`s to quickly find the changes that lead to a rolling update, the [revision history limit](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#revision-history-limit) should be set to `2`.
+   This also helps to not flood the API server with too many revisions.
 
 4. **Define health checks** ([example 1](https://github.com/gardener/gardener/blob/180951eac9b8183175d4dcadc305c7722ce8122d/pkg/gardenlet/controller/shoot/care/health.go#L763-L795))
 

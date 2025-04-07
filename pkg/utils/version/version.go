@@ -23,12 +23,18 @@ var (
 	ConstraintK8sGreaterEqual130 *semver.Constraints
 	// ConstraintK8sLess131 is a version constraint for versions < 1.31.
 	ConstraintK8sLess131 *semver.Constraints
+	// ConstraintK8sEqual131 is a version constraint for versions == 1.31.
+	ConstraintK8sEqual131 *semver.Constraints
 	// ConstraintK8sGreaterEqual131 is a version constraint for versions >= 1.31.
 	ConstraintK8sGreaterEqual131 *semver.Constraints
 	// ConstraintK8sLess132 is a version constraint for versions < 1.32.
 	ConstraintK8sLess132 *semver.Constraints
 	// ConstraintK8sGreaterEqual132 is a version constraint for versions >= 1.32.
 	ConstraintK8sGreaterEqual132 *semver.Constraints
+	// ConstraintK8sLess133 is a version constraint for versions < 1.33.
+	ConstraintK8sLess133 *semver.Constraints
+	// ConstraintK8sGreaterEqual133 is a version constraint for versions >= 1.33.
+	ConstraintK8sGreaterEqual133 *semver.Constraints
 )
 
 func init() {
@@ -43,11 +49,17 @@ func init() {
 	utilruntime.Must(err)
 	ConstraintK8sLess131, err = semver.NewConstraint("< 1.31-0")
 	utilruntime.Must(err)
+	ConstraintK8sEqual131, err = semver.NewConstraint("~ 1.31.x-0")
+	utilruntime.Must(err)
 	ConstraintK8sGreaterEqual131, err = semver.NewConstraint(">= 1.31-0")
 	utilruntime.Must(err)
 	ConstraintK8sLess132, err = semver.NewConstraint("< 1.32-0")
 	utilruntime.Must(err)
 	ConstraintK8sGreaterEqual132, err = semver.NewConstraint(">= 1.32-0")
+	utilruntime.Must(err)
+	ConstraintK8sLess133, err = semver.NewConstraint("< 1.33-0")
+	utilruntime.Must(err)
+	ConstraintK8sGreaterEqual133, err = semver.NewConstraint(">= 1.33-0")
 	utilruntime.Must(err)
 }
 
@@ -80,7 +92,7 @@ func CheckVersionMeetsConstraint(version, constraint string) (bool, error) {
 }
 
 func normalize(version string) string {
-	v := strings.Replace(version, "v", "", -1)
+	v := strings.ReplaceAll(version, "v", "")
 	idx := strings.IndexAny(v, "-+")
 	if idx != -1 {
 		v = v[:idx]

@@ -42,6 +42,8 @@ import (
 )
 
 const (
+	// SecretNameServerCert is the name of the kube-apiserver server certificate secret.
+	SecretNameServerCert = "kube-apiserver"
 	// ServicePortName is the name of the port in the service.
 	ServicePortName = "kube-apiserver"
 	// UserNameVPNSeedClient is the user name for the HA vpn-seed-client components (used as common name in its client certificate)
@@ -59,6 +61,8 @@ type Interface interface {
 	// TODO(oliver-goetz): Consider removing this method when we support Kubernetes version with structured authorization only.
 	//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
 	AppendAuthorizationWebhook(AuthorizationWebhook) error
+	// EnableStaticTokenKubeconfig enables the static token kubeconfig.
+	EnableStaticTokenKubeconfig()
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
 	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
@@ -91,6 +95,8 @@ type Values struct {
 	AuthenticationWebhook *AuthenticationWebhook
 	// AuthorizationWebhook contains configuration for the authorization webhooks.
 	AuthorizationWebhooks []AuthorizationWebhook
+	// Autoscaling contains information for configuring autoscaling settings for the API server.
+	Autoscaling AutoscalingConfig
 	// DefaultNotReadyTolerationSeconds indicates the tolerationSeconds of the toleration for notReady:NoExecute
 	// that is added by default to every pod that does not already have such a toleration (flag `--default-not-ready-toleration-seconds`).
 	DefaultNotReadyTolerationSeconds *int64
@@ -126,6 +132,8 @@ type Values struct {
 	ServiceNetworkCIDRs []net.IPNet
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
+	// StaticTokenKubeconfigEnabled indicates whether static token kubeconfig secret will be created for shoot.
+	StaticTokenKubeconfigEnabled *bool
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
 	// VPN contains information for configuring the VPN settings for the kube-apiserver.
@@ -154,6 +162,22 @@ type AuthorizationWebhook struct {
 	apiserverv1beta1.WebhookConfiguration
 }
 
+// AutoscalingConfig contains information for configuring autoscaling settings for the API server.
+type AutoscalingConfig struct {
+	// APIServerResources are the resource requirements for the API server container.
+	APIServerResources corev1.ResourceRequirements
+	// Replicas is the number of pod replicas for the API server.
+	Replicas *int32
+	// MinReplicas are the minimum Replicas for horizontal autoscaling.
+	MinReplicas int32
+	// MaxReplicas are the maximum Replicas for horizontal autoscaling.
+	MaxReplicas int32
+	// ScaleDownDisabled states whether scale-down shall be disabled.
+	ScaleDownDisabled bool
+	// MinAllowed are the minimum allowed resources for vertical autoscaling.
+	MinAllowed corev1.ResourceList
+}
+
 // Images is a set of container images used for the containers of the kube-apiserver pods.
 type Images struct {
 	// KubeAPIServer is the container image for the kube-apiserver.
@@ -176,9 +200,6 @@ type VPNConfig struct {
 	HighAvailabilityNumberOfSeedServers int
 	// HighAvailabilityNumberOfShootClients is the number of VPN shoot clients used for HA.
 	HighAvailabilityNumberOfShootClients int
-	// DisableNewVPN disable new VPN implementation.
-	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
-	DisableNewVPN bool
 	// IPFamilies are the IPFamilies of the shoot.
 	IPFamilies []gardencorev1beta1.IPFamily
 }
@@ -421,6 +442,12 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if ptr.Deref(k.values.StaticTokenKubeconfigEnabled, false) {
+		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken); err != nil {
+			return err
+		}
+	}
+
 	if err := k.reconcileServiceMonitor(ctx, k.emptyServiceMonitor()); err != nil {
 		return err
 	}
@@ -547,6 +574,10 @@ func (k *kubeAPIServer) AppendAuthorizationWebhook(webhook AuthorizationWebhook)
 	k.values.AuthorizationWebhooks = append(k.values.AuthorizationWebhooks, webhook)
 
 	return nil
+}
+
+func (k *kubeAPIServer) EnableStaticTokenKubeconfig() {
+	k.values.StaticTokenKubeconfigEnabled = ptr.To(true)
 }
 
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {

@@ -133,9 +133,10 @@ func (s *CertificateSecretConfig) GenerateCertificate() (*Certificate, error) {
 		}
 
 		var pk []byte
-		if s.PKCS == PKCS1 {
+		switch s.PKCS {
+		case PKCS1:
 			pk = utils.EncodePrivateKey(privateKey)
-		} else if s.PKCS == PKCS8 {
+		case PKCS8:
 			pk, err = utils.EncodePrivateKeyInPKCS8(privateKey)
 
 			if err != nil {

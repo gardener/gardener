@@ -501,6 +501,43 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).ToNot(HaveOccurred())
 		})
+
+		It("should merge MachineImages with overridden updateStrategy correctly", func() {
+			namespacedCloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
+				{
+					Name:           "test-image",
+					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMinor),
+				},
+			}
+
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespacedCloudProfileName, Namespace: namespaceName}, gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.NamespacedCloudProfile, _ ...client.GetOption) error {
+				namespacedCloudProfile.DeepCopyInto(obj)
+				return nil
+			})
+
+			c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any())
+
+			c.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: cloudProfileName}, gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.CloudProfile, _ ...client.GetOption) error {
+				cloudProfile.DeepCopyInto(obj)
+				return nil
+			})
+
+			gomock.InOrder(
+				c.EXPECT().Status().Return(sw),
+				sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.NamespacedCloudProfile{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, _ ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(And(
+						ContainSubstring(`{"status":{"cloudProfileSpec":{"machineImages":[{"name":"test-image","updateStrategy":"minor","versions":[`),
+						ContainSubstring(`{"architectures":["amd64"],"cri":[{"name":"containerd"}],"kubeletVersionConstraint":"==1.30.0","version":"1.0.0"}`),
+						ContainSubstring(`]}],"machineTypes":[]}}}`),
+					))
+					return nil
+				}),
+			)
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespacedCloudProfileName, Namespace: namespaceName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).ToNot(HaveOccurred())
+		})
 	})
 
 	Context("merge machine types", func() {
@@ -770,6 +807,60 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 				// Expect that the NamepacedCloudProfile Status is as expected.
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(namespacedCloudProfile), namespacedCloudProfile)).To(Succeed())
 				Expect(namespacedCloudProfile.Status.CloudProfileSpec.MachineImages).To(Equal(namespacedCloudProfile.Spec.MachineImages))
+			})
+		})
+
+		Describe("#MergeCloudProfiles", func() {
+			Describe("merge limits.maxNodesTotal correctly", func() {
+				var (
+					cloudProfile           *gardencorev1beta1.CloudProfile
+					namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile
+				)
+
+				BeforeEach(func() {
+					cloudProfile = &gardencorev1beta1.CloudProfile{}
+					namespacedCloudProfile = &gardencorev1beta1.NamespacedCloudProfile{}
+				})
+
+				It("should stay nil if no value is provided at all", func() {
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits).To(BeNil())
+				})
+
+				It("should apply only the value from the CloudProfile", func() {
+					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+				})
+
+				It("should apply only the value from the NamespacedCloudProfile", func() {
+					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+				})
+
+				It("should ignore a higher value from the NamespacedCloudProfile", func() {
+					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(10))}
+					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(99))}
+
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(10))))
+				})
+
+				It("should apply a lower value from the NamespacedCloudProfile", func() {
+					cloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(124))}
+					namespacedCloudProfile.Spec.Limits = &gardencorev1beta1.Limits{MaxNodesTotal: ptr.To(int32(20))}
+
+					namespacedcloudprofilecontroller.MergeCloudProfiles(namespacedCloudProfile, cloudProfile)
+
+					Expect(namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal).To(Equal(ptr.To(int32(20))))
+				})
 			})
 		})
 	})

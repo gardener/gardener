@@ -15,7 +15,7 @@ import (
 func VersionMajorMinor(version string) (string, error) {
 	v, err := semver.NewVersion(version)
 	if err != nil {
-		return "", fmt.Errorf("Invalid version string '%s': %w", version, err)
+		return "", fmt.Errorf("invalid version string '%s': %w", version, err)
 	}
 	return fmt.Sprintf("%d.%d", v.Major(), v.Minor()), nil
 }

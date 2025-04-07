@@ -1010,6 +1010,18 @@ ETCDEvents
 <tbody>
 <tr>
 <td>
+<code>autoscaling</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for etcd.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>storage</code></br>
 <em>
 <a href="#operator.gardener.cloud/v1alpha1.Storage">
@@ -1041,6 +1053,18 @@ Storage
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ControlPlaneAutoscaling
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for etcd.</p>
+</td>
+</tr>
 <tr>
 <td>
 <code>backup</code></br>
@@ -1244,6 +1268,19 @@ Kubernetes meta/v1.LabelSelector
 <p>SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
 considered for a deployment.
 An empty list means that all seeds are selected.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>injectGardenKubeconfig</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+resources.</p>
 </td>
 </tr>
 </tbody>
@@ -1937,6 +1974,22 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.EncryptionConfig
 <td>
 <em>(Optional)</em>
 <p>EncryptionConfig contains customizable encryption configuration of the Gardener API server.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>goAwayChance</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>GoAwayChance can be used to prevent HTTP/2 clients from getting stuck on a single apiserver, randomly close a
+connection (GOAWAY). The client&rsquo;s other in-flight requests won&rsquo;t be affected, and the client will reconnect,
+likely landing on a different apiserver after going through the load balancer again. This field sets the fraction
+of requests that will be sent a GOAWAY. Min is 0 (off), Max is 0.02 (<sup>1</sup>&frasl;<sub>50</sub> requests); 0.001 (<sup>1</sup>&frasl;<sub>1000</sub>) is a
+recommended starting point.</p>
 </td>
 </tr>
 </tbody>

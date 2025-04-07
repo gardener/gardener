@@ -336,7 +336,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should fail when the provided kubeconfig cannot be decoded", func() {
-			secret.Data = map[string][]byte{"kubeconfig": []byte("some non-decodeable stuff")}
+			secret.Data = map[string][]byte{"kubeconfig": []byte("some non-decodable stuff")}
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeNotFoundError())

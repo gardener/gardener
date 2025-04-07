@@ -71,6 +71,19 @@ HelmControllerDeployment
 <p>Helm configures that an extension controller is deployed using helm.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>injectGardenKubeconfig</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+resources.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1.HelmControllerDeployment">HelmControllerDeployment
@@ -196,6 +209,22 @@ string
 <em>(Optional)</em>
 <p>Digest of the image to pull, takes precedence over tag.
 The value should be in the format &lsquo;sha256:<HASH>&rsquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pullSecretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PullSecretRef is a reference to a secret containing the pull secret.
+The secret must be of type <code>kubernetes.io/dockerconfigjson</code> and must be located in the <code>garden</code> namespace.
+For usage in the gardenlet, the secret must have the label <code>gardener.cloud/role=helm-pull-secret</code>.</p>
 </td>
 </tr>
 </tbody>

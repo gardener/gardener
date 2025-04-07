@@ -29,6 +29,8 @@ const (
 	ContainerImageNameCortex = "cortex"
 	// ContainerImageNameDependencyWatchdog is a constant for an image in the image vector with name 'dependency-watchdog'.
 	ContainerImageNameDependencyWatchdog = "dependency-watchdog"
+	// ContainerImageNameEtcd is a constant for an image in the image vector with name 'etcd'.
+	ContainerImageNameEtcd = "etcd"
 	// ContainerImageNameEtcdDruid is a constant for an image in the image vector with name 'etcd-druid'.
 	ContainerImageNameEtcdDruid = "etcd-druid"
 	// ContainerImageNameEventLogger is a constant for an image in the image vector with name 'event-logger'.
@@ -127,10 +129,6 @@ const (
 	ContainerImageNameVpaUpdater = "vpa-updater"
 	// ContainerImageNameVpnClient is a constant for an image in the image vector with name 'vpn-client'.
 	ContainerImageNameVpnClient = "vpn-client"
-	// ContainerImageNameVpnSeedServer is a constant for an image in the image vector with name 'vpn-seed-server'.
-	ContainerImageNameVpnSeedServer = "vpn-seed-server"
 	// ContainerImageNameVpnServer is a constant for an image in the image vector with name 'vpn-server'.
 	ContainerImageNameVpnServer = "vpn-server"
-	// ContainerImageNameVpnShootClient is a constant for an image in the image vector with name 'vpn-shoot-client'.
-	ContainerImageNameVpnShootClient = "vpn-shoot-client"
 )

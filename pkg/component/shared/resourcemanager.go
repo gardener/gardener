@@ -54,11 +54,10 @@ func NewRuntimeGardenerResourceManager(
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	defaultValues := resourcemanager.Values{
-		ConcurrentSyncs:                      ptr.To(20),
-		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
-		Image:                                image.String(),
-		MaxConcurrentNetworkPolicyWorkers:    ptr.To(20),
-		MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
+		ConcurrentSyncs:                   ptr.To(20),
+		HealthSyncPeriod:                  &metav1.Duration{Duration: time.Minute},
+		Image:                             image.String(),
+		MaxConcurrentNetworkPolicyWorkers: ptr.To(20),
 		NetworkPolicyControllerIngressControllerSelector: &resourcemanagerconfigv1alpha1.IngressControllerSelector{
 			Namespace: v1beta1constants.GardenNamespace,
 			PodSelector: metav1.LabelSelector{MatchLabels: map[string]string{
@@ -66,9 +65,7 @@ func NewRuntimeGardenerResourceManager(
 				nginxingress.LabelKeyComponent: nginxingress.LabelValueController,
 			}},
 		},
-		// TODO(timuthy): Remove PodTopologySpreadConstraints webhook once for all seeds the
-		//  MatchLabelKeysInPodTopologySpread feature gate is beta and enabled by default (probably 1.26+).
-		PodTopologySpreadConstraintsEnabled: true,
+		PodTopologySpreadConstraintsEnabled: false,
 		Replicas:                            ptr.To[int32](2),
 		ResourceClass:                       ptr.To(v1beta1constants.SeedResourceManagerClass),
 		ResponsibilityMode:                  resourcemanager.ForSource,
@@ -96,16 +93,15 @@ func NewTargetGardenerResourceManager(
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	defaultValues := resourcemanager.Values{
-		AlwaysUpdate:                         ptr.To(true),
-		ConcurrentSyncs:                      ptr.To(20),
-		HealthSyncPeriod:                     &metav1.Duration{Duration: time.Minute},
-		Image:                                image.String(),
-		MaxConcurrentCSRApproverWorkers:      ptr.To(5),
-		MaxConcurrentHealthWorkers:           ptr.To(10),
-		MaxConcurrentTokenInvalidatorWorkers: ptr.To(5),
-		MaxConcurrentTokenRequestorWorkers:   ptr.To(5),
-		ResponsibilityMode:                   resourcemanager.ForTarget,
-		WatchedNamespace:                     &namespaceName,
+		AlwaysUpdate:                       ptr.To(true),
+		ConcurrentSyncs:                    ptr.To(20),
+		HealthSyncPeriod:                   &metav1.Duration{Duration: time.Minute},
+		Image:                              image.String(),
+		MaxConcurrentCSRApproverWorkers:    ptr.To(5),
+		MaxConcurrentHealthWorkers:         ptr.To(10),
+		MaxConcurrentTokenRequestorWorkers: ptr.To(5),
+		ResponsibilityMode:                 resourcemanager.ForTarget,
+		WatchedNamespace:                   &namespaceName,
 	}
 
 	applyDefaults(&values, defaultValues)

@@ -145,12 +145,26 @@ func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed) sets.Set[str
 		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
 	}
 
+	for _, extension := range seed.Spec.Extensions {
+		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type))
+	}
+
 	// add extension combinations for seed provider type
 	wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
 	wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.InfrastructureResource, seed.Spec.Provider.Type))
 	wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.WorkerResource, seed.Spec.Provider.Type))
 
 	return wantedKindTypeCombinations
+}
+
+// ExtensionKindAndTypeForID returns the extension's type and kind based on the given ID.
+func ExtensionKindAndTypeForID(extensionID string) (extensionKind string, extensionType string, err error) {
+	split := strings.Split(extensionID, "/")
+	if len(split) != 2 {
+		return "", "", fmt.Errorf("unexpected required extension: %q", extensionID)
+	}
+	extensionKind, extensionType = split[0], split[1]
+	return
 }
 
 // RequiredExtensionsReady checks if all required extensions for a seed exist and are ready.
@@ -169,11 +183,10 @@ func RequiredExtensionsReady(ctx context.Context, gardenClient client.Client, se
 		}
 
 		for _, kindType := range requiredExtensions.UnsortedList() {
-			split := strings.Split(kindType, "/")
-			if len(split) != 2 {
-				return fmt.Errorf("unexpected required extension: %q", kindType)
+			extensionKind, extensionType, err := ExtensionKindAndTypeForID(kindType)
+			if err != nil {
+				return err
 			}
-			extensionKind, extensionType := split[0], split[1]
 
 			if helper.IsResourceSupported(controllerRegistration.Spec.Resources, extensionKind, extensionType) && helper.IsControllerInstallationSuccessful(controllerInstallation) {
 				requiredExtensions.Delete(kindType)

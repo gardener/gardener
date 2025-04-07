@@ -38,11 +38,8 @@ config:
   featureGates:
     DefaultSeccompProfile: true
     NewWorkerPoolHash: true
-    NewVPN: true
-    NodeAgentAuthorizer: true
-  etcdConfig:
-    featureGates:
-      UseEtcdWrapper: true
+    IstioTLSTermination: true
+    RemoveAPIServerProxyLegacyPort: true
   logging:
     enabled: true
     vali:
@@ -78,6 +75,8 @@ config:
           secretRef:
             name: internal-domain-internal-local-gardener-cloud
             namespace: garden
+      extensions:
+      - type: local-ext-seed
       ingress:
         domain: ingress.local.seed.local.gardener.cloud
         controller:

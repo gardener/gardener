@@ -178,7 +178,7 @@ func ValidateManagedSeedTemplateForManagedSeedSet(template *seedmanagement.Manag
 		if gardenletConfig.SeedConfig == nil {
 			allErrs = append(allErrs, field.Required(configPath.Child("seedConfig"), "seedConfig is required"))
 		} else {
-			allErrs = append(allErrs, validateTemplateLabels(&gardenletConfig.SeedConfig.SeedTemplate.ObjectMeta, selector, configPath.Child("seedConfig").Child("metadata"))...)
+			allErrs = append(allErrs, validateTemplateLabels(&gardenletConfig.SeedConfig.ObjectMeta, selector, configPath.Child("seedConfig").Child("metadata"))...)
 		}
 	}
 

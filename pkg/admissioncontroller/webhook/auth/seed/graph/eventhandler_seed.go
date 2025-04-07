@@ -43,6 +43,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) err
 			}
 
 			if !v1beta1helper.SeedBackupSecretRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
+				!v1beta1helper.ResourceReferencesEqual(oldSeed.Spec.Resources, newSeed.Spec.Resources) ||
 				!seedDNSProviderSecretRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
 				g.handleSeedCreateOrUpdate(newSeed)
 			}
@@ -104,6 +105,20 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 	if seed.Spec.DNS.Provider != nil {
 		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.DNS.Provider.SecretRef.Namespace, seed.Spec.DNS.Provider.SecretRef.Name)
 		g.addEdge(secretVertex, seedVertex)
+	}
+
+	for _, resource := range seed.Spec.Resources {
+		// only secrets and configMap are supported here
+		if resource.ResourceRef.APIVersion == "v1" {
+			if resource.ResourceRef.Kind == "Secret" {
+				secretVertex := g.getOrCreateVertex(VertexTypeSecret, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
+				g.addEdge(secretVertex, seedVertex)
+			}
+			if resource.ResourceRef.Kind == "ConfigMap" {
+				configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, v1beta1constants.GardenNamespace, resource.ResourceRef.Name)
+				g.addEdge(configMapVertex, seedVertex)
+			}
+		}
 	}
 }
 

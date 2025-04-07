@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	e2e "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
@@ -95,7 +94,7 @@ func testCredentialRotationComplete(parentCtx context.Context, v rotationutils.V
 }
 
 func testCredentialRotationWithoutWorkersRollout(parentCtx context.Context, v rotationutils.Verifiers, f *framework.ShootCreationFramework) {
-	ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
+	ctx, cancel := context.WithTimeout(parentCtx, 30*time.Minute)
 	defer cancel()
 
 	By("Before credential rotation")
@@ -211,9 +210,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 			f.Verify()
 
-			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
-			}
+			// TODO: add back VerifyInClusterAccessToAPIServer once this test has been refactored to ordered containers
+			// if !v1beta1helper.IsWorkerless(s.Shoot) {
+			// 	inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			// }
 
 			// isolated test for ssh key rotation (does not trigger node rolling update)
 			if !v1beta1helper.IsWorkerless(f.Shoot) && !withoutWorkersRollout {
@@ -288,9 +288,10 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			By("Renew shoot client after credentials rotation")
 			Expect(f.ShootFramework.AddShoot(parentCtx, f.Shoot.Name, f.Shoot.Namespace)).To(Succeed())
 
-			if !v1beta1helper.IsWorkerless(f.Shoot) {
-				inclusterclient.VerifyInClusterAccessToAPIServer(parentCtx, f.ShootFramework)
-			}
+			// TODO: add back VerifyInClusterAccessToAPIServer once this test has been refactored to ordered containers
+			// if !v1beta1helper.IsWorkerless(s.Shoot) {
+			// 	inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			// }
 
 			By("Delete Shoot")
 			ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)

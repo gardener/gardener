@@ -557,6 +557,19 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <p>ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>injectGardenKubeconfig</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+resources.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerInstallation">ControllerInstallation
@@ -1109,6 +1122,22 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <em>(Optional)</em>
 <p>ProviderConfig contains provider-specific configuration for the profile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>limits</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Limits">
+Limits
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
+If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
 </td>
 </tr>
 </table>
@@ -1704,6 +1733,34 @@ Ingress
 <td>
 <em>(Optional)</em>
 <p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Seed extensions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamedResourceReference">
+[]NamedResourceReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
 </td>
 </tr>
 </table>
@@ -4095,6 +4152,41 @@ control plane of a shoot.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ControlPlaneAutoscaling">ControlPlaneAutoscaling
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ETCDConfig">ETCDConfig</a>, 
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>minAllowed</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<p>MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+Default values are not applied to this field.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">ControllerDeploymentPolicy
 (<code>string</code> alias)</p></h3>
 <p>
@@ -4973,6 +5065,86 @@ Defaults to true.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ETCD">ETCD
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
+</p>
+<p>
+<p>ETCD contains configuration for etcds of the shoot cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>main</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ETCDConfig">
+ETCDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Main contains configuration for the main etcd.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>events</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ETCDConfig">
+ETCDConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Events contains configuration for the events etcd.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ETCDConfig">ETCDConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ETCD">ETCD</a>)
+</p>
+<p>
+<p>ETCDConfig contains etcd configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControlPlaneAutoscaling">
+ControlPlaneAutoscaling
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for etcd.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ETCDEncryptionKeyRotation">ETCDEncryptionKeyRotation
 </h3>
 <p>
@@ -5226,10 +5398,11 @@ SeedSelector
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
-<p>Extension contains type and provider information for Shoot extensions.</p>
+<p>Extension contains type and provider information for extensions.</p>
 </p>
 <table>
 <thead>
@@ -6212,6 +6385,20 @@ StructuredAuthorization
 <em>(Optional)</em>
 <p>StructuredAuthorization contains configuration settings for structured authorization for the kube-apiserver.
 This field is only available for Kubernetes v1.30 or later.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControlPlaneAutoscaling">
+ControlPlaneAutoscaling
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Autoscaling contains auto-scaling configuration options for the kube-apiserver.</p>
 </td>
 </tr>
 </tbody>
@@ -7295,6 +7482,20 @@ Setting this field to true is not supported.</p>
 <p>Deprecated: This field is deprecated and will be removed in gardener v1.120</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>etcd</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ETCD">
+ETCD
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCD contains configuration for etcds of the shoot cluster.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubernetesConfig">KubernetesConfig
@@ -7659,7 +7860,8 @@ LastOperationType
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.NamespacedCloudProfileSpec">NamespacedCloudProfileSpec</a>)
 </p>
 <p>
 <p>Limits configures operational limits for Shoot clusters using this CloudProfile.
@@ -7860,6 +8062,33 @@ int32
 <td>
 <em>(Optional)</em>
 <p>NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>inPlaceUpdateTimeout</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>disableHealthTimeout</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+This is intended to be used only for in-place updates.</p>
 </td>
 </tr>
 </tbody>
@@ -8431,6 +8660,7 @@ Alerting
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.ExtensionResourceState">ExtensionResourceState</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
 </p>
 <p>
@@ -8580,6 +8810,22 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <em>(Optional)</em>
 <p>ProviderConfig contains provider-specific configuration for the profile.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>limits</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Limits">
+Limits
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
+If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md">https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md</a>.</p>
 </td>
 </tr>
 </tbody>
@@ -9001,6 +9247,21 @@ string
 <td>
 <em>(Optional)</em>
 <p>Digest of the image to pull, takes precedence over tag.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pullSecretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
+Kubernetes core/v1.LocalObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PullSecretRef is a reference to a secret containing the pull secret.
+The secret must be of type <code>kubernetes.io/dockerconfigjson</code> and must be located in the <code>garden</code> namespace.</p>
 </td>
 </tr>
 </tbody>
@@ -11104,6 +11365,34 @@ Ingress
 <p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Seed extensions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamedResourceReference">
+[]NamedResourceReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedStatus">SeedStatus
@@ -11457,6 +11746,34 @@ Ingress
 <td>
 <em>(Optional)</em>
 <p>AccessRestrictions describe a list of access restrictions for this seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Seed extensions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamedResourceReference">
+[]NamedResourceReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
 </td>
 </tr>
 </table>
@@ -13959,7 +14276,9 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 <td>
 <em>(Optional)</em>
 <p>MaxSurge is maximum number of machines that are created during an update.
-This value is divided by the number of configured zones for a fair distribution.</p>
+This value is divided by the number of configured zones for a fair distribution.
+Defaults to 0 in case of an in-place update.
+Defaults to 1 in case of a rolling update.</p>
 </td>
 </tr>
 <tr>
@@ -13974,7 +14293,9 @@ k8s.io/apimachinery/pkg/util/intstr.IntOrString
 <td>
 <em>(Optional)</em>
 <p>MaxUnavailable is the maximum number of machines that can be unavailable during an update.
-This value is divided by the number of configured zones for a fair distribution.</p>
+This value is divided by the number of configured zones for a fair distribution.
+Defaults to 1 in case of an in-place update.
+Defaults to 0 in case of a rolling update.</p>
 </td>
 </tr>
 <tr>

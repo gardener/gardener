@@ -143,7 +143,7 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 		metav1.SetMetaDataLabel(&service.ObjectMeta, label, value)
 	}
 	topologyAwareRoutingEnabled := v.values.AdmissionController.TopologyAwareRoutingEnabled && v.values.ClusterType == component.ClusterTypeShoot
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
+	gardenerutils.ReconcileTopologyAwareRoutingSettings(service, topologyAwareRoutingEnabled, v.values.RuntimeKubernetesVersion)
 
 	switch v.values.ClusterType {
 	case component.ClusterTypeSeed:
@@ -312,8 +312,8 @@ func (v *vpa) computeAdmissionControllerArgs() []string {
 	out := []string{
 		"--v=2",
 		"--stderrthreshold=info",
-		"--kube-api-qps=100",
-		"--kube-api-burst=120",
+		"--kube-api-qps=200",
+		"--kube-api-burst=250",
 		fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificateBundle),
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyCertificate),
 		fmt.Sprintf("--tls-private-key=%s/%s", volumeMountPathCertificates, secretsutils.DataKeyPrivateKey),

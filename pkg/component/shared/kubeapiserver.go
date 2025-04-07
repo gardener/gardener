@@ -36,7 +36,6 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -79,10 +78,11 @@ func NewKubeAPIServer(
 	secretsManager secretsmanager.Interface,
 	namePrefix string,
 	apiServerConfig *gardencorev1beta1.KubeAPIServerConfig,
-	autoscalingConfig apiserver.AutoscalingConfig,
+	autoscalingConfig kubeapiserver.AutoscalingConfig,
 	vpnConfig kubeapiserver.VPNConfig,
 	priorityClassName string,
 	isWorkerless bool,
+	runsAsStaticPod bool,
 	auditWebhookConfig *apiserver.AuditWebhook,
 	authenticationWebhookConfig *kubeapiserver.AuthenticationWebhook,
 	authorizationWebhookConfigs []kubeapiserver.AuthorizationWebhook,
@@ -97,7 +97,10 @@ func NewKubeAPIServer(
 	}
 
 	var (
-		enabledAdmissionPlugins                  = kubernetesutils.GetAdmissionPluginsForVersion(targetVersion.String())
+		// A list of admission plugins that are not enabled by default by Kubernetes itself.
+		enabledAdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{
+			{Name: "NodeRestriction"},
+		}
 		disabledAdmissionPlugins                 []gardencorev1beta1.AdmissionPlugin
 		apiAudiences                             = []string{"kubernetes", "gardener"}
 		auditConfig                              *apiserver.AuditConfig
@@ -170,10 +173,10 @@ func NewKubeAPIServer(
 				EnabledAdmissionPlugins:  enabledAdmissionPluginConfigs,
 				DisabledAdmissionPlugins: disabledAdmissionPlugins,
 				Audit:                    auditConfig,
-				Autoscaling:              autoscalingConfig,
 				FeatureGates:             featureGates,
 				Logging:                  logging,
 				Requests:                 requests,
+				RunsAsStaticPod:          runsAsStaticPod,
 				RuntimeVersion:           runtimeVersion,
 				WatchCacheSizes:          watchCacheSizes,
 			},
@@ -182,6 +185,7 @@ func NewKubeAPIServer(
 			AuthenticationConfiguration:         authenticationConfigurationFromConfigMap,
 			AuthenticationWebhook:               authenticationWebhookConfig,
 			AuthorizationWebhooks:               append(authorizationWebhookConfigs, authorizationWebhookConfigsFromConfigMap...),
+			Autoscaling:                         autoscalingConfig,
 			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 			DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 			EventTTL:                            eventTTL,
@@ -295,9 +299,6 @@ func computeKubeAPIServerImages(
 
 	if vpnConfig.HighAvailabilityEnabled {
 		imageNameVPNShootClient := imagevector.ContainerImageNameVpnClient
-		if vpnConfig.DisableNewVPN {
-			imageNameVPNShootClient = imagevector.ContainerImageNameVpnShootClient
-		}
 		imageVPNClient, err := imagevector.Containers().FindImage(imageNameVPNShootClient, imagevectorutils.RuntimeVersion(runtimeVersion.String()), imagevectorutils.TargetVersion(targetVersion.String()))
 		if err != nil {
 			return kubeapiserver.Images{}, err
@@ -365,7 +366,7 @@ func ensureKubeAPIServerAdmissionPluginConfig(plugins []gardencorev1beta1.Admiss
 	return plugins, nil
 }
 
-func computeKubeAPIServerReplicas(autoscalingConfig apiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {
+func computeKubeAPIServerReplicas(autoscalingConfig kubeapiserver.AutoscalingConfig, deployment *appsv1.Deployment, wantScaleDown bool) *int32 {
 	switch {
 	case autoscalingConfig.Replicas != nil:
 		// If the replicas were already set then don't change them.

@@ -10,6 +10,7 @@
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -23,6 +24,11 @@ func (in *ControllerDeployment) DeepCopyInto(out *ControllerDeployment) {
 		in, out := &in.Helm, &out.Helm
 		*out = new(HelmControllerDeployment)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.InjectGardenKubeconfig != nil {
+		in, out := &in.InjectGardenKubeconfig, &out.InjectGardenKubeconfig
+		*out = new(bool)
+		**out = **in
 	}
 	return
 }
@@ -130,6 +136,11 @@ func (in *OCIRepository) DeepCopyInto(out *OCIRepository) {
 	if in.Digest != nil {
 		in, out := &in.Digest, &out.Digest
 		*out = new(string)
+		**out = **in
+	}
+	if in.PullSecretRef != nil {
+		in, out := &in.PullSecretRef, &out.PullSecretRef
+		*out = new(corev1.LocalObjectReference)
 		**out = **in
 	}
 	return

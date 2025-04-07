@@ -156,4 +156,41 @@ var _ = Describe("#ValidateControllerManagerConfiguration", func() {
 			})
 		})
 	})
+
+	Context("ShootStateControllerConfiguration", func() {
+		Context("ConcurrentSyncs", func() {
+			var (
+				concurrentSyncs = 0
+			)
+
+			BeforeEach(func() {
+				conf.Controllers.ShootState = &controllermanagerconfigv1alpha1.ShootStateControllerConfiguration{}
+			})
+
+			It("should not allow negative values", func() {
+				concurrentSyncs = -1
+				conf.Controllers.ShootState.ConcurrentSyncs = &concurrentSyncs
+				errorList := ValidateControllerManagerConfiguration(conf)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shootState.concurrentSyncs"),
+					}))))
+			})
+
+			It("should allow 0 as a value", func() {
+				concurrentSyncs = 0
+				conf.Controllers.ShootState.ConcurrentSyncs = &concurrentSyncs
+				errorList := ValidateControllerManagerConfiguration(conf)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should allow positive values", func() {
+				concurrentSyncs = 1
+				conf.Controllers.ShootState.ConcurrentSyncs = &concurrentSyncs
+				errorList := ValidateControllerManagerConfiguration(conf)
+				Expect(errorList).To(BeEmpty())
+			})
+		})
+	})
 })

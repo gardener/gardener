@@ -308,6 +308,7 @@ metadata:
   name: node-exporter
   namespace: kube-system
 spec:
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       component: node-exporter
@@ -329,6 +330,7 @@ spec:
         - --path.procfs=/host/proc
         - --path.sysfs=/host/sys
         - --path.rootfs=/host
+        - --path.udev.data=/host/run/udev/data
         - --log.level=error
         - --collector.disable-defaults
         - --collector.conntrack

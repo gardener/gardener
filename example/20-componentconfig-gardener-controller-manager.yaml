@@ -35,6 +35,8 @@ controllers:
     conditionThresholds:
       - type: BackupBucketsReady
         duration: 1m
+  seedReference:
+    concurrentSyncs: 5
   shootMaintenance:
     concurrentSyncs: 5
   # enableShootControlPlaneRestarter: true
@@ -51,6 +53,8 @@ controllers:
     concurrentSyncs: 5
   # retryDuration: 10m
   shootMigration:
+    concurrentSyncs: 5
+  shootState:
     concurrentSyncs: 5
   project:
     concurrentSyncs: 5

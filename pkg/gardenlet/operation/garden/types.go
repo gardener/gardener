@@ -35,9 +35,6 @@ func NewBuilder() *Builder {
 		projectFunc: func(context.Context) (*gardencorev1beta1.Project, error) {
 			return nil, fmt.Errorf("project is required but not set")
 		},
-		internalDomainFunc: func() (*gardenerutils.Domain, error) {
-			return nil, fmt.Errorf("internal domain is required but not set")
-		},
 	}
 }
 
@@ -97,17 +94,21 @@ func (b *Builder) Build(ctx context.Context) (*Garden, error) {
 	}
 	garden.Project = project
 
-	internalDomain, err := b.internalDomainFunc()
-	if err != nil {
-		return nil, err
+	if b.internalDomainFunc != nil {
+		internalDomain, err := b.internalDomainFunc()
+		if err != nil {
+			return nil, err
+		}
+		garden.InternalDomain = internalDomain
 	}
-	garden.InternalDomain = internalDomain
 
-	defaultDomains, err := b.defaultDomainsFunc()
-	if err != nil {
-		return nil, err
+	if b.defaultDomainsFunc != nil {
+		defaultDomains, err := b.defaultDomainsFunc()
+		if err != nil {
+			return nil, err
+		}
+		garden.DefaultDomains = defaultDomains
 	}
-	garden.DefaultDomains = defaultDomains
 
 	return garden, nil
 }

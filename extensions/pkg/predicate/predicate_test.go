@@ -113,8 +113,8 @@ var _ = Describe("Predicate", func() {
 			}
 		})
 
-		testAndVerify := func(class extensionsv1alpha1.ExtensionClass, match gomegatypes.GomegaMatcher) {
-			predicate := HasClass(class)
+		testAndVerify := func(classes []extensionsv1alpha1.ExtensionClass, match gomegatypes.GomegaMatcher) {
+			predicate := HasClass(classes...)
 
 			Expect(predicate.Create(createEvent)).To(match)
 			Expect(predicate.Update(updateEvent)).To(match)
@@ -123,16 +123,24 @@ var _ = Describe("Predicate", func() {
 		}
 
 		Context("when class is unset", func() {
-			It("should match an empty class", func() {
-				testAndVerify("", BeTrue())
+			It("should match an empty class (nil)", func() {
+				testAndVerify(nil, BeTrue())
+			})
+
+			It("should match an empty class (empty)", func() {
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{""}, BeTrue())
 			})
 
 			It("should match the 'shoot' class", func() {
-				testAndVerify("shoot", BeTrue())
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{"shoot"}, BeTrue())
 			})
 
 			It("should not match the 'garden' class", func() {
-				testAndVerify("garden", BeFalse())
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{"garden"}, BeFalse())
+			})
+
+			It("should not match multiple classes", func() {
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{"seed", "garden"}, BeFalse())
 			})
 		})
 
@@ -141,16 +149,24 @@ var _ = Describe("Predicate", func() {
 				extensionClass = ptr.To[extensionsv1alpha1.ExtensionClass]("shoot")
 			})
 
-			It("should match an empty class", func() {
-				testAndVerify("", BeTrue())
+			It("should match an empty class (nil)", func() {
+				testAndVerify(nil, BeTrue())
+			})
+
+			It("should match an empty class (empty)", func() {
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{""}, BeTrue())
 			})
 
 			It("should match the 'shoot' class", func() {
-				testAndVerify("shoot", BeTrue())
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{"shoot"}, BeTrue())
 			})
 
 			It("should not match the 'garden' class", func() {
-				testAndVerify("garden", BeFalse())
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{"garden"}, BeFalse())
+			})
+
+			It("should not match multiple classes", func() {
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{"seed", "garden"}, BeFalse())
 			})
 		})
 
@@ -159,16 +175,24 @@ var _ = Describe("Predicate", func() {
 				extensionClass = ptr.To[extensionsv1alpha1.ExtensionClass]("garden")
 			})
 
-			It("should not match an empty class", func() {
-				testAndVerify("", BeFalse())
+			It("should not match an empty class (nil)", func() {
+				testAndVerify(nil, BeFalse())
+			})
+
+			It("should not match an empty class (empty)", func() {
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{""}, BeFalse())
 			})
 
 			It("should not match the 'shoot' class", func() {
-				testAndVerify("shoot", BeFalse())
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{"shoot"}, BeFalse())
 			})
 
 			It("should match the 'garden' class", func() {
-				testAndVerify("garden", BeTrue())
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{"garden"}, BeTrue())
+			})
+
+			It("should not match multiple classes", func() {
+				testAndVerify([]extensionsv1alpha1.ExtensionClass{"shoot", "seed"}, BeFalse())
 			})
 		})
 	})

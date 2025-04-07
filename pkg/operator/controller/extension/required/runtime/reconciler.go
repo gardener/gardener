@@ -24,6 +24,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // RequeueExtensionKindNotCalculated is the time after which an extension will be requeued if the extension kind has not been processed yet. Exposed for testing.
@@ -31,9 +32,8 @@ var RequeueExtensionKindNotCalculated = 2 * time.Second
 
 // Reconciler reconciles Extensions to determine their required state.
 type Reconciler struct {
-	Client client.Client
-	Config operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration
-
+	Client              client.Client
+	Config              operatorconfigv1alpha1.ExtensionRequiredRuntimeControllerConfiguration
 	Lock                *sync.RWMutex
 	KindToRequiredTypes map[string]sets.Set[string]
 
@@ -82,11 +82,52 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	if err := r.updateCondition(ctx, log, extension, requiredExtensionKinds); err != nil {
+	gardenList := &operatorv1alpha1.GardenList{}
+	if err := r.Client.List(ctx, gardenList, client.Limit(1)); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error retrieving Garden: %w", err)
+	}
+
+	garden := &operatorv1alpha1.Garden{}
+	if len(gardenList.Items) > 0 {
+		garden = &gardenList.Items[0]
+	} else {
+		log.Info("No Garden found")
+	}
+
+	requiredExtensionKindsBySpec, err := r.calculateRequiredResourceKindsBySpec(garden, extension)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.updateCondition(ctx, log, extension, requiredExtensionKinds.Union(requiredExtensionKindsBySpec)); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update extension status: %w", err)
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) calculateRequiredResourceKindsBySpec(garden *operatorv1alpha1.Garden, extension *operatorv1alpha1.Extension) (sets.Set[string], error) {
+	// Extensions are not required anymore if the Garden is in deletion.
+	if garden.DeletionTimestamp != nil {
+		return nil, nil
+	}
+
+	var (
+		requiredExtensionKinds = sets.New[string]()
+		requiredExtensions     = gardenerutils.ComputeRequiredExtensionsForGarden(garden)
+	)
+
+	for _, kindType := range requiredExtensions.UnsortedList() {
+		extensionKind, extensionType, err := gardenerutils.ExtensionKindAndTypeForID(kindType)
+		if err != nil {
+			return nil, err
+		}
+
+		if v1beta1helper.IsResourceSupported(extension.Spec.Resources, extensionKind, extensionType) {
+			requiredExtensionKinds.Insert(extensionKind)
+		}
+	}
+	return requiredExtensionKinds, nil
 }
 
 func (r *Reconciler) updateCondition(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension, kinds sets.Set[string]) error {

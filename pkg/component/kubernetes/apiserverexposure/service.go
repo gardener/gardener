@@ -41,10 +41,10 @@ var (
 
 // ServiceValues configure the kube-apiserver service.
 type ServiceValues struct {
-	// AnnotationsFunc is a function that returns annotations that should be added to the service.
-	AnnotationsFunc func() map[string]string
 	// NamePrefix is the prefix for the service name.
 	NamePrefix string
+	// NameSuffix is the suffix for the service name.
+	NameSuffix string
 	// TopologyAwareRoutingEnabled indicates whether topology-aware routing is enabled for the kube-apiserver service.
 	TopologyAwareRoutingEnabled bool
 	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
@@ -55,9 +55,10 @@ type ServiceValues struct {
 // this one is not exposed as not all values should be configured
 // from the outside.
 type serviceValues struct {
-	annotationsFunc             func() map[string]string
 	namePrefix                  string
+	nameSuffix                  string
 	topologyAwareRoutingEnabled bool
+	runtimeKubernetesVersion    *semver.Version
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -85,18 +86,17 @@ func NewService(
 	}
 
 	var (
-		internalValues = &serviceValues{
-			annotationsFunc: func() map[string]string { return map[string]string{} },
-		}
+		internalValues             = &serviceValues{}
 		loadBalancerServiceKeyFunc func() client.ObjectKey
 	)
 
 	if values != nil {
 		loadBalancerServiceKeyFunc = sniServiceKeyFunc
 
-		internalValues.annotationsFunc = values.AnnotationsFunc
 		internalValues.namePrefix = values.NamePrefix
+		internalValues.nameSuffix = values.NameSuffix
 		internalValues.topologyAwareRoutingEnabled = values.TopologyAwareRoutingEnabled
+		internalValues.runtimeKubernetesVersion = values.RuntimeKubernetesVersion
 	}
 
 	return &service{
@@ -126,7 +126,6 @@ func (s *service) Deploy(ctx context.Context) error {
 	obj := s.emptyService()
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, obj, func() error {
-		obj.Annotations = utils.MergeStringMaps(obj.Annotations, s.values.annotationsFunc())
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
 
 		namespaceSelectors := []metav1.LabelSelector{
@@ -151,7 +150,7 @@ func (s *service) Deploy(ctx context.Context) error {
 		}
 
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(obj, namespaceSelectors...))
-		gardenerutils.ReconcileTopologyAwareRoutingMetadata(obj, s.values.topologyAwareRoutingEnabled)
+		gardenerutils.ReconcileTopologyAwareRoutingSettings(obj, s.values.topologyAwareRoutingEnabled, s.values.runtimeKubernetesVersion)
 
 		obj.Labels = utils.MergeStringMaps(obj.Labels, getLabels())
 		obj.Spec.Type = corev1.ServiceTypeClusterIP
@@ -208,7 +207,7 @@ func (s *service) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *service) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.values.namePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.values.namePrefix + v1beta1constants.DeploymentNameKubeAPIServer + s.values.nameSuffix, Namespace: s.namespace}}
 }
 
 func getLabels() map[string]string {

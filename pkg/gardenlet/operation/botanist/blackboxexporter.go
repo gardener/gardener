@@ -48,7 +48,7 @@ func (b *Botanist) DefaultBlackboxExporterControlPlane() (component.DeployWaiter
 // ReconcileBlackboxExporterControlPlane deploys or destroys the blackbox-exporter component depending on whether shoot
 // monitoring is enabled or not.
 func (b *Botanist) ReconcileBlackboxExporterControlPlane(ctx context.Context) error {
-	if b.Operation.IsShootMonitoringEnabled() {
+	if b.IsShootMonitoringEnabled() {
 		return b.Shoot.Components.ControlPlane.BlackboxExporter.Deploy(ctx)
 	}
 
@@ -82,7 +82,7 @@ func (b *Botanist) DefaultBlackboxExporterCluster() (component.DeployWaiter, err
 // ReconcileBlackboxExporterCluster deploys or destroys the blackbox-exporter component depending on whether shoot
 // monitoring is enabled or not.
 func (b *Botanist) ReconcileBlackboxExporterCluster(ctx context.Context) error {
-	if b.Operation.IsShootMonitoringEnabled() {
+	if b.IsShootMonitoringEnabled() {
 		return b.Shoot.Components.SystemComponents.BlackboxExporter.Deploy(ctx)
 	}
 

@@ -469,11 +469,11 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	case *securityv1alpha1.WorkloadIdentity:
 		shootInfo := b.Shoot.GetInfo()
 		shootMeta := securityv1alpha1.ContextObject{
-			APIVersion: shootInfo.TypeMeta.GroupVersionKind().GroupVersion().String(),
-			Kind:       shootInfo.TypeMeta.Kind,
-			Namespace:  ptr.To(shootInfo.ObjectMeta.Namespace),
-			Name:       shootInfo.ObjectMeta.Name,
-			UID:        shootInfo.ObjectMeta.UID,
+			APIVersion: shootInfo.GroupVersionKind().GroupVersion().String(),
+			Kind:       shootInfo.Kind,
+			Namespace:  ptr.To(shootInfo.Namespace),
+			Name:       shootInfo.Name,
+			UID:        shootInfo.UID,
 		}
 
 		secret, err := workloadidentity.NewSecret(

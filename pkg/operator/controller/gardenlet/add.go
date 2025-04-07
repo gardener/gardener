@@ -35,14 +35,8 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 	if r.RuntimeCluster == nil {
 		r.RuntimeCluster = mgr
 	}
-	if r.RuntimeClient == nil {
-		r.RuntimeClient = mgr.GetClient()
-	}
 	if r.VirtualConfig == nil {
 		r.VirtualConfig = virtualCluster.GetConfig()
-	}
-	if r.VirtualAPIReader == nil {
-		r.VirtualAPIReader = virtualCluster.GetAPIReader()
 	}
 	if r.VirtualClient == nil {
 		r.VirtualClient = virtualCluster.GetClient()
@@ -58,7 +52,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 	}
 	if r.HelmRegistry == nil {
 		var err error
-		r.HelmRegistry, err = oci.NewHelmRegistry()
+		r.HelmRegistry, err = oci.NewHelmRegistry(r.RuntimeCluster.GetClient())
 		if err != nil {
 			return fmt.Errorf("failed creating new Helm registry: %w", err)
 		}

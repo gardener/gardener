@@ -195,13 +195,22 @@ var _ = Describe("Add", func() {
 			Expect(mapFn(ctx, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string]()))
 
-			By("Create a infrastructure with class garden and expect no requests")
+			By("Create infrastructure with class garden and expect no requests")
 			infrastructureGarden := infrastructure.DeepCopy()
 			infrastructureGarden.ResourceVersion = ""
 			infrastructureGarden.Spec.Class = ptr.To(extensionsv1alpha1.ExtensionClassGarden)
 			Expect(fakeSeedClient.Create(ctx, infrastructureGarden)).To(Succeed())
 			Expect(mapFn(ctx, nil)).To(BeEmpty())
 			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New[string]()))
+
+			By("Create infrastructure with class seed and expect requests")
+			infrastructureSeed := infrastructure.DeepCopy()
+			infrastructureSeed.ResourceVersion = ""
+			infrastructureSeed.Name = "infra-seed"
+			infrastructureSeed.Spec.Class = ptr.To(extensionsv1alpha1.ExtensionClassSeed)
+			Expect(fakeSeedClient.Create(ctx, infrastructureSeed)).To(Succeed())
+			Expect(mapFn(ctx, nil)).To(ConsistOf(Equal(reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerInstallation1.Name}})))
+			Expect(reconciler.KindToRequiredTypes).To(HaveKeyWithValue(extensionsv1alpha1.InfrastructureResource, sets.New(type1)))
 		})
 	})
 })

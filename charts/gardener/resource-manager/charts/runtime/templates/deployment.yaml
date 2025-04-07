@@ -80,6 +80,8 @@ spec:
             port: {{ .Values.global.config.server.healthProbes.port }}
             scheme: HTTP
           initialDelaySeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
         - name: config
           mountPath: /etc/gardener-resource-manager/config

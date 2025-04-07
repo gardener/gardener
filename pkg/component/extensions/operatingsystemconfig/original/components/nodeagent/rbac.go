@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -104,54 +105,6 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 				},
 			},
 		}
-
-		clusterRoleBindingNodeBootstrapper = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:node-bootstrapper",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.SchemeGroupVersion.Group,
-				Kind:     "ClusterRole",
-				Name:     "system:node-bootstrapper",
-			},
-			Subjects: []rbacv1.Subject{{
-				APIGroup: rbacv1.SchemeGroupVersion.Group,
-				Kind:     rbacv1.GroupKind,
-				Name:     bootstraptokenapi.BootstrapDefaultGroup,
-			}},
-		}
-
-		clusterRoleBindingNodeClient = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:certificates.k8s.io:certificatesigningrequests:nodeclient",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.SchemeGroupVersion.Group,
-				Kind:     "ClusterRole",
-				Name:     "system:certificates.k8s.io:certificatesigningrequests:nodeclient",
-			},
-			Subjects: []rbacv1.Subject{{
-				APIGroup: rbacv1.SchemeGroupVersion.Group,
-				Kind:     rbacv1.GroupKind,
-				Name:     bootstraptokenapi.BootstrapDefaultGroup,
-			}},
-		}
-
-		clusterRoleBindingSelfNodeClient = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.SchemeGroupVersion.Group,
-				Kind:     "ClusterRole",
-				Name:     "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient",
-			},
-			Subjects: []rbacv1.Subject{{
-				APIGroup: rbacv1.SchemeGroupVersion.Group,
-				Kind:     rbacv1.GroupKind,
-				Name:     user.NodesGroup,
-			}},
-		}
 	)
 
 	if features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer) {
@@ -163,8 +116,8 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			Verbs:     []string{"create", "get"},
 		})
 	} else {
-		// For the case that NodeAgentAuthorizer feature gate is disabled again node-agents group have to be added to
-		// (cluster) role binding that node-agents which are already migrated do not lose access.
+		// For the case that NodeAgentAuthorizer feature gate is disabled again node-agents group has to be added to
+		// (cluster) role binding so that node-agents which are already migrated do not lose access.
 		clusterRoleBinding.Subjects = append(clusterRoleBinding.Subjects, rbacv1.Subject{
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
 			Kind:     rbacv1.GroupKind,
@@ -179,13 +132,74 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 
 	return managedresources.
 		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
-		AddAllAndSerialize(
+		AddAllAndSerialize(append([]client.Object{
 			clusterRole,
 			clusterRoleBinding,
 			role,
 			roleBinding,
-			clusterRoleBindingNodeBootstrapper,
-			clusterRoleBindingNodeClient,
-			clusterRoleBindingSelfNodeClient,
-		)
+		}, GetCertificateSigningRequestClusterRoleBindings()...)...)
+}
+
+// GetCertificateSigningRequestClusterRoleBindings returns the ClusterRoleBindings that allows bootstrap tokens to
+// create CertificateSigningRequests.
+func GetCertificateSigningRequestClusterRoleBindings() []client.Object {
+	return []client.Object{
+		&rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: rbacv1.SchemeGroupVersion.String(),
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:node-bootstrapper",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     "ClusterRole",
+				Name:     "system:node-bootstrapper",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     rbacv1.GroupKind,
+				Name:     bootstraptokenapi.BootstrapDefaultGroup,
+			}},
+		},
+		&rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: rbacv1.SchemeGroupVersion.String(),
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:certificates.k8s.io:certificatesigningrequests:nodeclient",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     "ClusterRole",
+				Name:     "system:certificates.k8s.io:certificatesigningrequests:nodeclient",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     rbacv1.GroupKind,
+				Name:     bootstraptokenapi.BootstrapDefaultGroup,
+			}},
+		},
+		&rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: rbacv1.SchemeGroupVersion.String(),
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     "ClusterRole",
+				Name:     "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     rbacv1.GroupKind,
+				Name:     user.NodesGroup,
+			}},
+		},
+	}
 }

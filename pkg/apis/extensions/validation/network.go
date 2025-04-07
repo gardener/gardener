@@ -75,7 +75,7 @@ func ValidateNetworkSpec(spec *extensionsv1alpha1.NetworkSpec, fldPath *field.Pa
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIPFamily(cidrs, string(primaryIPFamily))...)
 	}
 
-	if !(len(spec.IPFamilies) == 1 && spec.IPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6) {
+	if len(spec.IPFamilies) != 1 || spec.IPFamilies[0] != extensionsv1alpha1.IPFamilyIPv6 {
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(cidrs, false)...)
 	}
 	return allErrs
@@ -99,7 +99,7 @@ func ValidateNetworkSpecUpdate(new, old *extensionsv1alpha1.NetworkSpec, deletio
 	// allow upgrades from empty IPFamilies to the default of IPv4
 	// the if condition can be removed once the network extension of all shoots have been updated
 	// TODO: Remove in Gardener 1.87
-	if !(old.IPFamilies == nil && slices.Equal(new.IPFamilies, []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4})) {
+	if old.IPFamilies != nil || !slices.Equal(new.IPFamilies, []extensionsv1alpha1.IPFamily{extensionsv1alpha1.IPFamilyIPv4}) {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.IPFamilies, old.IPFamilies, fldPath.Child("ipFamilies"))...)
 	}
 

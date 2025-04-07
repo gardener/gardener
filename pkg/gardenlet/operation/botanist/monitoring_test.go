@@ -17,7 +17,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockalertmanager "github.com/gardener/gardener/pkg/component/observability/monitoring/alertmanager/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -53,7 +53,7 @@ var _ = Describe("Monitoring", func() {
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				SecretsManager: fakeSecretManager,
-				SeedClientSet:  kubernetesfake.NewClientSetBuilder().WithClient(fakeSeedClient).Build(),
+				SeedClientSet:  fakekubernetes.NewClientSetBuilder().WithClient(fakeSeedClient).Build(),
 				Shoot: &shootpkg.Shoot{
 					ControlPlaneNamespace: controlPlaneNamespace,
 					Purpose:               gardencorev1beta1.ShootPurposeProduction,

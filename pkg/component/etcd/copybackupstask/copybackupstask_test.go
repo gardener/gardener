@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,7 +31,7 @@ var _ = Describe("CopyBackupsTask", func() {
 		c    *mockclient.MockClient
 		log  logr.Logger
 
-		expected            *druidv1alpha1.EtcdCopyBackupsTask
+		expected            *druidcorev1alpha1.EtcdCopyBackupsTask
 		values              *Values
 		etcdCopyBackupsTask Interface
 
@@ -44,14 +44,14 @@ var _ = Describe("CopyBackupsTask", func() {
 		c = mockclient.NewMockClient(ctrl)
 		log = logr.Discard()
 
-		expected = &druidv1alpha1.EtcdCopyBackupsTask{
+		expected = &druidcorev1alpha1.EtcdCopyBackupsTask{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bar",
 				Namespace: "shoot--foo--bar",
 			},
-			Spec: druidv1alpha1.EtcdCopyBackupsTaskSpec{
-				SourceStore: druidv1alpha1.StoreSpec{},
-				TargetStore: druidv1alpha1.StoreSpec{},
+			Spec: druidcorev1alpha1.EtcdCopyBackupsTaskSpec{
+				SourceStore: druidcorev1alpha1.StoreSpec{},
+				TargetStore: druidcorev1alpha1.StoreSpec{},
 			},
 		}
 
@@ -68,6 +68,10 @@ var _ = Describe("CopyBackupsTask", func() {
 
 	Describe("#Deploy", func() {
 		It("should create the EtcdCopyBackupsTask", func() {
+			expected.Spec.PodLabels = map[string]string{
+				"networking.gardener.cloud/to-dns":             "allowed",
+				"networking.gardener.cloud/to-public-networks": "allowed",
+			}
 			c.EXPECT().Create(ctx, expected)
 			Expect(etcdCopyBackupsTask.Deploy(ctx)).To(Succeed())
 		})
@@ -79,7 +83,7 @@ var _ = Describe("CopyBackupsTask", func() {
 			Expect(etcdCopyBackupsTask.Destroy(ctx)).To(Succeed())
 		})
 
-		It("should properly delete EtcdCopyBackupsTask resource if it exissts", func() {
+		It("should properly delete EtcdCopyBackupsTask resource if it exists", func() {
 			c.EXPECT().Delete(ctx, expected)
 			Expect(etcdCopyBackupsTask.Destroy(ctx)).To(Succeed())
 		})
@@ -112,7 +116,7 @@ var _ = Describe("CopyBackupsTask", func() {
 		It("should return error if observed generation is not updated", func() {
 			c.EXPECT().
 				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 					etcdCopyBackupsTask.Generation = 1
 					etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](0)
 					return nil
@@ -124,7 +128,7 @@ var _ = Describe("CopyBackupsTask", func() {
 			errorText := "some error"
 			c.EXPECT().
 				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 					etcdCopyBackupsTask.Status.ObservedGeneration = &expected.Generation
 					etcdCopyBackupsTask.Status.LastError = &errorText
 					return nil
@@ -135,7 +139,7 @@ var _ = Describe("CopyBackupsTask", func() {
 		It("should return error if expected Successful or Failed conditions are not added yet", func() {
 			c.EXPECT().
 				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 					etcdCopyBackupsTask.Status.ObservedGeneration = &expected.Generation
 					return nil
 				}).AnyTimes()
@@ -145,12 +149,12 @@ var _ = Describe("CopyBackupsTask", func() {
 		It("should return error if Failed condition with status True has been added", func() {
 			c.EXPECT().
 				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), expected).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 					etcdCopyBackupsTask.Status.ObservedGeneration = &expected.Generation
-					etcdCopyBackupsTask.Status.Conditions = []druidv1alpha1.Condition{
+					etcdCopyBackupsTask.Status.Conditions = []druidcorev1alpha1.Condition{
 						{
-							Type:    druidv1alpha1.EtcdCopyBackupsTaskFailed,
-							Status:  druidv1alpha1.ConditionTrue,
+							Type:    druidcorev1alpha1.EtcdCopyBackupsTaskFailed,
+							Status:  druidcorev1alpha1.ConditionTrue,
 							Reason:  "reason",
 							Message: "message",
 						},
@@ -163,12 +167,12 @@ var _ = Describe("CopyBackupsTask", func() {
 		It("should be successful if Successful condition with status True has been added", func() {
 			c.EXPECT().
 				Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), expected).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 					etcdCopyBackupsTask.Status.ObservedGeneration = &expected.Generation
-					etcdCopyBackupsTask.Status.Conditions = []druidv1alpha1.Condition{
+					etcdCopyBackupsTask.Status.Conditions = []druidcorev1alpha1.Condition{
 						{
-							Type:    druidv1alpha1.EtcdCopyBackupsTaskSucceeded,
-							Status:  druidv1alpha1.ConditionTrue,
+							Type:    druidcorev1alpha1.EtcdCopyBackupsTaskSucceeded,
+							Status:  druidcorev1alpha1.ConditionTrue,
 							Reason:  "reason",
 							Message: "message",
 						},
@@ -180,30 +184,30 @@ var _ = Describe("CopyBackupsTask", func() {
 
 		It("should eventually return success when Successful condition is reported with status True", func() {
 			gomock.InOrder(
-				c.EXPECT().Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).Return(notFoundErr),
+				c.EXPECT().Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).Return(notFoundErr),
 				c.EXPECT().
-					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 						etcdCopyBackupsTask.Generation = 1
 						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](0)
 						return nil
 					}),
 				c.EXPECT().
-					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 						etcdCopyBackupsTask.Generation = 1
 						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](1)
 						return nil
 					}),
 				c.EXPECT().
-					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdCopyBackupsTask{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidv1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
+					Get(gomock.AssignableToTypeOf(timeoutCtx), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(&druidcorev1alpha1.EtcdCopyBackupsTask{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, etcdCopyBackupsTask *druidcorev1alpha1.EtcdCopyBackupsTask, _ ...client.GetOption) error {
 						etcdCopyBackupsTask.Generation = 1
 						etcdCopyBackupsTask.Status.ObservedGeneration = ptr.To[int64](1)
-						etcdCopyBackupsTask.Status.Conditions = []druidv1alpha1.Condition{
+						etcdCopyBackupsTask.Status.Conditions = []druidcorev1alpha1.Condition{
 							{
-								Type:    druidv1alpha1.EtcdCopyBackupsTaskSucceeded,
-								Status:  druidv1alpha1.ConditionTrue,
+								Type:    druidcorev1alpha1.EtcdCopyBackupsTaskSucceeded,
+								Status:  druidcorev1alpha1.ConditionTrue,
 								Reason:  "reason",
 								Message: "message",
 							},

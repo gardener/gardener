@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: outputs.fluentbit.fluent.io
 spec:
   group: fluentbit.fluent.io
@@ -77,6 +77,64 @@ spec:
                   endpoint:
                     description: HTTP Service of the endpoint (if using EmulatorMode)
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   path:
                     description: Optional path to store the blobs.
                     type: string
@@ -225,6 +283,10 @@ spec:
                   logType:
                     description: Name of the event type.
                     type: string
+                  logTypeKey:
+                    description: Set a record key that will populate 'logtype'. If
+                      the key is found, it will have precedence
+                    type: string
                   sharedKey:
                     description: Specify the primary or the secondary client authentication
                       key
@@ -360,7 +422,15 @@ spec:
                 description: CustomPlugin defines Custom Output configuration.
                 properties:
                   config:
+                    description: |-
+                      Config holds any unsupported plugins classic configurations,
+                      if ConfigFileFormat is set to yaml, this filed will be ignored
                     type: string
+                  yamlConfig:
+                    description: YamlConfig holds the unsupported plugins yaml configurations,
+                      it only works when the ConfigFileFormat is yaml
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                 type: object
               datadog:
                 description: DataDog defines DataDog Output configuration.
@@ -453,6 +523,39 @@ spec:
                     description: Enable AWS Sigv4 Authentication for Amazon ElasticSearch
                       Service.
                     type: string
+                  awsAuthSecret:
+                    description: AWSAuthSecret Enable AWS Sigv4 Authentication for
+                      Amazon ElasticSearch Service.
+                    properties:
+                      valueFrom:
+                        description: ValueSource defines how to find a value's key.
+                        properties:
+                          secretKeyRef:
+                            description: Selects a key of a secret in the pod's namespace
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key
+                                  must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                    type: object
                   awsExternalID:
                     description: External ID for the AWS IAM Role specified with aws_role_arn.
                     type: string
@@ -480,6 +583,40 @@ spec:
                     description: Specify the credentials to use to connect to Elastic's
                       Elasticsearch Service running on Elastic Cloud.
                     type: string
+                  cloudAuthSecret:
+                    description: CloudAuthSecret Specify the credentials to use to
+                      connect to Elastic's Elasticsearch Service running on Elastic
+                      Cloud.
+                    properties:
+                      valueFrom:
+                        description: ValueSource defines how to find a value's key.
+                        properties:
+                          secretKeyRef:
+                            description: Selects a key of a secret in the pod's namespace
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key
+                                  must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                    type: object
                   cloudID:
                     description: If you are using Elastic's Elasticsearch Service
                       you can specify the cloud_id of the cluster running.
@@ -595,6 +732,64 @@ spec:
                   logstashPrefixKey:
                     description: Prefix keys with this string
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   path:
                     description: |-
                       Elasticsearch accepts new data on HTTP query path "/_bulk".
@@ -834,6 +1029,64 @@ spec:
                     description: Target host where Fluent-Bit or Fluentd are listening
                       for Forward messages.
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   password:
                     description: Specify the password corresponding to the username.
                     properties:
@@ -1030,6 +1283,64 @@ spec:
                     - tcp
                     - udp
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   packetSize:
                     description: If transport protocol is udp, it sets the size of
                       packets to be sent.
@@ -1247,6 +1558,64 @@ spec:
                       Specify the name of the time key in the output record.
                       To disable the time key just set the value to false.
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   port:
                     description: TCP port of the target HTTP Server
                     format: int32
@@ -1348,7 +1717,6 @@ spec:
                     type: string
                   host:
                     description: IP address or hostname of the target InfluxDB service.
-                    format: ipv6
                     type: string
                   httpPassword:
                     description: Password for user defined in HTTP_User
@@ -1447,6 +1815,64 @@ spec:
                             x-kubernetes-map-type: atomic
                         type: object
                     type: object
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   org:
                     description: InfluxDB organization name where the bucket is (v2
                       only)
@@ -1454,8 +1880,8 @@ spec:
                   port:
                     description: TCP port of the target InfluxDB service.
                     format: int32
-                    maximum: 65536
-                    minimum: 0
+                    maximum: 65535
+                    minimum: 1
                     type: integer
                   sequenceTag:
                     description: The name of the tag whose value is incremented for
@@ -1602,6 +2028,16 @@ spec:
                       If only one topic is set, that one will be used for all records.
                       Instead if multiple topics exists, the one set in the record by Topic_Key will be used.
                     type: string
+                  totalLimitSize:
+                    description: Limit the maximum number of Chunks in the filesystem
+                      for the current output logical destination.
+                    type: string
+                  workers:
+                    description: Enables dedicated thread(s) for this output. Default
+                      value is set since version 1.8.13. For previous versions is
+                      0.
+                    format: int32
+                    type: integer
                 type: object
               kinesis:
                 description: Kinesis defines Kinesis Output configuration.
@@ -1680,6 +2116,40 @@ spec:
                     - "on"
                     - "off"
                     type: string
+                  bearerToken:
+                    description: |-
+                      Set bearer token authentication token value.
+                      Can be used as alterntative to HTTP basic authentication
+                    properties:
+                      valueFrom:
+                        description: ValueSource defines how to find a value's key.
+                        properties:
+                          secretKeyRef:
+                            description: Selects a key of a secret in the pod's namespace
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key
+                                  must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                    type: object
                   dropSingleKey:
                     description: If set to true and after extracting labels only a
                       single key remains, the log line sent to Loki will be the value
@@ -1784,6 +2254,64 @@ spec:
                     - json
                     - key_value
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   port:
                     description: Loki TCP port
                     format: int32
@@ -1904,6 +2432,20 @@ spec:
                         description: Hostname to be used for TLS SNI extension
                         type: string
                     type: object
+                  totalLimitSize:
+                    description: Limit the maximum number of Chunks in the filesystem
+                      for the current output logical destination.
+                    type: string
+                  uri:
+                    description: Specify a custom HTTP URI. It must start with forward
+                      slash.
+                    type: string
+                  workers:
+                    description: Enables dedicated thread(s) for this output. Default
+                      value is set since version 1.8.13. For previous versions is
+                      0.
+                    format: int32
+                    type: integer
                 required:
                 - host
                 type: object
@@ -1923,12 +2465,6 @@ spec:
               opensearch:
                 description: OpenSearch defines OpenSearch Output configuration.
                 properties:
-                  Workers:
-                    description: Enables dedicated thread(s) for this output. Default
-                      value is set since version 1.8.13. For previous versions is
-                      0.
-                    format: int32
-                    type: integer
                   awsAuth:
                     description: Enable AWS Sigv4 Authentication for Amazon OpenSearch
                       Service.
@@ -1955,6 +2491,10 @@ spec:
                       To set an unlimited amount of memory set this value to False,
                       otherwise the value must be according to the Unit Size specification.
                     pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
+                    type: string
+                  compress:
+                    enum:
+                    - gzip
                     type: string
                   currentTimeIndex:
                     description: Use current time for index generation instead of
@@ -2061,6 +2601,64 @@ spec:
                   logstashPrefixKey:
                     description: Prefix keys with this string
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   path:
                     description: |-
                       OpenSearch accepts new data on HTTP query path "/_bulk".
@@ -2193,6 +2791,12 @@ spec:
                   type:
                     description: Type name
                     type: string
+                  workers:
+                    description: Enables dedicated thread(s) for this output. Default
+                      value is set since version 1.8.13. For previous versions is
+                      0.
+                    format: int32
+                    type: integer
                   writeOperation:
                     description: Operation to use to write in bulk requests.
                     type: string
@@ -2284,6 +2888,13 @@ spec:
                   logResponsePayload:
                     description: Log the response payload within the Fluent Bit log.
                     type: boolean
+                  logsBodyKey:
+                    description: The log body key to look up in the log events body/message.
+                      Sets the Body field of the opentelemtry logs data model.
+                    type: string
+                  logsBodyKeyAttributes:
+                    description: If true, remaining unmatched keys are added as attributes.
+                    type: boolean
                   logsUri:
                     description: 'Specify an optional HTTP URI for the target web
                       server listening for logs, e.g: /v1/logs'
@@ -2292,6 +2903,64 @@ spec:
                     description: 'Specify an optional HTTP URI for the target web
                       server listening for metrics, e.g: /v1/metrics'
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   port:
                     description: TCP port of the target OpenSearch instance, default
                       `80`
@@ -2379,6 +3048,10 @@ spec:
                       server listening for traces, e.g: /v1/traces'
                     type: string
                 type: object
+              processors:
+                description: Processors defines the processors configuration
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               prometheusExporter:
                 description: PrometheusExporter_types defines Prometheus exporter
                   configuration to expose metrics from Fluent Bit.
@@ -2495,6 +3168,64 @@ spec:
                     description: 'Log the response payload within the Fluent Bit log,default:
                       false'
                     type: boolean
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   port:
                     description: TCP port of the target HTTP Serveri, default:80
                     format: int32
@@ -2910,6 +3641,64 @@ spec:
                             x-kubernetes-map-type: atomic
                         type: object
                     type: object
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   port:
                     description: TCP port of the target Splunk instance, default `8088`
                     format: int32
@@ -3209,6 +3998,64 @@ spec:
                     description: Mode of the desired transport type, the available
                       options are tcp, tls and udp.
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   port:
                     description: TCP or UDP port of the remote Syslog server.
                     format: int32
@@ -3324,6 +4171,10 @@ spec:
                         description: Hostname to be used for TLS SNI extension
                         type: string
                     type: object
+                  totalLimitSize:
+                    description: Limit the maximum number of Chunks in the filesystem
+                      for the current output logical destination.
+                    type: string
                 type: object
               tcp:
                 description: TCP defines TCP Output configuration.
@@ -3355,6 +4206,64 @@ spec:
                       TSpecify the name of the time key in the output record.
                       To disable the time key just set the value to false.
                     type: string
+                  networking:
+                    description: Include fluentbit networking options for this output-plugin
+                    properties:
+                      DNSMode:
+                        description: Select the primary DNS connection type (TCP or
+                          UDP).
+                        enum:
+                        - TCP
+                        - UDP
+                        type: string
+                      DNSPreferIPv4:
+                        description: Prioritize IPv4 DNS results when trying to establish
+                          a connection.
+                        type: boolean
+                      DNSResolver:
+                        description: Select the primary DNS resolver type (LEGACY
+                          or ASYNC).
+                        enum:
+                        - LEGACY
+                        - ASYNC
+                        type: string
+                      connectTimeout:
+                        description: Set maximum time expressed in seconds to wait
+                          for a TCP connection to be established, this include the
+                          TLS handshake time.
+                        format: int32
+                        type: integer
+                      connectTimeoutLogError:
+                        description: On connection timeout, specify if it should log
+                          an error. When disabled, the timeout is logged as a debug
+                          message.
+                        type: boolean
+                      keepalive:
+                        description: 'Enable or disable connection keepalive support.
+                          Accepts a boolean value: on / off.'
+                        enum:
+                        - "on"
+                        - "off"
+                        type: string
+                      keepaliveIdleTimeout:
+                        description: Set maximum time expressed in seconds for an
+                          idle keepalive connection.
+                        format: int32
+                        type: integer
+                      keepaliveMaxRecycle:
+                        description: Set maximum number of times a keepalive connection
+                          can be used before it is retired.
+                        format: int32
+                        type: integer
+                      maxWorkerConnections:
+                        description: Set maximum number of TCP connections that can
+                          be established per worker.
+                        format: int32
+                        type: integer
+                      sourceAddress:
+                        description: Specify network address to bind for data traffic.
+                        type: string
+                    type: object
                   port:
                     description: TCP Port of the target service.
                     format: int32

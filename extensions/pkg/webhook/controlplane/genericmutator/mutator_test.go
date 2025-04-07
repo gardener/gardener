@@ -11,7 +11,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/coreos/go-systemd/v22/unit"
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -160,7 +160,7 @@ var _ = Describe("Mutator", func() {
 			),
 			Entry(
 				"other etcds than etcd-main and etcd-events",
-				&druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "test"}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "test"}},
 				nil,
 			),
 		)
@@ -262,10 +262,10 @@ var _ = Describe("Mutator", func() {
 			),
 		)
 
-		DescribeTable("EnsureETCD", func(newObj, oldObj *druidv1alpha1.Etcd) {
+		DescribeTable("EnsureETCD", func(newObj, oldObj *druidcorev1alpha1.Etcd) {
 			c.EXPECT().Get(context.Background(), clusterKey, &extensionsv1alpha1.Cluster{}).DoAndReturn(clientGet(clusterObject(cluster)))
 
-			ensurer.EXPECT().EnsureETCD(context.Background(), gomock.Any(), newObj, oldObj).Return(nil).Do(func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, _, _ *druidv1alpha1.Etcd) {
+			ensurer.EXPECT().EnsureETCD(context.Background(), gomock.Any(), newObj, oldObj).Return(nil).Do(func(ctx context.Context, gctx extensionscontextwebhook.GardenContext, _, _ *druidcorev1alpha1.Etcd) {
 				_, err := gctx.GetCluster(ctx)
 				if err != nil {
 					logger.Error(err, "Failed to get cluster object")
@@ -278,23 +278,23 @@ var _ = Describe("Mutator", func() {
 		},
 			Entry(
 				"with a etcd-main",
-				&druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
 				nil,
 			),
 			Entry(
 				"with a etcd-main and existing druid",
-				&druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
-				&druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDMain, Namespace: namespace}},
 			),
 			Entry(
 				"with a etcd-events",
-				&druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
 				nil,
 			),
 			Entry(
 				"with a etcd-events and existing druid",
-				&druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
-				&druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
+				&druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.ETCDEvents, Namespace: namespace}},
 			),
 		)
 

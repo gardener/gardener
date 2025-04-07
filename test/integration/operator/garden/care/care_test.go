@@ -5,7 +5,7 @@
 package care_test
 
 import (
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -474,7 +474,7 @@ func createDeployments(names []string, roleLabel, role string) {
 
 func createETCDs(names []string) {
 	for _, name := range names {
-		etcd := &druidv1alpha1.Etcd{
+		etcd := &druidcorev1alpha1.Etcd{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: testNamespace.Name,
@@ -483,7 +483,7 @@ func createETCDs(names []string) {
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 				},
 			},
-			Spec: druidv1alpha1.EtcdSpec{
+			Spec: druidcorev1alpha1.EtcdSpec{
 				Labels:   map[string]string{"foo": "bar"},
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}},
 			},
@@ -529,13 +529,13 @@ func updateDeploymentStatusToHealthy(name string) {
 
 func updateETCDStatusToHealthy(name string) {
 	By("Update status to healthy for ETCD " + name)
-	etcd := &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: testNamespace.Name}}
+	etcd := &druidcorev1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: testNamespace.Name}}
 	ExpectWithOffset(1, testClient.Get(ctx, client.ObjectKeyFromObject(etcd), etcd)).To(Succeed())
 
 	etcd.Status.ObservedGeneration = &etcd.Generation
-	etcd.Status.Conditions = []druidv1alpha1.Condition{
-		{Type: druidv1alpha1.ConditionTypeBackupReady, Status: druidv1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
-		{Type: druidv1alpha1.ConditionTypeAllMembersUpdated, Status: druidv1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+	etcd.Status.Conditions = []druidcorev1alpha1.Condition{
+		{Type: druidcorev1alpha1.ConditionTypeBackupReady, Status: druidcorev1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
+		{Type: druidcorev1alpha1.ConditionTypeAllMembersUpdated, Status: druidcorev1alpha1.ConditionTrue, LastTransitionTime: metav1.Now(), LastUpdateTime: metav1.Now()},
 	}
 	etcd.Status.Ready = ptr.To(true)
 	ExpectWithOffset(1, testClient.Status().Update(ctx, etcd)).To(Succeed())

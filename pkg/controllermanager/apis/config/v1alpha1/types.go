@@ -87,6 +87,9 @@ type ControllerManagerControllerConfiguration struct {
 	// SeedBackupBucketsCheck defines the configuration of the SeedBackupBucketsCheck controller.
 	// +optional
 	SeedBackupBucketsCheck *SeedBackupBucketsCheckControllerConfiguration `json:"seedBackupBucketsCheck,omitempty"`
+	// SeedReference defines the configuration of the SeedReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	// +optional
+	SeedReference *SeedReferenceControllerConfiguration `json:"seedReference,omitempty"`
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
 	ShootMaintenance ShootMaintenanceControllerConfiguration `json:"shootMaintenance"`
 	// ShootQuota defines the configuration of the ShootQuota controller.
@@ -112,6 +115,9 @@ type ControllerManagerControllerConfiguration struct {
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	// +optional
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration `json:"managedSeedSet,omitempty"`
+	// ShootState defines the configuration of the ShootState finalizer controller.
+	// +optional
+	ShootState *ShootStateControllerConfiguration `json:"shootState,omitempty"`
 }
 
 // BastionControllerConfiguration defines the configuration of the Bastion
@@ -308,6 +314,15 @@ type SeedBackupBucketsCheckControllerConfiguration struct {
 	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
 }
 
+// SeedReferenceControllerConfiguration defines the configuration of the
+// SeedReference controller.
+type SeedReferenceControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// seeds.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
 // ShootMaintenanceControllerConfiguration defines the configuration of the
 // ShootMaintenance controller.
 type ShootMaintenanceControllerConfiguration struct {
@@ -415,6 +430,15 @@ type ManagedSeedSetControllerConfiguration struct {
 	MaxShootRetries *int `json:"maxShootRetries,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
+}
+
+// ShootStateControllerConfiguration defines the configuration of the
+// ShootState finalizer controller.
+type ShootStateControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ConditionThreshold defines the duration how long a flappy condition stays in progressing state.

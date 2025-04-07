@@ -71,7 +71,7 @@ func setToProgressingIfWithinThreshold(
 			return v1beta1helper.UpdatedConditionWithClock(clock, condition, eventualConditionStatus, reason, message, codes...)
 		}
 
-		if delta := clock.Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= conditionThreshold {
+		if delta := clock.Now().UTC().Sub(condition.LastTransitionTime.UTC()); delta <= conditionThreshold {
 			return v1beta1helper.UpdatedConditionWithClock(clock, condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
 		return v1beta1helper.UpdatedConditionWithClock(clock, condition, eventualConditionStatus, reason, message, codes...)

@@ -329,6 +329,9 @@ spec:
           count(
             count by (seed) (ALERTS{alertname="VerticalPodAutoscalerCappedRecommendation", type="seed", alertstate="firing"})
           )
+      labels:
+          severity: warning
+          topology: garden
       annotations:
         summary: >-
           A VPA recommendation in a seed is capped.

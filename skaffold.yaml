@@ -52,6 +52,7 @@ build:
             - pkg/apis/operations/validation
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -181,6 +182,7 @@ build:
             - pkg/utils/gardener
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/time
@@ -249,6 +251,7 @@ build:
             - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -262,6 +265,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -308,6 +312,7 @@ build:
             - pkg/controllermanager/controller/seed/backupbucketscheck
             - pkg/controllermanager/controller/seed/extensionscheck
             - pkg/controllermanager/controller/seed/lifecycle
+            - pkg/controllermanager/controller/seed/reference
             - pkg/controllermanager/controller/seed/secrets
             - pkg/controllermanager/controller/seed/utils
             - pkg/controllermanager/controller/shoot
@@ -319,6 +324,7 @@ build:
             - pkg/controllermanager/controller/shoot/reference
             - pkg/controllermanager/controller/shoot/retry
             - pkg/controllermanager/controller/shoot/statuslabel
+            - pkg/controllermanager/controller/shootstate
             - pkg/controllermanager/features
             - pkg/controllerutils
             - pkg/controllerutils/mapper
@@ -338,6 +344,7 @@ build:
             - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
             - pkg/utils/retry
@@ -363,6 +370,7 @@ build:
             - cmd/utils
             - cmd/utils/initrun
             - pkg/api/extensions
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -376,6 +384,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -411,6 +420,7 @@ build:
             - pkg/utils/gardener
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/timewindow
@@ -450,6 +460,7 @@ build:
             - pkg/admissioncontroller/webhook/admission/updaterestriction
             - pkg/admissioncontroller/webhook/auth/seed
             - pkg/admissioncontroller/webhook/auth/seed/graph
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -464,6 +475,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -495,6 +507,7 @@ build:
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/bootstraptoken
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/timewindow
@@ -659,6 +672,7 @@ build:
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -673,6 +687,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -689,6 +704,7 @@ build:
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
             - pkg/component
+            - pkg/component/crddeployer
             - pkg/component/extensions/operatingsystemconfig/nodeinit
             - pkg/component/extensions/operatingsystemconfig/nodeinit/templates/scripts/init.tpl.sh
             - pkg/component/extensions/operatingsystemconfig/original/components
@@ -957,6 +973,7 @@ build:
             - imagevector/containers.yaml
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -974,6 +991,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -1009,8 +1027,6 @@ build:
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
-            - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcdcopybackupstasks.yaml
-            - pkg/component/etcd/etcd/crds/templates/crd-druid.gardener.cloud_etcds.yaml
             - pkg/component/extensions
             - pkg/component/extensions/backupentry
             - pkg/component/extensions/containerruntime
@@ -1066,7 +1082,8 @@ build:
             - pkg/component/kubernetes/apiserver
             - pkg/component/kubernetes/apiserver/constants
             - pkg/component/kubernetes/apiserverexposure
-            - pkg/component/kubernetes/apiserverexposure/templates/envoyfilter.yaml
+            - pkg/component/kubernetes/apiserverexposure/templates/envoyfilter-apiserver-proxy.yaml
+            - pkg/component/kubernetes/apiserverexposure/templates/envoyfilter-istio-tls-termination.yaml
             - pkg/component/kubernetes/controllermanager
             - pkg/component/kubernetes/dashboard
             - pkg/component/kubernetes/proxy
@@ -1241,7 +1258,6 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
-            - pkg/resourcemanager/webhook/tokeninvalidator
             - pkg/utils
             - pkg/utils/chart
             - pkg/utils/context
@@ -1318,6 +1334,7 @@ build:
             - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1333,6 +1350,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/resources/v1alpha1/helper
@@ -1374,7 +1392,6 @@ build:
             - pkg/resourcemanager/controller/node/agentreconciliationdelay
             - pkg/resourcemanager/controller/node/criticalcomponents
             - pkg/resourcemanager/controller/node/criticalcomponents/helper
-            - pkg/resourcemanager/controller/tokeninvalidator
             - pkg/resourcemanager/predicate
             - pkg/resourcemanager/webhook
             - pkg/resourcemanager/webhook/crddeletionprotection
@@ -1388,16 +1405,15 @@ build:
             - pkg/resourcemanager/webhook/projectedtokenmount
             - pkg/resourcemanager/webhook/seccompprofile
             - pkg/resourcemanager/webhook/systemcomponentsconfig
-            - pkg/resourcemanager/webhook/tokeninvalidator
             - pkg/utils
             - pkg/utils/context
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
-            - pkg/utils/imagevector
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/client
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/time
@@ -1433,6 +1449,7 @@ build:
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
+            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1447,6 +1464,7 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
+            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -1512,6 +1530,7 @@ build:
             - pkg/utils/kubernetes
             - pkg/utils/kubernetes/certificatesigningrequest
             - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
             - pkg/utils/retry

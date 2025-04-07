@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"maps"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -26,7 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	. "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
@@ -51,7 +50,7 @@ var _ = Describe("Resources", func() {
 	BeforeEach(func() {
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		seedClientSet = kubernetesfake.NewClientSetBuilder().WithClient(seedClient).Build()
+		seedClientSet = fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		botanist = &Botanist{Operation: &operation.Operation{
 			GardenClient:  gardenClient,
@@ -147,29 +146,6 @@ var _ = Describe("Resources", func() {
 						Namespace:   controlPlaneNamespace,
 						Labels:      resource.Labels,
 						Annotations: resource.Annotations,
-					},
-					Type: resource.Type,
-					Data: resource.Data,
-				},
-			)
-		})
-
-		It("should drop unwanted metadata from referenced resources", func() {
-			metav1.SetMetaDataAnnotation(&resource.ObjectMeta, "kubectl.kubernetes.io/some-random-annotation", "this should be kept")
-			expectedAnnotations := maps.Clone(resource.Annotations)
-			metav1.SetMetaDataAnnotation(&resource.ObjectMeta, "kubectl.kubernetes.io/last-applied-configuration", "this should be dropped")
-
-			Expect(gardenClient.Create(ctx, resource)).To(Succeed())
-
-			Expect(botanist.DeployReferencedResources(ctx)).To(Succeed())
-
-			expectReferencedResourcesInSeed(
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "ref-" + resource.Name,
-						Namespace:   controlPlaneNamespace,
-						Labels:      resource.Labels,
-						Annotations: expectedAnnotations,
 					},
 					Type: resource.Type,
 					Data: resource.Data,

@@ -7,6 +7,8 @@ package botanist
 import (
 	"context"
 
+	"k8s.io/utils/ptr"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/component/extensions/dnsrecord"
@@ -20,7 +22,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 		Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 		Namespace:         b.Shoot.ControlPlaneNamespace,
-		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		TTL:               b.dnsRecordTTLSeconds(),
 		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.IsRestorePhase(),
 		IPStack:           gardenerutils.GetIPStackForShoot(b.Shoot.GetInfo()),
 	}
@@ -50,7 +52,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 		Name:                         b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
 		SecretName:                   DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
 		Namespace:                    b.Shoot.ControlPlaneNamespace,
-		TTL:                          b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		TTL:                          b.dnsRecordTTLSeconds(),
 		ReconcileOnlyOnChangeOrError: b.Shoot.GetInfo().DeletionTimestamp != nil,
 		AnnotateOperation: b.Shoot.GetInfo().DeletionTimestamp != nil ||
 			controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) ||
@@ -146,4 +148,11 @@ func (b *Botanist) deployOrRestoreDNSRecord(ctx context.Context, dnsRecord compo
 		return dnsRecord.Restore(ctx, b.Shoot.GetShootState())
 	}
 	return dnsRecord.Deploy(ctx)
+}
+
+func (b *Botanist) dnsRecordTTLSeconds() *int64 {
+	if b.Config != nil && b.Config.Controllers != nil && b.Config.Controllers.Shoot != nil {
+		return b.Config.Controllers.Shoot.DNSEntryTTLSeconds
+	}
+	return ptr.To(int64(120))
 }

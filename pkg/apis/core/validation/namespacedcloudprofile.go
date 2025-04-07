@@ -20,7 +20,7 @@ func ValidateNamespacedCloudProfile(namespacedCloudProfile *core.NamespacedCloud
 	allErrs = append(allErrs, validateNamespacedCloudProfileParent(namespacedCloudProfile.Spec.Parent, field.NewPath("spec.parent"))...)
 
 	allErrs = append(allErrs, validateNamespacedCloudProfileKubernetesVersions(namespacedCloudProfile.Spec.Kubernetes, field.NewPath("spec.kubernetes"))...)
-	allErrs = append(allErrs, ValidateMachineImages(namespacedCloudProfile.Spec.MachineImages, field.NewPath("spec.machineImages"))...)
+	allErrs = append(allErrs, ValidateMachineImages(namespacedCloudProfile.Spec.MachineImages, field.NewPath("spec.machineImages"), true)...)
 	allErrs = append(allErrs, validateVolumeTypes(namespacedCloudProfile.Spec.VolumeTypes, field.NewPath("spec.volumeTypes"))...)
 	allErrs = append(allErrs, validateMachineTypes(namespacedCloudProfile.Spec.MachineTypes, field.NewPath("spec.machineTypes"))...)
 
@@ -30,6 +30,7 @@ func ValidateNamespacedCloudProfile(namespacedCloudProfile *core.NamespacedCloud
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec.caBundle"), *(namespacedCloudProfile.Spec.CABundle), "caBundle is not a valid PEM-encoded certificate"))
 		}
 	}
+	allErrs = append(allErrs, validateCloudProfileLimits(namespacedCloudProfile.Spec.Limits, field.NewPath("spec.limits"))...)
 
 	return allErrs
 }
@@ -46,10 +47,11 @@ func ValidateNamespacedCloudProfileUpdate(newProfile, oldProfile *core.Namespace
 }
 
 // ValidateNamespacedCloudProfileSpecUpdate validates the spec update of a NamespacedCloudProfile.
-func ValidateNamespacedCloudProfileSpecUpdate(oldProfile, newProfile *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
+func ValidateNamespacedCloudProfileSpecUpdate(newProfile, oldProfile *core.NamespacedCloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldProfile.Parent, newProfile.Parent, fldPath.Child("parent"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProfile.Parent, oldProfile.Parent, fldPath.Child("parent"))...)
+	allErrs = append(allErrs, validateCloudProfileLimitsUpdate(newProfile.Limits, oldProfile.Limits, fldPath.Child("limits"))...)
 
 	return allErrs
 }

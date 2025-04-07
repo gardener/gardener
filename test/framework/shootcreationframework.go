@@ -27,35 +27,39 @@ var shootCreationCfg *ShootCreationConfig
 type ShootCreationConfig struct {
 	GardenerConfig *GardenerConfig
 
-	shootKubeconfigPath          string
-	testShootName                string
-	testShootPrefix              string
-	shootMachineImageName        string
-	shootMachineType             string
-	shootMachineImageVersion     string
-	cloudProfileName             string
-	cloudProfileKind             string
-	seedName                     string
-	shootRegion                  string
-	secretBinding                string
-	shootProviderType            string
-	shootK8sVersion              string
-	externalDomain               string
-	workerZone                   string
-	ipFamilies                   string
-	networkingType               string
-	networkingPods               string
-	networkingServices           string
-	networkingNodes              string
-	startHibernatedFlag          string
-	startHibernated              bool
-	infrastructureProviderConfig string
-	controlPlaneProviderConfig   string
-	networkingProviderConfig     string
-	workersConfig                string
-	shootYamlPath                string
-	shootAnnotations             string
-	controlPlaneFailureTolerance string
+	shootKubeconfigPath           string
+	testShootName                 string
+	testShootPrefix               string
+	shootMachineImageName         string
+	shootMachineType              string
+	shootMachineImageVersion      string
+	cloudProfileName              string
+	cloudProfileKind              string
+	seedName                      string
+	shootRegion                   string
+	secretBinding                 string
+	shootProviderType             string
+	shootK8sVersion               string
+	externalDomain                string
+	workerZone                    string
+	ipFamilies                    string
+	networkingType                string
+	networkingPods                string
+	networkingServices            string
+	networkingNodes               string
+	startHibernatedFlag           string
+	startHibernated               bool
+	infrastructureProviderConfig  string
+	controlPlaneProviderConfig    string
+	networkingProviderConfig      string
+	workersConfig                 string
+	shootYamlPath                 string
+	shootAnnotations              string
+	controlPlaneFailureTolerance  string
+	kubeApiserverMinAllowedCPU    string
+	kubeApiserverMinAllowedMemory string
+	etcdMinAllowedCPU             string
+	etcdMinAllowedMemory          string
 }
 
 // ShootCreationFramework represents the shoot test framework that includes
@@ -291,6 +295,22 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 		base.controlPlaneFailureTolerance = overwrite.controlPlaneFailureTolerance
 	}
 
+	if StringSet(overwrite.kubeApiserverMinAllowedCPU) {
+		base.kubeApiserverMinAllowedCPU = overwrite.kubeApiserverMinAllowedCPU
+	}
+
+	if StringSet(overwrite.kubeApiserverMinAllowedMemory) {
+		base.kubeApiserverMinAllowedMemory = overwrite.kubeApiserverMinAllowedMemory
+	}
+
+	if StringSet(overwrite.etcdMinAllowedCPU) {
+		base.etcdMinAllowedCPU = overwrite.etcdMinAllowedCPU
+	}
+
+	if StringSet(overwrite.etcdMinAllowedMemory) {
+		base.etcdMinAllowedMemory = overwrite.etcdMinAllowedMemory
+	}
+
 	if StringSet(overwrite.shootYamlPath) {
 		base.shootYamlPath = overwrite.shootYamlPath
 	}
@@ -327,6 +347,10 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.networkingNodes, "networking-nodes", "", "the spec.networking.nodes to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.startHibernatedFlag, "start-hibernated", "", "the spec.hibernation.enabled to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.controlPlaneFailureTolerance, "control-plane-failure-tolerance", "", "the .spec.controlPlane.HighAvailability.FailureTolerance.FailureToleranceType to use for this shoot. Optional, defaults to no failure tolerance")
+	flag.StringVar(&newCfg.kubeApiserverMinAllowedCPU, "kube-apiserver-min-allowed-cpu", "", "the .spec.kubernetes.kubeAPIServer.autoscaling.cpu to use for this shoot. Optional.")
+	flag.StringVar(&newCfg.kubeApiserverMinAllowedMemory, "kube-apiserver-min-allowed-memory", "", "the .spec.kubernetes.kubeAPIServer.autoscaling.memory to use for this shoot. Optional.")
+	flag.StringVar(&newCfg.etcdMinAllowedCPU, "etcd-min-allowed-cpu", "", "the .spec.kubernetes.etcd.{main|events}.autoscaling.cpu to use for this shoot. Optional.")
+	flag.StringVar(&newCfg.etcdMinAllowedMemory, "etcd-min-allowed-memory", "", "the .spec.kubernetes.etcd.{main|events}.autoscaling.memory to use for this shoot. Optional.")
 
 	if newCfg.networkingType == "" {
 		newCfg.networkingType = "calico"
@@ -362,7 +386,7 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(f.Shoot))
 
 	if f.GardenerFramework.Config.ExistingShootName != "" {
-		shootKey := client.ObjectKey{Namespace: f.GardenerFramework.ProjectNamespace, Name: f.GardenerFramework.Config.ExistingShootName}
+		shootKey := client.ObjectKey{Namespace: f.ProjectNamespace, Name: f.GardenerFramework.Config.ExistingShootName}
 		if err := f.GardenClient.Client().Get(ctx, shootKey, f.Shoot); err != nil {
 			return fmt.Errorf("failed to get existing shoot %q: %w", shootKey, err)
 		}
@@ -382,7 +406,7 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 			return err
 		}
 
-		if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot); err != nil {
+		if err := f.CreateShoot(ctx, f.Shoot, true); err != nil {
 			log.Error(err, "Failed creating shoot")
 
 			dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)

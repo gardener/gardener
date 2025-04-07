@@ -7,6 +7,10 @@ package constants
 const (
 	// Port is the port exposed by the kube-apiserver.
 	Port = 443
+	// RequestHeaderGroup is the header key for the group headers.
+	RequestHeaderGroup = "X-Remote-Group"
+	// RequestHeaderUserName is the header key for the username headers.
+	RequestHeaderUserName = "X-Remote-User"
 )
 
 // ServiceName returns the service name with the given prefix.

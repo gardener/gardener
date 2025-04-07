@@ -10,7 +10,9 @@ import (
 	"slices"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -258,12 +260,20 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 
 	allErrs = validateDomains(dns, virtualCluster.DNS.Domains, fldPath.Child("dns", "domains"), allErrs)
 
-	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil && virtualCluster.ETCD.Main.Backup != nil {
-		if virtualCluster.ETCD.Main.Backup.BucketName != nil {
-			if virtualCluster.ETCD.Main.Backup.ProviderConfig != nil {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("etcd", "main", "backup", "providerConfig"), "provider must not be set when bucket name is set"))
+	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Main != nil {
+		etcdMainFldPath := fldPath.Child("etcd", "main")
+
+		if virtualCluster.ETCD.Main.Backup != nil {
+			if virtualCluster.ETCD.Main.Backup.BucketName != nil && virtualCluster.ETCD.Main.Backup.ProviderConfig != nil {
+				allErrs = append(allErrs, field.Forbidden(etcdMainFldPath.Child("backup", "providerConfig"), "provider must not be set when bucket name is set"))
 			}
 		}
+
+		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, etcdMainFldPath.Child("autoscaling"))...)
+	}
+
+	if virtualCluster.ETCD != nil && virtualCluster.ETCD.Events != nil {
+		allErrs = append(allErrs, validateETCDAutoscaling(virtualCluster.ETCD.Events.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}, fldPath.Child("etcd", "events", "autoscaling"))...)
 	}
 
 	if err := kubernetesversion.CheckIfSupported(virtualCluster.Kubernetes.Version); err != nil {
@@ -329,6 +339,21 @@ func validateVirtualCluster(dns *operatorv1alpha1.DNSManagement, virtualCluster 
 	return allErrs
 }
 
+func validateETCDAutoscaling(autoscaling *gardencorev1beta1.ControlPlaneAutoscaling, minRequired corev1.ResourceList, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if autoscaling != nil {
+		coreAutoscaling := &gardencore.ControlPlaneAutoscaling{}
+		if err := gardenCoreScheme.Convert(autoscaling, coreAutoscaling, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(fldPath, err))
+		}
+
+		allErrs = append(allErrs, gardencorevalidation.ValidateControlPlaneAutoscaling(coreAutoscaling, minRequired, fldPath)...)
+	}
+
+	return allErrs
+}
+
 func validateGardener(gardener operatorv1alpha1.Gardener, kubernetes operatorv1alpha1.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -377,7 +402,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			}
 
 			if !gardenerutils.IsServedByGardenerAPIServer(resource) {
-				allErrs = append(allErrs, field.Invalid(idxPath, resource, "should be a resource served by gardener-apiserver. ie; should have any of the suffixes {core,operations,settings,seedmanagement}.gardener.cloud"))
+				allErrs = append(allErrs, field.Invalid(idxPath, resource, "should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"))
 			}
 
 			if strings.HasPrefix(resource, "*") {
@@ -549,7 +574,7 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 	)
 
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig != nil {
-		encryptionConfig = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig.EncryptionConfig
+		encryptionConfig = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig
 	}
 	if garden.Spec.VirtualCluster.Gardener.APIServer != nil && garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig != nil {
 		gardenerEncryptionConfig = garden.Spec.VirtualCluster.Gardener.APIServer.EncryptionConfig
@@ -679,13 +704,13 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 		gAPIServerEncryptionConfigFldPath    = field.NewPath("spec", "virtualCluster", "gardener", "gardenerAPIServer", "encryptionConfig")
 	)
 
-	if oldKubeAPIServer := oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; oldKubeAPIServer != nil && oldKubeAPIServer.KubeAPIServerConfig != nil && oldKubeAPIServer.KubeAPIServerConfig.EncryptionConfig != nil {
-		if err := gardenCoreScheme.Convert(oldKubeAPIServer.KubeAPIServerConfig.EncryptionConfig, oldKubeAPIServerEncryptionConfig, nil); err != nil {
+	if oldKubeAPIServer := oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; oldKubeAPIServer != nil && oldKubeAPIServer.KubeAPIServerConfig != nil && oldKubeAPIServer.EncryptionConfig != nil {
+		if err := gardenCoreScheme.Convert(oldKubeAPIServer.EncryptionConfig, oldKubeAPIServerEncryptionConfig, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(kubeAPIServerEncryptionConfigFldPath, err))
 		}
 	}
-	if newKubeAPIServer := newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; newKubeAPIServer != nil && newKubeAPIServer.KubeAPIServerConfig != nil && newKubeAPIServer.KubeAPIServerConfig.EncryptionConfig != nil {
-		if err := gardenCoreScheme.Convert(newKubeAPIServer.KubeAPIServerConfig.EncryptionConfig, newKubeAPIServerEncryptionConfig, nil); err != nil {
+	if newKubeAPIServer := newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; newKubeAPIServer != nil && newKubeAPIServer.KubeAPIServerConfig != nil && newKubeAPIServer.EncryptionConfig != nil {
+		if err := gardenCoreScheme.Convert(newKubeAPIServer.EncryptionConfig, newKubeAPIServerEncryptionConfig, nil); err != nil {
 			allErrs = append(allErrs, field.InternalError(kubeAPIServerEncryptionConfigFldPath, err))
 		}
 	}

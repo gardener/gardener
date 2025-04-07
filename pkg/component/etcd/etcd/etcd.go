@@ -7,12 +7,15 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"maps"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/Masterminds/semver/v3"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	"github.com/go-logr/logr"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
@@ -91,7 +94,7 @@ type Interface interface {
 	// SetBackupConfig sets the backup configuration.
 	SetBackupConfig(config *BackupConfig)
 	// Get retrieves the Etcd resource
-	Get(context.Context) (*druidv1alpha1.Etcd, error)
+	Get(context.Context) (*druidcorev1alpha1.Etcd, error)
 	// Scale scales the etcd resource to the given replica count.
 	Scale(context.Context, int32) error
 	// RolloutPeerCA gets the peer CA and patches the
@@ -122,7 +125,7 @@ func New(
 		namespace:      namespace,
 		secretsManager: secretsManager,
 		values:         values,
-		etcd: &druidv1alpha1.Etcd{
+		etcd: &druidcorev1alpha1.Etcd{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
@@ -137,7 +140,7 @@ type etcd struct {
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
-	etcd           *druidv1alpha1.Etcd
+	etcd           *druidcorev1alpha1.Etcd
 }
 
 // Values are the configuration values for the ETCD.
@@ -150,6 +153,8 @@ type Values struct {
 	StorageClassName            *string
 	DefragmentationSchedule     *string
 	CARotationPhase             gardencorev1beta1.CredentialsRotationPhase
+	Autoscaling                 AutoscalingConfig
+	RuntimeKubernetesVersion    *semver.Version
 	BackupConfig                *BackupConfig
 	MaintenanceTimeWindow       gardencorev1beta1.MaintenanceTimeWindow
 	EvictionRequirement         *string
@@ -158,8 +163,33 @@ type Values struct {
 	TopologyAwareRoutingEnabled bool
 }
 
+// BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
+// the etcd's data directory.
+type BackupConfig struct {
+	// Provider is the name of the infrastructure provider for the blob storage bucket.
+	Provider string
+	// Container is the name of the blob storage bucket.
+	Container string
+	// SecretRefName is the name of a Secret object containing the credentials of the selected infrastructure provider.
+	SecretRefName string
+	// Prefix is a prefix that shall be used for the filename of the backups of this etcd.
+	Prefix string
+	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
+	FullSnapshotSchedule string
+	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+	LeaderElection *gardenletconfigv1alpha1.ETCDBackupLeaderElection
+	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
+	DeltaSnapshotRetentionPeriod *metav1.Duration
+}
+
+// AutoscalingConfig contains information for configuring autoscaling settings for etcd.
+type AutoscalingConfig struct {
+	// MinAllowed are the minimum allowed resources for vertical autoscaling.
+	MinAllowed corev1.ResourceList
+}
+
 func (e *etcd) Deploy(ctx context.Context) error {
-	var existingEtcd *druidv1alpha1.Etcd
+	var existingEtcd *druidcorev1alpha1.Etcd
 
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -175,63 +205,39 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		replicas = e.computeReplicas(existingEtcd)
 
-		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources()
-		resourcesCompactionJob                = e.computeCompactionJobContainerResources()
-		garbageCollectionPolicy               = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
-		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
-		compressionPolicy                     = druidv1alpha1.GzipCompression
-		compressionSpec                       = druidv1alpha1.CompressionSpec{
+		garbageCollectionPolicy = druidcorev1alpha1.GarbageCollectionPolicy(druidcorev1alpha1.GarbageCollectionPolicyExponential)
+		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
+		compressionPolicy       = druidcorev1alpha1.GzipCompression
+		compressionSpec         = druidcorev1alpha1.CompressionSpec{
 			Enabled: ptr.To(true),
 			Policy:  &compressionPolicy,
 		}
 
 		annotations         map[string]string
-		metrics             = druidv1alpha1.Basic
+		metrics             = druidcorev1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
-		minAllowed          = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("60M"),
-		}
+
+		minAllowed             = e.computeMinAllowedForETCDContainer()
+		resourcesEtcd          = e.computeETCDContainerResources(minAllowed)
+		resourcesBackupRestore = e.computeBackupRestoreContainerResources()
+		resourcesCompactionJob = e.computeCompactionJobContainerResources()
 	)
 
 	if e.values.Class == ClassImportant {
 		if !e.values.HighAvailabilityEnabled {
 			annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		}
-		resourcesBackupRestore = &corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("20m"),
-				corev1.ResourceMemory: resource.MustParse("80Mi"),
-			},
-		}
-		metrics = druidv1alpha1.Extensive
+		metrics = druidcorev1alpha1.Extensive
 		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)
-		minAllowed = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("300M"),
-		}
 	}
 
-	etcdCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
-	}
-
-	serverSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNamePrefixServer + e.values.Role,
-		CommonName:                  "etcd-server",
-		DNSNames:                    e.clientServiceDNSNames(),
-		CertType:                    secretsutils.ServerClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return err
-	}
-
-	clientSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        SecretNameClient,
-		CommonName:                  "etcd-client",
-		CertType:                    secretsutils.ClientCert,
-		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	etcdCASecret, serverSecret, clientSecret, err := GenerateClientServerCertificates(
+		ctx,
+		e.secretsManager,
+		e.values.Role,
+		e.clientServiceDNSNames(),
+		nil,
+	)
 	if err != nil {
 		return err
 	}
@@ -247,7 +253,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	clientService := &corev1.Service{}
-	gardenerutils.ReconcileTopologyAwareRoutingMetadata(clientService, e.values.TopologyAwareRoutingEnabled)
+	gardenerutils.ReconcileTopologyAwareRoutingSettings(clientService, e.values.TopologyAwareRoutingEnabled, e.values.RuntimeKubernetesVersion)
 
 	ports := []networkingv1.NetworkPolicyPort{
 		{Port: ptr.To(intstr.FromInt32(etcdconstants.PortEtcdClient)), Protocol: ptr.To(corev1.ProtocolTCP)},
@@ -299,10 +305,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				v1beta1constants.LabelApp: LabelAppValue,
 			}),
 		}
-		e.etcd.Spec.Etcd = druidv1alpha1.EtcdConfig{
+		e.etcd.Spec.Etcd = druidcorev1alpha1.EtcdConfig{
 			Resources: resourcesEtcd,
-			ClientUrlTLS: &druidv1alpha1.TLSConfig{
-				TLSCASecretRef: druidv1alpha1.SecretReference{
+			ClientUrlTLS: &druidcorev1alpha1.TLSConfig{
+				TLSCASecretRef: druidcorev1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
@@ -323,16 +329,17 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Metrics:                 &metrics,
 			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
 			Quota:                   ptr.To(resource.MustParse("8Gi")),
-			ClientService: &druidv1alpha1.ClientService{
-				Annotations: clientService.Annotations,
-				Labels:      clientService.Labels,
+			ClientService: &druidcorev1alpha1.ClientService{
+				Annotations:         clientService.Annotations,
+				Labels:              clientService.Labels,
+				TrafficDistribution: clientService.Spec.TrafficDistribution,
 			},
 		}
 
 		// TODO(timuthy): Once https://github.com/gardener/etcd-backup-restore/issues/538 is resolved we can enable PeerUrlTLS for all remaining clusters as well.
 		if e.values.HighAvailabilityEnabled {
-			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{
-				TLSCASecretRef: druidv1alpha1.SecretReference{
+			e.etcd.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.TLSConfig{
+				TLSCASecretRef: druidcorev1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
 						Name:      etcdPeerCASecretName,
 						Namespace: e.namespace,
@@ -346,9 +353,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			}
 		}
 
-		e.etcd.Spec.Backup = druidv1alpha1.BackupSpec{
-			TLS: &druidv1alpha1.TLSConfig{
-				TLSCASecretRef: druidv1alpha1.SecretReference{
+		e.etcd.Spec.Backup = druidcorev1alpha1.BackupSpec{
+			TLS: &druidcorev1alpha1.TLSConfig{
+				TLSCASecretRef: druidcorev1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
 						Name:      etcdCASecret.Name,
 						Namespace: etcdCASecret.Namespace,
@@ -374,11 +381,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		if e.values.BackupConfig != nil {
 			var (
-				provider            = druidv1alpha1.StorageProvider(e.values.BackupConfig.Provider)
+				provider            = druidcorev1alpha1.StorageProvider(e.values.BackupConfig.Provider)
 				deltaSnapshotPeriod = metav1.Duration{Duration: 5 * time.Minute}
 			)
 
-			e.etcd.Spec.Backup.Store = &druidv1alpha1.StoreSpec{
+			e.etcd.Spec.Backup.Store = &druidcorev1alpha1.StoreSpec{
 				SecretRef: &corev1.SecretReference{Name: e.values.BackupConfig.SecretRefName},
 				Container: &e.values.BackupConfig.Container,
 				Provider:  &provider,
@@ -390,14 +397,16 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			e.etcd.Spec.Backup.DeltaSnapshotRetentionPeriod = e.values.BackupConfig.DeltaSnapshotRetentionPeriod
 
 			if e.values.BackupConfig.LeaderElection != nil {
-				e.etcd.Spec.Backup.LeaderElection = &druidv1alpha1.LeaderElectionSpec{
+				e.etcd.Spec.Backup.LeaderElection = &druidcorev1alpha1.LeaderElectionSpec{
 					EtcdConnectionTimeout: e.values.BackupConfig.LeaderElection.EtcdConnectionTimeout,
 					ReelectionPeriod:      e.values.BackupConfig.LeaderElection.ReelectionPeriod,
 				}
 			}
 		}
 
-		e.etcd.Spec.StorageCapacity = ptr.To(resource.MustParse(e.values.StorageCapacity))
+		if existingEtcd == nil || existingEtcd.Spec.StorageCapacity == nil {
+			e.etcd.Spec.StorageCapacity = ptr.To(resource.MustParse(e.values.StorageCapacity))
+		}
 		e.etcd.Spec.StorageClass = e.values.StorageClassName
 		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
 		return nil
@@ -420,8 +429,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		serviceMonitor.Labels = monitoringutils.Labels(e.prometheusLabel())
 		serviceMonitor.Spec = monitoringv1.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{MatchLabels: map[string]string{
-				druidv1alpha1.LabelAppNameKey: fmt.Sprintf("%s-client", e.etcd.Name),
-				druidv1alpha1.LabelPartOfKey:  e.etcd.Name,
+				druidcorev1alpha1.LabelAppNameKey: fmt.Sprintf("%s-client", e.etcd.Name),
+				druidcorev1alpha1.LabelPartOfKey:  e.etcd.Name,
 			}},
 			Endpoints: []monitoringv1.Endpoint{
 				{
@@ -757,7 +766,7 @@ func (e *etcd) emptyVerticalPodAutoscaler() *vpaautoscalingv1.VerticalPodAutosca
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
 }
 
-func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowed corev1.ResourceList) error {
+func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautoscalingv1.VerticalPodAutoscaler, minAllowedETCD corev1.ResourceList) error {
 	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 	containerPolicyOff := vpaautoscalingv1.ContainerScalingModeOff
 	containerPolicyAuto := vpaautoscalingv1.ContainerScalingModeAuto
@@ -794,7 +803,7 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 				ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 					{
 						ContainerName:    containerNameEtcd,
-						MinAllowed:       minAllowed,
+						MinAllowed:       minAllowedETCD,
 						ControlledValues: &controlledValues,
 						Mode:             &containerPolicyAuto,
 					},
@@ -854,7 +863,7 @@ func (e *etcd) peerServiceDNSNames() []string {
 }
 
 // Get retrieves the Etcd resource
-func (e *etcd) Get(ctx context.Context) (*druidv1alpha1.Etcd, error) {
+func (e *etcd) Get(ctx context.Context) (*druidcorev1alpha1.Etcd, error) {
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
 		return nil, err
 	}
@@ -864,7 +873,7 @@ func (e *etcd) Get(ctx context.Context) (*druidv1alpha1.Etcd, error) {
 func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.values.BackupConfig = backupConfig }
 
 func (e *etcd) Scale(ctx context.Context, replicas int32) error {
-	etcdObj := &druidv1alpha1.Etcd{}
+	etcdObj := &druidcorev1alpha1.Etcd{}
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), etcdObj); err != nil {
 		return err
 	}
@@ -915,10 +924,10 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 		}
 
 		if e.etcd.Spec.Etcd.PeerUrlTLS == nil {
-			e.etcd.Spec.Etcd.PeerUrlTLS = &druidv1alpha1.TLSConfig{}
+			e.etcd.Spec.Etcd.PeerUrlTLS = &druidcorev1alpha1.TLSConfig{}
 		}
 
-		e.etcd.Spec.Etcd.PeerUrlTLS.TLSCASecretRef = druidv1alpha1.SecretReference{
+		e.etcd.Spec.Etcd.PeerUrlTLS.TLSCASecretRef = druidcorev1alpha1.SecretReference{
 			SecretReference: corev1.SecretReference{
 				Name:      etcdPeerCASecret.Name,
 				Namespace: e.etcd.Namespace,
@@ -939,18 +948,47 @@ func (e *etcd) GetReplicas() *int32 { return e.values.Replicas }
 
 func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
-func (e *etcd) computeContainerResources() (*corev1.ResourceRequirements, *corev1.ResourceRequirements) {
-	return &corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("300m"),
-				corev1.ResourceMemory: resource.MustParse("1G"),
-			},
-		}, &corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("10m"),
-				corev1.ResourceMemory: resource.MustParse("40Mi"),
-			},
+func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
+	minAllowed := corev1.ResourceList{
+		corev1.ResourceMemory: resource.MustParse("60M"),
+	}
+
+	if e.values.Class == ClassImportant {
+		minAllowed = corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("300M"),
 		}
+	}
+
+	maps.Insert(minAllowed, maps.All(e.values.Autoscaling.MinAllowed))
+	return minAllowed
+}
+
+func (e *etcd) computeETCDContainerResources(minAllowedETCD corev1.ResourceList) *corev1.ResourceRequirements {
+	resourcesETCD := kubernetesutils.MaximumResourcesFromResourceList(
+		corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("300m"),
+			corev1.ResourceMemory: resource.MustParse("1G"),
+		},
+		minAllowedETCD,
+	)
+
+	return &corev1.ResourceRequirements{Requests: resourcesETCD}
+}
+
+func (e *etcd) computeBackupRestoreContainerResources() *corev1.ResourceRequirements {
+	resourcesBackupRestore := corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("10m"),
+		corev1.ResourceMemory: resource.MustParse("40Mi"),
+	}
+
+	if e.values.Class == ClassImportant {
+		resourcesBackupRestore = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("20m"),
+			corev1.ResourceMemory: resource.MustParse("80Mi"),
+		}
+	}
+
+	return &corev1.ResourceRequirements{Requests: resourcesBackupRestore}
 }
 
 func (e *etcd) computeCompactionJobContainerResources() *corev1.ResourceRequirements {
@@ -962,7 +1000,7 @@ func (e *etcd) computeCompactionJobContainerResources() *corev1.ResourceRequirem
 	}
 }
 
-func (e *etcd) computeReplicas(existingEtcd *druidv1alpha1.Etcd) int32 {
+func (e *etcd) computeReplicas(existingEtcd *druidcorev1alpha1.Etcd) int32 {
 	if e.values.Replicas != nil {
 		return *e.values.Replicas
 	}
@@ -973,7 +1011,7 @@ func (e *etcd) computeReplicas(existingEtcd *druidv1alpha1.Etcd) int32 {
 	return 0
 }
 
-func (e *etcd) computeDefragmentationSchedule(existingEtcd *druidv1alpha1.Etcd) *string {
+func (e *etcd) computeDefragmentationSchedule(existingEtcd *druidcorev1alpha1.Etcd) *string {
 	defragmentationSchedule := e.values.DefragmentationSchedule
 	if existingEtcd != nil && existingEtcd.Spec.Etcd.DefragmentationSchedule != nil {
 		defragmentationSchedule = existingEtcd.Spec.Etcd.DefragmentationSchedule
@@ -981,7 +1019,7 @@ func (e *etcd) computeDefragmentationSchedule(existingEtcd *druidv1alpha1.Etcd) 
 	return defragmentationSchedule
 }
 
-func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *string {
+func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidcorev1alpha1.Etcd) *string {
 	fullSnapshotSchedule := &e.values.BackupConfig.FullSnapshotSchedule
 	if existingEtcd != nil && existingEtcd.Spec.Backup.FullSnapshotSchedule != nil {
 		fullSnapshotSchedule = existingEtcd.Spec.Backup.FullSnapshotSchedule
@@ -995,44 +1033,71 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 		return
 	}
 
-	etcdPeerCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
+	return GeneratePeerCertificates(ctx, e.secretsManager, e.values.Role, e.peerServiceDNSNames(), nil)
+}
+
+// GeneratePeerCertificates generates the peer certificates for the etcd cluster.
+func GeneratePeerCertificates(
+	ctx context.Context,
+	secretsManager secretsmanager.Interface,
+	role string,
+	dnsNames []string,
+	ipAddresses []net.IP,
+) (string, string, error) {
+	etcdPeerCASecret, found := secretsManager.Get(v1beta1constants.SecretNameCAETCDPeer)
 	if !found {
-		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
-		return
+		return "", "", fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 	}
 
-	peerServerSecret, err := e.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNamePrefixPeerServer + e.values.Role,
+	peerServerSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:                        secretNamePrefixPeerServer + role,
 		CommonName:                  "etcd-server",
-		DNSNames:                    e.peerServiceDNSNames(),
+		DNSNames:                    dnsNames,
+		IPAddresses:                 ipAddresses,
 		CertType:                    secretsutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
-		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
-		return
+		return "", "", fmt.Errorf("failed to generate secret %q: %w", secretNamePrefixPeerServer+role, err)
 	}
 
-	caSecretName = etcdPeerCASecret.Name
-	peerSecretName = peerServerSecret.Name
-	return
+	return etcdPeerCASecret.Name, peerServerSecret.Name, nil
 }
 
-// BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of
-// the etcd's data directory.
-type BackupConfig struct {
-	// Provider is the name of the infrastructure provider for the blob storage bucket.
-	Provider string
-	// Container is the name of the blob storage bucket.
-	Container string
-	// SecretRefName is the name of a Secret object containing the credentials of the selected infrastructure provider.
-	SecretRefName string
-	// Prefix is a prefix that shall be used for the filename of the backups of this etcd.
-	Prefix string
-	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
-	FullSnapshotSchedule string
-	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
-	LeaderElection *gardenletconfigv1alpha1.ETCDBackupLeaderElection
-	// DeltaSnapshotRetentionPeriod defines the duration for which delta snapshots will be retained, excluding the latest snapshot set.
-	DeltaSnapshotRetentionPeriod *metav1.Duration
+// GenerateClientServerCertificates generates client and server certificates for the etcd cluster.
+func GenerateClientServerCertificates(
+	ctx context.Context,
+	secretsManager secretsmanager.Interface,
+	role string,
+	dnsNames []string,
+	ipAddresses []net.IP,
+) (*corev1.Secret, *corev1.Secret, *corev1.Secret, error) {
+	etcdCASecret, found := secretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	if !found {
+		return nil, nil, nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
+	}
+
+	serverSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:                        secretNamePrefixServer + role,
+		CommonName:                  "etcd-server",
+		DNSNames:                    dnsNames,
+		IPAddresses:                 ipAddresses,
+		CertType:                    secretsutils.ServerClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to generate secret %q: %w", secretNamePrefixServer+role, err)
+	}
+
+	clientSecret, err := secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:                        SecretNameClient,
+		CommonName:                  "etcd-client",
+		CertType:                    secretsutils.ClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to generate secret %q: %w", SecretNameClient, err)
+	}
+
+	return etcdCASecret, serverSecret, clientSecret, nil
 }

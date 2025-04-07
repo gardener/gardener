@@ -145,15 +145,43 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			ProviderSpec: runtime.RawExtension{Raw: providerConfigBytes},
 		})
 
+		updateConfiguration := machinev1alpha1.UpdateConfiguration{
+			MaxUnavailable: &pool.MaxUnavailable,
+			MaxSurge:       &pool.MaxSurge,
+		}
+
+		machineDeploymentStrategy := machinev1alpha1.MachineDeploymentStrategy{
+			Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
+			RollingUpdate: &machinev1alpha1.RollingUpdateMachineDeployment{
+				UpdateConfiguration: updateConfiguration,
+			},
+		}
+
+		if pool.UpdateStrategy != nil {
+			switch *pool.UpdateStrategy {
+			case gardencorev1beta1.AutoInPlaceUpdate:
+				machineDeploymentStrategy.Type = machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType
+				machineDeploymentStrategy.InPlaceUpdate = &machinev1alpha1.InPlaceUpdateMachineDeployment{
+					UpdateConfiguration: updateConfiguration,
+					OrchestrationType:   machinev1alpha1.OrchestrationTypeAuto,
+				}
+			case gardencorev1beta1.ManualInPlaceUpdate:
+				machineDeploymentStrategy.Type = machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType
+				machineDeploymentStrategy.InPlaceUpdate = &machinev1alpha1.InPlaceUpdateMachineDeployment{
+					UpdateConfiguration: updateConfiguration,
+					OrchestrationType:   machinev1alpha1.OrchestrationTypeManual,
+				}
+			}
+		}
+
 		machineDeployments = append(machineDeployments, worker.MachineDeployment{
 			Name:                         deploymentName,
 			ClassName:                    className,
 			SecretName:                   className,
 			Minimum:                      pool.Minimum,
 			Maximum:                      pool.Maximum,
-			MaxSurge:                     pool.MaxSurge,
+			Strategy:                     machineDeploymentStrategy,
 			Priority:                     pool.Priority,
-			MaxUnavailable:               pool.MaxUnavailable,
 			Labels:                       pool.Labels,
 			Annotations:                  pool.Annotations,
 			Taints:                       pool.Taints,

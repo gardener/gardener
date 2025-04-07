@@ -245,11 +245,11 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			It("presets which match even with lower weight", func() {
 				preset2 := preset.DeepCopy()
 
-				preset.Spec.OpenIDConnectPresetSpec.Weight = 100
-				preset.Spec.OpenIDConnectPresetSpec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
+				preset.Spec.Weight = 100
+				preset.Spec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
 
-				preset2.ObjectMeta.Name = "preset-2"
-				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Name = "preset-2"
+				preset2.Spec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
 
@@ -258,9 +258,9 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 
 			It("preset with higher weight", func() {
 				preset2 := preset.DeepCopy()
-				preset2.ObjectMeta.Name = "preset-2"
-				preset2.Spec.OpenIDConnectPresetSpec.Weight = 100
-				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Name = "preset-2"
+				preset2.Spec.Weight = 100
+				preset2.Spec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
 
@@ -268,10 +268,10 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			})
 
 			It("presets ordered lexicographically", func() {
-				preset.ObjectMeta.Name = "01preset"
+				preset.Name = "01preset"
 				preset2 := preset.DeepCopy()
-				preset2.ObjectMeta.Name = "02preset"
-				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Name = "02preset"
+				preset2.Spec.Server.ClientID = "client-id-2"
 
 				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = ptr.To("client-id-2")
 
@@ -281,8 +281,8 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 			It("presets which don't match the project selector", func() {
 				preset2 := preset.DeepCopy()
 				preset2.Spec.ProjectSelector.MatchLabels = map[string]string{"not": "existing"}
-				preset2.Spec.OpenIDConnectPresetSpec.Weight = 100
-				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
+				preset2.Spec.Weight = 100
+				preset2.Spec.Server.ClientID = "client-id-2"
 
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
 			})

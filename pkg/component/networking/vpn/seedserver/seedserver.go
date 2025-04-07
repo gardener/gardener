@@ -130,9 +130,6 @@ type Values struct {
 	HighAvailabilityNumberOfShootClients int
 	// VPAUpdateDisabled indicates whether the vertical pod autoscaler update should be disabled.
 	VPAUpdateDisabled bool
-	// DisableNewVPN disable new VPN implementation.
-	// TODO(MartinWeindel) Remove after feature gate `NewVPN` gets promoted to GA.
-	DisableNewVPN bool
 }
 
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
@@ -299,6 +296,20 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			AutomountServiceAccountToken: ptr.To(false),
 			PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane300,
 			DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
+			InitContainers: []corev1.Container{
+				{
+					Name:            "setup",
+					Image:           v.values.ImageVPNSeedServer,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command: []string{
+						"/bin/vpn-server",
+						"setup",
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: ptr.To(true),
+					},
+				},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:            deploymentName,
@@ -619,36 +630,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			},
 		}
 
-		if v.values.DisableNewVPN {
-			statusPath := filepath.Join(volumeMountPathStatusDir, "openvpn.status")
-			exporterContainer.Command = []string{
-				"/openvpn-exporter",
-				"-openvpn.status_paths",
-				statusPath,
-				"-web.listen-address",
-				fmt.Sprintf(":%d", metricsPort),
-			}
-			exporterContainer.Env = nil
-		}
-
 		template.Spec.Containers = append(template.Spec.Containers, exporterContainer)
-	}
-
-	if !v.values.DisableNewVPN {
-		template.Spec.InitContainers = []corev1.Container{
-			{
-				Name:            "setup",
-				Image:           v.values.ImageVPNSeedServer,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command: []string{
-					"/bin/vpn-server",
-					"setup",
-				},
-				SecurityContext: &corev1.SecurityContext{
-					Privileged: ptr.To(true),
-				},
-			},
-		}
 	}
 
 	return template
@@ -707,7 +689,7 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas:             ptr.To(v.values.Replicas),
-			RevisionHistoryLimit: ptr.To[int32](1),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp: deploymentName,
 			}},

@@ -29,7 +29,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kubernetesfake "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -167,7 +167,7 @@ var _ = Describe("Bootstrap", func() {
 				return true, &approvedCSR, nil
 			})
 
-			bootstrapClientSet := kubernetesfake.NewClientSetBuilder().
+			bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
 				WithRESTConfig(bootstrapClientConfig).
 				WithKubernetes(kubeClient).
 				Build()
@@ -206,7 +206,7 @@ var _ = Describe("Bootstrap", func() {
 				return true, &deniedCSR, nil
 			})
 
-			bootstrapClientSet := kubernetesfake.NewClientSetBuilder().
+			bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
 				WithRESTConfig(bootstrapClientConfig).
 				WithKubernetes(kubeClient).
 				Build()
@@ -224,7 +224,7 @@ var _ = Describe("Bootstrap", func() {
 				return true, &failedCSR, nil
 			})
 
-			bootstrapClientSet := kubernetesfake.NewClientSetBuilder().
+			bootstrapClientSet := fakekubernetes.NewClientSetBuilder().
 				WithRESTConfig(bootstrapClientConfig).
 				WithKubernetes(kubeClient).
 				Build()

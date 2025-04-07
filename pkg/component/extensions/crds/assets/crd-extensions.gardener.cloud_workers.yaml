@@ -5,7 +5,7 @@ metadata:
   labels:
     gardener.cloud/deletion-protected: "true"
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: workers.extensions.gardener.cloud
 spec:
   group: extensions.gardener.cloud
@@ -491,6 +491,15 @@ spec:
                       description: MachineControllerManagerSettings contains configurations
                         for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
                       properties:
+                        disableHealthTimeout:
+                          description: |-
+                            DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+                            This is intended to be used only for in-place updates.
+                          type: boolean
+                        inPlaceUpdateTimeout:
+                          description: MachineInPlaceUpdateTimeout is the timeout
+                            after which in-place update is declared failed.
+                          type: string
                         machineCreationTimeout:
                           description: MachineCreationTimeout is the period after
                             which creation of the machine is declared failed.

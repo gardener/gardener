@@ -834,37 +834,6 @@ func validateDNS(dns *core.DNS, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
-func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	types := sets.Set[string]{}
-	for i, extension := range extensions {
-		if extension.Type == "" {
-			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("type"), "field must not be empty"))
-		} else if types.Has(extension.Type) {
-			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), extension.Type))
-		} else {
-			types.Insert(extension.Type)
-		}
-	}
-	return allErrs
-}
-
-func validateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	names := sets.Set[string]{}
-	for i, resource := range resources {
-		if resource.Name == "" {
-			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "field must not be empty"))
-		} else if names.Has(resource.Name) {
-			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), resource.Name))
-		} else {
-			names.Insert(resource.Name)
-		}
-		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.ResourceRef, fldPath.Index(i).Child("resourceRef"))...)
-	}
-	return allErrs
-}
-
 func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking, workerless bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -877,6 +846,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), *kubernetes.EnableStaticTokenKubeconfig, "setting this field to true is not supported"))
 	}
 
+	allErrs = append(allErrs, validateETCD(kubernetes.ETCD, fldPath.Child("etcd"))...)
 	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
@@ -896,6 +866,22 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 
 		if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
 			allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
+		}
+	}
+
+	return allErrs
+}
+
+func validateETCD(etcd *core.ETCD, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if etcd != nil {
+		if etcd.Main != nil {
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("main", "autoscaling"))...)
+		}
+
+		if etcd.Events != nil {
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Events.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}, fldPath.Child("events", "autoscaling"))...)
 		}
 	}
 
@@ -1478,6 +1464,15 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		}
 	}
 
+	allErrs = append(allErrs, ValidateControlPlaneAutoscaling(
+		kubeAPIServer.Autoscaling,
+		corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("20m"),
+			corev1.ResourceMemory: resource.MustParse("200M"),
+		},
+		fldPath.Child("autoscaling"))...,
+	)
+
 	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, version, fldPath.Child("featureGates"))...)
 
 	return allErrs
@@ -1751,6 +1746,11 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 	allErrs = append(allErrs, IsNotMoreThan100Percent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 
+	if getIntOrPercentValue(ptr.Deref(worker.MaxSurge, intstr.IntOrString{})) != 0 && ptr.Deref(worker.UpdateStrategy, "") == core.ManualInPlaceUpdate {
+		// MaxSurge must be 0 when update strategy is ManualInPlaceUpdate.
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxSurge"), worker.MaxSurge, "must be 0 when `updateStrategy` is `ManualInPlaceUpdate`"))
+	}
+
 	if (worker.MaxUnavailable == nil || getIntOrPercentValue(*worker.MaxUnavailable) == 0) && (worker.MaxSurge != nil && getIntOrPercentValue(*worker.MaxSurge) == 0) {
 		// Both MaxSurge and MaxUnavailable cannot be zero.
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxUnavailable"), worker.MaxUnavailable, "may not be 0 when `maxSurge` is 0"))
@@ -1836,6 +1836,10 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 
 	if worker.ClusterAutoscaler != nil {
 		allErrs = append(allErrs, ValidateClusterAutoscalerOptions(worker.ClusterAutoscaler, fldPath.Child("autoscaler"))...)
+	}
+
+	if worker.MachineControllerManagerSettings != nil && ptr.Deref(worker.MachineControllerManagerSettings.DisableHealthTimeout, false) && !helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("machineControllerManagerSettings", "disableHealthTimeout"), "can only be set to true when the update strategy is `AutoInPlaceUpdate` or `ManualInPlaceUpdate`"))
 	}
 
 	if worker.UpdateStrategy != nil {
@@ -2347,11 +2351,12 @@ func ValidatePositiveIntOrPercent(intOrPercent *intstr.IntOrString, fldPath *fie
 		return allErrs
 	}
 
-	if intOrPercent.Type == intstr.String {
+	switch intOrPercent.Type {
+	case intstr.String:
 		if validation.IsValidPercent(intOrPercent.StrVal) != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath, intOrPercent, "must be an integer or percentage (e.g '5%')"))
 		}
-	} else if intOrPercent.Type == intstr.Int {
+	case intstr.Int:
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(intOrPercent.IntValue()), fldPath)...)
 	}
 
@@ -2782,4 +2787,32 @@ func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []stri
 	}
 
 	return sets.List(resources)
+}
+
+// ValidateControlPlaneAutoscaling validates the given auto-scaling configuration.
+func ValidateControlPlaneAutoscaling(autoscaling *core.ControlPlaneAutoscaling, minRequired corev1.ResourceList, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if autoscaling != nil {
+		if len(autoscaling.MinAllowed) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("minAllowed"), "must provide minAllowed"))
+			return allErrs
+		}
+
+		allowedResources := sets.New(corev1.ResourceCPU, corev1.ResourceMemory)
+		for resource, quantity := range autoscaling.MinAllowed {
+			resourcePath := fldPath.Child("minAllowed", resource.String())
+			if !allowedResources.Has(resource) {
+				allErrs = append(allErrs, field.NotSupported(resourcePath, resource, allowedResources.UnsortedList()))
+			}
+
+			if minValue, ok := minRequired[resource]; ok && quantity.Cmp(minValue) < 0 {
+				allErrs = append(allErrs, field.Invalid(resourcePath, quantity, fmt.Sprintf("value must be bigger than >= %s", minValue.String())))
+			}
+
+			allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue(resource.String(), quantity, resourcePath)...)
+		}
+	}
+
+	return allErrs
 }

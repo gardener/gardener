@@ -61,12 +61,16 @@ The primary DNS provider manages `DNSRecord` resources (mandatory for Gardener r
 ### Generic Extensions
 
 - [Minimal Working Example](https://github.com/23technologies/gardener-extension-mwe)
+- [Registry Cache](https://github.com/gardener/gardener-extension-registry-cache)
 - [Shoot Certificate Service](https://github.com/gardener/gardener-extension-shoot-cert-service)
 - [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service)
+- [Shoot Falco Service](https://github.com/gardener/gardener-extension-shoot-falco-service)
 - [Shoot Flux Service](https://github.com/23technologies/gardener-extension-shoot-flux)
-- [Shoot OpenID Connect Service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
+- [Shoot Lakom Service](https://github.com/gardener/gardener-extension-shoot-lakom-service)
 - [Shoot Networking Filter](https://github.com/gardener/gardener-extension-shoot-networking-filter)
 - [Shoot Networking Problem Detector](https://github.com/gardener/gardener-extension-shoot-networking-problemdetector)
+- [Shoot OpenID Connect Service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
+- [Shoot Rsyslog Relp](https://github.com/gardener/gardener-extension-shoot-rsyslog-relp)
 
 If you implemented a new extension, please feel free to add it to this list!
 

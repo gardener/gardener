@@ -565,6 +565,14 @@ message ControlPlane {
   optional HighAvailability highAvailability = 1;
 }
 
+// ControlPlaneAutoscaling contains auto-scaling configuration options for control-plane components.
+message ControlPlaneAutoscaling {
+  // MinAllowed configures the minimum allowed resource requests for vertical pod autoscaling..
+  // Configuration of minAllowed resources is an advanced feature that can help clusters to overcome scale-up delays.
+  // Default values are not applied to this field.
+  map<string, .k8s.io.apimachinery.pkg.api.resource.Quantity> minAllowed = 1;
+}
+
 // ControllerDeployment contains information about how this controller is deployed.
 message ControllerDeployment {
   // Standard object metadata.
@@ -575,6 +583,11 @@ message ControllerDeployment {
 
   // ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
   optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 3;
+
+  // InjectGardenKubeconfig controls whether a kubeconfig to the garden cluster should be injected into workload
+  // resources.
+  // +optional
+  optional bool injectGardenKubeconfig = 4;
 }
 
 // ControllerDeploymentList is a collection of ControllerDeployments.
@@ -866,6 +879,24 @@ message DualApprovalForDeletion {
   optional bool includeServiceAccounts = 3;
 }
 
+// ETCD contains configuration for etcds of the shoot cluster.
+message ETCD {
+  // Main contains configuration for the main etcd.
+  // +optional
+  optional ETCDConfig main = 1;
+
+  // Events contains configuration for the events etcd.
+  // +optional
+  optional ETCDConfig events = 2;
+}
+
+// ETCDConfig contains etcd configuration.
+message ETCDConfig {
+  // Autoscaling contains auto-scaling configuration options for etcd.
+  // +optional
+  optional ControlPlaneAutoscaling autoscaling = 1;
+}
+
 // ETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
 message ETCDEncryptionKeyRotation {
   // Phase describes the phase of the ETCD encryption key credential rotation.
@@ -953,7 +984,7 @@ message ExposureClassScheduling {
   repeated Toleration tolerations = 2;
 }
 
-// Extension contains type and provider information for Shoot extensions.
+// Extension contains type and provider information for extensions.
 message Extension {
   // Type is the type of the extension resource.
   optional string type = 1;
@@ -1278,6 +1309,10 @@ message KubeAPIServerConfig {
   // This field is only available for Kubernetes v1.30 or later.
   // +optional
   optional StructuredAuthorization structuredAuthorization = 18;
+
+  // Autoscaling contains auto-scaling configuration options for the kube-apiserver.
+  // +optional
+  optional ControlPlaneAutoscaling autoscaling = 19;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -1613,6 +1648,10 @@ message Kubernetes {
   //
   // Deprecated: This field is deprecated and will be removed in gardener v1.120
   optional bool enableStaticTokenKubeconfig = 10;
+
+  // ETCD contains configuration for etcds of the shoot cluster.
+  // +optional
+  optional ETCD etcd = 11;
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.
@@ -1747,6 +1786,15 @@ message MachineControllerManagerSettings {
   // NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
   // +optional
   repeated string nodeConditions = 5;
+
+  // MachineInPlaceUpdateTimeout is the timeout after which in-place update is declared failed.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration inPlaceUpdateTimeout = 6;
+
+  // DisableHealthTimeout if set to true, health timeout will be ignored. Leading to machine never being declared failed.
+  // This is intended to be used only for in-place updates.
+  // +optional
+  optional bool disableHealthTimeout = 7;
 }
 
 // MachineImage defines the name and multiple versions of the machine image in any environment.
@@ -1961,6 +2009,12 @@ message NamespacedCloudProfileSpec {
   // ProviderConfig contains provider-specific configuration for the profile.
   // +optional
   optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 8;
+
+  // Limits configures operational limits for Shoot clusters using this NamespacedCloudProfile.
+  // If a limit is already set in the parent CloudProfile, it can only be more restrictive in the NamespacedCloudProfile.
+  // See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
+  // +optional
+  optional Limits limits = 9;
 }
 
 // NamespacedCloudProfileStatus holds the most recently observed status of the NamespacedCloudProfile.
@@ -2081,6 +2135,11 @@ message OCIRepository {
   // Digest of the image to pull, takes precedence over tag.
   // +optional
   optional string digest = 4;
+
+  // PullSecretRef is a reference to a secret containing the pull secret.
+  // The secret must be of type `kubernetes.io/dockerconfigjson` and must be located in the `garden` namespace.
+  // +optional
+  optional .k8s.io.api.core.v1.LocalObjectReference pullSecretRef = 5;
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.
@@ -2744,6 +2803,14 @@ message SeedSpec {
   // AccessRestrictions describe a list of access restrictions for this seed cluster.
   // +optional
   repeated AccessRestriction accessRestrictions = 10;
+
+  // Extensions contain type and provider information for Seed extensions.
+  // +optional
+  repeated Extension extensions = 11;
+
+  // Resources holds a list of named resource references that can be referred to in extension configs by their names.
+  // +optional
+  repeated NamedResourceReference resources = 12;
 }
 
 // SeedStatus is the status of a Seed.
@@ -3478,11 +3545,15 @@ message Worker {
 
   // MaxSurge is maximum number of machines that are created during an update.
   // This value is divided by the number of configured zones for a fair distribution.
+  // Defaults to 0 in case of an in-place update.
+  // Defaults to 1 in case of a rolling update.
   // +optional
   optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString maxSurge = 10;
 
   // MaxUnavailable is the maximum number of machines that can be unavailable during an update.
   // This value is divided by the number of configured zones for a fair distribution.
+  // Defaults to 1 in case of an in-place update.
+  // Defaults to 0 in case of a rolling update.
   // +optional
   optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString maxUnavailable = 11;
 

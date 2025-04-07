@@ -14,7 +14,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -80,7 +79,6 @@ var _ = Describe("GardenerAPIServer", func() {
 		podDisruptionBudget *policyv1.PodDisruptionBudget
 		serviceRuntime      *corev1.Service
 		vpa                 *vpaautoscalingv1.VerticalPodAutoscaler
-		hpa                 *autoscalingv2.HorizontalPodAutoscaler
 		deployment          *appsv1.Deployment
 		apiServiceFor       = func(group, version string) *apiregistrationv1.APIService {
 			return &apiregistrationv1.APIService{
@@ -121,19 +119,20 @@ var _ = Describe("GardenerAPIServer", func() {
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
 		values = Values{
 			Values: apiserver.Values{
-				Autoscaling: apiserver.AutoscalingConfig{
-					Replicas:           &replicas,
-					APIServerResources: resources,
-				},
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{
 					ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"},
 				},
 				RuntimeVersion: semver.MustParse("1.27.1"),
 			},
+			Autoscaling: AutoscalingConfig{
+				Replicas:           &replicas,
+				APIServerResources: resources,
+			},
 			ClusterIdentity:             clusterIdentity,
 			Image:                       image,
 			LogFormat:                   logFormat,
 			LogLevel:                    logLevel,
+			GoAwayChance:                ptr.To(0.0015),
 			TopologyAwareRoutingEnabled: true,
 			WorkloadIdentityTokenIssuer: workloadIdentityIssuer,
 		}
@@ -245,74 +244,10 @@ var _ = Describe("GardenerAPIServer", func() {
 								corev1.ResourceMemory: resource.MustParse("200M"),
 							},
 							MaxAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("7"),
-								corev1.ResourceMemory: resource.MustParse("28G"),
+								corev1.ResourceCPU:    resource.MustParse("12"),
+								corev1.ResourceMemory: resource.MustParse("48G"),
 							},
 							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-						},
-					},
-				},
-			},
-		}
-		hpa = &autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-apiserver",
-				Namespace: namespace,
-				Labels: map[string]string{
-					"app":  "gardener",
-					"role": "apiserver",
-					"high-availability-config.resources.gardener.cloud/type": "server",
-				},
-			},
-			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-				MinReplicas: ptr.To[int32](2),
-				MaxReplicas: 6,
-				ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       "gardener-apiserver",
-				},
-				Metrics: []autoscalingv2.MetricSpec{
-					{
-						Type: autoscalingv2.ResourceMetricSourceType,
-						Resource: &autoscalingv2.ResourceMetricSource{
-							Name: corev1.ResourceCPU,
-							Target: autoscalingv2.MetricTarget{
-								Type:         autoscalingv2.AverageValueMetricType,
-								AverageValue: ptr.To(resource.MustParse("6")),
-							},
-						},
-					},
-					{
-						Type: autoscalingv2.ResourceMetricSourceType,
-						Resource: &autoscalingv2.ResourceMetricSource{
-							Name: corev1.ResourceMemory,
-							Target: autoscalingv2.MetricTarget{
-								Type:         autoscalingv2.AverageValueMetricType,
-								AverageValue: ptr.To(resource.MustParse("24G")),
-							},
-						},
-					},
-				},
-				Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
-					ScaleUp: &autoscalingv2.HPAScalingRules{
-						StabilizationWindowSeconds: ptr.To[int32](60),
-						Policies: []autoscalingv2.HPAScalingPolicy{
-							{
-								Type:          autoscalingv2.PercentScalingPolicy,
-								Value:         100,
-								PeriodSeconds: 60,
-							},
-						},
-					},
-					ScaleDown: &autoscalingv2.HPAScalingRules{
-						StabilizationWindowSeconds: ptr.To[int32](1800),
-						Policies: []autoscalingv2.HPAScalingPolicy{
-							{
-								Type:          autoscalingv2.PodsScalingPolicy,
-								Value:         1,
-								PeriodSeconds: 300,
-							},
 						},
 					},
 				},
@@ -325,7 +260,6 @@ var _ = Describe("GardenerAPIServer", func() {
 				Labels: map[string]string{
 					"app":  "gardener",
 					"role": "apiserver",
-					"high-availability-config.resources.gardener.cloud/type": "server",
 				},
 				Annotations: map[string]string{
 					"reference.resources.gardener.cloud/configmap-0e4e3fd5": "gardener-apiserver-audit-policy-config-f5b578b4",
@@ -402,6 +336,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								"--log-level=" + logLevel,
 								"--log-format=" + logFormat,
 								"--secure-port=8443",
+								"--goaway-chance=0.001500",
 								"--workload-identity-token-issuer=" + workloadIdentityIssuer,
 								"--workload-identity-signing-key-file=/etc/gardener-apiserver/workload-identity/signing/key.pem",
 								"--http2-max-streams-per-connection=1000",
@@ -455,6 +390,9 @@ var _ = Describe("GardenerAPIServer", func() {
 								InitialDelaySeconds: 15,
 								PeriodSeconds:       10,
 								TimeoutSeconds:      15,
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -1337,10 +1275,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 			Context("resources generation", func() {
 				var expectedRuntimeObjects []client.Object
-				BeforeEach(func() {
-					values.Values.Autoscaling.MinReplicas = 2
-					values.Values.Autoscaling.MaxReplicas = 6
-				})
 
 				JustBeforeEach(func() {
 					Expect(deployer.Deploy(ctx)).To(Succeed())
@@ -1393,7 +1327,7 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					managedResourceSecretVirtual.Name = managedResourceVirtual.Spec.SecretRefs[0].Name
 					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretVirtual), managedResourceSecretVirtual)).To(Succeed())
 
-					expectedRuntimeObjects = []client.Object{deployment, serviceMonitor, vpa, hpa, podDisruptionBudget}
+					expectedRuntimeObjects = []client.Object{deployment, serviceMonitor, vpa, podDisruptionBudget}
 					Expect(managedResourceSecretRuntime.Type).To(Equal(corev1.SecretTypeOpaque))
 					Expect(managedResourceSecretRuntime.Immutable).To(Equal(ptr.To(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))

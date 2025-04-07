@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: filters.fluentbit.fluent.io
 spec:
   group: fluentbit.fluent.io
@@ -101,7 +101,16 @@ spec:
                       description: CustomPlugin defines a Custom plugin configuration.
                       properties:
                         config:
+                          description: |-
+                            Config holds any unsupported plugins classic configurations,
+                            if ConfigFileFormat is set to yaml, this filed will be ignored
                           type: string
+                        yamlConfig:
+                          description: YamlConfig holds the unsupported plugins yaml
+                            configurations, it only works when the ConfigFileFormat
+                            is yaml
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
                       type: object
                     grep:
                       description: Grep defines Grep Filter configuration.
@@ -191,6 +200,13 @@ spec:
                             when capacity is reached. In order to enable this option, you should set the number to a time interval.
                             For example, set this value to 60 or 60s and cache entries which have been created more than 60s will be evicted.
                           type: string
+                        kubeMetaNamespaceCacheTTL:
+                          description: |-
+                            Configurable TTL for K8s cached namespace metadata.
+                            By default, it is set to 900 which means a 15min TTL for namespace cache entries.
+                            Setting this to 0 will mean entries are evicted at random once the cache is full.
+                          format: int32
+                          type: integer
                         kubeMetaPreloadCacheDir:
                           description: |-
                             If set, Kubernetes meta-data can be cached/pre-loaded from files in JSON format in this directory,
@@ -200,6 +216,11 @@ spec:
                           description: |-
                             When the source records comes from Tail input plugin,
                             this option allows to specify what's the prefix used in Tail configuration.
+                          type: string
+                        kubeTokenCommand:
+                          description: |-
+                            Command to get Kubernetes authorization token.
+                            By default, it will be NULL and we will use token file to get token.
                           type: string
                         kubeTokenFile:
                           description: Token file
@@ -245,6 +266,19 @@ spec:
                             the data contained in the log key. Recommended use is
                             for developers or testing only.
                           type: string
+                        namespaceAnnotations:
+                          description: Include Kubernetes namespace resource annotations
+                            in the extra metadata.
+                          type: boolean
+                        namespaceLabels:
+                          description: Include Kubernetes namespace resource labels
+                            in the extra metadata.
+                          type: boolean
+                        namespaceMetadataOnly:
+                          description: |-
+                            Include Kubernetes namespace metadata only and no pod metadata.
+                            If this is set, the values of Labels and Annotations are ignored.
+                          type: boolean
                         regexParser:
                           description: |-
                             Set an alternative Parser to process record Tag and extract pod_name, namespace_name, container_name and docker_id.
@@ -279,6 +313,94 @@ spec:
                             instead of calling Kube Server API to enhance the log.
                             This could mitigate the Kube API heavy traffic issue for large cluster.
                           type: boolean
+                      type: object
+                    logToMetrics:
+                      description: LogToMetrics defines a Log to Metrics Filter configuration.
+                      properties:
+                        addLabel:
+                          description: Add a custom label NAME and set the value to
+                            the value of KEY
+                          items:
+                            type: string
+                          type: array
+                        alias:
+                          description: Alias for the plugin
+                          type: string
+                        bucket:
+                          description: Defines a bucket for histogram
+                          items:
+                            type: string
+                          type: array
+                        discardLogs:
+                          description: |-
+                            Flag that defines if logs should be discarded after processing. This applies
+                            for all logs, no matter if they have emitted metrics or not.
+                          type: boolean
+                        emitterMemBufLimit:
+                          description: set a buffer limit to restrict memory usage
+                            of metrics emitter
+                          type: string
+                        emitterName:
+                          description: Name of the emitter (advanced users)
+                          type: string
+                        exclude:
+                          description: |-
+                            Optional filter for records in which the content of KEY does not matches the regular expression.
+                            Value Format: FIELD REGEX
+                          items:
+                            type: string
+                          type: array
+                        kubernetesMode:
+                          description: |-
+                            If enabled, it will automatically put pod_id, pod_name, namespace_name, docker_id and container_name
+                            into the metric as labels. This option is intended to be used in combination with the kubernetes filter plugin.
+                          type: boolean
+                        labelField:
+                          description: Includes a record field as label dimension
+                            in the metric.
+                          items:
+                            type: string
+                          type: array
+                        metricDescription:
+                          description: Sets a help text for the metric.
+                          type: string
+                        metricMode:
+                          description: Defines the mode for the metric. Valid values
+                            are [counter, gauge or histogram]
+                          type: string
+                        metricName:
+                          description: Sets the name of the metric.
+                          type: string
+                        metricNamespace:
+                          description: Namespace of the metric
+                          type: string
+                        metricSubsystem:
+                          description: Sets a sub-system for the metric.
+                          type: string
+                        regex:
+                          description: |-
+                            Optional filter for records in which the content of KEY matches the regular expression.
+                            Value Format: FIELD REGEX
+                          items:
+                            type: string
+                          type: array
+                        retryLimit:
+                          description: 'RetryLimit describes how many times fluent-bit
+                            should retry to send data to a specific output. If set
+                            to false fluent-bit will try indefinetly. If set to any
+                            integer N>0 it will try at most N+1 times. Leading zeros
+                            are not allowed (values such as 007, 0150, 01 do not work).
+                            If this property is not defined fluent-bit will use the
+                            default value: 1.'
+                          pattern: ^(((f|F)alse)|(no_limits)|(no_retries)|([1-9]+[0-9]*))$
+                          type: string
+                        tag:
+                          description: Defines the tag for the generated metrics record
+                          type: string
+                        valueField:
+                          description: Specify the record field that holds a numerical
+                            value
+                          type: string
                       type: object
                     lua:
                       description: Lua defines Lua Filter configuration.
@@ -340,6 +462,13 @@ spec:
                             If you desire timestamp precision enabling this option will pass the timestamp as
                             a Lua table with keys sec for seconds since epoch and nsec for nanoseconds.
                           type: boolean
+                        typeArrayKey:
+                          description: |-
+                            If these keys are matched, the fields are handled as array. If more than
+                            one key, delimit by space. It is useful the array can be empty.
+                          items:
+                            type: string
+                          type: array
                         typeIntKey:
                           description: |-
                             If these keys are matched, the fields are converted to integer.
@@ -748,6 +877,53 @@ spec:
                           format: int64
                           type: integer
                       type: object
+                    wasm:
+                      description: Wasm defines a Wasm configuration.
+                      properties:
+                        accessiblePaths:
+                          description: Specify the whitelist of paths to be able to
+                            access paths from WASM programs.
+                          items:
+                            type: string
+                          type: array
+                        alias:
+                          description: Alias for the plugin
+                          type: string
+                        eventFormat:
+                          description: 'Define event format to interact with Wasm
+                            programs: msgpack or json. Default: json'
+                          type: string
+                        functionName:
+                          description: Wasm function name that will be triggered to
+                            do filtering. It's assumed that the function is built
+                            inside the Wasm program specified above.
+                          type: string
+                        retryLimit:
+                          description: 'RetryLimit describes how many times fluent-bit
+                            should retry to send data to a specific output. If set
+                            to false fluent-bit will try indefinetly. If set to any
+                            integer N>0 it will try at most N+1 times. Leading zeros
+                            are not allowed (values such as 007, 0150, 01 do not work).
+                            If this property is not defined fluent-bit will use the
+                            default value: 1.'
+                          pattern: ^(((f|F)alse)|(no_limits)|(no_retries)|([1-9]+[0-9]*))$
+                          type: string
+                        wasmHeapSize:
+                          description: Size of the heap size of Wasm execution. Review
+                            unit sizes for allowed values.
+                          pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
+                          type: string
+                        wasmPath:
+                          description: Path to the built Wasm program that will be
+                            used. This can be a relative path against the main configuration
+                            file.
+                          type: string
+                        wasmStackSize:
+                          description: Size of the stack size of Wasm execution. Review
+                            unit sizes for allowed values.
+                          pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
+                          type: string
+                      type: object
                   type: object
                 type: array
               logLevel:
@@ -769,6 +945,10 @@ spec:
                   A regular expression to match against the tags of incoming records.
                   Use this option if you want to use the full regex syntax.
                 type: string
+              ordinal:
+                description: An ordinal to influence filter ordering
+                format: int32
+                type: integer
             type: object
         type: object
     served: true

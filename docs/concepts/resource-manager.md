@@ -382,109 +382,6 @@ The GC controller would delete the `ConfigMap/test-1234` because it is considere
 
 The GC controller can be activated by setting the `.controllers.garbageCollector.enabled` field to `true` in the component configuration.
 
-### [TokenInvalidator Controller](../../pkg/resourcemanager/controller/tokeninvalidator)
-
-The Kubernetes community is slowly transitioning from static `ServiceAccount` token `Secret`s to [`ServiceAccount` Token Volume Projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection).
-Typically, when you create a `ServiceAccount`
-
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: default
-```
-
-then the [`serviceaccount-token`](https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/serviceaccount/tokens_controller.go) controller (part of `kube-controller-manager`) auto-generates a `Secret` with a static token:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-   annotations:
-      kubernetes.io/service-account.name: default
-      kubernetes.io/service-account.uid: 86e98645-2e05-11e9-863a-b2d4d086dd5a)
-   name: default-token-ntxs9
-type: kubernetes.io/service-account-token
-data:
-   ca.crt: base64(cluster-ca-cert)
-   namespace: base64(namespace)
-   token: base64(static-jwt-token)
-```
-
-Unfortunately, when using `ServiceAccount` Token Volume Projection in a `Pod`, this static token is actually not used at all:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: nginx
-spec:
-  serviceAccountName: default
-  containers:
-  - image: nginx
-    name: nginx
-    volumeMounts:
-    - mountPath: /var/run/secrets/tokens
-      name: token
-  volumes:
-  - name: token
-    projected:
-      sources:
-      - serviceAccountToken:
-          path: token
-          expirationSeconds: 7200
-```
-
-While the `Pod` is now using an expiring and auto-rotated token, the static token is still generated and valid.
-
-There is neither a way of preventing `kube-controller-manager` to generate such static tokens, nor a way to proactively remove or invalidate them:
-
-- https://github.com/kubernetes/kubernetes/issues/77599
-- https://github.com/kubernetes/kubernetes/issues/77600
-
-Disabling the `serviceaccount-token` controller is an option, however, especially in the Gardener context it may either break end-users or it may not even be possible to control such settings.
-Also, even if a future Kubernetes version supports native configuration of the above behaviour, Gardener still supports older versions which won't get such features but need a solution as well.
-
-This is where the _TokenInvalidator_ comes into play:
-Since it is not possible to prevent `kube-controller-manager` from generating static `ServiceAccount` `Secret`s, the _TokenInvalidator_ is, as its name suggests, just invalidating these tokens.
-It considers all such `Secret`s belonging to `ServiceAccount`s with `.automountServiceAccountToken=false`.
-By default, all namespaces in the target cluster are watched, however, this can be configured by specifying the `.targetClientConnection.namespace` field in the component configuration.
-Note that this setting also affects all other controllers and webhooks since it's a central configuration.
-
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: my-serviceaccount
-automountServiceAccountToken: false
-```
-
-This will result in a static `ServiceAccount` token secret whose `token` value is invalid:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  annotations:
-    kubernetes.io/service-account.name: my-serviceaccount
-    kubernetes.io/service-account.uid: 86e98645-2e05-11e9-863a-b2d4d086dd5a
-  name: my-serviceaccount-token-ntxs9
-type: kubernetes.io/service-account-token
-data:
-  ca.crt: base64(cluster-ca-cert)
-  namespace: base64(namespace)
-  token: AAAA
-```
-
-Any attempt to regenerate the token or creating a new such secret will again make the component invalidating it.
-
-> You can opt-out of this behaviour for `ServiceAccount`s setting `.automountServiceAccountToken=false` by labeling them with `token-invalidator.resources.gardener.cloud/skip=true`.
-
-In order to enable the _TokenInvalidator_ you have to set both `.controllers.tokenValidator.enabled=true` and `.webhooks.tokenValidator.enabled=true` in the component configuration.
-
-The below graphic shows an overview of the Token Invalidator for Service account secrets in the Shoot cluster.
-![image](images/resource-manager-token-invalidator.jpg)
-
 ### [TokenRequestor Controller](../../pkg/controller/tokenrequestor)
 
 This controller provides the service to create and auto-renew tokens via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/).
@@ -1046,6 +943,8 @@ The webhook performs the following actions:
           minDomains: 3 # lower value of max replicas or 3
           maxSkew: 1
           whenUnsatisfiable: ScheduleAnyway # or DoNotSchedule
+          matchLabelKeys: 
+          - pod-template-hash
           labelSelector: ...
       ```
 
@@ -1059,11 +958,15 @@ The webhook performs the following actions:
         - topologyKey: kubernetes.io/hostname
           maxSkew: 1
           whenUnsatisfiable: ScheduleAnyway # or DoNotSchedule
+          matchLabelKeys: 
+          - pod-template-hash
           labelSelector: ...
         - topologyKey: topology.kubernetes.io/zone
           minDomains: 2 # lower value of max replicas or number of zones
           maxSkew: 1
           whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys: 
+          - pod-template-hash
           labelSelector: ...
       ```
 
@@ -1160,7 +1063,7 @@ spec:
 ```
 
 The procedure circumvents a [known limitation](https://github.com/kubernetes/kubernetes/issues/98215) with TSCs which leads to imbalanced deployments after rolling updates.
-Gardener enables this webhook to schedule pods of deployments across nodes and zones.
+Gardener enables this webhook to schedule pods of deployments across nodes and zones. This webhook is enabled only when the `MatchLabelKeysInPodTopologySpread` feature gate (beta since `v1.27`) is explicitly disabled in the `kube-apiserver` and `kube-scheduler`.
 
 Please note that the `gardener-resource-manager` itself as well as pods labelled with `topology-spread-constraints.resources.gardener.cloud/skip` are excluded from any mutations.
 
@@ -1212,6 +1115,9 @@ endpoints:
 
 The webhook aims to circumvent issues with the Kubernetes `TopologyAwareHints` feature that currently does not allow to achieve a deterministic topology-aware traffic routing. For more details, see the following issue [kubernetes/kubernetes#113731](https://github.com/kubernetes/kubernetes/issues/113731) that describes drawbacks of the `TopologyAwareHints` feature for our use case.
 If the above-mentioned issue gets resolved and there is a native support for deterministic topology-aware traffic routing in Kubernetes, then this webhook can be dropped in favor of the native Kubernetes feature.
+
+> [!NOTE]  
+> The EndpointSlice Hints webhook is disabled when the runtime Kubernetes version is >= 1.32. Instead, the `ServiceTrafficDistribution` feature is used. See more details in [Topology-Aware Traffic Routing](../operations/topology_aware_routing.md).
 
 ### Validating Webhooks
 

@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: clusterinputs.fluentbit.fluent.io
 spec:
   group: fluentbit.fluent.io
@@ -66,7 +66,15 @@ spec:
                 description: CustomPlugin defines Custom Input configuration.
                 properties:
                   config:
+                    description: |-
+                      Config holds any unsupported plugins classic configurations,
+                      if ConfigFileFormat is set to yaml, this filed will be ignored
                     type: string
+                  yamlConfig:
+                    description: YamlConfig holds the unsupported plugins yaml configurations,
+                      it only works when the ConfigFileFormat is yaml
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                 type: object
               dummy:
                 description: Dummy defines Dummy Input configuration.
@@ -85,6 +93,48 @@ spec:
                   tag:
                     description: Tag name associated to all records comming from this
                       plugin.
+                    type: string
+                type: object
+              execWasi:
+                description: ExecWasi defines the exec wasi input plugin configuration
+                properties:
+                  accessiblePaths:
+                    description: Specify the whitelist of paths to be able to access
+                      paths from WASM programs.
+                    items:
+                      type: string
+                    type: array
+                  bufSize:
+                    description: Size of the buffer (check unit sizes for allowed
+                      values)
+                    pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
+                    type: string
+                  intervalNSec:
+                    description: Polling interval (nanoseconds).
+                    format: int64
+                    type: integer
+                  intervalSec:
+                    description: Polling interval (seconds).
+                    format: int32
+                    type: integer
+                  parser:
+                    description: Specify the name of a parser to interpret the entry
+                      as a structured message.
+                    type: string
+                  threaded:
+                    description: 'Indicates whether to run this input in its own thread.
+                      Default: false.'
+                    type: boolean
+                  wasiPath:
+                    description: The place of a WASM program file.
+                    type: string
+                  wasmHeapSize:
+                    pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
+                    type: string
+                  wasmStackSize:
+                    description: Size of the stack size of Wasm execution. Review
+                      unit sizes for allowed values.
+                    pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
                     type: string
                 type: object
               fluentBitMetrics:
@@ -252,6 +302,72 @@ spec:
                         type: string
                     type: object
                 type: object
+              kubernetesEvents:
+                description: KubernetesEvents defines the KubernetesEvents input plugin
+                  configuration
+                properties:
+                  db:
+                    description: Set a database file to keep track of recorded Kubernetes
+                      events
+                    type: string
+                  dbSync:
+                    description: 'Set a database sync method. values: extra, full,
+                      normal and off'
+                    type: string
+                  intervalNsec:
+                    description: 'Set the polling interval for each channel (sub seconds:
+                      nanoseconds).'
+                    format: int64
+                    type: integer
+                  intervalSec:
+                    description: Set the polling interval for each channel.
+                    format: int32
+                    type: integer
+                  kubeCAFile:
+                    description: CA certificate file
+                    type: string
+                  kubeCAPath:
+                    description: Absolute path to scan for certificate files
+                    type: string
+                  kubeNamespace:
+                    description: Kubernetes namespace to query events from. Gets events
+                      from all namespaces by default
+                    type: string
+                  kubeRequestLimit:
+                    description: kubernetes limit parameter for events query, no limit
+                      applied when set to 0.
+                    format: int32
+                    type: integer
+                  kubeRetentionTime:
+                    description: Kubernetes retention time for events.
+                    type: string
+                  kubeTokenFile:
+                    description: Token file
+                    type: string
+                  kubeTokenTTL:
+                    description: |-
+                      configurable 'time to live' for the K8s token. By default, it is set to 600 seconds.
+                      After this time, the token is reloaded from Kube_Token_File or the Kube_Token_Command.
+                    type: string
+                  kubeURL:
+                    description: API Server end-point
+                    type: string
+                  tag:
+                    description: Tag name associated to all records comming from this
+                      plugin.
+                    type: string
+                  tlsDebug:
+                    description: Debug level between 0 (nothing) and 4 (every detail).
+                    format: int32
+                    type: integer
+                  tlsVerify:
+                    description: When enabled, turns on certificate validation when
+                      connecting to the Kubernetes API server.
+                    type: boolean
+                  tlsVhost:
+                    description: Set optional TLS virtual host.
+                    type: string
+                type: object
               logLevel:
                 enum:
                 - "off"
@@ -352,11 +468,22 @@ spec:
                       and 204 are supported(default 201).
                     format: int32
                     type: integer
+                  tag:
+                    description: opentelemetry uses the tag value for incoming metrics.
+                    type: string
+                  tagFromURI:
+                    description: If true, tag will be created from uri. e.g. v1_metrics
+                      from /v1/metrics
+                    type: boolean
                   tagKey:
                     description: Specify the key name to overwrite a tag. If set,
                       the tag will be overwritten by a value of the key.
                     type: string
                 type: object
+              processors:
+                description: Processors defines the processors configuration
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               prometheusScrapeMetrics:
                 description: PrometheusScrapeMetrics  defines Prometheus Scrape Metrics
                   Input configuration.
@@ -632,6 +759,11 @@ spec:
                       This will help to reassembly multiline messages originally split by Docker or CRI
                       Specify one or Multiline Parser definition to apply to the content.
                     type: string
+                  offsetKey:
+                    description: |-
+                      If enabled, Fluent Bit appends the offset of the current monitored file as part of the record.
+                      The value assigned becomes the key in the map
+                    type: string
                   parser:
                     description: Specify the name of a parser to interpret the entry
                       as a structured message.
@@ -680,6 +812,10 @@ spec:
                       a file once is rotated in case some pending data is flushed.
                     format: int64
                     type: integer
+                  skipEmptyLines:
+                    description: Skips empty lines in the log file from any further
+                      processing or output.
+                    type: boolean
                   skipLongLines:
                     description: |-
                       When a monitored file reach it buffer capacity due to a very long line (Buffer_Max_Size),
@@ -701,6 +837,10 @@ spec:
                     type: string
                   tagRegex:
                     description: Set a regex to exctract fields from the file
+                    type: string
+                  threaded:
+                    description: Threaded mechanism allows input plugin to run in
+                      a separate thread which helps to desaturate the main pipeline.
                     type: string
                 type: object
               tcp:
@@ -737,6 +877,52 @@ spec:
                     description: When the expected Format is set to none, Fluent Bit
                       needs a separator string to split the records. By default it
                       uses the breakline character (LF or 0x10).
+                    type: string
+                type: object
+              udp:
+                description: UDP defines the UDP input plugin configuration
+                properties:
+                  bufferSize:
+                    description: |-
+                      BufferSize Specify the maximum buffer size in KB to receive a JSON message.
+                      If not set, the default size will be the value of Chunk_Size.
+                    pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
+                    type: string
+                  chunkSize:
+                    description: |-
+                      By default the buffer to store the incoming JSON messages, do not allocate the maximum memory allowed,
+                      instead it allocate memory when is required.
+                      The rounds of allocations are set by Chunk_Size in KB. If not set, Chunk_Size is equal to 32 (32KB).
+                    pattern: ^\d+(k|K|KB|kb|m|M|MB|mb|g|G|GB|gb)?$
+                    type: string
+                  format:
+                    description: |-
+                      Format Specify the expected payload format. It support the options json and none.
+                      When using json, it expects JSON maps, when is set to none,
+                      it will split every record using the defined Separator (option below).
+                    type: string
+                  listen:
+                    description: 'Listen Listener network interface, default: 0.0.0.0'
+                    type: string
+                  port:
+                    description: 'Port Specify the UDP port where listening for connections,
+                      default: 5170'
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  separator:
+                    description: Separator When the expected Format is set to none,
+                      Fluent Bit needs a separator string to split the records. By
+                      default it uses the breakline character (LF or 0x10).
+                    type: string
+                  sourceAddressKey:
+                    description: SourceAddressKey Specify the key where the source
+                      address will be injected.
+                    type: string
+                  threaded:
+                    description: Threaded mechanism allows input plugin to run in
+                      a separate thread which helps to desaturate the main pipeline.
                     type: string
                 type: object
             type: object

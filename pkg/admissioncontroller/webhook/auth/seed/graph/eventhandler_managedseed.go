@@ -20,6 +20,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Informer) error {
@@ -113,7 +114,7 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 	if allowBootstrap {
 		switch *managedSeed.Spec.Gardenlet.Bootstrap {
 		case seedmanagementv1alpha1.BootstrapToken:
-			secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+gardenletbootstraputil.TokenID(managedSeed.ObjectMeta))
+			secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraptoken.TokenID(managedSeed.ObjectMeta))
 			g.addEdge(secretVertex, managedSeedVertex)
 
 		case seedmanagementv1alpha1.BootstrapServiceAccount:

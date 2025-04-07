@@ -129,7 +129,7 @@ var _ = Describe("TokenRequestor tests", func() {
 			newRestConfig = &rest.Config{
 				Host:            restConfig.Host,
 				BearerToken:     string(secret.Data["token"]),
-				TLSClientConfig: rest.TLSClientConfig{CAData: restConfig.TLSClientConfig.CAData},
+				TLSClientConfig: rest.TLSClientConfig{CAData: restConfig.CAData},
 			}
 		})
 
@@ -158,7 +158,7 @@ var _ = Describe("TokenRequestor tests", func() {
 					Name: "config",
 					Cluster: clientcmdv1.Cluster{
 						Server:                   restConfig.Host,
-						CertificateAuthorityData: restConfig.TLSClientConfig.CAData,
+						CertificateAuthorityData: restConfig.CAData,
 					},
 				}},
 				AuthInfos: []clientcmdv1.NamedAuthInfo{{

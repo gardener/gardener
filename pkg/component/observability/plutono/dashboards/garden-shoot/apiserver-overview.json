@@ -1611,7 +1611,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{verb=~\"$verb\"}[$__rate_interval])) by(resource,verb,subresource)",
+          "expr": "sum(rate(apiserver_request_total{verb=~\"$verb\",pod=~\"$pod\"}[$__rate_interval])) by(resource,verb,subresource)",
           "format": "time_series",
           "instant": false,
           "interval": "",

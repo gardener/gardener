@@ -197,7 +197,7 @@ func validateKubernetesVersions(versions []core.ExpirableVersion, fldPath *field
 }
 
 // ValidateMachineImages validates the given list of machine images for valid values and combinations.
-func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Path) field.ErrorList {
+func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Path, allowEmptyVersions bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(machineImages) == 0 {
@@ -222,7 +222,7 @@ func ValidateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
 		}
 
-		if len(image.Versions) == 0 {
+		if len(image.Versions) == 0 && !allowEmptyVersions {
 			allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for the machine image '%s'", image.Name)))
 		}
 
@@ -383,5 +383,36 @@ func validateMachineTypeStorage(storage core.MachineTypeStorage, fldPath *field.
 		allErrs = append(allErrs, kubernetescorevalidation.ValidateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
 	}
 
+	return allErrs
+}
+
+func validateExtensions(extensions []core.Extension, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	types := sets.Set[string]{}
+	for i, extension := range extensions {
+		if extension.Type == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("type"), "field must not be empty"))
+		} else if types.Has(extension.Type) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), extension.Type))
+		} else {
+			types.Insert(extension.Type)
+		}
+	}
+	return allErrs
+}
+
+func validateResources(resources []core.NamedResourceReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	names := sets.Set[string]{}
+	for i, resource := range resources {
+		if resource.Name == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "field must not be empty"))
+		} else if names.Has(resource.Name) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), resource.Name))
+		} else {
+			names.Insert(resource.Name)
+		}
+		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.ResourceRef, fldPath.Index(i).Child("resourceRef"))...)
+	}
 	return allErrs
 }

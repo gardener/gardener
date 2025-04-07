@@ -279,4 +279,82 @@ metadata:
 			Expect(string(secretData["res1"])).To(Equal(secretResource))
 		})
 	})
+
+	Describe("#ObjectsInSecretData", func() {
+		var (
+			secretData map[string][]byte
+
+			configMap *corev1.ConfigMap
+			secret    *corev1.Secret
+		)
+
+		BeforeEach(func() {
+			configMap = &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "configmap",
+					Namespace: "garden",
+				},
+				Data: map[string]string{
+					"key1": "key2",
+				},
+			}
+
+			secret = &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret",
+					Namespace: "kube-system",
+				},
+				Data: map[string][]byte{
+					"key": []byte("secret"),
+				},
+			}
+		})
+
+		JustBeforeEach(func() {
+			secretData = make(map[string][]byte)
+
+			var names []string
+
+			for _, obj := range []client.Object{configMap, secret} {
+				name := obj.GetName()
+
+				Expect(names).NotTo(ContainElement(name), "object name is already in use: "+name)
+				names = append(names, name)
+
+				data, err := yaml.Marshal(obj)
+				Expect(err).ToNot(HaveOccurred(), "error marshalling "+obj.GetObjectKind().GroupVersionKind().String())
+				secretData[name] = data
+			}
+		})
+
+		It("should return all objects in the secret data", func() {
+			objects, err := ObjectsInSecretData(secretData)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objects).To(HaveLen(2))
+
+			for _, object := range objects {
+				if object.(client.Object).GetName() == "configmap" {
+					returnedConfigMap := &corev1.ConfigMap{}
+					Expect(kubernetesscheme.Scheme.Convert(object, returnedConfigMap, nil)).To(Succeed())
+					returnedConfigMap.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "ConfigMap"}
+					Expect(returnedConfigMap).To(Equal(configMap))
+				}
+
+				if object.(client.Object).GetName() == "secret" {
+					returnedSecret := &corev1.Secret{}
+					Expect(kubernetesscheme.Scheme.Convert(object, returnedSecret, nil)).To(Succeed())
+					returnedSecret.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}
+					Expect(returnedSecret).To(Equal(secret))
+				}
+			}
+		})
+	})
 })

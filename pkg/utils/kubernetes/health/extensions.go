@@ -79,7 +79,7 @@ func checkExtensionObject(generation int64, observedGeneration int64, annotation
 			return fmt.Errorf("cannot parse gardener.cloud/timestamp annotation: %w", err)
 		}
 
-		if parsedTimestamp.Truncate(time.Second).UTC().After(lastOperation.LastUpdateTime.Time.UTC()) {
+		if parsedTimestamp.Truncate(time.Second).UTC().After(lastOperation.LastUpdateTime.UTC()) {
 			return fmt.Errorf(
 				"extension is not reconciled yet - reconciliation requested at %s, last update time is: %s",
 				parsedTimestamp.Truncate(time.Second).UTC().Format(time.RFC3339),

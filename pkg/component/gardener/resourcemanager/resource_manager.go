@@ -10,7 +10,8 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/Masterminds/semver/v3"
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -64,7 +65,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/seccompprofile"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/systemcomponentsconfig"
-	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -116,8 +116,6 @@ const (
 	SecretNameShootAccess = gardenerutils.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
 	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
 	LabelValue = "gardener-resource-manager"
-	// labelChecksum is a constant for the label key which holds the checksum of the pod template.
-	labelChecksum = "checksum/pod-template"
 
 	configMapNamePrefix = "gardener-resource-manager"
 	secretNameServer    = "gardener-resource-manager-server"
@@ -267,8 +265,6 @@ type Values struct {
 	ManagedResourceLabels map[string]string
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources.
 	MaxConcurrentHealthWorkers *int
-	// MaxConcurrentTokenInvalidatorWorkers configures the number of worker threads for concurrent token invalidator reconciliations.
-	MaxConcurrentTokenInvalidatorWorkers *int
 	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations.
 	MaxConcurrentTokenRequestorWorkers *int
 	// MaxConcurrentCSRApproverWorkers configures the number of worker threads for concurrent kubelet CSR approver reconciliations.
@@ -296,6 +292,8 @@ type Values struct {
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
+	// RuntimeKubernetesVersion is the Kubernetes version of the runtime cluster.
+	RuntimeKubernetesVersion *semver.Version
 	// SchedulingProfile is the kube-scheduler profile configured for the Shoot.
 	SchedulingProfile *gardencorev1beta1.SchedulingProfile
 	// DefaultSeccompProfileEnabled specifies if the defaulting seccomp profile webhook of GRM should be enabled or not.
@@ -637,12 +635,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 		config.Controllers.TokenRequestor.ConcurrentSyncs = v
 	}
 
-	if v := r.values.MaxConcurrentTokenInvalidatorWorkers; v != nil {
-		config.Webhooks.TokenInvalidator.Enabled = true
-		config.Controllers.TokenInvalidator.Enabled = true
-		config.Controllers.TokenInvalidator.ConcurrentSyncs = v
-	}
-
 	if r.values.SchedulingProfile != nil && *r.values.SchedulingProfile != gardencorev1beta1.SchedulingProfileBalanced {
 		config.Webhooks.PodSchedulerName.Enabled = true
 		config.Webhooks.PodSchedulerName.SchedulerName = ptr.To(kubescheduler.BinPackingSchedulerName)
@@ -759,7 +751,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		}
 
 		topologyAwareRoutingEnabled := r.values.TopologyAwareRoutingEnabled && r.values.ResponsibilityMode == ForTarget
-		gardenerutils.ReconcileTopologyAwareRoutingMetadata(service, topologyAwareRoutingEnabled)
+		gardenerutils.ReconcileTopologyAwareRoutingSettings(service, topologyAwareRoutingEnabled, r.values.RuntimeKubernetesVersion)
 
 		service.Spec.Selector = r.appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
@@ -833,8 +825,8 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
 		)
 		// If 'BootstrapControlPlaneNode', there is typically no CoreDNS running yet, i.e, we cannot rely on the
-		// standard 'kubernetes.default.svc' DNS name but have to explicitly set it to '127.0.0.1'.
-		env = append(env, corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "127.0.0.1"})
+		// standard 'kubernetes.default.svc' DNS name but have to explicitly set it to 'localhost'.
+		env = append(env, corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"})
 	}
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
@@ -907,6 +899,9 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 								},
 							},
 							InitialDelaySeconds: 10,
+						},
+						SecurityContext: &corev1.SecurityContext{
+							AllowPrivilegeEscalation: ptr.To(false),
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
@@ -1056,23 +1051,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 				false,
 			)
 
-			// ATTENTION: THIS MUST BE THE LAST THING HAPPENING IN THIS FUNCTION TO MAKE SURE THE COMPUTED CHECKSUM IS
-			// ACCURATE!
-			// TODO(timuthy): Remove this workaround once the Kubernetes MatchLabelKeysInPodTopologySpread feature gate is beta
-			//  and enabled by default (probably 1.26+) for all supported clusters.
-			{
-				// Assign a predictable but unique label value per ReplicaSet which can be used for the
-				// Topology Spread Constraint selectors to prevent imbalanced deployments after rolling-updates.
-				// See https://github.com/kubernetes/kubernetes/issues/98215 for more information.
-				// This must be done as a last step because we need to consider that the pod topology constraints themselves
-				// can change and cause a rolling update.
-				podTemplateChecksum := utils.ComputeChecksum(deployment.Spec.Template)[:16]
-
-				deployment.Spec.Template.Labels[labelChecksum] = podTemplateChecksum
-				for i := range deployment.Spec.Template.Spec.TopologySpreadConstraints {
-					deployment.Spec.Template.Spec.TopologySpreadConstraints[i].LabelSelector.MatchLabels[labelChecksum] = podTemplateChecksum
-				}
-			}
+			kubernetesutils.MutateMatchLabelKeys(deployment.Spec.Template.Spec.TopologySpreadConstraints)
 		}
 
 		return nil
@@ -1308,7 +1287,6 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 	}
 
 	webhooks := []admissionregistrationv1.MutatingWebhook{
-		GetTokenInvalidatorMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 		r.getProjectedTokenMountMutatingWebhook(namespaceSelector, secretServerCA, buildClientConfigFn),
 	}
 
@@ -1354,41 +1332,6 @@ func (r *resourceManager) getValidatingWebhookConfigurationWebhooks(
 	)
 }
 
-// GetTokenInvalidatorMutatingWebhook returns the token-invalidator mutating webhook for the resourcemanager component
-// for reuse between the component and integration tests.
-func GetTokenInvalidatorMutatingWebhook(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) admissionregistrationv1.MutatingWebhook {
-	var (
-		failurePolicy = admissionregistrationv1.Fail
-		matchPolicy   = admissionregistrationv1.Exact
-		sideEffect    = admissionregistrationv1.SideEffectClassNone
-	)
-
-	return admissionregistrationv1.MutatingWebhook{
-		Name: "token-invalidator.resources.gardener.cloud",
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{corev1.GroupName},
-				APIVersions: []string{corev1.SchemeGroupVersion.Version},
-				Resources:   []string{"secrets"},
-			},
-			Operations: []admissionregistrationv1.OperationType{
-				admissionregistrationv1.Create,
-				admissionregistrationv1.Update,
-			},
-		}},
-		NamespaceSelector: namespaceSelector,
-		ObjectSelector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
-		},
-		ClientConfig:            buildClientConfigFn(secretServerCA, tokeninvalidator.WebhookPath),
-		AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-		FailurePolicy:           &failurePolicy,
-		MatchPolicy:             &matchPolicy,
-		SideEffects:             &sideEffect,
-		TimeoutSeconds:          ptr.To[int32](10),
-	}
-}
-
 // GetCRDDeletionProtectionValidatingWebhooks returns the ValidatingWebhooks for the crd-deletion-protection webhook for
 // reuse between the component and integration tests.
 func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.ValidatingWebhook {
@@ -1423,8 +1366,8 @@ func GetCRDDeletionProtectionValidatingWebhooks(secretServerCA *corev1.Secret, b
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
-						APIVersions: []string{druidv1alpha1.GroupVersion.Version},
+						APIGroups:   []string{druidcorev1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{druidcorev1alpha1.SchemeGroupVersion.Version},
 						Resources: []string{
 							"etcds",
 						},
@@ -1535,8 +1478,8 @@ func GetExtensionValidationValidatingWebhooks(secretServerCA *corev1.Secret, bui
 		{
 			resource: "etcds",
 			rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
-				APIVersions: []string{druidv1alpha1.GroupVersion.Version},
+				APIGroups:   []string{druidcorev1alpha1.SchemeGroupVersion.Group},
+				APIVersions: []string{druidcorev1alpha1.SchemeGroupVersion.Version},
 				Resources:   []string{"etcds"},
 			},
 			path: extensionvalidation.WebhookPathEtcd,

@@ -266,7 +266,7 @@ func newBastion(namespace string, name string, shootName string, seedName *strin
 	}
 
 	if createdAt != nil {
-		bastion.ObjectMeta.CreationTimestamp = metav1.NewTime(*createdAt)
+		bastion.CreationTimestamp = metav1.NewTime(*createdAt)
 	}
 
 	if expiresAt != nil {

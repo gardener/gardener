@@ -12,6 +12,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/component"
 	kubeapiserverexposure "github.com/gardener/gardener/pkg/component/kubernetes/apiserverexposure"
 	"github.com/gardener/gardener/pkg/features"
@@ -20,24 +21,44 @@ import (
 
 // DefaultKubeAPIServerService returns a deployer for the kube-apiserver service.
 func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
+	deployer := []component.Deployer{
+		b.defaultKubeAPIServerServiceWithSuffix("", true),
+	}
+	mutualTLSService := b.defaultKubeAPIServerServiceWithSuffix(kubeapiserverexposure.MutualTLSServiceNameSuffix, false)
+	if features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()) {
+		deployer = append(deployer, mutualTLSService)
+	} else {
+		deployer = append(deployer, component.OpDestroy(mutualTLSService))
+	}
+	return component.OpWait(deployer...)
+}
+
+func (b *Botanist) defaultKubeAPIServerServiceWithSuffix(suffix string, register bool) component.DeployWaiter {
+	clusterIPsFunc := b.setAPIServerServiceClusterIPs
+	ingressFunc := func(address string) {
+		b.APIServerAddress = address
+		b.newDNSComponentsTargetingAPIServerAddress()
+	}
+	if !register {
+		clusterIPsFunc = nil
+		ingressFunc = nil
+	}
+
 	return kubeapiserverexposure.NewService(
 		b.Logger,
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc:             func() map[string]string { return b.IstioLoadBalancerAnnotations() },
 			TopologyAwareRoutingEnabled: b.Shoot.TopologyAwareRoutingEnabled,
 			RuntimeKubernetesVersion:    b.Seed.KubernetesVersion,
+			NameSuffix:                  suffix,
 		},
 		func() client.ObjectKey {
 			return client.ObjectKey{Name: b.IstioServiceName(), Namespace: b.IstioNamespace()}
 		},
 		nil,
-		b.setAPIServerServiceClusterIPs,
-		func(address string) {
-			b.APIServerAddress = address
-			b.newDNSComponentsTargetingAPIServerAddress()
-		},
+		clusterIPsFunc,
+		ingressFunc,
 	)
 }
 
@@ -52,12 +73,33 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		b.SeedClientSet.Client(),
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.ControlPlaneNamespace,
+		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
+			var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
+
+			if b.ControlPlaneWildcardCert != nil {
+				wildcardConfiguration = &kubeapiserverexposure.WildcardConfiguration{
+					Hosts:     []string{b.ComputeKubeAPIServerHost()},
+					TLSSecret: *b.ControlPlaneWildcardCert,
+				}
+
+				// Wildcard endpoint must use the default istio ingress gateway if the shoot uses zonal istio ingress gateway.
+				// Otherwise, the wildcard endpoint can share the same istio ingress gateway as the kube-apiserver endpoint.
+				if b.DefaultIstioNamespace() != b.IstioNamespace() {
+					wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
+						Namespace: b.DefaultIstioNamespace(),
+						Labels:    b.DefaultIstioLabels(),
+					}
+				}
+			}
+
 			return &kubeapiserverexposure.SNIValues{
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
+				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+				WildcardConfiguration: wildcardConfiguration,
 			}
 		},
 	))
@@ -92,7 +134,26 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 		b.SeedClientSet.Client(),
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.ControlPlaneNamespace,
+		b.SecretsManager,
 		func() *kubeapiserverexposure.SNIValues {
+			var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
+
+			if b.ControlPlaneWildcardCert != nil {
+				wildcardConfiguration = &kubeapiserverexposure.WildcardConfiguration{
+					Hosts:     []string{b.ComputeKubeAPIServerHost()},
+					TLSSecret: *b.ControlPlaneWildcardCert,
+				}
+
+				// Wildcard endpoint must use the default istio ingress gateway if the shoot uses zonal istio ingress gateway.
+				// Otherwise, the wildcard endpoint can share the same istio ingress gateway as the kube-apiserver endpoint.
+				if b.DefaultIstioNamespace() != b.IstioNamespace() {
+					wildcardConfiguration.IstioIngressGateway = &kubeapiserverexposure.IstioIngressGateway{
+						Namespace: b.DefaultIstioNamespace(),
+						Labels:    b.DefaultIstioLabels(),
+					}
+				}
+			}
+
 			values := &kubeapiserverexposure.SNIValues{
 				Hosts: []string{
 					gardenerutils.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
@@ -105,6 +166,8 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 					Namespace: b.IstioNamespace(),
 					Labels:    b.IstioLabels(),
 				},
+				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
+				WildcardConfiguration: wildcardConfiguration,
 			}
 
 			if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
@@ -125,6 +188,7 @@ func mapToReservedKubeApiServerRange(ip net.IP) string {
 }
 
 // DefaultKubeAPIServerIngress returns a deployer for the kube-apiserver ingress.
+// TODO(oliver-goetz): Remove this method when Gardener v1.115.0 is released.
 func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
 	return kubeapiserverexposure.NewIngress(
 		b.SeedClientSet.Client(),
@@ -142,10 +206,8 @@ func (b *Botanist) DefaultKubeAPIServerIngress() component.Deployer {
 }
 
 // DeployKubeAPIServerIngress deploys the ingress for the kube-apiserver.
+// TODO(oliver-goetz): Remove this method when Gardener v1.115.0 is released.
 func (b *Botanist) DeployKubeAPIServerIngress(ctx context.Context) error {
-	// Do not deploy ingress if there is no wildcard certificate
-	if b.ControlPlaneWildcardCert == nil {
-		return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy(ctx)
-	}
-	return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Deploy(ctx)
+	// This is now part of the SNI deployer in kubeapiserverexposure.
+	return b.Shoot.Components.ControlPlane.KubeAPIServerIngress.Destroy(ctx)
 }

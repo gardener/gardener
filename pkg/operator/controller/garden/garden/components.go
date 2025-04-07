@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -156,15 +157,24 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// crds
-	c.etcdCRD = etcd.NewCRD(r.RuntimeClientSet.Client(), applier)
+	c.etcdCRD, err = etcd.NewCRD(r.RuntimeClientSet.Client(), r.RuntimeVersion)
+	if err != nil {
+		return
+	}
 	c.vpaCRD = vpa.NewCRD(applier, nil)
 	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
-	c.fluentCRD = fluentoperator.NewCRDs(applier)
+	c.fluentCRD, err = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	if err != nil {
+		return
+	}
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
 	if err != nil {
 		return
 	}
-	c.extensionCRD = extensioncrds.NewCRD(applier, true, false)
+	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
+	if err != nil {
+		return
+	}
 
 	// garden system components
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(garden, secretsManager)
@@ -208,7 +218,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.kubeAPIServerSNI, err = r.newSNI(garden, c.istio.GetValues().IngressGateway)
+	c.kubeAPIServerSNI, err = r.newSNI(ctx, garden, secretsManager, c.istio.GetValues().IngressGateway)
 	if err != nil {
 		return
 	}
@@ -287,7 +297,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.plutono, err = r.newPlutono(secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
+	c.plutono, err = r.newPlutono(garden, secretsManager, primaryIngressDomain.Name, wildcardCertSecretName)
 	if err != nil {
 		return
 	}
@@ -362,6 +372,7 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 		ManagedResourceLabels:                     map[string]string{v1beta1constants.LabelCareConditionType: string(operatorv1alpha1.VirtualComponentsHealthy)},
 		NetworkPolicyAdditionalNamespaceSelectors: r.Config.Controllers.NetworkPolicy.AdditionalNamespaceSelectors,
 		PriorityClassName:                         v1beta1constants.PriorityClassNameGardenSystemCritical,
+		RuntimeKubernetesVersion:                  r.RuntimeVersion,
 		SecretNameServerCA:                        operatorv1alpha1.SecretNameCARuntime,
 		Zones:                                     garden.Spec.RuntimeCluster.Provider.Zones,
 	})
@@ -369,13 +380,14 @@ func (r *Reconciler) newGardenerResourceManager(garden *operatorv1alpha1.Garden,
 
 func (r *Reconciler) newVirtualGardenGardenerResourceManager(secretsManager secretsmanager.Interface) (resourcemanager.Interface, error) {
 	return sharedcomponent.NewTargetGardenerResourceManager(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, resourcemanager.Values{
-		IsWorkerless:       true,
-		LogLevel:           r.Config.LogLevel,
-		LogFormat:          r.Config.LogFormat,
-		NamePrefix:         namePrefix,
-		PriorityClassName:  v1beta1constants.PriorityClassNameGardenSystem400,
-		SecretNameServerCA: operatorv1alpha1.SecretNameCARuntime,
-		TargetNamespaces:   []string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemPublicNamespace},
+		IsWorkerless:             true,
+		LogLevel:                 r.Config.LogLevel,
+		LogFormat:                r.Config.LogFormat,
+		NamePrefix:               namePrefix,
+		PriorityClassName:        v1beta1constants.PriorityClassNameGardenSystem400,
+		RuntimeKubernetesVersion: r.RuntimeVersion,
+		SecretNameServerCA:       operatorv1alpha1.SecretNameCARuntime,
+		TargetNamespaces:         []string{v1beta1constants.GardenNamespace, metav1.NamespaceSystem, gardencorev1beta1.GardenerShootIssuerNamespace, gardencorev1beta1.GardenerSystemPublicNamespace},
 	})
 }
 
@@ -426,6 +438,7 @@ func (r *Reconciler) newEtcd(
 		defragmentationScheduleFormat string
 		storageClassName              *string
 		storageCapacity               string
+		minAllowed                    corev1.ResourceList
 	)
 
 	switch role {
@@ -433,6 +446,9 @@ func (r *Reconciler) newEtcd(
 		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementNever)
 		defragmentationScheduleFormat = "%d %d * * *" // defrag main etcd daily in the maintenance window
 		storageCapacity = "25Gi"
+		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Autoscaling != nil {
+			minAllowed = etcd.Main.Autoscaling.MinAllowed
+		}
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Main != nil && etcd.Main.Storage != nil {
 			storageClassName = etcd.Main.Storage.ClassName
 			if etcd.Main.Storage.Capacity != nil {
@@ -444,6 +460,9 @@ func (r *Reconciler) newEtcd(
 		evictionRequirement = ptr.To(v1beta1constants.EvictionRequirementInMaintenanceWindowOnly)
 		defragmentationScheduleFormat = "%d %d */3 * *"
 		storageCapacity = "10Gi"
+		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Autoscaling != nil {
+			minAllowed = etcd.Events.Autoscaling.MinAllowed
+		}
 		if etcd := garden.Spec.VirtualCluster.ETCD; etcd != nil && etcd.Events != nil && etcd.Events.Storage != nil {
 			storageClassName = etcd.Events.Storage.ClassName
 			if etcd.Events.Storage.Capacity != nil {
@@ -481,10 +500,12 @@ func (r *Reconciler) newEtcd(
 			Role:                        role,
 			Class:                       class,
 			Replicas:                    replicas,
+			Autoscaling:                 etcd.AutoscalingConfig{MinAllowed: minAllowed},
 			StorageCapacity:             storageCapacity,
 			StorageClassName:            storageClassName,
 			DefragmentationSchedule:     &defragmentationSchedule,
 			CARotationPhase:             helper.GetCARotationPhase(garden.Status.Credentials),
+			RuntimeKubernetesVersion:    r.RuntimeVersion,
 			MaintenanceTimeWindow:       garden.Spec.VirtualCluster.Maintenance.TimeWindow,
 			EvictionRequirement:         evictionRequirement,
 			PriorityClassName:           v1beta1constants.PriorityClassNameGardenSystem500,
@@ -499,18 +520,26 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
-	var annotations map[string]string
-	if settings := garden.Spec.RuntimeCluster.Settings; settings != nil && settings.LoadBalancerServices != nil {
-		annotations = settings.LoadBalancerServices.Annotations
+	deployer := []component.Deployer{r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, "")}
+
+	mutualTLSService := r.newKubeAPIServerServiceWithSuffix(log, garden, ingressGatewayValues, kubeapiserverexposure.MutualTLSServiceNameSuffix)
+	if isIstioTLSTerminationEnabled(garden) {
+		deployer = append(deployer, mutualTLSService)
+	} else {
+		deployer = append(deployer, component.OpDestroy(mutualTLSService))
 	}
 
+	return component.OpWait(deployer...), nil
+}
+
+func (r *Reconciler) newKubeAPIServerServiceWithSuffix(log logr.Logger, garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues, suffix string) component.DeployWaiter {
 	return kubeapiserverexposure.NewService(
 		log,
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
 		&kubeapiserverexposure.ServiceValues{
-			AnnotationsFunc:             func() map[string]string { return annotations },
 			NamePrefix:                  namePrefix,
+			NameSuffix:                  suffix,
 			TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 			RuntimeKubernetesVersion:    r.RuntimeVersion,
 		},
@@ -520,7 +549,7 @@ func (r *Reconciler) newKubeAPIServerService(log logr.Logger, garden *operatorv1
 		nil,
 		nil,
 		nil,
-	), nil
+	)
 }
 
 func (r *Reconciler) newKubeAPIServer(
@@ -609,10 +638,11 @@ func (r *Reconciler) newKubeAPIServer(
 		secretsManager,
 		namePrefix,
 		apiServerConfig,
-		defaultAPIServerAutoscalingConfig(garden),
+		kubeAPIServerAutoscalingConfig(garden),
 		kubeapiserver.VPNConfig{Enabled: false},
 		v1beta1constants.PriorityClassNameGardenSystem500,
 		true,
+		false,
 		auditWebhookConfig,
 		authenticationWebhookConfig,
 		authorizationWebhookConfigs,
@@ -620,22 +650,47 @@ func (r *Reconciler) newKubeAPIServer(
 	)
 }
 
-func defaultAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) apiserver.AutoscalingConfig {
-	minReplicas := int32(2)
+func gardenerAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) gardenerapiserver.AutoscalingConfig {
+	replicas := int32(2)
 	if helper.HighAvailabilityEnabled(garden) {
-		minReplicas = 3
+		replicas = 3
 	}
 
-	return apiserver.AutoscalingConfig{
+	return gardenerapiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("600m"),
 				corev1.ResourceMemory: resource.MustParse("512Mi"),
 			},
 		},
+		Replicas: ptr.To(replicas),
+	}
+}
+
+func kubeAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) kubeapiserver.AutoscalingConfig {
+	minReplicas := int32(2)
+	if helper.HighAvailabilityEnabled(garden) {
+		minReplicas = 3
+	}
+
+	var minAllowed corev1.ResourceList
+	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil && kubeAPIServer.Autoscaling != nil {
+		minAllowed = kubeAPIServer.Autoscaling.MinAllowed
+	}
+
+	return kubeapiserver.AutoscalingConfig{
+		APIServerResources: corev1.ResourceRequirements{
+			Requests: kubernetesutils.MaximumResourcesFromResourceList(corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("600m"),
+				corev1.ResourceMemory: resource.MustParse("512Mi"),
+			},
+				minAllowed,
+			),
+		},
 		MinReplicas:       minReplicas,
 		MaxReplicas:       6,
 		ScaleDownDisabled: false,
+		MinAllowed:        minAllowed,
 	}
 }
 
@@ -765,16 +820,42 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 	)
 }
 
-func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
+	var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
+
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
 	domains := toDomainNames(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains))
+
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
+		sni := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI
+		sniDomains := GetAPIServerSNIDomains(domains, *sni)
+
+		if len(sniDomains) > 0 {
+			var tlsSecret corev1.Secret
+
+			if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: sni.SecretName, Namespace: r.GardenNamespace}, &tlsSecret); err != nil {
+				return nil, fmt.Errorf("failed to get SNI TLS secret %q: %w", sni.SecretName, err)
+			}
+
+			wildcardConfiguration = &kubeapiserverexposure.WildcardConfiguration{
+				Hosts:     sniDomains,
+				TLSSecret: tlsSecret,
+			}
+
+			domains = slices.DeleteFunc(domains, func(domain string) bool {
+				return slices.Contains(sniDomains, domain)
+			})
+		}
+	}
+
 	return kubeapiserverexposure.NewSNI(
 		r.RuntimeClientSet.Client(),
 		namePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
 		r.GardenNamespace,
+		secretsManager,
 		func() *kubeapiserverexposure.SNIValues {
 			return &kubeapiserverexposure.SNIValues{
 				Hosts: domains,
@@ -782,6 +863,8 @@ func (r *Reconciler) newSNI(garden *operatorv1alpha1.Garden, ingressGatewayValue
 					Namespace: ingressGatewayValues[0].Namespace,
 					Labels:    ingressGatewayValues[0].Labels,
 				},
+				IstioTLSTermination:   isIstioTLSTerminationEnabled(garden),
+				WildcardConfiguration: wildcardConfiguration,
 			}
 		},
 	), nil
@@ -824,6 +907,35 @@ func getAPIServerDomains(domains []operatorv1alpha1.DNSDomain) []operatorv1alpha
 			})
 	}
 	return apiServerDomains
+}
+
+// GetAPIServerSNIDomains returns the domains which match a SNI domain pattern.
+func GetAPIServerSNIDomains(domains []string, sni operatorv1alpha1.SNI) []string {
+	var sniDomains []string
+
+	for _, domainPattern := range sni.DomainPatterns {
+		// Handle wildcard domains
+		if strings.HasPrefix(domainPattern, "*.") {
+			patternWithoutWildcard := domainPattern[1:]
+			for _, domain := range domains {
+				if strings.HasSuffix(domain, patternWithoutWildcard) {
+					subDomain := strings.TrimSuffix(domain, patternWithoutWildcard)
+					// The wildcard is for one subdomain level only, so the subdomain should not contain any dots.
+					if len(subDomain) > 0 && !strings.Contains(subDomain, ".") {
+						sniDomains = append(sniDomains, domain)
+					}
+				}
+			}
+			continue
+		}
+
+		// Handle exact domains
+		if slices.Contains(domains, domainPattern) {
+			sniDomains = append(sniDomains, domainPattern)
+		}
+	}
+
+	return sniDomains
 }
 
 func getIngressWildcardDomains(domains []operatorv1alpha1.DNSDomain) []operatorv1alpha1.DNSDomain {
@@ -877,7 +989,7 @@ func (r *Reconciler) newGardenerMetricsExporter(secretsManager secretsmanager.In
 	return gardenermetricsexporter.New(r.RuntimeClientSet.Client(), r.GardenNamespace, secretsManager, gardenermetricsexporter.Values{Image: image.String()}), nil
 }
 
-func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (plutono.Interface, error) {
+func (r *Reconciler) newPlutono(garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressDomain string, wildcardCertSecretName *string) (plutono.Interface, error) {
 	return sharedcomponent.NewPlutono(
 		r.RuntimeClientSet.Client(),
 		r.GardenNamespace,
@@ -891,7 +1003,7 @@ func (r *Reconciler) newPlutono(secretsManager secretsmanager.Interface, ingress
 		false,
 		true,
 		false,
-		false,
+		vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		wildcardCertSecretName,
 	)
 }
@@ -940,6 +1052,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		err                error
 		apiServerConfig    *operatorv1alpha1.GardenerAPIServerConfig
 		auditWebhookConfig *apiserver.AuditWebhook
+		goAwayChance       *float64
 	)
 
 	if apiServer := garden.Spec.VirtualCluster.Gardener.APIServer; apiServer != nil {
@@ -949,6 +1062,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		if err != nil {
 			return nil, err
 		}
+		goAwayChance = apiServer.GoAwayChance
 	}
 
 	return sharedcomponent.NewGardenerAPIServer(
@@ -959,11 +1073,12 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		r.RuntimeVersion,
 		secretsManager,
 		apiServerConfig,
-		defaultAPIServerAutoscalingConfig(garden),
+		gardenerAPIServerAutoscalingConfig(garden),
 		auditWebhookConfig,
 		helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 		garden.Spec.VirtualCluster.Gardener.ClusterIdentity,
 		workloadIdentityTokenIssuer,
+		goAwayChance,
 	)
 }
 
@@ -977,6 +1092,7 @@ func (r *Reconciler) newGardenerAdmissionController(garden *operatorv1alpha1.Gar
 	values := gardeneradmissioncontroller.Values{
 		Image:                       image.String(),
 		LogLevel:                    logger.InfoLevel,
+		RuntimeVersion:              r.RuntimeVersion,
 		SeedRestrictionEnabled:      enableSeedRestriction,
 		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
@@ -1115,6 +1231,7 @@ func (r *Reconciler) newTerminalControllerManager(garden *operatorv1alpha1.Garde
 
 	values := terminal.Values{
 		Image:                       image.String(),
+		RuntimeVersion:              r.RuntimeVersion,
 		TopologyAwareRoutingEnabled: helper.TopologyAwareRoutingEnabled(garden.Spec.RuntimeCluster.Settings),
 	}
 
@@ -1354,7 +1471,9 @@ func domainNames(domains []operatorv1alpha1.DNSDomain) []string {
 
 func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) (extension.Interface, error) {
 	values := &extension.Values{
+		Class:      ptr.To(extensionsv1alpha1.ExtensionClassGarden),
 		Namespace:  r.GardenNamespace,
+		NamePrefix: ptr.To("garden-"),
 		Extensions: make(map[string]extension.Extension),
 	}
 
@@ -1363,13 +1482,11 @@ func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden 
 		values.Extensions[ext.Type] = extension.Extension{
 			Extension: extensionsv1alpha1.Extension{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      ext.Type,
-					Namespace: r.GardenNamespace,
+					Name: ext.Type,
 				},
 				Spec: extensionsv1alpha1.ExtensionSpec{
 					DefaultSpec: extensionsv1alpha1.DefaultSpec{
 						Type:           ext.Type,
-						Class:          ptr.To(extensionsv1alpha1.ExtensionClassGarden),
 						ProviderConfig: ext.ProviderConfig,
 					},
 				},

@@ -544,7 +544,7 @@ This reconciler inspects the following references:
 - Structured authorization kubeconfig `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.structuredAuthorization.kubeconfigs[].secretName`)
 - SNI `Secret`s (`.spec.virtualCluster.kubernetes.kubeAPIServer.sni.secretName`)
 
-Further checks might be added in the future.
+The checks naturally grow with the number of references that are added to the `Garden` specification.
 
 ### [`Controller Registrar` Controller](../../pkg/operator/controller/controllerregistrar)
 
@@ -576,8 +576,8 @@ Currently, this logic handles the following scenarios:
 
 #### [`Required Runtime` Reconciler](../../pkg/operator/controller/extension/required/runtime)
 
-This reconciler reacts on events from `BackupBucket`, `DNSRecord` and `Extension` resources.
-Based on these resources and the related `Extension` specification, it is checked if the extension deployment is required in the garden runtime cluster.
+This reconciler reacts on `Garden` and `Extension` events.
+It is checked if the extension deployment is required in the garden runtime cluster based on the existing `Garden` specification.
 The result is then put into the `RequiredRuntime` condition and added to the `Extension` status.
 
 #### [`Required Virtual` Reconciler](../../pkg/operator/controller/extension/required/virtual)
@@ -627,6 +627,10 @@ As of today, the `gardener-operator` only has one webhook handler which is now d
 
 ### Validation
 
+The validation webhook consists of the following handlers.
+
+#### `Garden`
+
 This webhook handler validates `CREATE`/`UPDATE`/`DELETE` operations on `Garden` resources.
 Simple validation is performed via [standard CRD validation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation).
 However, more advanced validation is hard to express via these means and is performed by this webhook handler.
@@ -637,6 +641,11 @@ This prevents users from accidental/undesired deletions.
 
 Another validation is to check that there is only one `Garden` resource at a time.
 It prevents creating a second `Garden` when there is already one in the system.
+
+#### `Extension`
+
+This webhook handler denies `DELETE` requests for `Extension` resources that are reported as required (also see [required-runtime](#required-runtime-reconciler) and [required-virtual](#required-virtual-reconciler)).
+These deletions often happen accidentally, and this handler safeguards the system from such actions.
 
 ### Defaulting
 

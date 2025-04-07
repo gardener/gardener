@@ -35,9 +35,9 @@ var _ = Describe("message_util", func() {
 	DescribeTable("#append_ChecksDetails",
 		func(input checkResultForConditionType, expected string) {
 			var details strings.Builder
-			input.appendFailedChecksDetails(&details)
-			input.appendUnsuccessfulChecksDetails(&details)
-			input.appendProgressingChecksDetails(&details)
+			Expect(input.appendFailedChecksDetails(&details)).To(Succeed())
+			Expect(input.appendUnsuccessfulChecksDetails(&details)).To(Succeed())
+			Expect(input.appendProgressingChecksDetails(&details)).To(Succeed())
 			Expect(trimTrailingWhitespace(details.String())).To(Equal(expected))
 		},
 		Entry("no unsuccessful checks", checkResultForConditionType{}, ""),

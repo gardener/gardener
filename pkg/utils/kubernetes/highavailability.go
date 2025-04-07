@@ -5,6 +5,9 @@
 package kubernetes
 
 import (
+	"slices"
+
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -111,4 +114,13 @@ func calculateMinDomains(numDomains, maxReplicas int32) *int32 {
 	}
 	// Return the number of zones otherwise because it's not possible to spread pods over more zones than there are available.
 	return ptr.To(numDomains)
+}
+
+// MutateMatchLabelKeys mutates the matchLabelKeys of the given topologySpreadConstraint by adding the "pod-template-hash" label key if it is not already present and removing it from the label selector match labels.
+func MutateMatchLabelKeys(topologySpreadConstraints []corev1.TopologySpreadConstraint) {
+	for i := range topologySpreadConstraints {
+		if !slices.Contains(topologySpreadConstraints[i].MatchLabelKeys, appsv1.DefaultDeploymentUniqueLabelKey) {
+			topologySpreadConstraints[i].MatchLabelKeys = append(topologySpreadConstraints[i].MatchLabelKeys, appsv1.DefaultDeploymentUniqueLabelKey)
+		}
+	}
 }

@@ -259,15 +259,15 @@ var _ = Describe("Helper", func() {
 			Expect(removedImages.UnsortedList()).To(ConsistOf("image-1"))
 			Expect(removedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
-					"image-1": sets.New[string]("version-1", "version-2"),
-					"image-2": sets.New[string]("version-1"),
+					"image-1": sets.New("version-1", "version-2"),
+					"image-2": sets.New("version-1"),
 				},
 			))
 			Expect(addedImages.UnsortedList()).To(ConsistOf("image-3"))
 			Expect(addedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
-					"image-2": sets.New[string]("version-3"),
-					"image-3": sets.New[string]("version-1", "version-2"),
+					"image-2": sets.New("version-3"),
+					"image-3": sets.New("version-1", "version-2"),
 				},
 			))
 		})
@@ -296,8 +296,8 @@ var _ = Describe("Helper", func() {
 			Expect(addedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
 			Expect(addedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
-					"image-2": sets.New[string]("version-3"),
-					"image-3": sets.New[string]("version-1", "version-2"),
+					"image-2": sets.New("version-3"),
+					"image-3": sets.New("version-1", "version-2"),
 				},
 			))
 		})
@@ -324,8 +324,8 @@ var _ = Describe("Helper", func() {
 			Expect(removedImages.UnsortedList()).To(ConsistOf("image-2", "image-3"))
 			Expect(removedVersions).To(BeEquivalentTo(
 				map[string]sets.Set[string]{
-					"image-2": sets.New[string]("version-3"),
-					"image-3": sets.New[string]("version-1", "version-2"),
+					"image-2": sets.New("version-3"),
+					"image-3": sets.New("version-1", "version-2"),
 				},
 			))
 			Expect(addedImages.UnsortedList()).To(BeEmpty())

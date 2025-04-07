@@ -167,24 +167,70 @@ var _ = Describe("utils", func() {
 		})
 
 		It("should return the required types for seed", func() {
-			seed.Spec.DNS = gardencorev1beta1.SeedDNS{
-				Provider: &gardencorev1beta1.SeedDNSProvider{Type: "providerB"},
-			}
-
 			Expect(ComputeRequiredExtensionsForSeed(seed).UnsortedList()).To(ConsistOf(
-				"DNSRecord/providerB",
 				"ControlPlane/providerA",
 				"Infrastructure/providerA",
 				"Worker/providerA",
 			))
 		})
 
-		It("should return the required types for seed w/o DNS provider", func() {
-			Expect(ComputeRequiredExtensionsForSeed(seed).UnsortedList()).To(ConsistOf(
-				"ControlPlane/providerA",
-				"Infrastructure/providerA",
-				"Worker/providerA",
-			))
+		When("seed has DNS provider", func() {
+			BeforeEach(func() {
+				seed.Spec.DNS = gardencorev1beta1.SeedDNS{
+					Provider: &gardencorev1beta1.SeedDNSProvider{Type: "providerB"},
+				}
+			})
+
+			It("should return the required types for seed", func() {
+				Expect(ComputeRequiredExtensionsForSeed(seed).UnsortedList()).To(ConsistOf(
+					"DNSRecord/providerB",
+					"ControlPlane/providerA",
+					"Infrastructure/providerA",
+					"Worker/providerA",
+				))
+			})
+		})
+
+		When("seed has extensions", func() {
+			BeforeEach(func() {
+				seed.Spec.Extensions = []gardencorev1beta1.Extension{
+					{Type: "extensionA"},
+					{Type: "extensionB"},
+				}
+			})
+
+			It("should return the required types for seed", func() {
+				Expect(ComputeRequiredExtensionsForSeed(seed).UnsortedList()).To(ConsistOf(
+					"Extension/extensionA",
+					"Extension/extensionB",
+					"ControlPlane/providerA",
+					"Infrastructure/providerA",
+					"Worker/providerA",
+				))
+			})
+		})
+	})
+
+	Describe("#ExtensionKindAndTypeForID", func() {
+		It("should return the expected kind and type", func() {
+			extKind, extType, err := ExtensionKindAndTypeForID("extension/test")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(extKind).To(Equal("extension"))
+			Expect(extType).To(Equal("test"))
+		})
+
+		It("should return an error when separator is invalid", func() {
+			extKind, extType, err := ExtensionKindAndTypeForID("extension-test")
+			Expect(err).To(MatchError(ContainSubstring("unexpected required extension")))
+			Expect(extKind).To(BeEmpty())
+			Expect(extType).To(BeEmpty())
+		})
+
+		It("should return an error when format is invalid", func() {
+			extKind, extType, err := ExtensionKindAndTypeForID("extension/backupbucket/test")
+			Expect(err).To(MatchError(ContainSubstring("unexpected required extension")))
+			Expect(extKind).To(BeEmpty())
+			Expect(extType).To(BeEmpty())
 		})
 	})
 

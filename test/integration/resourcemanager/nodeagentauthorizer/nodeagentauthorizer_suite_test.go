@@ -44,8 +44,8 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"github.com/gardener/gardener/pkg/utils/test/port"
 	"github.com/gardener/gardener/test/framework"
 )
 
@@ -84,7 +84,7 @@ var _ = BeforeSuite(func() {
 	By("Create kubeconfig file for the authorization webhook")
 	webhookAddress, err := net.ResolveTCPAddr("tcp", net.JoinHostPort("localhost", "0"))
 	Expect(err).NotTo(HaveOccurred())
-	webhookPort, _, err := port.SuggestPort("")
+	webhookPort, _, err := netutils.SuggestPort("")
 	Expect(err).ToNot(HaveOccurred())
 	kubeconfigFileName, err := createKubeconfigFileForAuthorizationWebhook(webhookAddress.IP.String(), webhookPort)
 	Expect(err).ToNot(HaveOccurred())

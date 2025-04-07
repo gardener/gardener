@@ -356,7 +356,7 @@ var _ = Describe("validator", func() {
 		Context("name/project length checks", func() {
 			It("should reject create operations on Shoot resources in projects which shall be deleted", func() {
 				deletionTimestamp := metav1.NewTime(time.Now())
-				project.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+				project.DeletionTimestamp = &deletionTimestamp
 
 				Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -2440,7 +2440,7 @@ var _ = Describe("validator", func() {
 
 				It("update should pass because validation of network disjointedness should not be executed", func() {
 					// set shoot pod cidr to overlap with vpn pod cidr
-					shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRange)
+					shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRangeV6)
 					oldShoot.Spec.SeedName = shoot.Spec.SeedName
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2455,7 +2455,7 @@ var _ = Describe("validator", func() {
 
 				It("update should fail because validation of network disjointedness is executed", func() {
 					// set shoot pod cidr to overlap with vpn pod cidr
-					shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRange)
+					shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRangeV6)
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -2469,7 +2469,7 @@ var _ = Describe("validator", func() {
 
 				It("delete should pass because validation of network disjointedness should not be executed", func() {
 					// set shoot pod cidr to overlap with vpn pod cidr
-					shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRange)
+					shoot.Spec.Networking.Pods = ptr.To(v1beta1constants.DefaultVPNRangeV6)
 
 					Expect(coreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())

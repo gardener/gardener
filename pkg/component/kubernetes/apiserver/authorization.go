@@ -96,9 +96,9 @@ func (k *kubeAPIServer) handleAuthorizationSettings(deployment *appsv1.Deploymen
 			webhook := k.values.AuthorizationWebhooks[0] // only one authz webhook supported in this case
 
 			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-config-file=%s/%s", volumeMountPathStructuredAuthorizationWebhookKubeconfigs, authorizationWebhookKubeconfigFilename(webhook.Name)))
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-authorized-ttl=%s", webhook.WebhookConfiguration.AuthorizedTTL.Duration.String()))
-			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-unauthorized-ttl=%s", webhook.WebhookConfiguration.UnauthorizedTTL.Duration.String()))
-			if v := webhook.WebhookConfiguration.SubjectAccessReviewVersion; v != "" {
+			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-authorized-ttl=%s", webhook.AuthorizedTTL.Duration.String()))
+			deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-cache-unauthorized-ttl=%s", webhook.UnauthorizedTTL.Duration.String()))
+			if v := webhook.SubjectAccessReviewVersion; v != "" {
 				deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--authorization-webhook-version=%s", v))
 			}
 		}
