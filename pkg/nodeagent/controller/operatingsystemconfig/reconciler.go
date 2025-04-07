@@ -86,7 +86,7 @@ func init() {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
 	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
-	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentconfigv1alpha1.SchemeGroupVersion, extensionsv1alpha1.SchemeGroupVersion})
+	versions := schema.GroupVersions([]schema.GroupVersion{extensionsv1alpha1.SchemeGroupVersion})
 	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 }
 
@@ -746,18 +746,13 @@ func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log 
 	if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet || oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent {
 		// Read the updated gardener-node-agent config for the API server CA bundle and server URL.
 		// This must always be called after applying the updated files.
-		nodeAgentConfigFile, err := r.FS.ReadFile(nodeagentconfigv1alpha1.ConfigFilePath)
+		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS)
 		if err != nil {
-			return fmt.Errorf("error reading config file: %w", err)
-		}
-
-		nodeAgentConfig := &nodeagentconfigv1alpha1.NodeAgentConfiguration{}
-		if err = runtime.DecodeInto(codec, nodeAgentConfigFile, nodeAgentConfig); err != nil {
-			return fmt.Errorf("error decoding gardener-node-agent config: %w", err)
+			return fmt.Errorf("failed reading the API server config: %w", err)
 		}
 
 		if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent {
-			if err := r.requestNewKubeConfigForNodeAgent(ctx, log, nodeAgentConfig); err != nil {
+			if err := r.requestNewKubeConfigForNodeAgent(ctx, log, apiServerConfig); err != nil {
 				return fmt.Errorf("failed requesting new certificate for node agent: %w", err)
 			}
 
@@ -769,7 +764,7 @@ func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log 
 		}
 
 		if oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet {
-			if err := r.rebootstrapKubelet(ctx, log, nodeAgentConfig, node); err != nil {
+			if err := r.rebootstrapKubelet(ctx, log, apiServerConfig, node); err != nil {
 				return fmt.Errorf("failed to rebootstrap kubelet: %w", err)
 			}
 
@@ -788,7 +783,7 @@ func (r *Reconciler) performCredentialsRotationInPlace(ctx context.Context, log 
 	return nil
 }
 
-func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, nodeAgentConfig *nodeagentconfigv1alpha1.NodeAgentConfiguration, node *corev1.Node) error {
+func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, apiServerConfig *nodeagentconfigv1alpha1.APIServer, node *corev1.Node) error {
 	log.Info("Rebootstrapping kubelet after CA rotation")
 
 	kubeletClientCertificatePath := filepath.Join(kubeletcomponent.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
@@ -808,8 +803,8 @@ func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, no
 
 		kubeConfig.Clusters = map[string]*clientcmdapi.Cluster{
 			"default-cluster": {
-				CertificateAuthorityData: nodeAgentConfig.APIServer.CABundle,
-				Server:                   nodeAgentConfig.APIServer.Server,
+				CertificateAuthorityData: apiServerConfig.CABundle,
+				Server:                   apiServerConfig.Server,
 			},
 		}
 
@@ -858,7 +853,7 @@ func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, no
 // RequestAndStoreKubeconfig is an alias for `nodeagent.RequestAndStoreKubeconfig`. Exposed for tests.
 var RequestAndStoreKubeconfig = nodeagent.RequestAndStoreKubeconfig
 
-func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log logr.Logger, nodeAgentConfig *nodeagentconfigv1alpha1.NodeAgentConfiguration) error {
+func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log logr.Logger, apiServerConfig *nodeagentconfigv1alpha1.APIServer) error {
 	log.Info("Requesting new kubeconfig for node agent after CA rotation")
 
 	kubeConfigFile, err := r.FS.ReadFile(nodeagentconfigv1alpha1.KubeconfigFilePath)
@@ -871,7 +866,7 @@ func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log l
 	}
 
 	// Use the updated CA Bundle
-	restConfig.CAData = nodeAgentConfig.APIServer.CABundle
+	restConfig.CAData = apiServerConfig.CABundle
 
 	return RequestAndStoreKubeconfig(ctx, log, r.FS, restConfig, r.MachineName)
 }
