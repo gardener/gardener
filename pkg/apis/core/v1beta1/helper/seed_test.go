@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -238,6 +239,55 @@ var _ = Describe("Helper", func() {
 				{specSeedName: "seed3", statusSeedName: "seed2"},
 				{specSeedName: "seed3", statusSeedName: "seed4"},
 			}, map[string]int{"seed": 1, "seed2": 3, "seed3": 2, "seed4": 1})
+		})
+	})
+
+	Describe("#GetValidVolumeSize", func() {
+		It("should return the size because no minimum size was set", func() {
+			var (
+				size = "20Gi"
+				seed = &gardencorev1beta1.Seed{
+					Spec: gardencorev1beta1.SeedSpec{
+						Volume: nil,
+					},
+				}
+			)
+
+			Expect(GetValidVolumeSize(seed, size)).To(Equal(size))
+		})
+
+		It("should return the minimum size because the given value is smaller", func() {
+			var (
+				size                = "20Gi"
+				minimumSize         = "25Gi"
+				minimumSizeQuantity = resource.MustParse(minimumSize)
+				seed                = &gardencorev1beta1.Seed{
+					Spec: gardencorev1beta1.SeedSpec{
+						Volume: &gardencorev1beta1.SeedVolume{
+							MinimumSize: &minimumSizeQuantity,
+						},
+					},
+				}
+			)
+
+			Expect(GetValidVolumeSize(seed, size)).To(Equal(minimumSize))
+		})
+
+		It("should return the given value size because the minimum size is smaller", func() {
+			var (
+				size                = "30Gi"
+				minimumSize         = "25Gi"
+				minimumSizeQuantity = resource.MustParse(minimumSize)
+				seed                = &gardencorev1beta1.Seed{
+					Spec: gardencorev1beta1.SeedSpec{
+						Volume: &gardencorev1beta1.SeedVolume{
+							MinimumSize: &minimumSizeQuantity,
+						},
+					},
+				}
+			)
+
+			Expect(GetValidVolumeSize(seed, size)).To(Equal(size))
 		})
 	})
 })

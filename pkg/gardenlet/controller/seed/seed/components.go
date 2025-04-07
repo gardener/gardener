@@ -563,7 +563,7 @@ func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, isM
 	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "cache",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("10Gi")),
+		StorageCapacity:   resource.MustParse(v1beta1helper.GetValidVolumeSize(seed.GetInfo(), "10Gi")),
 		Replicas:          1,
 		Retention:         ptr.To(monitoringv1.Duration("1d")),
 		RetentionSize:     "5GB",
@@ -586,7 +586,7 @@ func (r *Reconciler) newSeedPrometheus(log logr.Logger, seed *seedpkg.Seed) (com
 	return sharedcomponent.NewPrometheus(log, r.SeedClientSet.Client(), r.GardenNamespace, prometheus.Values{
 		Name:              "seed",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("100Gi")),
+		StorageCapacity:   resource.MustParse(v1beta1helper.GetValidVolumeSize(seed.GetInfo(), "100Gi")),
 		Replicas:          1,
 		RetentionSize:     "85GB",
 		VPAMinAllowed:     &corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("400Mi")},
@@ -610,7 +610,7 @@ func (r *Reconciler) newAggregatePrometheus(log logr.Logger, seed *seedpkg.Seed,
 	values := prometheus.Values{
 		Name:              "aggregate",
 		PriorityClassName: v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:   resource.MustParse(seed.GetValidVolumeSize("20Gi")),
+		StorageCapacity:   resource.MustParse(v1beta1helper.GetValidVolumeSize(seed.GetInfo(), "20Gi")),
 		Replicas:          1,
 		Retention:         ptr.To(monitoringv1.Duration("30d")),
 		RetentionSize:     "15GB",
@@ -654,7 +654,7 @@ func (r *Reconciler) newAlertmanager(log logr.Logger, seed *seedpkg.Seed, alerti
 		Name:               "seed",
 		ClusterType:        component.ClusterTypeSeed,
 		PriorityClassName:  v1beta1constants.PriorityClassNameSeedSystem600,
-		StorageCapacity:    resource.MustParse(seed.GetValidVolumeSize("1Gi")),
+		StorageCapacity:    resource.MustParse(v1beta1helper.GetValidVolumeSize(seed.GetInfo(), "1Gi")),
 		Replicas:           1,
 		AlertingSMTPSecret: alertingSMTPSecret,
 	})

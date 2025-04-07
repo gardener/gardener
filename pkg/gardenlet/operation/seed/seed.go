@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -140,22 +139,6 @@ func (s *Seed) IngressDomain() string {
 		return seed.Spec.Ingress.Domain
 	}
 	return ""
-}
-
-// GetValidVolumeSize is to get a valid volume size.
-// If the given size is smaller than the minimum volume size permitted by cloud provider on which seed cluster is running, it will return the minimum size.
-func (s *Seed) GetValidVolumeSize(size string) string {
-	seed := s.GetInfo()
-	if seed.Spec.Volume == nil || seed.Spec.Volume.MinimumSize == nil {
-		return size
-	}
-
-	qs, err := resource.ParseQuantity(size)
-	if err == nil && qs.Cmp(*seed.Spec.Volume.MinimumSize) < 0 {
-		return seed.Spec.Volume.MinimumSize.String()
-	}
-
-	return size
 }
 
 // GetLoadBalancerServiceAnnotations returns the load balancer annotations set for the seed if any.

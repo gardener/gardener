@@ -7,6 +7,7 @@ package helper
 import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -116,4 +117,19 @@ func CalculateSeedUsage(shootList []*gardencorev1beta1.Shoot) map[string]int {
 	}
 
 	return m
+}
+
+// GetValidVolumeSize is to get a valid volume size.
+// If the given size is smaller than the minimum volume size permitted by cloud provider on which seed cluster is running, it will return the minimum size.
+func GetValidVolumeSize(seed *gardencorev1beta1.Seed, size string) string {
+	if seed.Spec.Volume == nil || seed.Spec.Volume.MinimumSize == nil {
+		return size
+	}
+
+	qs, err := resource.ParseQuantity(size)
+	if err == nil && qs.Cmp(*seed.Spec.Volume.MinimumSize) < 0 {
+		return seed.Spec.Volume.MinimumSize.String()
+	}
+
+	return size
 }
