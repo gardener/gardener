@@ -556,7 +556,7 @@ PRETTY_NAME="Garden Linux 1592"
 			Expect(fs.WriteFile(kubeletCertPath, []byte("test-cert"), 0600)).To(Succeed())
 			Expect(fs.WriteFile(kubeletcomponent.PathKubeconfigReal, []byte(fakeKubeConfig), 0600)).To(Succeed())
 
-			Expect(reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)).To(Succeed())
+			Expect(reconciler.rebootstrapKubelet(ctx, log, &nodeAgentConfig.APIServer, node)).To(Succeed())
 
 			expectedBootStrapConfig := `apiVersion: v1
 clusters:
@@ -591,7 +591,7 @@ users:
 		It("should not fail if kubelet client certificate is missing but bootstrap file exists", func() {
 			Expect(fs.WriteFile(kubeletcomponent.PathKubeconfigBootstrap, []byte("test-bootstrap-kubeconfig"), 0600)).To(Succeed())
 
-			Expect(reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)).To(Succeed())
+			Expect(reconciler.rebootstrapKubelet(ctx, log, &nodeAgentConfig.APIServer, node)).To(Succeed())
 
 			Expect(fs.DirExists(kubeletCertDir)).To(BeFalse())
 
@@ -602,7 +602,7 @@ users:
 		})
 
 		It("should fail if kubelet client certificate and bootstrap file are missing", func() {
-			err := reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)
+			err := reconciler.rebootstrapKubelet(ctx, log, &nodeAgentConfig.APIServer, node)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("kubeconfig file %q does not exist, cannot proceed with rebootstrap", kubeletcomponent.PathKubeconfigBootstrap))
 		})
@@ -610,7 +610,7 @@ users:
 		It("should fail if kubeconfig file cannot be loaded", func() {
 			Expect(fs.WriteFile(kubeletcomponent.PathKubeconfigReal, []byte("invalid-kubeconfig"), 0600)).To(Succeed())
 
-			err := reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)
+			err := reconciler.rebootstrapKubelet(ctx, log, &nodeAgentConfig.APIServer, node)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unable to load kubeconfig file"))
 		})
@@ -621,7 +621,7 @@ users:
 			// Inject DBus restart failure
 			fakeDBus.InjectRestartFailure(errors.New("restart failed"), "kubelet.service")
 
-			err := reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)
+			err := reconciler.rebootstrapKubelet(ctx, log, &nodeAgentConfig.APIServer, node)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unable to restart unit"))
 		})
