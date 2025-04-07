@@ -132,16 +132,6 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	}
 
 	ginkgo.By("Apply redis chart")
-	masterValues := map[string]any{
-		"command": "redis-server",
-	}
-	if shoot.Spec.Provider.Type == "alicloud" {
-		// AliCloud requires a minimum of 20 GB for its PVCs
-		masterValues["persistence"] = map[string]any{
-			"size": "20Gi",
-		}
-	}
-
 	// redis-slaves are not required for test success
 	values := map[string]any{
 		"image": map[string]any{
@@ -155,7 +145,12 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 		"rbac": map[string]any{
 			"create": true,
 		},
-		"master": masterValues,
+		"master": map[string]any{
+			"command": "redis-server",
+			"persistence": map[string]any{
+				"size": v1beta1helper.GetValidVolumeSize(t.framework.Seed, "8Gi"),
+			},
+		},
 	}
 
 	err := t.framework.ShootClient.ChartApplier().ApplyFromEmbeddedFS(ctx, chartRedis, chartPathRedis, t.framework.Namespace, "redis", kubernetes.Values(values), kubernetes.ForceNamespace)
