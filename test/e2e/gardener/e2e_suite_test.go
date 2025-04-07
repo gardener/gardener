@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/test/e2e"
 	_ "github.com/gardener/gardener/test/e2e/gardener/managedseed"
+	_ "github.com/gardener/gardener/test/e2e/gardener/observability"
 	_ "github.com/gardener/gardener/test/e2e/gardener/project"
 	_ "github.com/gardener/gardener/test/e2e/gardener/seed"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot"
