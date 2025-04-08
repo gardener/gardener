@@ -765,7 +765,7 @@ func (c *validationContext) ensureMachineImages() field.ErrorList {
 		for idx, worker := range c.shoot.Spec.Provider.Workers {
 			fldPath := field.NewPath("spec", "provider", "workers").Index(idx)
 
-			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, c.cloudProfileSpec.Capabilities, fldPath)
+			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfileSpec.MachineImages, c.cloudProfileSpec.GetCapabilities(), fldPath)
 			if err != nil {
 				allErrs = append(allErrs, err)
 				continue
@@ -1144,7 +1144,7 @@ func (c *validationContext) validateWorkerMachine(idxPath *field.Path, worker, o
 	}
 
 	isUpdateStrategyInPlace := helper.IsUpdateStrategyInPlace(worker.UpdateStrategy)
-	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.Capabilities)
+	isMachineImagePresentInCloudprofile, architectureSupported, activeMachineImageVersion, inPlaceUpdateSupported, validMachineImageVersions := validateMachineImagesConstraints(a, c.cloudProfileSpec.MachineImages, isNewWorkerPool, isUpdateStrategyInPlace, worker.Machine, oldWorker.Machine, c.cloudProfileSpec.GetCapabilities())
 	if !isMachineImagePresentInCloudprofile {
 		return field.Invalid(idxPath.Child("machine", "image"), worker.Machine.Image, fmt.Sprintf("machine image version is not supported, supported machine image versions are: %+v", validMachineImageVersions))
 	}

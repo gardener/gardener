@@ -1306,14 +1306,30 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				BeforeEach(func() {
 					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.CloudProfileCapabilities, true))
 
-					cloudProfile.Spec.Capabilities = core.Capabilities{
-						"architecture": []string{"amd64", "arm64"},
+					cloudProfile.Spec.Capabilities = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"architecture": []string{"amd64", "arm64"}}},
+						{Capabilities: core.Capabilities{"anotherCapability": []string{"value1"}}},
 					}
 				})
 
 				It("should succeed to validate with neither architectures nor capabilities set for machine images", func() {
 					cloudProfile.Spec.MachineTypes[0].Architecture = ptr.To("arm64")
 					Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
+				})
+
+				It("should fail to validate with no architecture capability defined in a machine image capability set", func() {
+					cloudProfile.Spec.MachineTypes[0].Architecture = ptr.To("arm64")
+					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"anotherCapability": []string{"value1"}}},
+					}
+
+					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeRequired),
+							"Field":  Equal("spec.machineImages[0].versions[0].capabilitySets[0].architecture"),
+							"Detail": Equal("must provide at least one architecture"),
+						})),
+					))
 				})
 
 				It("should fail to validate with only architectures set", func() {
@@ -1333,12 +1349,31 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				It("should successfully validate with only capabilities set", func() {
 					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
 						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
+						{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 					}
 					cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
 						"architecture": []string{"arm64"},
 					}
 
 					Expect(ValidateCloudProfile(cloudProfile)).To(BeEmpty())
+				})
+
+				It("should fail to validate with multiple architectures set in one machine image capability set", func() {
+					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"architecture": []string{"arm64", "amd64"}}},
+					}
+					cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
+						"architecture": []string{"arm64"},
+					}
+
+					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.machineImages[0].versions[0].capabilitySets[0].architecture"),
+							"BadValue": BeEquivalentTo([]string{"arm64", "amd64"}),
+							"Detail":   Equal("must not define more than one architecture within one capability set"),
+						})),
+					))
 				})
 
 				It("should fail to validate with multiple architectures set for machine type capabilities", func() {
@@ -1358,7 +1393,8 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 				It("should fail to validate with unknown architecture capabilities set", func() {
 					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
-						{Capabilities: core.Capabilities{"architecture": []string{"amd64", "other"}}},
+						{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
+						{Capabilities: core.Capabilities{"architecture": []string{"other"}}},
 					}
 					cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
 						"architecture": []string{"other"},
@@ -1367,7 +1403,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeNotSupported),
-							"Field":    Equal("spec.machineImages[0].versions[0].capabilitySets[0].architecture[1]"),
+							"Field":    Equal("spec.machineImages[0].versions[0].capabilitySets[1].architecture[0]"),
 							"BadValue": Equal("other"),
 							"Detail":   Equal(`supported values: "amd64", "arm64"`),
 						})), PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1380,10 +1416,10 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should fail to validate capabilities with empty keys or values", func() {
-					cloudProfile.Spec.Capabilities = core.Capabilities{
-						"":               core.CapabilityValues{},
-						"hasNoValues":    []string{},
-						"hasEmptyValues": []string{""},
+					cloudProfile.Spec.Capabilities = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"": core.CapabilityValues{}}},
+						{Capabilities: core.Capabilities{"hasNoValues": []string{}}},
+						{Capabilities: core.Capabilities{"hasEmptyValues": []string{""}}},
 					}
 
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
@@ -1422,8 +1458,8 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should fail to validate invalid architecture capability values", func() {
-					cloudProfile.Spec.Capabilities = core.Capabilities{
-						"architecture": []string{"amd64", "custom"},
+					cloudProfile.Spec.Capabilities = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"architecture": []string{"arm64", "custom"}}},
 					}
 
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
@@ -1437,6 +1473,34 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							"Field":    Equal("spec.capabilities.architecture"),
 							"BadValue": Equal("custom"),
 							"Detail":   Equal("allowed architectures are: amd64, arm64"),
+						})),
+					))
+				})
+
+				It("should fail to validate if the global capability definition does not define each capability once in its own set", func() {
+					cloudProfile.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
+					}
+					cloudProfile.Spec.MachineTypes[0].Capabilities = core.Capabilities{
+						"architecture": []string{"arm64"},
+					}
+
+					cloudProfile.Spec.Capabilities = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"architecture": []string{"arm64", "amd64"}}},
+						{Capabilities: core.Capabilities{"architecture": []string{"arm64"}, "someKey": []string{"value1", "value2"}}},
+					}
+
+					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.capabilities[1]"),
+							"BadValue": Equal("architecture"),
+							"Detail":   Equal("each capability must only be defined once"),
+						})), PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.capabilities[1]"),
+							"BadValue": HaveLen(2),
+							"Detail":   Equal("must have exactly one capability"),
 						})),
 					))
 				})
@@ -1515,8 +1579,8 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should fail to validate provided capabilities with disabled feature gate", func() {
-					cloudProfile.Spec.Capabilities = core.Capabilities{
-						"architecture": []string{"amd64"},
+					cloudProfile.Spec.Capabilities = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 					}
 
 					Expect(ValidateCloudProfile(cloudProfile)).To(ConsistOf(
@@ -1793,9 +1857,9 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				})
 
 				It("should validate other capability values against global definition", func() {
-					cloudProfileNew.Spec.Capabilities = core.Capabilities{
-						"architecture": []string{"amd64", "arm64"},
-						"foo":          []string{"bar", "baz"},
+					cloudProfileNew.Spec.Capabilities = []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"architecture": []string{"amd64", "arm64"}}},
+						{Capabilities: core.Capabilities{"foo": []string{"bar", "baz"}}},
 					}
 
 					cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
@@ -1842,8 +1906,8 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 				DescribeTableSubtree("switching to Capabilities",
 					func(isInitialSwitch bool) {
 						BeforeEach(func() {
-							cloudProfileNew.Spec.Capabilities = core.Capabilities{
-								"architecture": []string{"amd64", "arm64"},
+							cloudProfileNew.Spec.Capabilities = []core.CapabilitySet{
+								{Capabilities: core.Capabilities{"architecture": []string{"amd64", "arm64"}}},
 							}
 
 							if !isInitialSwitch {
@@ -1907,7 +1971,8 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 						It("should fail to validate with unknown architecture capabilities set", func() {
 							cloudProfileNew.Spec.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
-								{Capabilities: core.Capabilities{"architecture": []string{"amd64", "other"}}},
+								{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
+								{Capabilities: core.Capabilities{"architecture": []string{"other"}}},
 							}
 							cloudProfileNew.Spec.MachineTypes[0].Capabilities = core.Capabilities{
 								"architecture": []string{"other"},
@@ -1919,7 +1984,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							Expect(ValidateCloudProfileUpdate(cloudProfileNew, cloudProfileOld)).To(ConsistOf(
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":     Equal(field.ErrorTypeNotSupported),
-									"Field":    Equal("spec.machineImages[0].versions[0].capabilitySets[0].architecture[1]"),
+									"Field":    Equal("spec.machineImages[0].versions[0].capabilitySets[1].architecture[0]"),
 									"BadValue": Equal("other"),
 									"Detail":   Equal(`supported values: "amd64", "arm64"`),
 								})), PointTo(MatchFields(IgnoreExtras, Fields{

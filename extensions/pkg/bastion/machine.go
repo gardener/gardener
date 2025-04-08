@@ -43,11 +43,11 @@ func GetMachineSpecFromCloudProfile(profile *gardencorev1beta1.CloudProfile) (vm
 		}
 	}
 
-	vm.ImageBaseName, err = getImageName(bastionSpec, profile.Spec.MachineImages, profile.Spec.Capabilities, vm.Architecture)
+	vm.ImageBaseName, err = getImageName(bastionSpec, profile.Spec.MachineImages, profile.Spec.GetCapabilities(), vm.Architecture)
 	if err != nil {
 		return MachineSpec{}, err
 	}
-	vm.ImageVersion, err = getImageVersion(bastionSpec, vm.ImageBaseName, vm.Architecture, profile.Spec.MachineImages, profile.Spec.Capabilities)
+	vm.ImageVersion, err = getImageVersion(bastionSpec, vm.ImageBaseName, vm.Architecture, profile.Spec.MachineImages, profile.Spec.GetCapabilities())
 	return vm, err
 }
 
@@ -196,7 +196,7 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 // findMostSuitableMachineType searches for the machine type that satisfies certain criteria
 // currently we try to find the machine with the lowest amount of cpus
 func findMostSuitableMachineType(profile *gardencorev1beta1.CloudProfile) (machineName string, machineArch string, err error) {
-	supportedArchs := getImageArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages, profile.Spec.Capabilities)
+	supportedArchs := getImageArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages, profile.Spec.GetCapabilities())
 
 	var minCpu *int64
 

@@ -207,8 +207,8 @@ var _ = Describe("Strategy", func() {
 				},
 			}
 			newCloudProfile := oldCloudProfile.DeepCopy()
-			newCloudProfile.Spec.Capabilities = core.Capabilities{
-				"architecture": []string{"amd64"},
+			newCloudProfile.Spec.Capabilities = []core.CapabilitySet{
+				{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 			}
 
 			cloudprofileregistry.Strategy.PrepareForUpdate(context.Background(), newCloudProfile, oldCloudProfile)
@@ -273,8 +273,8 @@ var _ = Describe("Strategy", func() {
 		It("should sync architecture capabilities to empty architecture fields", func() {
 			cloudProfile := &core.CloudProfile{
 				Spec: core.CloudProfileSpec{
-					Capabilities: core.Capabilities{
-						"architecture": []string{"amd64"},
+					Capabilities: []core.CapabilitySet{
+						{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
 					},
 					MachineImages: []core.MachineImage{{Versions: []core.MachineImageVersion{
 						{CapabilitySets: []core.CapabilitySet{{Capabilities: core.Capabilities{

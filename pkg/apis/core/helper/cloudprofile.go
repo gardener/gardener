@@ -271,12 +271,14 @@ func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages
 
 			// Sync architecture field to capabilities if filled on initial migration.
 			if isInitialMigration && len(version.Architectures) > 0 && len(version.CapabilitySets) == 0 {
-				newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets,
-					core.CapabilitySet{
-						Capabilities: core.Capabilities{
-							constants.ArchitectureKey: version.Architectures,
-						},
-					})
+				for _, architecture := range version.Architectures {
+					newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets,
+						core.CapabilitySet{
+							Capabilities: core.Capabilities{
+								constants.ArchitectureKey: []string{architecture},
+							},
+						})
+				}
 				continue
 			}
 

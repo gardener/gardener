@@ -378,8 +378,17 @@ func validateMachineImageVersionArchitecture(machineImageVersion core.MachineIma
 	// assert that the architecture values defined do not conflict
 	if len(capabilities) > 0 {
 		supportedArchitectures = capabilities[v1beta1constants.ArchitectureKey]
-		allCapabilityArchitectures := core.ExtractArchitectures(machineImageVersion.CapabilitySets)
+		for capabilitySetIdx, capabilitySet := range machineImageVersion.CapabilitySets {
+			architectureCapabilityValues := capabilitySet.Capabilities[v1beta1constants.ArchitectureKey]
+			architectureFieldPath := fldPath.Child("capabilitySets").Index(capabilitySetIdx).Child("architecture")
+			if len(architectureCapabilityValues) == 0 {
+				allErrs = append(allErrs, field.Required(architectureFieldPath, "must provide at least one architecture"))
+			} else if len(architectureCapabilityValues) > 1 {
+				allErrs = append(allErrs, field.Invalid(architectureFieldPath, architectureCapabilityValues, "must not define more than one architecture within one capability set"))
+			}
+		}
 
+		allCapabilityArchitectures := core.ExtractArchitectures(machineImageVersion.CapabilitySets)
 		if len(machineImageVersion.Architectures) > 0 && !areSlicesEqual(allCapabilityArchitectures, machineImageVersion.Architectures) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("architectures"), machineImageVersion.Architectures, fmt.Sprintf("architecture field values set (%s) conflict with the capability architectures (%s)", strings.Join(machineImageVersion.Architectures, ","), strings.Join(allCapabilityArchitectures, ","))))
 		}

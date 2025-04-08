@@ -27,7 +27,7 @@ spec:
 # ---
 # If CloudProfileCapabilities feature gate is enabled:
 # capabilities:
-#   architecture: [amd64,arm64]
+# - architecture: [amd64,arm64]
   kubernetes:
     versions:
     - version: 1.30.1
@@ -47,7 +47,8 @@ spec:
     # - amd64
     # - arm64
     # capabilitySets: # CloudProfileCapabilities feature gate enabled
-    # - architecture: [amd64, arm64]
+    # - architecture: [amd64]
+    # - architecture: [arm64]
     # cri: # Even though gardener doesn't support docker CRI, gardener requires machine images to have the docker daemon installed. See https://github.com/gardener/gardener/issues/4673 for more information.
     # - name: containerd    
     #   containerRuntimes:
