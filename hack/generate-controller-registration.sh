@@ -17,6 +17,8 @@ generate-controller-registration [options] <name> <chart-dir> <version> <dest> <
     -e, --pod-security-enforce[=pod-security-standard]
                       Sets 'security.gardener.cloud/pod-security-enforce' annotation in the
                       controller registration. Defaults to 'baseline'.
+    -i, --inject-garden-kubeconfig
+                      Sets 'injectGardenKubeconfig: true' for the controller deployment.
     <name>            Name of the controller registration to generate.
     <chart-dir>       Location of the chart directory.
     <version>         Version to use for the Helm chart and the tag in the ControllerDeployment.
@@ -31,6 +33,8 @@ EOM
 }
 
 POD_SECURITY_ENFORCE="baseline"
+INJECT_GARDEN_KUBECONFIG=false
+
 while :; do
   case $1 in
     -h|--help)
@@ -45,6 +49,9 @@ while :; do
       ;;
     --pod-security-enforce=*)
       POD_SECURITY_ENFORCE=${1#*=}
+      ;;
+    -i|--inject-garden-kubeconfig)
+      INJECT_GARDEN_KUBECONFIG=true
       ;;
     --)
       shift
@@ -117,6 +124,13 @@ else
     image: $default_image
 EOM
 fi
+
+if [ "${INJECT_GARDEN_KUBECONFIG}" = true ]; then
+  cat <<EOM >> "$DEST"
+injectGardenKubeconfig: true
+EOM
+fi
+
 cat <<EOM >> "$DEST"
 ---
 apiVersion: core.gardener.cloud/v1beta1
