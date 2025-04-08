@@ -42,6 +42,8 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NetworkingStatus,Services
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NginxIngress,LoadBalancerSourceRanges
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,OIDCConfig,SigningAlgs
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,PendingWorkerUpdates,AutoInPlaceUpdate
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,PendingWorkerUpdates,ManualInPlaceUpdate
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ProjectMember,Roles
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ProjectSpec,DualApprovalForDeletion
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ProjectSpec,Members
