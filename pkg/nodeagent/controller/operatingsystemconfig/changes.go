@@ -287,28 +287,12 @@ func sumResourceReservations(left, right map[string]string) (map[string]string, 
 
 	out := make(map[string]string)
 
-	if cpu, err := sumQuantities(left["cpu"], right["cpu"]); err != nil {
-		return nil, fmt.Errorf("failed to sum cpu reservations: %w", err)
-	} else {
-		out["cpu"] = cpu.String()
-	}
-
-	if memory, err := sumQuantities(left["memory"], right["memory"]); err != nil {
-		return nil, fmt.Errorf("failed to sum memory reservations: %w", err)
-	} else {
-		out["memory"] = memory.String()
-	}
-
-	if ephemeralStorage, err := sumQuantities(left["ephemeral-storage"], right["ephemeral-storage"]); err != nil {
-		return nil, fmt.Errorf("failed to sum ephemeral-storage reservations: %w", err)
-	} else {
-		out["ephemeral-storage"] = ephemeralStorage.String()
-	}
-
-	if pid, err := sumQuantities(left["pid"], right["pid"]); err != nil {
-		return nil, fmt.Errorf("failed to sum pid reservations: %w", err)
-	} else {
-		out["pid"] = pid.String()
+	for _, resource := range []string{"cpu", "memory", "ephemeral-storage", "pid"} {
+		if quantity, err := sumQuantities(left[resource], right[resource]); err != nil {
+			return nil, fmt.Errorf("failed to sum %s reservations: %w", resource, err)
+		} else {
+			out[resource] = quantity.String()
+		}
 	}
 
 	return out, nil
@@ -317,8 +301,7 @@ func sumResourceReservations(left, right map[string]string) (map[string]string, 
 func sumQuantities(l, r string) (*resource.Quantity, error) {
 	var (
 		left, right resource.Quantity
-
-		err error
+		err         error
 	)
 
 	if r == "" && l == "" {
