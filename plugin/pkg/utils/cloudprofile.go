@@ -186,11 +186,11 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 	if shootK8sVersion != nil && version.ConstraintK8sGreaterEqual134.Check(shootK8sVersion) {
 		// default empty cloudprofile kind to CloudProfile
 		if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == "" {
-			newShoot.Spec.CloudProfile.Kind = constants.CloudProfileReferenceKindCloudProfile
+			newShoot.Spec.CloudProfile.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
 		}
 		// For update operations, an unchanged cloudProfileName will be set to nil if it equals the value in cloudProfile.name.
 		if oldShoot != nil && newShoot.Spec.CloudProfileName != nil && newShoot.Spec.CloudProfile != nil &&
-			newShoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindCloudProfile &&
+			newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile &&
 			ptr.Deref(newShoot.Spec.CloudProfileName, "") == ptr.Deref(oldShoot.Spec.CloudProfileName, "") &&
 			ptr.Deref(newShoot.Spec.CloudProfileName, "") == newShoot.Spec.CloudProfile.Name {
 			newShoot.Spec.CloudProfileName = nil
