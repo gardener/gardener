@@ -225,6 +225,7 @@ func (a *authorizer) authorizePod(ctx context.Context, log logr.Logger, machineN
 			log.Info("Denying request because field selector is invalid", "error", err)
 			return auth.DecisionDeny, "", fmt.Errorf("error parsing field selector: %w", err)
 		}
+
 		for _, req := range reqs {
 			if req.Field == "spec.nodeName" && req.Operator == selection.Equals && req.Value == node {
 				return auth.DecisionAllow, "", nil

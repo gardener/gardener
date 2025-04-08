@@ -51,15 +51,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - watch
-  - delete
-- apiGroups:
-  - ""
-  resources:
   - events
   verbs:
   - get
@@ -68,6 +59,15 @@ rules:
   - create
   - patch
   - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
 `
 
 				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
@@ -227,15 +227,6 @@ rules:
   - watch
   - patch
   - update
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - watch
-  - delete
 - apiGroups:
   - ""
   resources:

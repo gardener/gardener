@@ -173,7 +173,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if isInPlaceUpdate(oscChanges) {
 		if !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
 			log.Info("Node is not ready for in-place update, will be requeued when the node has the ready-for-update condition", "node", node.Name)
-			return reconcile.Result{RequeueAfter: 10 * time.Minute}, nil
+			return reconcile.Result{}, nil
 		}
 
 		log.Info("In-place update is in progress", "osUpdate", oscChanges.InPlaceUpdates.OperatingSystem,
@@ -871,6 +871,9 @@ func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log l
 	return RequestAndStoreKubeconfig(ctx, log, r.FS, restConfig, r.MachineName)
 }
 
+// The machine-controller-manager drains the node and marks it unschedulable before marking the node ready for in-place updates.
+// Despite this, DaemonSet pods and pods with local storage are recreated on the node during the update,
+// requiring an additional deletion step after the completion of update.
 func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, node *corev1.Node) error {
 	// List all pods running on the node and delete them.
 	// This should recreate daemonset pods and pods with local storage.
@@ -880,13 +883,7 @@ func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, n
 		return fmt.Errorf("failed listing pods for node %s: %w", node.Name, err)
 	}
 
-	return kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, func(obj runtime.Object) bool {
-		pod, ok := obj.(*corev1.Pod)
-		if !ok {
-			return false
-		}
-		return pod.Spec.NodeName == node.Name
-	})
+	return kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, nil)
 }
 
 // Logic copied from https://github.com/google/cadvisor/blob/5b649021c2dab9db34c8c37596f8f73c48548350/machine/operatingsystem_unix.go#L29-L54

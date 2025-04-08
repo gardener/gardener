@@ -38,11 +38,6 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods"},
-					Verbs:     []string{"get", "list", "watch", "delete"},
-				},
-				{
-					APIGroups: []string{""},
 					Resources: []string{"events"},
 					Verbs:     []string{"get", "list", "watch", "create", "patch", "update"},
 				},
@@ -133,6 +128,13 @@ func RBACResourcesData(secretNames []string) (map[string][]byte, error) {
 			Kind:     rbacv1.GroupKind,
 			Name:     v1beta1constants.NodeAgentsGroup,
 		})
+		clusterRole.Rules = append(clusterRole.Rules,
+			rbacv1.PolicyRule{
+				APIGroups: []string{""},
+				Resources: []string{"pods"},
+				Verbs:     []string{"get", "list", "watch", "delete"},
+			},
+		)
 	}
 
 	return managedresources.
