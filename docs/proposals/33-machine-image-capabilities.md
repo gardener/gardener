@@ -229,7 +229,8 @@ Please note the following characteristics:
 Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`.
 Then the image with `gen2` will be preferred.
 
-Other edge cases will be deterministic solved as well to ensure a consistent behavior, see the matching algorithm section.
+Other edge cases will be deterministic solved as well to ensure a consistent behavior. 
+For further information, refer to the [matching algorithm](#matching-algorithm) section.
 
 In addition to the `spec.capabilities`, spec.machineTypes` is extended with a `capabilities` map.
 
