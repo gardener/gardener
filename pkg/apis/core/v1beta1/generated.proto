@@ -448,7 +448,7 @@ message CloudProfileSpec {
   // The order of values for a given capability is relevant. The most important value is listed first.
   // During maintenance upgrades, the image that matches most capabilities will be selected.
   // +optional
-  map<string, CapabilityValues> capabilities = 12;
+  repeated CapabilitySet capabilities = 12;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.

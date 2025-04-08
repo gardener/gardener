@@ -887,17 +887,9 @@ func (in *CloudProfileSpec) DeepCopyInto(out *CloudProfileSpec) {
 	}
 	if in.Capabilities != nil {
 		in, out := &in.Capabilities, &out.Capabilities
-		*out = make(map[string]CapabilityValues, len(*in))
-		for key, val := range *in {
-			var outVal []string
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				in, out := &val, &outVal
-				*out = make(CapabilityValues, len(*in))
-				copy(*out, *in)
-			}
-			(*out)[key] = outVal
+		*out = make([]CapabilitySet, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	return

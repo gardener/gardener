@@ -487,8 +487,8 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 <td>
 <code>capabilities</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.Capabilities">
-Capabilities
+<a href="#core.gardener.cloud/v1beta1.CapabilitySet">
+[]CapabilitySet
 </a>
 </em>
 </td>
@@ -3440,7 +3440,6 @@ CRIName
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.CapabilitySet">CapabilitySet</a>, 
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.MachineType">MachineType</a>)
 </p>
 <p>
@@ -3450,6 +3449,7 @@ CRIName
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
 </p>
 <p>
@@ -3699,8 +3699,8 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 <td>
 <code>capabilities</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.Capabilities">
-Capabilities
+<a href="#core.gardener.cloud/v1beta1.CapabilitySet">
+[]CapabilitySet
 </a>
 </em>
 </td>

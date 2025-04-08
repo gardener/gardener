@@ -2716,7 +2716,7 @@ func autoConvert_v1beta1_CloudProfileSpec_To_core_CloudProfileSpec(in *CloudProf
 	out.VolumeTypes = *(*[]core.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Bastion = (*core.Bastion)(unsafe.Pointer(in.Bastion))
 	out.Limits = (*core.Limits)(unsafe.Pointer(in.Limits))
-	out.Capabilities = *(*map[string]core.CapabilityValues)(unsafe.Pointer(&in.Capabilities))
+	out.Capabilities = *(*[]core.CapabilitySet)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
 
@@ -2739,7 +2739,7 @@ func autoConvert_core_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *core.Clou
 	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Bastion = (*Bastion)(unsafe.Pointer(in.Bastion))
 	out.Limits = (*Limits)(unsafe.Pointer(in.Limits))
-	out.Capabilities = *(*Capabilities)(unsafe.Pointer(&in.Capabilities))
+	out.Capabilities = *(*[]CapabilitySet)(unsafe.Pointer(&in.Capabilities))
 	return nil
 }
 

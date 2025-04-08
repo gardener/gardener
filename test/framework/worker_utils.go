@@ -82,7 +82,7 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 		return fmt.Errorf("no MachineTypes of architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
 
-	machineImage := firstMachineImageWithAMDSupport(cloudProfile.Spec.MachineImages, cloudProfile.Spec.Capabilities)
+	machineImage := firstMachineImageWithAMDSupport(cloudProfile.Spec.MachineImages, cloudProfile.Spec.GetCapabilities())
 
 	if machineImage == nil {
 		return fmt.Errorf("no MachineImage that supports architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)

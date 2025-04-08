@@ -58,14 +58,17 @@ func ValidateNamespacedCloudProfileSpecUpdate(newProfile, oldProfile *core.Names
 
 // ValidateNamespacedCloudProfileStatus validates the specification of a NamespacedCloudProfile object.
 func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs      = field.ErrorList{}
+		capabilities = spec.GetCapabilities()
+	)
 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	if len(spec.MachineImages) > 0 {
-		allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, spec.Capabilities, fldPath.Child("machineImages"))...)
+		allErrs = append(allErrs, ValidateCloudProfileMachineImages(spec.MachineImages, capabilities, fldPath.Child("machineImages"))...)
 	}
 	if len(spec.MachineTypes) > 0 {
-		allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, spec.Capabilities, fldPath.Child("machineTypes"))...)
+		allErrs = append(allErrs, validateCloudProfileMachineTypes(spec.MachineTypes, capabilities, fldPath.Child("machineTypes"))...)
 	}
 	if len(spec.VolumeTypes) > 0 {
 		allErrs = append(allErrs, validateVolumeTypes(spec.VolumeTypes, fldPath.Child("volumeTypes"))...)

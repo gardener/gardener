@@ -93,7 +93,21 @@ type CloudProfileSpec struct {
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
 	// +optional
-	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=capabilities,casttype=Capabilities"`
+	Capabilities []CapabilitySet `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=capabilities"`
+}
+
+// GetCapabilities returns the capabilities slice of the CloudProfile as a Capabilities map.
+func (spec *CloudProfileSpec) GetCapabilities() Capabilities {
+	if len(spec.Capabilities) == 0 {
+		return nil
+	}
+	capabilities := make(Capabilities, len(spec.Capabilities))
+	for _, capabilitySet := range spec.Capabilities {
+		for key, value := range capabilitySet.Capabilities {
+			capabilities[key] = value
+		}
+	}
+	return capabilities
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile

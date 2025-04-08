@@ -301,8 +301,9 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 			}
 
 			// There is no entry for this image in the parent CloudProfile yet.
-			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, parentCloudProfileSpecCore.Capabilities, imageIndexPath, false)...)
-			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, parentCloudProfileSpecCore.Capabilities, imageIndexPath)...)
+			capabilities := parentCloudProfileSpecCore.GetCapabilities()
+			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, capabilities, imageIndexPath, false)...)
+			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, capabilities, imageIndexPath)...)
 		}
 	}
 	return allErrs.ToAggregate()

@@ -425,8 +425,8 @@ var _ = Describe("Helper", func() {
 
 		Describe("Initial migration", func() {
 			BeforeEach(func() {
-				cloudProfileSpecNew.Capabilities = core.Capabilities{
-					"architecture": []string{"arm64", "amd64", "custom"},
+				cloudProfileSpecNew.Capabilities = []core.CapabilitySet{
+					{Capabilities: core.Capabilities{"architecture": []string{"arm64", "amd64", "custom"}}},
 				}
 			})
 
@@ -444,7 +444,8 @@ var _ = Describe("Helper", func() {
 			It("It should correctly handle split-up machine image version capability architectures", func() {
 				cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
 					{Capabilities: core.Capabilities{"architecture": []string{"custom"}}},
-					{Capabilities: core.Capabilities{"architecture": []string{"amd64", "arm64"}}},
+					{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
+					{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
 				}
 
 				SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
@@ -453,13 +454,14 @@ var _ = Describe("Helper", func() {
 			})
 
 			It("It should sync filled architecture fields to empty capabilities", func() {
-				cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
+				cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures = []string{"amd64", "arm64"}
 				cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("amd64")
 
 				SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
 
-				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64"}))
+				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64", "arm64"}))
 				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
+				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
 				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
 				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
 			})
