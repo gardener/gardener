@@ -140,7 +140,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 	var (
 		nodeCacheOptions  = cache.ByObject{Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})}
 		leaseCacheOptions = cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
-		podCacheOptions   = cache.ByObject{Field: fields.SelectorFromSet(fields.Set{indexer.PodNodeName: hostName})}
+		podCacheOptions   = cache.ByObject{Field: fields.OneTermEqualSelector(indexer.PodNodeName, hostName)}
 	)
 
 	if nodeName != "" {
@@ -148,7 +148,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 		nodeCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: nodeName})
 		nodeCacheOptions.Label = nil
 		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenerutils.NodeAgentLeaseName(nodeName)})
-		podCacheOptions.Field = fields.SelectorFromSet(fields.Set{indexer.PodNodeName: nodeName})
+		podCacheOptions.Field = fields.OneTermEqualSelector(indexer.PodNodeName, nodeName)
 	}
 
 	log.Info("Setting up manager")

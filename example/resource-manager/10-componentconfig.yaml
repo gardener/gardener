@@ -112,3 +112,4 @@ webhooks:
   nodeAgentAuthorizer:
     enabled: true
     machineNamespace: shoot--foo--bar
+    authorizeWithSelectors: false
