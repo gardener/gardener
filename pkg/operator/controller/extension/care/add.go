@@ -24,11 +24,11 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/operator/mapper"
 	"github.com/gardener/gardener/pkg/operator/predicate"
+	"github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // ControllerName is the name of this controller.
@@ -91,7 +91,7 @@ func (r *Reconciler) MapManagedResourceToExtension(_ context.Context, obj client
 		return nil
 	}
 
-	if extensionName, ok := helper.ExtensionForManagedResourceName(managedResource.Name); ok {
+	if extensionName, ok := gardener.ExtensionForManagedResourceName(managedResource.Name); ok {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: extensionName}}}
 	}
 

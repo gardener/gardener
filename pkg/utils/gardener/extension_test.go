@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package helper_test
+package gardener_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -10,7 +10,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	. "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
+	. "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("Extension", func() {
@@ -39,15 +39,10 @@ var _ = Describe("Extension", func() {
 	},
 
 		Entry("it should recognize a managed resource of an extension", "extension-foobar-garden", "foobar", true),
-
 		Entry("it should recognize a managed resource of an extension admission for runtime cluster", "extension-admission-runtime-foobar", "foobar", true),
-
 		Entry("it should recognize a managed resource of an extension admission for virtual cluster", "extension-admission-virtual-foobar", "foobar", true),
-
 		Entry("it should not recognize a random managed resource as an extension", "foobar", "", false),
-
 		Entry("it should not recognize a managed resource with a matching prefix only as an extension", "extension-foobar", "", false),
-
 		Entry("it should not recognize a managed resource with a matching suffix only as an extension", "foobar-garden", "", false),
 	)
 

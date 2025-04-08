@@ -18,11 +18,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // RequeueGardenResourceNotReady is the time after which an extension will be requeued, if the Garden resource was not ready during its reconciliation. Exposed for testing.
@@ -136,7 +136,7 @@ func (r *Reconciler) reconcile(
 }
 
 func (r *Reconciler) deployExtensionInRuntime(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	if !helper.IsExtensionInRuntimeRequired(extension) {
+	if !gardener.IsExtensionInRuntimeRequired(extension) {
 		log.V(1).Info("Deployment in runtime cluster not required")
 		return r.runtime.Delete(ctx, log, extension)
 	}

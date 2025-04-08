@@ -397,7 +397,7 @@ func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden) sets.Se
 func IsRuntimeExtensionInstallationSuccessful(ctx context.Context, c client.Client, gardenNamespace, extensionName string) error {
 	managedResource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      helper.ExtensionRuntimeManagedResourceName(extensionName),
+			Name:      ExtensionRuntimeManagedResourceName(extensionName),
 			Namespace: gardenNamespace,
 		},
 	}
