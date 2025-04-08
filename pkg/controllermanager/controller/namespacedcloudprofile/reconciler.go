@@ -129,14 +129,8 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 		if namespacedCloudProfile.Status.CloudProfileSpec.Limits == nil {
 			namespacedCloudProfile.Status.CloudProfileSpec.Limits = &gardencorev1beta1.Limits{}
 		}
-
-		maxNodesTotalOverride := ptr.Deref(namespacedCloudProfile.Spec.Limits.MaxNodesTotal, 0)
-		var maxNodesTotalParent int32
-		if cloudProfile.Spec.Limits != nil {
-			maxNodesTotalParent = ptr.Deref(cloudProfile.Spec.Limits.MaxNodesTotal, 0)
-		}
-		if maxNodesTotal := utils.MinGreaterThanZero(maxNodesTotalOverride, maxNodesTotalParent); maxNodesTotal > 0 {
-			namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal = ptr.To(maxNodesTotal)
+		if ptr.Deref(namespacedCloudProfile.Spec.Limits.MaxNodesTotal, 0) > 0 {
+			namespacedCloudProfile.Status.CloudProfileSpec.Limits.MaxNodesTotal = namespacedCloudProfile.Spec.Limits.MaxNodesTotal
 		}
 	}
 }

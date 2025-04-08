@@ -8,7 +8,10 @@ Gardener operators can configure limits for shoot clusters in the `CloudProfile.
 The limits are enforced on all shoot clusters using the respective `CloudProfile`.
 If a certain limit is not configured, no limit is enforced.
 
-The configured limits of a `CloudProfile` can be overridden by setting a more restrictive value in a `NamespacedCloudProfile`.
+The configured limits of a `CloudProfile` can be overridden by configuring limits in a `NamespacedCloudProfile`.
+To increase a `CloudProfile` limit, a user must have permission by the appropriate custom verbs.
+Setting a stricter limit is always allowed without requiring special permissions.
+For more information, see the [NamespacedCloudProfile documentation](../project/namespaced-cloud-profiles.md#field-modification-restrictions).
 
 This document explains the limits that can be configured in the `CloudProfile`.
 

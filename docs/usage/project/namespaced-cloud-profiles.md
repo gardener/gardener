@@ -32,6 +32,7 @@ Changing the following fields require the corresponding custom verbs:
 * For changing the `.spec.kubernetes` field, the custom verb `modify-spec-kubernetes` is required.
 * For changing the `.spec.machineImages` field, the custom verb `modify-spec-machineimages` is required.
 * For changing the `.spec.providerConfig` field, the custom verb `modify-spec-providerconfig` is required.
+* For raising limits in `.spec.limits` field above values in the parent CloudProfile `.spec.limits`, the custom verb `raise-spec-limits` is required.
 
 The assignment of these custom verbs can be achieved by creating a `ClusterRole` and a `RoleBinding` like in the following example:
 
