@@ -30,7 +30,7 @@ spec:
         - -conf
         - /etc/coredns/Corefile
         # TODO(marc1404): When updating coredns to v1.13.x check if the NET_BIND_SERVICE capability can be removed.
-        image: registry.k8s.io/coredns/coredns:v1.12.0
+        image: registry.k8s.io/coredns/coredns:v1.12.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 5
