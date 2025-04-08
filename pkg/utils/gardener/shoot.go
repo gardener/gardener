@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +40,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
@@ -827,4 +829,38 @@ func IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(shoot *gardencorev1b
 	}
 
 	return !valueKubeAPIServer && !valueKubeScheduler
+}
+
+// IsAuthorizeWithSelectorsEnabled checks if the feature gate "AuthorizeWithSelectors" is enabled in the kube-apiserver
+// of the Shoot.
+func IsAuthorizeWithSelectorsEnabled(kubeAPIServer *gardencorev1beta1.KubeAPIServerConfig, kubernetesVersion *semver.Version) bool {
+	// The feature gate is beta in v1.32 and enabled by default.
+	if versionutils.ConstraintK8sGreaterEqual132.Check(kubernetesVersion) {
+		if kubeAPIServer == nil {
+			return true
+		}
+
+		value, ok := kubeAPIServer.FeatureGates["AuthorizeWithSelectors"]
+		if !ok {
+			return true
+		}
+
+		return value
+	}
+
+	// The feature gate is alpha in v1.31 and disabled by default.
+	if versionutils.ConstraintK8sGreaterEqual131.Check(kubernetesVersion) {
+		if kubeAPIServer == nil {
+			return false
+		}
+
+		value, ok := kubeAPIServer.FeatureGates["AuthorizeWithSelectors"]
+		if !ok {
+			return false
+		}
+
+		return value
+	}
+
+	return false
 }

@@ -17,6 +17,7 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,12 +26,13 @@ import (
 )
 
 // NewAuthorizer returns a new authorizer for requests from gardener-node-agents. It never has an opinion on the request.
-func NewAuthorizer(logger logr.Logger, sourceClient, targetClient client.Client, machineNamespace string) *authorizer {
+func NewAuthorizer(logger logr.Logger, sourceClient, targetClient client.Client, machineNamespace string, authorizeWithSelectors bool) *authorizer {
 	return &authorizer{
-		sourceClient:     sourceClient,
-		targetClient:     targetClient,
-		logger:           logger,
-		machineNamespace: machineNamespace,
+		sourceClient:           sourceClient,
+		targetClient:           targetClient,
+		logger:                 logger,
+		machineNamespace:       machineNamespace,
+		authorizeWithSelectors: authorizeWithSelectors,
 	}
 }
 
@@ -47,10 +49,11 @@ var (
 )
 
 type authorizer struct {
-	sourceClient     client.Client
-	targetClient     client.Client
-	logger           logr.Logger
-	machineNamespace string
+	sourceClient           client.Client
+	targetClient           client.Client
+	logger                 logr.Logger
+	machineNamespace       string
+	authorizeWithSelectors bool
 }
 
 var _ auth.Authorizer = (*authorizer)(nil)
@@ -83,7 +86,7 @@ func (a *authorizer) Authorize(ctx context.Context, attrs auth.Attributes) (auth
 		case nodeResource:
 			return a.authorizeNode(ctx, requestLog, machineName, attrs)
 		case podResource:
-			return a.authorizePod(requestLog, attrs)
+			return a.authorizePod(ctx, requestLog, machineName, attrs)
 		case secretsResource:
 			return a.authorizeSecret(ctx, requestLog, machineName, attrs)
 		}
@@ -189,7 +192,7 @@ func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machine
 	return auth.DecisionAllow, "", nil
 }
 
-func (a *authorizer) authorizePod(log logr.Logger, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizePod(ctx context.Context, log logr.Logger, machineName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	if ok, reason := a.checkSubresource(log, attrs); !ok {
 		return auth.DecisionDeny, reason, nil
 	}
@@ -197,6 +200,66 @@ func (a *authorizer) authorizePod(log logr.Logger, attrs auth.Attributes) (auth.
 	allowedVerbs := []string{"get", "list", "watch", "delete"}
 	if allowed, reason := a.checkVerb(log, attrs, allowedVerbs...); !allowed {
 		return auth.DecisionDeny, reason, nil
+	}
+
+	machine := &machinev1alpha1.Machine{}
+	if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: a.machineNamespace}, machine); err != nil {
+		return auth.DecisionDeny, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
+	}
+
+	node := machine.Labels[machinev1alpha1.NodeLabelKey]
+	if node == "" {
+		log.Info(`Denying request because the machine does not have a "node" label`, "machineName", machineName)
+		return auth.DecisionDeny, fmt.Sprintf(`expecting "node" label on machine %q`, machineName), nil
+	}
+
+	switch attrs.GetVerb() {
+	case "list", "watch":
+		if !a.authorizeWithSelectors {
+			return auth.DecisionAllow, "", nil
+		}
+
+		// allow a scoped fieldSelector
+		reqs, err := attrs.GetFieldSelector()
+		if err != nil {
+			log.Info("Denying request because field selector is invalid", "error", err)
+			return auth.DecisionDeny, "", fmt.Errorf("error parsing field selector: %w", err)
+		}
+		for _, req := range reqs {
+			if req.Field == "spec.nodeName" && req.Operator == selection.Equals && req.Value == node {
+				return auth.DecisionAllow, "", nil
+			}
+		}
+
+		// allow a read of a single pod known to be related to the node
+		if attrs.GetName() != "" {
+			return a.authorizeSinglePod(ctx, log, node, attrs)
+		}
+
+		log.Info("Denying request because only listing/watching pods with spec.nodeName field selector for the same node is allowed")
+		return auth.DecisionDeny, fmt.Sprintf("can only list/watch pods with spec.nodeName=%s field selector", node), nil
+
+	case "get", "delete":
+		return a.authorizeSinglePod(ctx, log, node, attrs)
+	}
+
+	return auth.DecisionAllow, "", nil
+}
+
+func (a *authorizer) authorizeSinglePod(ctx context.Context, log logr.Logger, nodeName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      attrs.GetName(),
+			Namespace: attrs.GetNamespace(),
+		},
+	}
+	if err := a.targetClient.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
+		return auth.DecisionDeny, "", fmt.Errorf("error getting pod %q: %w", client.ObjectKeyFromObject(pod), err)
+	}
+
+	if pod.Spec.NodeName != nodeName {
+		log.Info("Denying request because pod belongs to a different node", "podNodeName", pod.Spec.NodeName)
+		return auth.DecisionDeny, fmt.Sprintf("pod %q does not belong to node %q", client.ObjectKeyFromObject(pod), nodeName), nil
 	}
 
 	return auth.DecisionAllow, "", nil
