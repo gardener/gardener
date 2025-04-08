@@ -11,14 +11,14 @@ The following sections explain the general registration process for extensions.
 
 The registration starts by creating [`Extension`](../../example/operator/15-extension.yaml) resources in the garden runtime cluster. 
 They represent the single source for all deployment aspects an extension may offer (garden, seed, shoot, admission).
-The `gardener-operator` takes these resources to deploy the extension to the garden runtime cluster, as well as creating corresponding [`ControllerRegistration`](../../example/25-controllerregistration.yaml) and [`ControllerDeployment`](../../example/25-controllerdeployment.yaml) resources in the virtual garden cluster.
+The `gardener-operator` takes these resources to deploy the extension controllers to the garden runtime cluster, as well as creating corresponding [`ControllerRegistration`](../../example/25-controllerregistration.yaml) and [`ControllerDeployment`](../../example/25-controllerdeployment.yaml) resources in the virtual garden cluster.
 
 Please see the following example of an `Extension` resource which mainly configures:
 - The resource kinds and types the extension is responsible for
-- A Reference the OCI Helm chart for the extension
-- Values for the extension in the garden runtime cluster
-- Values for the deployment in the seed clusters
-- A Reference the OCI Helm chart(s) for the extension admission
+- A Reference the OCI Helm chart(s) for the extension admission and optional values
+- A Reference the OCI Helm chart for the extension controller
+- Optional values for the extension in the garden runtime cluster
+- Optional values for the deployment in the seed clusters
 
 ```yaml
 apiVersion: operator.gardener.cloud/v1alpha1
@@ -41,7 +41,6 @@ spec:
     type: local
   deployment:
     admission:
-      values: {}
       runtimeCluster:
         helm:
           ociRepository:
@@ -50,7 +49,11 @@ spec:
         helm:
           ociRepository:
             ref: registry.example.com/gardener/extensions/local/adission-application:v1.0.0
+      values: {}
     extension:
+      helm:
+          ociRepository:
+            ref: registry.example.com/gardener/extensions/local/extension:v1.0.0
       values:
          controllers:
            dnsrecord:
@@ -59,9 +62,6 @@ spec:
         controllers:
           dnsrecord:
             concurrentSyncs: 1
-      helm:
-          ociRepository:
-            ref: registry.example.com/gardener/extensions/local/extension:v1.0.0
 ```
 
 Operators may use `Extension`s to observe their status conditions, regularly updated by `gardener-operator`.
@@ -146,7 +146,7 @@ A reference to the shown `ControllerDeployment` specifies how the deployment of 
 
 ## Deploying Extension Controllers
 
-In the garden runtime cluster `gardener-operator` deploys the extension directly, as soon as it is considered as required.
+In the garden runtime cluster `gardener-operator` deploys the extension controllers directly, as soon as it is considered as required.
 Deployments in the seed clusters are represented by another resource called `ControllerInstallation`.
 
 ```yaml
@@ -165,7 +165,7 @@ spec:
 
 This resource expresses that Gardener requires the `provider-local` extension controller to run on the `local-1` seed cluster.
 
-`gardener-controller-manager` automatically determines which extension is required on which seed cluster and will only create `ControllerInstallation` objects for those.
+`gardener-controller-manager` automatically determines which extension controller is required on which seed cluster and will only create `ControllerInstallation` objects for those.
 Also, it will automatically delete `ControllerInstallation`s referencing extension controllers that are no longer required on a seed (e.g., because all shoots on it have been deleted).
 There are additional configuration options, please see the [Deployment Configuration Options section](#deployment-configuration-options).
 After `gardener-controller-manager` has written the `ControllerInstallation` resource, gardenlet picks it up and installs the controller on the respective `Seed` using the referenced `ControllerDeployment`.
@@ -239,7 +239,7 @@ The downloaded chart is cached in memory. It is recommended to always specify a 
 
 No matter where the chart originates from, `gardener-operator` and `gardenlet` deploy it with the provided Helm values.
 The chart and the values can be updated at any time - Gardener will recognize it and re-trigger the deployment process.
-In order to allow extensions to get information about the garden and the seed cluster, additional properties are mixed into the values (root level) of every deployed Helm chart:
+In order to allow extension controller deployments to get information about the garden and the seed cluster, additional properties are mixed into the values (root level) of every deployed Helm chart:
 
 - Additional properties for garden deployment
 ```yaml
@@ -276,7 +276,7 @@ In order to allow extensions to get information about the garden and the seed cl
       featureGates: <gardenlet-feature-gates>
   ```
 
-Extensions can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
+Extension controller deployments can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
 The list might be extended in the future.
 
 ### Deployment Configuration Options
@@ -286,7 +286,7 @@ There are the following policies:
 
 * `OnDemand` (default): Gardener will demand the deployment and deletion of the extension controller to/from seed clusters dynamically. It will automatically determine (based on other resources like `Shoot`s) whether it is required and decide accordingly.
 * `Always`: Gardener will demand the deployment of the extension controller to seed clusters independent of whether it is actually required or not. This might be helpful if you want to add a new component/controller to all seed clusters by default. Another use-case is to minimize the durations until extension controllers get deployed and ready in case you have highly fluctuating seed clusters.
-* `AlwaysExceptNoShoots`: Similar to `Always`, but if the seed does not have any shoots, then the extension is not being deployed. It will be deleted from a seed after the last shoot has been removed from it.
+* `AlwaysExceptNoShoots`: Similar to `Always`, but if the seed does not have any shoots, then the extension controller is not being deployed. It will be deleted from a seed after the last shoot has been removed from it.
 
 Also, the `.spec.extension.seedSelector` allows to specify a label selector for seed clusters.
 Only if it matches the labels of a seed, then it will be deployed to it.
@@ -294,8 +294,7 @@ Please note that a seed selector can only be specified for secondary controllers
 
 ### `Extension` Resource Configurations
 
-The `Extension` resource allows injecting arbitrary steps into the garden, seed and shoot reconciliation flow that are unknown to Gardener.
-Hence, it is slightly special and allows further configuration when registering it:
+The extensibility contract allows the following configuration options per registered extension resource (see `resources` below):
 
 ```yaml
 apiVersion: operator.gardener.cloud/v1alpha1
@@ -331,7 +330,7 @@ Also, please note that the `primary` field cannot be changed after creation of t
 
 #### `Extension` Lifecycle
 
-The `lifecycle` field tells Gardener when to perform a certain action on the `Extension` resource during the reconciliation flows. If omitted, then the default behaviour will be applied. Please find more information on the defaults in the explanation below. Possible values for each control flow are `AfterKubeAPIServer`, `BeforeKubeAPIServer`, and `AfterWorker`. Let's take the following configuration and explain it.
+The `lifecycle` field tells Gardener when to perform a certain action on the `Extension` (`extensions.gardener.cloud/v1alpha1`) resource during the reconciliation flows. If omitted, then the default behaviour will be applied. Please find more information on the defaults in the explanation below. Possible values for each control flow are `AfterKubeAPIServer`, `BeforeKubeAPIServer`, and `AfterWorker`. Let's take the following configuration and explain it.
 
 ```yaml
     ...

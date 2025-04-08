@@ -7,7 +7,7 @@ The document describes an out-of-tree extension architecture that keeps the Gard
 
 ## Basic Concepts
 
-Gardener keeps running in the "garden cluster" and implements the core logic of garden, seed and shoot cluster reconciliation / deletion.
+Gardener components run in the garden and seed clusters, implementing the core logic for garden, seed, and shoot cluster reconciliation and deletion.
 Extensions are Kubernetes controllers themselves (like Gardener) and run in the garden runtime and seed clusters.
 As usual, we try to use Kubernetes wherever applicable.
 We rely on Kubernetes extension concepts in order to enable extensibility for Gardener.
@@ -16,7 +16,7 @@ We rely on Kubernetes extension concepts in order to enable extensibility for Ga
 
 Extensions consist of the following building blocks:
 1. A Helm chart as the vehicle to generally deploy extension controllers to a Kubernetes clusters
-1. Controllers that reconcile objects of the API group `extensions.gardener.cloud`. These controllers take over outsourced tasks, like creating the shoot infrastructure or deploying components to the control-plane. Optionally, extensions can bring their own webhooks to mutate resources deployed by Gardener.
+1. Extension controllers that reconcile objects of the API group `extensions.gardener.cloud`. These controllers take over outsourced tasks, like creating the shoot infrastructure or deploying components to the control-plane. Optionally, extensions can bring their own webhooks to mutate resources deployed by Gardener.
 1. Optionally, a Helm chart with an admission component inside. The admission controller runs in the garden runtime cluster and validates extension specific settings of the `Shoot` (given in `providerConfig` fields). See [admission](./admission.md) for more details.
 
 ### Registration
@@ -47,18 +47,18 @@ The `.spec.class` field identifies the different deployment cases.
 
 #### Garden
 
-Extensions serve the garden (run in garden runtime), e.g. installing certifictes for API and ingress endpoints.
-In the course of the `Garden` reconciliation, the `gardener-operator` creates `BackupBucket`, `DNSRecord` and `Extension` resources (group `extensions.gardener.cloud`) which triggers the reconciliation of responsible extension controllers.
+Extension controllers serve the garden (run in garden runtime), e.g. installing certificates for API and ingress endpoints.
+In the course of the `Garden` reconciliation, the `gardener-operator` creates `BackupBucket`, `DNSRecord` and `Extension` resources (group `extensions.gardener.cloud`) which triggers the responsible extension controllers to reconcile them.
 
 #### Seed
 
-Extensions serve the seed (run in seed), e.g. requesting a wildcard certificate for the seed's ingress domain.
-In the course of the `Seed` reconciliation, the `gardenlet` creates `DNSRecord` and `Extension` resources (group `extensions.gardener.cloud`) which triggers the reconciliation of responsible extension controllers.
+Extension controllers serve the seed (run in seed), e.g. requesting a wildcard certificate for the seed's ingress domain.
+In the course of the `Seed` reconciliation, the `gardenlet` creates `DNSRecord` and `Extension` resources (group `extensions.gardener.cloud`) which triggers the responsible extension controllers to reconcile them.
 
 #### Shoot
 
-Extensions serve the shoot (run in seed), e.g. deploying a certificate controller into the control-plane namespace.
-In the course of the `Shoot` reconciliation, the `gardenlet` creates various extension resources (group `extensions.gardener.cloud`) which triggers the reconciliation of responsible extension controllers.
+Extension controllers serve the shoot (run in seed), e.g. deploying a certificate controller into the control-plane namespace.
+In the course of the `Shoot` reconciliation, the `gardenlet` creates various extension resources (group `extensions.gardener.cloud`) which triggers the responsible extension controllers to reconcile them.
 
 ### `gardenlet` Reconciliation Walkthrough
 
