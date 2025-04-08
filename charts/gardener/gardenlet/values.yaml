@@ -118,6 +118,8 @@ config:
     shootState:
       concurrentSyncs: 5
       syncPeriod: 6h
+    shootStatus:
+      concurrentSyncs: 5
     managedSeed:
       concurrentSyncs: 5
       syncPeriod: 1h

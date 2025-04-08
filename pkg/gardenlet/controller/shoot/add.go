@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/care"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/shoot"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/state"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/shoot/status"
 )
 
 // AddToManager adds all Shoot controllers to the given manager.
@@ -67,6 +68,13 @@ func AddToManager(
 		SeedName:              cfg.SeedConfig.Name,
 	}).AddToManager(mgr, gardenCluster); err != nil {
 		return fmt.Errorf("failed adding care reconciler: %w", err)
+	}
+
+	if err := (&status.Reconciler{
+		Config:   *cfg.Controllers.ShootStatus,
+		SeedName: cfg.SeedConfig.Name,
+	}).AddToManager(mgr, gardenCluster, seedCluster); err != nil {
+		return fmt.Errorf("failed adding status reconciler: %w", err)
 	}
 
 	// If gardenlet is responsible for an unmanaged seed we want to add the state reconciler which performs periodic
