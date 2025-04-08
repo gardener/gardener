@@ -221,7 +221,7 @@ spec:
 
 Please note the following characteristics:
 - The array of capabilities is ordered.
-- The array of each capability is ordered also.
+- The array of each capability is also ordered.
 - The order defines the priority of the values in case of multiple supported images.
 - The first value in the array is the most preferred value.
 - The last value is the least preferred value.
