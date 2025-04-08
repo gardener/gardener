@@ -17,7 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
@@ -31,13 +31,13 @@ func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfil
 		return nil, fmt.Errorf("no cloudprofile reference has been provided")
 	}
 	switch cloudProfileReference.Kind {
-	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
 		namespacedCloudProfile, err := namespacedCloudProfileLister.NamespacedCloudProfiles(shoot.Namespace).Get(cloudProfileReference.Name)
 		if err != nil {
 			return nil, err
 		}
 		return &namespacedCloudProfile.Status.CloudProfileSpec, nil
-	case constants.CloudProfileReferenceKindCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 		cloudProfile, err := cloudProfileLister.Get(cloudProfileReference.Name)
 		if err != nil {
 			return nil, err
@@ -71,11 +71,11 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 
 	if !equality.Semantic.DeepEqual(oldCloudProfileRoot, newCloudProfileRoot) {
 		fromProfile := fmt.Sprintf("%q", oldCloudProfileReference.Name)
-		if oldCloudProfileReference.Kind != constants.CloudProfileReferenceKindCloudProfile {
+		if oldCloudProfileReference.Kind != v1beta1constants.CloudProfileReferenceKindCloudProfile {
 			fromProfile += fmt.Sprintf(" (root: %q)", oldCloudProfileRoot.Name)
 		}
 		toProfile := fmt.Sprintf("%q", newCloudProfileReference.Name)
-		if newCloudProfileReference.Kind != constants.CloudProfileReferenceKindCloudProfile {
+		if newCloudProfileReference.Kind != v1beta1constants.CloudProfileReferenceKindCloudProfile {
 			toProfile += fmt.Sprintf(" (root: %q)", newCloudProfileRoot.Name)
 		}
 		return fmt.Errorf("cloud profile reference change is invalid: cannot change from %s to %s. The cloud profile reference must remain within the same hierarchy", fromProfile, toProfile)
@@ -134,9 +134,9 @@ func getRootCloudProfile(namespacedCloudProfileLister gardencorev1beta1listers.N
 		return nil, errors.New("unexpected nil cloudprofile to get root of")
 	}
 	switch cloudProfile.Kind {
-	case constants.CloudProfileReferenceKindCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 		return cloudProfile, nil
-	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
 		cp, err := namespacedCloudProfileLister.NamespacedCloudProfiles(namespace).Get(cloudProfile.Name)
 		if err != nil {
 			return nil, err
@@ -158,14 +158,14 @@ func BuildCloudProfileReference(shoot *core.Shoot) *gardencorev1beta1.CloudProfi
 			return nil
 		}
 		if len(cloudProfileV1Beta1.Kind) == 0 {
-			cloudProfileV1Beta1.Kind = constants.CloudProfileReferenceKindCloudProfile
+			cloudProfileV1Beta1.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
 		}
 		return cloudProfileV1Beta1
 	}
 	if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 {
 		return &gardencorev1beta1.CloudProfileReference{
 			Name: *shoot.Spec.CloudProfileName,
-			Kind: constants.CloudProfileReferenceKindCloudProfile,
+			Kind: v1beta1constants.CloudProfileReferenceKindCloudProfile,
 		}
 	}
 	return nil
@@ -184,11 +184,11 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 	if shootK8sVersion != nil && version.ConstraintK8sGreaterEqual134.Check(shootK8sVersion) {
 		// default empty cloudprofile kind to CloudProfile
 		if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == "" {
-			newShoot.Spec.CloudProfile.Kind = constants.CloudProfileReferenceKindCloudProfile
+			newShoot.Spec.CloudProfile.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
 		}
 		// For update operations, an unchanged cloudProfileName will be set to nil if it equals the value in cloudProfile.name.
 		if oldShoot != nil && newShoot.Spec.CloudProfileName != nil && newShoot.Spec.CloudProfile != nil &&
-			newShoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindCloudProfile &&
+			newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile &&
 			ptr.Deref(newShoot.Spec.CloudProfileName, "") == ptr.Deref(oldShoot.Spec.CloudProfileName, "") &&
 			ptr.Deref(newShoot.Spec.CloudProfileName, "") == newShoot.Spec.CloudProfile.Name {
 			newShoot.Spec.CloudProfileName = nil
@@ -197,34 +197,34 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 	}
 
 	// clear cloudProfile if namespacedCloudProfile is newly provided but feature toggle is disabled
-	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindNamespacedCloudProfile && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) &&
-		(oldShoot == nil || oldShoot.Spec.CloudProfile == nil || oldShoot.Spec.CloudProfile.Kind != constants.CloudProfileReferenceKindNamespacedCloudProfile) {
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) &&
+		(oldShoot == nil || oldShoot.Spec.CloudProfile == nil || oldShoot.Spec.CloudProfile.Kind != v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile) {
 		newShoot.Spec.CloudProfile = nil
 	}
 
 	// fill empty cloudProfile field from cloudProfileName, if provided
 	if newShoot.Spec.CloudProfile == nil && newShoot.Spec.CloudProfileName != nil {
 		newShoot.Spec.CloudProfile = &core.CloudProfileReference{
-			Kind: constants.CloudProfileReferenceKindCloudProfile,
+			Kind: v1beta1constants.CloudProfileReferenceKindCloudProfile,
 			Name: *newShoot.Spec.CloudProfileName,
 		}
 	}
 
 	// default empty cloudprofile kind to CloudProfile
 	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == "" {
-		newShoot.Spec.CloudProfile.Kind = constants.CloudProfileReferenceKindCloudProfile
+		newShoot.Spec.CloudProfile.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
 	}
 
 	// As long as shoot k8s version < v1.33: fill cloudProfileName from cloudProfile if provided and kind is CloudProfile.
 	// For backwards compatibility (esp. Dashboard), the cloudProfileName field is synced here with the referenced CloudProfile.
 	cloudProfileName := ptr.Deref(newShoot.Spec.CloudProfileName, "")
-	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindCloudProfile &&
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile &&
 		(shootK8sVersion == nil || version.ConstraintK8sLess133.Check(shootK8sVersion) || cloudProfileName != "" && cloudProfileName != newShoot.Spec.CloudProfile.Name) {
 		newShoot.Spec.CloudProfileName = &newShoot.Spec.CloudProfile.Name
 	}
 
 	// Unset cloudProfileName if kind other than CloudProfile is provided.
-	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind != constants.CloudProfileReferenceKindCloudProfile {
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind != v1beta1constants.CloudProfileReferenceKindCloudProfile {
 		newShoot.Spec.CloudProfileName = nil
 	}
 }
