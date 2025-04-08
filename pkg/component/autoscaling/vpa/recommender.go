@@ -340,6 +340,7 @@ func (v *vpa) computeRecommenderArgs() []string {
 		fmt.Sprintf("--memory-aggregation-interval=%s", ptr.Deref(v.values.Recommender.MemoryAggregationInterval, gardencorev1beta1.DefaultMemoryAggregationInterval).Duration),
 		fmt.Sprintf("--memory-aggregation-interval-count=%d", ptr.Deref(v.values.Recommender.MemoryAggregationIntervalCount, gardencorev1beta1.DefaultMemoryAggregationIntervalCount)),
 		"--leader-elect=true",
+		"--leader-elect-resource-name=" + recommender,
 		fmt.Sprintf("--leader-elect-resource-namespace=%s", v.namespaceForApplicationClassResource()),
 	}
 

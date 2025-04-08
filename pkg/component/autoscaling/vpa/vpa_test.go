@@ -770,6 +770,7 @@ var _ = Describe("VPA", func() {
 									fmt.Sprintf("--memory-aggregation-interval=%s", ptr.Deref(memoryAggregationInterval, metav1.Duration{Duration: 24 * time.Hour}).Duration),
 									fmt.Sprintf("--memory-aggregation-interval-count=%d", ptr.Deref(memoryAggregationIntervalCount, 8)),
 									"--leader-elect=true",
+									"--leader-elect-resource-name=vpa-recommender",
 									fmt.Sprintf("--leader-elect-resource-namespace=%s", leaderElectionNamespace),
 								},
 								LivenessProbe: livenessProbeVpa,
