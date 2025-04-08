@@ -125,6 +125,7 @@ var _ = Describe("#Secret", func() {
 			Data: map[string][]byte{
 				"config": []byte(`{"foo":"bar"}`),
 				"token":  []byte("token"),
+				"foo":    []byte("bar"), // should be removed after the reconciliation of the secret
 			},
 		}
 
