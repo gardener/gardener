@@ -699,7 +699,7 @@ var _ = Describe("customverbauthorizer", func() {
 					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
-				Describe("permissions granted", func() {
+				When("permission is granted", func() {
 					BeforeEach(func() {
 						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
 
@@ -715,7 +715,7 @@ var _ = Describe("customverbauthorizer", func() {
 					})
 				})
 
-				Describe("permissions not granted", func() {
+				When("permission is not granted", func() {
 					BeforeEach(func() {
 						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
 

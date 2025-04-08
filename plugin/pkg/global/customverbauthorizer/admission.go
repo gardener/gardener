@@ -342,9 +342,7 @@ func mustCheckProviderConfig(oldProviderConfig, providerConfig *runtime.RawExten
 }
 
 func mustCheckLimits(oldLimits, limits *core.Limits, parentCloudProfile *v1beta1.CloudProfile) bool {
-	return limits != nil &&
-		!apiequality.Semantic.DeepEqual(oldLimits, limits) &&
+	return !apiequality.Semantic.DeepEqual(oldLimits, limits) &&
 		parentCloudProfile.Spec.Limits != nil &&
-		parentCloudProfile.Spec.Limits.MaxNodesTotal != nil &&
 		ptr.Deref(limits.MaxNodesTotal, 0) > ptr.Deref(parentCloudProfile.Spec.Limits.MaxNodesTotal, 0)
 }
