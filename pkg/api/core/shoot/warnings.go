@@ -48,7 +48,7 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 
 	kubernetesVersion, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
 	if err == nil && versionutils.ConstraintK8sGreaterEqual133.Check(kubernetesVersion) && ptr.Deref(shoot.Spec.CloudProfileName, "") != "" {
-		warnings = append(warnings, "you are setting the spec.cloudProfileName field. The field is deprecated and will be force set empty starting with Kubernetes 1.34. Instead, use the spec.cloudProfile.name field.")
+		warnings = append(warnings, "you are setting the spec.cloudProfileName field. The field is deprecated and will be forcefully set empty starting with Kubernetes 1.34. Use the new spec.cloudProfile.name field instead.")
 	}
 
 	return warnings
