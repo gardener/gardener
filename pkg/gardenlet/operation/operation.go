@@ -258,10 +258,6 @@ func (b *Builder) Build(
 	if err != nil {
 		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
-	operation.ManagedSeedAPIServer, err = v1beta1helper.ReadManagedSeedAPIServer(shoot.GetInfo())
-	if err != nil {
-		return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
-	}
 
 	return operation, nil
 }

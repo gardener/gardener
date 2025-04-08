@@ -25,7 +25,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
@@ -234,29 +233,6 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						MinReplicas:       2,
 						MaxReplicas:       6,
-						ScaleDownDisabled: false,
-					},
-				),
-				Entry("shoot is a managed seed w/ APIServer settings",
-					func() {
-						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
-						botanist.ManagedSeedAPIServer = &helper.ManagedSeedAPIServer{
-							Autoscaler: &helper.ManagedSeedAPIServerAutoscaler{
-								MinReplicas: ptr.To[int32](16),
-								MaxReplicas: 32,
-							},
-							Replicas: ptr.To[int32](24),
-						}
-					},
-					kubeapiserver.AutoscalingConfig{
-						APIServerResources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("250m"),
-								corev1.ResourceMemory: resource.MustParse("500Mi"),
-							},
-						},
-						MinReplicas:       16,
-						MaxReplicas:       32,
 						ScaleDownDisabled: false,
 					},
 				),
