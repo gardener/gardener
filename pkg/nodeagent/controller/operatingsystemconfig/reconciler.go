@@ -62,7 +62,6 @@ const (
 	lastAppliedOperatingSystemConfigFilePath         = nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml"
 	lastComputedOperatingSystemConfigChangesFilePath = nodeagentconfigv1alpha1.BaseDir + "/last-computed-osc-changes.yaml"
 	annotationUpdatingOperatingSystemVersion         = "node-agent.gardener.cloud/updating-operating-system-version"
-	kubeletUnitName                                  = "kubelet.service"
 	pathKubeletCPUManagerPolicyState                 = kubeletcomponent.PathKubeletDirectory + "/cpu_manager_state"
 )
 
@@ -484,7 +483,7 @@ func (r *Reconciler) applyChangedUnits(ctx context.Context, log logr.Logger, cha
 			return err
 		}
 
-		if unit.Name == kubeletUnitName && changes.InPlaceUpdates.Kubelet.CPUManagerPolicy {
+		if unit.Name == v1beta1constants.OperatingSystemConfigUnitNameKubeletService && changes.InPlaceUpdates.Kubelet.CPUManagerPolicy {
 			// See https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/#changing-the-cpu-manager-policy
 			log.Info("Removing kubelet cpu manager policy state file", "path", pathKubeletCPUManagerPolicyState)
 			if err := r.FS.Remove(pathKubeletCPUManagerPolicyState); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
@@ -848,13 +847,16 @@ func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, no
 		return fmt.Errorf("unable to delete kubelet client certificate directory %q: %w", kubeletClientCertificateDir, err)
 	}
 
-	if err := r.DBus.Restart(ctx, r.Recorder, node, kubeletUnitName); err != nil {
-		return fmt.Errorf("unable to restart unit %q: %w", kubeletUnitName, err)
+	if err := r.DBus.Restart(ctx, r.Recorder, node, v1beta1constants.OperatingSystemConfigUnitNameKubeletService); err != nil {
+		return fmt.Errorf("unable to restart unit %q: %w", v1beta1constants.OperatingSystemConfigUnitNameKubeletService, err)
 	}
 
 	log.Info("Successfully restarted kubelet after CA rotation", "node", node.Name)
 	return nil
 }
+
+// RequestAndStoreKubeconfig is an alias for `nodeagent.RequestAndStoreKubeconfig`. Exposed for tests.
+var RequestAndStoreKubeconfig = nodeagent.RequestAndStoreKubeconfig
 
 func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log logr.Logger, nodeAgentConfig *nodeagentconfigv1alpha1.NodeAgentConfiguration) error {
 	log.Info("Requesting new kubeconfig for node agent after CA rotation")
@@ -871,7 +873,7 @@ func (r *Reconciler) requestNewKubeConfigForNodeAgent(ctx context.Context, log l
 	// Use the updated CA Bundle
 	restConfig.TLSClientConfig.CAData = nodeAgentConfig.APIServer.CABundle
 
-	return nodeagent.RequestAndStoreKubeconfig(ctx, log, r.FS, restConfig, r.MachineName)
+	return RequestAndStoreKubeconfig(ctx, log, r.FS, restConfig, r.MachineName)
 }
 
 func (r *Reconciler) deleteRemainingPods(ctx context.Context, log logr.Logger, node *corev1.Node) error {

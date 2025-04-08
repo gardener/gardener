@@ -30,7 +30,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeletcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
@@ -585,7 +584,7 @@ users:
 
 			Expect(fakeDBus.Actions).To(ContainElement(fakedbus.SystemdAction{
 				Action:    fakedbus.ActionRestart,
-				UnitNames: []string{kubeletUnitName},
+				UnitNames: []string{"kubelet.service"},
 			}))
 		})
 
@@ -598,7 +597,7 @@ users:
 
 			Expect(fakeDBus.Actions).To(ContainElement(fakedbus.SystemdAction{
 				Action:    fakedbus.ActionRestart,
-				UnitNames: []string{kubeletUnitName},
+				UnitNames: []string{"kubelet.service"},
 			}))
 		})
 
@@ -620,7 +619,7 @@ users:
 			Expect(fs.WriteFile(kubeletcomponent.PathKubeconfigBootstrap, []byte("test-bootstrap-kubeconfig"), 0600)).To(Succeed())
 
 			// Inject DBus restart failure
-			fakeDBus.InjectRestartFailure(errors.New("restart failed"), kubeletUnitName)
+			fakeDBus.InjectRestartFailure(errors.New("restart failed"), "kubelet.service")
 
 			err := reconciler.rebootstrapKubelet(ctx, log, nodeAgentConfig, node)
 			Expect(err).To(HaveOccurred())
@@ -700,7 +699,7 @@ kind: NodeAgentConfiguration
 			Expect(reconciler.performCredentialsRotationInPlace(ctx, log, oscChanges, node)).To(Succeed())
 			Expect(fakeDBus.Actions).To(ContainElement(fakedbus.SystemdAction{
 				Action:    fakedbus.ActionRestart,
-				UnitNames: []string{kubeletUnitName},
+				UnitNames: []string{"kubelet.service"},
 			}))
 
 			Expect(oscChanges.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet).To(BeFalse())
@@ -711,7 +710,7 @@ kind: NodeAgentConfiguration
 			Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(nodeAgentKubeconfig), 0600)).To(Succeed())
 
 			DeferCleanup(test.WithVar(
-				&nodeagent.RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, _ afero.Afero, restConfig *rest.Config, _ string) error {
+				&RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, _ afero.Afero, restConfig *rest.Config, _ string) error {
 					newKubeConfig := getNodeAgentKubeConfig(restConfig.TLSClientConfig.CAData, nodeAgentConfig.APIServer.Server, "new-cert")
 
 					Expect(fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, []byte(newKubeConfig), 0600)).To(Succeed())

@@ -40,7 +40,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/healthcheck"
 	"github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
@@ -971,7 +970,7 @@ kind: NodeAgentConfiguration
 				&operatingsystemconfig.KubeletHealthCheckRetryTimeout, 2*time.Second,
 				&operatingsystemconfig.KubeletHealthCheckRetryInterval, 200*time.Millisecond,
 				&healthcheckcontroller.DefaultKubeletHealthEndpoint, server.URL,
-				&nodeagent.RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, fs afero.Afero, restConfig *rest.Config, _ string) error {
+				&operatingsystemconfig.RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, fs afero.Afero, restConfig *rest.Config, _ string) error {
 					nodeAgentConfig := &nodeagentconfigv1alpha1.NodeAgentConfiguration{
 						APIServer: nodeagentconfigv1alpha1.APIServer{
 							CABundle: []byte("new-ca-bundle"),

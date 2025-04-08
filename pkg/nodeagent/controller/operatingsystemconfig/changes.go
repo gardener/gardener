@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"reflect"
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
@@ -147,8 +146,7 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 	)
 
 	if oldOSC.Spec.InPlaceUpdates != nil && newOSC.Spec.InPlaceUpdates != nil {
-		if oldOSC.Spec.InPlaceUpdates.OperatingSystemVersion != newOSC.Spec.InPlaceUpdates.OperatingSystemVersion &&
-			currentOSVersion != nil && *currentOSVersion != newOSC.Spec.InPlaceUpdates.OperatingSystemVersion {
+		if currentOSVersion != nil && *currentOSVersion != newOSC.Spec.InPlaceUpdates.OperatingSystemVersion {
 			changes.InPlaceUpdates.OperatingSystem = true
 		}
 
@@ -184,13 +182,13 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 			} else {
 				caRotation := oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil &&
 					newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities != nil &&
-					!reflect.DeepEqual(oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime, newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime)
+					!oldOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime.Equal(newOSC.Spec.InPlaceUpdates.CredentialsRotation.CertificateAuthorities.LastInitiationTime)
 				changes.InPlaceUpdates.CertificateAuthoritiesRotation.Kubelet = caRotation
 				changes.InPlaceUpdates.CertificateAuthoritiesRotation.NodeAgent = caRotation && features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
 
 				changes.InPlaceUpdates.ServiceAccountKeyRotation = oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
 					newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey != nil &&
-					!reflect.DeepEqual(oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime, newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime)
+					!oldOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime.Equal(newOSC.Spec.InPlaceUpdates.CredentialsRotation.ServiceAccountKey.LastInitiationTime)
 			}
 		}
 	}
