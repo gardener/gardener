@@ -47,6 +47,7 @@ var TimeNow = time.Now
 // Interface is an interface for managing Workers.
 type Interface interface {
 	component.DeployMigrateWaiter
+	Get(context.Context) (*extensionsv1alpha1.Worker, error)
 	SetSSHPublicKey([]byte)
 	SetInfrastructureProviderStatus(*runtime.RawExtension)
 	SetWorkerPoolNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
@@ -376,6 +377,15 @@ func (w *worker) WaitCleanup(ctx context.Context) error {
 		w.waitInterval,
 		w.waitTimeout,
 	)
+}
+
+// Get retrieves and returns the Worker resource.
+func (w *worker) Get(ctx context.Context) (*extensionsv1alpha1.Worker, error) {
+	if err := w.client.Get(ctx, client.ObjectKeyFromObject(w.worker), w.worker); err != nil {
+		return nil, err
+	}
+
+	return w.worker, nil
 }
 
 // SetSSHPublicKey sets the public SSH key in the values.
