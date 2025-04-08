@@ -722,7 +722,7 @@ var _ = Describe("KubeAPIServer", func() {
 								// API server request duration greater than 1s percentage
 								{
 									Record: "shoot:apiserver_latency:percentage",
-									Expr:   intstr.FromString(`1 - sum(rate(apiserver_request_duration_seconds_bucket{le="1",subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH",scope="resource"}[1h])) / sum(rate(apiserver_request_duration_seconds_count{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH",scope="resource"}[1h]))`),
+									Expr:   intstr.FromString(`1 - sum(rate(apiserver_request_duration_seconds_bucket{le="1.0",subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH",scope="resource"}[1h])) / sum(rate(apiserver_request_duration_seconds_count{subresource!~"log|portforward|exec|proxy|attach",verb!~"CONNECT|LIST|WATCH",scope="resource"}[1h]))`),
 								},
 
 								{
