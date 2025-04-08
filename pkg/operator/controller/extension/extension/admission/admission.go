@@ -20,7 +20,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
@@ -140,7 +139,7 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 		return fmt.Errorf("failed to inject garden access secrets: %w", err)
 	}
 
-	managedResourceName := helper.ExtensionAdmissionRuntimeManagedResourceName(extension.Name)
+	managedResourceName := gardenerutils.ExtensionAdmissionRuntimeManagedResourceName(extension.Name)
 	if err := managedresources.CreateForSeedWithLabels(
 		ctx,
 		d.runtimeClientSet.Client(),
@@ -160,7 +159,7 @@ func (d *deployment) createOrUpdateAdmissionRuntimeClusterResources(ctx context.
 }
 
 func (d *deployment) deleteAdmissionRuntimeClusterResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	managedResourceName := helper.ExtensionAdmissionRuntimeManagedResourceName(extension.Name)
+	managedResourceName := gardenerutils.ExtensionAdmissionRuntimeManagedResourceName(extension.Name)
 
 	log.Info("Deleting admission ManagedResource for runtime cluster if present", "managedResource", client.ObjectKey{Name: managedResourceName, Namespace: d.gardenNamespace})
 	if err := managedresources.DeleteForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
@@ -219,7 +218,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 		return err
 	}
 
-	managedResourceName := helper.ExtensionAdmissionVirtualManagedResourceName(extension.Name)
+	managedResourceName := gardenerutils.ExtensionAdmissionVirtualManagedResourceName(extension.Name)
 	if err := managedresources.CreateForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName, managedresources.LabelValueOperator, false, serializedObjects); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
@@ -231,7 +230,7 @@ func (d *deployment) createOrUpdateAdmissionVirtualClusterResources(ctx context.
 }
 
 func (d *deployment) deleteAdmissionVirtualClusterResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	managedResourceName := helper.ExtensionAdmissionVirtualManagedResourceName(extension.Name)
+	managedResourceName := gardenerutils.ExtensionAdmissionVirtualManagedResourceName(extension.Name)
 
 	log.Info("Deleting admission ManagedResource for virtual cluster", "managedResource", client.ObjectKey{Name: managedResourceName, Namespace: d.gardenNamespace})
 	if err := managedresources.DeleteForShoot(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, managedResourceName); err != nil {
