@@ -29,7 +29,7 @@ import (
 const nodeAgentCSRPrefix = "node-agent-csr-"
 
 // RequestAndStoreKubeconfig requests a certificate via CSR and stores the resulting kubeconfig on the disk.
-var RequestAndStoreKubeconfig = func(ctx context.Context, log logr.Logger, fs afero.Afero, config *rest.Config, machineName string) error {
+func RequestAndStoreKubeconfig(ctx context.Context, log logr.Logger, fs afero.Afero, config *rest.Config, machineName string) error {
 	clientSet, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("unable to create a clientset from rest config: %w", err)
