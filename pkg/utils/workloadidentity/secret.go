@@ -170,9 +170,9 @@ func (s *Secret) Reconcile(ctx context.Context, c client.Client) error {
 		}
 
 		// preserve the data token key if present but overwrite all other data keys
-		if v, ok := s.secret.Data[securityv1alpha1constants.DataKeyToken]; ok {
-			s.secret.Data[securityv1alpha1constants.DataKeyToken] = v
-		}
+		maps.DeleteFunc(s.secret.Data, func(k string, _ []byte) bool {
+			return k != securityv1alpha1constants.DataKeyToken
+		})
 
 		if len(s.workloadIdentityProviderConfig) > 0 {
 			s.secret.Data[securityv1alpha1constants.DataKeyConfig] = s.workloadIdentityProviderConfig
