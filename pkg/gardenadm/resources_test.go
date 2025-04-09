@@ -29,15 +29,25 @@ var _ = Describe("Resources", func() {
 			createCloudProfile(fsys, "cpfl")
 			createProject(fsys, "project")
 			createShoot(fsys, "shoot")
+			createControllerRegistration(fsys, "ext1")
+			createControllerRegistration(fsys, "ext2")
+			createControllerDeployment(fsys, "ext1")
+			createControllerDeployment(fsys, "ext2")
 		})
 
 		It("should read the Kubernetes resources successfully", func() {
-			cloudProfile, project, shoot, err := gardenadm.ReadManifests(log, fsys)
+			cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, err := gardenadm.ReadManifests(log, fsys)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(cloudProfile.Name).To(Equal("cpfl"))
 			Expect(project.Name).To(Equal("project"))
 			Expect(shoot.Name).To(Equal("shoot"))
+			Expect(controllerRegistrations).To(HaveLen(2))
+			Expect(controllerRegistrations[0].Name).To(Equal("ext1"))
+			Expect(controllerRegistrations[1].Name).To(Equal("ext2"))
+			Expect(controllerDeployments).To(HaveLen(2))
+			Expect(controllerDeployments[0].Name).To(Equal("ext1"))
+			Expect(controllerDeployments[1].Name).To(Equal("ext2"))
 		})
 	})
 
@@ -45,7 +55,7 @@ var _ = Describe("Resources", func() {
 		It("should return an error", func() {
 			fsys["cloudprofile-foo.yaml"] = &fstest.MapFile{Data: []byte(`{`)}
 
-			_, _, _, err := gardenadm.ReadManifests(log, fsys)
+			_, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 			Expect(err).To(MatchError(ContainSubstring("failed decoding resource at index")))
 		})
 	})
@@ -56,7 +66,7 @@ var _ = Describe("Resources", func() {
 			fsys["project-foo.json"] = &fstest.MapFile{Data: []byte(`{"apiVersion":"core.gardener.cloud/v1beta1","kind":"Project"}`)}
 			fsys["shoot-foo.json"] = &fstest.MapFile{Data: []byte(`{"apiVersion":"core.gardener.cloud/v1beta1","kind":"Shoot"}`)}
 
-			_, _, _, err := gardenadm.ReadManifests(log, fsys)
+			_, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 			Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")))
 		})
 	})
@@ -67,7 +77,7 @@ var _ = Describe("Resources", func() {
 				createCloudProfile(fsys, "obj1")
 				createCloudProfile(fsys, "obj2")
 
-				_, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.CloudProfile resource")))
 			})
 		})
@@ -77,7 +87,7 @@ var _ = Describe("Resources", func() {
 				createProject(fsys, "obj1")
 				createProject(fsys, "obj2")
 
-				_, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.Project resource")))
 			})
 		})
@@ -87,7 +97,7 @@ var _ = Describe("Resources", func() {
 				createShoot(fsys, "obj1")
 				createShoot(fsys, "obj2")
 
-				_, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.Shoot resource")))
 			})
 		})
@@ -99,7 +109,7 @@ var _ = Describe("Resources", func() {
 				createShoot(fsys, "shoot")
 				createProject(fsys, "project")
 
-				_, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")))
 			})
 		})
@@ -109,7 +119,7 @@ var _ = Describe("Resources", func() {
 				createCloudProfile(fsys, "cpfl")
 				createShoot(fsys, "shoot")
 
-				_, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Project resource, but did not find any")))
 			})
 		})
@@ -119,7 +129,7 @@ var _ = Describe("Resources", func() {
 				createCloudProfile(fsys, "cpfl")
 				createProject(fsys, "project")
 
-				_, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Shoot resource, but did not find any")))
 			})
 		})
@@ -145,6 +155,22 @@ metadata:
 func createShoot(fsys fstest.MapFS, name string) {
 	fsys["shoot-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
+metadata:
+  name: ` + name + `
+`)}
+}
+
+func createControllerRegistration(fsys fstest.MapFS, name string) {
+	fsys["controllerregistration-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
+  name: ` + name + `
+`)}
+}
+
+func createControllerDeployment(fsys fstest.MapFS, name string) {
+	fsys["controllerdeployment-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1
+kind: ControllerDeployment
 metadata:
   name: ` + name + `
 `)}

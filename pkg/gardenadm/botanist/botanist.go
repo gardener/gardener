@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -35,11 +36,19 @@ import (
 type AutonomousBotanist struct {
 	*botanistpkg.Botanist
 
-	HostName string
-	DBus     dbus.DBus
-	FS       afero.Afero
+	HostName   string
+	DBus       dbus.DBus
+	FS         afero.Afero
+	Extensions []Extension
 
 	operatingSystemConfigSecret *corev1.Secret
+}
+
+// Extension contains the ControllerRegistration and ControllerDeployment for an extension registration.
+type Extension struct {
+	ControllerRegistration *gardencorev1beta1.ControllerRegistration
+	ControllerDeployment   *gardencorev1.ControllerDeployment
+	ControllerInstallation *gardencorev1beta1.ControllerInstallation
 }
 
 // NewAutonomousBotanist creates a new botanist.AutonomousBotanist instance for the gardenadm command execution.
@@ -50,6 +59,7 @@ func NewAutonomousBotanist(
 	project *gardencorev1beta1.Project,
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
+	extensions []Extension,
 ) (
 	*AutonomousBotanist,
 	error,
@@ -98,9 +108,10 @@ func NewAutonomousBotanist(
 	return &AutonomousBotanist{
 		Botanist: b,
 
-		HostName: hostName,
-		DBus:     dbus.New(log),
-		FS:       afero.Afero{Fs: afero.NewOsFs()},
+		HostName:   hostName,
+		DBus:       dbus.New(log),
+		FS:         afero.Afero{Fs: afero.NewOsFs()},
+		Extensions: extensions,
 	}, nil
 }
 
