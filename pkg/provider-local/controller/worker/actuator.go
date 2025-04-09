@@ -48,11 +48,14 @@ type actuator struct {
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
 func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster) worker.Actuator {
 	workerDelegate := &delegateFactory{
-		gardenReader: gardenCluster.GetAPIReader(),
-		seedClient:   mgr.GetClient(),
-		decoder:      serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
-		restConfig:   mgr.GetConfig(),
-		scheme:       mgr.GetScheme(),
+		seedClient: mgr.GetClient(),
+		decoder:    serializer.NewCodecFactory(mgr.GetScheme(), serializer.EnableStrict).UniversalDecoder(),
+		restConfig: mgr.GetConfig(),
+		scheme:     mgr.GetScheme(),
+	}
+
+	if gardenCluster != nil {
+		workerDelegate.gardenReader = gardenCluster.GetAPIReader()
 	}
 
 	return &actuator{
