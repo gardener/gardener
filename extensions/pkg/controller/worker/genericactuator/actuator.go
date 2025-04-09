@@ -42,14 +42,19 @@ type genericActuator struct {
 // It provides a default implementation that allows easier integration of providers.
 // If machine-controller-manager should not be managed then only the delegateFactory must be provided.
 func NewActuator(mgr manager.Manager, gardenCluster cluster.Cluster, delegateFactory DelegateFactory, errorCodeCheckFunc healthcheck.ErrorCodeCheckFunc) worker.Actuator {
-	return &genericActuator{
+	actuator := &genericActuator{
 		delegateFactory:    delegateFactory,
-		gardenReader:       gardenCluster.GetAPIReader(),
 		seedClient:         mgr.GetClient(),
 		seedReader:         mgr.GetAPIReader(),
 		scheme:             mgr.GetScheme(),
 		errorCodeCheckFunc: errorCodeCheckFunc,
 	}
+
+	if gardenCluster != nil {
+		actuator.gardenReader = gardenCluster.GetAPIReader()
+	}
+
+	return actuator
 }
 
 func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger logr.Logger, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments worker.MachineDeployments) error {
