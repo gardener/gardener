@@ -192,7 +192,12 @@ Introduce a top level capabilities array in the CloudProfile `spec.capabilities`
 
 ```go
 type Spec struct {
-    Capabilities []map[string][]string
+    Capabilities []Capability
+}
+
+type Capability struct {
+  Name string
+  Values []string
 }
 ```
 
