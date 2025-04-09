@@ -653,7 +653,8 @@ These deletions often happen accidentally, and this handler safeguards the syste
 
 ### Defaulting
 
-This webhook handler mutates the `Garden` resource on `CREATE`/`UPDATE`/`DELETE` operations.
+This webhook handler mutates `Garden` resources on `CREATE`/`UPDATE`/`DELETE` operations.
+`Extension` resources are mutated in the scope of `CREATE`/`UPDATE` requests.
 Simple defaulting is performed via [standard CRD defaulting](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#defaulting).
 However, more advanced defaulting is hard to express via these means and is performed by this webhook handler.
 
