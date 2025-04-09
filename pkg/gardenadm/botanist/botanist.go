@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -105,14 +106,42 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
-	return &AutonomousBotanist{
+	autonomousBotanist := &AutonomousBotanist{
 		Botanist: b,
 
 		HostName:   hostName,
 		DBus:       dbus.New(log),
 		FS:         afero.Afero{Fs: afero.NewOsFs()},
 		Extensions: extensions,
-	}, nil
+	}
+
+	if err := autonomousBotanist.initializeFakeGardenResources(ctx); err != nil {
+		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
+	}
+
+	return autonomousBotanist, nil
+}
+
+func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context) error {
+	if err := b.GardenClient.Create(ctx, b.Seed.GetInfo().DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+		return fmt.Errorf("failed creating Seed %s: %w", b.Seed.GetInfo().Name, err)
+	}
+
+	for _, extension := range b.Extensions {
+		if err := b.GardenClient.Create(ctx, extension.ControllerRegistration.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating ControllerRegistration %s: %w", extension.ControllerRegistration.Name, err)
+		}
+
+		if err := b.GardenClient.Create(ctx, extension.ControllerDeployment.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating ControllerDeployment %s: %w", extension.ControllerDeployment.Name, err)
+		}
+
+		if err := b.GardenClient.Create(ctx, extension.ControllerInstallation.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating ControllerInstallation %s: %w", extension.ControllerInstallation.Name, err)
+		}
+	}
+
+	return nil
 }
 
 func newGardenObject(ctx context.Context, project *gardencorev1beta1.Project) (*gardenpkg.Garden, error) {
@@ -123,9 +152,15 @@ func newGardenObject(ctx context.Context, project *gardencorev1beta1.Project) (*
 }
 
 func newSeedObject(ctx context.Context, shootObj *shootpkg.Shoot) (*seedpkg.Seed, error) {
+	seed := &gardencorev1beta1.Seed{
+		ObjectMeta: metav1.ObjectMeta{Name: shootObj.GetInfo().Name},
+		Status:     gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(shootObj.GetInfo().Name)},
+	}
+	kubernetes.GardenScheme.Default(seed)
+
 	obj, err := seedpkg.
 		NewBuilder().
-		WithSeedObject(&gardencorev1beta1.Seed{}).
+		WithSeedObject(seed).
 		Build(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed building seed object: %w", err)
@@ -166,6 +201,7 @@ func newFakeGardenClient() client.Client {
 	return fakeclient.
 		NewClientBuilder().
 		WithScheme(kubernetes.GardenScheme).
+		WithStatusSubresource(&gardencorev1beta1.ControllerInstallation{}).
 		Build()
 }
 

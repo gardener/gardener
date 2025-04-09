@@ -5,14 +5,21 @@
 package botanist
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
+	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
 // ComputeExtensions takes a list of ControllerRegistrations and ControllerDeployments and computes a corresponding list
@@ -52,4 +59,29 @@ func ComputeExtensions(seedName string, controllerRegistrations []*gardencorev1b
 	}
 
 	return extensions, nil
+}
+
+// ReconcileExtensionControllerDeployments reconciles the extension controller deployments.
+func (b *AutonomousBotanist) ReconcileExtensionControllerDeployments(ctx context.Context, networkAvailable bool) error {
+	var (
+		reconcilerCtx = log.IntoContext(ctx, b.Logger.WithName("controllerinstallation-reconciler"))
+		reconciler    = controllerinstallation.Reconciler{
+			GardenClient:              b.GardenClient,
+			SeedClientSet:             b.SeedClientSet,
+			HelmRegistry:              oci.NewHelmRegistry(b.SeedClientSet.Client()),
+			Clock:                     clock.RealClock{},
+			Identity:                  &b.Shoot.GetInfo().Status.Gardener,
+			GardenNamespace:           b.Shoot.ControlPlaneNamespace,
+			BootstrapControlPlaneNode: !networkAvailable,
+		}
+	)
+
+	for _, extension := range b.Extensions {
+		b.Logger.Info("Reconciling ControllerInstallation using gardenlet's reconciliation logic", "controllerInstallationName", extension.ControllerInstallation.Name)
+		if _, err := reconciler.Reconcile(reconcilerCtx, reconcile.Request{NamespacedName: types.NamespacedName{Name: extension.ControllerInstallation.Name}}); err != nil {
+			return fmt.Errorf("failed running ControllerInstallation controller for %q: %w", extension.ControllerInstallation.Name, err)
+		}
+	}
+
+	return nil
 }
