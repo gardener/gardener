@@ -216,20 +216,22 @@ If no further information is provided each machine type and machine image will b
 # CloudProfile Example
 spec:
   capabilities:
-    - hypervisorType: ["gen2", "gen1"]
-    - network: ["accelerated", "standard"]
-    - storageAccess: ["NVMe", "SCSI"]
-    - secureBoot: ["secure", "none"]
-    - bootMode: ["uefi-preferred", "uefi", "legacy-bios"]
+    - name: hypervisorType
+      values: ["gen2", "gen1"]
+    - name: network
+      values: ["accelerated", "standard"]
+    - name: storageAccess
+      values: ["NVMe", "SCSI"]
+    - name: secureBoot
+      values: ["secure", "none"]
+    - name: bootMode
+      values: ["uefi-preferred", "uefi", "legacy-bios"]
     ...
 ```
 
 Please note the following characteristics:
-- The array of capabilities is ordered.
-- The array of each capability is also ordered.
-- The order defines the priority of the values in case of multiple supported images.
-- The first value in the array is the most preferred value.
-- The last value is the least preferred value.
+- The order of capabilities define their priority, .e.g, prefer `hypervisorType` over `network`.
+- The order of capability values also define their priority, .e.g, prefer `gen2` over `gen1`.
 
 Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`.
 Then the image with `gen2` will be preferred.
