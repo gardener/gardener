@@ -22,6 +22,7 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -41,6 +42,9 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, gard
 	}
 	if r.HelmRegistry == nil {
 		r.HelmRegistry = oci.NewHelmRegistry(r.GardenClient)
+	}
+	if r.GardenNamespace == "" {
+		r.GardenNamespace = v1beta1constants.GardenNamespace
 	}
 
 	return builder.
