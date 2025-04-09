@@ -38,7 +38,7 @@ func validateControllerResourceUpdate(oldResources, newResources []gardencorev1b
 			allErrs = append(allErrs, field.InternalError(fldPath.Index(i), err))
 		}
 
-		// Imitate defaulting of ControllerRegistration
+		// Imitate defaulting of ControllerRegistration, since defaulting for extensions was only added later.
 		if oldCoreResource.Primary == nil {
 			oldCoreResource.Primary = ptr.To(true)
 		}

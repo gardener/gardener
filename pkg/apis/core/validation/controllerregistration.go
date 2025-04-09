@@ -182,10 +182,10 @@ func ValidateControllerResourceUpdate(new, old []core.ControllerResource, fldPat
 
 	kindTypeToPrimary := make(map[string]*bool, len(old))
 	for _, resource := range old {
-		kindTypeToPrimary[resource.Kind+resource.Type] = resource.Primary
+		kindTypeToPrimary[gardenerutils.ExtensionsID(resource.Kind, resource.Type)] = resource.Primary
 	}
 	for i, resource := range new {
-		if primary, ok := kindTypeToPrimary[resource.Kind+resource.Type]; ok {
+		if primary, ok := kindTypeToPrimary[gardenerutils.ExtensionsID(resource.Kind, resource.Type)]; ok {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(resource.Primary, primary, fldPath.Index(i).Child("primary"))...)
 		}
 	}
