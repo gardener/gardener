@@ -8,9 +8,14 @@ description: Defining the differences and requirements for upgrading to a suppor
 Breaking changes may be introduced with new Kubernetes versions.
 This documentation describes the differences and requirements for upgrading to a supported Kubernetes version.
 
+## Upgrading to Kubernetes `v1.34`
+
+- The `Shoot`'s field `spec.cloudProfileName` is forbidden. `Shoot` owners must migrate their `CloudProfile` reference to the new `spec.cloudProfile.name` field.
+
 ## Upgrading to Kubernetes `v1.33`
 
 - A new `deny-all` `NetworkPolicy` is deployed into the `kube-system` namespace of the `Shoot` cluster. `Shoot` owners that run workloads in the `kube-system` namespace are required to explicitly allow their expected `Ingress` and `Egress` traffic in `kube-system` via `NetworkPolicies`.
+- The `Shoot`'s field `spec.cloudProfileName` is deprecated. `Shoot` owners should migrate their `CloudProfile` reference to the new `spec.cloudProfile.name` field.
 
 ## Upgrading to Kubernetes `v1.32`
 
