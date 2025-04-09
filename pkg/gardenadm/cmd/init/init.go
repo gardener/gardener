@@ -171,7 +171,7 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Autono
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", opts.ConfigDir, err)
 	}
 
-	extensions, err := botanist.ComputeExtensions(shoot.Name, controllerRegistrations, controllerDeployments)
+	extensions, err := botanist.ComputeExtensions(shoot, controllerRegistrations, controllerDeployments)
 	if err != nil {
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
 	}

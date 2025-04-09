@@ -12,22 +12,41 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
 // ComputeExtensions takes a list of ControllerRegistrations and ControllerDeployments and computes a corresponding list
 // of Extensions.
-func ComputeExtensions(seedName string, controllerRegistrations []*gardencorev1beta1.ControllerRegistration, controllerDeployments []*gardencorev1.ControllerDeployment) ([]Extension, error) {
+func ComputeExtensions(
+	shoot *gardencorev1beta1.Shoot,
+	controllerRegistrations []*gardencorev1beta1.ControllerRegistration,
+	controllerDeployments []*gardencorev1.ControllerDeployment,
+) (
+	[]Extension,
+	error,
+) {
 	var extensions []Extension
 
+	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(shoot, controllerRegistrations)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing the names of the wanted ControllerRegistrations: %w", err)
+	}
+
 	for _, controllerRegistration := range controllerRegistrations {
+		if !wantedControllerRegistrationNames.Has(controllerRegistration.Name) {
+			continue
+		}
+
 		if controllerRegistration.Spec.Deployment == nil || len(controllerRegistration.Spec.Deployment.DeploymentRefs) != 1 {
 			return nil, fmt.Errorf("ControllerRegistration %s has invalid deployment refs in its spec (must reference exactly one ControllerDeployment)", controllerRegistration.Name)
 		}
@@ -46,7 +65,7 @@ func ComputeExtensions(seedName string, controllerRegistrations []*gardencorev1b
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
 					RegistrationRef: corev1.ObjectReference{Name: controllerRegistration.Name},
 					DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment.Name},
-					SeedRef:         corev1.ObjectReference{Name: seedName},
+					SeedRef:         corev1.ObjectReference{Name: shoot.Name},
 				},
 			}
 		)
@@ -59,6 +78,44 @@ func ComputeExtensions(seedName string, controllerRegistrations []*gardencorev1b
 	}
 
 	return extensions, nil
+}
+
+func computeWantedControllerRegistrationNames(shoot *gardencorev1beta1.Shoot, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) (sets.Set[string], error) {
+	var (
+		result                                   = sets.New[string]()
+		extensionIDToControllerRegistrationNames = make(map[string][]string)
+	)
+
+	for _, controllerRegistration := range controllerRegistrations {
+		for _, resource := range controllerRegistration.Spec.Resources {
+			id := gardenerutils.ExtensionsID(resource.Kind, resource.Type)
+			extensionIDToControllerRegistrationNames[id] = append(extensionIDToControllerRegistrationNames[id], controllerRegistration.Name)
+		}
+
+		if controllerRegistration.Spec.Deployment != nil && ptr.Deref(controllerRegistration.Spec.Deployment.Policy, "") == gardencorev1beta1.ControllerDeploymentPolicyAlways {
+			result.Insert(controllerRegistration.Name)
+		}
+	}
+
+	for _, extensionID := range gardenerutils.ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationSliceToList(controllerRegistrations), nil, nil).UnsortedList() {
+		names, ok := extensionIDToControllerRegistrationNames[extensionID]
+		if !ok {
+			return nil, fmt.Errorf("need to install an extension controller for %q but no appropriate ControllerRegistration found", extensionID)
+		}
+		result.Insert(names...)
+	}
+
+	return result, nil
+}
+
+func controllerRegistrationSliceToList(controllerRegistrations []*gardencorev1beta1.ControllerRegistration) *gardencorev1beta1.ControllerRegistrationList {
+	list := &gardencorev1beta1.ControllerRegistrationList{}
+	for _, controllerRegistration := range controllerRegistrations {
+		if controllerRegistration != nil {
+			list.Items = append(list.Items, *controllerRegistration)
+		}
+	}
+	return list
 }
 
 // ReconcileExtensionControllerDeployments reconciles the extension controller deployments.
