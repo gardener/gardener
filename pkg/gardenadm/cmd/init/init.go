@@ -159,12 +159,17 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 }
 
 func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.AutonomousBotanist, error) {
-	cloudProfile, project, shoot, err := gardenadm.ReadManifests(opts.Log, os.DirFS(opts.ConfigDir))
+	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, err := gardenadm.ReadManifests(opts.Log, os.DirFS(opts.ConfigDir))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", opts.ConfigDir, err)
 	}
 
-	b, err := botanist.NewAutonomousBotanist(ctx, opts.Log, nil, project, cloudProfile, shoot)
+	extensions, err := botanist.ComputeExtensions(shoot.Name, controllerRegistrations, controllerDeployments)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing extensions: %w", err)
+	}
+
+	b, err := botanist.NewAutonomousBotanist(ctx, opts.Log, nil, project, cloudProfile, shoot, extensions)
 	if err != nil {
 		return nil, fmt.Errorf("failed constructing botanist: %w", err)
 	}
@@ -229,5 +234,5 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Autono
 		return nil, flow.Errors(err)
 	}
 
-	return botanist.NewAutonomousBotanist(ctx, opts.Log, clientSet, project, cloudProfile, shoot)
+	return botanist.NewAutonomousBotanist(ctx, opts.Log, clientSet, project, cloudProfile, shoot, extensions)
 }
