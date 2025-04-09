@@ -360,6 +360,9 @@ const (
 	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be
 	// retried.
 	ShootOperationRetry = "retry"
+	// ShootOperationForceInPlaceUpdate is a constant for the value of the operation annotation that must be set
+	// to forcibly trigger an in-place update when a previous update is still in progress.
+	ShootOperationForceInPlaceUpdate = "force-in-place-update"
 	// OperationRotateCredentialsStart is a constant for an annotation indicating that the rotation of all credentials
 	// shall be started. This includes CAs, certificates, kubeconfigs, SSH keypairs, observability credentials, and
 	// ServiceAccount signing key.
@@ -659,9 +662,6 @@ const (
 	// the linked cloudprofiles containing the region distances.
 	AnnotationSchedulingCloudProfiles = "scheduling.gardener.cloud/cloudprofiles"
 
-	// AnnotationForceInPlaceUpdate is an annotation for a Shoot that must be set to "true"
-	// to forcibly trigger an in-place update when a previous update is still in progress.
-	AnnotationForceInPlaceUpdate = "shoot.gardener.cloud/force-in-place-update"
 	// AnnotationConfirmationForceDeletion is a constant for an annotation on a Shoot resource whose value must be set to "true" in order to
 	// trigger force-deletion of the cluster. It can only be set if the Shoot has a deletion timestamp and contains an ErrorCode in the Shoot Status.
 	AnnotationConfirmationForceDeletion = "confirmation.gardener.cloud/force-deletion"

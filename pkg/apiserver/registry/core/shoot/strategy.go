@@ -143,6 +143,11 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				} else {
 					mustIncrease, mustRemoveOperationAnnotation = true, false
 				}
+
+			case v1beta1constants.ShootOperationForceInPlaceUpdate:
+				// The annotation will be removed later by gardenlet once the in-place update is finished.
+				// The generation will be increased if there really is a spec change in the object.
+				mustIncrease, mustRemoveOperationAnnotation = false, false
 			}
 
 			if strings.HasPrefix(newShoot.Annotations[v1beta1constants.GardenerOperation], v1beta1constants.OperationRotateRolloutWorkers) {

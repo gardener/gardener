@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 	admissionpluginsvalidation "github.com/gardener/gardener/pkg/utils/validation/admissionplugins"
 	apigroupsvalidation "github.com/gardener/gardener/pkg/utils/validation/apigroups"
@@ -62,6 +63,7 @@ var (
 	availableShootOperations = sets.New(
 		v1beta1constants.ShootOperationMaintain,
 		v1beta1constants.ShootOperationRetry,
+		v1beta1constants.ShootOperationForceInPlaceUpdate,
 	).Union(availableShootMaintenanceOperations)
 	availableShootMaintenanceOperations = sets.New(
 		v1beta1constants.GardenerOperationReconcile,
@@ -2740,7 +2742,7 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Allow the update without validation if the force-update annotation is present.
-	if helper.ShootNeedsForceInPlaceUpdate(newShoot) {
+	if kubernetesutils.HasMetaDataAnnotation(newShoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate) {
 		return allErrs
 	}
 
@@ -2804,7 +2806,7 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		newKubeletConfig := helper.CalculateEffectiveKubeletConfiguration(newShoot.Spec.Kubernetes.Kubelet, worker.Kubernetes)
 
 		if !apiequality.Semantic.DeepEqual(oldWorker, worker) || !oldKubernetesVersion.Equal(newKubernetesVersion) || !apiequality.Semantic.DeepEqual(oldKubeletConfig, newKubeletConfig) {
-			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("the worker pool %q is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration.", worker.Name)))
+			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("the worker pool %q is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'", worker.Name)))
 		}
 	}
 

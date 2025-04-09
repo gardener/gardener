@@ -854,9 +854,9 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 				// If there are no pending workers rollouts for in-place updates, we can remove the force in-place update annotation.
 				if (o.Shoot.GetInfo().Status.InPlaceUpdates == nil || o.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates == nil) &&
-					metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationForceInPlaceUpdate) {
+					kubernetesutils.HasMetaDataAnnotation(o.Shoot.GetInfo(), v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate) {
 					return botanist.Shoot.UpdateInfo(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
-						delete(shoot.Annotations, v1beta1constants.AnnotationForceInPlaceUpdate)
+						delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 						return nil
 					})
 				}

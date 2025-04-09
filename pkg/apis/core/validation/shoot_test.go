@@ -7707,7 +7707,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should return no errors if force-update annotation is present", func() {
 			newShoot.Annotations = map[string]string{
-				v1beta1constants.AnnotationForceInPlaceUpdate: "true",
+				v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationForceInPlaceUpdate,
 			}
 
 			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
@@ -7774,12 +7774,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.workers[0]"),
-					"Detail": Equal("the worker pool \"worker-1\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration."),
+					"Detail": Equal("the worker pool \"worker-1\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.workers[1]"),
-					"Detail": Equal("the worker pool \"worker-2\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration."),
+					"Detail": Equal("the worker pool \"worker-2\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
 				})),
 			))
 		})
@@ -7792,7 +7792,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.workers[1]"),
-					"Detail": Equal("the worker pool \"worker-2\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration."),
+					"Detail": Equal("the worker pool \"worker-2\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
 				})),
 			))
 		})
@@ -7805,7 +7805,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.workers[1]"),
-					"Detail": Equal("the worker pool \"worker-2\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration."),
+					"Detail": Equal("the worker pool \"worker-2\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
 				})),
 			))
 		})
@@ -7866,7 +7866,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
 					"Field":  Equal("spec.provider.workers[1]"),
-					"Detail": Equal("the worker pool \"worker-3\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration."),
+					"Detail": Equal("the worker pool \"worker-3\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
 				})),
 			))
 		})
