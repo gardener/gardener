@@ -21,6 +21,10 @@ import (
 func GenerateExtension(opts *Options) ([]byte, error) {
 	extension := newBaseExtension(opts)
 
+	if opts.InjectGardenKubeconfig {
+		extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = &opts.InjectGardenKubeconfig
+	}
+
 	if opts.AdmissionRuntimeOCIRepository != "" && opts.AdmissionApplicationOCIRepository != "" {
 		ensureAdmission(extension, opts)
 	}
