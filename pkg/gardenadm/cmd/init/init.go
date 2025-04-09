@@ -122,6 +122,13 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployShootSystem,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying extension controllers",
+			Fn: func(ctx context.Context) error {
+				return b.ReconcileExtensionControllerDeployments(ctx, false)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{

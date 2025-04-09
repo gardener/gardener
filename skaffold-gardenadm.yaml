@@ -224,6 +224,7 @@ build:
             - pkg/component/observability/plutono/dashboards/garden-shoot
             - pkg/component/observability/plutono/dashboards/seed
             - pkg/component/observability/plutono/dashboards/shoot
+            - pkg/component/seed/system
             - pkg/component/shared
             - pkg/component/shoot/namespaces
             - pkg/component/shoot/system
@@ -248,6 +249,8 @@ build:
             - pkg/gardenadm/staticpod
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/apis/config/v1alpha1/helper
+            - pkg/gardenlet/controller/controllerinstallation/controllerinstallation
+            - pkg/gardenlet/controller/controllerinstallation/utils
             - pkg/gardenlet/features
             - pkg/gardenlet/operation
             - pkg/gardenlet/operation/botanist
@@ -282,6 +285,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/gardener/gardenlet
             - pkg/utils/gardener/secretsrotation
             - pkg/utils/gardener/tokenrequest
             - pkg/utils/imagevector
@@ -295,6 +299,7 @@ build:
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
             - pkg/utils/net
+            - pkg/utils/oci
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
@@ -445,7 +450,6 @@ build:
             - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/api/indexer
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -461,7 +465,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/resources/v1alpha1/helper
