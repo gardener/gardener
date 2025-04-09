@@ -1,6 +1,6 @@
 # General Conventions
 
-All the extensions that are registered to Gardener are deployed to the seed clusters on which they are required (also see [ControllerRegistration](controllerregistration.md)).
+All the extensions that are registered to Gardener are deployed to the garden runtime and seed clusters on which they are required (also see [extension registration documentation](registration.md)).
 
 Some of these extensions might need to create global resources in the seed (e.g., `ClusterRole`s), i.e., it's important to have a naming scheme to avoid conflicts as it cannot be checked or validated upfront that two extensions don't use the same names.
 
