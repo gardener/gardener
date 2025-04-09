@@ -564,4 +564,26 @@ var _ = Describe("Pod Utils", func() {
 			Expect(actual).To(Equal(logs))
 		})
 	})
+
+	Describe("#InjectKubernetesServiceHost", func() {
+		var (
+			host       = "host"
+			containers []corev1.Container
+		)
+
+		BeforeEach(func() {
+			containers = []corev1.Container{{}}
+		})
+
+		It("should do nothing because env var is already present", func() {
+			containers[0].Env = []corev1.EnvVar{{Name: "KUBERNETES_SERVICE_HOST", Value: "foo"}}
+			InjectKubernetesServiceHostEnv(containers, host)
+			Expect(containers[0].Env[0].Value).To(Equal("foo"))
+		})
+
+		It("should do nothing because env var is already present", func() {
+			InjectKubernetesServiceHostEnv(containers, host)
+			Expect(containers[0].Env[0].Value).To(Equal(host))
+		})
+	})
 })

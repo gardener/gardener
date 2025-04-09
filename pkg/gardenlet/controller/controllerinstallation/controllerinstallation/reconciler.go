@@ -72,6 +72,7 @@ type Reconciler struct {
 	Clock                 clock.Clock
 	Identity              *gardencorev1beta1.Gardener
 	GardenClusterIdentity string
+	GardenNamespace       string
 	// BootstrapControlPlaneNode controls whether the pods are used to bootstrap a control plane node. If set to true,
 	// they are deployed to the host network. In addition, all taints are tolerated to make sure they can get deployed
 	// to nodes even when they are not ready yet. Furthermore, the replicas are set to 1 and a usable port range is
@@ -201,7 +202,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	var (
-		injectGardenKubeconfig            = ptr.Deref(controllerDeployment.InjectGardenKubeconfig, false)
+		injectGardenKubeconfig            = !r.BootstrapControlPlaneNode && ptr.Deref(controllerDeployment.InjectGardenKubeconfig, false)
 		genericGardenKubeconfigSecretName string
 	)
 
@@ -249,7 +250,6 @@ func (r *Reconciler) reconcile(
 				"region":          seed.Spec.Provider.Region,
 				"volumeProvider":  volumeProvider,
 				"volumeProviders": volumeProviders,
-				"ingressDomain":   &seed.Spec.Ingress.Domain,
 				"protected":       v1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintProtected),
 				"visible":         seed.Spec.Settings.Scheduling.Visible,
 				"taints":          seed.Spec.Taints,
@@ -265,6 +265,10 @@ func (r *Reconciler) reconcile(
 
 	if genericGardenKubeconfigSecretName != "" {
 		gardenerValues["gardener"].(map[string]any)["garden"].(map[string]any)["genericKubeconfigSecretName"] = genericGardenKubeconfigSecretName
+	}
+
+	if seed.Spec.Ingress != nil {
+		gardenerValues["gardener"].(map[string]any)["seed"].(map[string]any)["ingressDomain"] = &seed.Spec.Ingress.Domain
 	}
 
 	if r.BootstrapControlPlaneNode {
@@ -349,7 +353,7 @@ func (r *Reconciler) reconcile(
 	if err := managedresources.Create(
 		seedCtx,
 		r.SeedClientSet.Client(),
-		v1beta1constants.GardenNamespace,
+		r.GardenNamespace,
 		controllerInstallation.Name,
 		map[string]string{ctrlinstutils.LabelKeyControllerInstallationName: controllerInstallation.Name},
 		false,
@@ -406,7 +410,7 @@ func (r *Reconciler) delete(
 	mr := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controllerInstallation.Name,
-			Namespace: v1beta1constants.GardenNamespace,
+			Namespace: r.GardenNamespace,
 		},
 	}
 
@@ -583,6 +587,8 @@ func (r *Reconciler) MutateSpecForControlPlaneNodeBootstrapping(obj runtime.Obje
 
 	if deployment, ok := obj.(*appsv1.Deployment); ok {
 		deployment.Spec.Replicas = ptr.To(int32(1))
+		deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
+		deployment.Spec.Strategy.RollingUpdate = nil
 	}
 	return kubernetesutils.VisitPodSpec(obj, func(podSpec *corev1.PodSpec) {
 		podSpec.HostNetwork = r.BootstrapControlPlaneNode
@@ -590,6 +596,8 @@ func (r *Reconciler) MutateSpecForControlPlaneNodeBootstrapping(obj runtime.Obje
 			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
 			corev1.Toleration{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
 		)
+		kubernetesutils.InjectKubernetesServiceHostEnv(podSpec.InitContainers, "localhost")
+		kubernetesutils.InjectKubernetesServiceHostEnv(podSpec.Containers, "localhost")
 	})
 }
 

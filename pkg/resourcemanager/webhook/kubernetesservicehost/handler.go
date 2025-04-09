@@ -38,35 +38,8 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 	log := h.Logger.WithValues("pod", kubernetesutils.ObjectKeyForCreateWebhooks(pod, req))
 
 	log.Info("Injecting KUBERNETES_SERVICE_HOST environment variable into all containers in the pod")
-	h.mutateContainers(pod.Spec.InitContainers)
-	h.mutateContainers(pod.Spec.Containers)
+	kubernetesutils.InjectKubernetesServiceHostEnv(pod.Spec.InitContainers, h.Host)
+	kubernetesutils.InjectKubernetesServiceHostEnv(pod.Spec.Containers, h.Host)
 
 	return nil
-}
-
-func (h *Handler) mutateContainers(containers []corev1.Container) {
-	for i, container := range containers {
-		if hasEnv(container.Env) {
-			continue
-		}
-
-		if container.Env == nil {
-			container.Env = make([]corev1.EnvVar, 0, 1)
-		}
-
-		containers[i].Env = append(containers[i].Env, corev1.EnvVar{
-			Name:      "KUBERNETES_SERVICE_HOST",
-			Value:     h.Host,
-			ValueFrom: nil,
-		})
-	}
-}
-
-func hasEnv(envVars []corev1.EnvVar) bool {
-	for _, env := range envVars {
-		if env.Name == "KUBERNETES_SERVICE_HOST" {
-			return true
-		}
-	}
-	return false
 }
