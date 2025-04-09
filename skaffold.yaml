@@ -1233,6 +1233,7 @@ build:
             - pkg/gardenlet/controller/shoot/shoot
             - pkg/gardenlet/controller/shoot/shoot/helper
             - pkg/gardenlet/controller/shoot/state
+            - pkg/gardenlet/controller/shoot/status
             - pkg/gardenlet/controller/tokenrequestor/workloadidentity
             - pkg/gardenlet/controller/vpaevictionrequirements
             - pkg/gardenlet/features
