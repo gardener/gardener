@@ -346,7 +346,7 @@ return true
 
 If multiple machine image versions are valid for a machine type, the selection is made based on the following rules:
 
-1. The global capabilities array is evaluated in order. The first difference in the most preferred value of the capabilities determines the selection.
+1. The order of global capabilities are taken into consideration for choosing the best candidate. The first difference in the most preferred value of the capabilities determines the selection.
 2. If the most preferred value is identical for all capabilities, the next most preferred values are compared, continuing this process until a selection is made.
 
 ## Implications on NamespacedCloudProfiles. 
