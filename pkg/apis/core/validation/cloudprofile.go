@@ -414,7 +414,7 @@ func HasDecreasedMaxNodesTotal(newMaxNodesTotal, oldMaxNodesTotal *int32) bool {
 	return newMaxNodesTotal != nil && oldMaxNodesTotal != nil && *newMaxNodesTotal < *oldMaxNodesTotal
 }
 
-func validateCapabilities(capabilities []core.CapabilitySet, fldPath *field.Path) field.ErrorList {
+func validateCapabilities(capabilities []core.Capability, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(capabilities) == 0 {
@@ -426,17 +426,12 @@ func validateCapabilities(capabilities []core.CapabilitySet, fldPath *field.Path
 	}
 
 	capabilityMap := make(core.Capabilities, len(capabilities))
-	for idx, capabilitySet := range capabilities {
+	for idx, capability := range capabilities {
 		capabilitySetFieldPath := fldPath.Index(idx)
-		if len(capabilitySet.Capabilities) != 1 {
-			allErrs = append(allErrs, field.Invalid(capabilitySetFieldPath, capabilitySet.Capabilities, "must have exactly one capability"))
+		if _, exists := capabilityMap[capability.Name]; exists {
+			allErrs = append(allErrs, field.Duplicate(capabilitySetFieldPath, capability.Name))
 		}
-		for key, value := range capabilitySet.Capabilities {
-			if _, exists := capabilityMap[key]; exists {
-				allErrs = append(allErrs, field.Invalid(capabilitySetFieldPath, key, "each capability must only be defined once"))
-			}
-			capabilityMap[key] = value
-		}
+		capabilityMap[capability.Name] = capability.Values
 	}
 
 	// Capability "architecture" is required.

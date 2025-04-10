@@ -487,8 +487,8 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 <td>
 <code>capabilities</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.CapabilitySet">
-[]CapabilitySet
+<a href="#core.gardener.cloud/v1beta1.Capability">
+[]Capability
 </a>
 </em>
 </td>
@@ -3445,11 +3445,49 @@ CRIName
 <p>
 <p>Capabilities of a machine type or machine image.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.Capability">Capability
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
+</p>
+<p>
+<p>Capability contains the Name and Values of a capability.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<td>
+<code>values</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.CapabilitySet">CapabilitySet
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
 <a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
 </p>
 <p>
@@ -3699,8 +3737,8 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 <td>
 <code>capabilities</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.CapabilitySet">
-[]CapabilitySet
+<a href="#core.gardener.cloud/v1beta1.Capability">
+[]Capability
 </a>
 </em>
 </td>

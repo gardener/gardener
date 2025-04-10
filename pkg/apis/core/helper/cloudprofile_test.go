@@ -425,8 +425,8 @@ var _ = Describe("Helper", func() {
 
 		Describe("Initial migration", func() {
 			BeforeEach(func() {
-				cloudProfileSpecNew.Capabilities = []core.CapabilitySet{
-					{Capabilities: core.Capabilities{"architecture": []string{"arm64", "amd64", "custom"}}},
+				cloudProfileSpecNew.Capabilities = []core.Capability{
+					{Name: "architecture", Values: []string{"arm64", "amd64", "custom"}},
 				}
 			})
 
