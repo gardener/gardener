@@ -107,7 +107,7 @@ Some network ranges are reserved for specific use-cases in the communication bet
 ## Overlapping IPv4 Networks between Seed and Shoot
 By default, the seed and shoot clusters must have non-overlapping IPv4 network ranges and gardener will enforce disjunct ranges.
 However, under certain conditions it is possible to allow overlapping IPv4 network ranges:
-1. The seed cluster must have a single control plane (non-HA).
+1. The shoot cluster must have a non-highly-available VPN, usually implicitly selected by having a non-highly-available control plane.
 2. The shoot cluster need be either single-stack IPv4 or dual-stack IPv4/IPv6.
 3. The shoot cluster networks don't use the reserved ranges mentioned above.
 
@@ -115,4 +115,4 @@ However, under certain conditions it is possible to allow overlapping IPv4 netwo
 > Gardener still enforces the non-overlapping condition for IPv6 networks to avoid any potential issues.
 
 If all conditions are met, the seed and shoot clusters can have overlapping (IPv4) network ranges.
-The overlapping ranges are mapped to the reserved ranges mentioned above within the VPN network.
+The potentially overlapping ranges are mapped to the reserved ranges mentioned above within the VPN network, i.e., double network address translation (NAT) is used .
