@@ -433,7 +433,7 @@ var _ = Describe("Interface", func() {
 			)
 		}
 
-		expectGetGardenletChartValues = func(withBootstrap bool, seedIsGardener bool) {
+		expectGetGardenletChartValues = func(withBootstrap bool, seedIsGarden bool) {
 			gardenletChartValues = map[string]any{"foo": "bar"}
 
 			vh.EXPECT().GetGardenletChartValues(mergedDeployment, gomock.AssignableToTypeOf(&gardenletconfigv1alpha1.GardenletConfiguration{}), gomock.AssignableToTypeOf("")).DoAndReturn(
@@ -454,7 +454,7 @@ var _ = Describe("Interface", func() {
 						Expect(gc.GardenClientConnection.BootstrapKubeconfig).To(BeNil())
 					}
 
-					if seedIsGardener {
+					if seedIsGarden {
 						Expect(deployment.PodLabels).To(HaveKeyWithValue("networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443", "allowed"))
 					} else {
 						Expect(deployment.PodLabels).To(BeEmpty())
