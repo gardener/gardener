@@ -26,10 +26,10 @@ import (
 
 // ETCDEncryptionKeyVerifier verifies the etcd encryption key rotation.
 type ETCDEncryptionKeyVerifier struct {
-	RuntimeClient                client.Client
-	Namespace                    string
 	SecretsManagerLabelSelector  client.MatchingLabels
 	GetETCDEncryptionKeyRotation func() *gardencorev1beta1.ETCDEncryptionKeyRotation
+	GetRuntimeClient             func() client.Client
+	GetETCDSecretNamespace       func() string
 
 	EncryptionKey  string
 	RoleLabelValue string
@@ -48,10 +48,11 @@ func init() {
 
 // Before is called before the rotation is started.
 func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
+	runtimeClient := v.GetRuntimeClient()
 	By("Verify old etcd encryption key secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
+		g.Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetETCDSecretNamespace()), v.SecretsManagerLabelSelector)).To(Succeed())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(1), "etcd encryption key should get created, but not rotated yet")
@@ -61,7 +62,7 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 	By("Verify old etcd encryption config secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
+		g.Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetETCDSecretNamespace()), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
 		sort.Sort(sort.Reverse(AgeSorter(secretList.Items)))
 
@@ -110,10 +111,11 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 	Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime).NotTo(BeNil())
 	Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime.After(etcdEncryptionKeyRotation.LastInitiationTime.Time)).To(BeTrue())
 
+	runtimeClient := v.GetRuntimeClient()
 	By("Verify etcd encryption key secrets")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
+		g.Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetETCDSecretNamespace()))).To(Succeed())
 
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(2), "etcd encryption key should get rotated")
@@ -124,13 +126,12 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 	By("Verify combined etcd encryption config secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
+		g.Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetETCDSecretNamespace()), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
 		sort.Sort(sort.Reverse(AgeSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
-		err := runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)
-		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)).To(Succeed())
 
 		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
 		g.Expect(encryptionConfiguration.Resources[0].Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
@@ -171,11 +172,11 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 	Expect(etcdEncryptionKeyRotation.LastInitiationFinishedTime).To(BeNil())
 	Expect(etcdEncryptionKeyRotation.LastCompletionTriggeredTime).To(BeNil())
 
+	runtimeClient := v.GetRuntimeClient()
 	By("Verify new etcd encryption key secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), v.SecretsManagerLabelSelector)).To(Succeed())
-
+		Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetETCDSecretNamespace()), v.SecretsManagerLabelSelector)).To(Succeed())
 		grouped := GroupByName(secretList.Items)
 		g.Expect(grouped[v.EncryptionKey]).To(HaveLen(1), "old etcd encryption key should get cleaned up")
 		g.Expect(grouped[v.EncryptionKey]).To(ContainElement(v.secretsPrepared[v.EncryptionKey][1]), "new etcd encryption key secret should be kept")
@@ -184,13 +185,12 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 	By("Verify new etcd encryption config secret")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(v.RuntimeClient.List(ctx, secretList, client.InNamespace(v.Namespace), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
+		g.Expect(runtimeClient.List(ctx, secretList, client.InNamespace(v.GetETCDSecretNamespace()), client.MatchingLabels{v1beta1constants.LabelRole: v.RoleLabelValue})).To(Succeed())
 		g.Expect(secretList.Items).NotTo(BeEmpty())
 		sort.Sort(sort.Reverse(AgeSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
-		err := runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)
-		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)).To(Succeed())
 
 		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
 		g.Expect(encryptionConfiguration.Resources[0].Providers).To(DeepEqual([]apiserverconfigv1.ProviderConfiguration{
