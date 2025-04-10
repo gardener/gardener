@@ -15,7 +15,7 @@ helm template istio pkg/component/networking/istio/charts/istio/istio-ingress -n
 
 Clone istio github repository and checkout desired release tag:
 ```console
-ISTIO_VERSION=1.23.2
+ISTIO_VERSION=1.25.1
 git clone https://github.com/istio/istio.git
 cd istio
 git checkout $ISTIO_VERSION
@@ -23,7 +23,7 @@ git checkout $ISTIO_VERSION
 
 Compare crds:
 ```console
-diff istio-crds.yaml istio/${ISTIO_VERSION}/manifests/charts/base/crds/crd-all.gen.yaml
+diff istio-crds.yaml istio/${ISTIO_VERSION}/manifests/charts/base/files/crd-all.gen.yaml
 ```
 
 Render new version in istio/istio repository:

@@ -26,7 +26,7 @@ spec:
 {{ toYaml .Values.labels | indent 8 }}
 {{ toYaml .Values.networkPolicyLabels | indent 8 }}
         service.istio.io/canonical-name: "istio-ingressgateway"
-        service.istio.io/canonical-revision: "1.19"
+        service.istio.io/canonical-revision: "1.25"
       annotations:
         sidecar.istio.io/inject: "false"
         proxy.istio.io/config: |-

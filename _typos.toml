@@ -39,4 +39,5 @@ extend-exclude = [
     "10-crd-cert.gardener.cloud_certificates.yaml",
     "generated.pb.go",
     "openapi_generated.go",
+    "crd-all.gen.yaml",
 ]

@@ -28,6 +28,9 @@ spec:
         sidecar.istio.io/inject: "false"
         checksum/istio-config: <CHECKSUM>
     spec:
+      tolerations:
+      - key: cni.istio.io/not-ready
+        operator: "Exists"
       serviceAccountName: istiod
       securityContext:
         fsGroup: 1337
@@ -47,12 +50,20 @@ spec:
           - --keepaliveMaxServerConnectionAge
           - "30m"
           ports:
-          - containerPort: 15012
-            protocol: TCP
-          - containerPort: 10250
-            protocol: TCP
           - containerPort: 8080
             protocol: TCP
+            name: http-debug
+          - containerPort: 10250
+            protocol: TCP
+          - containerPort: 15012
+            protocol: TCP
+            name: tls-xds
+          - containerPort: 15014
+            protocol: TCP
+            name: http-monitoring
+          - containerPort: 15017
+            protocol: TCP
+            name: https-webhooks
           readinessProbe:
             httpGet:
               path: /ready
@@ -84,6 +95,12 @@ spec:
                 fieldPath: spec.serviceAccountName
           - name: KUBECONFIG
             value: /var/run/secrets/remote/config
+          # If you explicitly told us where ztunnel lives, use that.
+          # Otherwise, assume it lives in our namespace
+          # Also, check for an explicit ENV override (legacy approach) and prefer that
+          # if present
+          - name: CA_TRUSTED_NODE_ACCOUNTS
+            value: "istio-system/ztunnel"
           - name: PILOT_TRACE_SAMPLING
             value: "1"
           - name: PILOT_ENABLE_ANALYSIS
@@ -98,6 +115,7 @@ spec:
             valueFrom:
               resourceFieldRef:
                 resource: limits.cpu
+                divisor: "1"
           - name: PLATFORM
             value: ""
           resources:
