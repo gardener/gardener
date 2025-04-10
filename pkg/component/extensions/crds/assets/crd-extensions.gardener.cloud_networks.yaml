@@ -73,7 +73,7 @@ spec:
                   rule: self == oldSelf
               ipFamilies:
                 description: |-
-                  IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+                  IPFamilies specifies the IP protocol versions to use for shoot networking.
                   See https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md
                 items:
                   description: IPFamily is a type for specifying an IP protocol version
@@ -147,6 +147,15 @@ spec:
                   - status
                   - type
                   type: object
+                type: array
+              ipFamilies:
+                description: |-
+                  IPFamilies specifies the IP protocol versions that actually are used for shoot networking.
+                  During dual-stack migration, this field may differ from the spec.
+                items:
+                  description: IPFamily is a type for specifying an IP protocol version
+                    to use in Gardener clusters.
+                  type: string
                 type: array
               lastError:
                 description: LastError holds information about the last occurred error

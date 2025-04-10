@@ -135,18 +135,11 @@ func ValidateIPFamilies(ipFamilies []extensionsv1alpha1.IPFamily, fldPath *field
 func ValidateIPFamiliesUpdate(newIPFamilies, oldIPFamilies []extensionsv1alpha1.IPFamily, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(oldIPFamilies) == 1 && oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 {
-		if len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv4 {
-			// Allow transition from [IPv6] to [IPv6, IPv4]
-			return allErrs
-		}
-	}
-
-	if len(oldIPFamilies) == 1 && oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 {
-		if len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv6 {
-			// Allow transition from [IPv4] to [IPv4, IPv6]
-			return allErrs
-		}
+	if len(oldIPFamilies) == 1 &&
+		((oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 && len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv6 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv4) ||
+			(oldIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 && len(newIPFamilies) == 2 && newIPFamilies[0] == extensionsv1alpha1.IPFamilyIPv4 && newIPFamilies[1] == extensionsv1alpha1.IPFamilyIPv6)) {
+		// Allow transition from [IPv6] to [IPv6, IPv4] or [IPv4] to [IPv4, IPv6]
+		return allErrs
 	}
 
 	if !apiequality.Semantic.DeepEqual(newIPFamilies, oldIPFamilies) {

@@ -124,8 +124,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	}
 
 	if hasNodesCIDR {
-		err := botanist.UpdateDualStackMigrationConditionIfNeeded(ctx)
-		if err != nil {
+		if err := botanist.UpdateDualStackMigrationConditionIfNeeded(ctx); err != nil {
 			return v1beta1helper.NewWrappedLastErrors(v1beta1helper.FormatLastErrDescription(err), err)
 		}
 		networks, err := shoot.ToNetworks(o.Shoot.GetInfo(), o.Shoot.IsWorkerless)
@@ -817,7 +816,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployWorker, waitUntilWorkerStatusUpdate, deployManagedResourceForGardenerNodeAgent),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Checking dual-stack migration of nodes",
+			Name:         "Checking if we have dual-stack pod CIDRs in nodes",
 			Fn:           botanist.CheckPodCIDRsInNodes,
 			SkipIf:       o.Shoot.IsWorkerless,
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady),
