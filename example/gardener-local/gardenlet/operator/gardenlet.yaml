@@ -5,9 +5,6 @@ metadata:
   name: local
   namespace: garden
 spec:
-  deployment:
-    podLabels:
-      networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443: allowed
   config:
     apiVersion: gardenlet.config.gardener.cloud/v1alpha1
     kind: GardenletConfiguration
