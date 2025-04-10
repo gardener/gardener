@@ -22,13 +22,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
@@ -148,6 +151,10 @@ func (r *Reconciler) reconcile(
 		return result, r.updateStatus(ctx, gardenlet, status)
 	}
 
+	if err := r.addNetworkPolicyLabel(ctx, log, gardenlet); err != nil {
+		return result, fmt.Errorf("could not add network policy label to gardenlet: %w", err)
+	}
+
 	status.Conditions, err = actuator.Reconcile(ctx, log, gardenlet, status.Conditions, &gardenlet.Spec.Deployment.GardenletDeployment, &gardenlet.Spec.Config, seedmanagementv1alpha1.BootstrapToken, false)
 	if err != nil {
 		if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
@@ -194,4 +201,26 @@ func (r *Reconciler) cleanupKubeconfigSecret(ctx context.Context, log logr.Logge
 	}
 
 	return nil
+}
+
+func (r *Reconciler) addNetworkPolicyLabel(ctx context.Context, log logr.Logger, gardenlet *seedmanagementv1alpha1.Gardenlet) error {
+	// Only add label if gardenlet is deployed to garden runtime cluster.
+	if gardenlet.Spec.KubeconfigSecretRef != nil {
+		return nil
+	}
+
+	toKubeAPIServer := gardenerutils.NetworkPolicyLabel("virtual-garden-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port)
+	if _, ok := gardenlet.Spec.Deployment.PodLabels[toKubeAPIServer]; ok {
+		return nil
+	}
+
+	patch := client.MergeFrom(gardenlet.DeepCopy())
+
+	if gardenlet.Spec.Deployment.PodLabels == nil {
+		gardenlet.Spec.Deployment.PodLabels = make(map[string]string)
+	}
+	gardenlet.Spec.Deployment.PodLabels[toKubeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
+
+	log.Info("Adding network policy label to gardenlet")
+	return r.VirtualClient.Patch(ctx, gardenlet, patch)
 }

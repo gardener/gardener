@@ -130,6 +130,7 @@ var _ = Describe("Gardenlet controller test", func() {
 
 		EventuallyWithOffset(1, func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(gardenlet), gardenlet)).To(Succeed())
+			g.Expect(gardenlet.Spec.Deployment.PodLabels).To(HaveKeyWithValue("networking.resources.gardener.cloud/to-virtual-garden-kube-apiserver-tcp-443", "allowed"))
 			g.Expect(gardenlet.Status.ObservedGeneration).To(Equal(gardenlet.Generation))
 			condition := v1beta1helper.GetCondition(gardenlet.Status.Conditions, seedmanagementv1alpha1.SeedRegistered)
 			g.Expect(condition).NotTo(BeNil())
