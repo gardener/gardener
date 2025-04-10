@@ -84,8 +84,8 @@ var _ = Describe("CloudProfile defaulting", func() {
 
 		Context("With Capabilities", func() {
 			It("should not default the architecture for MachineImageVersion and MachineType", func() {
-				obj.Spec.Capabilities = []CapabilitySet{
-					{Capabilities: Capabilities{v1beta1constants.ArchitectureKey: []string{"arm64"}}},
+				obj.Spec.Capabilities = []Capability{
+					{Name: v1beta1constants.ArchitectureKey, Values: []string{"arm64"}},
 				}
 				SetObjectDefaults_CloudProfile(obj)
 

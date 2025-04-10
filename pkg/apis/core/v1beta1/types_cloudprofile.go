@@ -93,7 +93,7 @@ type CloudProfileSpec struct {
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
 	// +optional
-	Capabilities []CapabilitySet `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=capabilities"`
+	Capabilities []Capability `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=capabilities"`
 }
 
 // GetCapabilities returns the capabilities slice of the CloudProfile as a Capabilities map.
@@ -102,10 +102,8 @@ func (spec *CloudProfileSpec) GetCapabilities() Capabilities {
 		return nil
 	}
 	capabilities := make(Capabilities, len(spec.Capabilities))
-	for _, capabilitySet := range spec.Capabilities {
-		for key, value := range capabilitySet.Capabilities {
-			capabilities[key] = value
-		}
+	for _, capability := range spec.Capabilities {
+		capabilities[capability.Name] = capability.Values
 	}
 	return capabilities
 }
@@ -390,6 +388,12 @@ type Capabilities map[string]CapabilityValues
 
 func (t Capabilities) String() string {
 	return fmt.Sprintf("%v", map[string]CapabilityValues(t))
+}
+
+// Capability contains the Name and Values of a capability.
+type Capability struct {
+	Name   string   `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Values []string `json:"values" protobuf:"bytes,2,rep,name=values"`
 }
 
 // CapabilitySet is a wrapper for Capabilities.

@@ -73,7 +73,7 @@ type CloudProfileSpec struct {
 	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
-	Capabilities []CapabilitySet
+	Capabilities []Capability
 }
 
 // GetCapabilities returns the capabilities slice of the CloudProfile as a Capabilities map.
@@ -82,10 +82,8 @@ func (spec *CloudProfileSpec) GetCapabilities() Capabilities {
 		return nil
 	}
 	capabilities := make(Capabilities, len(spec.Capabilities))
-	for _, capabilitySet := range spec.Capabilities {
-		for key, value := range capabilitySet.Capabilities {
-			capabilities[key] = value
-		}
+	for _, capability := range spec.Capabilities {
+		capabilities[capability.Name] = capability.Values
 	}
 	return capabilities
 }
@@ -339,6 +337,12 @@ func (c CapabilityValues) IsSubsetOf(other CapabilityValues) bool {
 
 // Capabilities of a machine type or machine image.
 type Capabilities map[string]CapabilityValues
+
+// Capability contains the Name and Values of a capability.
+type Capability struct {
+	Name   string   `json:"name"`
+	Values []string `json:"values"`
+}
 
 // CapabilitySet is a wrapper for Capabilities.
 // This is a workaround as the Protobuf generator can't handle a slice of maps.
