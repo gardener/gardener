@@ -6,6 +6,7 @@ package framework
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -76,12 +77,14 @@ func (f *CommonFramework) BeforeEach() {
 		} else {
 			// This is the default location if the framework is running in one of the gardener/shoot suites.
 			// Otherwise the resource dir has to be adjusted
-			f.ResourcesDir, err = filepath.Abs(filepath.Join("..", "..", "..", "framework", "resources"))
+			// TODO(Rado): This path, without the `test` dir, is not right for e2e tests. Pretty strange
+			f.ResourcesDir, err = filepath.Abs(filepath.Join("..", "..", "..", "test", "framework", "resources"))
 		}
 		ExpectNoError(err)
 	}
 	FileExists(f.ResourcesDir)
 
+	fmt.Println("Creating templates dir using resource dir: ", f.ResourcesDir)
 	f.TemplatesDir = filepath.Join(f.ResourcesDir, "templates")
 
 	f.ChartDir = filepath.Join(f.ResourcesDir, "charts")
