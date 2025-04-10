@@ -230,8 +230,8 @@ spec:
 ```
 
 Please note the following characteristics:
-- The order of capabilities define their priority, .e.g., prefer `hypervisorType` over `network`.
-- The order of capability values also define their priority, .e.g., prefer `gen2` over `gen1`.
+- The order of capabilities define their priority, e.g., prefer `hypervisorType` over `network`.
+- The order of capability values also define their priority, e.g., prefer `gen2` over `gen1`.
 
 Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`.
 Then the image with `gen2` will be preferred.
