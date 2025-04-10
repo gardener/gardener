@@ -1498,6 +1498,20 @@ var _ = Describe("validator", func() {
 				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
 			})
 
+			It("should add deploy infrastructure task because ipFamilies have changed", func() {
+				shoot.Spec.Networking = &core.Networking{
+					Nodes:      &nodesCIDR,
+					Pods:       &podsCIDR,
+					Services:   &servicesCIDR,
+					IPFamilies: []core.IPFamily{core.IPFamilyIPv4, core.IPFamilyIPv6},
+				}
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(ctx, attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, "deployInfrastructure")).To(BeTrue())
+			})
+
 			It("should add deploy infrastructure task because SSHAccess in WorkersSettings config has changed", func() {
 				shoot.Spec.Provider.WorkersSettings = &core.WorkersSettings{
 					SSHAccess: &core.SSHAccess{
