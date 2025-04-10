@@ -10,7 +10,7 @@ metadata:
     networking.resources.gardener.cloud/from-all-seed-scrape-targets-allowed-ports: '[{"port":15020,"protocol":"TCP"}]'
     foo: bar
   labels:
-    app.kubernetes.io/version: 1.23.2
+    app.kubernetes.io/version: 1.25.1
     app: istio-ingressgateway
     foo: bar
 spec:

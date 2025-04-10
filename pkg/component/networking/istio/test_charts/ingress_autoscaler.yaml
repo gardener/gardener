@@ -4,7 +4,7 @@ metadata:
   name: istio-ingressgateway
   namespace: test-ingress
   labels:
-    app.kubernetes.io/version: 1.23.2
+    app.kubernetes.io/version: 1.25.1
     app: istio-ingressgateway
     foo: bar
 spec:
