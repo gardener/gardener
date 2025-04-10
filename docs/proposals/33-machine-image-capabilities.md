@@ -188,22 +188,24 @@ In this case it does not result in an error but in performance loss.
 
 ## Proposal
 
-Introduce a top level capabilities map in the CloudProfile `spec.capabilities`.
+Introduce a top level capabilities array in the CloudProfile `spec.capabilities`.
+
+```go
+type Spec struct {
+    Capabilities []Capability
+}
+
+type Capability struct {
+  Name string
+  Values []string
+}
+```
 
 Capabilities are very specific to the provider and the selected catalog offered by Gardener in the cloud profile.
 To minimize complexity and data size in the cloud profile, the capabilities are defined as a map with string keys and string arrays as values.
 The key is the capability name and the value is an array of possible values.
 
-```go
-type Spec struct {
-    Capabilities map[string][]string `json:"capabilities"`
-}
-```
-
-> [!NOTE] 
-> Due to technical limitations of the protobuf, it is not possible to define an array of maps or a map of string arrays, see [docs](https://protobuf.dev/programming-guides/proto3/#maps). That means that the capabilities will either be defined internally as a byte array or as a string with comma-separated values. To take advantage of most API and code generation features of Kubernetes libraries, a map of strings seems best; however, this consideration is not final and might change in the course of the implementation. I suggest to update the GEP later with whatever proves to be the best solution in terms of performance, maintainability and readability.
-
-For each cloud profile the capabilities are defined in the `spec.capabilities` map.
+For each cloud profile the capabilities are defined in the `spec.capabilities` array. 
 The full set of possibilities for each capability is defined here.
 As some capabilities can have multiple values at the same time an array of possible values is used instead of a single value.
 
@@ -214,27 +216,36 @@ If no further information is provided each machine type and machine image will b
 # CloudProfile Example
 spec:
   capabilities:
-    hypervisorType: ["gen2", "gen1"]
-    network: ["accelerated", "standard"]
-    storageAccess: ["NVMe", "SCSI"]
-    secureBoot: ["secure", "none"]
-    bootMode: ["uefi-preferred", "uefi", "legacy-bios"]
+    - name: architecture
+      values: [amd64, arm64]
+    - name: hypervisorType
+      values: [gen2, gen1]
+    - name: network
+      values: [accelerated, standard]
+    - name: storageAccess
+      values: [NVMe, SCSI]
+    - name: secureBoot
+      values: [secure, none]
     ...
 ```
 
 Please note the following characteristics:
-- The array of a capability is ordered.
-- The order defines the priority of the values in case of multiple supported images.
-- The first value in the array is the most preferred value.
-- The last value is the least preferred value.
+- The order of capabilities defines their priority, e.g., prefer `hypervisorType` over `network`.
+- The order of capability values also defines their priority, e.g., prefer `gen2` over `gen1`.
 
 Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`.
 Then the image with `gen2` will be preferred.
 
-Other edge cases will be deterministic solved as well to ensure a consistent behavior.
+Other edge cases will be deterministic solved as well to ensure a consistent behavior. 
+For further information, refer to the [matching algorithm](#matching-algorithm) section.
 
-In addition to the default capabilities, the `spec.machineTypes` is extended with the `capabilities` structure described above.
-The image versions in `spec.machineImages.versions` will be extended with `capabilitySets` - an array of capabilities structures, one entry for each image reference of an image version in the cloud provider.
+In addition to the `spec.capabilities`, spec.machineTypes` is extended with a `capabilities` map.
+
+```go
+type Capabilities map[string][]string
+```
+
+The image versions in `spec.machineImages.versions` will be extended with `capabilitySets` - an array of capabilities maps, one entry for each image reference of an image version in the cloud provider.
 
 The architecture is also added to the capabilitySets. This is required as the architecture is a capability itself. 
 
@@ -245,9 +256,12 @@ The architecture is also added to the capabilitySets. This is required as the ar
 # CloudProfile
 spec:
   capabilities: # <-- Full list of possible capabilities used as default
-    architecture: ["amd64", "arm64"]
-    hypervisorType: ["gen2", "gen1"]
-    network: ["accelerated", "standard"]
+    - name: architecture
+      values: [amd64, arm64]
+    - name: hypervisorType
+      values: [gen2, gen1]
+    - name: network
+      values: [accelerated, standard]
 
   machineImages:
     - name: gardenlinux
@@ -339,6 +353,11 @@ for capabilityName, machineCapabilities in machineType.capabilities:
       
 return true
 ```
+
+If multiple machine image versions are valid for a machine type, the selection is made based on the following rules:
+
+1. The order of global capabilities are taken into consideration for choosing the best candidate. The first difference in the most preferred value of the capabilities determines the selection.
+2. If the most preferred value is identical for all capabilities, the next most preferred values are compared, continuing this process until a selection is made.
 
 ## Implications on NamespacedCloudProfiles. 
 
