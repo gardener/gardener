@@ -6,7 +6,7 @@ namespace: registry
 
 resources:
 - namespace.yaml
-- registry-cache-config.yaml
+- configmap.yaml
 - gcr
 - k8s
 - localhost
