@@ -216,22 +216,22 @@ If no further information is provided each machine type and machine image will b
 # CloudProfile Example
 spec:
   capabilities:
+    - name: architecture
+      values: [amd64, arm64]
     - name: hypervisorType
-      values: ["gen2", "gen1"]
+      values: [gen2, gen1]
     - name: network
-      values: ["accelerated", "standard"]
+      values: [accelerated, standard]
     - name: storageAccess
-      values: ["NVMe", "SCSI"]
+      values: [NVMe, SCSI]
     - name: secureBoot
-      values: ["secure", "none"]
-    - name: bootMode
-      values: ["uefi-preferred", "uefi", "legacy-bios"]
+      values: [secure, none]
     ...
 ```
 
 Please note the following characteristics:
-- The order of capabilities define their priority, e.g., prefer `hypervisorType` over `network`.
-- The order of capability values also define their priority, e.g., prefer `gen2` over `gen1`.
+- The order of capabilities defines their priority, e.g., prefer `hypervisorType` over `network`.
+- The order of capability values also defines their priority, e.g., prefer `gen2` over `gen1`.
 
 Example: A machine supports hypervisor `gen2` AND `gen1` and an image version offers `gen1` OR `gen2`.
 Then the image with `gen2` will be preferred.
@@ -256,9 +256,12 @@ The architecture is also added to the capabilitySets. This is required as the ar
 # CloudProfile
 spec:
   capabilities: # <-- Full list of possible capabilities used as default
-    architecture: ["amd64", "arm64"]
-    hypervisorType: ["gen2", "gen1"]
-    network: ["accelerated", "standard"]
+    - name: architecture
+      values: [amd64, arm64]
+    - name: hypervisorType
+      values: [gen2, gen1]
+    - name: network
+      values: [accelerated, standard]
 
   machineImages:
     - name: gardenlinux
