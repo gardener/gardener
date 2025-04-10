@@ -433,7 +433,7 @@ var _ = Describe("health check", func() {
 						},
 					},
 				}
-				nodeList := &corev1.NodeList{Items: []corev1.Node{
+				nodeList := []*corev1.Node{
 					{
 						Status: corev1.NodeStatus{
 							Conditions: []corev1.NodeCondition{
@@ -444,7 +444,7 @@ var _ = Describe("health check", func() {
 							},
 						},
 					},
-				}}
+				}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal(""))
 				Expect(err).ToNot(HaveOccurred())
@@ -460,7 +460,7 @@ var _ = Describe("health check", func() {
 						},
 					},
 				}
-				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{}, machineDeploymentList, controlPlaneNamespace)
+				msg, err := CheckNodesScaling(ctx, fakeClient, []*corev1.Node{}, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("not enough machine objects created yet")))
 			})
@@ -489,7 +489,7 @@ var _ = Describe("health check", func() {
 						},
 					},
 				}
-				msg, err := CheckNodesScaling(ctx, fakeClient, &corev1.NodeList{}, machineDeploymentList, controlPlaneNamespace)
+				msg, err := CheckNodesScaling(ctx, fakeClient, []*corev1.Node{}, machineDeploymentList, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("is erroneous")))
 			})
@@ -508,7 +508,7 @@ var _ = Describe("health check", func() {
 				for _, machine := range machineList.Items {
 					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
 				}
-				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
 						machinev1alpha1.MachineDeployment{
@@ -537,7 +537,7 @@ var _ = Describe("health check", func() {
 				for _, machine := range machineList.Items {
 					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
 				}
-				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
 						machinev1alpha1.MachineDeployment{
@@ -561,7 +561,7 @@ var _ = Describe("health check", func() {
 				for _, machine := range machineList.Items {
 					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
 				}
-				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
 						machinev1alpha1.MachineDeployment{
@@ -579,7 +579,7 @@ var _ = Describe("health check", func() {
 
 		Describe("Scaling down", func() {
 			It("should return true if number of registered nodes equal number of desired machines", func() {
-				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
 						machinev1alpha1.MachineDeployment{
@@ -594,10 +594,8 @@ var _ = Describe("health check", func() {
 			})
 
 			It("should return an error if the machine for a cordoned node is not found", func() {
-				nodeList := &corev1.NodeList{
-					Items: []corev1.Node{
-						{Spec: corev1.NodeSpec{Unschedulable: true}},
-					},
+				nodeList := []*corev1.Node{
+					{Spec: corev1.NodeSpec{Unschedulable: true}},
 				}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{Items: []machinev1alpha1.MachineDeployment{}}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
@@ -614,12 +612,10 @@ var _ = Describe("health check", func() {
 							{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace, Labels: map[string]string{"node": nodeName}}},
 						},
 					}
-					nodeList = &corev1.NodeList{
-						Items: []corev1.Node{
-							{
-								ObjectMeta: metav1.ObjectMeta{Name: nodeName},
-								Spec:       corev1.NodeSpec{Unschedulable: true},
-							},
+					nodeList = []*corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+							Spec:       corev1.NodeSpec{Unschedulable: true},
 						},
 					}
 				)
@@ -632,7 +628,7 @@ var _ = Describe("health check", func() {
 			})
 
 			It("should return an error if there are more nodes then machines", func() {
-				nodeList := &corev1.NodeList{Items: []corev1.Node{{}}}
+				nodeList := []*corev1.Node{{}}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, &machinev1alpha1.MachineDeploymentList{}, controlPlaneNamespace)
 				Expect(msg).To(Equal("NodesScalingDown"))
 				Expect(err).To(MatchError(ContainSubstring("too many worker nodes are registered. Exceeding maximum desired machine count")))
@@ -655,12 +651,10 @@ var _ = Describe("health check", func() {
 							},
 						},
 					}
-					nodeList = &corev1.NodeList{
-						Items: []corev1.Node{
-							{
-								ObjectMeta: metav1.ObjectMeta{Name: nodeName},
-								Spec:       corev1.NodeSpec{Unschedulable: true},
-							},
+					nodeList = []*corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+							Spec:       corev1.NodeSpec{Unschedulable: true},
 						},
 					}
 				)
