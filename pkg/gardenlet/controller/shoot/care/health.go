@@ -758,6 +758,7 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 		}
 	}
 
+	// Skip checks if all shoot nodes are ready and match the target node number and if there are no ongoing node drains
 	if registeredNodes == desiredMachines && readyAndSchedulableNodes == desiredMachines {
 		return "", nil
 	}
