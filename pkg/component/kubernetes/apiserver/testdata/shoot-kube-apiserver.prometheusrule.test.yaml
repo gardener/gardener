@@ -21,9 +21,9 @@ tests:
   # in this example the request duration is always greater than 3s and less than or equal to 5s.
   - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="+Inf"}'
     values: '0+1x62'
-  - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="5"}'
+  - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="5.0"}'
     values: '0+1x62'
-  - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="3"}'
+  - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="3.0"}'
     values: '0+0x62'
   # KubeApiServerTooManyAuditlogFailures
   - series: 'apiserver_audit_error_total{plugin="webhook", job="kube-apiserver"}'
