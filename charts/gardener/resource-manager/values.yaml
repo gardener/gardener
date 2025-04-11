@@ -142,3 +142,4 @@ global:
       nodeAgentAuthorizer:
         enabled: false
       # machineNamespace: shoot--foo--bar
+      # authorizeWithSelectors: false

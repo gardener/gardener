@@ -31,17 +31,15 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, nil
 	}
 
-	const pathVarLibKubelet = "/var/lib/kubelet"
-
 	return []extensionsv1alpha1.Unit{
 		{
 			Name: UnitName,
 			Content: ptr.To(`[Unit]
-Description=mount ` + pathVarLibKubelet + ` on kubelet data device
+Description=mount ` + kubelet.PathKubeletDirectory + ` on kubelet data device
 Before=` + kubelet.UnitName + `
 [Mount]
 What=/dev/disk/by-label/KUBEDEV
-Where=` + pathVarLibKubelet + `
+Where=` + kubelet.PathKubeletDirectory + `
 Type=ext4
 Options=defaults,prjquota,errors=remount-ro
 [Install]

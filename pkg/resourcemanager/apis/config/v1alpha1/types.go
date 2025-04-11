@@ -332,6 +332,9 @@ type NodeAgentAuthorizerWebhookConfig struct {
 	Enabled bool `json:"enabled"`
 	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
 	MachineNamespace string `json:"machineNamespace"`
+	// AuthorizeWithSelectors defines whether authorization is allowed to use field selectors.
+	// +optional
+	AuthorizeWithSelectors *bool `json:"authorizeWithSelectors,omitempty"`
 }
 
 // SeccompProfileWebhookConfig is the configuration for the seccomp-profile webhook.

@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"go.uber.org/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -66,7 +68,9 @@ var _ = Describe("ResourceManager", func() {
 
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
-			botanist.Shoot = &shootpkg.Shoot{}
+			botanist.Shoot = &shootpkg.Shoot{
+				KubernetesVersion: semver.MustParse("1.32.1"),
+			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
@@ -118,6 +122,25 @@ var _ = Describe("ResourceManager", func() {
 			Expect(resourceManager).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resourceManager.GetValues().PodTopologySpreadConstraintsEnabled).To(BeTrue())
+		})
+
+		It("should successfully set NodeAgentAuthorizerAuthorizeWithSelectors=true if AuthorizeWithSelectors is enabled in the Shoot", func() {
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+								FeatureGates: map[string]bool{"AuthorizeWithSelectors": true},
+							},
+						},
+					},
+				},
+			})
+
+			resourceManager, err := botanist.DefaultResourceManager()
+			Expect(resourceManager).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resourceManager.GetValues().NodeAgentAuthorizerAuthorizeWithSelectors).To(PointTo(Equal(true)))
 		})
 	})
 

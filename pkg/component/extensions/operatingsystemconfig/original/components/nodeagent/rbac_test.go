@@ -59,6 +59,15 @@ rules:
   - create
   - patch
   - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
 `
 
 				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1

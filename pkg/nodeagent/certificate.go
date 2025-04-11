@@ -15,6 +15,10 @@ import (
 	"github.com/spf13/afero"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -27,6 +31,16 @@ import (
 )
 
 const nodeAgentCSRPrefix = "node-agent-csr-"
+
+var codec runtime.Codec
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(nodeagentconfigv1alpha1.AddToScheme(scheme))
+	ser := jsonserializer.NewSerializerWithOptions(jsonserializer.DefaultMetaFactory, scheme, scheme, jsonserializer.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	versions := schema.GroupVersions([]schema.GroupVersion{nodeagentconfigv1alpha1.SchemeGroupVersion})
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+}
 
 // RequestAndStoreKubeconfig requests a certificate via CSR and stores the resulting kubeconfig on the disk.
 func RequestAndStoreKubeconfig(ctx context.Context, log logr.Logger, fs afero.Afero, config *rest.Config, machineName string) error {
@@ -69,4 +83,19 @@ func RequestAndStoreKubeconfig(ctx context.Context, log logr.Logger, fs afero.Af
 	}
 
 	return fs.WriteFile(nodeagentconfigv1alpha1.KubeconfigFilePath, kubeconfig, 0600)
+}
+
+// GetAPIServerConfig reads the gardener-node-agent config file and returns the APIServer configuration.
+func GetAPIServerConfig(fs afero.Afero) (*nodeagentconfigv1alpha1.APIServer, error) {
+	nodeAgentConfigFile, err := fs.ReadFile(nodeagentconfigv1alpha1.ConfigFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading gardener-node-agent config file: %w", err)
+	}
+
+	nodeAgentConfig := &nodeagentconfigv1alpha1.NodeAgentConfiguration{}
+	if err = runtime.DecodeInto(codec, nodeAgentConfigFile, nodeAgentConfig); err != nil {
+		return nil, fmt.Errorf("error decoding gardener-node-agent config: %w", err)
+	}
+
+	return &nodeAgentConfig.APIServer, nil
 }

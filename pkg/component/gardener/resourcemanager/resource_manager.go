@@ -319,8 +319,10 @@ type Values struct {
 	// operating system configs on nodes. When this is provided, the respective controller is enabled in
 	// resource-manager.
 	NodeAgentReconciliationMaxDelay *metav1.Duration
-	// NodeAgentAuthorizerEnabled specifies if node-agent-authorizer webhook should be enabled
+	// NodeAgentAuthorizerEnabled specifies if node-agent-authorizer webhook should be enabled.
 	NodeAgentAuthorizerEnabled bool
+	// NodeAgentAuthorizerAuthorizeWithSelectors specifies if node-agent-authorizer should allow authorization to use field selectors.
+	NodeAgentAuthorizerAuthorizeWithSelectors *bool
 }
 
 // ResponsibilityMode is a string alias.
@@ -579,7 +581,8 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 				Enabled: true,
 			},
 			NodeAgentAuthorizer: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
-				Enabled: r.values.NodeAgentAuthorizerEnabled,
+				Enabled:                r.values.NodeAgentAuthorizerEnabled,
+				AuthorizeWithSelectors: r.values.NodeAgentAuthorizerAuthorizeWithSelectors,
 			},
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,

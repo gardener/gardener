@@ -37,15 +37,16 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	}
 
 	return shared.NewTargetGardenerResourceManager(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.SecretsManager, resourcemanager.Values{
-		ClusterIdentity:                 b.Seed.GetInfo().Status.ClusterIdentity,
-		DefaultNotReadyToleration:       defaultNotReadyTolerationSeconds,
-		DefaultUnreachableToleration:    defaultUnreachableTolerationSeconds,
-		IsWorkerless:                    b.Shoot.IsWorkerless,
-		KubernetesServiceHost:           ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
-		LogLevel:                        logger.InfoLevel,
-		LogFormat:                       logger.FormatJSON,
-		NodeAgentReconciliationMaxDelay: b.Shoot.OSCSyncJitterPeriod,
-		NodeAgentAuthorizerEnabled:      true,
+		ClusterIdentity:                           b.Seed.GetInfo().Status.ClusterIdentity,
+		DefaultNotReadyToleration:                 defaultNotReadyTolerationSeconds,
+		DefaultUnreachableToleration:              defaultUnreachableTolerationSeconds,
+		IsWorkerless:                              b.Shoot.IsWorkerless,
+		KubernetesServiceHost:                     ptr.To(b.Shoot.ComputeOutOfClusterAPIServerAddress(true)),
+		LogLevel:                                  logger.InfoLevel,
+		LogFormat:                                 logger.FormatJSON,
+		NodeAgentReconciliationMaxDelay:           b.Shoot.OSCSyncJitterPeriod,
+		NodeAgentAuthorizerEnabled:                true,
+		NodeAgentAuthorizerAuthorizeWithSelectors: ptr.To(gardenerutils.IsAuthorizeWithSelectorsEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, b.Shoot.KubernetesVersion)),
 		// TODO(shafeeqes): Remove PodTopologySpreadConstraints webhook once the
 		// MatchLabelKeysInPodTopologySpread feature gate is locked to true.
 		PodTopologySpreadConstraintsEnabled: gardenerutils.IsMatchLabelKeysInPodTopologySpreadFeatureGateDisabled(b.Shoot.GetInfo()),
