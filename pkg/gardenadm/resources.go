@@ -105,21 +105,17 @@ func ReadManifests(
 
 		return nil
 	}); err != nil {
-		err = fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
-		return
+		return nil, nil, nil, nil, nil, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
 	}
 
 	if cloudProfile == nil {
-		err = fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
-		return
+		return nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
 	}
 	if project == nil {
-		err = fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
-		return
+		return nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
 	}
 	if shoot == nil {
-		err = fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
-		return
+		return nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
 	}
 
 	return
