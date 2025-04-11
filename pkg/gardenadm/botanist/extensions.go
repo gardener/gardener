@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +22,9 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -142,4 +145,25 @@ func (b *AutonomousBotanist) ReconcileExtensionControllerInstallations(ctx conte
 	}
 
 	return nil
+}
+
+// TimeoutManagedResourceHealthCheck is the timeout for the health check of the managed resources.
+// Exposed for testing.
+var TimeoutManagedResourceHealthCheck = 2 * time.Minute
+
+// WaitUntilExtensionControllerInstallationsHealthy waits until all ControllerInstallation resources used for
+// extension controller deployments are healthy.
+func (b *AutonomousBotanist) WaitUntilExtensionControllerInstallationsHealthy(ctx context.Context) error {
+	var taskFns []flow.TaskFn
+
+	for _, extension := range b.Extensions {
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return managedresources.WaitUntilHealthyAndNotProgressing(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, extension.ControllerInstallation.Name)
+		})
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutManagedResourceHealthCheck)
+	defer cancel()
+
+	return flow.Parallel(taskFns...)(timeoutCtx)
 }

@@ -122,12 +122,17 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployShootSystem,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
-		_ = g.Add(flow.Task{
+		deployExtensionControllers = g.Add(flow.Task{
 			Name: "Deploying extension controllers",
 			Fn: func(ctx context.Context) error {
 				return b.ReconcileExtensionControllerInstallations(ctx, false)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		waitForExtensionControllersReady = g.Add(flow.Task{
+			Name:         "Waiting until extension controllers report readiness",
+			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
+			Dependencies: flow.NewTaskIDs(deployExtensionControllers),
 		})
 	)
 
