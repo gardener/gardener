@@ -184,6 +184,12 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	if err := managedresources.CreateForSeedWithLabels(ctx, g.client, g.namespace, ManagedResourceNameRuntime, false, managedResourceLabels, runtimeResources); err != nil {
 		return err
 	}
+	// We need to wait for the gardener-apiserve service to get created by the gardener-apiserver-runtime MR
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+	if err := managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, ManagedResourceNameRuntime); err != nil {
+		return err
+	}
 
 	serviceRuntime := &corev1.Service{}
 	if err := g.client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: g.namespace}, serviceRuntime); err != nil {
