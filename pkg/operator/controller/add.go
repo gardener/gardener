@@ -25,6 +25,7 @@ import (
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/extension"
+	"github.com/gardener/gardener/pkg/operator/controller/extension/care"
 	requiredruntime "github.com/gardener/gardener/pkg/operator/controller/extension/required/runtime"
 	requiredvirtual "github.com/gardener/gardener/pkg/operator/controller/extension/required/virtual"
 	"github.com/gardener/gardener/pkg/operator/controller/garden"
@@ -113,6 +114,19 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 
 					return true, (&requiredvirtual.Reconciler{
 						Config: cfg.Controllers.ExtensionRequiredVirtual,
+					}).AddToManager(mgr, virtualCluster)
+				},
+			},
+			{
+				Name: care.ControllerName,
+				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+					if virtualCluster == nil {
+						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add Care reconciler")
+						return false, nil
+					}
+
+					return true, (&care.Reconciler{
+						Config: *cfg,
 					}).AddToManager(mgr, virtualCluster)
 				},
 			},
