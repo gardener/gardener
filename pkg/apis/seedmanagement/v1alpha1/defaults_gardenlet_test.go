@@ -89,6 +89,12 @@ var _ = Describe("Defaults", func() {
 											Name:      "backup-" + name,
 											Namespace: namespace,
 										},
+										CredentialsRef: &corev1.ObjectReference{
+											APIVersion: "v1",
+											Kind:       "Secret",
+											Name:       "backup-" + name,
+											Namespace:  namespace,
+										},
 									},
 								},
 							},
@@ -114,9 +120,11 @@ var _ = Describe("Defaults", func() {
 						SeedTemplate: gardencorev1beta1.SeedTemplate{
 							Spec: gardencorev1beta1.SeedSpec{
 								Backup: &gardencorev1beta1.SeedBackup{
-									SecretRef: corev1.SecretReference{
-										Name:      "foo",
-										Namespace: "bar",
+									CredentialsRef: &corev1.ObjectReference{
+										APIVersion: "v1",
+										Kind:       "Secret",
+										Name:       "foo",
+										Namespace:  "bar",
 									},
 								},
 								Ingress: &gardencorev1beta1.Ingress{
@@ -148,9 +156,11 @@ var _ = Describe("Defaults", func() {
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{
-										SecretRef: corev1.SecretReference{
-											Name:      "foo",
-											Namespace: "bar",
+										CredentialsRef: &corev1.ObjectReference{
+											APIVersion: "v1",
+											Kind:       "Secret",
+											Name:       "foo",
+											Namespace:  "bar",
 										},
 									},
 									Ingress: &gardencorev1beta1.Ingress{

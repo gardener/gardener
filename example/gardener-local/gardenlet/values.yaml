@@ -64,6 +64,11 @@ config:
         secretRef:
           name: backup-local
           namespace: garden
+        credentialsRef:
+          apiVersion: v1
+          kind: Secret
+          name: backup-local
+          namespace: garden
       provider:
         type: local
         region: local

@@ -434,11 +434,12 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 	}
 
 	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the object
+	// TODO(vpnachev): Add support for WorkloadIdentity
 	if spec.Backup != nil {
 		var checksum string
 
 		// Get backup secret
-		backupSecret, err := kubernetesutils.GetSecretByReference(ctx, a.GardenClient, &spec.Backup.SecretRef)
+		backupSecret, err := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
 		if err == nil {
 			checksum = utils.ComputeSecretChecksum(backupSecret.Data)[:8]
 		} else if client.IgnoreNotFound(err) != nil {
@@ -453,7 +454,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 			}
 
 			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.SecretRef.Namespace, Name: spec.Backup.SecretRef.Name},
+				ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.CredentialsRef.Namespace, Name: spec.Backup.CredentialsRef.Name},
 			}
 
 			if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.GardenClient, secret, func() error {
@@ -475,7 +476,7 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 			gardenletDeployment = &seedmanagementv1alpha1.GardenletDeployment{}
 		}
 		gardenletDeployment.PodAnnotations = utils.MergeStringMaps[string](gardenletDeployment.PodAnnotations, map[string]string{
-			"checksum/seed-backup-secret": spec.Backup.SecretRef.Name + "-" + checksum,
+			"checksum/seed-backup-secret": spec.Backup.CredentialsRef.Name + "-" + checksum,
 		})
 	}
 
@@ -485,12 +486,12 @@ func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, 
 func (a *Actuator) deleteBackupSecret(ctx context.Context, spec *gardencorev1beta1.SeedSpec, obj client.Object) error {
 	// If backup is specified, delete the backup secret if it exists and is owned by the object
 	if spec.Backup != nil {
-		backupSecret, err := kubernetesutils.GetSecretByReference(ctx, a.GardenClient, &spec.Backup.SecretRef)
+		backupSecret, err := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
 		if client.IgnoreNotFound(err) != nil {
 			return err
 		}
 		if err == nil && metav1.IsControlledBy(backupSecret, obj) {
-			if err := kubernetesutils.DeleteSecretByReference(ctx, a.GardenClient, &spec.Backup.SecretRef); err != nil {
+			if err := kubernetesutils.DeleteSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef); err != nil {
 				return err
 			}
 		}
@@ -507,7 +508,7 @@ func (a *Actuator) getBackupSecret(ctx context.Context, spec *gardencorev1beta1.
 
 	// If backup is specified, get the backup secret if it exists and is owned by the object
 	if spec.Backup != nil {
-		backupSecret, err = kubernetesutils.GetSecretByReference(ctx, a.GardenClient, &spec.Backup.SecretRef)
+		backupSecret, err = kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}

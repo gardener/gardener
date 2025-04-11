@@ -535,9 +535,9 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 				Region: region,
 			},
 			ProviderConfig: seed.Spec.Backup.ProviderConfig,
-			SecretRef: corev1.SecretReference{
-				Name:      seed.Spec.Backup.SecretRef.Name,
-				Namespace: seed.Spec.Backup.SecretRef.Namespace,
+			SecretRef: corev1.SecretReference{ // TODO(vpnachev): Add support for WorkloadIdentity
+				Name:      seed.Spec.Backup.CredentialsRef.Name,
+				Namespace: seed.Spec.Backup.CredentialsRef.Namespace,
 			},
 			SeedName: &seed.Name, // In future this will be moved to gardener-scheduler.
 		}

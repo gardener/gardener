@@ -270,7 +270,7 @@ selfUpgrade:
 in your `gardenlet-values.yaml` file.
 Please replace the `ref` placeholder with the URL to the OCI repository containing the gardenlet Helm chart you are installing.
 
-> [!NOTE]  
+> [!NOTE]
 > If you don't configure this `selfUpgrade` section in the initial deployment, you can also do it later, or you directly create the corresponding `seedmanagement.gardener.cloud/v1alpha1.Gardenlet` resource in the garden cluster.
 
 ## Deploy the gardenlet
@@ -463,7 +463,9 @@ spec:
         backup:
           provider: local
           region: local
-          secretRef:
+          credentialsRef:
+            apiVersion: v1
+            kind: Secret
             name: backup-local
             namespace: garden
         dns:
