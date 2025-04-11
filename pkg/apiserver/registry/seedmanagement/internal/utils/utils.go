@@ -11,7 +11,7 @@ import (
 )
 
 // SyncBackupSecretRefAndCredentialsRef syncs the seed backup credentials when possible.
-// TODO(vpnachev): Remove this function after v1.119.0 has been released.
+// TODO(vpnachev): Remove this function after v1.121.0 has been released.
 func SyncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.SeedBackup) {
 	if backup == nil {
 		return

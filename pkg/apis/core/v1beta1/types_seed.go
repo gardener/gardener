@@ -137,7 +137,7 @@ type SeedBackup struct {
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for
 	// the object store where backups should be stored. It should have enough privileges to manipulate
 	// the objects as well as buckets.
-	// Deprecated: This field will be removed after v1.119.0 has been released. Use `CredentialsRef` instead.
+	// Deprecated: This field will be removed after v1.121.0 has been released. Use `CredentialsRef` instead.
 	// Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
 	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,4,opt,name=secretRef"`
 
