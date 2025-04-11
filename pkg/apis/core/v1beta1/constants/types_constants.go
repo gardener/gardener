@@ -360,6 +360,9 @@ const (
 	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be
 	// retried.
 	ShootOperationRetry = "retry"
+	// ShootOperationForceInPlaceUpdate is a constant for the value of the operation annotation that must be set
+	// to forcibly trigger an in-place update when a previous update is still in progress.
+	ShootOperationForceInPlaceUpdate = "force-in-place-update"
 	// OperationRotateCredentialsStart is a constant for an annotation indicating that the rotation of all credentials
 	// shall be started. This includes CAs, certificates, kubeconfigs, SSH keypairs, observability credentials, and
 	// ServiceAccount signing key.
