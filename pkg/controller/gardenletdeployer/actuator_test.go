@@ -503,7 +503,7 @@ var _ = Describe("Interface", func() {
 		Context("gardenlet", func() {
 			BeforeEach(func() {
 				managedSeed.Spec.Gardenlet = gardenlet
-				gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
 			})
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap)", func() {
@@ -637,7 +637,7 @@ var _ = Describe("Interface", func() {
 		Context("seed is garden", func() {
 			BeforeEach(func() {
 				managedSeed.Spec.Gardenlet = gardenlet
-				gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, metav1.PartialObjectMetadata{})
 					return nil
 				})
@@ -796,7 +796,7 @@ var _ = Describe("Interface", func() {
 			})
 
 			It("should delete gardenlet if it still exists", func() {
-				gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), gomock.Any()).Return(nil)
 				expectGetSeed(false)
 				expectGetGardenletDeployment(true)
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from target cluster")
