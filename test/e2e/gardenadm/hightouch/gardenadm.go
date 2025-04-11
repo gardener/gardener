@@ -130,6 +130,14 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			))
 		}, SpecTimeout(time.Minute))
 
+		It("should ensure the control plane namespace is properly labeled", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) map[string]string {
+				namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}}
+				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
+				return namespace.Labels
+			}).Should(HaveKeyWithValue("gardener.cloud/role", "shoot"))
+		}, SpecTimeout(time.Minute))
+
 		It("should join as worker node", func(ctx SpecContext) {
 			_, stdErr, err := execute(ctx, 1,
 				"gardenadm", "join",

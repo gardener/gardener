@@ -1972,15 +1972,24 @@ func GetEndpointSliceHintsMutatingWebhook(
 }
 
 func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector {
-	namespaceSelectorOperator := metav1.LabelSelectorOpIn
+	if r.values.ResponsibilityMode == ForSourceAndTarget {
+		return &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      v1beta1constants.GardenRole,
+				Operator: metav1.LabelSelectorOpExists,
+			}},
+		}
+	}
+
+	operator := metav1.LabelSelectorOpIn
 	if r.values.ResponsibilityMode != ForTarget {
-		namespaceSelectorOperator = metav1.LabelSelectorOpNotIn
+		operator = metav1.LabelSelectorOpNotIn
 	}
 
 	return &metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
 			Key:      v1beta1constants.GardenerPurpose,
-			Operator: namespaceSelectorOperator,
+			Operator: operator,
 			Values:   []string{metav1.NamespaceSystem, "kubernetes-dashboard"},
 		}},
 	}

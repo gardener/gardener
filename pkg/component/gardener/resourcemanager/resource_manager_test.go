@@ -885,6 +885,28 @@ var _ = Describe("ResourceManager", func() {
 		}
 
 		mutatingWebhookConfigurationFor = func(responsibilityMode ResponsibilityMode, bootstrapControlPlaneNode bool) *admissionregistrationv1.MutatingWebhookConfiguration {
+			var namespaceSelectorMatchExpressions []metav1.LabelSelectorRequirement
+
+			switch responsibilityMode {
+			case ForSource:
+				namespaceSelectorMatchExpressions = []metav1.LabelSelectorRequirement{{
+					Key:      "gardener.cloud/purpose",
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"kube-system", "kubernetes-dashboard"},
+				}}
+			case ForTarget:
+				namespaceSelectorMatchExpressions = []metav1.LabelSelectorRequirement{{
+					Key:      "gardener.cloud/purpose",
+					Operator: metav1.LabelSelectorOpIn,
+					Values:   []string{"kube-system", "kubernetes-dashboard"},
+				}}
+			case ForSourceAndTarget:
+				namespaceSelectorMatchExpressions = []metav1.LabelSelectorRequirement{{
+					Key:      "gardener.cloud/role",
+					Operator: metav1.LabelSelectorOpExists,
+				}}
+			}
+
 			ignoreStaticPodsInBootstrapMode := func(in []metav1.LabelSelectorRequirement) []metav1.LabelSelectorRequirement {
 				if !bootstrapControlPlaneNode {
 					return in
@@ -917,13 +939,7 @@ var _ = Describe("ResourceManager", func() {
 							},
 							Operations: []admissionregistrationv1.OperationType{"CREATE"},
 						}},
-						NamespaceSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{{
-								Key:      "gardener.cloud/purpose",
-								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{"kube-system", "kubernetes-dashboard"},
-							}},
-						},
+						NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 						ObjectSelector: &metav1.LabelSelector{
 							MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 								{
@@ -975,11 +991,7 @@ var _ = Describe("ResourceManager", func() {
 						},
 					},
 					NamespaceSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "gardener.cloud/purpose",
-							Operator: metav1.LabelSelectorOpNotIn,
-							Values:   []string{"kube-system", "kubernetes-dashboard"},
-						}},
+						MatchExpressions: namespaceSelectorMatchExpressions,
 						MatchLabels: map[string]string{
 							"high-availability-config.resources.gardener.cloud/consider": "true",
 						},
@@ -1018,13 +1030,7 @@ var _ = Describe("ResourceManager", func() {
 						},
 						Operations: []admissionregistrationv1.OperationType{"CREATE"},
 					}},
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "gardener.cloud/purpose",
-							Operator: metav1.LabelSelectorOpNotIn,
-							Values:   []string{"kube-system", "kubernetes-dashboard"},
-						}},
-					},
+					NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 					ObjectSelector: &metav1.LabelSelector{
 						MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 							{
@@ -1106,13 +1112,7 @@ var _ = Describe("ResourceManager", func() {
 							},
 							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
 						}},
-						NamespaceSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{{
-								Key:      "gardener.cloud/purpose",
-								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{"kube-system", "kubernetes-dashboard"},
-							}},
-						},
+						NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 						ObjectSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
@@ -1144,13 +1144,7 @@ var _ = Describe("ResourceManager", func() {
 							},
 							Operations: []admissionregistrationv1.OperationType{"CREATE"},
 						}},
-						NamespaceSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{{
-								Key:      "gardener.cloud/purpose",
-								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{"kube-system", "kubernetes-dashboard"},
-							}},
-						},
+						NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 						ObjectSelector: &metav1.LabelSelector{
 							MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{{
 								Key:      "system-components-config.resources.gardener.cloud/skip",
@@ -1183,13 +1177,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					Operations: []admissionregistrationv1.OperationType{"CREATE"},
 				}},
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{{
-						Key:      "gardener.cloud/purpose",
-						Operator: metav1.LabelSelectorOpNotIn,
-						Values:   []string{"kube-system", "kubernetes-dashboard"},
-					}},
-				},
+				NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 				ObjectSelector: &metav1.LabelSelector{
 					MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 						{

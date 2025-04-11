@@ -64,6 +64,10 @@ func run(ctx context.Context, opts *Options) error {
 	var (
 		g = flow.NewGraph("init")
 
+		deployNamespace = g.Add(flow.Task{
+			Name: "Deploying control plane namespace",
+			Fn:   b.DeployControlPlaneNamespace,
+		})
 		reconcileCustomResourceDefinitions = g.Add(flow.Task{
 			Name: "Reconciling CustomResourceDefinitions",
 			Fn:   b.ReconcileCustomResourceDefinitions,
@@ -103,7 +107,7 @@ func run(ctx context.Context, opts *Options) error {
 				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(true)
 				return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
 			},
-			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement),
 		})
 		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
 			Name:         "Waiting until gardener-resource-manager reports readiness",
