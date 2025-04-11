@@ -158,17 +158,6 @@ generate_group () {
     if $add_keep_object_annotation; then
       sed -i '/^  annotations:.*/a\    resources.gardener.cloud/keep-object: "true"' "$crd_out"
     fi
-
-    # Continue serving the "autoscaling.k8s.io/v1beta2" API version for backwards-compatibility reasons.
-    # Starting VPA 1.3.0, the "autoscaling.k8s.io/v1beta2" API version is no longer served.
-    # Gardener continues to serve the "autoscaling.k8s.io/v1beta2" API version for several more release to allow
-    # end users to adapt their manifests to no longer use this API version.
-    # For more details, see https://github.com/kubernetes/autoscaler/blob/e27059ea483694cb9c7ad5d990c6cdeb42ca311b/vertical-pod-autoscaler/MIGRATE.md#notice-on-switching-to-v1-version-04x-12x-to-13x.
-    #
-    # TODO(ialidzhikov): Remove this workaround in Gardener v1.119.
-    if [[ ${group} == "autoscaling.k8s.io" ]]; then
-      sed -i "s/^    served: false$/    served: true/" "$crd_out"
-    fi
   done < <(ls "$output_dir_temp/$sanitized_group_name"_*.yaml)
 
   # garbage collection - clean all generated files for this group to account for changed prefix or removed resources
