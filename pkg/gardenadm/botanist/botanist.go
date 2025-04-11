@@ -21,6 +21,7 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
@@ -153,8 +154,11 @@ func newGardenObject(ctx context.Context, project *gardencorev1beta1.Project) (*
 
 func newSeedObject(ctx context.Context, shootObj *shootpkg.Shoot) (*seedpkg.Seed, error) {
 	seed := &gardencorev1beta1.Seed{
-		ObjectMeta: metav1.ObjectMeta{Name: shootObj.GetInfo().Name},
-		Status:     gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(shootObj.GetInfo().Name)},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   shootObj.GetInfo().Name,
+			Labels: map[string]string{v1beta1constants.LabelAutonomousShootCluster: "true"},
+		},
+		Status: gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(shootObj.GetInfo().Name)},
 	}
 	kubernetes.GardenScheme.Default(seed)
 

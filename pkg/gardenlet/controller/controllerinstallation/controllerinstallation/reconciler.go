@@ -263,6 +263,10 @@ func (r *Reconciler) reconcile(
 		},
 	}
 
+	if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelAutonomousShootCluster) {
+		gardenerValues["gardener"].(map[string]any)["autonomousShootCluster"] = true
+	}
+
 	if genericGardenKubeconfigSecretName != "" {
 		gardenerValues["gardener"].(map[string]any)["garden"].(map[string]any)["genericKubeconfigSecretName"] = genericGardenKubeconfigSecretName
 	}

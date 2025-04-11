@@ -458,7 +458,8 @@ const (
 	// LabelKeyAggregateToProjectMember is a constant for a label on ClusterRoles that are aggregated to the project
 	// member ClusterRole.
 	LabelKeyAggregateToProjectMember = "rbac.gardener.cloud/aggregate-to-project-member"
-
+	// LabelAutonomousShootCluster is a constant for a label on a Seed indicating that it is an autonomous shoot cluster.
+	LabelAutonomousShootCluster = "seed.gardener.cloud/autonomous-shoot-cluster"
 	// LabelSecretBindingReference is used to identify secrets which are referred by a SecretBinding (not necessarily in the same namespace).
 	LabelSecretBindingReference = "reference.gardener.cloud/secretbinding"
 	// LabelCredentialsBindingReference is used to identify credentials which are referred by a CredentialsBinding (not necessarily in the same namespace).
