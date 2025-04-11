@@ -27,11 +27,13 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
@@ -621,6 +623,20 @@ func PrepareGardenletChartValues(
 
 	// Set the seed name
 	gardenletConfig.SeedConfig.Name = obj.GetName()
+
+	// Set network policy label
+	isGarden, err := gardenletutils.SeedIsGarden(ctx, targetClusterClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if seed is garden: %w", err)
+	}
+	if isGarden {
+		gardenletDeployment.PodLabels = utils.MergeStringMaps(
+			map[string]string{
+				gardenerutils.NetworkPolicyLabel("virtual-garden-"+v1beta1constants.DeploymentNameKubeAPIServer, kubeapiserverconstants.Port): v1beta1constants.LabelNetworkPolicyAllowed,
+			},
+			gardenletDeployment.PodLabels,
+		)
+	}
 
 	// Get gardenlet chart values
 	return vp.GetGardenletChartValues(
