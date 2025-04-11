@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -94,6 +95,40 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           flow.TaskFn(b.ApproveKubeletServerCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
 			Dependencies: flow.NewTaskIDs(bootstrapKubelet),
 		})
+		deployGardenerResourceManager = g.Add(flow.Task{
+			// TODO: Do this only when Network is not available on control plane nodes, i.e., only when
+			//  CNI/kube-proxy/CoreDNS are not ready/available yet.
+			Name: "Deploying gardener-resource-manager with bootstrap mode",
+			Fn: func(ctx context.Context) error {
+				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(true)
+				return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
+		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
+			Name:         "Waiting until gardener-resource-manager reports readiness",
+			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying seed system resources",
+			Fn: func(ctx context.Context) error {
+				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{}).Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying shoot system resources",
+			Fn:           b.DeployShootSystem,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying extension controllers",
+			Fn: func(ctx context.Context) error {
+				return b.ReconcileExtensionControllerInstallations(ctx, false)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
@@ -131,12 +166,17 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 }
 
 func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.AutonomousBotanist, error) {
-	cloudProfile, project, shoot, err := gardenadm.ReadManifests(opts.Log, os.DirFS(opts.ConfigDir))
+	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, err := gardenadm.ReadManifests(opts.Log, os.DirFS(opts.ConfigDir))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", opts.ConfigDir, err)
 	}
 
-	b, err := botanist.NewAutonomousBotanist(ctx, opts.Log, nil, project, cloudProfile, shoot)
+	extensions, err := botanist.ComputeExtensions(shoot, controllerRegistrations, controllerDeployments)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing extensions: %w", err)
+	}
+
+	b, err := botanist.NewAutonomousBotanist(ctx, opts.Log, nil, project, cloudProfile, shoot, extensions)
 	if err != nil {
 		return nil, fmt.Errorf("failed constructing botanist: %w", err)
 	}
@@ -201,5 +241,5 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Autono
 		return nil, flow.Errors(err)
 	}
 
-	return botanist.NewAutonomousBotanist(ctx, opts.Log, clientSet, project, cloudProfile, shoot)
+	return botanist.NewAutonomousBotanist(ctx, opts.Log, clientSet, project, cloudProfile, shoot, extensions)
 }

@@ -25,16 +25,20 @@ import (
 // ReadManifests reads Kubernetes and Gardener manifests in YAML or JSON format.
 // It returns a CloudProfile, Project, and Shoot resource if found, or an error if any issues occur during reading or
 // decoding.
-func ReadManifests(log logr.Logger, fsys fs.FS) (*gardencorev1beta1.CloudProfile, *gardencorev1beta1.Project, *gardencorev1beta1.Shoot, error) {
-	var (
-		cloudProfile *gardencorev1beta1.CloudProfile
-		project      *gardencorev1beta1.Project
-		shoot        *gardencorev1beta1.Shoot
+func ReadManifests(
+	log logr.Logger,
+	fsys fs.FS,
+) (
+	cloudProfile *gardencorev1beta1.CloudProfile,
+	project *gardencorev1beta1.Project,
+	shoot *gardencorev1beta1.Shoot,
+	controllerRegistrations []*gardencorev1beta1.ControllerRegistration,
+	controllerDeployments []*gardencorev1.ControllerDeployment,
+	err error,
+) {
+	decoder := serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(gardencorev1.SchemeGroupVersion, gardencorev1beta1.SchemeGroupVersion)
 
-		decoder = serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(gardencorev1.SchemeGroupVersion, gardencorev1beta1.SchemeGroupVersion)
-	)
-
-	if err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+	if err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("failed walking directory: %w", err)
 		}
@@ -90,23 +94,29 @@ func ReadManifests(log logr.Logger, fsys fs.FS) (*gardencorev1beta1.CloudProfile
 					return fmt.Errorf("found more than one *gardencorev1beta1.Shoot resource, but only one is allowed")
 				}
 				shoot = typedObj
+
+			case *gardencorev1beta1.ControllerRegistration:
+				controllerRegistrations = append(controllerRegistrations, typedObj)
+
+			case *gardencorev1.ControllerDeployment:
+				controllerDeployments = append(controllerDeployments, typedObj)
 			}
 		}
 
 		return nil
 	}); err != nil {
-		return nil, nil, nil, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
 	}
 
 	if cloudProfile == nil {
-		return nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
+		return nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
 	}
 	if project == nil {
-		return nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
+		return nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
 	}
 	if shoot == nil {
-		return nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
+		return nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
 	}
 
-	return cloudProfile, project, shoot, nil
+	return
 }

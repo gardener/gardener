@@ -6,7 +6,6 @@ package gardenlet
 
 import (
 	"context"
-	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/clock"
@@ -51,11 +50,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager, virt
 		r.Recorder = mgr.GetEventRecorderFor(ControllerName + "-controller")
 	}
 	if r.HelmRegistry == nil {
-		var err error
-		r.HelmRegistry, err = oci.NewHelmRegistry(r.RuntimeCluster.GetClient())
-		if err != nil {
-			return fmt.Errorf("failed creating new Helm registry: %w", err)
-		}
+		r.HelmRegistry = oci.NewHelmRegistry(r.RuntimeCluster.GetClient())
 	}
 
 	return builder.
