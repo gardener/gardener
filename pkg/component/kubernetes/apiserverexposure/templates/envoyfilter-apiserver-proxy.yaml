@@ -77,7 +77,20 @@ spec:
                           string_match:
                             exact: {{ .ControlPlaneNamespace }}
                     route:
-                      cluster: outbound|{{ .Port }}||{{ .MTLSHost }}
+                      cluster: outbound|{{ .Port }}||{{ .MutualTLSHost }}
+                  - match:
+                      prefix: "/"
+                      headers:
+                      - name: Connection
+                        string_match:
+                          exact: Upgrade
+                      - name: Upgrade
+                        present_match: true
+                    route:
+                      cluster: outbound|{{ .Port }}||{{ .ConnectionUpgradeHost }}
+                      upgrade_configs:
+                      - upgrade_type: spdy/3.1
+                      - upgrade_type: websocket
                   - match:
                       prefix: "/"
                     route:

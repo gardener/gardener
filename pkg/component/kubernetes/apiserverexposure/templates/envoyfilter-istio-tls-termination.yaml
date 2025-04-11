@@ -53,3 +53,33 @@ spec:
         route:
           cluster: outbound|{{ $.Port }}||{{ $.MutualTLSHost }}
 {{- end }}
+  - applyTo: CLUSTER
+    match:
+      context: ANY
+      cluster:
+        name: outbound|{{ .Port }}||{{ .ConnectionUpgradeHost }}
+    patch:
+      operation: MERGE
+      value:
+        transportSocket:
+          name: envoy.transport_sockets.tls
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+            commonTlsContext:
+              alpnProtocols:
+              - "http/1.1"
+  - applyTo: HTTP_ROUTE
+    match:
+      context: GATEWAY
+      routeConfiguration:
+        name: "{{ .RouteConfigurationName }}"
+        vhost:
+          route:
+            name: "{{ .ConnectionUpgradeRouteName }}"
+    patch:
+      operation: MERGE
+      value:
+        route:
+          upgrade_configs:
+          - upgrade_type: spdy/3.1
+          - upgrade_type: websocket

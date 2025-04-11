@@ -1505,26 +1505,18 @@ var _ = Describe("Helper", func() {
 	)
 
 	DescribeTable("#IsShootIstioTLSTerminationEnabled",
-		func(shootKubernetesVersion string, shootAnnotations map[string]string, expected bool) {
+		func(shootAnnotations map[string]string, expected bool) {
 			shoot := &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: shootAnnotations,
-				},
-				Spec: gardencorev1beta1.ShootSpec{
-					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: shootKubernetesVersion,
-					},
 				},
 			}
 			Expect(IsShootIstioTLSTerminationEnabled(shoot)).To(Equal(expected))
 		},
 
-		Entry("shoot with Kubernetes v1.30.0 has no Istio TLS termination", "1.30.0", nil, false),
-		Entry("shoot with Kubernetes v1.31.0 has Istio TLS termination", "1.31.0", nil, true),
-		Entry("shoot with Kubernetes v1.31.0 has no Istio TLS termination if is disabled by annotation", "1.31.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "true"}, false),
-		Entry("shoot with Kubernetes v1.31.0 has no Istio TLS termination if is not disabled by annotation", "1.31.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}, true),
-		Entry("shoot with Kubernetes v1.31.0 has no Istio TLS termination if it is annotated with a bogus value", "1.31.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "foobar"}, true),
-		Entry("shoot with Kubernetes v1.30.0 has no Istio TLS termination even if is not disabled by annotation", "1.30.0", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}, false),
-		Entry("shoot with bogus Kubernetes version has no Istio TLS termination - this should not happen in reality anyway", "foobar", nil, false),
+		Entry("shoot has Istio TLS termination if it has no annotations", nil, true),
+		Entry("shoot has no Istio TLS termination if is disabled by annotation", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "true"}, false),
+		Entry("shoot has no Istio TLS termination if is not disabled by annotation", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}, true),
+		Entry("shoot has no Istio TLS termination if it is annotated with a bogus value", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "foobar"}, true),
 	)
 })
