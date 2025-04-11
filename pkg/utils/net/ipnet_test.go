@@ -79,3 +79,25 @@ var _ = DescribeTable("#CheckDualStackForKubeComponents",
 	Entry("should fail with two IPv4 entries", []string{"10.0.0.0/8", "192.168.0.0/16"}, false, MatchError(ContainSubstring("network CIDRs must be of different IP family"))),
 	Entry("should fail with two IPv6 entries", []string{"2001:db8::/64", "2001:db8:1::/64"}, false, MatchError(ContainSubstring("network CIDRs must be of different IP family"))),
 )
+
+var _ = DescribeTable("#GetByIPFamily",
+	func(cidrs []string, ipFamily string, matcher gomegatypes.GomegaMatcher) {
+		var networks []net.IPNet
+		for _, cidr := range cidrs {
+			_, ipNet, err := net.ParseCIDR(cidr)
+			Expect(err).ToNot(HaveOccurred())
+			networks = append(networks, *ipNet)
+		}
+		Expect(GetByIPFamily(networks, ipFamily)).To(matcher)
+	},
+
+	Entry("should return empty list with nil list", nil, "", BeEmpty()),
+	Entry("should return empty list with empty list", []string{}, "", BeEmpty()),
+	Entry("should return one entry with single IPv4 entry + ipv4 match", []string{"10.0.0.0/8"}, IPv4Family, HaveLen(1)),
+	Entry("should return empty list with single IPv4 entry + ipv6 match", []string{"11.0.0.0/8"}, IPv6Family, BeEmpty()),
+	Entry("should return empty list with single IPv4 entry + bogus match", []string{"12.0.0.0/8"}, "bogus", BeEmpty()),
+	Entry("should return two entries with two IPv4 entries + ipv4 match", []string{"10.0.0.0/8", "11.0.0.0/8"}, IPv4Family, HaveLen(2)),
+	Entry("should return two entries with two IPv4 entries + IPv6 entry + ipv4 match", []string{"12.0.0.0/8", "13.0.0.0/8", "2001:db8:1::/64"}, IPv4Family, HaveLen(2)),
+	Entry("should return one entry with two IPv4 entries + IPv6 entry + ipv6 match", []string{"14.0.0.0/8", "15.0.0.0/8", "2001:db8:1::/64"}, IPv6Family, HaveLen(1)),
+	Entry("should return two entries with two IPv4 entries + two IPv6 entries + ipv6 match", []string{"16.0.0.0/8", "17.0.0.0/8", "2001:db8:1::/64", "2001:db8:2::/64"}, IPv6Family, HaveLen(2)),
+)

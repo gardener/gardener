@@ -5,15 +5,16 @@
 package botanist
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/imagevector"
-	"github.com/gardener/gardener/pkg/component"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
-func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
+func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	imageNameVPNShootClient := imagevector.ContainerImageNameVpnClient
 	image, err := imagevector.Containers().FindImage(imageNameVPNShootClient, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
 	if err != nil {
@@ -42,4 +43,13 @@ func (b *Botanist) DefaultVPNShoot() (component.DeployWaiter, error) {
 		b.SecretsManager,
 		values,
 	), nil
+}
+
+// DeployVPNShoot deploys the vpn-shoot.
+func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
+	b.Shoot.Components.SystemComponents.VPNShoot.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
+	b.Shoot.Components.SystemComponents.VPNShoot.SetServiceNetworkCIDRs(b.Shoot.Networks.Services)
+	b.Shoot.Components.SystemComponents.VPNShoot.SetNodeNetworkCIDRs(b.Shoot.Networks.Nodes)
+
+	return b.Shoot.Components.SystemComponents.VPNShoot.Deploy(ctx)
 }

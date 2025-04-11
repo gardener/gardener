@@ -13,49 +13,52 @@ import (
 )
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes *string, seedPods, seedServices string, workerless bool) field.ErrorList {
+func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices, seedNodes *string, seedPods, seedServices string, workerless, allowOverlap bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("nodes"), shootNodes, "node", false, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("services"), shootServices, "service", true, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("pods"), shootPods, "pod", !workerless, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("nodes"), shootNodes, "node", false, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("services"), shootServices, "service", true, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("pods"), shootPods, "pod", !workerless, allowOverlap, seedNodes, seedPods, seedServices)...)
 
 	return allErrs
 }
 
 // ValidateMultiNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateMultiNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices []string, seedNodes *string, seedPods, seedServices string, workerless bool) field.ErrorList {
+func ValidateMultiNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, shootServices []string, seedNodes *string, seedPods, seedServices string, workerless, allowOverlap bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("nodes"), shootNodes, "node", false, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("services"), shootServices, "service", true, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("pods"), shootPods, "pod", !workerless, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("nodes"), shootNodes, "node", false, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("services"), shootServices, "service", true, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeed(fldPath.Child("pods"), shootPods, "pod", !workerless, allowOverlap, seedNodes, seedPods, seedServices)...)
 
 	return allErrs
 }
 
-func validateOverlapWithSeedWrapper(fldPath *field.Path, shootNetwork *string, networkType string, networkRequired bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
+func validateOverlapWithSeedWrapper(fldPath *field.Path, shootNetwork *string, networkType string, networkRequired, allowOverlap bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
 	var network []string
 	if shootNetwork != nil {
 		network = append(network, *shootNetwork)
 	}
-	return validateOverlapWithSeed(fldPath, network, networkType, networkRequired, seedNodes, seedPods, seedServices)
+	return validateOverlapWithSeed(fldPath, network, networkType, networkRequired, allowOverlap, seedNodes, seedPods, seedServices)
 }
 
-func validateOverlapWithSeed(fldPath *field.Path, shootNetwork []string, networkType string, networkRequired bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
+func validateOverlapWithSeed(fldPath *field.Path, shootNetwork []string, networkType string, networkRequired, allowOverlap bool, seedNodes *string, seedPods, seedServices string) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for _, network := range shootNetwork {
-		if NetworksIntersect(seedServices, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with seed service network", networkType)))
-		}
+		// we allow overlapping with seed networks for non-haVPN, IPv4 shoots
+		if !allowOverlap || NewCIDR(network, fldPath).IsIPv6() {
+			if NetworksIntersect(seedServices, network) {
+				allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with seed service network", networkType)))
+			}
 
-		if NetworksIntersect(seedPods, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with seed pod network", networkType)))
-		}
+			if NetworksIntersect(seedPods, network) {
+				allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with seed pod network", networkType)))
+			}
 
-		if seedNodes != nil && NetworksIntersect(*seedNodes, network) {
-			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with seed node network", networkType)))
+			if seedNodes != nil && NetworksIntersect(*seedNodes, network) {
+				allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with seed node network", networkType)))
+			}
 		}
 
 		if NetworksIntersect(v1beta1constants.DefaultVPNRangeV6, network) {
@@ -64,6 +67,22 @@ func validateOverlapWithSeed(fldPath *field.Path, shootNetwork []string, network
 
 		if NetworksIntersect(v1beta1constants.ReservedKubeApiServerMappingRange, network) {
 			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved kube-apiserver mapping range (%s)", networkType, v1beta1constants.ReservedKubeApiServerMappingRange)))
+		}
+
+		if NetworksIntersect(v1beta1constants.ReservedSeedPodNetworkMappedRange, network) {
+			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved seed pod network mapping range (%s)", networkType, v1beta1constants.ReservedSeedPodNetworkMappedRange)))
+		}
+
+		if NetworksIntersect(v1beta1constants.ReservedShootNodeNetworkMappedRange, network) {
+			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved shoot node network mapping range (%s)", networkType, v1beta1constants.ReservedShootNodeNetworkMappedRange)))
+		}
+
+		if NetworksIntersect(v1beta1constants.ReservedShootServiceNetworkMappedRange, network) {
+			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved shoot service network mapping range (%s)", networkType, v1beta1constants.ReservedShootServiceNetworkMappedRange)))
+		}
+
+		if NetworksIntersect(v1beta1constants.ReservedShootPodNetworkMappedRange, network) {
+			allErrs = append(allErrs, field.Invalid(fldPath, network, fmt.Sprintf("shoot %s network intersects with reserved shoot pod network mapping range (%s)", networkType, v1beta1constants.ReservedShootPodNetworkMappedRange)))
 		}
 	}
 	if len(shootNetwork) == 0 && networkRequired {

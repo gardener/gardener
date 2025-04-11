@@ -10,6 +10,13 @@ import (
 	"strings"
 )
 
+const (
+	// IPv4Family represents the IPv4 IP family.
+	IPv4Family = "ipv4"
+	// IPv6Family represents the IPv6 IP family.
+	IPv6Family = "ipv6"
+)
+
 // JoinByComma concatenates the CIDRs of the given networks to create a single string with comma as separator.
 func JoinByComma(cidrs []net.IPNet) string {
 	return Join(cidrs, ",")
@@ -55,4 +62,22 @@ func dualStack(cidrs []net.IPNet) (bool, error) {
 		}
 	}
 	return v4 && v6, nil
+}
+
+// GetByIPFamily returns a list of CIDRs that belong to the given IP family.
+func GetByIPFamily(cidrs []net.IPNet, ipFamily string) []net.IPNet {
+	var result []net.IPNet
+	for _, nw := range cidrs {
+		switch ipFamily {
+		case IPv4Family:
+			if nw.IP.To4() != nil && len(nw.IP) == net.IPv4len {
+				result = append(result, nw)
+			}
+		case IPv6Family:
+			if nw.IP.To16() != nil && len(nw.IP) == net.IPv6len {
+				result = append(result, nw)
+			}
+		}
+	}
+	return result
 }
