@@ -432,7 +432,11 @@ winkernel:
 				return &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
+							"app":                 "kubernetes",
+							"gardener.cloud/role": "system-component",
 							"resources.gardener.cloud/garbage-collectable-reference": "true",
+							"role":   "proxy",
+							"origin": "gardener",
 						},
 						Name:      configMapNameFor(ipvsEnabled),
 						Namespace: "kube-system",

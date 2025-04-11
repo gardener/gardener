@@ -122,7 +122,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
 				Namespace: metav1.NamespaceSystem,
-				Labels:    getLabels(),
+				Labels:    GetLabels(),
 			},
 			Spec: corev1.ServiceSpec{
 				Type:      corev1.ServiceTypeClusterIP,
@@ -132,7 +132,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 					Port:     int32(portMetrics),
 					Protocol: corev1.ProtocolTCP,
 				}},
-				Selector: getLabels(),
+				Selector: GetLabels(),
 			},
 		}
 
@@ -149,6 +149,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ConfigNamePrefix,
 				Namespace: metav1.NamespaceSystem,
+				Labels:    utils.MergeStringMaps(GetLabels(), getSystemComponentLabels()),
 			},
 			Data: map[string]string{dataKeyConfig: componentConfigRaw},
 		}
@@ -157,7 +158,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-proxy-conntrack-fix-script",
 				Namespace: metav1.NamespaceSystem,
-				Labels:    utils.MergeStringMaps(getLabels(), getSystemComponentLabels()),
+				Labels:    utils.MergeStringMaps(GetLabels(), getSystemComponentLabels()),
 			},
 			Data: map[string]string{dataKeyConntrackFixScript: conntrackFixScript},
 		}
@@ -166,7 +167,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-proxy-cleanup-script",
 				Namespace: metav1.NamespaceSystem,
-				Labels:    utils.MergeStringMaps(getLabels(), getSystemComponentLabels()),
+				Labels:    utils.MergeStringMaps(GetLabels(), getSystemComponentLabels()),
 			},
 			Data: map[string]string{dataKeyCleanupScript: cleanupScript},
 		}
@@ -429,7 +430,8 @@ func (k *kubeProxy) computePoolResourcesDataForMajorMinorVersionOnly(pool Worker
 	return registry.AddAllAndSerialize(vpa)
 }
 
-func getLabels() map[string]string {
+// GetLabels returns the default labels for kube-proxy resources.
+func GetLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelProxy,
@@ -444,7 +446,7 @@ func getSystemComponentLabels() map[string]string {
 }
 
 func getPoolLabels(pool WorkerPool) map[string]string {
-	return utils.MergeStringMaps(getLabels(), map[string]string{
+	return utils.MergeStringMaps(GetLabels(), map[string]string{
 		"pool":    pool.Name,
 		"version": pool.KubernetesVersion.String(),
 	})

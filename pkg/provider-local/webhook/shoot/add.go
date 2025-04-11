@@ -7,11 +7,13 @@ package shoot
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	kubeproxy "github.com/gardener/gardener/pkg/component/kubernetes/proxy"
 )
 
 var (
@@ -34,6 +36,9 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		Types:         []extensionswebhook.Type{{Obj: &corev1.ConfigMap{}}},
 		Mutator:       NewMutator(),
 		FailurePolicy: &failurePolicy,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: kubeproxy.GetLabels(),
+		},
 	})
 }
 
