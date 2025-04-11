@@ -812,6 +812,16 @@ const (
 	DefaultVPNRangeV6 = "fd8f:6d53:b97a:1::/96"
 	// ReservedKubeApiServerMappingRange is the IPv4 network range for the "kubernetes" service used by apiserver-proxy
 	ReservedKubeApiServerMappingRange = "240.0.0.0/8"
+	// ReservedSeedPodNetworkMappedRange is the IPv4 network range for the seed pod network used in the VPN between seed and shoot cluster.
+	ReservedSeedPodNetworkMappedRange = "241.0.0.0/8"
+	// ReservedShootNodeNetworkMappedRange is the IPv4 network range for the shoot node network used in the VPN between seed and shoot cluster.
+	ReservedShootNodeNetworkMappedRange = "242.0.0.0/8"
+	// ReservedShootServiceNetworkMappedRange is the IPv4 network range for the shoot service network used in the VPN between seed and shoot cluster.
+	ReservedShootServiceNetworkMappedRange = "243.0.0.0/8"
+	// ReservedShootPodNetworkMappedRange is the IPv4 network range for the shoot pod network used in the VPN between seed and shoot cluster.
+	ReservedShootPodNetworkMappedRange = "244.0.0.0/8"
+	// EnvoyNonRootUserId is the user ID for the non-root user in the envoy container.
+	EnvoyNonRootUserId = 65532
 
 	// BackupSecretName is the name of secret having credentials for etcd backups.
 	BackupSecretName string = "etcd-backup"
