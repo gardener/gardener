@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
@@ -62,7 +63,8 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	var (
-		g = flow.NewGraph("init")
+		g                = flow.NewGraph("init")
+		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
 		deployNamespace = g.Add(flow.Task{
 			Name: "Deploying control plane namespace",
@@ -147,6 +149,18 @@ func run(ctx context.Context, opts *Options) error {
 			Name:         "Waiting until shoot namespaces have been reconciled",
 			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Wait,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, deployShootNamespaces),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying kube-proxy system component",
+			Fn:           b.DeployKubeProxy,
+			SkipIf:       !kubeProxyEnabled,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady, waitForExtensionControllersReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting kube-proxy system component",
+			Fn:           b.Shoot.Components.SystemComponents.KubeProxy.Destroy,
+			SkipIf:       kubeProxyEnabled,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
 	)
 
