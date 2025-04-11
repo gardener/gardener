@@ -40,8 +40,8 @@ const (
 	// MutualTLSServiceNameSuffix is used to create a second service instance for
 	// use with mutual tls authentication from istio using the ca-front-proxy secrets.
 	MutualTLSServiceNameSuffix = "-mtls"
-	// UpgradeServiceNameSuffix is used to create service instance for connections which set the Upgrade HTTP header.
-	UpgradeServiceNameSuffix = "-upgrade"
+	// ConnectionUpgradeServiceNameSuffix is used to create service instance for connections which set the Upgrade HTTP header.
+	ConnectionUpgradeServiceNameSuffix = "-connection-upgrade"
 	// AuthenticationDynamicMetadataKey is the key used to configure the istio envoy filter.
 	AuthenticationDynamicMetadataKey = "authenticated-kube-apiserver-host"
 	// IstioTLSTerminationEnvoyFilterSuffix is the suffix for the envoy filter used for TLS termination.
@@ -50,7 +50,15 @@ const (
 	// authenticationDynamicMetadataKeyAPIServerProxy is the key used to configure the istio envoy filter for the APIServer proxy.
 	authenticationDynamicMetadataKeyAPIServerProxy = "authenticated-shoot"
 
+	// connectionUpgradeRouteName is the name of the envoy route used for connections which set the Upgrade HTTP header.
+	// The route is created by an Istio VirtualService and updated by an EnvoyFilter.
 	connectionUpgradeRouteName = "connection-upgrade"
+
+	// sniHost is the host used for SNI configuration when Istio TLS termination is enabled.
+	// SNI needs to be set for the wildcard certificate case. The wildcard cert is not signed by the cluster CA
+	// so it would cause a certificate error otherwise.
+	// kubernetes.default.svc.cluster.local` is part of any kube-apiserver certificate, so we select this one.
+	sniHost = "kubernetes.default.svc.cluster.local"
 
 	// istioMTLSSecretSuffix is the suffix for the secret used for mutual tls authentication to kube-apiserver.
 	istioMTLSSecretSuffix = "-kube-apiserver-istio-mtls" // #nosec G101 -- No credential.
@@ -155,7 +163,7 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	ControlPlaneNamespace                     string
 	Host                                      string
 	MutualTLSHost                             string
-	UpgradeHost                               string
+	ConnectionUpgradeHost                     string
 	Port                                      int
 	APIServerClusterIPPrefixLen               int
 	APIServerRequestHeaderUserName            string
@@ -174,7 +182,7 @@ type envoyFilterIstioTLSTerminationTemplateValues struct {
 	Name                             string
 	Namespace                        string
 	MutualTLSHost                    string
-	UpgradeHost                      string
+	ConnectionUpgradeHost            string
 	Port                             int
 	RouteConfigurationName           string
 	WildcardRouteConfigurationName   string
@@ -193,13 +201,13 @@ func (s *sni) Deploy(ctx context.Context) error {
 	var (
 		values = s.valuesFunc()
 
-		destinationRule        = s.emptyDestinationRule()
-		mTLSDestinationRule    = s.emptyMTLSDestinationRule()
-		upgradeDestinationRule = s.emptyUpgradeDestinationRule()
+		destinationRule                  = s.emptyDestinationRule()
+		mTLSDestinationRule              = s.emptyMTLSDestinationRule()
+		connectionUpgradeDestinationRule = s.emptyConnectionUpgradeDestinationRule()
 
-		hostName        = fmt.Sprintf("%s.%s.svc.%s", s.name, s.namespace, gardencorev1beta1.DefaultDomain)
-		mTLSHostName    = fmt.Sprintf("%s%s.%s.svc.%s", s.name, MutualTLSServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
-		upgradeHostName = fmt.Sprintf("%s%s.%s.svc.%s", s.name, UpgradeServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
+		hostName                  = fmt.Sprintf("%s.%s.svc.%s", s.name, s.namespace, gardencorev1beta1.DefaultDomain)
+		mTLSHostName              = fmt.Sprintf("%s%s.%s.svc.%s", s.name, MutualTLSServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
+		connectionUpgradeHostName = fmt.Sprintf("%s%s.%s.svc.%s", s.name, ConnectionUpgradeServiceNameSuffix, s.namespace, gardencorev1beta1.DefaultDomain)
 	)
 
 	istioGatewayConfigurations, err := s.istioGatewayConfigurations()
@@ -238,7 +246,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			ControlPlaneNamespace:          s.namespace,
 			Host:                           hostName,
 			MutualTLSHost:                  mTLSHostName,
-			UpgradeHost:                    upgradeHostName,
+			ConnectionUpgradeHost:          connectionUpgradeHostName,
 			Port:                           kubeapiserverconstants.Port,
 			APIServerClusterIPPrefixLen:    apiServerClusterIPPrefixLen,
 			APIServerRequestHeaderUserName: kubeapiserverconstants.RequestHeaderUserName,
@@ -284,7 +292,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 				Namespace:                        envoyFilter.Namespace,
 				Port:                             kubeapiserverconstants.Port,
 				MutualTLSHost:                    mTLSHostName,
-				UpgradeHost:                      upgradeHostName,
+				ConnectionUpgradeHost:            connectionUpgradeHostName,
 				RouteConfigurationName:           routeConfigurationName,
 				WildcardRouteConfigurationName:   wildcardRouteConfigurationName,
 				ConnectionUpgradeRouteName:       connectionUpgradeRouteName,
@@ -314,7 +322,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 	destinationMutateFn := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), hostName)
 	if values.IstioTLSTermination {
-		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
+		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, destinationRule, destinationMutateFn); err != nil {
@@ -322,17 +330,17 @@ func (s *sni) Deploy(ctx context.Context) error {
 	}
 
 	if values.IstioTLSTermination {
-		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), mTLSHostName, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
+		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), mTLSHostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, mTLSDestinationRule, destinationMTLSMutateFn); err != nil {
 			return err
 		}
 
-		destinationUpgradeMutateFn := istio.DestinationRuleWithTLSTermination(upgradeDestinationRule, getLabels(), upgradeHostName, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, upgradeDestinationRule, destinationUpgradeMutateFn); err != nil {
+		destinationConnectionUpgradeMutateFn := istio.DestinationRuleWithTLSTermination(connectionUpgradeDestinationRule, getLabels(), connectionUpgradeHostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, connectionUpgradeDestinationRule, destinationConnectionUpgradeMutateFn); err != nil {
 			return err
 		}
 	} else {
-		if err := kubernetesutils.DeleteObjects(ctx, s.client, mTLSDestinationRule, upgradeDestinationRule); err != nil {
+		if err := kubernetesutils.DeleteObjects(ctx, s.client, mTLSDestinationRule, connectionUpgradeDestinationRule); err != nil {
 			return err
 		}
 	}
@@ -361,7 +369,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 		virtualServiceMutateFn := istio.VirtualServiceWithSNIMatch(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName)
 		if values.IstioTLSTermination {
-			virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName, upgradeHostName, connectionUpgradeRouteName)
+			virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName, connectionUpgradeHostName, connectionUpgradeRouteName)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, configuration.virtualService, virtualServiceMutateFn); err != nil {
@@ -392,7 +400,7 @@ func (s *sni) Destroy(ctx context.Context) error {
 		s.client,
 		s.emptyDestinationRule(),
 		s.emptyMTLSDestinationRule(),
-		s.emptyUpgradeDestinationRule(),
+		s.emptyConnectionUpgradeDestinationRule(),
 		s.emptyGateway(),
 		s.emptyWildcardGateway(),
 		s.emptyVirtualService(),
@@ -411,8 +419,8 @@ func (s *sni) emptyMTLSDestinationRule() *istionetworkingv1beta1.DestinationRule
 	return &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: s.name + "-mtls", Namespace: s.namespace}}
 }
 
-func (s *sni) emptyUpgradeDestinationRule() *istionetworkingv1beta1.DestinationRule {
-	return &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: s.name + "-upgrade", Namespace: s.namespace}}
+func (s *sni) emptyConnectionUpgradeDestinationRule() *istionetworkingv1beta1.DestinationRule {
+	return &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: s.name + ConnectionUpgradeServiceNameSuffix, Namespace: s.namespace}}
 }
 
 func (s *sni) emptyEnvoyFilterAPIServerProxy() *istionetworkingv1alpha3.EnvoyFilter {

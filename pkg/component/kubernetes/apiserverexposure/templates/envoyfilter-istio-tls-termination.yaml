@@ -57,7 +57,7 @@ spec:
     match:
       context: ANY
       cluster:
-        name: outbound|{{ .Port }}||{{ .UpgradeHost }}
+        name: outbound|{{ .Port }}||{{ .ConnectionUpgradeHost }}
     patch:
       operation: MERGE
       value:

@@ -53,7 +53,7 @@ var _ = Describe("#SNI", func() {
 		istioTLSTermination         bool
 		hosts                       []string
 		hostName                    string
-		upgradeHostName             string
+		connectionUpgradeHostName   string
 		wildcardConfiguration       *WildcardConfiguration
 		wildcardHosts               []string
 		wildcardTLSSecret           corev1.Secret
@@ -95,7 +95,7 @@ var _ = Describe("#SNI", func() {
 		istioTLSTermination = false
 		hosts = []string{"foo.bar"}
 		hostName = "kube-apiserver." + namespace + ".svc.cluster.local"
-		upgradeHostName = "kube-apiserver-upgrade." + namespace + ".svc.cluster.local"
+		connectionUpgradeHostName = "kube-apiserver-connection-upgrade." + namespace + ".svc.cluster.local"
 		wildcardConfiguration = nil
 		wildcardHosts = []string{"foo.wildcard", "bar.wildcard"}
 		wildcardTLSSecret = corev1.Secret{
@@ -516,7 +516,7 @@ var _ = Describe("#SNI", func() {
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
-									Host: upgradeHostName,
+									Host: connectionUpgradeHostName,
 									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
 								},
 							},
@@ -594,7 +594,7 @@ var _ = Describe("#SNI", func() {
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
-									Host: upgradeHostName,
+									Host: connectionUpgradeHostName,
 									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
 								},
 							},
@@ -669,7 +669,7 @@ var _ = Describe("#SNI", func() {
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
-									Host: upgradeHostName,
+									Host: connectionUpgradeHostName,
 									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
 								},
 							},
@@ -702,7 +702,7 @@ var _ = Describe("#SNI", func() {
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
-									Host: upgradeHostName,
+									Host: connectionUpgradeHostName,
 									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
 								},
 							},
