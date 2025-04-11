@@ -17,6 +17,8 @@ patches:
         value: https://registry.k8s.io
       - name: REGISTRY_HTTP_ADDR
         value: :5006
+      - name: OTEL_TRACES_EXPORTER
+        value: none
     - op: replace
       path: /spec/template/spec/containers/0/ports/0/containerPort
       value: 5006

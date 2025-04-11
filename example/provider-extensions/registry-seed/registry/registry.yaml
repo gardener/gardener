@@ -23,7 +23,7 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: registry
-        image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-rc.2
+        image: europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0
         imagePullPolicy: IfNotPresent
         env:
         - name: REGISTRY_HTTP_TLS_CERTIFICATE
