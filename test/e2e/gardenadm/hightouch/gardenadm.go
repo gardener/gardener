@@ -120,7 +120,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 				podList := &corev1.PodList{}
 				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace("kube-system"))).To(Succeed())
 				return podList.Items
-			}).Should(ConsistOf(
+			}).Should(ContainElements(
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-events-0-machine-0")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-main-0-machine-0")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-machine-0")})}),
@@ -128,6 +128,8 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-scheduler-machine-0")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("kube-proxy")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("gardener-resource-manager")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("calico")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("coredns")})}),
 			))
 		}, SpecTimeout(time.Minute))
 

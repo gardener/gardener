@@ -162,6 +162,21 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       kubeProxyEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
+		deployNetwork = g.Add(flow.Task{
+			Name:         "Deploying shoot network plugin",
+			Fn:           b.DeployNetwork,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady, waitForExtensionControllersReady),
+		})
+		waitUntilNetworkReady = g.Add(flow.Task{
+			Name:         "Waiting until shoot network plugin has been reconciled",
+			Fn:           b.Shoot.Components.Extensions.Network.Wait,
+			Dependencies: flow.NewTaskIDs(deployNetwork),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying CoreDNS system component",
+			Fn:           b.DeployCoreDNS,
+			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
