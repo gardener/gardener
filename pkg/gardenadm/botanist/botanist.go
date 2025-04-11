@@ -187,6 +187,7 @@ func newShootObject(ctx context.Context, projectName string, cloudProfile *garde
 		WithProjectName(projectName).
 		WithCloudProfileObject(cloudProfile).
 		WithShootObject(shoot).
+		WithInternalDomain(&gardenerutils.Domain{Domain: "gardenadm.local"}).
 		Build(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed building shoot object: %w", err)
