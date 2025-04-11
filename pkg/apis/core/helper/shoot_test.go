@@ -486,6 +486,27 @@ var _ = Describe("Helper", func() {
 		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &core.WorkerKubernetes{Version: ptr.To("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
+	var (
+		sampleShootKubelet = &core.KubeletConfig{
+			MaxPods: ptr.To(int32(50)),
+		}
+		sampleWorkerKubelet = &core.KubeletConfig{
+			MaxPods: ptr.To(int32(100)),
+		}
+	)
+
+	DescribeTable("#CalculateEffectiveKubeletConfiguration",
+		func(shootKubelet *core.KubeletConfig, workerKubernetes *core.WorkerKubernetes, expectedRes *core.KubeletConfig) {
+			res := CalculateEffectiveKubeletConfiguration(shootKubelet, workerKubernetes)
+			Expect(res).To(Equal(expectedRes))
+		},
+
+		Entry("all nil", nil, nil, nil),
+		Entry("workerKubernetes = nil", sampleShootKubelet, nil, sampleShootKubelet),
+		Entry("workerKubernetes.kubelet = nil", sampleShootKubelet, &core.WorkerKubernetes{}, sampleShootKubelet),
+		Entry("workerKubernetes.kubelet != nil", sampleShootKubelet, &core.WorkerKubernetes{Kubelet: sampleWorkerKubelet}, sampleWorkerKubelet),
+	)
+
 	DescribeTable("#SystemComponentsAllowed",
 		func(worker *core.Worker, allowsSystemComponents bool) {
 			Expect(SystemComponentsAllowed(worker)).To(Equal(allowsSystemComponents))
