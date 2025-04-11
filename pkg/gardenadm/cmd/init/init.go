@@ -138,6 +138,16 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
 			Dependencies: flow.NewTaskIDs(deployExtensionControllers),
 		})
+		deployShootNamespaces = g.Add(flow.Task{
+			Name:         "Deploying shoot namespaces system component",
+			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		waitUntilShootNamespacesReady = g.Add(flow.Task{
+			Name:         "Waiting until shoot namespaces have been reconciled",
+			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Wait,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, deployShootNamespaces),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
