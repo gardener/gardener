@@ -5,9 +5,14 @@
 package core
 
 import (
+	"slices"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // +genclient
@@ -64,6 +69,23 @@ type CloudProfileSpec struct {
 	// Limits configures operational limits for Shoot clusters using this CloudProfile.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 	Limits *Limits
+	// Capabilities contains the definition of all possible capabilities in the CloudProfile.
+	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+	// The order of values for a given capability is relevant. The most important value is listed first.
+	// During maintenance upgrades, the image that matches most capabilities will be selected.
+	Capabilities []Capability
+}
+
+// GetCapabilities returns the capabilities slice of the CloudProfile as a Capabilities map.
+func (spec *CloudProfileSpec) GetCapabilities() Capabilities {
+	if len(spec.Capabilities) == 0 {
+		return nil
+	}
+	capabilities := make(Capabilities, len(spec.Capabilities))
+	for _, capability := range spec.Capabilities {
+		capabilities[capability.Name] = capability.Values
+	}
+	return capabilities
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -110,6 +132,22 @@ type MachineImageVersion struct {
 	KubeletVersionConstraint *string
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	InPlaceUpdates *InPlaceUpdates
+	// CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+	// the machine image version.
+	CapabilitySets []CapabilitySet
+}
+
+// SupportsArchitecture checks if the machine image version supports a given architecture.
+func (m *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, architecture string) bool {
+	if len(capabilities) == 0 {
+		return slices.Contains(m.Architectures, architecture)
+	}
+	for _, capability := range m.CapabilitySets {
+		if slices.Contains(capability.Capabilities[constants.ArchitectureKey], architecture) {
+			return true
+		}
+	}
+	return slices.Contains(capabilities[constants.ArchitectureKey], architecture)
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -138,6 +176,16 @@ type MachineType struct {
 	Usable *bool
 	// Architecture is the CPU architecture of this machine type.
 	Architecture *string
+	// Capabilities contains the the machine type capabilities.
+	Capabilities Capabilities
+}
+
+// GetArchitecture returns the architecture of the machine type.
+func (m *MachineType) GetArchitecture() string {
+	if len(m.Capabilities[constants.ArchitectureKey]) == 1 {
+		return m.Capabilities[constants.ArchitectureKey][0]
+	}
+	return ptr.Deref(m.Architecture, "")
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
@@ -261,4 +309,56 @@ type InPlaceUpdates struct {
 	Supported bool
 	// MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
 	MinVersionForUpdate *string
+}
+
+// CapabilityValues contains capability values.
+// This is a workaround as the Protobuf generator can't handle a map with slice values.
+type CapabilityValues []string
+
+// Contains checks if the CapabilityValues contains all values.
+func (c CapabilityValues) Contains(values ...string) bool {
+	for _, value := range values {
+		if !slices.Contains(c, value) {
+			return false
+		}
+	}
+	return true
+}
+
+// IsSubsetOf checks if the CapabilityValues is a subset of another CapabilityValues.
+func (c CapabilityValues) IsSubsetOf(other CapabilityValues) bool {
+	for _, value := range c {
+		if !other.Contains(value) {
+			return false
+		}
+	}
+	return true
+}
+
+// Capabilities of a machine type or machine image.
+type Capabilities map[string]CapabilityValues
+
+// Capability contains the Name and Values of a capability.
+type Capability struct {
+	Name   string   `json:"name"`
+	Values []string `json:"values"`
+}
+
+// CapabilitySet is a wrapper for Capabilities.
+// This is a workaround as the Protobuf generator can't handle a slice of maps.
+type CapabilitySet struct {
+	Capabilities
+}
+
+// ExtractArchitectures extracts all architectures from a list of CapabilitySets.
+func ExtractArchitectures(capabilities []CapabilitySet) []string {
+	var architectures []string
+	for _, capabilitySet := range capabilities {
+		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey] {
+			if !slices.Contains(architectures, architectureValue) {
+				architectures = append(architectures, architectureValue)
+			}
+		}
+	}
+	return architectures
 }
