@@ -96,6 +96,7 @@ gardener:
     provider: local
   runtimeCluster:
     enabled: false
+  autonomousShootCluster: false
 
 usablePorts:
 - 8080  # metrics
