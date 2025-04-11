@@ -73,7 +73,7 @@ type CloudProfileSpec struct {
 	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
-	Capabilities []Capability
+	Capabilities []CapabilityDefinition
 }
 
 // GetCapabilities returns the capabilities slice of the CloudProfile as a Capabilities map.
@@ -143,11 +143,11 @@ func (m *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, ar
 		return slices.Contains(m.Architectures, architecture)
 	}
 	for _, capability := range m.CapabilitySets {
-		if slices.Contains(capability.Capabilities[constants.ArchitectureKey], architecture) {
+		if slices.Contains(capability.Capabilities[constants.ArchitectureName], architecture) {
 			return true
 		}
 	}
-	return slices.Contains(capabilities[constants.ArchitectureKey], architecture)
+	return slices.Contains(capabilities[constants.ArchitectureName], architecture)
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -176,14 +176,14 @@ type MachineType struct {
 	Usable *bool
 	// Architecture is the CPU architecture of this machine type.
 	Architecture *string
-	// Capabilities contains the the machine type capabilities.
+	// Capabilities contains the machine type capabilities.
 	Capabilities Capabilities
 }
 
 // GetArchitecture returns the architecture of the machine type.
 func (m *MachineType) GetArchitecture() string {
-	if len(m.Capabilities[constants.ArchitectureKey]) == 1 {
-		return m.Capabilities[constants.ArchitectureKey][0]
+	if len(m.Capabilities[constants.ArchitectureName]) == 1 {
+		return m.Capabilities[constants.ArchitectureName][0]
 	}
 	return ptr.Deref(m.Architecture, "")
 }
@@ -311,54 +311,21 @@ type InPlaceUpdates struct {
 	MinVersionForUpdate *string
 }
 
+// CapabilityDefinition contains the Name and Values of a capability.
+type CapabilityDefinition struct {
+	Name   string
+	Values CapabilityValues
+}
+
 // CapabilityValues contains capability values.
 // This is a workaround as the Protobuf generator can't handle a map with slice values.
 type CapabilityValues []string
 
-// Contains checks if the CapabilityValues contains all values.
-func (c CapabilityValues) Contains(values ...string) bool {
-	for _, value := range values {
-		if !slices.Contains(c, value) {
-			return false
-		}
-	}
-	return true
-}
-
-// IsSubsetOf checks if the CapabilityValues is a subset of another CapabilityValues.
-func (c CapabilityValues) IsSubsetOf(other CapabilityValues) bool {
-	for _, value := range c {
-		if !other.Contains(value) {
-			return false
-		}
-	}
-	return true
-}
-
 // Capabilities of a machine type or machine image.
 type Capabilities map[string]CapabilityValues
-
-// Capability contains the Name and Values of a capability.
-type Capability struct {
-	Name   string   `json:"name"`
-	Values []string `json:"values"`
-}
 
 // CapabilitySet is a wrapper for Capabilities.
 // This is a workaround as the Protobuf generator can't handle a slice of maps.
 type CapabilitySet struct {
 	Capabilities
-}
-
-// ExtractArchitectures extracts all architectures from a list of CapabilitySets.
-func ExtractArchitectures(capabilities []CapabilitySet) []string {
-	var architectures []string
-	for _, capabilitySet := range capabilities {
-		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey] {
-			if !slices.Contains(architectures, architectureValue) {
-				architectures = append(architectures, architectureValue)
-			}
-		}
-	}
-	return architectures
 }

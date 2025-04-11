@@ -7,14 +7,10 @@ package helper
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/Masterminds/semver/v3"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
@@ -236,92 +232,23 @@ func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version se
 	return result, nil
 }
 
-// SyncArchitectureCapabilityFields syncs the architecture capabilities and the architecture fields.
-func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec, oldCloudProfileSpec core.CloudProfileSpec) {
-	hasCapabilities := len(newCloudProfileSpec.Capabilities) > 0
-	if !hasCapabilities {
-		return
+// HasCapability returns true of the passed capabilities contain the capability with the given name.
+func HasCapability(capabilities []core.CapabilityDefinition, capabilityName string) bool {
+	for _, capability := range capabilities {
+		if capability.Name == capabilityName {
+			return true
+		}
 	}
-
-	isInitialMigration := hasCapabilities && len(oldCloudProfileSpec.Capabilities) == 0
-
-	// For the initial migration to capabilities, sync the architecture fields to the capability definitions.
-	// Subsequently only sync the architecture fields if they have not changed.
-	syncMachineImageArchitectureCapabilities(newCloudProfileSpec.MachineImages, oldCloudProfileSpec.MachineImages, isInitialMigration)
-	syncMachineTypeArchitectureCapabilities(newCloudProfileSpec.MachineTypes, oldCloudProfileSpec.MachineTypes, isInitialMigration)
+	return false
 }
 
-func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages []core.MachineImage, isInitialMigration bool) {
-	oldMachineImagesMap := util.NewCoreImagesContext(oldMachineImages)
-
-	for imageIdx, image := range newMachineImages {
-		for versionIdx, version := range newMachineImages[imageIdx].Versions {
-			oldMachineImageVersion, oldVersionExists := oldMachineImagesMap.GetImageVersion(image.Name, version.Version)
-			capabilityArchitectures := core.ExtractArchitectures(version.CapabilitySets)
-
-			// Skip any architecture field syncing if
-			// - architecture field has been modified and changed to any value other than empty.
-			architecturesFieldHasBeenChanged := oldVersionExists && len(version.Architectures) > 0 &&
-				(len(oldMachineImageVersion.Architectures) == 0 ||
-					!apiequality.Semantic.DeepEqual(oldMachineImageVersion.Architectures, version.Architectures))
-			// - both the architecture field and the architecture capability are empty or filled equally.
-			if architecturesFieldHasBeenChanged || slices.Equal(capabilityArchitectures, version.Architectures) {
-				continue
-			}
-
-			// Sync architecture field to capabilities if filled on initial migration.
-			if isInitialMigration && len(version.Architectures) > 0 && len(version.CapabilitySets) == 0 {
-				for _, architecture := range version.Architectures {
-					newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets,
-						core.CapabilitySet{
-							Capabilities: core.Capabilities{
-								constants.ArchitectureKey: []string{architecture},
-							},
-						})
-				}
-				continue
-			}
-
-			// Sync capability architectures to architecture field.
-			if len(capabilityArchitectures) > 0 {
-				newMachineImages[imageIdx].Versions[versionIdx].Architectures = capabilityArchitectures
-			}
+// ExtractArchitecturesFromCapabilitySets extracts all architectures from a list of CapabilitySets.
+func ExtractArchitecturesFromCapabilitySets(capabilities []core.CapabilitySet) []string {
+	architectures := sets.New[string]()
+	for _, capabilitySet := range capabilities {
+		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureName] {
+			architectures.Insert(architectureValue)
 		}
 	}
-}
-
-func syncMachineTypeArchitectureCapabilities(newMachineTypes, oldMachineTypes []core.MachineType, isInitialMigration bool) {
-	oldMachineTypesMap := utils.CreateMapFromSlice(oldMachineTypes, func(machineType core.MachineType) string { return machineType.Name })
-
-	for i, machineType := range newMachineTypes {
-		oldMachineType, oldMachineTypeExists := oldMachineTypesMap[machineType.Name]
-		architectureValue := ptr.Deref(machineType.Architecture, "")
-		oldArchitectureValue := ptr.Deref(oldMachineType.Architecture, "")
-		capabilityArchitectures := machineType.Capabilities[constants.ArchitectureKey]
-
-		// Skip any architecture field syncing if
-		// - architecture field has been modified and changed to any value other than empty.
-		architectureFieldHasBeenChanged := oldMachineTypeExists && architectureValue != "" &&
-			(oldArchitectureValue == "" || oldArchitectureValue != architectureValue)
-		// - both the architecture field and the architecture capability are empty or filled equally.
-		architecturesInSync := len(capabilityArchitectures) == 0 && architectureValue == "" ||
-			len(capabilityArchitectures) == 1 && capabilityArchitectures[0] == architectureValue
-		if architectureFieldHasBeenChanged || architecturesInSync {
-			continue
-		}
-
-		// Sync architecture field to capabilities if filled on initial migration.
-		if isInitialMigration && architectureValue != "" && len(capabilityArchitectures) == 0 {
-			if newMachineTypes[i].Capabilities == nil {
-				newMachineTypes[i].Capabilities = make(core.Capabilities)
-			}
-			newMachineTypes[i].Capabilities[constants.ArchitectureKey] = []string{architectureValue}
-			continue
-		}
-
-		// Sync capability architecture to architecture field.
-		if len(capabilityArchitectures) == 1 {
-			newMachineTypes[i].Architecture = ptr.To(capabilityArchitectures[0])
-		}
-	}
+	return architectures.UnsortedList()
 }

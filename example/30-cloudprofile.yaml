@@ -25,8 +25,7 @@ spec:
 #   machineType: # optional -> will use the machine with the lowest amount of CPUs
 #     name: n1-standard-2
 # ---
-# If CloudProfileCapabilities feature gate is enabled:
-# capabilities:
+# capabilities: # CloudProfileCapabilities feature gate enabled
 # - name: architecture
 #   values: [amd64,arm64]
   kubernetes:

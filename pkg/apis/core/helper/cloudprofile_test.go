@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
@@ -405,66 +404,35 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
-	Describe("#SyncArchitectureCapabilityFields", func() {
-		var (
-			cloudProfileSpecNew core.CloudProfileSpec
-			cloudProfileSpecOld core.CloudProfileSpec
-		)
-
-		BeforeEach(func() {
-			cloudProfileSpecNew = core.CloudProfileSpec{
-				MachineImages: []core.MachineImage{
-					{Versions: []core.MachineImageVersion{{}}},
-				},
-				MachineTypes: []core.MachineType{
-					{},
-				},
+	DescribeTable("#HasCapability",
+		func(capabilityNames []string, requestedCapability string, expectedResult bool) {
+			capabilities := []core.CapabilityDefinition{}
+			for _, capabilityName := range capabilityNames {
+				capabilities = append(capabilities, core.CapabilityDefinition{Name: capabilityName})
 			}
-			cloudProfileSpecOld = cloudProfileSpecNew
-		})
+			Expect(HasCapability(capabilities, requestedCapability)).To(Equal(expectedResult))
+		},
+		Entry("Should return false - no capabilities", nil, "foo", false),
+		Entry("Should return true - one capability", []string{"foo"}, "foo", true),
+		Entry("Should return true - many capabilities", []string{"foo", "bar"}, "foo", true),
+	)
 
-		Describe("Initial migration", func() {
-			BeforeEach(func() {
-				cloudProfileSpecNew.Capabilities = []core.Capability{
-					{Name: "architecture", Values: []string{"arm64", "amd64", "custom"}},
-				}
+	DescribeTable("#ExtractArchitecturesFromCapabilitySets",
+		func(architecturesInSet1, architecturesInSet2, expectedResult []string) {
+			var capabilitySets []core.CapabilitySet
+
+			capabilitySets = append(capabilitySets, core.CapabilitySet{
+				Capabilities: core.Capabilities{"architecture": architecturesInSet1},
 			})
 
-			It("It should do nothing for empty architectures and empty capabilities", func() {
-				cloudProfileSpecNewBefore := cloudProfileSpecNew
-				// With the update, the old fields are unset:
-				cloudProfileSpecOld.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
-				cloudProfileSpecOld.MachineTypes[0].Architecture = ptr.To("amd64")
-
-				SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
-
-				Expect(cloudProfileSpecNew).To(Equal(cloudProfileSpecNewBefore))
+			capabilitySets = append(capabilitySets, core.CapabilitySet{
+				Capabilities: core.Capabilities{"architecture": architecturesInSet2},
 			})
 
-			It("It should correctly handle split-up machine image version capability architectures", func() {
-				cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
-					{Capabilities: core.Capabilities{"architecture": []string{"custom"}}},
-					{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
-					{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
-				}
-
-				SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
-
-				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64", "arm64", "custom"))
-			})
-
-			It("It should sync filled architecture fields to empty capabilities", func() {
-				cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures = []string{"amd64", "arm64"}
-				cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("amd64")
-
-				SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
-
-				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64", "arm64"}))
-				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
-				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
-				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
-				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
-			})
-		})
-	})
+			Expect(ExtractArchitecturesFromCapabilitySets(capabilitySets)).To(ConsistOf(expectedResult))
+		},
+		Entry("Should return no values", nil, nil, []string{}),
+		Entry("Should return architecture in sets (sets partially filled)", []string{"amd64", "arm64"}, []string{"ia-64"}, []string{"amd64", "arm64", "ia-64"}),
+		Entry("Should return architecture in sets (all sets filled)", []string{"amd64", "arm64"}, nil, []string{"amd64", "arm64"}),
+	)
 })

@@ -342,11 +342,11 @@ message CRI {
   repeated ContainerRuntime containerRuntimes = 2;
 }
 
-// Capability contains the Name and Values of a capability.
-message Capability {
+// CapabilityDefinition contains the Name and Values of a capability.
+message CapabilityDefinition {
   optional string name = 1;
 
-  repeated string values = 2;
+  optional CapabilityValues values = 2;
 }
 
 // CapabilitySet is a wrapper for Capabilities.
@@ -455,7 +455,7 @@ message CloudProfileSpec {
   // The order of values for a given capability is relevant. The most important value is listed first.
   // During maintenance upgrades, the image that matches most capabilities will be selected.
   // +optional
-  repeated Capability capabilities = 12;
+  repeated CapabilityDefinition capabilities = 12;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -1901,7 +1901,7 @@ message MachineType {
   // +optional
   optional string architecture = 7;
 
-  // Capabilities contains the the machine type capabilities.
+  // Capabilities contains the machine type capabilities.
   // +optional
   map<string, CapabilityValues> capabilities = 8;
 }

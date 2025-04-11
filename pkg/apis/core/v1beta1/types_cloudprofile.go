@@ -7,7 +7,6 @@ package v1beta1
 import (
 	"encoding/json"
 	"fmt"
-	"slices"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,19 +92,7 @@ type CloudProfileSpec struct {
 	// The order of values for a given capability is relevant. The most important value is listed first.
 	// During maintenance upgrades, the image that matches most capabilities will be selected.
 	// +optional
-	Capabilities []Capability `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=capabilities"`
-}
-
-// GetCapabilities returns the capabilities slice of the CloudProfile as a Capabilities map.
-func (spec *CloudProfileSpec) GetCapabilities() Capabilities {
-	if len(spec.Capabilities) == 0 {
-		return nil
-	}
-	capabilities := make(Capabilities, len(spec.Capabilities))
-	for _, capability := range spec.Capabilities {
-		capabilities[capability.Name] = capability.Values
-	}
-	return capabilities
+	Capabilities []CapabilityDefinition `json:"capabilities,omitempty" protobuf:"bytes,12,rep,name=capabilities"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -168,27 +155,6 @@ type MachineImageVersion struct {
 	CapabilitySets []CapabilitySet `json:"capabilitySets,omitempty" protobuf:"bytes,6,rep,name=capabilitySets"`
 }
 
-// SupportsArchitecture checks if the machine image version supports the given architecture.
-func (v *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, architecture string) bool {
-	if len(capabilities) == 0 {
-		return slices.Contains(v.Architectures, architecture)
-	}
-	for _, capability := range v.CapabilitySets {
-		if slices.Contains(capability.Capabilities[constants.ArchitectureKey], architecture) {
-			return true
-		}
-	}
-	return slices.Contains(capabilities[constants.ArchitectureKey], architecture)
-}
-
-// GetArchitectures returns the list of supported architectures for the machine image version.
-func (v *MachineImageVersion) GetArchitectures(capabilities Capabilities) []string {
-	if len(capabilities) > 0 {
-		return ExtractArchitectures(v.CapabilitySets)
-	}
-	return v.Architectures
-}
-
 // ExpirableVersion contains a version and an expiration date.
 type ExpirableVersion struct {
 	// Version is the version identifier.
@@ -220,15 +186,15 @@ type MachineType struct {
 	// Architecture is the CPU architecture of this machine type.
 	// +optional
 	Architecture *string `json:"architecture,omitempty" protobuf:"bytes,7,opt,name=architecture"`
-	// Capabilities contains the the machine type capabilities.
+	// Capabilities contains the machine type capabilities.
 	// +optional
 	Capabilities Capabilities `json:"capabilities,omitempty" protobuf:"bytes,8,rep,name=capabilities,casttype=Capabilities"`
 }
 
 // GetArchitecture returns the architecture of the machine type.
 func (m *MachineType) GetArchitecture() string {
-	if len(m.Capabilities[constants.ArchitectureKey]) == 1 {
-		return m.Capabilities[constants.ArchitectureKey][0]
+	if len(m.Capabilities[constants.ArchitectureName]) == 1 {
+		return m.Capabilities[constants.ArchitectureName][0]
 	}
 	return ptr.Deref(m.Architecture, "")
 }
@@ -372,6 +338,12 @@ type InPlaceUpdates struct {
 	MinVersionForUpdate *string `json:"minVersionForUpdate,omitempty" protobuf:"bytes,2,opt,name=minVersionForUpdate"`
 }
 
+// CapabilityDefinition contains the Name and Values of a capability.
+type CapabilityDefinition struct {
+	Name   string           `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Values CapabilityValues `json:"values" protobuf:"bytes,2,rep,name=values"`
+}
+
 // CapabilityValues contains capability values.
 // This is a workaround as the Protobuf generator can't handle a map with slice values.
 // +protobuf.nullable=true
@@ -390,12 +362,6 @@ func (t Capabilities) String() string {
 	return fmt.Sprintf("%v", map[string]CapabilityValues(t))
 }
 
-// Capability contains the Name and Values of a capability.
-type Capability struct {
-	Name   string   `json:"name" protobuf:"bytes,1,opt,name=name"`
-	Values []string `json:"values" protobuf:"bytes,2,rep,name=values"`
-}
-
 // CapabilitySet is a wrapper for Capabilities.
 // This is a workaround as the Protobuf generator can't handle a slice of maps.
 type CapabilitySet struct {
@@ -410,17 +376,4 @@ func (c *CapabilitySet) UnmarshalJSON(data []byte) error {
 // MarshalJSON marshals the CapabilitySet object to JSON.
 func (c *CapabilitySet) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.Capabilities)
-}
-
-// ExtractArchitectures extracts the architectures from the given capability sets.
-func ExtractArchitectures(capabilities []CapabilitySet) []string {
-	var architectures []string
-	for _, capabilitySet := range capabilities {
-		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureKey] {
-			if !slices.Contains(architectures, architectureValue) {
-				architectures = append(architectures, architectureValue)
-			}
-		}
-	}
-	return architectures
 }

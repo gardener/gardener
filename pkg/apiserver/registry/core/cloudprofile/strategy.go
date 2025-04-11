@@ -15,8 +15,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 type cloudProfileStrategy struct {
@@ -45,7 +45,7 @@ func (cloudProfileStrategy) Validate(_ context.Context, obj runtime.Object) fiel
 func (cloudProfileStrategy) Canonicalize(obj runtime.Object) {
 	cloudProfile := obj.(*core.CloudProfile)
 
-	helper.SyncArchitectureCapabilityFields(cloudProfile.Spec, core.CloudProfileSpec{})
+	admissionutils.SyncArchitectureCapabilityFields(cloudProfile.Spec, core.CloudProfileSpec{})
 	syncLegacyAccessRestrictionLabelWithNewField(cloudProfile)
 }
 
@@ -57,7 +57,7 @@ func (cloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj r
 	oldCloudProfile := oldObj.(*core.CloudProfile)
 	newCloudProfile := newObj.(*core.CloudProfile)
 
-	helper.SyncArchitectureCapabilityFields(newCloudProfile.Spec, oldCloudProfile.Spec)
+	admissionutils.SyncArchitectureCapabilityFields(newCloudProfile.Spec, oldCloudProfile.Spec)
 	syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(newCloudProfile, oldCloudProfile)
 }
 

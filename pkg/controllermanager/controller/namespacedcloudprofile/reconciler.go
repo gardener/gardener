@@ -21,12 +21,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 // Reconciler reconciles NamespacedCloudProfiles.
@@ -143,7 +143,7 @@ func MergeCloudProfiles(namespacedCloudProfile *gardencorev1beta1.NamespacedClou
 func syncArchitectureCapabilities(namespacedCloudProfile *gardencorev1beta1.NamespacedCloudProfile) {
 	var coreCloudProfileSpec gardencore.CloudProfileSpec
 	_ = api.Scheme.Convert(&namespacedCloudProfile.Status.CloudProfileSpec, &coreCloudProfileSpec, nil)
-	helper.SyncArchitectureCapabilityFields(coreCloudProfileSpec, gardencore.CloudProfileSpec{})
+	admissionutils.SyncArchitectureCapabilityFields(coreCloudProfileSpec, gardencore.CloudProfileSpec{})
 	defaultMachineTypeArchitectures(coreCloudProfileSpec)
 	_ = api.Scheme.Convert(&coreCloudProfileSpec, &namespacedCloudProfile.Status.CloudProfileSpec, nil)
 }

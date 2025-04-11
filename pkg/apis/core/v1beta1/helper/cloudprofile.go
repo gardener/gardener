@@ -11,8 +11,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -513,4 +515,30 @@ func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.Expirable
 	return func(expirableVersion gardencorev1beta1.ExpirableVersion, _ *semver.Version) (bool, error) {
 		return expirableVersion.Classification != nil && *expirableVersion.Classification == gardencorev1beta1.ClassificationDeprecated, nil
 	}
+}
+
+func extractArchitecturesFromCapabilitySets(capabilities []gardencorev1beta1.CapabilitySet) []string {
+	architectures := sets.New[string]()
+	for _, capabilitySet := range capabilities {
+		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureName] {
+			architectures.Insert(architectureValue)
+		}
+	}
+	return architectures.UnsortedList()
+}
+
+// GetArchitecturesFromImageVersion returns the list of supported architectures for the machine image version.
+// It first tries to retrieve the architectures from the capability sets and falls back to the architectures field if none are found.
+func GetArchitecturesFromImageVersion(imageVersion gardencorev1beta1.MachineImageVersion) []string {
+	if architectures := extractArchitecturesFromCapabilitySets(imageVersion.CapabilitySets); len(architectures) > 0 {
+		return architectures
+	}
+	return imageVersion.Architectures
+}
+
+// ArchitectureSupportedByImageVersion checks if the machine image version supports the given architecture.
+// The function falls back to the architectures field if the passed capabilities are empty.
+func ArchitectureSupportedByImageVersion(version gardencorev1beta1.MachineImageVersion, architecture string) bool {
+	supportedArchitectures := GetArchitecturesFromImageVersion(version)
+	return slices.Contains(supportedArchitectures, architecture)
 }

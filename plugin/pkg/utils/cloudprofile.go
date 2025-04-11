@@ -7,16 +7,18 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"slices"
 
-	"k8s.io/apimachinery/pkg/api/equality"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
@@ -29,13 +31,13 @@ func GetCloudProfileSpec(cloudProfileLister gardencorev1beta1listers.CloudProfil
 		return nil, fmt.Errorf("no cloudprofile reference has been provided")
 	}
 	switch cloudProfileReference.Kind {
-	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
 		namespacedCloudProfile, err := namespacedCloudProfileLister.NamespacedCloudProfiles(shoot.Namespace).Get(cloudProfileReference.Name)
 		if err != nil {
 			return nil, err
 		}
 		return &namespacedCloudProfile.Status.CloudProfileSpec, nil
-	case constants.CloudProfileReferenceKindCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 		cloudProfile, err := cloudProfileLister.Get(cloudProfileReference.Name)
 		if err != nil {
 			return nil, err
@@ -54,7 +56,7 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 		return nil
 	}
 	newCloudProfileReference := BuildCloudProfileReference(newShoot)
-	if equality.Semantic.DeepEqual(oldCloudProfileReference, newCloudProfileReference) {
+	if apiequality.Semantic.DeepEqual(oldCloudProfileReference, newCloudProfileReference) {
 		return nil
 	}
 
@@ -67,19 +69,19 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 		return err
 	}
 
-	if !equality.Semantic.DeepEqual(oldCloudProfileRoot, newCloudProfileRoot) {
+	if !apiequality.Semantic.DeepEqual(oldCloudProfileRoot, newCloudProfileRoot) {
 		fromProfile := fmt.Sprintf("%q", oldCloudProfileReference.Name)
-		if oldCloudProfileReference.Kind != constants.CloudProfileReferenceKindCloudProfile {
+		if oldCloudProfileReference.Kind != v1beta1constants.CloudProfileReferenceKindCloudProfile {
 			fromProfile += fmt.Sprintf(" (root: %q)", oldCloudProfileRoot.Name)
 		}
 		toProfile := fmt.Sprintf("%q", newCloudProfileReference.Name)
-		if newCloudProfileReference.Kind != constants.CloudProfileReferenceKindCloudProfile {
+		if newCloudProfileReference.Kind != v1beta1constants.CloudProfileReferenceKindCloudProfile {
 			toProfile += fmt.Sprintf(" (root: %q)", newCloudProfileRoot.Name)
 		}
 		return fmt.Errorf("cloud profile reference change is invalid: cannot change from %s to %s. The cloud profile reference must remain within the same hierarchy", fromProfile, toProfile)
 	}
 
-	if !equality.Semantic.DeepEqual(newCloudProfileReference, oldCloudProfileReference) {
+	if !apiequality.Semantic.DeepEqual(newCloudProfileReference, oldCloudProfileReference) {
 		newCloudProfileSpec, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, newShoot)
 		if err != nil {
 			return fmt.Errorf("could not find cloudProfileSpec from the shoot cloudProfile reference: %s", err.Error())
@@ -99,7 +101,7 @@ func ValidateCloudProfileChanges(cloudProfileLister gardencorev1beta1listers.Clo
 
 		// Check that the target cloud profile still supports the currently used machine types, machine images and volume types.
 		// No need to check for Kubernetes versions, as the NamespacedCloudProfile could have only extended a version so with the next maintenance the Shoot will be updated to a supported version.
-		_, removedMachineImageVersions, _, _ := helper.GetMachineImageDiff(oldCloudProfileSpecCore.MachineImages, newCloudProfileSpecCore.MachineImages)
+		_, removedMachineImageVersions, _, _ := gardencorehelper.GetMachineImageDiff(oldCloudProfileSpecCore.MachineImages, newCloudProfileSpecCore.MachineImages)
 		machineTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.MachineTypes, func(mt gardencorev1beta1.MachineType) string { return mt.Name })
 		volumeTypes := gardenerutils.CreateMapFromSlice(newCloudProfileSpec.VolumeTypes, func(vt gardencorev1beta1.VolumeType) string { return vt.Name })
 
@@ -132,9 +134,9 @@ func getRootCloudProfile(namespacedCloudProfileLister gardencorev1beta1listers.N
 		return nil, errors.New("unexpected nil cloudprofile to get root of")
 	}
 	switch cloudProfile.Kind {
-	case constants.CloudProfileReferenceKindCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 		return cloudProfile, nil
-	case constants.CloudProfileReferenceKindNamespacedCloudProfile:
+	case v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile:
 		cp, err := namespacedCloudProfileLister.NamespacedCloudProfiles(namespace).Get(cloudProfile.Name)
 		if err != nil {
 			return nil, err
@@ -156,14 +158,14 @@ func BuildCloudProfileReference(shoot *core.Shoot) *gardencorev1beta1.CloudProfi
 			return nil
 		}
 		if len(cloudProfileV1Beta1.Kind) == 0 {
-			cloudProfileV1Beta1.Kind = constants.CloudProfileReferenceKindCloudProfile
+			cloudProfileV1Beta1.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
 		}
 		return cloudProfileV1Beta1
 	}
 	if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 {
 		return &gardencorev1beta1.CloudProfileReference{
 			Name: *shoot.Spec.CloudProfileName,
-			Kind: constants.CloudProfileReferenceKindCloudProfile,
+			Kind: v1beta1constants.CloudProfileReferenceKindCloudProfile,
 		}
 	}
 	return nil
@@ -177,33 +179,125 @@ func SyncCloudProfileFields(oldShoot, newShoot *core.Shoot) {
 	}
 
 	// clear cloudProfile if namespacedCloudProfile is newly provided but feature toggle is disabled
-	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindNamespacedCloudProfile && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) &&
-		(oldShoot == nil || oldShoot.Spec.CloudProfile == nil || oldShoot.Spec.CloudProfile.Kind != constants.CloudProfileReferenceKindNamespacedCloudProfile) {
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile && !utilfeature.DefaultFeatureGate.Enabled(features.UseNamespacedCloudProfile) &&
+		(oldShoot == nil || oldShoot.Spec.CloudProfile == nil || oldShoot.Spec.CloudProfile.Kind != v1beta1constants.CloudProfileReferenceKindNamespacedCloudProfile) {
 		newShoot.Spec.CloudProfile = nil
 	}
 
 	// fill empty cloudProfile field from cloudProfileName, if provided
 	if newShoot.Spec.CloudProfile == nil && newShoot.Spec.CloudProfileName != nil {
 		newShoot.Spec.CloudProfile = &core.CloudProfileReference{
-			Kind: constants.CloudProfileReferenceKindCloudProfile,
+			Kind: v1beta1constants.CloudProfileReferenceKindCloudProfile,
 			Name: *newShoot.Spec.CloudProfileName,
 		}
 	}
 
 	// default empty cloudprofile kind to CloudProfile
 	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == "" {
-		newShoot.Spec.CloudProfile.Kind = constants.CloudProfileReferenceKindCloudProfile
+		newShoot.Spec.CloudProfile.Kind = v1beta1constants.CloudProfileReferenceKindCloudProfile
 	}
 
 	// fill cloudProfileName from cloudProfile if provided and kind is CloudProfile
 	// for backwards compatibility (esp. Dashboard), the CloudProfileName field is synced here with the referenced CloudProfile
 	// TODO(LucaBernstein): Remove this block as soon as the CloudProfileName field is deprecated.
-	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == constants.CloudProfileReferenceKindCloudProfile {
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind == v1beta1constants.CloudProfileReferenceKindCloudProfile {
 		newShoot.Spec.CloudProfileName = &newShoot.Spec.CloudProfile.Name
 	}
 
 	// if other than CloudProfile is provided, unset cloudProfileName
-	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind != constants.CloudProfileReferenceKindCloudProfile {
+	if newShoot.Spec.CloudProfile != nil && newShoot.Spec.CloudProfile.Kind != v1beta1constants.CloudProfileReferenceKindCloudProfile {
 		newShoot.Spec.CloudProfileName = nil
+	}
+}
+
+// SyncArchitectureCapabilityFields syncs the architecture capabilities and the architecture fields.
+func SyncArchitectureCapabilityFields(newCloudProfileSpec core.CloudProfileSpec, oldCloudProfileSpec core.CloudProfileSpec) {
+	hasCapabilities := len(newCloudProfileSpec.Capabilities) > 0
+	if !hasCapabilities || !gardencorehelper.HasCapability(newCloudProfileSpec.Capabilities, v1beta1constants.ArchitectureName) {
+		return
+	}
+
+	isInitialMigration := hasCapabilities && len(oldCloudProfileSpec.Capabilities) == 0
+
+	// During the initial migration to capabilities, synchronize the architecture fields with the capability definitions.
+	// After the migration, only sync architectures from the capability definitions back to the architecture fields.
+	// This approach ensures that capabilities are consistently used once defined.
+	// Any mismatch between capabilities and architecture fields will result in a validation error.
+	syncMachineImageArchitectureCapabilities(newCloudProfileSpec.MachineImages, oldCloudProfileSpec.MachineImages, isInitialMigration)
+	syncMachineTypeArchitectureCapabilities(newCloudProfileSpec.MachineTypes, oldCloudProfileSpec.MachineTypes, isInitialMigration)
+}
+
+func syncMachineImageArchitectureCapabilities(newMachineImages, oldMachineImages []core.MachineImage, isInitialMigration bool) {
+	oldMachineImagesMap := util.NewCoreImagesContext(oldMachineImages)
+
+	for imageIdx, image := range newMachineImages {
+		for versionIdx, version := range newMachineImages[imageIdx].Versions {
+			oldMachineImageVersion, oldVersionExists := oldMachineImagesMap.GetImageVersion(image.Name, version.Version)
+			capabilityArchitectures := gardencorehelper.ExtractArchitecturesFromCapabilitySets(version.CapabilitySets)
+
+			// Skip any architecture field syncing if
+			// - architecture field has been modified and changed to any value other than empty.
+			architecturesFieldHasBeenChanged := oldVersionExists && len(version.Architectures) > 0 &&
+				!apiequality.Semantic.DeepEqual(oldMachineImageVersion.Architectures, version.Architectures)
+
+			// - both the architecture field and the architecture capability are empty or filled equally.
+			if architecturesFieldHasBeenChanged || slices.Equal(capabilityArchitectures, version.Architectures) {
+				continue
+			}
+
+			// Sync architecture field to capabilities if filled on initial migration.
+			if isInitialMigration && len(version.Architectures) > 0 && len(version.CapabilitySets) == 0 {
+				for _, architecture := range version.Architectures {
+					newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets = append(newMachineImages[imageIdx].Versions[versionIdx].CapabilitySets,
+						core.CapabilitySet{
+							Capabilities: core.Capabilities{
+								v1beta1constants.ArchitectureName: []string{architecture},
+							},
+						})
+				}
+				continue
+			}
+
+			// Sync capability architectures to architectures field.
+			if len(capabilityArchitectures) > 0 {
+				newMachineImages[imageIdx].Versions[versionIdx].Architectures = capabilityArchitectures
+			}
+		}
+	}
+}
+
+func syncMachineTypeArchitectureCapabilities(newMachineTypes, oldMachineTypes []core.MachineType, isInitialMigration bool) {
+	oldMachineTypesMap := gardenerutils.CreateMapFromSlice(oldMachineTypes, func(machineType core.MachineType) string { return machineType.Name })
+
+	for i, machineType := range newMachineTypes {
+		oldMachineType, oldMachineTypeExists := oldMachineTypesMap[machineType.Name]
+		architectureValue := ptr.Deref(machineType.Architecture, "")
+		oldArchitectureValue := ptr.Deref(oldMachineType.Architecture, "")
+		capabilityArchitectures := machineType.Capabilities[v1beta1constants.ArchitectureName]
+
+		// Skip any architecture field syncing if
+		// - architecture field has been modified and changed to any value other than empty.
+		architectureFieldHasBeenChanged := oldMachineTypeExists && architectureValue != "" &&
+			(oldArchitectureValue == "" || oldArchitectureValue != architectureValue)
+		// - both the architecture field and the architecture capability are empty or filled equally.
+		architecturesInSync := len(capabilityArchitectures) == 0 && architectureValue == "" ||
+			len(capabilityArchitectures) == 1 && capabilityArchitectures[0] == architectureValue
+		if architectureFieldHasBeenChanged || architecturesInSync {
+			continue
+		}
+
+		// Sync architecture field to capabilities if filled on initial migration.
+		if isInitialMigration && architectureValue != "" && len(capabilityArchitectures) == 0 {
+			if newMachineTypes[i].Capabilities == nil {
+				newMachineTypes[i].Capabilities = make(core.Capabilities)
+			}
+			newMachineTypes[i].Capabilities[v1beta1constants.ArchitectureName] = []string{architectureValue}
+			continue
+		}
+
+		// Sync capability architecture to architecture field.
+		if len(capabilityArchitectures) == 1 {
+			newMachineTypes[i].Architecture = ptr.To(capabilityArchitectures[0])
+		}
 	}
 }

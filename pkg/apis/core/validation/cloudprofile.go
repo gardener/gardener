@@ -152,7 +152,7 @@ func validateCloudProfileMachineTypes(machineTypes []core.MachineType, capabilit
 	allErrs = append(allErrs, validateMachineTypes(machineTypes, capabilities, fldPath)...)
 
 	for i, machineType := range machineTypes {
-		if ptr.Deref(machineType.Architecture, "") == "" && (len(capabilities) == 0 || len(machineType.Capabilities[v1beta1constants.ArchitectureKey]) == 0) {
+		if ptr.Deref(machineType.Architecture, "") == "" && (len(capabilities) == 0 || len(machineType.Capabilities[v1beta1constants.ArchitectureName]) == 0) {
 			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("architecture"), "must provide an architecture"))
 		}
 		if len(capabilities) == 0 && len(machineType.Capabilities) > 0 {
@@ -414,7 +414,7 @@ func HasDecreasedMaxNodesTotal(newMaxNodesTotal, oldMaxNodesTotal *int32) bool {
 	return newMaxNodesTotal != nil && oldMaxNodesTotal != nil && *newMaxNodesTotal < *oldMaxNodesTotal
 }
 
-func validateCapabilities(capabilities []core.Capability, fldPath *field.Path) field.ErrorList {
+func validateCapabilities(capabilities []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(capabilities) == 0 {
@@ -429,24 +429,24 @@ func validateCapabilities(capabilities []core.Capability, fldPath *field.Path) f
 	for idx, capability := range capabilities {
 		capabilitySetFieldPath := fldPath.Index(idx)
 		if _, exists := capabilityMap[capability.Name]; exists {
-			allErrs = append(allErrs, field.Duplicate(capabilitySetFieldPath, capability.Name))
+			allErrs = append(allErrs, field.Duplicate(capabilitySetFieldPath.Child("name"), capability.Name))
 		}
 		capabilityMap[capability.Name] = capability.Values
 	}
 
-	// Capability "architecture" is required.
-	val, ok := capabilityMap[v1beta1constants.ArchitectureKey]
+	// CapabilityDefinition "architecture" is required.
+	val, ok := capabilityMap[v1beta1constants.ArchitectureName]
 	if !ok {
-		allErrs = append(allErrs, field.Required(fldPath.Child(v1beta1constants.ArchitectureKey), "architecture capability is required"))
+		allErrs = append(allErrs, field.Required(fldPath.Child(v1beta1constants.ArchitectureName), "architecture capability is required"))
 	} else {
 		for _, v := range val {
 			if !slices.Contains(v1beta1constants.ValidArchitectures, v) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child(v1beta1constants.ArchitectureKey), v, "allowed architectures are: "+strings.Join(v1beta1constants.ValidArchitectures, ", ")))
+				allErrs = append(allErrs, field.Invalid(fldPath.Child(v1beta1constants.ArchitectureName), v, "allowed architectures are: "+strings.Join(v1beta1constants.ValidArchitectures, ", ")))
 			}
 		}
 	}
 
-	// Capability keys defined must not be empty.
+	// CapabilityDefinition keys defined must not be empty.
 	for key, value := range capabilityMap {
 		if key == "" {
 			allErrs = append(allErrs, field.Required(fldPath, "capability keys must not be empty"))

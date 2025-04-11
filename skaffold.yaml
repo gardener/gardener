@@ -285,8 +285,12 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
+            - pkg/client/seedmanagement/clientset/versioned
+            - pkg/client/seedmanagement/clientset/versioned/scheme
+            - pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
             - pkg/component
             - pkg/component/garden/projectrbac
             - pkg/controller/reference
@@ -361,6 +365,7 @@ build:
             - pkg/utils/validation/features
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - plugin/pkg/utils
             - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:
@@ -444,8 +449,6 @@ build:
             - cmd/gardener-admission-controller/app
             - cmd/utils
             - cmd/utils/initrun
-            - extensions/pkg/apis/config/v1alpha1
-            - extensions/pkg/util
             - pkg/admissioncontroller/apis/config/v1alpha1
             - pkg/admissioncontroller/apis/config/v1alpha1/helper
             - pkg/admissioncontroller/apis/config/v1alpha1/validation
@@ -966,10 +969,8 @@ build:
             - cmd/gardenlet/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
-            - extensions/pkg/apis/config/v1alpha1
             - extensions/pkg/controller
             - extensions/pkg/predicate
-            - extensions/pkg/util
             - imagevector
             - imagevector/charts.yaml
             - imagevector/containers.yaml

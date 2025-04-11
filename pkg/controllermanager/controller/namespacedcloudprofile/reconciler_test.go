@@ -185,7 +185,7 @@ var _ = Describe("NamespacedCloudProfile Reconciler", func() {
 					UpdateStrategy: ptr.To(gardencorev1beta1.UpdateStrategyMajor),
 				},
 			}
-			cloudProfile.Spec.Capabilities = []gardencorev1beta1.Capability{
+			cloudProfile.Spec.Capabilities = []gardencorev1beta1.CapabilityDefinition{
 				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 			}
 

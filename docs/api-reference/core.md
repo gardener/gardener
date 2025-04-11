@@ -487,8 +487,8 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 <td>
 <code>capabilities</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.Capability">
-[]Capability
+<a href="#core.gardener.cloud/v1beta1.CapabilityDefinition">
+[]CapabilityDefinition
 </a>
 </em>
 </td>
@@ -3445,14 +3445,14 @@ CRIName
 <p>
 <p>Capabilities of a machine type or machine image.</p>
 </p>
-<h3 id="core.gardener.cloud/v1beta1.Capability">Capability
+<h3 id="core.gardener.cloud/v1beta1.CapabilityDefinition">CapabilityDefinition
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>)
 </p>
 <p>
-<p>Capability contains the Name and Values of a capability.</p>
+<p>CapabilityDefinition contains the Name and Values of a capability.</p>
 </p>
 <table>
 <thead>
@@ -3476,7 +3476,9 @@ string
 <td>
 <code>values</code></br>
 <em>
-[]string
+<a href="#core.gardener.cloud/v1beta1.CapabilityValues">
+CapabilityValues
+</a>
 </em>
 </td>
 <td>
@@ -3518,6 +3520,10 @@ Capabilities
 </table>
 <h3 id="core.gardener.cloud/v1beta1.CapabilityValues">CapabilityValues
 (<code>[]string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CapabilityDefinition">CapabilityDefinition</a>)
+</p>
 <p>
 <p>CapabilityValues contains capability values.
 This is a workaround as the Protobuf generator can&rsquo;t handle a map with slice values.</p>
@@ -3737,8 +3743,8 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/usage/shoot/s
 <td>
 <code>capabilities</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.Capability">
-[]Capability
+<a href="#core.gardener.cloud/v1beta1.CapabilityDefinition">
+[]CapabilityDefinition
 </a>
 </em>
 </td>
@@ -8506,7 +8512,7 @@ Capabilities
 </td>
 <td>
 <em>(Optional)</em>
-<p>Capabilities contains the the machine type capabilities.</p>
+<p>Capabilities contains the machine type capabilities.</p>
 </td>
 </tr>
 </tbody>

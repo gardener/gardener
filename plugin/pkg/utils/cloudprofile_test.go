@@ -16,7 +16,7 @@ import (
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
-	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
+	. "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 var _ = Describe("CloudProfile", func() {
@@ -72,7 +72,7 @@ var _ = Describe("CloudProfile", func() {
 	Describe("#GetCloudProfile", func() {
 		It("returns an error if CloudProfile is not found", func() {
 			shoot.Spec.CloudProfileName = &cloudProfileName
-			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			res, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
 			Expect(res).To(BeNil())
 			Expect(err).To(HaveOccurred())
 		})
@@ -81,7 +81,7 @@ var _ = Describe("CloudProfile", func() {
 			Expect(coreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(cloudProfile)).To(Succeed())
 
 			shoot.Spec.CloudProfileName = &cloudProfileName
-			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			res, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
 			Expect(res).To(Equal(&cloudProfile.Spec))
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -92,7 +92,7 @@ var _ = Describe("CloudProfile", func() {
 			shoot.Spec.CloudProfile = &core.CloudProfileReference{
 				Name: cloudProfileName,
 			}
-			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			res, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
 			Expect(res).To(Equal(&cloudProfile.Spec))
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -104,7 +104,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: namespacedCloudProfileName,
 			}
-			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			res, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
 			Expect(res).To(Equal(&namespacedCloudProfile.Status.CloudProfileSpec))
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -113,7 +113,7 @@ var _ = Describe("CloudProfile", func() {
 			Expect(coreInformerFactory.Core().V1beta1().NamespacedCloudProfiles().Informer().GetStore().Add(namespacedCloudProfile)).To(Succeed())
 
 			shoot.Spec.CloudProfileName = &namespacedCloudProfileName
-			res, err := admissionutils.GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
+			res, err := GetCloudProfileSpec(cloudProfileLister, namespacedCloudProfileLister, shoot)
 			Expect(res).To(BeNil())
 			Expect(err).To(HaveOccurred())
 		})
@@ -131,7 +131,7 @@ var _ = Describe("CloudProfile", func() {
 				Name: cloudProfileName,
 			}
 
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -142,7 +142,7 @@ var _ = Describe("CloudProfile", func() {
 			}
 			newShoot := shoot.DeepCopy()
 
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -154,7 +154,7 @@ var _ = Describe("CloudProfile", func() {
 			}
 			newShoot.Spec.CloudProfileName = &cloudProfileName
 
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -167,7 +167,7 @@ var _ = Describe("CloudProfile", func() {
 			}
 			newShoot := shoot.DeepCopy()
 
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -183,7 +183,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: namespacedCloudProfileName,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -202,7 +202,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: namespacedCloudProfileName,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -221,7 +221,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "CloudProfile",
 				Name: cloudProfileName,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -244,7 +244,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: namespacedCloudProfileName + "-2",
 			}
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -266,7 +266,7 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "NamespacedCloudProfile",
 				Name: unrelatedNamespacedCloudProfile.Name,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -285,18 +285,18 @@ var _ = Describe("CloudProfile", func() {
 				Kind: "CloudProfile",
 				Name: unrelatedCloudProfile.Name,
 			}
-			err := admissionutils.ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
+			err := ValidateCloudProfileChanges(cloudProfileLister, namespacedCloudProfileLister, newShoot, shoot)
 			Expect(err).To(HaveOccurred())
 		})
 	})
 
 	Describe("#BuildCloudProfileReference", func() {
 		It("should return nil for nil shoot", func() {
-			Expect(admissionutils.BuildCloudProfileReference(nil)).To(BeNil())
+			Expect(BuildCloudProfileReference(nil)).To(BeNil())
 		})
 
 		It("should build and return cloud profile reference from an existing cloudProfileName", func() {
-			Expect(admissionutils.BuildCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
+			Expect(BuildCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
 				CloudProfileName: ptr.To("profile-name"),
 			}})).To(Equal(&gardencorev1beta1.CloudProfileReference{
 				Kind: "CloudProfile",
@@ -305,7 +305,7 @@ var _ = Describe("CloudProfile", func() {
 		})
 
 		It("should return an existing cloud profile reference", func() {
-			Expect(admissionutils.BuildCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
+			Expect(BuildCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
 				CloudProfileName: ptr.To("ignore-me"),
 				CloudProfile: &core.CloudProfileReference{
 					Kind: "NamespacedCloudProfile",
@@ -318,7 +318,7 @@ var _ = Describe("CloudProfile", func() {
 		})
 
 		It("should return an existing cloud profile reference and default the kind to CloudProfile", func() {
-			Expect(admissionutils.BuildCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
+			Expect(BuildCloudProfileReference(&core.Shoot{Spec: core.ShootSpec{
 				CloudProfileName: ptr.To("ignore-me"),
 				CloudProfile: &core.CloudProfileReference{
 					Name: "profile-1",
@@ -337,7 +337,7 @@ var _ = Describe("CloudProfile", func() {
 
 		It("should default the cloudProfile to the cloudProfileName value", func() {
 			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile")}}
-			admissionutils.SyncCloudProfileFields(nil, shoot)
+			SyncCloudProfileFields(nil, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
@@ -345,7 +345,7 @@ var _ = Describe("CloudProfile", func() {
 
 		It("should default the cloudProfileName to the cloudProfile value and to kind CloudProfile", func() {
 			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfile: &core.CloudProfileReference{Name: "profile"}}}
-			admissionutils.SyncCloudProfileFields(nil, shoot)
+			SyncCloudProfileFields(nil, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
@@ -353,7 +353,7 @@ var _ = Describe("CloudProfile", func() {
 
 		It("should override the cloudProfileName from the cloudProfile", func() {
 			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile-name"), CloudProfile: &core.CloudProfileReference{Name: "profile"}}}
-			admissionutils.SyncCloudProfileFields(nil, shoot)
+			SyncCloudProfileFields(nil, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
@@ -361,7 +361,7 @@ var _ = Describe("CloudProfile", func() {
 
 		It("should override cloudProfile from cloudProfileName as with disabledFeatureToggle reference to NamespacedCloudProfile is ignored", func() {
 			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile"), CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}}}
-			admissionutils.SyncCloudProfileFields(nil, shoot)
+			SyncCloudProfileFields(nil, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
@@ -370,7 +370,7 @@ var _ = Describe("CloudProfile", func() {
 		It("should remove the cloudProfileName if a NamespacedCloudProfile is given and the feature is enabled", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
 			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile"), CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}}}
-			admissionutils.SyncCloudProfileFields(nil, shoot)
+			SyncCloudProfileFields(nil, shoot)
 			Expect(shoot.Spec.CloudProfileName).To(BeNil())
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("namespacedprofile"))
 			Expect(shoot.Spec.CloudProfile.Kind).To(Equal("NamespacedCloudProfile"))
@@ -378,7 +378,7 @@ var _ = Describe("CloudProfile", func() {
 
 		It("should remove the cloudProfileName and leave the cloudProfile untouched for an invalid kind (failure is evaluated at another point in the validation chain, fields are only synced here)", func() {
 			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile"), CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile-secret", Kind: "Secret"}}}
-			admissionutils.SyncCloudProfileFields(nil, shoot)
+			SyncCloudProfileFields(nil, shoot)
 			Expect(shoot.Spec.CloudProfileName).To(BeNil())
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("namespacedprofile-secret"))
 			Expect(shoot.Spec.CloudProfile.Kind).To(Equal("Secret"))
@@ -387,7 +387,7 @@ var _ = Describe("CloudProfile", func() {
 		It("should remove the cloudProfileName and leave the cloudProfile untouched for an invalid kind with enabled nscpfl feature toggle (failure is evaluated at another point in the validation chain, fields are only synced here)", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, true))
 			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfileName: ptr.To("profile"), CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile-secret", Kind: "Secret"}}}
-			admissionutils.SyncCloudProfileFields(nil, shoot)
+			SyncCloudProfileFields(nil, shoot)
 			Expect(shoot.Spec.CloudProfileName).To(BeNil())
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("namespacedprofile-secret"))
 			Expect(shoot.Spec.CloudProfile.Kind).To(Equal("Secret"))
@@ -397,7 +397,7 @@ var _ = Describe("CloudProfile", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
 			oldShoot := &core.Shoot{Spec: core.ShootSpec{CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}}}
 			shoot := &core.Shoot{Spec: core.ShootSpec{CloudProfile: &core.CloudProfileReference{Name: "profile", Kind: "CloudProfile"}}}
-			admissionutils.SyncCloudProfileFields(oldShoot, shoot)
+			SyncCloudProfileFields(oldShoot, shoot)
 			Expect(*shoot.Spec.CloudProfileName).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("profile"))
 			Expect(shoot.Spec.CloudProfile.Kind).To(Equal("CloudProfile"))
@@ -407,10 +407,73 @@ var _ = Describe("CloudProfile", func() {
 			DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.UseNamespacedCloudProfile, false))
 			oldShoot := &core.Shoot{Spec: core.ShootSpec{CloudProfile: &core.CloudProfileReference{Name: "namespacedprofile", Kind: "NamespacedCloudProfile"}}}
 			shoot := oldShoot.DeepCopy()
-			admissionutils.SyncCloudProfileFields(oldShoot, shoot)
+			SyncCloudProfileFields(oldShoot, shoot)
 			Expect(shoot.Spec.CloudProfileName).To(BeNil())
 			Expect(shoot.Spec.CloudProfile.Name).To(Equal("namespacedprofile"))
 			Expect(shoot.Spec.CloudProfile.Kind).To(Equal("NamespacedCloudProfile"))
+		})
+	})
+
+	Describe("#SyncArchitectureCapabilityFields", func() {
+		var (
+			cloudProfileSpecNew core.CloudProfileSpec
+			cloudProfileSpecOld core.CloudProfileSpec
+		)
+
+		BeforeEach(func() {
+			cloudProfileSpecNew = core.CloudProfileSpec{
+				MachineImages: []core.MachineImage{
+					{Versions: []core.MachineImageVersion{{}}},
+				},
+				MachineTypes: []core.MachineType{
+					{},
+				},
+			}
+			cloudProfileSpecOld = cloudProfileSpecNew
+		})
+
+		Describe("Initial migration", func() {
+			BeforeEach(func() {
+				cloudProfileSpecNew.Capabilities = []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"arm64", "amd64", "custom"}},
+				}
+			})
+
+			It("It should do nothing for empty architectures and empty capabilities", func() {
+				cloudProfileSpecNewBefore := cloudProfileSpecNew
+				// With the update, the old fields are unset:
+				cloudProfileSpecOld.MachineImages[0].Versions[0].Architectures = []string{"amd64"}
+				cloudProfileSpecOld.MachineTypes[0].Architecture = ptr.To("amd64")
+
+				SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
+
+				Expect(cloudProfileSpecNew).To(Equal(cloudProfileSpecNewBefore))
+			})
+
+			It("It should correctly handle split-up machine image version capability architectures", func() {
+				cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets = []core.CapabilitySet{
+					{Capabilities: core.Capabilities{"architecture": []string{"custom"}}},
+					{Capabilities: core.Capabilities{"architecture": []string{"amd64"}}},
+					{Capabilities: core.Capabilities{"architecture": []string{"arm64"}}},
+				}
+
+				SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
+
+				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(ConsistOf("amd64", "arm64", "custom"))
+			})
+
+			It("It should sync filled architecture fields to empty capabilities", func() {
+				cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures = []string{"amd64", "arm64"}
+				cloudProfileSpecNew.MachineTypes[0].Architecture = ptr.To("amd64")
+
+				SyncArchitectureCapabilityFields(cloudProfileSpecNew, cloudProfileSpecOld)
+
+				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].Architectures).To(Equal([]string{"amd64", "arm64"}))
+				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
+				Expect(cloudProfileSpecNew.MachineImages[0].Versions[0].CapabilitySets[1].Capabilities["architecture"]).To(BeEquivalentTo([]string{"arm64"}))
+				Expect(cloudProfileSpecNew.MachineTypes[0].Architecture).To(Equal(ptr.To("amd64")))
+				Expect(cloudProfileSpecNew.MachineTypes[0].Capabilities["architecture"]).To(BeEquivalentTo([]string{"amd64"}))
+			})
 		})
 	})
 })
