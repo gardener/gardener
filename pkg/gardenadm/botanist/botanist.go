@@ -45,7 +45,7 @@ type AutonomousBotanist struct {
 	operatingSystemConfigSecret *corev1.Secret
 }
 
-// Extension contains the ControllerRegistration and ControllerDeployment for an extension registration.
+// Extension contains the resources needed for an extension registration.
 type Extension struct {
 	ControllerRegistration *gardencorev1beta1.ControllerRegistration
 	ControllerDeployment   *gardencorev1.ControllerDeployment

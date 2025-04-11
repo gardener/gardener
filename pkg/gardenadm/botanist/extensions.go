@@ -118,8 +118,9 @@ func controllerRegistrationSliceToList(controllerRegistrations []*gardencorev1be
 	return list
 }
 
-// ReconcileExtensionControllerDeployments reconciles the extension controller deployments.
-func (b *AutonomousBotanist) ReconcileExtensionControllerDeployments(ctx context.Context, networkAvailable bool) error {
+// ReconcileExtensionControllerInstallations reconciles the ControllerInstallation resources necessary to deploy the
+// extension controllers.
+func (b *AutonomousBotanist) ReconcileExtensionControllerInstallations(ctx context.Context, networkAvailable bool) error {
 	var (
 		reconcilerCtx = log.IntoContext(ctx, b.Logger.WithName("controllerinstallation-reconciler"))
 		reconciler    = controllerinstallation.Reconciler{
