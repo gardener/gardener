@@ -232,7 +232,7 @@ func (a *actuator) reconcileControlPlane(
 	bool,
 	error,
 ) {
-	if a.atomicShootWebhookConfig != nil {
+	if a.hasShootWebhooks(cluster.Shoot) {
 		value := a.atomicShootWebhookConfig.Load()
 		webhookConfig, ok := value.(*webhook.Configs)
 		if !ok {
@@ -523,7 +523,7 @@ func (a *actuator) deleteControlPlane(
 		}
 	}
 
-	if a.atomicShootWebhookConfig != nil {
+	if a.hasShootWebhooks(cluster.Shoot) {
 		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ShootWebhooksResourceName, false); err != nil {
 			return fmt.Errorf("could not delete managed resource containing shoot webhooks for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
@@ -538,6 +538,10 @@ func (a *actuator) deleteControlPlane(
 	}
 
 	return nil
+}
+
+func (a *actuator) hasShootWebhooks(shoot *gardencorev1beta1.Shoot) bool {
+	return a.atomicShootWebhookConfig != nil && !v1beta1helper.IsShootAutonomous(shoot)
 }
 
 // computeChecksums computes and returns all needed checksums. This includes the checksums for the given deployed secrets,

@@ -232,7 +232,7 @@ var _ = Describe("Certificates tests", func() {
 			Expect(webhookOptions.Complete()).To(Succeed())
 			webhookConfig := webhookOptions.Completed()
 			webhookConfig.Clock = fakeClock
-			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil)
+			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			defaultServer, ok = mgr.GetWebhookServer().(*webhook.DefaultServer)
@@ -427,7 +427,7 @@ var _ = Describe("Certificates tests", func() {
 			Expect(webhookOptions.Complete()).To(Succeed())
 			webhookConfig := webhookOptions.Completed()
 			webhookConfig.Clock = fakeClock
-			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil)
+			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr, nil, false)
 			Expect(err).NotTo(HaveOccurred())
 
 			defaultServer, ok = mgr.GetWebhookServer().(*webhook.DefaultServer)
