@@ -79,5 +79,31 @@ var _ = Describe("Handler", func() {
 				Expect(extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig).To(PointTo(BeTrue()))
 			})
 		})
+
+		Context("primary defaulting", func() {
+			It("should default the primary field to true", func() {
+				Expect(handler.Default(ctx, extension)).To(Succeed())
+				Expect(extension.Spec.Resources).To(ConsistOf(
+					gardencorev1beta1.ControllerResource{
+						Kind:    "Worker",
+						Type:    "test",
+						Primary: ptr.To(true),
+					},
+				))
+			})
+
+			It("should not overwrite the primary field", func() {
+				extension.Spec.Resources[0].Primary = ptr.To(false)
+
+				Expect(handler.Default(ctx, extension)).To(Succeed())
+				Expect(extension.Spec.Resources).To(ConsistOf(
+					gardencorev1beta1.ControllerResource{
+						Kind:    "Worker",
+						Type:    "test",
+						Primary: ptr.To(false),
+					},
+				))
+			})
+		})
 	})
 })
