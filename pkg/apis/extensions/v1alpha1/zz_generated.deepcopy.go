@@ -1580,6 +1580,13 @@ func (in *NodeTemplate) DeepCopyInto(out *NodeTemplate) {
 			(*out)[key] = val.DeepCopy()
 		}
 	}
+	if in.VirtualCapacity != nil {
+		in, out := &in.VirtualCapacity, &out.VirtualCapacity
+		*out = make(v1.ResourceList, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val.DeepCopy()
+		}
+	}
 	return
 }
 
