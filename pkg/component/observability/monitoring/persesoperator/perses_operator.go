@@ -29,6 +29,8 @@ var TimeoutWaitForManagedResource = 5 * time.Minute
 type Values struct {
 	// Image defines the container image of perses-operator.
 	Image string
+	// PriorityClassName is the name of the priority class for the deployment.
+	PriorityClassName string
 }
 
 // New creates a new instance of DeployWaiter for the perses-operator.
@@ -51,6 +53,7 @@ func (p *persesOperator) Deploy(ctx context.Context) error {
 
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
+		p.deployment(),
 	)
 	if err != nil {
 		return err
