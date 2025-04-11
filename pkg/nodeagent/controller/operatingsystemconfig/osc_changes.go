@@ -61,8 +61,9 @@ type containerd struct {
 }
 
 type containerdRegistries struct {
-	Desired []extensionsv1alpha1.RegistryConfig `json:"desired,omitempty"`
-	Deleted []extensionsv1alpha1.RegistryConfig `json:"deleted,omitempty"`
+	UpstreamsToProbe []string                            `json:"upstreamsToProbe,omitempty"`
+	Desired          []extensionsv1alpha1.RegistryConfig `json:"desired,omitempty"`
+	Deleted          []extensionsv1alpha1.RegistryConfig `json:"deleted,omitempty"`
 }
 
 // persist the operatingSystemConfigChanges to disk. persist() requires the caller to ensure no concurrent actions are
