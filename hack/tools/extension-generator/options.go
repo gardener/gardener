@@ -14,6 +14,10 @@ import (
 )
 
 // Options contain the generate configuration.
+// `Extension` API fields are not supposed to be added as command line options.
+// Instead, an opinionated value can be set per component category.
+// Further adjustments can be made by the consumer via Kustomize or similar tools.
+// The OCI repository values are an exception, since they are usually calculated just before the example is generated (e.g. in the scope of a release process).
 type Options struct {
 	ExtensionName       string
 	ProviderType        string
