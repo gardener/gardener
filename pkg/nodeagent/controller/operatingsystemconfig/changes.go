@@ -297,19 +297,29 @@ func collectAllFiles(osc *extensionsv1alpha1.OperatingSystemConfig) []extensions
 }
 
 func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1alpha1.RegistryConfig) containerdRegistries {
-	r := containerdRegistries{
-		Desired: newRegistries,
+	var r containerdRegistries
+
+	for _, oldRegistry := range oldRegistries {
+		if !slices.ContainsFunc(newRegistries, func(newRegistry extensionsv1alpha1.RegistryConfig) bool {
+			return oldRegistry.Upstream == newRegistry.Upstream
+		}) {
+			r.Deleted = append(r.Deleted, oldRegistry)
+		}
 	}
 
-	upstreamsInUse := sets.New[string]()
-	for _, registryConfig := range r.Desired {
-		upstreamsInUse.Insert(registryConfig.Upstream)
+	for _, newRegistry := range newRegistries {
+		if ptr.Deref(newRegistry.ReadinessProbe, false) {
+			oldRegistryIndex := slices.IndexFunc(oldRegistries, func(oldRegistry extensionsv1alpha1.RegistryConfig) bool {
+				return oldRegistry.Upstream == newRegistry.Upstream
+			})
+			if oldRegistryIndex != -1 && apiequality.Semantic.DeepEqual(oldRegistries[oldRegistryIndex], newRegistry) {
+				// suppress host probing if no changes are detected
+				newRegistry.ReadinessProbe = ptr.To(false)
+			}
+		}
+
+		r.Desired = append(r.Desired, newRegistry)
 	}
-
-	r.Deleted = slices.DeleteFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
-		return upstreamsInUse.Has(config.Upstream)
-	})
-
 	return r
 }
 
