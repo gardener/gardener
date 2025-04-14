@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	nodelocaldns "github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -103,6 +104,18 @@ func (m *MockInterface) SetIPFamilies(arg0 []v1beta1.IPFamily) {
 func (mr *MockInterfaceMockRecorder) SetIPFamilies(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIPFamilies", reflect.TypeOf((*MockInterface)(nil).SetIPFamilies), arg0)
+}
+
+// SetWorkerPools mocks base method.
+func (m *MockInterface) SetWorkerPools(arg0 []nodelocaldns.WorkerPool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetWorkerPools", arg0)
+}
+
+// SetWorkerPools indicates an expected call of SetWorkerPools.
+func (mr *MockInterfaceMockRecorder) SetWorkerPools(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkerPools", reflect.TypeOf((*MockInterface)(nil).SetWorkerPools), arg0)
 }
 
 // Wait mocks base method.
