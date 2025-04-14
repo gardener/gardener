@@ -54,6 +54,7 @@ func (p *persesOperator) Deploy(ctx context.Context) error {
 	resources, err := registry.AddAllAndSerialize(
 		p.serviceAccount(),
 		p.deployment(),
+		p.vpa(),
 	)
 	if err != nil {
 		return err
