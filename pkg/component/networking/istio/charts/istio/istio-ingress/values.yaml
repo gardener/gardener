@@ -23,6 +23,7 @@ serviceName: istio-ingressgateway
 ingressVersion: "1.25.1"
 #externalTrafficPolicy: Cluster
 replicas: 2
+cpuRequests: 300m
 minReplicas: 2
 maxReplicas: 9
 enforceSpreadAcrossHosts: false

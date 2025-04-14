@@ -63,8 +63,9 @@ var _ = Describe("istiod", func() {
 
 		renderer chartrenderer.Interface
 
-		minReplicas = 2
-		maxReplicas = 9
+		expectedCPURequests string
+		minReplicas         = 2
+		maxReplicas         = 9
 
 		externalTrafficPolicy corev1.ServiceExternalTrafficPolicy
 
@@ -202,7 +203,8 @@ var _ = Describe("istiod", func() {
 
 		istioIngressDeployment = func(replicas *int) string {
 			data, _ := os.ReadFile("./test_charts/ingress_deployment.yaml")
-			return strings.ReplaceAll(string(data), "<REPLICAS>", strconv.Itoa(ptr.Deref(replicas, 2)))
+			str := strings.ReplaceAll(string(data), "<REPLICAS>", strconv.Itoa(ptr.Deref(replicas, 2)))
+			return strings.ReplaceAll(str, "<CPU_REQUESTS>", expectedCPURequests)
 		}
 
 		istioIngressServiceMonitor = func() string {
@@ -257,6 +259,7 @@ var _ = Describe("istiod", func() {
 		labels = map[string]string{"foo": "bar"}
 		networkLabels = map[string]string{"to-target": "allowed"}
 		expectAPIServerTLSTermination = false
+		expectedCPURequests = "300m"
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.31.1"})
@@ -749,6 +752,7 @@ var _ = Describe("istiod", func() {
 		Context("With IstioTLSTermination feature gate enabled", func() {
 			BeforeEach(func() {
 				expectAPIServerTLSTermination = true
+				expectedCPURequests = "500m"
 				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.IstioTLSTermination, true))
 			})
 
@@ -760,6 +764,7 @@ var _ = Describe("istiod", func() {
 		Context("With IstioTLSTermination feature gate disabled but with shoots still using the feature", func() {
 			BeforeEach(func() {
 				expectAPIServerTLSTermination = true
+				expectedCPURequests = "500m"
 
 				envoyFilter := istionetworkingv1alpha3.EnvoyFilter{
 					ObjectMeta: metav1.ObjectMeta{
