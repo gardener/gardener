@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -225,9 +224,8 @@ var _ = Describe("NodeLocalDNS", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
-			Image:             image,
-			KubernetesVersion: semver.MustParse("1.31.1"),
-			IPFamilies:        []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+			Image:      image,
+			IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 		}
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
