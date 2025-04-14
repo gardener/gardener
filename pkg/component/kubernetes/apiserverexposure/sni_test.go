@@ -53,6 +53,7 @@ var _ = Describe("#SNI", func() {
 		istioTLSTermination         bool
 		hosts                       []string
 		hostName                    string
+		connectionUpgradeHostName   string
 		wildcardConfiguration       *WildcardConfiguration
 		wildcardHosts               []string
 		wildcardTLSSecret           corev1.Secret
@@ -94,6 +95,7 @@ var _ = Describe("#SNI", func() {
 		istioTLSTermination = false
 		hosts = []string{"foo.bar"}
 		hostName = "kube-apiserver." + namespace + ".svc.cluster.local"
+		connectionUpgradeHostName = "kube-apiserver-connection-upgrade." + namespace + ".svc.cluster.local"
 		wildcardConfiguration = nil
 		wildcardHosts = []string{"foo.wildcard", "bar.wildcard"}
 		wildcardTLSSecret = corev1.Secret{
@@ -490,7 +492,7 @@ var _ = Describe("#SNI", func() {
 				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
 					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
 					CredentialName: namespace + "-kube-apiserver-istio-mtls",
-					Sni:            expectedDestinationRule.Spec.Host,
+					Sni:            "kubernetes.default.svc.cluster.local",
 				}
 
 				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
@@ -501,6 +503,25 @@ var _ = Describe("#SNI", func() {
 
 				expectedVirtualService.Spec.Tls = nil
 				expectedVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+					{
+						Name: "connection-upgrade",
+						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+							{
+								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Upgrade":    {},
+								},
+							},
+						},
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: connectionUpgradeHostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
 					{
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
@@ -536,7 +557,7 @@ var _ = Describe("#SNI", func() {
 				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
 					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
 					CredentialName: namespace + "-kube-apiserver-istio-mtls",
-					Sni:            expectedDestinationRule.Spec.Host,
+					Sni:            "kubernetes.default.svc.cluster.local",
 				}
 
 				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
@@ -560,6 +581,25 @@ var _ = Describe("#SNI", func() {
 
 				expectedVirtualService.Spec.Tls = nil
 				expectedVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+					{
+						Name: "connection-upgrade",
+						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+							{
+								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Upgrade":    {},
+								},
+							},
+						},
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: connectionUpgradeHostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
 					{
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
@@ -598,7 +638,7 @@ var _ = Describe("#SNI", func() {
 				expectedDestinationRule.Spec.TrafficPolicy.Tls = &istioapinetworkingv1beta1.ClientTLSSettings{
 					Mode:           istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE,
 					CredentialName: namespace + "-kube-apiserver-istio-mtls",
-					Sni:            expectedDestinationRule.Spec.Host,
+					Sni:            "kubernetes.default.svc.cluster.local",
 				}
 
 				expectedGateway.Spec.Servers[0].Port.Protocol = "HTTPS"
@@ -617,6 +657,25 @@ var _ = Describe("#SNI", func() {
 				expectedVirtualService.Spec.Tls = nil
 				expectedVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
 					{
+						Name: "connection-upgrade",
+						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+							{
+								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Upgrade":    {},
+								},
+							},
+						},
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: connectionUpgradeHostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
+					{
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{
 								Destination: &istioapinetworkingv1beta1.Destination{
@@ -630,6 +689,25 @@ var _ = Describe("#SNI", func() {
 
 				expectedWildcardVirtualService.Spec.Tls = nil
 				expectedWildcardVirtualService.Spec.Http = []*istioapinetworkingv1beta1.HTTPRoute{
+					{
+						Name: "connection-upgrade",
+						Match: []*istioapinetworkingv1beta1.HTTPMatchRequest{
+							{
+								Headers: map[string]*istioapinetworkingv1beta1.StringMatch{
+									"Connection": {MatchType: &istioapinetworkingv1beta1.StringMatch_Exact{Exact: "Upgrade"}},
+									"Upgrade":    {},
+								},
+							},
+						},
+						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
+							{
+								Destination: &istioapinetworkingv1beta1.Destination{
+									Host: connectionUpgradeHostName,
+									Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+								},
+							},
+						},
+					},
 					{
 						Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{
 							{

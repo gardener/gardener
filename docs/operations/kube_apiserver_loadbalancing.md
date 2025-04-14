@@ -14,14 +14,8 @@ traffic within the cluster remains encrypted.
 
 This document is focused on the second mode.
 
-The minimum version of Kube API server (for virtual garden and shoot) is v1.31.0. Starting with this version the Kube API
-server uses the WebSocket protocol instead of SPDY for streaming APIs ([ref](https://kubernetes.io/blog/2024/08/20/websockets-transition/)).
-Envoy cannot upgrade the connection from HTTP to SPDY ([ref](https://github.com/envoyproxy/envoy/issues/36469)).  
-Thus, for shoots and gardens using lower versions L7 load balancing remains deactivated even when the feature gate is enabled.  
-On eligible shoots L7 load balancing is activated by default. However, it can be deactivated by annotating the shoot with
-`shoot.gardener.cloud/disable-istio-tls-termination: "true"`.  
-The same logic applies to `kubectl` tool. Thus, please use `kubectl` v1.31.0 or higher if you want to access a Kube API
-server with L7 load balancing.
+On seeds where the feature gate is activated L7 load balancing can still be deactivated for single shoots by annotating
+them with `shoot.gardener.cloud/disable-istio-tls-termination: "true"`.
 
 ## How it works
 
