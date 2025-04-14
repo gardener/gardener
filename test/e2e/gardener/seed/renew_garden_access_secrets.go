@@ -5,12 +5,15 @@
 package seed
 
 import (
+	"context"
+	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
@@ -21,37 +24,45 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/test/e2e"
+	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/managedseed"
 )
 
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
-	Describe("Garden Cluster Access For Seed Components", func() {
+	Describe("Garden Cluster Access For Seed Components", Ordered, func() {
 		var (
-			seed             *gardencorev1beta1.Seed
+			s                *SeedContext
 			seedNamespace    string
 			gardenAccessName string
-
-			accessSecret *corev1.Secret
+			accessSecret     *corev1.Secret
 		)
 
-		BeforeEach(func() {
+		BeforeTestSetup(func() {
+			testContext := NewTestContext()
+
 			// Find the first seed which is not "e2e-managedseed". Seed name differs between test scenarios, e.g., non-ha/ha.
 			// However, this test should not use "e2e-managedseed", because it is created and deleted in a separate e2e test.
-			// Thus, it might be already gone before the garden cluster access was renewed.
+			// This e2e test already includes tests for the "Renew gardenlet kubeconfig" functionality. Additionally,
+			// it might be already gone before the kubeconfig was renewed.
 			seedList := &gardencorev1beta1.SeedList{}
-			Expect(testClient.List(ctx, seedList)).To(Succeed())
-			for _, s := range seedList.Items {
-				if s.Name != managedseed.GetSeedName() {
-					seed = s.DeepCopy()
-					break
-				}
+			if err := testContext.GardenClient.List(context.Background(), seedList); err != nil {
+				testContext.Log.Error(err, "Failed to list seeds")
+				panic(err)
 			}
-			log.Info("Renewing garden cluster access", "seedName", seed.Name)
 
-			seedNamespace = gardenerutils.ComputeGardenNamespace(seed.Name)
+			seedIndex := slices.IndexFunc(seedList.Items, func(item gardencorev1beta1.Seed) bool {
+				return item.Name != managedseed.GetSeedName()
+			})
 
+			if seedIndex == -1 {
+				panic("failed to find applicable seed")
+			}
+
+			s = testContext.ForSeed(&seedList.Items[seedIndex])
+
+			seedNamespace = gardenerutils.ComputeGardenNamespace(s.Seed.Name)
 			gardenAccessName = "test-" + utils.ComputeSHA256Hex([]byte(uuid.NewUUID()))[:8]
-
 			accessSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      gardenAccessName,
@@ -67,29 +78,78 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			}
 		})
 
-		It("should request tokens for garden access secrets", func() {
-			By("Create garden access secret")
-			Expect(testClient.Create(ctx, accessSecret)).To(Succeed())
-			log.Info("Created garden access secret for test", "secret", client.ObjectKeyFromObject(accessSecret))
-
-			DeferCleanup(func() {
-				By("Delete garden access secret")
-				Expect(testClient.Delete(ctx, accessSecret)).To(Succeed())
-			})
-
-			createRBACForGardenAccessServiceAccount(gardenAccessName, seedNamespace)
-
-			By("Wait for token to be populated in garden access secret")
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
-				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(BeEmpty())))
+		It("Should create garden access secret", func(ctx SpecContext) {
+			Eventually(ctx, func() error {
+				if err := s.GardenClient.Create(ctx, accessSecret); !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+				return StopTrying("access secret already exists")
 			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
 
-			By("Use token to access garden")
-			gardenAccessConfig := rest.CopyConfig(restConfig)
+		It("Should create RBAC role for service account", func(ctx SpecContext) {
+			role := &rbacv1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gardenAccessName,
+					Namespace: seedNamespace,
+				},
+				Rules: []rbacv1.PolicyRule{{
+					APIGroups:     []string{""},
+					Resources:     []string{"serviceaccounts"},
+					Verbs:         []string{"get"},
+					ResourceNames: []string{gardenAccessName},
+				}},
+			}
+
+			Eventually(ctx, func() error {
+				if err := s.GardenClient.Create(ctx, role); !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+				return StopTrying("role already exists")
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("Should create RoleBinding for service account", func(ctx SpecContext) {
+			roleBinding := &rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      gardenAccessName,
+					Namespace: seedNamespace,
+				},
+				Subjects: []rbacv1.Subject{{
+					Kind: rbacv1.ServiceAccountKind,
+					Name: gardenAccessName,
+				}},
+				RoleRef: rbacv1.RoleRef{
+					APIGroup: rbacv1.GroupName,
+					Kind:     "Role",
+					Name:     gardenAccessName,
+				},
+			}
+
+			Eventually(ctx, func() error {
+				if err := s.GardenClient.Create(ctx, roleBinding); !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+				return StopTrying("rolebinding already exists")
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		var accessSecretBefore *corev1.Secret
+		It("Should wait for to be populated in garden access secret", func(ctx SpecContext) {
+			Eventually(func(g Gomega) {
+				g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
+				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(BeEmpty())))
+				accessSecretBefore = accessSecret.DeepCopy()
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("Should initialize client from garden access secret", func(ctx SpecContext) {
+			gardenAccessConfig := rest.CopyConfig(s.GardenClientSet.RESTConfig())
+
 			// drop kind admin client certificate so that we can test other credentials
 			gardenAccessConfig.CertData = nil
 			gardenAccessConfig.KeyData = nil
+
 			// use the requested token and create a client
 			gardenAccessConfig.BearerToken = string(accessSecret.Data[resourcesv1alpha1.DataKeyToken])
 			gardenAccessClient, err := client.New(gardenAccessConfig, client.Options{})
@@ -98,104 +158,35 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			Eventually(func(g Gomega) {
 				g.Expect(gardenAccessClient.Get(ctx, client.ObjectKey{Name: gardenAccessName, Namespace: seedNamespace}, &corev1.ServiceAccount{})).To(Succeed())
 			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		ItShouldAnnotateSeed(s, map[string]string{
+			v1beta1constants.GardenerOperation: v1beta1constants.SeedOperationRenewGardenAccessSecrets,
 		})
 
-		It("should renew all garden access secrets when triggered by annotation", func() {
-			By("Create garden access secret")
-			Expect(testClient.Create(ctx, accessSecret)).To(Succeed())
-			log.Info("Created garden access secret for test", "secret", client.ObjectKeyFromObject(accessSecret))
+		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Seed)
 
-			DeferCleanup(func() {
-				By("Delete garden access secret")
-				Expect(testClient.Delete(ctx, accessSecret)).To(Succeed())
-			})
-
-			By("Wait for token to be populated in garden access secret")
-			var accessSecretBefore *corev1.Secret
+		It("Should wait for token to be renewed in garden access secret", func(ctx SpecContext) {
 			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
-				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(BeEmpty())))
-				accessSecretBefore = accessSecret.DeepCopy()
-			}).Should(Succeed())
-
-			By("Trigger renewal of garden access secrets")
-			patch := client.MergeFrom(seed.DeepCopy())
-			metav1.SetMetaDataAnnotation(&seed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.SeedOperationRenewGardenAccessSecrets)
-			Eventually(func() error {
-				return testClient.Patch(ctx, seed, patch)
-			}).Should(Succeed())
-
-			By("Wait for operation annotation to be removed from Seed")
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
-				g.Expect(seed.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
-			}).Should(Succeed())
-
-			By("Wait for token to be renewed in garden access secret")
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
+				g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(accessSecret), accessSecret)).To(Succeed())
 				g.Expect(accessSecret.Data).To(HaveKeyWithValue(resourcesv1alpha1.DataKeyToken, Not(Equal(accessSecretBefore.Data[resourcesv1alpha1.DataKeyToken]))))
 				g.Expect(accessSecret.Annotations).To(HaveKeyWithValue(resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, Not(Equal(accessSecretBefore.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]))))
 			}).Should(Succeed())
-		})
+		}, SpecTimeout(time.Minute))
 
 		Describe("usage in provider-local", func() {
-			It("should be allowed via seed authorizer to annotate its own seed", func() {
+			It("should be allowed via seed authorizer to annotate its own seed", func(ctx SpecContext) {
 				const testAnnotation = "provider-local-e2e-test-garden-access"
 
 				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seed), seed)).To(Succeed())
+					g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Seed), s.Seed)).To(Succeed())
 
-					g.Expect(seed.Annotations).To(HaveKey(testAnnotation))
-					g.Expect(time.Parse(time.RFC3339, seed.Annotations[testAnnotation])).
-						Should(BeTemporally(">", seed.CreationTimestamp.UTC()),
-							"Timestamp in %s annotation on seed %s should be after creationTimestamp of seed", testAnnotation, seed.Name)
+					g.Expect(s.Seed.Annotations).To(HaveKey(testAnnotation))
+					g.Expect(time.Parse(time.RFC3339, s.Seed.Annotations[testAnnotation])).
+						Should(BeTemporally(">", s.Seed.CreationTimestamp.UTC()),
+							"Timestamp in %s annotation on seed %s should be after creationTimestamp of seed", testAnnotation, s.Seed.Name)
 				}).Should(Succeed())
-			})
+			}, SpecTimeout(time.Minute))
 		})
 	})
 })
-
-func createRBACForGardenAccessServiceAccount(name, namespace string) {
-	By("Create RBAC resources for ServiceAccount")
-	role := &rbacv1.Role{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Rules: []rbacv1.PolicyRule{{
-			APIGroups:     []string{""},
-			Resources:     []string{"serviceaccounts"},
-			Verbs:         []string{"get"},
-			ResourceNames: []string{name},
-		}},
-	}
-	Expect(testClient.Create(ctx, role)).To(Succeed())
-	log.Info("Created role for test", "role", client.ObjectKeyFromObject(role))
-
-	DeferCleanup(func() {
-		Expect(testClient.Delete(ctx, role)).To(Succeed())
-	})
-
-	roleBinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Subjects: []rbacv1.Subject{{
-			Kind: rbacv1.ServiceAccountKind,
-			Name: name,
-		}},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     name,
-		},
-	}
-	Expect(testClient.Create(ctx, roleBinding)).To(Succeed())
-	log.Info("Created role binding for test", "roleBinding", client.ObjectKeyFromObject(roleBinding))
-
-	DeferCleanup(func() {
-		Expect(testClient.Delete(ctx, roleBinding)).To(Succeed())
-	})
-}
