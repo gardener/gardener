@@ -17,6 +17,8 @@ patches:
             value: https://europe-docker.pkg.dev
           - name: REGISTRY_HTTP_ADDR
             value: :5008
+          - name: OTEL_TRACES_EXPORTER
+            value: none
       - op: replace
         path: /spec/template/spec/containers/0/ports/0/containerPort
         value: 5008
