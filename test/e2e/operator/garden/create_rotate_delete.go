@@ -7,7 +7,6 @@ package garden
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -177,7 +176,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		// Also see test/e2e/gardener/shoot/create_rotate_delete.go, where some of the verifiers already got refactored to use separate "It" statements
 		// TODO(Wieneo): Refactor and consolidate verifiers and verifier interface
 		for _, vv := range v {
-			It(fmt.Sprintf("Verify before for %s", reflect.TypeOf(vv).String()), func(ctx SpecContext) {
+			It(fmt.Sprintf("Verify before for %T", vv), func(ctx SpecContext) {
 				vv.Before(ctx)
 			}, SpecTimeout(5*time.Minute))
 		}
@@ -198,7 +197,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		ItShouldWaitForGardenToBeReconciledAndHealthy(s)
 
 		for _, vv := range v {
-			It(fmt.Sprintf("Verify after prepared for %s", reflect.TypeOf(vv).String()), func(ctx SpecContext) {
+			It(fmt.Sprintf("Verify after prepared for %T", vv), func(ctx SpecContext) {
 				vv.AfterPrepared(ctx)
 			}, SpecTimeout(5*time.Minute))
 		}
@@ -219,14 +218,14 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 		ItShouldWaitForGardenToBeReconciledAndHealthy(s)
 
 		for _, vv := range v {
-			It(fmt.Sprintf("Verify after completed for %s", reflect.TypeOf(vv).String()), func(ctx SpecContext) {
+			It(fmt.Sprintf("Verify after completed for %T", vv), func(ctx SpecContext) {
 				vv.AfterCompleted(ctx)
 			}, SpecTimeout(5*time.Minute))
 		}
 
 		for _, vv := range v {
 			if cleanup, ok := vv.(rotationutils.CleanupVerifier); ok {
-				It(fmt.Sprintf("Cleanup for %s", reflect.TypeOf(vv).String()), func(ctx SpecContext) {
+				It(fmt.Sprintf("Cleanup for %T", vv), func(ctx SpecContext) {
 					cleanup.Cleanup(ctx)
 				})
 			}
