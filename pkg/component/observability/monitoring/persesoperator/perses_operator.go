@@ -55,6 +55,8 @@ func (p *persesOperator) Deploy(ctx context.Context) error {
 		p.serviceAccount(),
 		p.deployment(),
 		p.vpa(),
+		p.clusterRole(),
+		p.clusterRoleBinding(),
 	)
 	if err != nil {
 		return err

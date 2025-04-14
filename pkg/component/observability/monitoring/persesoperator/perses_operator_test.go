@@ -13,6 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -54,9 +55,11 @@ var _ = Describe("PersesOperator", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceAccount *corev1.ServiceAccount
-		deployment     *appsv1.Deployment
-		vpa            *vpaautoscalingv1.VerticalPodAutoscaler
+		serviceAccount     *corev1.ServiceAccount
+		deployment         *appsv1.Deployment
+		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
+		clusterRole        *rbacv1.ClusterRole
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -201,6 +204,91 @@ var _ = Describe("PersesOperator", func() {
 				},
 			},
 		}
+
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "perses-operator",
+				Labels: map[string]string{"app": "perses-operator"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{appsv1.GroupName},
+					Resources: []string{"deployments", "statefulsets"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "patch"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"services", "configmaps"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"perses"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"perses/finalizers"},
+					Verbs:     []string{"update"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"perses/status"},
+					Verbs:     []string{"get", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesdashboards"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesdashboards/finalizers"},
+					Verbs:     []string{"update"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesdashboards/status"},
+					Verbs:     []string{"get", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesdatasources"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesdatasources/finalizers"},
+					Verbs:     []string{"update"},
+				},
+				{
+					APIGroups: []string{"perses.dev"},
+					Resources: []string{"persesdatasources/status"},
+					Verbs:     []string{"get", "patch", "update"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "perses-operator",
+				Labels: map[string]string{"app": "perses-operator"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "perses-operator",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "perses-operator",
+				Namespace: namespace,
+			}},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -262,6 +350,8 @@ var _ = Describe("PersesOperator", func() {
 					serviceAccount,
 					deployment,
 					vpa,
+					clusterRole,
+					clusterRoleBinding,
 				))
 			})
 		})
