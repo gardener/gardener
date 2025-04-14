@@ -567,6 +567,28 @@ Some controllers may only be instantiated or added later, because they need the 
 Gardener relies on extensions to provide various capabilities, such as supporting cloud providers.
 This controller automates the management of extensions by managing all necessary resources in the runtime and virtual garden clusters.
 
+#### [`Extension Care` Reconciler](../../pkg/operator/controller/extension/care)
+
+This reconciler performs three "care" actions related to `Extensions`s.
+
+It maintains the following conditions:
+
+- `ControllerInstallationsHealthy`: The conditions of the `ControllerInstallation`s which belong to this extension are checked (e.g., `Healthy`).
+- `RuntimeHealthy`: The conditions of the `ManagedResource`s applied to the runtime cluster are checked (e.g., `ResourcesApplied`).
+- `AdmissionHealthy`: The conditions of the `ManagedResource`s applied to the runtime and the virtual cluster are checked (e.g., `ResourcesApplied`).
+
+If all checks for a certain condition are succeeded, then its `status` will be set to `True`.
+Otherwise, it will be set to `False` or `Progressing`.
+
+If at least one check fails and there is threshold configuration for the conditions (in `.controllers.extensionCare.conditionThresholds`), then the status will be set:
+
+- to `Progressing` if it was `True` before.
+- to `Progressing` if it was `Progressing` before and the `lastUpdateTime` of the condition does not exceed the configured threshold duration yet.
+- to `False` if it was `Progressing` before and the `lastUpdateTime` of the condition exceeds the configured threshold duration.
+
+The condition thresholds can be used to prevent reporting issues too early just because there is a rollout or a short disruption.
+Only if the unhealthiness persists for at least the configured threshold duration, then the issues will be reported (by setting the status to `False`).
+
 #### [`Main` Reconciler](../../pkg/operator/controller/extension/extension)
 
 Currently, this logic handles the following scenarios:
