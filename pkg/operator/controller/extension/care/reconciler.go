@@ -23,11 +23,6 @@ import (
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 )
 
-var (
-	// NewHealthCheck is used to create a new Health check instance.
-	NewHealthCheck = defaultNewHealthCheck
-)
-
 // Reconciler reconciles Extension resources and executes health check operations.
 type Reconciler struct {
 	RuntimeClient   client.Client
@@ -63,7 +58,7 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, request reconcile.R
 	// Initialize conditions based on the current status.
 	extensionConditions := NewExtensionConditions(r.Clock, extension)
 
-	updatedConditions := NewHealthCheck(
+	updatedConditions := NewHealth(
 		extension,
 		r.RuntimeClient,
 		r.VirtualClient,

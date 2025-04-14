@@ -512,12 +512,12 @@ var _ = Describe("Extension health", func() {
 			})
 
 			It("should only initialize missing conditions", func() {
-				extension.Status.Conditions = append(extension.Status.Conditions, gardencorev1beta1.Condition{Type: "Healthy"}, gardencorev1beta1.Condition{Type: "Foo"})
+				extension.Status.Conditions = append(extension.Status.Conditions, gardencorev1beta1.Condition{Type: "RuntimeHealthy"}, gardencorev1beta1.Condition{Type: "Foo"})
 				conditions := NewExtensionConditions(fakeClock, extension)
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
-					OfType("Healthy"),
+					OfType("RuntimeHealthy"),
 					beConditionWithStatusReasonAndMessage("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
@@ -529,7 +529,7 @@ var _ = Describe("Extension health", func() {
 
 				Expect(conditions.ConvertToSlice()).To(HaveExactElements(
 					OfType("ControllerInstallationsHealthy"),
-					OfType("Healthy"),
+					OfType("RuntimeHealthy"),
 					OfType("AdmissionHealthy"),
 				))
 			})
@@ -539,7 +539,7 @@ var _ = Describe("Extension health", func() {
 			It("should return the expected condition types", func() {
 				Expect(ConditionTypes()).To(HaveExactElements(
 					gardencorev1beta1.ConditionType("ControllerInstallationsHealthy"),
-					gardencorev1beta1.ConditionType("Healthy"),
+					gardencorev1beta1.ConditionType("RuntimeHealthy"),
 					gardencorev1beta1.ConditionType("AdmissionHealthy"),
 				))
 			})

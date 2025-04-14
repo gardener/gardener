@@ -19,7 +19,7 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	"github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	healthchecker "github.com/gardener/gardener/pkg/utils/kubernetes/health/checker"
 )
 
@@ -59,7 +59,7 @@ func (h *health) Check(ctx context.Context, conditions ExtensionConditions) []ga
 	var taskFns []flow.TaskFn
 
 	if conditions.controllerInstallationsHealthy != nil {
-		taskFns = append(taskFns, func(_ context.Context) error {
+		taskFns = append(taskFns, func(ctx context.Context) error {
 			newControllerInstallationsCondition, err := h.checkControllerInstallations(ctx, *conditions.controllerInstallationsHealthy)
 			conditions.controllerInstallationsHealthy = ptr.To(v1beta1helper.NewConditionOrError(h.clock, *conditions.controllerInstallationsHealthy, newControllerInstallationsCondition, err))
 			return nil
@@ -67,15 +67,15 @@ func (h *health) Check(ctx context.Context, conditions ExtensionConditions) []ga
 	}
 
 	if conditions.extensionHealthy != nil {
-		taskFns = append(taskFns, func(_ context.Context) error {
-			newExtensionComponentsCondition, err := h.checkExtension(ctx, *conditions.extensionHealthy)
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			newExtensionComponentsCondition, err := h.checkRuntimeExtension(ctx, *conditions.extensionHealthy)
 			conditions.extensionHealthy = ptr.To(v1beta1helper.NewConditionOrError(h.clock, *conditions.extensionHealthy, newExtensionComponentsCondition, err))
 			return nil
 		})
 	}
 
 	if conditions.extensionAdmissionHealthy != nil {
-		taskFns = append(taskFns, func(_ context.Context) error {
+		taskFns = append(taskFns, func(ctx context.Context) error {
 			newExtensionAdmissionComponentsCondition, err := h.checkExtensionAdmission(ctx, *conditions.extensionAdmissionHealthy)
 			conditions.extensionAdmissionHealthy = ptr.To(v1beta1helper.NewConditionOrError(h.clock, *conditions.extensionAdmissionHealthy, newExtensionAdmissionComponentsCondition, err))
 			return nil
@@ -104,9 +104,9 @@ func (h *health) checkControllerInstallations(ctx context.Context, condition gar
 	return ptr.To(v1beta1helper.UpdatedConditionWithClock(h.clock, condition, gardencorev1beta1.ConditionTrue, "ControllerInstallationsRunning", "All controller installations are healthy.")), nil
 }
 
-func (h *health) checkExtension(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+func (h *health) checkRuntimeExtension(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	managedResource := &resourcesv1alpha1.ManagedResource{}
-	managedResourceName := gardener.ExtensionRuntimeManagedResourceName(h.extension.Name)
+	managedResourceName := gardenerutils.ExtensionRuntimeManagedResourceName(h.extension.Name)
 
 	if err := h.runtimeClient.Get(ctx, client.ObjectKey{Namespace: h.gardenNamespace, Name: managedResourceName}, managedResource); err != nil {
 		return nil, fmt.Errorf("failed to get managed resource %s: %w", managedResourceName, err)
@@ -121,8 +121,8 @@ func (h *health) checkExtension(ctx context.Context, condition gardencorev1beta1
 
 func (h *health) checkExtensionAdmission(ctx context.Context, condition gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
 	managedResourceNames := []string{
-		gardener.ExtensionAdmissionVirtualManagedResourceName(h.extension.Name),
-		gardener.ExtensionAdmissionRuntimeManagedResourceName(h.extension.Name),
+		gardenerutils.ExtensionAdmissionVirtualManagedResourceName(h.extension.Name),
+		gardenerutils.ExtensionAdmissionRuntimeManagedResourceName(h.extension.Name),
 	}
 
 	for _, managedResourceName := range managedResourceNames {
@@ -179,11 +179,11 @@ func ConditionTypes() []gardencorev1beta1.ConditionType {
 func NewExtensionConditions(clock clock.Clock, extension *operatorv1alpha1.Extension) ExtensionConditions {
 	var extensionConditions ExtensionConditions
 
-	if gardener.IsControllerInstallationInVirtualRequired(extension) {
+	if gardenerutils.IsControllerInstallationInVirtualRequired(extension) {
 		extensionConditions.controllerInstallationsHealthy = ptr.To(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ControllerInstallationsHealthy))
 	}
 
-	if gardener.IsExtensionInRuntimeRequired(extension) {
+	if gardenerutils.IsExtensionInRuntimeRequired(extension) {
 		extensionConditions.extensionHealthy = ptr.To(v1beta1helper.GetOrInitConditionWithClock(clock, extension.Status.Conditions, operatorv1alpha1.ExtensionHealthy))
 	}
 

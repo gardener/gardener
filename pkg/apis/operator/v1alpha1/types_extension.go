@@ -146,7 +146,7 @@ const (
 	// ControllerInstallationsHealthy is a constant for a condition type indicating the health of the controller installations.
 	ControllerInstallationsHealthy = "ControllerInstallationsHealthy"
 	// ExtensionHealthy is a constant for a condition type indicating the extension's health.
-	ExtensionHealthy gardencorev1beta1.ConditionType = "Healthy"
+	ExtensionHealthy gardencorev1beta1.ConditionType = "RuntimeHealthy"
 	// ExtensionAdmissionHealthy is a constant for a condition type indicating the runtime extension admission's health.
 	ExtensionAdmissionHealthy gardencorev1beta1.ConditionType = "AdmissionHealthy"
 )
