@@ -68,6 +68,8 @@ type Interface interface {
 	SetClusterDNS([]string)
 	SetDNSServers([]string)
 	SetIPFamilies([]gardencorev1beta1.IPFamily)
+	// SetWorkerPools sets the WorkerPools field in the Values.
+	SetWorkerPools([]WorkerPool)
 }
 
 // Values is a set of configuration values for the node-local-dns component.
@@ -82,10 +84,18 @@ type Values struct {
 	ClusterDNS []string
 	// DNSServer are the ClusterIPs of kube-system/coredns Service
 	DNSServers []string
-	// KubernetesVersion is the Kubernetes version of the Shoot.
-	KubernetesVersion *semver.Version
 	// IPFamilies specifies the IP protocol versions to use for node local dns.
 	IPFamilies []gardencorev1beta1.IPFamily
+	// WorkerPools is a list of worker pools for which the node-local-dns DaemonSets should be deployed.
+	WorkerPools []WorkerPool
+}
+
+// WorkerPool contains configuration for the kube-proxy deployment for this specific worker pool.
+type WorkerPool struct {
+	// Name is the name of the worker pool.
+	Name string
+	// KubernetesVersion is the Kubernetes version of the worker pool.
+	KubernetesVersion *semver.Version
 }
 
 // New creates a new instance of DeployWaiter for node-local-dns.
@@ -105,9 +115,14 @@ type nodeLocalDNS struct {
 	client    client.Client
 	namespace string
 	values    Values
+
+	serviceAccount *corev1.ServiceAccount
+	configMap      *corev1.ConfigMap
+	service        *corev1.Service
 }
 
 func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
+	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 	scrapeConfig := n.emptyScrapeConfig("")
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, scrapeConfig, func() error {
 		metav1.SetMetaDataLabel(&scrapeConfig.ObjectMeta, "prometheus", shoot.Label)
@@ -158,10 +173,29 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	data, err := n.computeResourcesData()
+	err := n.computeResourcesData()
 	if err != nil {
 		return err
 	}
+
+	daemonSets, vpas, err := n.computePoolResourcesData()
+	if err != nil {
+		return err
+	}
+
+	objects := []client.Object{n.serviceAccount, n.configMap, n.service}
+	for i := range daemonSets {
+		objects = append(objects, daemonSets[i])
+	}
+	for i := range vpas {
+		objects = append(objects, vpas[i])
+	}
+
+	data, err := registry.AddAllAndSerialize(objects...)
+	if err != nil {
+		return err
+	}
+
 	return managedresources.CreateForShoot(ctx, n.client, n.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
@@ -194,13 +228,12 @@ func (n *nodeLocalDNS) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, managedResourceName)
 }
 
-func (n *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
+func (n *nodeLocalDNS) computeResourcesData() error {
 	if n.getHealthAddress() == "" {
-		return nil, errors.New("empty IPVSAddress")
+		return errors.New("empty IPVSAddress")
 	}
 
 	var (
-		registry       = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns",
@@ -300,12 +333,26 @@ ip6.arpa:53 {
 				},
 			},
 		}
+	)
+	n.serviceAccount = serviceAccount
+	n.configMap = configMap
+	n.service = service
 
+	return nil
+}
+
+func (n *nodeLocalDNS) computePoolResourcesData() ([]*appsv1.DaemonSet, []*vpaautoscalingv1.VerticalPodAutoscaler, error) {
+	var (
 		maxUnavailable       = intstr.FromString("10%")
 		hostPathFileOrCreate = corev1.HostPathFileOrCreate
-		daemonSet            = &appsv1.DaemonSet{
+		vpas                 []*vpaautoscalingv1.VerticalPodAutoscaler
+		daemonSets           []*appsv1.DaemonSet
+	)
+
+	for _, pool := range n.values.WorkerPools {
+		daemonSet := &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "node-local-dns",
+				Name:      "node-local-dns-" + pool.Name,
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					labelKey:                                    nodelocaldnsconstants.LabelValue,
@@ -340,7 +387,7 @@ ip6.arpa:53 {
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName:  "system-node-critical",
-						ServiceAccountName: serviceAccount.Name,
+						ServiceAccountName: n.serviceAccount.Name,
 						HostNetwork:        true,
 						DNSPolicy:          corev1.DNSDefault,
 						SecurityContext: &corev1.PodSecurityContext{
@@ -360,6 +407,7 @@ ip6.arpa:53 {
 						},
 						NodeSelector: map[string]string{
 							v1beta1constants.LabelNodeLocalDNS: "true",
+							v1beta1constants.LabelWorkerPool:   pool.Name,
 						},
 						Containers: []corev1.Container{
 							{
@@ -466,7 +514,7 @@ ip6.arpa:53 {
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: configMap.Name,
+											Name: n.configMap.Name,
 										},
 										Items: []corev1.KeyToPath{
 											{
@@ -482,44 +530,38 @@ ip6.arpa:53 {
 				},
 			},
 		}
-		vpa *vpaautoscalingv1.VerticalPodAutoscaler
-	)
+		utilruntime.Must(references.InjectAnnotations(daemonSet))
+		daemonSets = append(daemonSets, daemonSet)
 
-	utilruntime.Must(references.InjectAnnotations(daemonSet))
-
-	if n.values.VPAEnabled {
-		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
-		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "node-local-dns",
-				Namespace: metav1.NamespaceSystem,
-			},
-			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "DaemonSet",
-					Name:       daemonSet.Name,
+		if n.values.VPAEnabled {
+			vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "node-local-dns-" + pool.Name,
+					Namespace: metav1.NamespaceSystem,
 				},
-				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
+				Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+					TargetRef: &autoscalingv1.CrossVersionObjectReference{
+						APIVersion: appsv1.SchemeGroupVersion.String(),
+						Kind:       "DaemonSet",
+						Name:       daemonSet.Name,
+					},
+					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+						UpdateMode: &vpaUpdateMode,
+					},
+					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+							ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+							ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+						}},
+					},
 				},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
-					}},
-				},
-			},
+			}
+			vpas = append(vpas, vpa)
 		}
 	}
 
-	return registry.AddAllAndSerialize(
-		serviceAccount,
-		configMap,
-		service,
-		daemonSet,
-		vpa,
-	)
+	return daemonSets, vpas, nil
 }
 
 func selectIPAddress(addresses []string, preferIPv6 bool) string {
@@ -565,7 +607,7 @@ func (n *nodeLocalDNS) forceTcpToClusterDNS() string {
 }
 
 func (n *nodeLocalDNS) forceTcpToUpstreamDNS() string {
-	if n.values.Config == nil || n.values.Config.ForceTCPToUpstreamDNS == nil || *n.values.Config.ForceTCPToUpstreamDNS {
+	if n.values.Config != nil && n.values.Config.ForceTCPToUpstreamDNS != nil && *n.values.Config.ForceTCPToUpstreamDNS {
 		return "force_tcp"
 	}
 	return "prefer_udp"
@@ -592,6 +634,10 @@ func (n *nodeLocalDNS) SetDNSServers(servers []string) {
 
 func (n *nodeLocalDNS) SetIPFamilies(ipfamilies []gardencorev1beta1.IPFamily) {
 	n.values.IPFamilies = ipfamilies
+}
+
+func (n *nodeLocalDNS) SetWorkerPools(pools []WorkerPool) {
+	n.values.WorkerPools = pools
 }
 
 func (n *nodeLocalDNS) getIPVSAddress() (ipvsAddress string) {
