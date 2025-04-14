@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/virtual/access"
 	virtualcluster "github.com/gardener/gardener/pkg/operator/controller/virtual/cluster"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 // AddToManagerFuncs returns all virtual garden cluster controllers for a registration via the controller registrar.

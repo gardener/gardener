@@ -13,7 +13,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 var _ = Describe("utils", func() {
@@ -259,7 +259,7 @@ baz`, spaces)).To(Equal(`foo
 				"bastions.operations.gardener.cloud",
 			}
 			filterFn = func(s string) bool {
-				return !gardenerutils.IsServedByGardenerAPIServer(s)
+				return !operator.IsServedByGardenerAPIServer(s)
 			}
 
 			result := FilterEntriesByFilterFn(entries, filterFn)
@@ -277,7 +277,7 @@ baz`, spaces)).To(Equal(`foo
 				"bastions.operations.gardener.cloud",
 			}
 
-			result := FilterEntriesByFilterFn(entries, gardenerutils.IsServedByGardenerAPIServer)
+			result := FilterEntriesByFilterFn(entries, operator.IsServedByGardenerAPIServer)
 			Expect(result).To(ConsistOf(
 				"shoots.core.gardener.cloud",
 				"bastions.operations.gardener.cloud",

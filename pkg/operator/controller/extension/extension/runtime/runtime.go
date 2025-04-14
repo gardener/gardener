@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/oci"
@@ -91,7 +91,7 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 		}
 	}
 
-	namespace := gardener.ExtensionRuntimeNamespaceName(extension.Name)
+	namespace := operator.ExtensionRuntimeNamespaceName(extension.Name)
 	if err := d.ensureNamespace(ctx, namespace, extension); err != nil {
 		return fmt.Errorf("failed ensuring namespace %q: %w", namespace, err)
 	}
@@ -101,7 +101,7 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 		return fmt.Errorf("failed rendering Helm chart %q: %w", extension.Spec.Deployment.ExtensionDeployment.Helm.OCIRepository.GetURL(), err)
 	}
 
-	mrName := gardener.ExtensionRuntimeManagedResourceName(extension.Name)
+	mrName := operator.ExtensionRuntimeManagedResourceName(extension.Name)
 	if err := managedresources.CreateForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName, false, renderedChart.AsSecretData()); err != nil {
 		return fmt.Errorf("failed creating ManagedResource: %w", err)
 	}
@@ -113,8 +113,8 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 }
 
 func (d *deployer) deleteResources(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
-	mrName := gardener.ExtensionRuntimeManagedResourceName(extension.Name)
-	namespace := gardener.ExtensionRuntimeNamespaceName(extension.Name)
+	mrName := operator.ExtensionRuntimeManagedResourceName(extension.Name)
+	namespace := operator.ExtensionRuntimeNamespaceName(extension.Name)
 
 	log.Info("Deleting extension ManagedResource for runtime cluster if present", "managedResource", client.ObjectKey{Name: mrName, Namespace: d.gardenNamespace})
 	if err := client.IgnoreNotFound(managedresources.DeleteForSeed(ctx, d.runtimeClientSet.Client(), d.gardenNamespace, mrName)); err != nil {

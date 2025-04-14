@@ -28,7 +28,7 @@ import (
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/operator/mapper"
 	"github.com/gardener/gardener/pkg/operator/predicate"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 // ControllerName is the name of this controller.

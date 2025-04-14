@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/admission"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/controllerregistration"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/runtime"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener/operator"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
