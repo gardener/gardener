@@ -77,7 +77,7 @@ spec:
         gpu: 0
         memory: 8Gi
       virtualCapacity: 
-        hc.hana.com/memory: 1234567
+        subdomain.domain.com/resource-name: 1234567
     labels:
       node.kubernetes.io/role: node
       worker.gardener.cloud/cri-name: containerd
@@ -124,7 +124,7 @@ The provider extension (respectively, machine-controller-manager) is still respo
 
 The `spec.pools[].nodeTemplate.capacity` field contains the resource information of the machine like `cpu`, `gpu`, and `memory`. This info is used by Cluster Autoscaler to generate `nodeTemplate` during scaling the `nodeGroup` from zero.
 
-The `spec.pools[].nodeTemplate.virtualCapacity` field contains the _virtual_ resource information associated with the machine and used to specify extended resources that are _virtual_ in nature (for specifying real, provisionable resources, `nodeTemplate.capacity` should be used). This will be applied to the machine class `nodeTemplate` without triggering a rollout of the cluster and will be  used by Cluster Autoscaler for scaling the `nodeGroup` from zero.
+The `spec.pools[].nodeTemplate.virtualCapacity` field contains the _virtual_ resource information associated with the machine and used to specify extended resources that are _virtual_ in nature (for specifying real, provisionable resources, `nodeTemplate.capacity` should be used). This will be applied to the machine class `nodeTemplate` without triggering a rollout of the cluster and will be  used by Cluster Autoscaler for scaling the `nodeGroup`.
 
 The `spec.pools[].machineControllerManager` field allows to configure the settings for machine-controller-manager component. Providers must populate these settings on worker-pool to the related [fields](https://github.com/gardener/machine-controller-manager/blob/master/kubernetes/machine_objects/machine-deployment.yaml#L30-L34) in MachineDeployment.
 
