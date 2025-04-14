@@ -64,8 +64,8 @@ var _ = Describe("istiod", func() {
 		renderer chartrenderer.Interface
 
 		expectedCPURequests string
-		minReplicas         = 2
-		maxReplicas         = 9
+		expectedMinReplicas int
+		expectedMaxReplicas int
 
 		externalTrafficPolicy corev1.ServiceExternalTrafficPolicy
 
@@ -260,6 +260,8 @@ var _ = Describe("istiod", func() {
 		networkLabels = map[string]string{"to-target": "allowed"}
 		expectAPIServerTLSTermination = false
 		expectedCPURequests = "300m"
+		expectedMinReplicas = 2
+		expectedMaxReplicas = 9
 
 		c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		renderer = chartrenderer.NewWithServerVersion(&version.Info{GitVersion: "v1.31.1"})
@@ -516,10 +518,10 @@ var _ = Describe("istiod", func() {
 
 		Context("horizontal ingress gateway scaling", func() {
 			BeforeEach(func() {
-				minReplicas = 3
-				maxReplicas = 8
-				igw[0].MinReplicas = &minReplicas
-				igw[0].MaxReplicas = &maxReplicas
+				expectedMinReplicas = 3
+				expectedMaxReplicas = 8
+				igw[0].MinReplicas = &expectedMinReplicas
+				igw[0].MaxReplicas = &expectedMaxReplicas
 				istiod = NewIstio(
 					c,
 					renderer,
@@ -538,7 +540,7 @@ var _ = Describe("istiod", func() {
 			})
 
 			It("should successfully deploy correct autoscaling", func() {
-				checkSuccessfulDeployment(&minReplicas, &maxReplicas)
+				checkSuccessfulDeployment(&expectedMinReplicas, &expectedMaxReplicas)
 			})
 		})
 
