@@ -11,7 +11,7 @@ spec:
       {{ $k }}: {{ $v }}
 {{- end }}
   configPatches:
-  {{- if .APIServerProxy }}
+  {{- if .UseProxyProtocol }}
   - applyTo: FILTER_CHAIN
     match:
       context: ANY

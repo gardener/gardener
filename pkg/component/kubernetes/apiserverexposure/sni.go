@@ -110,6 +110,7 @@ type SNIValues struct {
 // APIServerProxy contains values for the APIServer proxy protocol configuration.
 type APIServerProxy struct {
 	APIServerClusterIP string
+	UseProxyProtocol   bool
 }
 
 // IstioIngressGateway contains the values for istio ingress gateway configuration.
@@ -217,20 +218,14 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	if values.APIServerProxy != nil || values.IstioTLSTermination {
+	if values.APIServerProxy != nil && (values.APIServerProxy.UseProxyProtocol || values.IstioTLSTermination) {
 		envoyFilter := s.emptyEnvoyFilterAPIServerProxy()
 
-		var (
-			err                         error
-			apiServerClusterIPPrefixLen int
-		)
-
-		if values.APIServerProxy != nil {
-			apiServerClusterIPPrefixLen, err = netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
-			if err != nil {
-				return err
-			}
+		apiServerClusterIPPrefixLen, err := netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
+		if err != nil {
+			return err
 		}
+
 		targetClusterProxyProtocol := fmt.Sprintf("outbound|%d||%s", kubeapiserverconstants.Port, hostName)
 		if values.IstioTLSTermination {
 			targetClusterProxyProtocol = GetAPIServerProxyTargetClusterName(s.namespace)
@@ -305,7 +300,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if values.APIServerProxy != nil || values.IstioTLSTermination {
+	if (values.APIServerProxy != nil && values.APIServerProxy.UseProxyProtocol) || values.IstioTLSTermination {
 		serializedObjects, err := registry.SerializedObjects()
 		if err != nil {
 			return err
