@@ -24,8 +24,8 @@ spec:
         - name: envoy.filters.network.tcp_proxy
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-            stat_prefix: {{ .TargetClusterProxyProtocol }}
-            cluster: {{ .TargetClusterProxyProtocol }}
+            stat_prefix: {{ .TargetClusterAPIServerProxy }}
+            cluster: {{ .TargetClusterAPIServerProxy }}
             access_log:
             - name: envoy.access_loggers.file
               typed_config:
@@ -50,7 +50,7 @@ spec:
     patch:
       operation: ADD
       value:
-        name: {{ .TargetClusterProxyProtocol }}
+        name: {{ .TargetClusterAPIServerProxy }}
         address:
           pipe:
             path: "@kube-apiservers/{{ .ControlPlaneNamespace }}"
@@ -59,11 +59,11 @@ spec:
           - name: envoy.filters.network.http_connection_manager
             typed_config:
               "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
-              stat_prefix: {{ .TargetClusterProxyProtocol }}
+              stat_prefix: {{ .TargetClusterAPIServerProxy }}
               route_config:
-                name: {{ .TargetClusterProxyProtocol }}
+                name: {{ .TargetClusterAPIServerProxy }}
                 virtual_hosts:
-                - name: {{ .TargetClusterProxyProtocol }}
+                - name: {{ .TargetClusterAPIServerProxy }}
                   domains:
                   - "*"
                   routes:
@@ -163,11 +163,11 @@ spec:
     patch:
       operation: ADD
       value:
-        name: {{ .TargetClusterProxyProtocol }}
+        name: {{ .TargetClusterAPIServerProxy }}
         type: STATIC
         connect_timeout: 1s
         load_assignment:
-          cluster_name: {{ .TargetClusterProxyProtocol }}
+          cluster_name: {{ .TargetClusterAPIServerProxy }}
           endpoints:
           - lb_endpoints:
             - endpoint:
