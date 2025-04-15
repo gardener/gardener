@@ -81,6 +81,7 @@ func GetValidatingWebhookConfiguration(mode, url string) *admissionregistrationv
 						Resources:   []string{"extensions"},
 					},
 					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Update,
 						admissionregistrationv1.Delete,
 					},
 				}},

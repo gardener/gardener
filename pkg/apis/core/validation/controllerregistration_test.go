@@ -5,6 +5,7 @@
 package validation_test
 
 import (
+	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -385,7 +386,7 @@ var _ = Describe("validation", func() {
 	})
 
 	Describe("#ValidateControllerRegistrationUpdate", func() {
-		It("should prevent updating anything if deletion time stamp is set", func() {
+		It("should forbid updating anything if deletion time stamp is set", func() {
 			now := metav1.Now()
 
 			newControllerRegistration := prepareControllerRegistrationForUpdate(controllerRegistration)
@@ -402,7 +403,7 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
-		It("should prevent changing the primary field of a resource", func() {
+		It("should forbid changing the primary field of a resource", func() {
 			newControllerRegistration := prepareControllerRegistrationForUpdate(controllerRegistration)
 			newControllerRegistration.Spec.Resources[0].Primary = ptr.To(false)
 
@@ -412,6 +413,53 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.resources[0].primary"),
 			}))))
+		})
+	})
+
+	Describe("#ValidateControllerResourceUpdate", func() {
+		var resources []core.ControllerResource
+
+		BeforeEach(func() {
+			resources = []core.ControllerResource{
+				{
+					Kind: extensionsv1alpha1.InfrastructureResource,
+					Type: "foo",
+				},
+				{
+					Kind: extensionsv1alpha1.ExtensionResource,
+					Type: "bar",
+				},
+			}
+		})
+
+		It("should forbid changing the primary field of a resource", func() {
+			newResources := slices.Clone(resources)
+			newResources[0].Primary = ptr.To(false)
+
+			errorList := ValidateControllerResourceUpdate(newResources, resources, field.NewPath("spec.resources"))
+
+			Expect(errorList).To(ContainElement(MatchError(ContainSubstring("field is immutable"))))
+		})
+
+		It("should allow adding a new resource", func() {
+			newResources := slices.Clone(resources)
+			newResources = append(newResources, core.ControllerResource{
+				Kind:    extensionsv1alpha1.ExtensionResource,
+				Type:    "baz",
+				Primary: ptr.To(true),
+			})
+
+			errorList := ValidateControllerResourceUpdate(newResources, resources, field.NewPath("spec.resources"))
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow update without changes", func() {
+			newResources := slices.Clone(resources)
+
+			errorList := ValidateControllerResourceUpdate(newResources, resources, field.NewPath("spec.resources"))
+
+			Expect(errorList).To(BeEmpty())
 		})
 	})
 })

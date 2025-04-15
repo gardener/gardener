@@ -33,5 +33,11 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 		extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = ptr.To(true)
 	}
 
+	for i, resource := range extension.Spec.Resources {
+		if resource.Primary == nil {
+			extension.Spec.Resources[i].Primary = ptr.To(true)
+		}
+	}
+
 	return nil
 }
