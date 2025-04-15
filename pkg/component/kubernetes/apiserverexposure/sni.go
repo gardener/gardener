@@ -172,7 +172,7 @@ type envoyFilterAPIServerProxyTemplateValues struct {
 	APIServerAuthenticationDynamicMetadataKey string
 	IstioTLSTermination                       bool
 	IstioTLSSecret                            string
-	TargetClusterProxyProtocol                string
+	TargetClusterAPIServerProxy               string
 }
 
 type envoyFilterIstioTLSTerminationTemplateValues struct {
@@ -226,9 +226,9 @@ func (s *sni) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		targetClusterProxyProtocol := fmt.Sprintf("outbound|%d||%s", kubeapiserverconstants.Port, hostName)
+		targetClusterAPIServerProxy := fmt.Sprintf("outbound|%d||%s", kubeapiserverconstants.Port, hostName)
 		if values.IstioTLSTermination {
-			targetClusterProxyProtocol = GetAPIServerProxyTargetClusterName(s.namespace)
+			targetClusterAPIServerProxy = GetAPIServerProxyTargetClusterName(s.namespace)
 		}
 
 		var envoyFilterAPIServerProxy bytes.Buffer
@@ -249,7 +249,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			APIServerAuthenticationDynamicMetadataKey: authenticationDynamicMetadataKeyAPIServerProxy,
 			IstioTLSTermination:                       values.IstioTLSTermination,
 			IstioTLSSecret:                            s.emptyIstioTLSSecret().Name,
-			TargetClusterProxyProtocol:                targetClusterProxyProtocol,
+			TargetClusterAPIServerProxy:               targetClusterAPIServerProxy,
 		}); err != nil {
 			return err
 		}
