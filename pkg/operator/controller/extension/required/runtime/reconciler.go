@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 // RequeueExtensionKindNotCalculated is the time after which an extension will be requeued if the extension kind has not been processed yet. Exposed for testing.
@@ -114,7 +115,7 @@ func (r *Reconciler) calculateRequiredResourceKindsBySpec(garden *operatorv1alph
 
 	var (
 		requiredExtensionKinds = sets.New[string]()
-		requiredExtensions     = gardenerutils.ComputeRequiredExtensionsForGarden(garden)
+		requiredExtensions     = operator.ComputeRequiredExtensionsForGarden(garden)
 	)
 
 	for _, kindType := range requiredExtensions.UnsortedList() {

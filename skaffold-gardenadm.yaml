@@ -16,7 +16,6 @@ build:
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -32,7 +31,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -328,7 +326,6 @@ build:
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -343,7 +340,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -513,7 +509,6 @@ build:
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -528,7 +523,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security

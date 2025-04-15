@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -401,7 +402,7 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 				allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("%q are always encrypted", resource)))
 			}
 
-			if !gardenerutils.IsServedByGardenerAPIServer(resource) {
+			if !operator.IsServedByGardenerAPIServer(resource) {
 				allErrs = append(allErrs, field.Invalid(idxPath, resource, "should be a resource served by gardener-apiserver. ie; should have any of the suffixes {authentication,core,operations,security,settings,seedmanagement}.gardener.cloud"))
 			}
 
@@ -730,10 +731,10 @@ func validateEncryptionConfigUpdate(oldGarden, newGarden *operatorv1alpha1.Garde
 		}
 	}
 
-	currentEncryptedKubernetesResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, gardenerutils.IsServedByKubeAPIServer)
+	currentEncryptedKubernetesResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, operator.IsServedByKubeAPIServer)
 	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newKubeAPIServerEncryptionConfig, oldKubeAPIServerEncryptionConfig, sets.New(currentEncryptedKubernetesResources...), etcdEncryptionKeyRotation, false, kubeAPIServerEncryptionConfigFldPath)...)
 
-	currentEncryptedGardenerResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, gardenerutils.IsServedByGardenerAPIServer)
+	currentEncryptedGardenerResources := utils.FilterEntriesByFilterFn(newGarden.Status.EncryptedResources, operator.IsServedByGardenerAPIServer)
 	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newGAPIServerEncryptionConfig, oldGAPIServerEncryptionConfig, sets.New(currentEncryptedGardenerResources...), etcdEncryptionKeyRotation, false, gAPIServerEncryptionConfigFldPath)...)
 
 	return allErrs

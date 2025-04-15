@@ -69,6 +69,9 @@ controllers:
     concurrentSyncs: 5
   extension:
     concurrentSyncs: 5
+  extensionCare:
+    concurrentSyncs: 5
+    syncPeriod: 1m
   extensionRequiredRuntime:
     concurrentSyncs: 5
   extensionRequiredVirtual:

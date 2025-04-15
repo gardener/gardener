@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package gardener_test
+package operator_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -10,7 +10,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
-	. "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 var _ = Describe("GardenStatus", func() {

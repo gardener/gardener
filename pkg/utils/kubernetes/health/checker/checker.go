@@ -412,3 +412,97 @@ type ExtensionCondition struct {
 	ExtensionNamespace string
 	LastHeartbeatTime  *metav1.MicroTime
 }
+
+// CheckControllerInstallations checks multiple controller installations in case the provided filter func returns true. If their state
+// indicates issues then this is reflected in the state of the provided condition. If there are no issues, nil is returned.
+func (h *HealthChecker) CheckControllerInstallations(
+	ctx context.Context,
+	gardenReader client.Reader,
+	condition gardencorev1beta1.Condition,
+	controllerInstallations []gardencorev1beta1.ControllerInstallation,
+	filterFunc func(gardencorev1beta1.ControllerInstallation) bool,
+	progressingThreshold *metav1.Duration,
+) (*gardencorev1beta1.Condition, error) {
+	for _, controllerInstallation := range controllerInstallations {
+		if !filterFunc(controllerInstallation) {
+			continue
+		}
+
+		if exitCondition, err := h.CheckControllerInstallation(ctx, gardenReader, condition, &controllerInstallation, progressingThreshold); err != nil {
+			return nil, fmt.Errorf("failed to check condition type %q for controller installation %q: %w", condition.Type, controllerInstallation.Name, err)
+		} else if exitCondition != nil {
+			return exitCondition, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// CheckControllerInstallation checks the conditions of the given controller installation and reflects the state in the returned condition.
+func (h *HealthChecker) CheckControllerInstallation(ctx context.Context, gardenReader client.Reader, condition gardencorev1beta1.Condition, controllerInstallation *gardencorev1beta1.ControllerInstallation, controllerInstallationProgressingThreshold *metav1.Duration) (*gardencorev1beta1.Condition, error) {
+	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool{
+		gardencorev1beta1.ControllerInstallationValid:       defaultSuccessfulCheck(),
+		gardencorev1beta1.ControllerInstallationInstalled:   defaultSuccessfulCheck(),
+		gardencorev1beta1.ControllerInstallationHealthy:     defaultSuccessfulCheck(),
+		gardencorev1beta1.ControllerInstallationProgressing: resourcesNotProgressingCheck(h.clock, controllerInstallationProgressingThreshold),
+	}
+
+	return h.checkControllerInstallationConditions(ctx, gardenReader, condition, controllerInstallation, conditionsToCheck, controllerInstallationProgressingThreshold)
+}
+
+func (h *HealthChecker) checkControllerInstallationConditions(
+	ctx context.Context,
+	gardenReader client.Reader,
+	condition gardencorev1beta1.Condition,
+	controllerInstallation *gardencorev1beta1.ControllerInstallation,
+	conditionsToCheck map[gardencorev1beta1.ConditionType]func(condition gardencorev1beta1.Condition) bool,
+	controllerInstallationProgressingThreshold *metav1.Duration,
+) (*gardencorev1beta1.Condition, error) {
+	var controllerRegistration gardencorev1beta1.ControllerRegistration
+
+	if err := gardenReader.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, &controllerRegistration); err != nil {
+		return nil, fmt.Errorf("failed to get controller registration %q: %w", controllerInstallation.Spec.RegistrationRef.Name, err)
+	}
+
+	if controllerRegistration.ResourceVersion != controllerInstallation.Spec.RegistrationRef.ResourceVersion {
+		c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "OutdatedControllerRegistration", fmt.Sprintf("observed resource version of controller registration '%s' in controller installation '%s' outdated (%s/%s)", controllerRegistration.Name, controllerInstallation.Name, controllerInstallation.Spec.RegistrationRef.ResourceVersion, controllerRegistration.ResourceVersion))
+		return &c, nil
+	}
+
+	for _, condType := range []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.ControllerInstallationValid,
+		gardencorev1beta1.ControllerInstallationInstalled,
+		gardencorev1beta1.ControllerInstallationHealthy,
+		gardencorev1beta1.ControllerInstallationProgressing,
+	} {
+		cond := v1beta1helper.GetCondition(controllerInstallation.Status.Conditions, condType)
+		if cond == nil {
+			continue
+		}
+
+		checkConditionStatus, ok := conditionsToCheck[cond.Type]
+		if !ok {
+			continue
+		}
+		if !checkConditionStatus(*cond) {
+			c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, cond.Reason, fmt.Sprintf("Seed %s: %s", controllerInstallation.Spec.SeedRef.Name, cond.Message))
+			if cond.Type == gardencorev1beta1.ControllerInstallationProgressing && controllerInstallationProgressingThreshold != nil {
+				c = v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "ProgressingRolloutStuck", fmt.Sprintf("Seed %s: ControllerInstallation %s is progressing for more than %s", controllerInstallation.Spec.SeedRef.Name, controllerInstallation.Name, controllerInstallationProgressingThreshold.Duration))
+			}
+			return &c, nil
+		}
+
+		delete(conditionsToCheck, cond.Type)
+	}
+
+	if len(conditionsToCheck) > 0 {
+		var missing []string
+		for cond := range conditionsToCheck {
+			missing = append(missing, string(cond))
+		}
+		c := v1beta1helper.FailedCondition(h.clock, h.lastOperation, h.conditionThresholds, condition, "MissingControllerInstallationCondition", fmt.Sprintf("Seed %s: ControllerInstallation %s is missing the following condition(s), %v", controllerInstallation.Spec.SeedRef.Name, controllerInstallation.Name, missing))
+		return &c, nil
+	}
+
+	return nil, nil
+}

@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 // ControllerName is the name of this controller.
@@ -127,7 +128,7 @@ func (r *Reconciler) MapGardenToExtensions(log logr.Logger) handler.MapFunc {
 
 		var (
 			requests           []reconcile.Request
-			requiredExtensions = gardenerutils.ComputeRequiredExtensionsForGarden(garden)
+			requiredExtensions = operator.ComputeRequiredExtensionsForGarden(garden)
 		)
 
 		for _, extension := range extensionList.Items {

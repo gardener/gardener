@@ -67,6 +67,8 @@ type ControllerConfiguration struct {
 	VPAEvictionRequirements VPAEvictionRequirementsControllerConfiguration `json:"vpaEvictionRequirements"`
 	// Extension defines the configuration of the extension controller.
 	Extension ExtensionControllerConfiguration `json:"extension"`
+	// ExtensionCare is the configuration for the extension care controller
+	ExtensionCare ExtensionCareControllerConfiguration `json:"extensionCare"`
 	// ExtensionRequiredRuntime defines the configuration of the ExtensionRequiredRuntime controller.
 	ExtensionRequiredRuntime ExtensionRequiredRuntimeControllerConfiguration `json:"extensionRequiredRuntime"`
 	// ExtensionRequiredVirtual defines the configuration of the ExtensionRequiredVirtual controller.
@@ -128,6 +130,20 @@ type ExtensionControllerConfiguration struct {
 	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+}
+
+// ExtensionCareControllerConfiguration defines the configuration of the ExtensionCare controller.
+type ExtensionCareControllerConfiguration struct {
+	// ConcurrentSyncs is the number of concurrent worker routines for this controller.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check is performed).
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// ConditionThresholds defines the condition threshold per condition type.
+	// +optional
+	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
 }
 
 // ExtensionRequiredRuntimeControllerConfiguration defines the configuration of the extension-required-runtime controller.

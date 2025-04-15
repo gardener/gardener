@@ -65,6 +65,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -812,7 +813,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			services,
 			nil,
 			shared.NormalizeResources(getKubernetesResourcesForEncryption(garden)),
-			utils.FilterEntriesByFilterFn(shared.NormalizeResources(garden.Status.EncryptedResources), gardenerutils.IsServedByKubeAPIServer),
+			utils.FilterEntriesByFilterFn(shared.NormalizeResources(garden.Status.EncryptedResources), operator.IsServedByKubeAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			false,
 		)
@@ -849,7 +850,7 @@ func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden
 			r.GardenNamespace,
 			gardenerAPIServer,
 			getGardenerResourcesForEncryption(garden),
-			utils.FilterEntriesByFilterFn(garden.Status.EncryptedResources, gardenerutils.IsServedByGardenerAPIServer),
+			utils.FilterEntriesByFilterFn(garden.Status.EncryptedResources, operator.IsServedByGardenerAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetWorkloadIdentityKeyRotationPhase(garden.Status.Credentials),
 		)
@@ -1234,7 +1235,7 @@ var IntervalWaitUntilExtensionReady = 5 * time.Second
 
 // waitUntilRequiredExtensionsReady waits until all the extensions required for a garden reconciliation are ready.
 func (r *Reconciler) waitUntilRequiredExtensionsReady(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) error {
-	requiredExtensions := gardenerutils.ComputeRequiredExtensionsForGarden(garden)
+	requiredExtensions := operator.ComputeRequiredExtensionsForGarden(garden)
 
 	return retry.UntilTimeout(ctx, IntervalWaitUntilExtensionReady, time.Minute, func(ctx context.Context) (done bool, err error) {
 		extensionList := &operatorv1alpha1.ExtensionList{}
@@ -1242,7 +1243,7 @@ func (r *Reconciler) waitUntilRequiredExtensionsReady(ctx context.Context, log l
 			return retry.SevereError(err)
 		}
 
-		if err := gardenerutils.RequiredGardenExtensionsReady(ctx, log, r.RuntimeClientSet.Client(), r.GardenNamespace, requiredExtensions); err != nil {
+		if err := operator.RequiredGardenExtensionsReady(ctx, log, r.RuntimeClientSet.Client(), r.GardenNamespace, requiredExtensions); err != nil {
 			log.Error(err, "Waiting until all the required extension controllers are ready")
 			return retry.MinorError(err)
 		}

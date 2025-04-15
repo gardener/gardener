@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/admission"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/controllerregistration"
 	"github.com/gardener/gardener/pkg/operator/controller/extension/extension/runtime"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
@@ -129,11 +129,6 @@ func (r *Reconciler) removeFinalizer(ctx context.Context, log logr.Logger, exten
 	return nil
 }
 
-func (r *Reconciler) isDeploymentInRuntimeRequired(extension *operatorv1alpha1.Extension) bool {
-	requiredCondition := v1beta1helper.GetCondition(extension.Status.Conditions, operatorv1alpha1.ExtensionRequiredRuntime)
-	return requiredCondition != nil && requiredCondition.Status == gardencorev1beta1.ConditionTrue
-}
-
 // Conditions contains all conditions of the extension status subresource.
 type Conditions struct {
 	installed gardencorev1beta1.Condition
@@ -184,7 +179,7 @@ func newGardenInfo(garden *operatorv1alpha1.Garden) *gardenInfo {
 
 	return &gardenInfo{
 		garden:                           garden,
-		reconciled:                       gardenerutils.IsGardenSuccessfullyReconciled(garden),
+		reconciled:                       operator.IsGardenSuccessfullyReconciled(garden),
 		deleting:                         gardenInDeletion(garden),
 		genericTokenKubeconfigSecretName: kubeconfigSecretName,
 	}

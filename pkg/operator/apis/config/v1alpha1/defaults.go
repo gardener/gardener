@@ -113,6 +113,16 @@ func SetDefaults_ExtensionControllerConfiguration(obj *ExtensionControllerConfig
 	}
 }
 
+// SetDefaults_ExtensionCareControllerConfiguration sets defaults for the ExtensionCareControllerConfiguration object.
+func SetDefaults_ExtensionCareControllerConfiguration(obj *ExtensionCareControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = ptr.To(5)
+	}
+	if obj.SyncPeriod == nil {
+		obj.SyncPeriod = &metav1.Duration{Duration: time.Minute}
+	}
+}
+
 // SetDefaults_ExtensionRequiredRuntimeControllerConfiguration sets defaults for the ExtensionRequiredControllerRuntimeConfiguration object.
 func SetDefaults_ExtensionRequiredRuntimeControllerConfiguration(obj *ExtensionRequiredRuntimeControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {

@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/operator/controller/controllerregistrar"
 	"github.com/gardener/gardener/pkg/operator/controller/virtual/access"
 	virtualcluster "github.com/gardener/gardener/pkg/operator/controller/virtual/cluster"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/gardener/operator"
 )
 
 // AddToManagerFuncs returns all virtual garden cluster controllers for a registration via the controller registrar.
@@ -43,7 +43,7 @@ func AddToManagerFuncs(cfg *operatorconfigv1alpha1.OperatorConfiguration, storeC
 			AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
 				log := logf.FromContext(ctx)
 
-				if !gardenerutils.IsGardenSuccessfullyReconciled(garden) {
+				if !operator.IsGardenSuccessfullyReconciled(garden) {
 					log.Info("Garden is still being reconciled, waiting for it to finish")
 					return false, nil
 				}

@@ -33,9 +33,10 @@ import (
 var _ = Describe("HealthChecker", func() {
 	var _ = Describe("health check", func() {
 		var (
-			ctx        = context.Background()
-			fakeClient client.Client
-			fakeClock  = testclock.NewFakeClock(time.Now())
+			ctx              = context.Background()
+			fakeClient       client.Client
+			fakeGardenClient client.Client
+			fakeClock        = testclock.NewFakeClock(time.Now())
 
 			condition gardencorev1beta1.Condition
 
@@ -44,6 +45,7 @@ var _ = Describe("HealthChecker", func() {
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 			fakeClock = testclock.NewFakeClock(time.Now())
 			condition = gardencorev1beta1.Condition{
 				Type:               "test",
@@ -464,6 +466,268 @@ var _ = Describe("HealthChecker", func() {
 					kubeStateMetricsShootDeployment,
 				},
 				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+		)
+
+		DescribeTable("#CheckControllerInstallation",
+			func(conditions []gardencorev1beta1.Condition, upToDate bool, stepTime bool, conditionMatcher types.GomegaMatcher) {
+				var checker = NewHealthChecker(fakeClient, fakeClock, map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
+
+				controllerRegistration := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+				}
+				Expect(fakeGardenClient.Create(ctx, controllerRegistration)).To(Succeed())
+
+				controllerInstallation := &gardencorev1beta1.ControllerInstallation{
+					Spec: gardencorev1beta1.ControllerInstallationSpec{
+						RegistrationRef: corev1.ObjectReference{
+							Name:            controllerRegistration.Name,
+							ResourceVersion: controllerRegistration.ResourceVersion,
+						},
+					},
+				}
+
+				if !upToDate {
+					controllerInstallation.Spec.RegistrationRef.ResourceVersion = "0"
+				}
+
+				if stepTime {
+					fakeClock.Step(5 * time.Minute)
+				}
+
+				controllerInstallation.Status.Conditions = conditions
+
+				exitCondition, err := checker.CheckControllerInstallation(ctx, fakeGardenClient, condition, controllerInstallation, &metav1.Duration{Duration: 5 * time.Minute})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(exitCondition).To(conditionMatcher)
+			},
+			Entry("no conditions",
+				nil,
+				true,
+				false,
+				PointTo(beConditionWithFalseStatusReasonAndMsg("MissingControllerInstallationCondition", ""))),
+			Entry("one true condition, two missing",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+				},
+				true,
+				false,
+				PointTo(beConditionWithFalseStatusReasonAndMsg("MissingControllerInstallationCondition", string(gardencorev1beta1.ControllerInstallationInstalled)))),
+			Entry("multiple true conditions",
+				[]gardencorev1beta1.Condition{
+					{
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationInstalled,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationProgressing,
+						Status: gardencorev1beta1.ConditionFalse,
+					},
+				},
+				true,
+				false,
+				BeNil()),
+			Entry("both progressing and healthy conditions are true for less than ControllerInstallationProgressingThreshold",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:               gardencorev1beta1.ControllerInstallationProgressing,
+						Status:             gardencorev1beta1.ConditionTrue,
+						LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationInstalled,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+				},
+				true,
+				false,
+				BeNil()),
+			Entry("both progressing and healthy conditions are true for more than ControllerInstallationProgressingThreshold",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:               gardencorev1beta1.ControllerInstallationProgressing,
+						Status:             gardencorev1beta1.ConditionTrue,
+						LastTransitionTime: metav1.Time{Time: fakeClock.Now()},
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationInstalled,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+				},
+				true,
+				true,
+				PointTo(beConditionWithFalseStatusReasonAndMsg("ProgressingRolloutStuck", "Seed : ControllerInstallation  is progressing for more than 5m0s"))),
+			Entry("one false condition Valid",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionFalse,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationInstalled,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+				},
+				true,
+				false,
+				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+			Entry("one false condition Installed",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationInstalled,
+						Status: gardencorev1beta1.ConditionFalse,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+				},
+				true,
+				false,
+				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+			Entry("one false condition Healthy",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationInstalled,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationHealthy,
+						Status: gardencorev1beta1.ConditionFalse,
+					},
+				},
+				true,
+				false,
+				PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
+			Entry("multiple false conditions with reason & message. Valid & Installed conditions are not false",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:    gardencorev1beta1.ControllerInstallationHealthy,
+						Status:  gardencorev1beta1.ConditionFalse,
+						Reason:  "barFailed",
+						Message: "bar is unhealthy",
+					},
+					{
+						Type:    gardencorev1beta1.ControllerInstallationProgressing,
+						Status:  gardencorev1beta1.ConditionFalse,
+						Reason:  "fooFailed",
+						Message: "foo is unhealthy",
+					},
+				},
+				true,
+				false,
+				PointTo(beConditionWithFalseStatusReasonAndMsg("barFailed", "bar is unhealthy"))),
+			Entry("multiple false conditions with reason & message & Installed condition is false",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:    gardencorev1beta1.ControllerInstallationHealthy,
+						Status:  gardencorev1beta1.ConditionFalse,
+						Reason:  "barFailed",
+						Message: "bar is unhealthy",
+					},
+					{
+						Type:    gardencorev1beta1.ControllerInstallationInstalled,
+						Status:  gardencorev1beta1.ConditionFalse,
+						Reason:  "fooFailed",
+						Message: "foo is unhealthy",
+					},
+				},
+				true,
+				false,
+				PointTo(beConditionWithFalseStatusReasonAndMsg("fooFailed", "foo is unhealthy"))),
+			Entry("outdated controller registration",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:    gardencorev1beta1.ControllerInstallationInstalled,
+						Status:  gardencorev1beta1.ConditionFalse,
+						Reason:  "fooFailed",
+						Message: "foo is unhealthy",
+					},
+					{
+						Type:    gardencorev1beta1.ControllerInstallationHealthy,
+						Status:  gardencorev1beta1.ConditionFalse,
+						Reason:  "barFailed",
+						Message: "bar is unhealthy",
+					},
+				},
+				false,
+				false,
+				PointTo(beConditionWithFalseStatusReasonAndMsg("OutdatedControllerRegistration", "outdated"))),
+			Entry("unknown condition status with reason and message",
+				[]gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.ControllerInstallationValid,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:   gardencorev1beta1.ControllerInstallationInstalled,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
+					{
+						Type:    gardencorev1beta1.ControllerInstallationHealthy,
+						Status:  gardencorev1beta1.ConditionUnknown,
+						Reason:  "Unknown",
+						Message: "bar is unknown",
+					},
+				},
+				true,
+				false,
+				PointTo(beConditionWithFalseStatusReasonAndMsg("Unknown", "bar is unknown"))),
 		)
 	})
 })

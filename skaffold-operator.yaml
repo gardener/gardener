@@ -234,6 +234,7 @@ build:
             - pkg/operator/controller
             - pkg/operator/controller/controllerregistrar
             - pkg/operator/controller/extension
+            - pkg/operator/controller/extension/care
             - pkg/operator/controller/extension/extension
             - pkg/operator/controller/extension/extension/admission
             - pkg/operator/controller/extension/extension/controllerregistration
@@ -249,6 +250,7 @@ build:
             - pkg/operator/controller/virtual/access
             - pkg/operator/controller/virtual/cluster
             - pkg/operator/features
+            - pkg/operator/mapper
             - pkg/operator/predicate
             - pkg/operator/webhook
             - pkg/operator/webhook/defaulting
@@ -277,6 +279,7 @@ build:
             - pkg/utils/flow
             - pkg/utils/gardener
             - pkg/utils/gardener/gardenlet
+            - pkg/utils/gardener/operator
             - pkg/utils/gardener/secretsrotation
             - pkg/utils/gardener/tokenrequest
             - pkg/utils/imagevector
@@ -320,7 +323,6 @@ build:
             - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/api/indexer
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -336,7 +338,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/resources/v1alpha1/helper
@@ -454,7 +455,6 @@ build:
             - pkg/apis/operations/validation
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -653,7 +653,6 @@ build:
             - cmd/utils/initrun
             - pkg/api/extensions
             - pkg/api/indexer
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -667,7 +666,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -772,7 +770,6 @@ build:
             - cmd/utils
             - cmd/utils/initrun
             - pkg/api/extensions
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -786,7 +783,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -862,7 +858,6 @@ build:
             - pkg/admissioncontroller/webhook/admission/updaterestriction
             - pkg/admissioncontroller/webhook/auth/seed
             - pkg/admissioncontroller/webhook/auth/seed/graph
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/helper
             - pkg/apis/core/install
@@ -877,7 +872,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -1029,7 +1023,6 @@ build:
             - imagevector/charts.yaml
             - imagevector/containers.yaml
             - pkg/api/extensions
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1044,7 +1037,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
@@ -1183,7 +1175,6 @@ build:
             - extensions/pkg/webhook/cmd
             - extensions/pkg/webhook/shoot
             - pkg/api/extensions
-            - pkg/apis/authentication
             - pkg/apis/core
             - pkg/apis/core/install
             - pkg/apis/core/v1
@@ -1197,7 +1188,6 @@ build:
             - pkg/apis/operations/v1alpha1
             - pkg/apis/operator
             - pkg/apis/operator/v1alpha1
-            - pkg/apis/operator/v1alpha1/helper
             - pkg/apis/resources
             - pkg/apis/resources/v1alpha1
             - pkg/apis/security
