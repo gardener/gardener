@@ -123,7 +123,7 @@ func controllerRegistrationSliceToList(controllerRegistrations []*gardencorev1be
 
 // ReconcileExtensionControllerInstallations reconciles the ControllerInstallation resources necessary to deploy the
 // extension controllers.
-func (b *AutonomousBotanist) ReconcileExtensionControllerInstallations(ctx context.Context, networkAvailable bool) error {
+func (b *AutonomousBotanist) ReconcileExtensionControllerInstallations(ctx context.Context, bootstrapMode bool) error {
 	var (
 		reconcilerCtx = log.IntoContext(ctx, b.Logger.WithName("controllerinstallation-reconciler"))
 		reconciler    = controllerinstallation.Reconciler{
@@ -133,7 +133,7 @@ func (b *AutonomousBotanist) ReconcileExtensionControllerInstallations(ctx conte
 			Clock:                     clock.RealClock{},
 			Identity:                  &b.Shoot.GetInfo().Status.Gardener,
 			GardenNamespace:           b.Shoot.ControlPlaneNamespace,
-			BootstrapControlPlaneNode: !networkAvailable,
+			BootstrapControlPlaneNode: bootstrapMode,
 		}
 	)
 

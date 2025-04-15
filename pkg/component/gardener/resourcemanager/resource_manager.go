@@ -1128,12 +1128,12 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 var SuggestPort = netutils.SuggestPort
 
 func (r *resourceManager) chooseServerPort() error {
-	if r.port != 0 {
+	if !r.values.BootstrapControlPlaneNode {
+		r.port = 10250
 		return nil
 	}
 
-	if !r.values.BootstrapControlPlaneNode {
-		r.port = 10250
+	if r.port != 0 {
 		return nil
 	}
 

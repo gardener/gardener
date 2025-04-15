@@ -62,6 +62,11 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed bootstrapping control plane: %w", err)
 	}
 
+	podNetworkAvailable, err := b.IsPodNetworkAvailable(ctx)
+	if err != nil {
+		return fmt.Errorf("failed checking whether pod network is already available: %w", err)
+	}
+
 	var (
 		g                = flow.NewGraph("init")
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
@@ -102,11 +107,9 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(bootstrapKubelet),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
-			// TODO: Do this only when Network is not available on control plane nodes, i.e., only when
-			//  CNI/kube-proxy/CoreDNS are not ready/available yet.
-			Name: "Deploying gardener-resource-manager with bootstrap mode",
+			Name: "Deploying gardener-resource-manager",
 			Fn: func(ctx context.Context) error {
-				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(true)
+				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(!podNetworkAvailable)
 				return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
 			},
 			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement),
@@ -131,11 +134,11 @@ func run(ctx context.Context, opts *Options) error {
 		deployExtensionControllers = g.Add(flow.Task{
 			Name: "Deploying extension controllers",
 			Fn: func(ctx context.Context) error {
-				return b.ReconcileExtensionControllerInstallations(ctx, false)
+				return b.ReconcileExtensionControllerInstallations(ctx, !podNetworkAvailable)
 			},
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
 		})
-		waitForExtensionControllersReady = g.Add(flow.Task{
+		waitUntilExtensionControllersReady = g.Add(flow.Task{
 			Name:         "Waiting until extension controllers report readiness",
 			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
 			Dependencies: flow.NewTaskIDs(deployExtensionControllers),
@@ -154,7 +157,7 @@ func run(ctx context.Context, opts *Options) error {
 			Name:         "Deploying kube-proxy system component",
 			Fn:           b.DeployKubeProxy,
 			SkipIf:       !kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady, waitForExtensionControllersReady),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady, waitUntilExtensionControllersReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deleting kube-proxy system component",
@@ -165,18 +168,61 @@ func run(ctx context.Context, opts *Options) error {
 		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
 			Fn:           b.DeployNetwork,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady, waitForExtensionControllersReady),
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady, waitUntilExtensionControllersReady),
 		})
 		waitUntilNetworkReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been reconciled",
 			Fn:           b.Shoot.Components.Extensions.Network.Wait,
 			Dependencies: flow.NewTaskIDs(deployNetwork),
 		})
-		_ = g.Add(flow.Task{
+		deployCoreDNS = g.Add(flow.Task{
 			Name:         "Deploying CoreDNS system component",
 			Fn:           b.DeployCoreDNS,
 			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady),
 		})
+		waitUntilCoreDNSReady = g.Add(flow.Task{
+			Name:         "Waiting until CoreDNS system component is ready",
+			Fn:           b.Shoot.Components.SystemComponents.CoreDNS.Wait,
+			Dependencies: flow.NewTaskIDs(deployCoreDNS),
+		})
+
+		deployGardenerResourceManagerIntoPodNetwork = g.Add(flow.Task{
+			Name: "Redeploying gardener-resource-manager into pod network",
+			Fn: func(ctx context.Context) error {
+				b.Shoot.Components.ControlPlane.ResourceManager.SetBootstrapControlPlaneNode(false)
+				return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
+			},
+			SkipIf:       podNetworkAvailable,
+			Dependencies: flow.NewTaskIDs(waitUntilCoreDNSReady),
+		})
+		waitUntilGardenerResourceManagerInPodNetworkReady = g.Add(flow.Task{
+			Name:         "Waiting until gardener-resource-manager (in pod network) reports readiness",
+			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+			SkipIf:       podNetworkAvailable,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManagerIntoPodNetwork),
+		})
+		deployExtensionControllersIntoPodNetwork = g.Add(flow.Task{
+			Name: "Redeploying extension controllers into pod network",
+			Fn: func(ctx context.Context) error {
+				return b.ReconcileExtensionControllerInstallations(ctx, false)
+			},
+			SkipIf:       podNetworkAvailable,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
+		})
+		waitUntilExtensionControllersInPodNetworkReady = g.Add(flow.Task{
+			Name:         "Waiting until extension controllers (in pod network) report readiness",
+			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
+			SkipIf:       podNetworkAvailable,
+			Dependencies: flow.NewTaskIDs(deployExtensionControllersIntoPodNetwork),
+		})
+		syncPointBootstrapped = flow.NewTaskIDs(
+			waitUntilGardenerResourceManagerReady,
+			waitUntilGardenerResourceManagerInPodNetworkReady,
+			waitUntilExtensionControllersReady,
+			waitUntilExtensionControllersInPodNetworkReady,
+		)
+
+		_ = syncPointBootstrapped // TODO: Remove this dummy line once syncPointBootstrapped is used for further tasks.
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{

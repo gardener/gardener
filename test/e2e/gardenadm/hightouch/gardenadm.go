@@ -141,6 +141,41 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			}).Should(HaveKeyWithValue("gardener.cloud/role", "shoot"))
 		}, SpecTimeout(time.Minute))
 
+		It("should ensure the control plane namespace is properly labeled", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) map[string]string {
+				namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}}
+				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
+				return namespace.Labels
+			}).Should(HaveKeyWithValue("gardener.cloud/role", "shoot"))
+		}, SpecTimeout(time.Minute))
+
+		It("should ensure extensions and gardener-resource-manager run in pod network", func(ctx SpecContext) {
+			By("Check extensions")
+			Eventually(ctx, func(g Gomega) {
+				namespaceList := &corev1.NamespaceList{}
+				g.Expect(shootClientSet.Client().List(ctx, namespaceList, client.MatchingLabels{"gardener.cloud/role": "extension"})).To(Succeed())
+
+				for _, namespace := range namespaceList.Items {
+					podList := &corev1.PodList{}
+					g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(namespace.Name))).To(Succeed())
+
+					for _, pod := range podList.Items {
+						g.Expect(pod.Spec.HostNetwork).To(BeFalse(), "pod %s", client.ObjectKeyFromObject(&pod))
+					}
+				}
+			}).Should(Succeed())
+
+			By("Check gardener-resource-manager")
+			Eventually(ctx, func(g Gomega) {
+				podList := &corev1.PodList{}
+				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace("kube-system"), client.MatchingLabels{"app": "gardener-resource-manager"})).To(Succeed())
+
+				for _, pod := range podList.Items {
+					g.Expect(pod.Spec.HostNetwork).To(BeFalse(), "pod %s", client.ObjectKeyFromObject(&pod))
+				}
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
 		It("should join as worker node", func(ctx SpecContext) {
 			_, stdErr, err := execute(ctx, 1,
 				"gardenadm", "join",
