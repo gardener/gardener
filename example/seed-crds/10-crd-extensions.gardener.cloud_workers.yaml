@@ -577,7 +577,7 @@ spec:
                     nodeTemplate:
                       description: NodeTemplate contains resource information of the
                         machine which is used by Cluster Autoscaler to generate nodeTemplate
-                        during scaling a nodeGroup from zero
+                        during scaling a nodeGroup
                       properties:
                         capacity:
                           additionalProperties:
