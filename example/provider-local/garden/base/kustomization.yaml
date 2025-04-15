@@ -10,5 +10,5 @@ resources:
 - secret-backup.yaml
 - secretbinding.yaml
 - credentialsbinding.yaml
-- https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.40.2/example/controller-registration.yaml
+- https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.40.3/example/controller-registration.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.47.1/example/controller-registration.yaml
