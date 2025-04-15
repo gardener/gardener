@@ -741,7 +741,7 @@ images:
 - name: apiserver-proxy
   sourceRepository: github.com/envoyproxy/envoy
   repository: europe-docker.pkg.dev/gardener-project/releases/3rd/envoyproxy/envoy-distroless
-  tag: "v1.33.2"
+  tag: "v1.34.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
