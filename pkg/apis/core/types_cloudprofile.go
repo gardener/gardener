@@ -76,18 +76,6 @@ type CloudProfileSpec struct {
 	Capabilities []CapabilityDefinition
 }
 
-// GetCapabilities returns the capabilities slice of the CloudProfile as a Capabilities map.
-func (spec *CloudProfileSpec) GetCapabilities() Capabilities {
-	if len(spec.Capabilities) == 0 {
-		return nil
-	}
-	capabilities := make(Capabilities, len(spec.Capabilities))
-	for _, capability := range spec.Capabilities {
-		capabilities[capability.Name] = capability.Values
-	}
-	return capabilities
-}
-
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
 type SeedSelector struct {
 	// LabelSelector is optional and can be used to select seeds by their label settings

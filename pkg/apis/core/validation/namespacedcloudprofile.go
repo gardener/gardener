@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -60,7 +61,7 @@ func ValidateNamespacedCloudProfileSpecUpdate(newProfile, oldProfile *core.Names
 func ValidateNamespacedCloudProfileStatus(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs      = field.ErrorList{}
-		capabilities = spec.GetCapabilities()
+		capabilities = helper.CapabilityDefinitionsToCapabilities(spec.Capabilities)
 	)
 
 	allErrs = append(allErrs, validateCloudProfileKubernetesSettings(spec.Kubernetes, fldPath.Child("kubernetes"))...)

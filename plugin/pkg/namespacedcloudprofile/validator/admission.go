@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -301,7 +302,7 @@ func (c *validationContext) validateMachineImageOverrides(ctx context.Context, a
 			}
 
 			// There is no entry for this image in the parent CloudProfile yet.
-			capabilities := parentCloudProfileSpecCore.GetCapabilities()
+			capabilities := gardencorehelper.CapabilityDefinitionsToCapabilities(parentCloudProfileSpecCore.Capabilities)
 			allErrs = append(allErrs, validation.ValidateMachineImages([]gardencore.MachineImage{image}, capabilities, imageIndexPath, false)...)
 			allErrs = append(allErrs, validation.ValidateCloudProfileMachineImages([]gardencore.MachineImage{image}, capabilities, imageIndexPath)...)
 		}

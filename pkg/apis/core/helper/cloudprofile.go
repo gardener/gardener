@@ -252,3 +252,15 @@ func ExtractArchitecturesFromCapabilitySets(capabilities []core.CapabilitySet) [
 	}
 	return architectures.UnsortedList()
 }
+
+// CapabilityDefinitionsToCapabilities takes the capability definitions and converts them to capabilities.
+func CapabilityDefinitionsToCapabilities(capabilityDefinitions []core.CapabilityDefinition) core.Capabilities {
+	if len(capabilityDefinitions) == 0 {
+		return nil
+	}
+	capabilities := make(core.Capabilities, len(capabilityDefinitions))
+	for _, capability := range capabilityDefinitions {
+		capabilities[capability.Name] = capability.Values
+	}
+	return capabilities
+}

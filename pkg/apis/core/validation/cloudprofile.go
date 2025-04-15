@@ -57,7 +57,7 @@ func ValidateCloudProfileUpdate(newProfile, oldProfile *core.CloudProfile) field
 func ValidateCloudProfileSpec(spec *core.CloudProfileSpec, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs      = field.ErrorList{}
-		capabilities = spec.GetCapabilities()
+		capabilities = helper.CapabilityDefinitionsToCapabilities(spec.Capabilities)
 	)
 
 	if len(spec.Type) == 0 {
@@ -301,7 +301,7 @@ func validateCloudProfileBastion(spec *core.CloudProfileSpec, fldPath *field.Pat
 	}
 
 	if spec.Bastion.MachineImage != nil {
-		allErrs = append(allErrs, validateBastionImage(spec.Bastion.MachineImage, spec.MachineImages, spec.GetCapabilities(), machineArch, fldPath.Child("machineImage"))...)
+		allErrs = append(allErrs, validateBastionImage(spec.Bastion.MachineImage, spec.MachineImages, helper.CapabilityDefinitionsToCapabilities(spec.Capabilities), machineArch, fldPath.Child("machineImage"))...)
 	}
 
 	return allErrs
@@ -434,7 +434,8 @@ func validateCapabilities(capabilities []core.CapabilityDefinition, fldPath *fie
 		capabilityMap[capability.Name] = capability.Values
 	}
 
-	// CapabilityDefinition "architecture" is required.
+	// The 'architecture' capability definition is required.
+	// It corresponds to the older, dedicated 'architecture' fields in the CloudProfile.
 	val, ok := capabilityMap[v1beta1constants.ArchitectureName]
 	if !ok {
 		allErrs = append(allErrs, field.Required(fldPath.Child(v1beta1constants.ArchitectureName), "architecture capability is required"))
