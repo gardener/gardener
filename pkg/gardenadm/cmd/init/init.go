@@ -143,6 +143,11 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
 			Dependencies: flow.NewTaskIDs(deployExtensionControllers),
 		})
+		deployNetworkPolicies = g.Add(flow.Task{
+			Name:         "Deploying network policies",
+			Fn:           b.ApplyNetworkPolicies,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployExtensionControllers),
+		})
 		deployShootNamespaces = g.Add(flow.Task{
 			Name:         "Deploying shoot namespaces system component",
 			Fn:           b.Shoot.Components.SystemComponents.Namespaces.Deploy,
@@ -216,6 +221,7 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(deployExtensionControllersIntoPodNetwork),
 		})
 		syncPointBootstrapped = flow.NewTaskIDs(
+			deployNetworkPolicies,
 			waitUntilGardenerResourceManagerReady,
 			waitUntilGardenerResourceManagerInPodNetworkReady,
 			waitUntilExtensionControllersReady,

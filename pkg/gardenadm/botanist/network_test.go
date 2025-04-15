@@ -6,10 +6,13 @@ package botanist_test
 
 import (
 	"context"
+	"net"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -25,8 +28,8 @@ import (
 
 var _ = Describe("Network", func() {
 	var (
-		ctx       context.Context
-		namespace = "kube-system"
+		ctx           context.Context
+		namespaceName = "kube-system"
 
 		b *AutonomousBotanist
 	)
@@ -38,7 +41,12 @@ var _ = Describe("Network", func() {
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
 					Shoot: &shoot.Shoot{
-						ControlPlaneNamespace: namespace,
+						ControlPlaneNamespace: namespaceName,
+						Networks: &shoot.Networks{
+							Pods:     []net.IPNet{{IP: net.ParseIP("10.1.2.3"), Mask: net.CIDRMask(8, 32)}},
+							Services: []net.IPNet{{IP: net.ParseIP("10.4.5.6"), Mask: net.CIDRMask(8, 32)}},
+							Nodes:    []net.IPNet{{IP: net.ParseIP("10.7.8.9"), Mask: net.CIDRMask(8, 32)}},
+						},
 					},
 					SeedClientSet: fakekubernetes.
 						NewClientSetBuilder().
@@ -47,18 +55,23 @@ var _ = Describe("Network", func() {
 				},
 			},
 		}
+		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Networking: &gardencorev1beta1.Networking{
+					IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+				},
+			},
+		})
 	})
 
 	Describe("#IsPodNetworkAvailable", func() {
-		var (
-			managedResource *resourcesv1alpha1.ManagedResource
-		)
+		var managedResource *resourcesv1alpha1.ManagedResource
 
 		BeforeEach(func() {
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot-core-coredns",
-					Namespace: namespace,
+					Namespace: namespaceName,
 				},
 			}
 		})
@@ -98,6 +111,25 @@ var _ = Describe("Network", func() {
 			available, err := b.IsPodNetworkAvailable(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(available).To(BeTrue())
+		})
+	})
+
+	Describe("#ApplyNetworkPolicies", func() {
+		It("should apply the NetworkPolicies", func() {
+			namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default", Labels: map[string]string{"gardener.cloud/role": "shoot"}}, Status: corev1.NamespaceStatus{Phase: corev1.NamespaceActive}}
+			Expect(b.SeedClientSet.Client().Create(ctx, namespace)).To(Succeed())
+
+			endpoints := &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{Name: "kubernetes", Namespace: "default"}}
+			Expect(b.SeedClientSet.Client().Create(ctx, endpoints)).To(Succeed())
+
+			networkPolicyList := &networkingv1.NetworkPolicyList{}
+			Expect(b.SeedClientSet.Client().List(ctx, networkPolicyList)).To(Succeed())
+			Expect(networkPolicyList.Items).To(BeEmpty())
+
+			Expect(b.ApplyNetworkPolicies(ctx)).To(Succeed())
+
+			Expect(b.SeedClientSet.Client().List(ctx, networkPolicyList)).To(Succeed())
+			Expect(networkPolicyList.Items).NotTo(BeEmpty())
 		})
 	})
 })
