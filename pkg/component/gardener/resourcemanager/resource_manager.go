@@ -2067,18 +2067,7 @@ func (r *resourceManager) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForDeployment)
 	defer cancel()
 
-	return Until(timeoutCtx, IntervalWaitForDeployment, func(ctx context.Context) (done bool, err error) {
-		deployment := r.emptyDeployment()
-		if err := r.client.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if err := health.CheckDeployment(deployment); err != nil {
-			return retry.MinorError(err)
-		}
-
-		return retry.Ok()
-	})
+	return Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(r.client, r.emptyDeployment()))
 }
 
 // WaitCleanup for destruction to finish and component to be fully removed. Gardener-Resource-manager does not need to wait for cleanup.

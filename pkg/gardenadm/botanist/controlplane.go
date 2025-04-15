@@ -140,6 +140,7 @@ func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.In
 	clientSet, err := kubernetes.NewClientFromFile("", PathKubeconfig,
 		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 		kubernetes.WithClientConnectionOptions(componentbaseconfigv1alpha1.ClientConnectionConfiguration{QPS: 100, Burst: 130}),
+		kubernetes.WithDisabledCachedClient(),
 	)
 	if err != nil {
 		b.Logger.Info("Waiting for kube-apiserver to start", "error", err.Error())
