@@ -116,7 +116,7 @@ func verifyRemoveAPIServerProxyLegacyPortFeatureGate(ctx context.Context, garden
 			continue
 		}
 
-		if k.Status.LastOperation == nil || (k.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate && k.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) {
+		if k.Status.LastOperation == nil || ((k.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate || k.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeDelete) && k.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) {
 			continue
 		}
 
