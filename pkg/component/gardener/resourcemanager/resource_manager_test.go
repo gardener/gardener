@@ -885,6 +885,18 @@ var _ = Describe("ResourceManager", func() {
 		}
 
 		mutatingWebhookConfigurationFor = func(responsibilityMode ResponsibilityMode, bootstrapControlPlaneNode bool) *admissionregistrationv1.MutatingWebhookConfiguration {
+			ignoreStaticPodsInBootstrapMode := func(in []metav1.LabelSelectorRequirement) []metav1.LabelSelectorRequirement {
+				if !bootstrapControlPlaneNode {
+					return in
+				}
+
+				return append(in, metav1.LabelSelectorRequirement{
+					Key:      "static-pod",
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"true"},
+				})
+			}
+
 			obj := &admissionregistrationv1.MutatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gardener-resource-manager",
@@ -913,7 +925,7 @@ var _ = Describe("ResourceManager", func() {
 							}},
 						},
 						ObjectSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{
+							MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 								{
 									Key:      "projected-token-mount.resources.gardener.cloud/skip",
 									Operator: metav1.LabelSelectorOpDoesNotExist,
@@ -923,7 +935,7 @@ var _ = Describe("ResourceManager", func() {
 									Operator: metav1.LabelSelectorOpNotIn,
 									Values:   []string{"gardener-resource-manager"},
 								},
-							},
+							}),
 						},
 						ClientConfig: admissionregistrationv1.WebhookClientConfig{
 							Service: &admissionregistrationv1.ServiceReference{
@@ -1014,7 +1026,7 @@ var _ = Describe("ResourceManager", func() {
 						}},
 					},
 					ObjectSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
+						MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 							{
 								Key:      "seccompprofile.resources.gardener.cloud/skip",
 								Operator: metav1.LabelSelectorOpDoesNotExist,
@@ -1024,7 +1036,7 @@ var _ = Describe("ResourceManager", func() {
 								Operator: metav1.LabelSelectorOpNotIn,
 								Values:   []string{"gardener-resource-manager"},
 							},
-						},
+						}),
 					},
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
@@ -1057,13 +1069,13 @@ var _ = Describe("ResourceManager", func() {
 						}},
 					},
 					ObjectSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
+						MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 							{
 								Key:      resourcesv1alpha1.KubernetesServiceHostInject,
 								Operator: metav1.LabelSelectorOpNotIn,
 								Values:   []string{"disable"},
 							},
-						},
+						}),
 					},
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
@@ -1140,10 +1152,10 @@ var _ = Describe("ResourceManager", func() {
 							}},
 						},
 						ObjectSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{{
+							MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{{
 								Key:      "system-components-config.resources.gardener.cloud/skip",
 								Operator: metav1.LabelSelectorOpDoesNotExist,
-							}},
+							}}),
 						},
 						ClientConfig: admissionregistrationv1.WebhookClientConfig{
 							Service: &admissionregistrationv1.ServiceReference{
@@ -1179,7 +1191,7 @@ var _ = Describe("ResourceManager", func() {
 					}},
 				},
 				ObjectSelector: &metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{
+					MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 						{
 							Key:      "app",
 							Operator: metav1.LabelSelectorOpNotIn,
@@ -1189,7 +1201,7 @@ var _ = Describe("ResourceManager", func() {
 							Key:      "topology-spread-constraints.resources.gardener.cloud/skip",
 							Operator: metav1.LabelSelectorOpDoesNotExist,
 						},
-					},
+					}),
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service: &admissionregistrationv1.ServiceReference{

@@ -8,6 +8,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -1362,6 +1363,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
+	r.skipStaticPodsDuringBootstrapMode(webhooks)
 	return webhooks
 }
 
@@ -2088,6 +2090,40 @@ func (r *resourceManager) GetValues() Values { return r.values }
 // SetBootstrapControlPlaneNode sets the BootstrapControlPlaneNode field in the Values.
 func (r *resourceManager) SetBootstrapControlPlaneNode(b bool) {
 	r.values.BootstrapControlPlaneNode = b
+}
+
+func (r *resourceManager) skipStaticPodsDuringBootstrapMode(webhooks []admissionregistrationv1.MutatingWebhook) {
+	if !r.values.BootstrapControlPlaneNode {
+		return
+	}
+
+	handlesPodCreations := func(rules []admissionregistrationv1.RuleWithOperations) bool {
+		for _, rule := range rules {
+			if slices.Contains(rule.APIGroups, corev1.GroupName) &&
+				slices.Contains(rule.APIVersions, corev1.SchemeGroupVersion.Version) &&
+				slices.Contains(rule.Resources, "pods") &&
+				slices.Contains(rule.Operations, admissionregistrationv1.Create) {
+				return true
+			}
+		}
+		return false
+	}
+
+	for i, webhook := range webhooks {
+		if !handlesPodCreations(webhook.Rules) {
+			continue
+		}
+
+		if webhook.ObjectSelector == nil {
+			webhooks[i].ObjectSelector = &metav1.LabelSelector{}
+		}
+
+		webhooks[i].ObjectSelector.MatchExpressions = append(webhooks[i].ObjectSelector.MatchExpressions, metav1.LabelSelectorRequirement{
+			Key:      "static-pod",
+			Operator: metav1.LabelSelectorOpNotIn,
+			Values:   []string{"true"},
+		})
+	}
 }
 
 // Secrets is collection of secrets for the gardener-resource-manager.

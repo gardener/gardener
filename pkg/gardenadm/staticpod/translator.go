@@ -40,6 +40,7 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 	pod := &corev1.Pod{ObjectMeta: podTemplate.ObjectMeta, Spec: podTemplate.Spec}
 	pod.Name = objectMeta.Name
 	pod.Namespace = metav1.NamespaceSystem
+	metav1.SetMetaDataLabel(&podTemplate.ObjectMeta, "static-pod", "true")
 
 	translateSpec(&pod.Spec)
 
