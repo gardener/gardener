@@ -738,7 +738,7 @@ func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinatio
 	return nil
 }
 
-// CheckNodesScaling checks whether cluster nodes are being scaled up or down. If scaling is in progress, it returns a string describing the action. An error is returned if any failure occurs.
+// CheckNodesScaling checks whether cluster nodes are in a rolling update or being scaled up or down. If scaling is in progress, it returns a string describing the action. An error is returned if any failure occurs.
 func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList []*corev1.Node, machineDeploymentList *machinev1alpha1.MachineDeploymentList, controlPlaneNamespace string) (string, error) {
 	var (
 		readyAndSchedulableNodes int
