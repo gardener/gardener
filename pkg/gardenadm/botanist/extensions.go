@@ -128,21 +128,20 @@ func controllerRegistrationSliceToList(controllerRegistrations []*gardencorev1be
 // ReconcileExtensionControllerInstallations reconciles the ControllerInstallation resources necessary to deploy the
 // extension controllers.
 func (b *AutonomousBotanist) ReconcileExtensionControllerInstallations(ctx context.Context, bootstrapMode bool) error {
-	var (
-		reconcilerCtx = log.IntoContext(ctx, b.Logger.WithName("controllerinstallation-reconciler"))
-		reconciler    = controllerinstallation.Reconciler{
-			GardenClient:              b.GardenClient,
-			SeedClientSet:             b.SeedClientSet,
-			HelmRegistry:              oci.NewHelmRegistry(b.SeedClientSet.Client()),
-			Clock:                     clock.RealClock{},
-			Identity:                  &b.Shoot.GetInfo().Status.Gardener,
-			GardenNamespace:           b.Shoot.ControlPlaneNamespace,
-			BootstrapControlPlaneNode: bootstrapMode,
-		}
-	)
+	reconciler := controllerinstallation.Reconciler{
+		GardenClient:              b.GardenClient,
+		SeedClientSet:             b.SeedClientSet,
+		HelmRegistry:              oci.NewHelmRegistry(b.SeedClientSet.Client()),
+		Clock:                     clock.RealClock{},
+		Identity:                  &b.Shoot.GetInfo().Status.Gardener,
+		GardenNamespace:           b.Shoot.ControlPlaneNamespace,
+		BootstrapControlPlaneNode: bootstrapMode,
+	}
 
 	for _, extension := range b.Extensions {
 		b.Logger.Info("Reconciling ControllerInstallation using gardenlet's reconciliation logic", "controllerInstallationName", extension.ControllerInstallation.Name)
+
+		reconcilerCtx := log.IntoContext(ctx, b.Logger.WithName("controllerinstallation-reconciler").WithValues("controllerInstallationName", extension.ControllerInstallation.Name))
 		if _, err := reconciler.Reconcile(reconcilerCtx, reconcile.Request{NamespacedName: types.NamespacedName{Name: extension.ControllerInstallation.Name}}); err != nil {
 			return fmt.Errorf("failed running ControllerInstallation controller for %q: %w", extension.ControllerInstallation.Name, err)
 		}

@@ -106,7 +106,7 @@ func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) err
 	}
 
 	reconcilerCtx, cancelFunc := context.WithCancel(ctx)
-	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler"))
+	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler").WithValues("secret", client.ObjectKeyFromObject(b.operatingSystemConfigSecret)))
 
 	_, err := (&operatingsystemconfigcontroller.Reconciler{
 		Client: b.SeedClientSet.Client(),

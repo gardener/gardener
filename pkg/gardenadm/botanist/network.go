@@ -40,19 +40,16 @@ func (b *AutonomousBotanist) IsPodNetworkAvailable(ctx context.Context) (bool, e
 
 // ApplyNetworkPolicies reconciles all namespaces in the cluster in order to apply the network policies.
 func (b *AutonomousBotanist) ApplyNetworkPolicies(ctx context.Context) error {
-	var (
-		reconcilerCtx = log.IntoContext(ctx, b.Logger.WithName("networkpolicy-reconciler"))
-		reconciler    = &networkpolicy.Reconciler{
-			RuntimeClient: b.SeedClientSet.Client(),
-			Resolver:      hostnameresolver.NewNoOpProvider(),
-			RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
-				IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
-				Pods:       netIPNetSliceToStringSlice(b.Shoot.Networks.Pods),
-				Services:   netIPNetSliceToStringSlice(b.Shoot.Networks.Services),
-				Nodes:      netIPNetSliceToStringSlice(b.Shoot.Networks.Nodes),
-			},
-		}
-	)
+	reconciler := &networkpolicy.Reconciler{
+		RuntimeClient: b.SeedClientSet.Client(),
+		Resolver:      hostnameresolver.NewNoOpProvider(),
+		RuntimeNetworks: networkpolicy.RuntimeNetworkConfig{
+			IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
+			Pods:       netIPNetSliceToStringSlice(b.Shoot.Networks.Pods),
+			Services:   netIPNetSliceToStringSlice(b.Shoot.Networks.Services),
+			Nodes:      netIPNetSliceToStringSlice(b.Shoot.Networks.Nodes),
+		},
+	}
 
 	namespaceList := &corev1.NamespaceList{}
 	if err := b.SeedClientSet.Client().List(ctx, namespaceList); err != nil {
@@ -61,6 +58,8 @@ func (b *AutonomousBotanist) ApplyNetworkPolicies(ctx context.Context) error {
 
 	for _, namespace := range namespaceList.Items {
 		b.Logger.Info("Reconciling NetworkPolicies using gardenlet's reconciliation logic", "namespaceName", namespace.Name)
+
+		reconcilerCtx := log.IntoContext(ctx, b.Logger.WithName("networkpolicy-reconciler").WithValues("namespaceName", namespace.Name))
 		if _, err := reconciler.Reconcile(reconcilerCtx, reconcile.Request{NamespacedName: types.NamespacedName{Name: namespace.Name}}); err != nil {
 			return fmt.Errorf("failed running NetworkPolicy controller for %q: %w", namespace.Name, err)
 		}
