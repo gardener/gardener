@@ -84,10 +84,12 @@ var _ = Describe("Extensions", func() {
 				},
 			}
 			controllerDeployment1 = &gardencorev1.ControllerDeployment{
-				ObjectMeta: metav1.ObjectMeta{Name: "ext1"},
+				ObjectMeta:             metav1.ObjectMeta{Name: "ext1"},
+				InjectGardenKubeconfig: ptr.To(true),
 			}
 			controllerDeployment3 = &gardencorev1.ControllerDeployment{
-				ObjectMeta: metav1.ObjectMeta{Name: "ext3"},
+				ObjectMeta:             metav1.ObjectMeta{Name: "ext3"},
+				InjectGardenKubeconfig: ptr.To(false),
 			}
 
 			controllerRegistrations = []*gardencorev1beta1.ControllerRegistration{controllerRegistration1, controllerRegistration2, controllerRegistration3}
@@ -122,7 +124,7 @@ var _ = Describe("Extensions", func() {
 			Expect(extensions).To(Equal([]Extension{
 				{
 					ControllerRegistration: controllerRegistration1,
-					ControllerDeployment:   controllerDeployment1,
+					ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment1),
 					ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
 						ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration1.Name},
 						Spec: gardencorev1beta1.ControllerInstallationSpec{
@@ -134,7 +136,7 @@ var _ = Describe("Extensions", func() {
 				},
 				{
 					ControllerRegistration: controllerRegistration3,
-					ControllerDeployment:   controllerDeployment3,
+					ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment3),
 					ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
 						ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration3.Name},
 						Spec: gardencorev1beta1.ControllerInstallationSpec{
@@ -232,4 +234,10 @@ func makeManagedResourceHealthy(ctx context.Context, fakeClient client.Client, m
 		},
 	}
 	return fakeClient.Status().Patch(ctx, mr, patch)
+}
+
+func controllerDeploymentWithoutInjectGardenKubeconfig(in *gardencorev1.ControllerDeployment) *gardencorev1.ControllerDeployment {
+	out := in.DeepCopy()
+	out.InjectGardenKubeconfig = nil
+	return out
 }

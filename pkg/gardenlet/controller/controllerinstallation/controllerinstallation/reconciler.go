@@ -202,7 +202,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	var (
-		injectGardenKubeconfig            = !r.BootstrapControlPlaneNode && ptr.Deref(controllerDeployment.InjectGardenKubeconfig, false)
+		injectGardenKubeconfig            = ptr.Deref(controllerDeployment.InjectGardenKubeconfig, false)
 		genericGardenKubeconfigSecretName string
 	)
 

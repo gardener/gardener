@@ -62,7 +62,7 @@ func ComputeExtensions(
 		}
 
 		var (
-			controllerDeployment   = controllerDeployments[idx]
+			controllerDeployment   = controllerDeployments[idx].DeepCopy()
 			controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 				ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration.Name},
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
@@ -72,6 +72,10 @@ func ComputeExtensions(
 				},
 			}
 		)
+
+		// Remove the InjectGardenKubeconfig field from the ControllerDeployment because we don't have any information
+		// about a potentially existing garden cluster.
+		controllerDeployment.InjectGardenKubeconfig = nil
 
 		extensions = append(extensions, Extension{
 			ControllerRegistration: controllerRegistration,
