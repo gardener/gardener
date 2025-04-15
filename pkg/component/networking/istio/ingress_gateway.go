@@ -76,6 +76,11 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			}
 		}
 
+		cpuRequests := "300m"
+		if enableAPIServerTLSTermination {
+			cpuRequests = "500m"
+		}
+
 		values := map[string]any{
 			"trustDomain":                        istioIngressGateway.TrustDomain,
 			"labels":                             istioIngressGateway.Labels,
@@ -100,6 +105,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"apiServerRequestHeaderUserName":            kubeapiserverconstants.RequestHeaderUserName,
 			"apiServerRequestHeaderGroup":               kubeapiserverconstants.RequestHeaderGroup,
 			"apiServerAuthenticationDynamicMetadataKey": apiserverexposure.AuthenticationDynamicMetadataKey,
+			"cpuRequests":                               cpuRequests,
 		}
 
 		if istioIngressGateway.MinReplicas != nil {
