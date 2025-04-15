@@ -162,6 +162,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				},
 				APIServerProxy: &kubeapiserverexposure.APIServerProxy{
 					APIServerClusterIP: b.APIServerClusterIP,
+					UseProxyProtocol:   !features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort),
 				},
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 					Namespace: b.IstioNamespace(),
@@ -169,10 +170,6 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				},
 				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
 				WildcardConfiguration: wildcardConfiguration,
-			}
-
-			if features.DefaultFeatureGate.Enabled(features.RemoveAPIServerProxyLegacyPort) {
-				values.APIServerProxy = nil
 			}
 
 			return values
