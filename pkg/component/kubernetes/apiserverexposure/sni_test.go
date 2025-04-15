@@ -85,6 +85,7 @@ var _ = Describe("#SNI", func() {
 
 		apiServerProxyValues = &APIServerProxy{
 			APIServerClusterIP: "1.1.1.1",
+			UseProxyProtocol:   true,
 		}
 		namespace = "test-namespace"
 		istioLabels = map[string]string{"foo": "bar"}
@@ -355,7 +356,7 @@ var _ = Describe("#SNI", func() {
 				},
 			}
 
-			if apiServerProxyValues != nil || istioTLSTermination {
+			if (apiServerProxyValues != nil && apiServerProxyValues.UseProxyProtocol) || istioTLSTermination {
 				mrData := validateManagedResourceAndGetData(ctx, c, expectedManagedResourceSNI)
 
 				var envoyFilterObjectsMetas []metav1.ObjectMeta
@@ -372,7 +373,7 @@ var _ = Describe("#SNI", func() {
 					envoyFilterObjectsMetas = append(envoyFilterObjectsMetas, actualEnvoyFilter.ObjectMeta)
 				}
 
-				if apiServerProxyValues != nil {
+				if apiServerProxyValues != nil && apiServerProxyValues.UseProxyProtocol {
 					Expect(envoyFilterObjectsMetas).To(ContainElement(expectedEnvoyFilterObjectMetaAPIServerProxy))
 				}
 
