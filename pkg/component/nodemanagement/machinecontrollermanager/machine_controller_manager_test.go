@@ -211,6 +211,9 @@ var _ = Describe("MachineControllerManager", func() {
 								"--safety-up=2",
 								"--safety-down=1",
 								"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+								"--concurrent-syncs=30",
+								"--kube-api-qps=150",
+								"--kube-api-burst=200",
 								"--v=3",
 							},
 							LivenessProbe: &corev1.Probe{

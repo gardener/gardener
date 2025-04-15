@@ -215,6 +215,9 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						"--safety-up=2",
 						"--safety-down=1",
 						"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+						"--concurrent-syncs=30",
+						"--kube-api-qps=150",
+						"--kube-api-burst=200",
 						"--v=3",
 					},
 					LivenessProbe: &corev1.Probe{
