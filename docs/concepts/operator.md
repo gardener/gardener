@@ -250,7 +250,7 @@ Besides those, the `gardener-operator` is able to deploy the following optional 
  The service account issuer of shoots will be calculated in the format `https://discovery.<.spec.runtimeCluster.ingress.domains[0]>/projects/<project-name>/shoots/<shoot-uid>/issuer`.
  This configuration applies for all seeds registered with the Garden cluster. Once set it should not be modified.
 
-The reconciler also manages a few observability-related components (more planned as part of [GEP-19](../proposals/19-migrating-observability-stack-to-operators.md)):
+The reconciler also manages a few observability-related components:
 
 - `fluent-operator`
 - `fluent-bit`
@@ -263,6 +263,7 @@ The reconciler also manages a few observability-related components (more planned
 - `prometheus-garden` (read more [here](#garden-prometheus))
 - `prometheus-longterm` (read more [here](#long-term-prometheus))
 - `blackbox-exporter`
+- `perses-operator`
 
 It is also mandatory to provide an IPv4 CIDR for the service network of the virtual cluster via `.spec.virtualCluster.networking.services`.
 This range is used by the API server to compute the cluster IPs of `Service`s.

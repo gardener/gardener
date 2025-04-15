@@ -19,14 +19,14 @@ When using the `gardener-operator` for managing the garden runtime and virtual c
 
 ### `PriorityClass`es for Garden Control Plane Components
 
-| Name                              | Priority  | Associated Components (Examples)                                                                                                                                                                                     |
-|-----------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`, `istio`                                                                                                                                                            |
-| `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver`, `gardener-apiserver`                                                                                                      |
-| `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`, Extension Admission Controllers                                                                                                         |
-| `gardener-garden-system-300`      | 999999300 | `virtual-garden-kube-controller-manager`, `vpa-admission-controller`, `etcd-druid`, `nginx-ingress-controller`                                                                                                       |
-| `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `gardener-scheduler`, `gardener-controller-manager`, `gardener-dashboard`, `terminal-controller-manager`, `gardener-discovery-server`, Extension Controllers                       |
-| `gardener-garden-system-100`      | 999999100 | `fluent-operator`, `fluent-bit`, `gardener-metrics-exporter`, `kube-state-metrics`, `plutono`, `vali`, `prometheus-operator`, `alertmanager-garden`, `prometheus-garden`, `blackbox-exporter`, `prometheus-longterm` |
+| Name                              | Priority  | Associated Components (Examples)                                                                                                                                                                                                        |
+|-----------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `gardener-garden-system-critical` | 999999550 | `gardener-operator`, `gardener-resource-manager`, `istio`                                                                                                                                                                               |
+| `gardener-garden-system-500`      | 999999500 | `virtual-garden-etcd-events`, `virtual-garden-etcd-main`, `virtual-garden-kube-apiserver`, `gardener-apiserver`                                                                                                                         |
+| `gardener-garden-system-400`      | 999999400 | `virtual-garden-gardener-resource-manager`, `gardener-admission-controller`, Extension Admission Controllers                                                                                                                            |
+| `gardener-garden-system-300`      | 999999300 | `virtual-garden-kube-controller-manager`, `vpa-admission-controller`, `etcd-druid`, `nginx-ingress-controller`                                                                                                                          |
+| `gardener-garden-system-200`      | 999999200 | `vpa-recommender`, `vpa-updater`, `gardener-scheduler`, `gardener-controller-manager`, `gardener-dashboard`, `terminal-controller-manager`, `gardener-discovery-server`, Extension Controllers                                          |
+| `gardener-garden-system-100`      | 999999100 | `fluent-operator`, `fluent-bit`, `gardener-metrics-exporter`, `kube-state-metrics`, `plutono`, `vali`, `prometheus-operator`, `alertmanager-garden`, `prometheus-garden`, `blackbox-exporter`, `prometheus-longterm`, `perses-operator` |
 
 ## Seed Clusters
 
