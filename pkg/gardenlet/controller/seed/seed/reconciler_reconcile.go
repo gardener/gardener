@@ -214,7 +214,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		deployEtcdCRD = g.Add(flow.Task{
 			Name:   "Deploying ETCD-related custom resource definitions",
-			Fn:     c.etcdCRD.Deploy,
+			Fn:     component.OpWait(c.etcdCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		deployIstioCRD = g.Add(flow.Task{

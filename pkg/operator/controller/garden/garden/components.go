@@ -88,7 +88,6 @@ import (
 )
 
 type components struct {
-	etcdCRD       component.Deployer
 	vpaCRD        component.Deployer
 	fluentCRD     component.Deployer
 	extensionCRD  component.Deployer
@@ -158,7 +157,10 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// crds
-	c.etcdCRD, err = etcd.NewCRD(r.RuntimeClientSet.Client(), r.RuntimeVersion)
+	c.etcdCRD, err = etcd.NewCRD(r.RuntimeClientSet.Client(), applier, r.RuntimeVersion)
+	if err != nil {
+		return
+	}
 	c.vpaCRD, err = vpa.NewCRD(r.RuntimeClientSet.Client(), applier, nil)
 	if err != nil {
 		return

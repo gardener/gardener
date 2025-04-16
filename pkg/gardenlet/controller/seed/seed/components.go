@@ -78,8 +78,8 @@ import (
 type components struct {
 	machineCRD    component.DeployWaiter
 	extensionCRD  component.DeployWaiter
-	etcdCRD       component.Deployer
-	vpaCRD        component.Deployer
+	etcdCRD       component.DeployWaiter
+	istioCRD      component.DeployWaiter
 	vpaCRD        component.DeployWaiter
 	fluentCRD     component.DeployWaiter
 	prometheusCRD component.DeployWaiter
@@ -142,7 +142,10 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.etcdCRD, err = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedVersion)
+	c.etcdCRD, err = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), r.SeedVersion)
+	if err != nil {
+		return
+	}
 	c.istioCRD, err = istio.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return

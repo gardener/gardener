@@ -626,7 +626,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		})
 		deployEtcdCRD = g.Add(flow.Task{
 			Name: "Deploying ETCD-related custom resource definitions",
-			Fn:   c.etcdCRD.Deploy,
+			Fn:   component.OpWait(c.etcdCRD).Deploy,
 		})
 		deployVPACRD = g.Add(flow.Task{
 			Name:   "Deploying custom resource definitions for VPA",

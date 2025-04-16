@@ -378,7 +378,7 @@ func (r *Reconciler) delete(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying ETCD-related custom resource definitions",
-			Fn:           c.etcdCRD.Destroy,
+			Fn:           component.OpWait(c.etcdCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
