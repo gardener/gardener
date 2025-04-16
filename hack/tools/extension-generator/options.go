@@ -23,8 +23,6 @@ type Options struct {
 	ExtensionOCIRepository            string
 	AdmissionRuntimeOCIRepository     string
 	AdmissionApplicationOCIRepository string
-
-	InjectGardenKubeconfig bool
 }
 
 var validCategories = sets.New(slices.Collect(maps.Keys(categoryToEnsurer))...)
@@ -38,7 +36,6 @@ func (o *Options) AddFlags(flags *flag.FlagSet) {
 	flags.StringVar(&o.ExtensionOCIRepository, "extension-oci-repository", "", "URL to OCI image containing the extension chart")
 	flags.StringVar(&o.AdmissionRuntimeOCIRepository, "admission-runtime-oci-repository", "", "OPTIONAL: URL to OCI image containing the admission runtime chart")
 	flags.StringVar(&o.AdmissionApplicationOCIRepository, "admission-application-oci-repository", "", "OPTIONAL: URL to OCI image containing the admission application chart")
-	flags.BoolVar(&o.InjectGardenKubeconfig, "inject-garden-kubeconfig", false, "OPTIONAL: When set, the `.spec.deployment.extension.injectGardenKubeconfig: true` field is added to the generated extension")
 }
 
 // Validate returns an error if the Options configuration is incomplete.
