@@ -20,19 +20,24 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
+var availableExtensionAutoEnableModes = sets.New(
+	core.AutoEnableModeShoot,
+	core.AutoEnableModeSeed,
+)
+
 var availablePolicies = sets.New(
-	string(core.ControllerDeploymentPolicyOnDemand),
-	string(core.ControllerDeploymentPolicyAlways),
-	string(core.ControllerDeploymentPolicyAlwaysExceptNoShoots),
+	core.ControllerDeploymentPolicyOnDemand,
+	core.ControllerDeploymentPolicyAlways,
+	core.ControllerDeploymentPolicyAlwaysExceptNoShoots,
 )
 
 var availableExtensionStrategies = sets.New(
-	string(core.BeforeKubeAPIServer),
-	string(core.AfterKubeAPIServer),
+	core.BeforeKubeAPIServer,
+	core.AfterKubeAPIServer,
 )
 
 var availableExtensionStrategiesForReconcile = availableExtensionStrategies.Clone().Insert(
-	string(core.AfterWorker),
+	core.AfterWorker,
 )
 
 // ValidateControllerRegistration validates a ControllerRegistration object.
@@ -78,6 +83,9 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			if resource.GloballyEnabled != nil {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("globallyEnabled"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
 			}
+			if resource.AutoEnable != nil {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("autoEnable"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
 			if resource.ReconcileTimeout != nil {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("reconcileTimeout"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
 			}
@@ -86,15 +94,29 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			}
 		}
 
+		configuredAutoEnableModes := sets.New[core.AutoEnableMode]()
+		for j, autoEnableMode := range resource.AutoEnable {
+			autoEnablePath := idxPath.Child("autoEnable").Index(j)
+
+			if !availableExtensionAutoEnableModes.Has(autoEnableMode) {
+				allErrs = append(allErrs, field.NotSupported(autoEnablePath, autoEnableMode, sets.List(availableExtensionAutoEnableModes)))
+			}
+
+			if configuredAutoEnableModes.Has(autoEnableMode) {
+				allErrs = append(allErrs, field.Duplicate(autoEnablePath, autoEnableMode))
+			}
+			configuredAutoEnableModes.Insert(autoEnableMode)
+		}
+
 		if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.Lifecycle != nil {
 			lifecyclePath := idxPath.Child("lifecycle")
-			if resource.Lifecycle.Reconcile != nil && !availableExtensionStrategiesForReconcile.Has(string(*resource.Lifecycle.Reconcile)) {
+			if resource.Lifecycle.Reconcile != nil && !availableExtensionStrategiesForReconcile.Has(*resource.Lifecycle.Reconcile) {
 				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("reconcile"), *resource.Lifecycle.Reconcile, sets.List(availableExtensionStrategiesForReconcile)))
 			}
-			if resource.Lifecycle.Delete != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Delete)) {
+			if resource.Lifecycle.Delete != nil && !availableExtensionStrategies.Has(*resource.Lifecycle.Delete) {
 				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("delete"), *resource.Lifecycle.Delete, sets.List(availableExtensionStrategies)))
 			}
-			if resource.Lifecycle.Migrate != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Migrate)) {
+			if resource.Lifecycle.Migrate != nil && !availableExtensionStrategies.Has(*resource.Lifecycle.Migrate) {
 				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("migrate"), *resource.Lifecycle.Migrate, sets.List(availableExtensionStrategies)))
 			}
 		}
@@ -106,7 +128,7 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 	}
 
 	if deployment := spec.Deployment; deployment != nil {
-		if policy := deployment.Policy; policy != nil && !availablePolicies.Has(string(*policy)) {
+		if policy := deployment.Policy; policy != nil && !availablePolicies.Has(*policy) {
 			allErrs = append(allErrs, field.NotSupported(deploymentPath.Child("policy"), *policy, sets.List(availablePolicies)))
 		}
 
