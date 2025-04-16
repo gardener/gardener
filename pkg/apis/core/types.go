@@ -70,7 +70,7 @@ type Extension struct {
 	Type string
 	// ProviderConfig is the configuration passed to extension resource.
 	ProviderConfig *runtime.RawExtension
-	// Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
+	// Disabled allows to disable extensions that were marked as 'automatically enabled' by Gardener administrators.
 	Disabled *bool
 }
 

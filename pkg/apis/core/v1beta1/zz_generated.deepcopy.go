@@ -1512,6 +1512,11 @@ func (in *ControllerResource) DeepCopyInto(out *ControllerResource) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.AutoEnable != nil {
+		in, out := &in.AutoEnable, &out.AutoEnable
+		*out = make([]AutoEnableMode, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

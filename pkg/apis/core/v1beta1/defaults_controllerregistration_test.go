@@ -73,6 +73,12 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 				Expect(obj.Spec.Resources[0].GloballyEnabled).To(BeNil())
 			})
 
+			It("should not default the autoEnable field", func() {
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[0].AutoEnable).To(BeNil())
+			})
+
 			It("should not default the reconcileTimeout field", func() {
 				SetObjectDefaults_ControllerRegistration(obj)
 

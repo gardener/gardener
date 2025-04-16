@@ -3183,7 +3183,7 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					},
 					"globallyEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters. This field is defaulted to false when kind is \"Extension\".",
+							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters. Deprecated: This field is deprecated and will be removed in Gardener version v.122. Please use AutoEnable instead.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -3212,6 +3212,21 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 							Description: "WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters. This field is only relevant when kind is \"Extension\".",
 							Type:        []string{"boolean"},
 							Format:      "",
+						},
+					},
+					"autoEnable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both. Valid values are \"shoot\" and \"seed\". This field can only be set for resources of kind \"Extension\".",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -3899,7 +3914,7 @@ func schema_pkg_apis_core_v1beta1_Extension(ref common.ReferenceCallback) common
 					},
 					"disabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.",
+							Description: "Disabled allows to disable extensions that were marked as 'automatically enabled' by Gardener administrators.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

@@ -2788,6 +2788,16 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.AutoEnableMode">AutoEnableMode
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResource">ControllerResource</a>)
+</p>
+<p>
+<p>AutoEnableMode defines the mode for automatically enabling a resource.
+It specifies whether the resource is enabled for all clusters, only shoot clusters, only seed clusters, or none.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.AvailabilityZone">AvailabilityZone
 </h3>
 <p>
@@ -4720,7 +4730,7 @@ bool
 <td>
 <em>(Optional)</em>
 <p>GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
-This field is defaulted to false when kind is &ldquo;Extension&rdquo;.</p>
+Deprecated: This field is deprecated and will be removed in Gardener version v.122. Please use AutoEnable instead.</p>
 </td>
 </tr>
 <tr>
@@ -4781,6 +4791,22 @@ bool
 <em>(Optional)</em>
 <p>WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
 This field is only relevant when kind is &ldquo;Extension&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>autoEnable</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.AutoEnableMode">
+[]AutoEnableMode
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
+Valid values are &ldquo;shoot&rdquo; and &ldquo;seed&rdquo;.
+This field can only be set for resources of kind &ldquo;Extension&rdquo;.</p>
 </td>
 </tr>
 </tbody>
@@ -5702,7 +5728,7 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>Disabled allows to disable extensions that were marked as &lsquo;globally enabled&rsquo; by Gardener administrators.</p>
+<p>Disabled allows to disable extensions that were marked as &lsquo;automatically enabled&rsquo; by Gardener administrators.</p>
 </td>
 </tr>
 </tbody>

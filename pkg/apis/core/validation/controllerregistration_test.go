@@ -172,6 +172,7 @@ var _ = Describe("validation", func() {
 				Kind:             extensionsv1alpha1.ExtensionResource,
 				Type:             "arbitrary",
 				GloballyEnabled:  ptr.To(true),
+				AutoEnable:       []core.AutoEnableMode{core.AutoEnableModeShoot},
 				ReconcileTimeout: &metav1.Duration{Duration: 10 * time.Second},
 				Lifecycle: &core.ControllerResourceLifecycle{
 					Reconcile: &strategy,
@@ -187,6 +188,7 @@ var _ = Describe("validation", func() {
 		It("should forbid to set certain fields for kind != Extension", func() {
 			strategy := core.BeforeKubeAPIServer
 			ctrlResource.GloballyEnabled = ptr.To(true)
+			ctrlResource.AutoEnable = []core.AutoEnableMode{core.AutoEnableModeShoot}
 			ctrlResource.ReconcileTimeout = &metav1.Duration{Duration: 10 * time.Second}
 			ctrlResource.Lifecycle = &core.ControllerResourceLifecycle{
 				Reconcile: &strategy,
@@ -200,10 +202,44 @@ var _ = Describe("validation", func() {
 				"Field": Equal("spec.resources[0].globallyEnabled"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.resources[0].autoEnable"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.resources[0].reconcileTimeout"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.resources[0].lifecycle"),
+			}))))
+		})
+
+		It("should allow setting valid autoEnable modes", func() {
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+
+			controllerRegistration.Spec.Resources[0].AutoEnable = []core.AutoEnableMode{"shoot", "seed"}
+			Expect(ValidateControllerRegistration(controllerRegistration)).To(BeEmpty())
+		})
+
+		It("should forbid setting an invalid autoEnable mode", func() {
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+			controllerRegistration.Spec.Resources[0].AutoEnable = append(controllerRegistration.Spec.Resources[0].AutoEnable, "foo")
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.resources[0].autoEnable[0]"),
+			}))))
+		})
+
+		It("should forbid setting an duplicate autoEnable", func() {
+			controllerRegistration.Spec.Resources[0].Kind = "Extension"
+			controllerRegistration.Spec.Resources[0].AutoEnable = []core.AutoEnableMode{"shoot", "shoot"}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeDuplicate),
+				"Field": Equal("spec.resources[0].autoEnable[1]"),
 			}))))
 		})
 
