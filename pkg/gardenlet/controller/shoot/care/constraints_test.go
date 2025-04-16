@@ -593,10 +593,35 @@ var _ = Describe("Constraints", func() {
 				})
 
 				It("should remove the 'ManualInPlaceWorkersUpdated' constraint because it's true", func() {
+					shoot.Status.InPlaceUpdates = nil
+
 					shootPkg := &shootpkg.Shoot{
 						ControlPlaneNamespace: controlPlaneNamespace,
 					}
-					shootPkg.SetInfo(&gardencorev1beta1.Shoot{})
+					shootPkg.SetInfo(shoot)
+
+					constraint = NewConstraint(
+						logr.Discard(),
+						shootPkg,
+						seedClient,
+						func() (kubernetes.Interface, bool, error) {
+							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+						},
+						clock,
+					)
+
+					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
+					))
+				})
+
+				It("should remove the 'ManualInPlaceWorkersUpdated' constraint because the Shoot is workerless", func() {
+					shoot.Spec.Provider.Workers = nil
+
+					shootPkg := &shootpkg.Shoot{
+						ControlPlaneNamespace: controlPlaneNamespace,
+					}
+					shootPkg.SetInfo(shoot)
 
 					constraint = NewConstraint(
 						logr.Discard(),
