@@ -18,7 +18,6 @@ import (
 	shootextensionactuator "github.com/gardener/gardener/pkg/provider-local/controller/extension/shoot"
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
-	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
