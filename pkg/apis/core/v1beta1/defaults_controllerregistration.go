@@ -5,6 +5,7 @@
 package v1beta1
 
 import (
+	"slices"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +20,15 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 
 	if obj.Kind == "Extension" {
 		if obj.GloballyEnabled == nil {
-			obj.GloballyEnabled = ptr.To(false)
+			if slices.Contains(obj.AutoEnable, AutoEnableModeShoot) {
+				obj.GloballyEnabled = ptr.To(true)
+			} else {
+				obj.GloballyEnabled = ptr.To(false)
+			}
+		}
+
+		if len(obj.AutoEnable) == 0 && *obj.GloballyEnabled {
+			obj.AutoEnable = []AutoEnableMode{AutoEnableModeShoot}
 		}
 
 		if obj.ReconcileTimeout == nil {

@@ -37,6 +37,10 @@ func (h *Handler) Default(_ context.Context, obj runtime.Object) error {
 		if resource.Primary == nil {
 			extension.Spec.Resources[i].Primary = ptr.To(true)
 		}
+
+		if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) && len(resource.AutoEnable) == 0 {
+			extension.Spec.Resources[i].AutoEnable = []gardencorev1beta1.AutoEnableMode{gardencorev1beta1.AutoEnableModeShoot}
+		}
 	}
 
 	return nil

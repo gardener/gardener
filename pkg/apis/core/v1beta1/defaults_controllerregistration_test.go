@@ -107,6 +107,45 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(true)))
 			})
 
+			It("should default the globallyEnabled field if autoEnable is not set", func() {
+				obj.Spec.Resources[1].AutoEnable = nil
+
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(false)))
+			})
+
+			It("should default the globallyEnabled field if autoEnable is set to shoot", func() {
+				obj.Spec.Resources[1].AutoEnable = []AutoEnableMode{"shoot"}
+
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(true)))
+			})
+
+			It("should not default the globallyEnabled field if autoEnable is set to seed", func() {
+				obj.Spec.Resources[1].AutoEnable = []AutoEnableMode{"seed"}
+
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(false)))
+			})
+
+			It("should default the autoEnable field to shoot", func() {
+				obj.Spec.Resources[1].GloballyEnabled = ptr.To(true)
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].AutoEnable).To(ConsistOf(AutoEnableMode("shoot")))
+			})
+
+			It("should not overwrite the autoEnable field", func() {
+				obj.Spec.Resources[1].AutoEnable = []AutoEnableMode{"shoot", "seed"}
+
+				SetObjectDefaults_ControllerRegistration(obj)
+
+				Expect(obj.Spec.Resources[1].AutoEnable).To(ConsistOf(AutoEnableMode("shoot"), AutoEnableMode("seed")))
+			})
+
 			It("should default the reconcileTimeout field", func() {
 				SetObjectDefaults_ControllerRegistration(obj)
 
