@@ -17,6 +17,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
@@ -103,18 +104,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	}
 
 	allErrs = append(allErrs, validateSeedNetworks(seedSpec.Networks, fldPath.Child("networks"), inTemplate)...)
-
-	if seedSpec.Backup != nil {
-		if len(seedSpec.Backup.Provider) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("backup", "provider"), "must provide a backup cloud provider name"))
-		}
-
-		if seedSpec.Provider.Type != seedSpec.Backup.Provider && (seedSpec.Backup.Region == nil || len(*seedSpec.Backup.Region) == 0) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("backup", "region"), "", "region must be specified for if backup provider is different from provider used in `spec.cloud`"))
-		}
-
-		allErrs = append(allErrs, validateSecretReference(seedSpec.Backup.SecretRef, fldPath.Child("backup", "secretRef"))...)
-	}
+	allErrs = append(allErrs, validateSeedBackup(seedSpec.Backup, seedSpec.Provider.Type, fldPath.Child("backup"))...)
 
 	var keyValues = sets.New[string]()
 
@@ -239,6 +229,56 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	allErrs = append(allErrs, validateExtensions(seedSpec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateExtensionsForSeed(seedSpec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(seedSpec.Resources, fldPath.Child("resources"))...)
+
+	return allErrs
+}
+
+func validateSeedBackup(seedBackup *core.SeedBackup, seedProviderType string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if seedBackup == nil {
+		return allErrs
+	}
+
+	if len(seedBackup.Provider) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("provider"), "must provide a backup cloud provider name"))
+	}
+
+	if seedProviderType != seedBackup.Provider && (seedBackup.Region == nil || len(*seedBackup.Region) == 0) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("region"), "", "region must be specified for if backup provider is different from seed provider used in `spec.provider.type`"))
+	}
+
+	// How to achieve backward compatibility between secretRef and credentialsRef?
+	// - if secretRef is set, credentialsRef must be set and refer the same secret
+	// - if secretRef is not set, then credentialsRef must refer a WorkloadIdentity
+	//
+	// After the sync in the strategy, we can have the following cases:
+	// - both secretRef and credentialsRef are unset, which we forbid here
+	// - both can be set but refer to different resources, which we forbid here
+	// - secretRef can be unset only when workloadIdentity is used, which we respect here
+
+	if seedBackup.CredentialsRef == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
+	} else {
+		allErrs = append(allErrs, ValidateCredentialsRef(*seedBackup.CredentialsRef, fldPath.Child("credentialsRef"))...)
+
+		if seedBackup.CredentialsRef.GroupVersionKind().String() == corev1.SchemeGroupVersion.WithKind("Secret").String() {
+			if seedBackup.SecretRef.Namespace != seedBackup.CredentialsRef.Namespace || seedBackup.SecretRef.Name != seedBackup.CredentialsRef.Name {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretRef"), "must refer to the same secret as `spec.backup.credentialsRef`"))
+			}
+		} else {
+			emptySecretRef := corev1.SecretReference{}
+			if seedBackup.SecretRef != emptySecretRef {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretRef"), "must not be set when `spec.backup.credentialsRef` refer to resource other than secret"))
+			}
+		}
+
+		// TODO(vpnachev): Allow WorkloadIdentities once the support in the controllers and components is fully implemented.
+		if seedBackup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			seedBackup.CredentialsRef.Kind == "WorkloadIdentity" {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsRef"), "support for workload identity as backup credentials is not yet fully implemented"))
+		}
+	}
 
 	return allErrs
 }

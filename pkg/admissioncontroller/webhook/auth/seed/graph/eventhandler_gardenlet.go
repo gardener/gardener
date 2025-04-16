@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -17,6 +18,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
@@ -61,6 +63,7 @@ func (g *graph) handleGardenletCreateOrUpdate(ctx context.Context, gardenlet *se
 	defer g.lock.Unlock()
 
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeGardenlet, gardenlet.Namespace, gardenlet.Name)
+	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeGardenlet, gardenlet.Namespace, gardenlet.Name)
 	g.deleteAllOutgoingEdges(VertexTypeGardenlet, gardenlet.Namespace, gardenlet.Name, VertexTypeSeed)
 
 	var (
@@ -76,8 +79,20 @@ func (g *graph) handleGardenletCreateOrUpdate(ctx context.Context, gardenlet *se
 	}
 
 	if seedTemplate != nil && seedTemplate.Spec.Backup != nil {
-		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seedTemplate.Spec.Backup.SecretRef.Namespace, seedTemplate.Spec.Backup.SecretRef.Name)
-		g.addEdge(secretVertex, gardenletVertex)
+		var (
+			namespace = seedTemplate.Spec.Backup.CredentialsRef.Namespace
+			name      = seedTemplate.Spec.Backup.CredentialsRef.Name
+			vertex    *vertex
+		)
+
+		if seedTemplate.Spec.Backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			seedTemplate.Spec.Backup.CredentialsRef.Kind == "WorkloadIdentity" {
+			vertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, namespace, name)
+		} else if seedTemplate.Spec.Backup.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+			seedTemplate.Spec.Backup.CredentialsRef.Kind == "Secret" {
+			vertex = g.getOrCreateVertex(VertexTypeSecret, namespace, name)
+		}
+		g.addEdge(vertex, gardenletVertex)
 	}
 
 	var allowBootstrap bool

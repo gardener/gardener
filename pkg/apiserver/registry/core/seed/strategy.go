@@ -8,6 +8,7 @@ import (
 	"context"
 	"slices"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -41,6 +42,8 @@ func (s Strategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	seed.Generation = 1
 	seed.Status = core.SeedStatus{}
+
+	SyncBackupSecretRefAndCredentialsRef(seed.Spec.Backup)
 }
 
 // PrepareForUpdate is invoked on update before validation to normalize
@@ -51,6 +54,8 @@ func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	newSeed := obj.(*core.Seed)
 	oldSeed := old.(*core.Seed)
 	newSeed.Status = oldSeed.Status
+
+	SyncBackupSecretRefAndCredentialsRef(newSeed.Spec.Backup)
 
 	if mustIncreaseGeneration(oldSeed, newSeed) {
 		newSeed.Generation = oldSeed.Generation + 1
@@ -196,4 +201,43 @@ func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(seed, oldSeed *core.Se
 		seed.Labels["seed.gardener.cloud/eu-access"] != "true" {
 		seed.Spec.AccessRestrictions = removeAccessRestriction(seed.Spec.AccessRestrictions, "eu-access-only")
 	}
+}
+
+// SyncBackupSecretRefAndCredentialsRef ensures the backup fields
+// credentialsRef and secretRef are synced.
+// TODO(vpnachev): Remove once the backup.secretRef field is removed.
+func SyncBackupSecretRefAndCredentialsRef(backup *core.SeedBackup) {
+	if backup == nil {
+		return
+	}
+
+	emptySecretRef := corev1.SecretReference{}
+
+	// secretRef is set and credentialsRef is not, sync both fields.
+	if backup.SecretRef != emptySecretRef && backup.CredentialsRef == nil {
+		backup.CredentialsRef = &corev1.ObjectReference{
+			APIVersion: "v1",
+			Kind:       "Secret",
+			Namespace:  backup.SecretRef.Namespace,
+			Name:       backup.SecretRef.Name,
+		}
+
+		return
+	}
+
+	// secretRef is unset and credentialsRef refer a secret, sync both fields.
+	if backup.SecretRef == emptySecretRef && backup.CredentialsRef != nil &&
+		backup.CredentialsRef.APIVersion == "v1" && backup.CredentialsRef.Kind == "Secret" {
+		backup.SecretRef = corev1.SecretReference{
+			Namespace: backup.CredentialsRef.Namespace,
+			Name:      backup.CredentialsRef.Name,
+		}
+
+		return
+	}
+
+	// in all other cases we can do nothing:
+	// - both fields are unset -> we have nothing to sync
+	// - both fields are set -> let the validation check if they are correct
+	// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
 }

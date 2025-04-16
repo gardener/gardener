@@ -78,22 +78,22 @@ func SeedSettingTopologyAwareRoutingEnabled(settings *gardencorev1beta1.SeedSett
 	return settings != nil && settings.TopologyAwareRouting != nil && settings.TopologyAwareRouting.Enabled
 }
 
-// SeedBackupSecretRefEqual returns true when the secret reference of the backup configuration is the same.
-func SeedBackupSecretRefEqual(oldBackup, newBackup *gardencorev1beta1.SeedBackup) bool {
+// SeedBackupCredentialsRefEqual returns true when the credentials reference of the backup configuration is the same.
+func SeedBackupCredentialsRefEqual(oldBackup, newBackup *gardencorev1beta1.SeedBackup) bool {
 	var (
-		oldSecretRef corev1.SecretReference
-		newSecretRef corev1.SecretReference
+		oldCredentialsRef *corev1.ObjectReference
+		newCredentialsRef *corev1.ObjectReference
 	)
 
 	if oldBackup != nil {
-		oldSecretRef = oldBackup.SecretRef
+		oldCredentialsRef = oldBackup.CredentialsRef
 	}
 
 	if newBackup != nil {
-		newSecretRef = newBackup.SecretRef
+		newCredentialsRef = newBackup.CredentialsRef
 	}
 
-	return apiequality.Semantic.DeepEqual(oldSecretRef, newSecretRef)
+	return apiequality.Semantic.DeepEqual(oldCredentialsRef, newCredentialsRef)
 }
 
 // CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.

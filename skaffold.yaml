@@ -115,6 +115,7 @@ build:
             - pkg/apiserver/registry/security/workloadidentity/storage
             - pkg/apiserver/registry/seedmanagement/gardenlet
             - pkg/apiserver/registry/seedmanagement/gardenlet/storage
+            - pkg/apiserver/registry/seedmanagement/internal/utils
             - pkg/apiserver/registry/seedmanagement/managedseed
             - pkg/apiserver/registry/seedmanagement/managedseed/storage
             - pkg/apiserver/registry/seedmanagement/managedseedset

@@ -115,9 +115,11 @@ var _ = Describe("ManagedSeed controller test", func() {
 						Backup: &gardencorev1beta1.SeedBackup{
 							Provider: "test",
 							Region:   ptr.To("bar"),
-							SecretRef: corev1.SecretReference{
-								Name:      backupSecret.Name,
-								Namespace: backupSecret.Namespace,
+							CredentialsRef: &corev1.ObjectReference{
+								APIVersion: "v1",
+								Kind:       "Secret",
+								Name:       backupSecret.Name,
+								Namespace:  backupSecret.Namespace,
 							},
 						},
 					},

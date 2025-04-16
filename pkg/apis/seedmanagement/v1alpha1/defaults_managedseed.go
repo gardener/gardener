@@ -133,10 +133,16 @@ func setDefaultsResources(obj *gardenletconfigv1alpha1.ResourcesConfiguration) {
 }
 
 func setDefaultsSeedSpec(spec *gardencorev1beta1.SeedSpec, name, namespace string) {
-	if spec.Backup != nil && spec.Backup.SecretRef == (corev1.SecretReference{}) {
+	if spec.Backup != nil && spec.Backup.SecretRef == (corev1.SecretReference{}) && spec.Backup.CredentialsRef == nil {
 		spec.Backup.SecretRef = corev1.SecretReference{
 			Name:      "backup-" + name,
 			Namespace: namespace,
+		}
+		spec.Backup.CredentialsRef = &corev1.ObjectReference{
+			APIVersion: "v1",
+			Kind:       "Secret",
+			Name:       "backup-" + name,
+			Namespace:  namespace,
 		}
 	}
 }

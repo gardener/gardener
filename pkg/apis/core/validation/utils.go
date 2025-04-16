@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	kubernetescorevalidation "github.com/gardener/gardener/pkg/utils/validation/kubernetes/core"
 )
 
@@ -414,5 +415,64 @@ func validateResources(resources []core.NamedResourceReference, fldPath *field.P
 		}
 		allErrs = append(allErrs, validateCrossVersionObjectReference(resource.ResourceRef, fldPath.Index(i).Child("resourceRef"))...)
 	}
+	return allErrs
+}
+
+// ValidateCredentialsRef ensures that a resource of GVK v1.Secret or security.gardener.cloud/v1alpha1.WorkloadIdentity
+// is referred, and its name and namespace are properly set.
+func ValidateCredentialsRef(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(ref.APIVersion) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide an apiVersion"))
+	}
+
+	if len(ref.Kind) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "must provide a kind"))
+	}
+
+	if len(ref.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
+	}
+
+	for _, err := range validation.IsDNS1123Subdomain(ref.Name) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("name"), ref.Name, err))
+	}
+
+	if len(ref.Namespace) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
+	}
+
+	for _, err := range validation.IsDNS1123Subdomain(ref.Namespace) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), ref.Namespace, err))
+	}
+
+	var (
+		secret           = corev1.SchemeGroupVersion.WithKind("Secret")
+		workloadIdentity = securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentity")
+
+		allowedGVKs = sets.New(secret, workloadIdentity)
+		validGVKs   = []string{secret.String(), workloadIdentity.String()}
+	)
+
+	if !allowedGVKs.Has(ref.GroupVersionKind()) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, ref.String(), validGVKs))
+	}
+
+	return allErrs
+}
+
+// ValidateObjectReferenceNameAndNamespace ensures the name in the ObjectReference is set.
+// Optionally, it can ensure the namespace is also set when requireNamespace=true.
+func ValidateObjectReferenceNameAndNamespace(ref corev1.ObjectReference, fldPath *field.Path, requireNamespace bool) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(ref.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
+	}
+	if requireNamespace && len(ref.Namespace) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
+	}
+
 	return allErrs
 }
