@@ -311,7 +311,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 			} else if u := in.URL; u != nil {
 				parsedURL, err := url.Parse(*u)
 				if err != nil {
-					return admissionregistrationv1.WebhookClientConfig{}, fmt.Errorf("failed to parse URL: %v", err)
+					return admissionregistrationv1.WebhookClientConfig{}, fmt.Errorf("failed to parse URL %q: %w", *u, err)
 				}
 				path = parsedURL.Path
 			}

@@ -164,12 +164,6 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       !kubeProxyEnabled,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady, waitUntilShootNamespacesReady, waitUntilExtensionControllersReady),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Deleting kube-proxy system component",
-			Fn:           b.Shoot.Components.SystemComponents.KubeProxy.Destroy,
-			SkipIf:       kubeProxyEnabled,
-			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
-		})
 		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
 			Fn:           b.DeployNetwork,
@@ -183,7 +177,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployCoreDNS = g.Add(flow.Task{
 			Name:         "Deploying CoreDNS system component",
 			Fn:           b.DeployCoreDNS,
-			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady),
+			Dependencies: flow.NewTaskIDs(waitUntilNetworkReady, deployNetworkPolicies),
 		})
 		waitUntilCoreDNSReady = g.Add(flow.Task{
 			Name:         "Waiting until CoreDNS system component is ready",

@@ -90,9 +90,9 @@ spec:
         {{- if .Values.gardener.version }}
         - --gardener-version={{ .Values.gardener.version }}
         {{- end }}
-        - {{- if .Values.gardener.autonomousShootCluster }}
+        {{- if .Values.gardener.autonomousShootCluster }}
         - --autonomous-shoot-cluster={{ .Values.gardener.autonomousShootCluster }}
-        - {{- end }}
+        {{- end }}
         - --log-level={{ .Values.logLevel | default "info"  }}
         - --log-format={{ .Values.logFormat | default "json"  }}
         env:

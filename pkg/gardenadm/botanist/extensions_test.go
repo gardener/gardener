@@ -198,7 +198,7 @@ var _ = Describe("Extensions", func() {
 			Expect(b.WaitUntilExtensionControllerInstallationsHealthy(ctx)).To(MatchError(ContainSubstring("is not healthy")))
 		})
 
-		It("should fail if all ManagedResource are healthy", func() {
+		It("should succeed if all ManagedResource are healthy", func() {
 			Expect(fakeClient.Create(ctx, managedResource1)).To(Succeed())
 			Expect(fakeClient.Create(ctx, managedResource2)).To(Succeed())
 
