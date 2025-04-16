@@ -219,3 +219,28 @@ func (s *GardenContext) WithVirtualClusterClientSet(clientSet kubernetes.Interfa
 	s.VirtualClusterKomega = komega.New(s.VirtualClusterClient)
 	return s
 }
+
+// SeedContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
+// same test case, i.e., within the same ordered container.
+// Accordingly, SeedContext values must not be reused across multiple test cases (ordered containers). Make sure to
+// declare SeedContext variables within the ordered container and initialize them during ginkgo tree construction,
+// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+//
+// A SeedContext can be initialized using TestContext.ForSeed.
+type SeedContext struct {
+	TestContext
+
+	// Seed object the test is working with
+	Seed *gardencorev1beta1.Seed
+}
+
+// ForSeed copies the receiver TestContext for deriving a SeedContext.
+func (t *TestContext) ForSeed(seed *gardencorev1beta1.Seed) *SeedContext {
+	s := &SeedContext{
+		TestContext: *t,
+		Seed:        seed,
+	}
+	s.Log = s.Log.WithValues("seed", client.ObjectKeyFromObject(seed))
+
+	return s
+}
