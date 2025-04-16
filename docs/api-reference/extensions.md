@@ -4031,6 +4031,20 @@ Kubernetes core/v1.ResourceList
 <p>Capacity represents the expected Node capacity.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>virtualCapacity</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VirtualCapacity represents the expected Node &lsquo;virtual&rsquo; capacity ie comprising virtual extended resources.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.OSUpdate">OSUpdate
@@ -4997,7 +5011,7 @@ NodeTemplate
 </td>
 <td>
 <em>(Optional)</em>
-<p>NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup from zero</p>
+<p>NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup</p>
 </td>
 </tr>
 <tr>

@@ -158,7 +158,7 @@ type WorkerPool struct {
 	// KubeletConfig contains the kubelet configuration for the worker pool.
 	// +optional
 	KubeletConfig *gardencorev1beta1.KubeletConfig `json:"kubeletConfig,omitempty"`
-	// NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup from zero
+	// NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup
 	// +optional
 	NodeTemplate *NodeTemplate `json:"nodeTemplate,omitempty"`
 	// Architecture is the CPU architecture of the worker pool machines and machine image.
@@ -198,6 +198,9 @@ type ClusterAutoscalerOptions struct {
 type NodeTemplate struct {
 	// Capacity represents the expected Node capacity.
 	Capacity corev1.ResourceList `json:"capacity"`
+	// VirtualCapacity represents the expected Node 'virtual' capacity ie comprising virtual extended resources.
+	// +optional
+	VirtualCapacity corev1.ResourceList `json:"virtualCapacity,omitempty"`
 }
 
 // MachineImage contains logical information about the name and the version of the machie image that
