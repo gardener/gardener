@@ -323,6 +323,7 @@ var _ = Describe("ResourceManager", func() {
 				{Key: "a"},
 				{Key: "b"},
 				{Key: "c"},
+				{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists},
 			},
 			ResponsibilityMode:                        ForTarget,
 			TargetDisableCache:                        &targetDisableCache,
@@ -494,6 +495,7 @@ var _ = Describe("ResourceManager", func() {
 						{Key: "a"},
 						{Key: "b"},
 						{Key: "c"},
+						{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists},
 					},
 				}
 				config.Controllers.NodeCriticalComponents.Enabled = !isWorkerless
@@ -619,6 +621,10 @@ var _ = Describe("ResourceManager", func() {
 								},
 							},
 							Tolerations: []corev1.Toleration{
+								{
+									Key:      "node-role.kubernetes.io/control-plane",
+									Operator: corev1.TolerationOpExists,
+								},
 								{
 									Key:               corev1.TaintNodeNotReady,
 									Operator:          corev1.TolerationOpExists,

@@ -816,6 +816,15 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		priorityClassName = r.values.PriorityClassName
 	)
 
+	// If system component pods shall tolerate the control plane taint, we should add it for gardener-resource-manager
+	// itself as well (otherwise, it cannot be scheduled in order to add the toleration to other pods).
+	for _, toleration := range r.values.SystemComponentTolerations {
+		if toleration.Key == "node-role.kubernetes.io/control-plane" {
+			tolerations = append(tolerations, toleration)
+			break
+		}
+	}
+
 	if r.values.DefaultNotReadyToleration != nil {
 		tolerations = append(tolerations, corev1.Toleration{
 			Key:               corev1.TaintNodeNotReady,

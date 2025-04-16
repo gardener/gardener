@@ -127,6 +127,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						{Path: cctx.KubernetesVersion.String()},
 						{Path: fmt.Sprintf("%s", cctx.SSHPublicKeys)},
 						{Path: strconv.FormatBool(cctx.ValitailEnabled)},
+						{Path: fmt.Sprintf("%+v", cctx.Taints)},
 					},
 					nil
 			}
@@ -145,6 +146,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					},
 					KubeletDataVolumeName: &kubeletDataVolumeName,
+					ControlPlane:          &gardencorev1beta1.WorkerControlPlane{},
 				},
 				{
 					Name: worker2Name,
@@ -282,6 +284,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 					SSHPublicKeys:         sshPublicKeys,
 					ValitailEnabled:       valitailEnabled,
 				}
+
+				if worker.ControlPlane != nil {
+					componentsContext.KubeletConfigParameters.WithStaticPodPath = true
+					componentsContext.Taints = append(componentsContext.Taints, corev1.Taint{
+						Key:    "node-role.kubernetes.io/control-plane",
+						Effect: corev1.TaintEffectNoSchedule,
+					})
+				}
+
 				originalUnits, originalFiles, _ := originalConfigFn(componentsContext)
 
 				oscInit := &extensionsv1alpha1.OperatingSystemConfig{
