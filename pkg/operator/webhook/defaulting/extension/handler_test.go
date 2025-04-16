@@ -105,5 +105,70 @@ var _ = Describe("Handler", func() {
 				))
 			})
 		})
+
+		Context("autoEnable defaulting", func() {
+			Context("kind == Extension", func() {
+				BeforeEach(func() {
+					extension.Spec.Resources[0].Kind = "Extension"
+				})
+
+				It("should default the autoEnable field to none", func() {
+					Expect(handler.Default(ctx, extension)).To(Succeed())
+					Expect(extension.Spec.Resources).To(ConsistOf(
+						gardencorev1beta1.ControllerResource{
+							Kind:       "Extension",
+							Type:       "test",
+							Primary:    ptr.To(true),
+							AutoEnable: nil,
+						},
+					))
+				})
+
+				It("should default the autoEnable field to shoot", func() {
+					extension.Spec.Resources[0].GloballyEnabled = ptr.To(true)
+
+					Expect(handler.Default(ctx, extension)).To(Succeed())
+					Expect(extension.Spec.Resources).To(ConsistOf(
+						gardencorev1beta1.ControllerResource{
+							Kind:            "Extension",
+							Type:            "test",
+							Primary:         ptr.To(true),
+							GloballyEnabled: ptr.To(true),
+							AutoEnable:      []gardencorev1beta1.AutoEnableMode{"shoot"},
+						},
+					))
+				})
+
+				It("should not overwrite the autoEnable field if already set", func() {
+					extension.Spec.Resources[0].GloballyEnabled = ptr.To(true)
+					extension.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"seed"}
+
+					Expect(handler.Default(ctx, extension)).To(Succeed())
+					Expect(extension.Spec.Resources).To(ConsistOf(
+						gardencorev1beta1.ControllerResource{
+							Kind:            "Extension",
+							Type:            "test",
+							Primary:         ptr.To(true),
+							GloballyEnabled: ptr.To(true),
+							AutoEnable:      []gardencorev1beta1.AutoEnableMode{"seed"},
+						},
+					))
+				})
+			})
+
+			Context("kind != Extension", func() {
+				It("should not overwrite the autoEnable field", func() {
+					Expect(handler.Default(ctx, extension)).To(Succeed())
+					Expect(extension.Spec.Resources).To(ConsistOf(
+						gardencorev1beta1.ControllerResource{
+							Kind:       "Worker",
+							Type:       "test",
+							Primary:    ptr.To(true),
+							AutoEnable: nil,
+						},
+					))
+				})
+			})
+		})
 	})
 })
