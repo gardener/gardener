@@ -81,6 +81,7 @@ type components struct {
 	etcdCRD       component.Deployer
 	istioCRD      component.Deployer
 	vpaCRD        component.Deployer
+	vpaCRD        component.DeployWaiter
 	fluentCRD     component.DeployWaiter
 	prometheusCRD component.DeployWaiter
 
@@ -143,11 +144,11 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.etcdCRD, err = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedVersion)
+	c.vpaCRD, err = vpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), nil)
 	if err != nil {
 		return
 	}
 	c.istioCRD = istio.NewCRD(r.SeedClientSet.ChartApplier())
-	c.vpaCRD = vpa.NewCRD(r.SeedClientSet.Applier(), nil)
 	c.fluentCRD, err = fluentoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return

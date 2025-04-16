@@ -630,7 +630,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		})
 		deployVPACRD = g.Add(flow.Task{
 			Name:   "Deploying custom resource definitions for VPA",
-			Fn:     c.vpaCRD.Deploy,
+			Fn:     component.OpWait(c.vpaCRD).Deploy,
 			SkipIf: !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		})
 		deployIstioCRD = g.Add(flow.Task{

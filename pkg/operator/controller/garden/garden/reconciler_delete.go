@@ -372,7 +372,7 @@ func (r *Reconciler) delete(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for VPA",
-			Fn:           c.vpaCRD.Destroy,
+			Fn:           component.OpWait(c.vpaCRD).Destroy,
 			SkipIf:       !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})

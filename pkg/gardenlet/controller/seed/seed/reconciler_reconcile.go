@@ -224,7 +224,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		deployVPACRD = g.Add(flow.Task{
 			Name:   "Deploying VPA-related custom resource definitions",
-			Fn:     c.vpaCRD.Deploy,
+			Fn:     component.OpWait(c.vpaCRD).Deploy,
 			SkipIf: seedIsGarden || !vpaEnabled(seed.GetInfo().Spec.Settings),
 		})
 		deployFluentCRD = g.Add(flow.Task{
