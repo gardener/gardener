@@ -65,6 +65,9 @@ get_group_package () {
   "monitoring.coreos.com_v1alpha1")
     echo "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
     ;;
+  "perses.dev_v1alpha1")
+    echo "github.com/perses/perses-operator/api/v1alpha1"
+    ;;
   "autoscaling.k8s.io")
     echo "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
     ;;
@@ -92,6 +95,7 @@ generate_all_groups () {
   generate_group monitoring.coreos.com_v1
   generate_group monitoring.coreos.com_v1beta1
   generate_group monitoring.coreos.com_v1alpha1
+  generate_group perses.dev_v1alpha1
   generate_group machine.sapcloud.io
   generate_group dashboard.gardener.cloud
 }
@@ -133,6 +137,9 @@ generate_group () {
     chmod +w "$scrapeconfig_types_file" "$monitoring_dir/v1alpha1/"
     trap 'cp "$scrapeconfig_types_backup" "$scrapeconfig_types_file" && chmod -w "$monitoring_dir/v1alpha1/"' EXIT
     sed -i 's/\+kubebuilder:validation:Enum=Pod;Endpoints;Ingress;Service;Node;EndpointSlice/\+kubebuilder:validation:Enum=Pod;pod;Endpoints;endpoints;Ingress;ingress;Service;service;Node;node;EndpointSlice;endpointslice/g' "$scrapeconfig_types_file"
+    $generate
+  elif [[ "$group" == "perses.dev_v1alpha1" ]]; then
+    generate="controller-gen crd:ignoreUnexportedFields=true"$crd_options" paths="$package_path" output:crd:dir="$output_dir_temp" output:stdout"
     $generate
   else
     $generate
