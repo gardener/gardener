@@ -175,6 +175,14 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			}).Should(gbytes.Say(`Active: active \(running\)`))
 		}, SpecTimeout(time.Minute))
 
+		It("should ensure that extension webhooks on control plane components are functioning", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) map[string]string {
+				pod := &corev1.Pod{}
+				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: "kube-scheduler-machine-0", Namespace: "kube-system"}, pod)).To(Succeed())
+				return pod.Labels
+			}).Should(HaveKeyWithValue("injected-by", "provider-local"))
+		}, SpecTimeout(time.Minute))
+
 		It("should join as worker node", func(ctx SpecContext) {
 			_, stdErr, err := execute(ctx, 1, "gardenadm", "join")
 			Expect(err).NotTo(HaveOccurred())

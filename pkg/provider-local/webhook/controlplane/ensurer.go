@@ -69,3 +69,9 @@ func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ extensionscont
 
 	return nil
 }
+
+// EnsureKubeSchedulerDeployment ensures that the kube-scheduler deployment conforms to the provider requirements.
+func (e *ensurer) EnsureKubeSchedulerDeployment(_ context.Context, _ extensionscontextwebhook.GardenContext, newObj, _ *appsv1.Deployment) error {
+	newObj.Spec.Template.Labels["injected-by"] = "provider-local"
+	return nil
+}
