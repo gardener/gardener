@@ -614,7 +614,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for fluent-operator",
-			Fn:   c.fluentCRD.Deploy,
+			Fn:   component.OpWait(c.fluentCRD).Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for prometheus-operator",
@@ -622,7 +622,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for extensions",
-			Fn:   c.extensionCRD.Deploy,
+			Fn:   component.OpWait(c.extensionCRD).Deploy,
 		})
 		deployEtcdCRD = g.Add(flow.Task{
 			Name: "Deploying ETCD-related custom resource definitions",

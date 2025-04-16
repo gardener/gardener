@@ -88,11 +88,11 @@ import (
 )
 
 type components struct {
-	vpaCRD        component.Deployer
-	fluentCRD     component.Deployer
-	extensionCRD  component.Deployer
+	etcdCRD       component.DeployWaiter
 	vpaCRD        component.DeployWaiter
 	istioCRD      component.DeployWaiter
+	fluentCRD     component.DeployWaiter
+	extensionCRD  component.DeployWaiter
 	prometheusCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
