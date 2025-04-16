@@ -313,7 +313,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines,
-			numDesiredManualInPlace, numUpdatedManualInPlace, numNeedUpdateManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace int32
+			numNeedUpdateManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace int32
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
@@ -408,14 +408,11 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 					}
 				}
 
-				numDesiredManualInPlace += deployment.Spec.Replicas
 				numNeedUpdateManualInPlace += oldMachineSetsTotalReplicas
-				numUpdatedManualInPlace += deployment.Status.UpdatedReplicas
-			} else {
-				numDesired += deployment.Spec.Replicas
-				numUpdated += deployment.Status.UpdatedReplicas
 			}
 
+			numDesired += deployment.Spec.Replicas
+			numUpdated += deployment.Status.UpdatedReplicas
 			numAvailable += deployment.Status.AvailableReplicas
 			numUnavailable += deployment.Status.UnavailableReplicas
 		}
@@ -425,12 +422,12 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 		case !extensionscontroller.IsHibernationEnabled(cluster):
 			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
-			if numUnavailable == 0 && (numUpdated+numUpdatedManualInPlace+numNeedUpdateManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
+			if numUnavailable == 0 && (numUpdated+numNeedUpdateManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
 				numOldMachinesNotUpdateCandidateManualInPlace == 0 {
 				return retryutils.Ok()
 			}
 
-			if numUnavailable == 0 && numAvailable == (numDesired+numDesiredManualInPlace) && (numUpdated+numUpdatedManualInPlace+numNeedUpdateManualInPlace) < numberOfAwakeMachines {
+			if numUnavailable == 0 && numAvailable == numDesired && (numUpdated+numNeedUpdateManualInPlace) < numberOfAwakeMachines {
 				msg = fmt.Sprintf("Waiting until all old machines are drained and terminated. Waiting for %d machine(s)...", numberOfAwakeMachines-numUpdated)
 			}
 
@@ -444,7 +441,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			}
 
 			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d/%d machinedeployments available)...",
-				numAvailable, numDesired+numDesiredManualInPlace, numUpdated+numUpdatedManualInPlace+numNeedUpdateManualInPlace+numDesiredManualInPlace, numDesired, numUnavailable, numHealthyDeployments, len(wantedMachineDeployments))
+				numAvailable, numDesired, numUpdated+numNeedUpdateManualInPlace, numDesired, numUnavailable, numHealthyDeployments, len(wantedMachineDeployments))
 		default:
 			if numberOfAwakeMachines == 0 {
 				return retryutils.Ok()
