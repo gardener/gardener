@@ -189,11 +189,9 @@ func (f *CommonFramework) DumpLogsForPodsWithLabelsInNamespace(ctx context.Conte
 
 // DumpLogsForPodInNamespace prints the logs of the pod with the given namespace and name.
 func (f *CommonFramework) DumpLogsForPodInNamespace(ctx context.Context, k8sClient kubernetes.Interface, namespace, name string, options *corev1.PodLogOptions) error {
-	var log logr.Logger
-	if options != nil {
-		log = f.Logger.WithValues("pod", client.ObjectKey{Namespace: namespace, Name: name}, "container", options.Container)
-	} else {
-		log = f.Logger.WithValues("pod", client.ObjectKey{Namespace: namespace, Name: name})
+	log := f.Logger.WithValues("pod", client.ObjectKey{Namespace: namespace, Name: name})
+	if options != nil && options.Container != "" {
+		log = log.WithValues("container", options.Container)
 	}
 	log.Info("Dumping logs for corev1.Pod")
 
