@@ -105,13 +105,15 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 
 	return kubeapiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
-			Requests: kubernetesutils.MaximumResourcesFromResourceList(
-				corev1.ResourceList{
+			Requests: func() corev1.ResourceList {
+				if len(minAllowed) > 0 {
+					return minAllowed
+				}
+				return corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("250m"),
 					corev1.ResourceMemory: resource.MustParse("500Mi"),
-				},
-				minAllowed,
-			),
+				}
+			}(),
 		},
 		MinReplicas:       minReplicas,
 		MaxReplicas:       maxReplicas,

@@ -877,7 +877,7 @@ func validateETCD(etcd *core.ETCD, fldPath *field.Path) field.ErrorList {
 
 	if etcd != nil {
 		if etcd.Main != nil {
-			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("main", "autoscaling"))...)
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("150M")}, fldPath.Child("main", "autoscaling"))...)
 		}
 
 		if etcd.Events != nil {
