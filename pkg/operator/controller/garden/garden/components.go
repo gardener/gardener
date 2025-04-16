@@ -90,10 +90,10 @@ import (
 type components struct {
 	etcdCRD       component.Deployer
 	vpaCRD        component.Deployer
-	istioCRD      component.Deployer
 	fluentCRD     component.Deployer
 	extensionCRD  component.Deployer
 	vpaCRD        component.DeployWaiter
+	istioCRD      component.DeployWaiter
 	prometheusCRD component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
@@ -163,10 +163,10 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
+	c.istioCRD, err = istio.NewCRD(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Applier())
 	if err != nil {
 		return
 	}
-	c.istioCRD = istio.NewCRD(r.RuntimeClientSet.ChartApplier())
 	c.fluentCRD, err = fluentoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
 	if err != nil {
 		return

@@ -635,7 +635,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		})
 		deployIstioCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for Istio",
-			Fn:   c.istioCRD.Deploy,
+			Fn:   component.OpWait(c.istioCRD).Deploy,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",

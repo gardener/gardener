@@ -219,7 +219,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		deployIstioCRD = g.Add(flow.Task{
 			Name:   "Deploying Istio-related custom resource definitions",
-			Fn:     c.istioCRD.Deploy,
+			Fn:     component.OpWait(c.istioCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		deployVPACRD = g.Add(flow.Task{

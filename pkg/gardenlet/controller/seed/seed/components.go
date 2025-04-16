@@ -79,7 +79,6 @@ type components struct {
 	machineCRD    component.DeployWaiter
 	extensionCRD  component.DeployWaiter
 	etcdCRD       component.Deployer
-	istioCRD      component.Deployer
 	vpaCRD        component.Deployer
 	vpaCRD        component.DeployWaiter
 	fluentCRD     component.DeployWaiter
@@ -144,11 +143,14 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.etcdCRD, err = etcd.NewCRD(r.SeedClientSet.Client(), r.SeedVersion)
+	c.istioCRD, err = istio.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
 	c.vpaCRD, err = vpa.NewCRD(r.SeedClientSet.Client(), r.SeedClientSet.Applier(), nil)
 	if err != nil {
 		return
 	}
-	c.istioCRD = istio.NewCRD(r.SeedClientSet.ChartApplier())
 	c.fluentCRD, err = fluentoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return

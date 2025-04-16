@@ -637,15 +637,14 @@ var _ = Describe("Seed controller tests", func() {
 						// Usually, the gardener-operator deploys and manages the following resources.
 						// However, it is not really running, so we have to fake its behaviour here.
 						By("Create resources managed by gardener-operator")
-						chartApplier, err := kubernetes.NewChartApplierForConfig(restConfig)
-						Expect(err).NotTo(HaveOccurred())
 
 						var (
 							applier                  = kubernetes.NewApplier(testClient, testClient.RESTMapper())
 							managedResourceCRDReader = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
 							istioSystemNamespace     = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
-							istioCRDs                = istio.NewCRD(chartApplier)
 						)
+						istioCRDs, err := istio.NewCRD(testClient, applier)
+						Expect(err).NotTo(HaveOccurred())
 						vpaCRD, err := vpa.NewCRD(testClient, applier, nil)
 						Expect(err).NotTo(HaveOccurred())
 						fluentCRD, err := fluentoperator.NewCRDs(testClient, applier)
