@@ -1273,6 +1273,51 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 				})
 			})
 
+			Context("ManagedResource reconciliation delay", func() {
+				It("should fail if gardener-apiserver service does not get created from ManagedResource", func() {
+					Expect(fakeClient.Delete(ctx, serviceRuntime)).To(Succeed())
+					Eventually(ctx, func(g Gomega) {
+						g.Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceRuntime), &corev1.Service{})).To(BeNotFoundError())
+					}).Should(Succeed())
+
+					Expect(deployer.Deploy(ctx)).To(MatchError(ContainSubstring("failed waiting for service gardener-apiserver to get created by gardener-resource-manager")))
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceRuntime), managedResourceRuntime)).To(Succeed())
+					expectedRuntimeMr := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            managedResourceRuntime.Name,
+							Namespace:       managedResourceRuntime.Namespace,
+							ResourceVersion: "2",
+							Generation:      1,
+							Labels: map[string]string{
+								"gardener.cloud/role":                "seed-system-component",
+								"care.gardener.cloud/condition-type": "VirtualComponentsHealthy",
+							},
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							Class:       ptr.To("seed"),
+							SecretRefs:  []corev1.LocalObjectReference{{Name: managedResourceRuntime.Spec.SecretRefs[0].Name}},
+							KeepObjects: ptr.To(false),
+						},
+					}
+					utilruntime.Must(references.InjectAnnotations(expectedRuntimeMr))
+					Expect(managedResourceRuntime).To(Equal(expectedRuntimeMr))
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceVirtual), managedResourceVirtual)).To(Succeed())
+					// Virtual Mr should not have been changed
+					expectedVirtualMr := &resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            managedResourceVirtual.Name,
+							Namespace:       managedResourceVirtual.Namespace,
+							Generation:      1,
+							ResourceVersion: "1",
+						},
+					}
+					Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
+				})
+
+			})
+
 			Context("resources generation", func() {
 				var expectedRuntimeObjects []client.Object
 
