@@ -520,22 +520,33 @@ func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *gardenletconfigv1alpha1.Gar
 	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
 }
 
-func sortByIPFamilies(ipfamilies []gardencorev1beta1.IPFamily, cidr []net.IPNet) []net.IPNet {
+func sortByIPFamilies(ipfamilies []gardencorev1beta1.IPFamily, cidrs []net.IPNet) []net.IPNet {
 	var result []net.IPNet
 	for _, ipfamily := range ipfamilies {
 		switch ipfamily {
 		case gardencorev1beta1.IPFamilyIPv4:
-			for _, c := range cidr {
-				if c.IP.To4() != nil {
-					result = append(result, c)
+			for _, cidr := range cidrs {
+				if cidr.IP.To4() != nil {
+					result = append(result, cidr)
 				}
 			}
 		case gardencorev1beta1.IPFamilyIPv6:
-			for _, c := range cidr {
-				if c.IP.To4() == nil {
-					result = append(result, c)
+			for _, cidr := range cidrs {
+				if cidr.IP.To4() == nil {
+					result = append(result, cidr)
 				}
 			}
+		}
+	}
+	return result
+}
+
+func getPrimaryCIDRs(cidrs []net.IPNet, ipFamilies []gardencorev1beta1.IPFamily) []net.IPNet {
+	var result []net.IPNet
+	isIPv4 := ipFamilies[0] == gardencorev1beta1.IPFamilyIPv4
+	for _, cidr := range cidrs {
+		if (isIPv4 && cidr.IP.To4() != nil) || (!isIPv4 && cidr.IP.To4() == nil) {
+			result = append(result, cidr)
 		}
 	}
 	return result
@@ -595,6 +606,14 @@ func ToNetworks(shoot *gardencorev1beta1.Shoot, workerless bool) (*Networks, err
 		} else {
 			nodes = sortByIPFamilies(shoot.Spec.Networking.IPFamilies, result)
 		}
+	}
+
+	// During dual-stack migration, until nodes are migrated to  dual-stack, we only use the primary addresses.
+	condition := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
+	if condition != nil && condition.Status != gardencorev1beta1.ConditionTrue {
+		nodes = getPrimaryCIDRs(nodes, shoot.Spec.Networking.IPFamilies)
+		services = getPrimaryCIDRs(services, shoot.Spec.Networking.IPFamilies)
+		pods = getPrimaryCIDRs(pods, shoot.Spec.Networking.IPFamilies)
 	}
 
 	for _, cidr := range services {

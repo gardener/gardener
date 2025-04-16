@@ -1299,7 +1299,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+<p>IPFamilies specifies the IP protocol versions to use for shoot networking.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md</a></p>
 </td>
 </tr>
@@ -3492,7 +3492,8 @@ string
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#extensions.gardener.cloud/v1alpha1.NetworkSpec">NetworkSpec</a>)
+<a href="#extensions.gardener.cloud/v1alpha1.NetworkSpec">NetworkSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus</a>)
 </p>
 <p>
 <p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
@@ -3960,7 +3961,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+<p>IPFamilies specifies the IP protocol versions to use for shoot networking.
 See <a href="https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md">https://github.com/gardener/gardener/blob/master/docs/development/ipv6.md</a></p>
 </td>
 </tr>
@@ -3997,6 +3998,21 @@ DefaultStatus
 (Members of <code>DefaultStatus</code> are embedded into this type.)
 </p>
 <p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ipFamilies</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.IPFamily">
+[]IPFamily
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IPFamilies specifies the IP protocol versions that actually are used for shoot networking.
+During dual-stack migration, this field may differ from the spec.</p>
 </td>
 </tr>
 </tbody>
