@@ -5,6 +5,9 @@ metadata:
   name: {{ .LoggerName }}
   namespace: {{ .HelmDeployNamespace }}
   labels:
+    origin:                              gardener
+    gardener.cloud/role:                 system-component
+    resources.gardener.cloud/managed-by: gardener
     app: {{ .AppLabel }}
 spec:
   replicas: 1
@@ -14,6 +17,11 @@ spec:
   template:
     metadata:
       labels:
+    {{ if .AdditionalLabels }}
+      {{- range $key, $value := .AdditionalLabels }}
+        {{ $key }}: {{ $value }}
+      {{- end }}
+    {{ end }}
         app: {{ .AppLabel }}
     spec:
       containers:
