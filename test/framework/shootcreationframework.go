@@ -395,7 +395,6 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 	}
 
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(f.Shoot))
-
 	if f.GardenerFramework.Config.ExistingShootName != "" {
 		shootKey := client.ObjectKey{Namespace: f.ProjectNamespace, Name: f.GardenerFramework.Config.ExistingShootName}
 		if err := f.GardenClient.Client().Get(ctx, shootKey, f.Shoot); err != nil {
