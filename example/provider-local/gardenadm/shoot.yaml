@@ -4,6 +4,7 @@ metadata:
   name: root
   namespace: garden
 spec:
+  region: local
   provider:
     type: local
     workers:

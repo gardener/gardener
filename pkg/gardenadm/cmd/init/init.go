@@ -222,7 +222,16 @@ func run(ctx context.Context, opts *Options) error {
 			waitUntilExtensionControllersInPodNetworkReady,
 		)
 
-		_ = syncPointBootstrapped // TODO: Remove this dummy line once syncPointBootstrapped is used for further tasks.
+		deployControlPlane = g.Add(flow.Task{
+			Name:         "Deploying shoot control plane components",
+			Fn:           b.DeployControlPlane,
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane has been reconciled",
+			Fn:           b.Shoot.Components.Extensions.ControlPlane.Wait,
+			Dependencies: flow.NewTaskIDs(deployControlPlane),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{

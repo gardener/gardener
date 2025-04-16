@@ -553,7 +553,7 @@ func (a *actuator) computeChecksums(
 ) (map[string]string, error) {
 	// Get cloud provider secret and config from cluster
 	cpSecret := &corev1.Secret{}
-	if err := a.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}, cpSecret); err != nil {
+	if err := a.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}, cpSecret); client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf("could not get secret '%s/%s': %w", namespace, v1beta1constants.SecretNameCloudProvider, err)
 	}
 
