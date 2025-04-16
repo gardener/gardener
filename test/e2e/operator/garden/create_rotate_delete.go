@@ -31,6 +31,7 @@ import (
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 	Describe("Create Garden, Rotate Credentials and Delete Garden", Ordered, Label("credentials-rotation"), func() {
 		var s *GardenContext
+
 		BeforeTestSetup(func() {
 			backupSecret := defaultBackupSecret()
 			s = NewTestContext().ForGarden(defaultGarden(backupSecret, false), backupSecret)
@@ -187,7 +188,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Garden)
 
-		It("Rotation in preparing status", func(ctx SpecContext) {
+		It("Rotation in Preparing status", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) {
 				g.Expect(s.GardenKomega.Get(s.Garden)()).To(Succeed())
 				v.ExpectPreparingStatus(g)
@@ -208,7 +209,7 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 
 		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Garden)
 
-		It("Rotation in completing status", func(ctx SpecContext) {
+		It("Rotation in Completing status", func(ctx SpecContext) {
 			Eventually(ctx, func(g Gomega) {
 				g.Expect(s.GardenKomega.Get(s.Garden)()).To(Succeed())
 				v.ExpectCompletingStatus(g)

@@ -127,9 +127,9 @@ func ItShouldAnnotateGarden(s *GardenContext, annotations map[string]string) {
 	It("Annotate Garden", func(ctx SpecContext) {
 		patch := client.MergeFrom(s.Garden.DeepCopy())
 
-		for annotationKey, annotationValue := range annotations {
-			s.Log.Info("Setting annotation", "annotation", annotationKey, "value", annotationValue)
-			metav1.SetMetaDataAnnotation(&s.Garden.ObjectMeta, annotationKey, annotationValue)
+		for key, value := range annotations {
+			s.Log.Info("Setting annotation", "annotation", key, "value", value)
+			metav1.SetMetaDataAnnotation(&s.Garden.ObjectMeta, key, value)
 		}
 
 		Eventually(ctx, func() error {
