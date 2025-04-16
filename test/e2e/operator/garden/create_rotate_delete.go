@@ -21,50 +21,32 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/test/e2e"
+	. "github.com/gardener/gardener/test/e2e/gardener"
+	. "github.com/gardener/gardener/test/e2e/operator/garden/internal"
 	"github.com/gardener/gardener/test/e2e/operator/garden/internal/rotation"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
 var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
-	var (
-		backupSecret = defaultBackupSecret()
-		garden       = defaultGarden(backupSecret, false)
-	)
+	Describe("Create Garden, Rotate Credentials and Delete Garden", Ordered, Label("credentials-rotation"), func() {
+		var s *GardenContext
 
-	It("Create Garden, Rotate Credentials and Delete Garden", Label("credentials-rotation"), func() {
-		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
-		defer cancel()
-
-		By("Create Garden")
-		Expect(runtimeClient.Create(ctx, backupSecret)).To(Succeed())
-		Expect(runtimeClient.Create(ctx, garden)).To(Succeed())
-		waitForGardenToBeReconciledAndHealthy(ctx, garden)
-
-		DeferCleanup(func() {
-			ctx, cancel = context.WithTimeout(parentCtx, 5*time.Minute)
-			defer cancel()
-
-			By("Delete Garden")
-			Expect(gardenerutils.ConfirmDeletion(ctx, runtimeClient, garden)).To(Succeed())
-			Expect(runtimeClient.Delete(ctx, garden)).To(Succeed())
-			Expect(runtimeClient.Delete(ctx, backupSecret)).To(Succeed())
-			waitForGardenToBeDeleted(ctx, garden)
-			cleanupVolumes(ctx)
-			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "kube-apiserver-etcd-encryption-configuration"})).To(Succeed())
-			Expect(runtimeClient.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(namespace), client.MatchingLabels{"role": "gardener-apiserver-etcd-encryption-configuration"})).To(Succeed())
-
-			By("Wait until extension reports a successful uninstallation")
-			waitForExtensionToReportDeletion(ctx, "provider-local")
+		BeforeTestSetup(func() {
+			backupSecret := defaultBackupSecret()
+			s = NewTestContext().ForGarden(defaultGarden(backupSecret, false), backupSecret)
 		})
+
+		ItShouldCreateGarden(s)
+		ItShouldWaitForGardenToBeReconciledAndHealthy(s)
 
 		v := rotationutils.Verifiers{
 			// basic verifiers checking secrets
-			&rotation.CAVerifier{RuntimeClient: runtimeClient, Garden: garden},
+			&rotation.CAVerifier{RuntimeClient: s.GardenClient, Garden: s.Garden},
 			&rotationutils.ObservabilityVerifier{
 				GetObservabilitySecretFunc: func(ctx context.Context) (*corev1.Secret, error) {
 					secretList := &corev1.SecretList{}
-					if err := runtimeClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{
+					if err := s.GardenClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{
 						"managed-by":       "secrets-manager",
 						"manager-identity": "gardener-operator",
 						"name":             "observability-ingress",
@@ -79,57 +61,57 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 					return &secretList.Items[0], nil
 				},
 				GetObservabilityEndpoint: func(_ *corev1.Secret) string {
-					return "https://plutono-garden." + garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
+					return "https://plutono-garden." + s.Garden.Spec.RuntimeCluster.Ingress.Domains[0].Name
 				},
 				GetObservabilityRotation: func() *gardencorev1beta1.ObservabilityRotation {
-					return garden.Status.Credentials.Rotation.Observability
+					return s.Garden.Status.Credentials.Rotation.Observability
 				},
 			},
 			&rotationutils.ETCDEncryptionKeyVerifier{
 				GetETCDSecretNamespace: func() string {
-					return namespace
+					return v1beta1constants.GardenNamespace
 				},
 				GetRuntimeClient: func() client.Client {
-					return runtimeClient
+					return s.GardenClient
 				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
-					return garden.Status.Credentials.Rotation.ETCDEncryptionKey
+					return s.Garden.Status.Credentials.Rotation.ETCDEncryptionKey
 				},
 				EncryptionKey:  v1beta1constants.SecretNameETCDEncryptionKey,
 				RoleLabelValue: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration,
 			},
 			&rotationutils.ETCDEncryptionKeyVerifier{
 				GetETCDSecretNamespace: func() string {
-					return namespace
+					return v1beta1constants.GardenNamespace
 				},
 				GetRuntimeClient: func() client.Client {
-					return runtimeClient
+					return s.GardenClient
 				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetETCDEncryptionKeyRotation: func() *gardencorev1beta1.ETCDEncryptionKeyRotation {
-					return garden.Status.Credentials.Rotation.ETCDEncryptionKey
+					return s.Garden.Status.Credentials.Rotation.ETCDEncryptionKey
 				},
 				EncryptionKey:  v1beta1constants.SecretNameGardenerETCDEncryptionKey,
 				RoleLabelValue: v1beta1constants.SecretNamePrefixGardenerETCDEncryptionConfiguration,
 			},
 			&rotationutils.ServiceAccountKeyVerifier{
 				GetServiceAccountKeySecretNamespace: func() string {
-					return namespace
+					return v1beta1constants.GardenNamespace
 				},
 				GetRuntimeClient: func() client.Client {
-					return runtimeClient
+					return s.GardenClient
 				},
 				SecretsManagerLabelSelector: rotation.ManagedByGardenerOperatorSecretsManager,
 				GetServiceAccountKeyRotation: func() *gardencorev1beta1.ServiceAccountKeyRotation {
-					return garden.Status.Credentials.Rotation.ServiceAccountKey
+					return s.Garden.Status.Credentials.Rotation.ServiceAccountKey
 				},
 			},
 
 			// advanced verifiers testing things from the user's perspective
 			&rotationutils.EncryptedDataVerifier{
 				NewTargetClientFunc: func(ctx context.Context) (kubernetes.Interface, error) {
-					return kubernetes.NewClientFromSecret(ctx, runtimeClient, namespace, "gardener",
+					return kubernetes.NewClientFromSecret(ctx, s.GardenClient, v1beta1constants.GardenNamespace, "gardener",
 						kubernetes.WithDisabledCachedClient(),
 						kubernetes.WithClientOptions(client.Options{Scheme: operatorclient.VirtualScheme}),
 					)
@@ -186,64 +168,73 @@ var _ = Describe("Garden Tests", Label("Garden", "default"), func() {
 					},
 				},
 			},
-			&rotation.VirtualGardenAccessVerifier{RuntimeClient: runtimeClient, Namespace: namespace},
+			&rotation.VirtualGardenAccessVerifier{RuntimeClient: s.GardenClient, Namespace: v1beta1constants.GardenNamespace},
 		}
 
-		DeferCleanup(func() {
-			ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
-			defer cancel()
+		// the verifiers used in this test still use separate "By" statements for structuring tests and expect to be executed within an "It" statement
+		// This is a problem as we removed the "top-level" "It" statements during the refactoring of this test
+		// Until all verifiers are refactored, we need to instantiate separate "It" statements for all shared verifiers to allow for assertions
+		// Also see test/e2e/gardener/shoot/create_rotate_delete.go, where some of the verifiers already got refactored to use separate "It" statements
+		// TODO(Wieneo): Refactor and consolidate verifiers and verifier interface
+		for _, vv := range v {
+			It(fmt.Sprintf("Verify before for %T", vv), func(ctx SpecContext) {
+				vv.Before(ctx)
+			}, SpecTimeout(5*time.Minute))
+		}
 
-			v.Cleanup(ctx)
+		ItShouldAnnotateGarden(s, map[string]string{
+			v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsStart,
 		})
 
-		v.Before(ctx)
+		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Garden)
 
-		By("Start credentials rotation")
-		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
-		defer cancel()
+		It("Rotation in Preparing status", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) {
+				g.Expect(s.GardenKomega.Get(s.Garden)()).To(Succeed())
+				v.ExpectPreparingStatus(g)
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
 
-		patch := client.MergeFrom(garden.DeepCopy())
-		metav1.SetMetaDataAnnotation(&garden.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateCredentialsStart)
-		Eventually(func() error {
-			return runtimeClient.Patch(ctx, garden, patch)
-		}).Should(Succeed())
+		ItShouldWaitForGardenToBeReconciledAndHealthy(s)
 
-		Eventually(func(g Gomega) {
-			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-			g.Expect(garden.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
-			v.ExpectPreparingStatus(g)
-		}).Should(Succeed())
+		for _, vv := range v {
+			It(fmt.Sprintf("Verify after prepared for %T", vv), func(ctx SpecContext) {
+				vv.AfterPrepared(ctx)
+			}, SpecTimeout(5*time.Minute))
+		}
 
-		waitForGardenToBeReconciledAndHealthy(ctx, garden)
+		ItShouldAnnotateGarden(s, map[string]string{
+			v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsComplete,
+		})
 
-		Eventually(func() error {
-			return runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)
-		}).Should(Succeed())
+		ItShouldEventuallyNotHaveOperationAnnotation(s.GardenKomega, s.Garden)
 
-		v.AfterPrepared(ctx)
+		It("Rotation in Completing status", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) {
+				g.Expect(s.GardenKomega.Get(s.Garden)()).To(Succeed())
+				v.ExpectCompletingStatus(g)
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
 
-		By("Complete credentials rotation")
-		ctx, cancel = context.WithTimeout(parentCtx, 20*time.Minute)
-		defer cancel()
+		ItShouldWaitForGardenToBeReconciledAndHealthy(s)
 
-		patch = client.MergeFrom(garden.DeepCopy())
-		metav1.SetMetaDataAnnotation(&garden.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationRotateCredentialsComplete)
-		Eventually(func() error {
-			return runtimeClient.Patch(ctx, garden, patch)
-		}).Should(Succeed())
+		for _, vv := range v {
+			It(fmt.Sprintf("Verify after completed for %T", vv), func(ctx SpecContext) {
+				vv.AfterCompleted(ctx)
+			}, SpecTimeout(5*time.Minute))
+		}
 
-		Eventually(func(g Gomega) {
-			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-			g.Expect(garden.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
-			v.ExpectCompletingStatus(g)
-		}).Should(Succeed())
+		for _, vv := range v {
+			if cleanup, ok := vv.(rotationutils.CleanupVerifier); ok {
+				It(fmt.Sprintf("Cleanup for %T", vv), func(ctx SpecContext) {
+					cleanup.Cleanup(ctx)
+				})
+			}
+		}
 
-		waitForGardenToBeReconciledAndHealthy(ctx, garden)
-
-		Eventually(func(g Gomega) {
-			g.Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
-		}).Should(Succeed())
-
-		v.AfterCompleted(ctx)
+		ItShouldDeleteGarden(s)
+		ItShouldWaitForGardenToBeDeleted(s)
+		ItShouldCleanUp(s)
+		ItShouldWaitForExtensionToReportDeletion(s, "provider-local")
 	})
 })
