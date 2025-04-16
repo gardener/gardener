@@ -232,6 +232,11 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.Shoot.Components.Extensions.ControlPlane.Wait,
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying control plane components as Deployments for static pod translation",
+			Fn:           b.DeployControlPlaneDeployments,
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{

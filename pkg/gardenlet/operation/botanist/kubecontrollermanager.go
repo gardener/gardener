@@ -43,6 +43,10 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if b.Shoot.RunsControlPlane() {
+		replicaCount = 0
+	}
+
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetReplicaCount(replicaCount)
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetRuntimeConfig(b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues().RuntimeConfig)
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetServiceNetworks(b.Shoot.Networks.Services)

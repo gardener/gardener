@@ -16,6 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/imagevector"
@@ -57,7 +58,7 @@ func (b *AutonomousBotanist) deployETCD(role string) func(context.Context) error
 
 func (b *AutonomousBotanist) deployKubeAPIServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(nil)
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](0))
 	return b.DeployKubeAPIServer(ctx, false)
 }
 
@@ -138,8 +139,8 @@ func (b *AutonomousBotanist) filesForStaticControlPlanePods(ctx context.Context)
 	var files []extensionsv1alpha1.File
 
 	for _, component := range b.staticControlPlaneComponents() {
-		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(component.targetObject), component.targetObject); err != nil {
-			return nil, fmt.Errorf("failed reading object %s for %q: %w", client.ObjectKeyFromObject(component.targetObject), component.name, err)
+		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: component.name, Namespace: b.Shoot.ControlPlaneNamespace}, component.targetObject); err != nil {
+			return nil, fmt.Errorf("failed reading object for %q: %w", component.name, err)
 		}
 
 		f, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject)
