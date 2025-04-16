@@ -114,6 +114,12 @@ This constraint indicates that there is at least one `CustomResourceDefinition` 
 It will not be added to the `.status.constraints` if there is no such CRD.
 However, if it's visible, then you should consider upgrading the existing objects to the current stored version. See [Upgrade existing objects to a new stored version](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version) for detailed steps.
 
+**`ManualInPlaceWorkersUpdated`**:
+
+This constraint indicates that at least one worker pool with the update strategy `ManualInPlaceUpdate` is pending an update. Despite this, the `Shoot` reconciliation will still succeed.
+The constraint is not added to `.status.constraints` if all such worker pools are already up-to-date.
+Once the user manually labels all the relevant nodes with `node.machine.sapcloud.io/selected-for-update` and the update process completes, the constraint will be automatically removed.
+
 ### Last Operation
 
 The Shoot status holds information about the last operation that is performed on the Shoot. The last operation field reflects overall progress and the tasks that are currently being executed. Allowed operation types are `Create`, `Reconcile`, `Delete`, `Migrate`, and `Restore`. Allowed operation states are `Processing`, `Succeeded`, `Error`, `Failed`, `Pending`, and `Aborted`. An operation in `Error` state is an operation that will be retried for a configurable amount of time (`controllers.shoot.retryDuration` field in `GardenletConfiguration`, defaults to `12h`). If the operation cannot complete successfully for the configured retry duration, it will be marked as `Failed`. An operation in `Failed` state is an operation that won't be retried automatically (to retry such an operation, see [Retry failed operation](../shoot-operations/shoot_operations.md#retry-failed-operation)).
