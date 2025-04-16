@@ -45,6 +45,17 @@ type ControllerRegistrationSpec struct {
 	Deployment *ControllerRegistrationDeployment `json:"deployment,omitempty" protobuf:"bytes,2,opt,name=deployment"`
 }
 
+// AutoEnableMode defines the mode for automatically enabling a resource.
+// It specifies whether the resource is enabled for all clusters, only shoot clusters, only seed clusters, or none.
+type AutoEnableMode string
+
+const (
+	// AutoEnableModeShoot enables the resource only for shoot clusters.
+	AutoEnableModeShoot AutoEnableMode = "shoot"
+	// AutoEnableModeSeed enables the resource only for seed clusters.
+	AutoEnableModeSeed AutoEnableMode = "seed"
+)
+
 // ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this
 // kind (aws-route53, gcp, auditlog, ...).
 type ControllerResource struct {
@@ -53,7 +64,7 @@ type ControllerResource struct {
 	// Type is the resource type, for example "coreos" or "ubuntu".
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
-	// This field is defaulted to false when kind is "Extension".
+	// Deprecated: This field is deprecated and will be removed in Gardener version v.122. Please use AutoEnable instead.
 	// +optional
 	GloballyEnabled *bool `json:"globallyEnabled,omitempty" protobuf:"varint,3,opt,name=globallyEnabled"`
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
@@ -76,6 +87,11 @@ type ControllerResource struct {
 	// This field is only relevant when kind is "Extension".
 	// +optional
 	WorkerlessSupported *bool `json:"workerlessSupported,omitempty" protobuf:"varint,7,opt,name=workerlessSupported"`
+	// AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
+	// Valid values are "shoot" and "seed".
+	// This field can only be set for resources of kind "Extension".
+	// +optional
+	AutoEnable []AutoEnableMode `json:"autoEnable,omitempty" protobuf:"bytes,8,rep,name=autoEnable,casttype=AutoEnableMode"`
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.

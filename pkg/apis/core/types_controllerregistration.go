@@ -42,6 +42,17 @@ type ControllerRegistrationSpec struct {
 	Deployment *ControllerRegistrationDeployment
 }
 
+// AutoEnableMode defines the mode for automatically enabling a resource.
+// It specifies whether the resource is enabled for all clusters, only shoot clusters, only seed clusters, or none.
+type AutoEnableMode string
+
+const (
+	// AutoEnableModeShoot enables the resource only for shoot clusters.
+	AutoEnableModeShoot AutoEnableMode = "shoot"
+	// AutoEnableModeSeed enables the resource only for seed clusters.
+	AutoEnableModeSeed AutoEnableMode = "seed"
+)
+
 // ControllerResource is a combination of a kind (Infrastructure, Generic, ...) and the actual type for this
 // kind (aws-route53, gcp, auditlog, ...).
 type ControllerResource struct {
@@ -50,7 +61,8 @@ type ControllerResource struct {
 	// Type is the resource type.
 	Type string
 	// GloballyEnabled determines if this resource is required by all Shoot clusters.
-	// This field is defaulted to false when kind is "Extension".
+	// TODO(timuthy): Remove this field in Gardener v.122.
+	// Deprecated: This field is deprecated and will be removed in Gardener version v.122. Please use AutoEnable instead.
 	GloballyEnabled *bool
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
 	// This field is defaulted to 3m0s when kind is "Extension".
@@ -68,6 +80,10 @@ type ControllerResource struct {
 	// WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
 	// This field is only relevant when kind is "Extension".
 	WorkerlessSupported *bool
+	// AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
+	// Valid values are "shoot" and "seed".
+	// This field can only be set for resources of kind "Extension".
+	AutoEnable []AutoEnableMode
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.
