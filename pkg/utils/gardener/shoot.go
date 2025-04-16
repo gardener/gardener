@@ -866,6 +866,8 @@ func IsAuthorizeWithSelectorsEnabled(kubeAPIServer *gardencorev1beta1.KubeAPISer
 }
 
 // CalculateWorkerPoolHashForInPlaceUpdate calculates the data string for the worker pool hash to be used for in-place updates.
+//
+// WARNING: Changing this function will cause an in-place update of all the existing nodes. Use with caution.
 func CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName string, kubernetesVersion *string, kubeletConfig *gardencorev1beta1.KubeletConfig, machineImageVersion string, credentials *gardencorev1beta1.ShootCredentials) (string, error) {
 	var data []string
 

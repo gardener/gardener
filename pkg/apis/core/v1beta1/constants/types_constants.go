@@ -738,7 +738,7 @@ const (
 	// ObservabilityComponentsHealthy is a constant for a condition type indicating the health of observability components.
 	ObservabilityComponentsHealthy = "ObservabilityComponentsHealthy"
 
-	// LabelWorkerName is a constant for a label that indicates the worker resource the machine deployment belongs to
+	// LabelWorkerName is a constant for a label that indicates the name of the Worker resource the MachineDeployment belongs to.
 	LabelWorkerName = "worker.gardener.cloud/name"
 	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
 	LabelWorkerPool = "worker.gardener.cloud/pool"
