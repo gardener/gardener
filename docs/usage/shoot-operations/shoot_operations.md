@@ -37,6 +37,15 @@ Failed shoots are only reconciled again if a new Gardener version is deployed, t
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=retry
 ```
 
+## Force-update a worker pool with InPlace update strategy
+
+Annotate the shoot with `gardener.cloud/operation=force-in-place-update` to force an update for worker pools using the update strategy `AutoInPlaceUpdate` or `ManualInPlaceUpdate`. Without this annotation, any subsequent updates to the same worker pool are denied until the current in-place update has been successfully reconciled.
+
+
+```bash
+kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=force-in-place-update
+```
+
 ## Credentials Rotation Operations
 
 Please consult [Credentials Rotation for Shoot Clusters](shoot_credentials_rotation.md) for more information.

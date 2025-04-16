@@ -2806,7 +2806,7 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 		newKubeletConfig := helper.CalculateEffectiveKubeletConfiguration(newShoot.Spec.Kubernetes.Kubelet, worker.Kubernetes)
 
 		if !apiequality.Semantic.DeepEqual(oldWorker, worker) || !oldKubernetesVersion.Equal(newKubernetesVersion) || !apiequality.Semantic.DeepEqual(oldKubeletConfig, newKubeletConfig) {
-			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("the worker pool %q is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'", worker.Name)))
+			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("the worker pool %q is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with '%s=%s'", worker.Name, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate)))
 		}
 	}
 

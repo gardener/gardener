@@ -260,8 +260,8 @@ func (b *Botanist) outOfClusterAPIServerFQDN() string {
 // SetInPlaceUpdatePendingWorkers sets the Shoot status with the name of worker pools which are undergoing an in-place update.
 func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *extensionsv1alpha1.Worker) error {
 	var (
-		autoInPlaceUpdatePendingWorkers   = sets.New[string]()
-		manualInPlaceUpdatePendingWorkers = sets.New[string]()
+		autoInPlaceUpdatePendingWorkers   []string
+		manualInPlaceUpdatePendingWorkers []string
 	)
 
 	for _, pool := range b.Shoot.GetInfo().Spec.Provider.Workers {
@@ -313,20 +313,20 @@ func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *e
 
 		switch ptr.Deref(pool.UpdateStrategy, "") {
 		case gardencorev1beta1.AutoInPlaceUpdate:
-			autoInPlaceUpdatePendingWorkers.Insert(pool.Name)
+			autoInPlaceUpdatePendingWorkers = append(autoInPlaceUpdatePendingWorkers, pool.Name)
 		case gardencorev1beta1.ManualInPlaceUpdate:
-			manualInPlaceUpdatePendingWorkers.Insert(pool.Name)
+			manualInPlaceUpdatePendingWorkers = append(manualInPlaceUpdatePendingWorkers, pool.Name)
 		}
 	}
 
-	if autoInPlaceUpdatePendingWorkers.Len() == 0 && manualInPlaceUpdatePendingWorkers.Len() == 0 {
+	if len(autoInPlaceUpdatePendingWorkers) == 0 && len(manualInPlaceUpdatePendingWorkers) == 0 {
 		return nil
 	}
 
 	if b.Shoot.GetInfo().Status.InPlaceUpdates != nil &&
 		b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates != nil &&
-		autoInPlaceUpdatePendingWorkers.Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate...)) &&
-		manualInPlaceUpdatePendingWorkers.Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...)) {
+		sets.New(autoInPlaceUpdatePendingWorkers...).Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate...)) &&
+		sets.New(manualInPlaceUpdatePendingWorkers...).Equal(sets.New(b.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate...)) {
 		return nil
 	}
 
@@ -339,14 +339,14 @@ func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *e
 			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = &gardencorev1beta1.PendingWorkerUpdates{}
 		}
 
-		for poolName := range autoInPlaceUpdatePendingWorkers {
+		for _, poolName := range autoInPlaceUpdatePendingWorkers {
 			if slices.Contains(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, poolName) {
 				continue
 			}
 			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = append(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, poolName)
 		}
 
-		for poolName := range manualInPlaceUpdatePendingWorkers {
+		for _, poolName := range manualInPlaceUpdatePendingWorkers {
 			if slices.Contains(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, poolName) {
 				continue
 			}

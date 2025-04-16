@@ -848,7 +848,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 						return nil
 					}); err != nil {
-						return err
+						return fmt.Errorf("failed to remove pending AutoInPlaceUpdate worker pools from status: %w", err)
 					}
 				}
 
