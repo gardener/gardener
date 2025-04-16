@@ -30,10 +30,11 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			// However, this test should not use "e2e-managedseed", because it is created and deleted in a separate e2e test.
 			// This e2e test already includes tests for the "Renew gardenlet kubeconfig" functionality. Additionally,
 			// it might be already gone before the kubeconfig was renewed.
+			ctx := context.Background()
 			seedList := &gardencorev1beta1.SeedList{}
-			if err := testContext.GardenClient.List(context.Background(), seedList); err != nil {
+			if err := testContext.GardenClient.List(ctx, seedList); err != nil {
 				testContext.Log.Error(err, "Failed to list seeds")
-				panic(err)
+				Fail(err.Error())
 			}
 
 			seedIndex := slices.IndexFunc(seedList.Items, func(item gardencorev1beta1.Seed) bool {
@@ -41,7 +42,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			})
 
 			if seedIndex == -1 {
-				panic("failed to find applicable seed")
+				Fail("failed to find applicable seed")
 			}
 
 			s = testContext.ForSeed(&seedList.Items[seedIndex])
