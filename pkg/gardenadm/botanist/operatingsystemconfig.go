@@ -50,6 +50,20 @@ func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForNodeAgent(ctx c
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)
 }
 
+// ActivateGardenerNodeAgent deploys the OperatingSystemConfig and the corresponding ManagedResource containing the
+// Secret for gardener-node-agent. Then it activates the gardener-node-agent unit.
+func (b *AutonomousBotanist) ActivateGardenerNodeAgent(ctx context.Context) error {
+	if _, _, err := b.deployOperatingSystemConfig(ctx); err != nil {
+		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
+	}
+
+	if err := b.DeployManagedResourceForGardenerNodeAgent(ctx); err != nil {
+		return fmt.Errorf("failed deploying ManagedResource containing Secret with OperatingSystemConfig for gardener-node-agent: %w", err)
+	}
+
+	return b.DBus.Start(ctx, nil, nil, nodeagentconfigv1alpha1.UnitName)
+}
+
 func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
 	userKubeconfigSecret, ok := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
 	if !ok {

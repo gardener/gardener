@@ -55,10 +55,6 @@ func ValidateOperatingSystemConfigUpdate(new, old *extensionsv1alpha1.OperatingS
 func ValidateOperatingSystemConfigSpec(spec *extensionsv1alpha1.OperatingSystemConfigSpec, pathsFromFiles sets.Set[string], fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(spec.Type) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "field is required"))
-	}
-
 	if len(spec.Purpose) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("purpose"), "field is required"))
 	} else {

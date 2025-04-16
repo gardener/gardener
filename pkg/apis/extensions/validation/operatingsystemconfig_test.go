@@ -107,9 +107,6 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				"Field": Equal("metadata.namespace"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.type"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.purpose"),
 			}))))
 		})

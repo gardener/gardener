@@ -63,9 +63,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 		})
 
 		It("should initialize as control plane node", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0,
-				"gardenadm", "init", "-d", "/gardenadm/resources",
-			)
+			stdOut, _, err := execute(ctx, 0, "gardenadm", "init", "-d", "/gardenadm/resources")
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
@@ -169,10 +167,16 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
 
+		It("should ensure gardener-node-agent is running", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) *gbytes.Buffer {
+				stdOut, _, err := execute(ctx, 0, "systemctl", "status", "gardener-node-agent")
+				g.Expect(err).NotTo(HaveOccurred())
+				return stdOut
+			}).Should(gbytes.Say(`Active: active \(running\)`))
+		}, SpecTimeout(time.Minute))
+
 		It("should join as worker node", func(ctx SpecContext) {
-			_, stdErr, err := execute(ctx, 1,
-				"gardenadm", "join",
-			)
+			_, stdErr, err := execute(ctx, 1, "gardenadm", "join")
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdErr).Should(gbytes.Say("Not implemented either"))
