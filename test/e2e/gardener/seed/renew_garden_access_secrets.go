@@ -26,7 +26,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/e2e/gardener/managedseed"
 )
 
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
@@ -52,7 +51,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			}
 
 			seedIndex := slices.IndexFunc(seedList.Items, func(item gardencorev1beta1.Seed) bool {
-				return item.Name != managedseed.GetSeedName()
+				return item.Name != DefaultManagedSeedName()
 			})
 
 			if seedIndex == -1 {

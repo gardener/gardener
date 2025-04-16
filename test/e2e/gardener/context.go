@@ -21,6 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 )
@@ -242,5 +243,50 @@ func (t *TestContext) ForSeed(seed *gardencorev1beta1.Seed) *SeedContext {
 	}
 	s.Log = s.Log.WithValues("seed", client.ObjectKeyFromObject(seed))
 
+	return s
+}
+
+// ManagedSeedContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
+// same test case, i.e., within the same ordered container.
+// Accordingly, ManagedSeedContext values must not be reused across multiple test cases (ordered containers). Make sure to
+// declare ManagedSeedContext variables within the ordered container and initialize them during ginkgo tree construction,
+// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+//
+// A ManagedSeedContext can be initialized using TestContext.ForManagedSeed.
+type ManagedSeedContext struct {
+	TestContext
+
+	// ManagedSeed object the test is working with
+	ManagedSeed *seedmanagementv1alpha1.ManagedSeed
+
+	// ShootContext object the managed seed is referencing
+	ShootContext ShootContext
+
+	// Seed object the managed seed is referencing
+	SeedContext SeedContext
+}
+
+// ForManagedSeed copies the receiver ShootContext for deriving a ManagedSeedContext.
+func (t *TestContext) ForManagedSeed(managedseed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
+	ms := &ManagedSeedContext{
+		TestContext: *t,
+		ManagedSeed: managedseed,
+	}
+	t.Log = t.Log.WithValues("managedseed", client.ObjectKeyFromObject(managedseed))
+
+	return ms
+}
+
+// WithShoot initialized a ShootContext and adds it to the ManagedSeedContext
+// This function is intended to be used for the shoot the managed seed is "based" on
+func (s *ManagedSeedContext) WithShoot(shoot *gardencorev1beta1.Shoot) *ManagedSeedContext {
+	s.ShootContext = *s.ForShoot(shoot)
+	return s
+}
+
+// WithSeed initialized a SeedContext and adds it to the ManagedSeedContext
+// This function should be called for the resulting seed object from a managed seed
+func (s *ManagedSeedContext) WithSeed(seed *gardencorev1beta1.Seed) *ManagedSeedContext {
+	s.SeedContext = *s.ForSeed(seed)
 	return s
 }
