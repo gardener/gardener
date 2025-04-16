@@ -123,6 +123,7 @@ func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secre
 	_, err = k.secretsManager.Generate(ctx, &secretsutils.KubeconfigSecretConfig{
 		Name:        SecretNameUserKubeconfig,
 		ContextName: k.namespace,
+		Namespace:   k.namespace,
 		Cluster: clientcmdv1.Cluster{
 			Server:                   "localhost",
 			CertificateAuthorityData: caBundleSecret.Data[secretsutils.DataKeyCertificateBundle],

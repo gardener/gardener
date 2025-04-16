@@ -8,6 +8,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -71,6 +72,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -206,6 +208,8 @@ type Interface interface {
 	SetSecrets(Secrets)
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
+	// SetBootstrapControlPlaneNode sets the BootstrapControlPlaneNode field in the Values.
+	SetBootstrapControlPlaneNode(bool)
 }
 
 // New creates a new instance of the gardener-resource-manager.
@@ -229,6 +233,7 @@ type resourceManager struct {
 	secretsManager secretsmanager.Interface
 	values         Values
 	secrets        Secrets
+	port           int32
 }
 
 // Values holds the optional configuration options for the gardener resource manager
@@ -343,6 +348,10 @@ const (
 )
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
+	if err := r.chooseServerPort(); err != nil {
+		return err
+	}
+
 	if r.values.ResponsibilityMode == ForTarget {
 		r.secrets.shootAccess = r.newShootAccessSecret()
 		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
@@ -539,7 +548,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			},
 			Webhooks: resourcemanagerconfigv1alpha1.HTTPSServer{
 				Server: resourcemanagerconfigv1alpha1.Server{
-					Port: resourcemanagerconstants.ServerPort,
+					Port: int(r.port),
 				},
 				TLS: resourcemanagerconfigv1alpha1.TLSServer{
 					ServerCertDir: volumeMountPathCerts,
@@ -552,7 +561,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			ClusterID:     r.values.ClusterIdentity,
 			ResourceClass: r.values.ResourceClass,
 			GarbageCollector: resourcemanagerconfigv1alpha1.GarbageCollectorControllerConfig{
-				Enabled:    true,
+				Enabled:    !r.values.BootstrapControlPlaneNode,
 				SyncPeriod: &metav1.Duration{Duration: 12 * time.Hour},
 			},
 			Health: resourcemanagerconfigv1alpha1.HealthControllerConfig{
@@ -744,11 +753,11 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 
 		if r.values.ResponsibilityMode != ForTarget {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForSeedScrapeTargets(service, portMetrics))
-			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, resourcemanagerconstants.ServerPort))
+			metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingFromWorldToPorts, fmt.Sprintf(`[{"protocol":"TCP","port":%d}]`, r.port))
 		} else {
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, portMetrics))
 			utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForWebhookTargets(service, networkingv1.NetworkPolicyPort{
-				Port:     ptr.To(intstr.FromInt32(resourcemanagerconstants.ServerPort)),
+				Port:     ptr.To(intstr.FromInt32(r.port)),
 				Protocol: ptr.To(corev1.ProtocolTCP),
 			}))
 		}
@@ -773,7 +782,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 				Name:       serverPortName,
 				Protocol:   corev1.ProtocolTCP,
 				Port:       serverServicePort,
-				TargetPort: intstr.FromInt32(resourcemanagerconstants.ServerPort),
+				TargetPort: intstr.FromInt32(r.port),
 			},
 		}
 		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
@@ -801,8 +810,10 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 	}
 
 	var (
-		tolerations []corev1.Toleration
-		env         []corev1.EnvVar
+		tolerations       []corev1.Toleration
+		env               []corev1.EnvVar
+		replicas          = r.values.Replicas
+		priorityClassName = r.values.PriorityClassName
 	)
 
 	if r.values.DefaultNotReadyToleration != nil {
@@ -830,23 +841,31 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		// If 'BootstrapControlPlaneNode', there is typically no CoreDNS running yet, i.e, we cannot rely on the
 		// standard 'kubernetes.default.svc' DNS name but have to explicitly set it to 'localhost'.
 		env = append(env, corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"})
+		replicas = ptr.To[int32](1)
+		priorityClassName = "system-cluster-critical"
 	}
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
-		deployment.Spec.Replicas = r.values.Replicas
+		deployment.Spec.Replicas = replicas
 		deployment.Spec.RevisionHistoryLimit = ptr.To[int32](2)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: r.appLabel()}
+
+		if r.values.BootstrapControlPlaneNode {
+			deployment.Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
+			deployment.Spec.Strategy.RollingUpdate = nil
+		}
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: utils.MergeStringMaps(r.getDeploymentTemplateLabels(), r.getNetworkPolicyLabels(), map[string]string{
-					resourcesv1alpha1.ProjectedTokenSkip: "true",
+					resourcesv1alpha1.ProjectedTokenSkip:         "true",
+					resourcesv1alpha1.SystemComponentsConfigSkip: "true",
 				}),
 			},
 			Spec: corev1.PodSpec{
-				PriorityClassName: r.values.PriorityClassName,
+				PriorityClassName: priorityClassName,
 				SecurityContext: &corev1.PodSecurityContext{
 					SeccompProfile: &corev1.SeccompProfile{
 						Type: corev1.SeccompProfileTypeRuntimeDefault,
@@ -1104,6 +1123,28 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 	return err
 }
 
+// SuggestPort is an alias for netutils.SuggestPort.
+// Exposed for testing.
+var SuggestPort = netutils.SuggestPort
+
+func (r *resourceManager) chooseServerPort() error {
+	if r.port != 0 {
+		return nil
+	}
+
+	if !r.values.BootstrapControlPlaneNode {
+		r.port = 10250
+		return nil
+	}
+
+	p, _, err := SuggestPort("")
+	if err != nil {
+		return fmt.Errorf("failed to find a usable port: %w", err)
+	}
+	r.port = int32(p) // #nosec G115 -- Value is within [0,65535]
+	return nil
+}
+
 func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-vpa", Namespace: r.namespace}}
 }
@@ -1322,6 +1363,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
+	r.skipStaticPodsDuringBootstrapMode(webhooks)
 	return webhooks
 }
 
@@ -2044,6 +2086,45 @@ func (r *resourceManager) SetSecrets(s Secrets) { r.secrets = s }
 
 // GetValues returns the current configuration values of the deployer.
 func (r *resourceManager) GetValues() Values { return r.values }
+
+// SetBootstrapControlPlaneNode sets the BootstrapControlPlaneNode field in the Values.
+func (r *resourceManager) SetBootstrapControlPlaneNode(b bool) {
+	r.values.BootstrapControlPlaneNode = b
+}
+
+func (r *resourceManager) skipStaticPodsDuringBootstrapMode(webhooks []admissionregistrationv1.MutatingWebhook) {
+	if !r.values.BootstrapControlPlaneNode {
+		return
+	}
+
+	handlesPodCreations := func(rules []admissionregistrationv1.RuleWithOperations) bool {
+		for _, rule := range rules {
+			if slices.Contains(rule.APIGroups, corev1.GroupName) &&
+				slices.Contains(rule.APIVersions, corev1.SchemeGroupVersion.Version) &&
+				slices.Contains(rule.Resources, "pods") &&
+				slices.Contains(rule.Operations, admissionregistrationv1.Create) {
+				return true
+			}
+		}
+		return false
+	}
+
+	for i, webhook := range webhooks {
+		if !handlesPodCreations(webhook.Rules) {
+			continue
+		}
+
+		if webhook.ObjectSelector == nil {
+			webhooks[i].ObjectSelector = &metav1.LabelSelector{}
+		}
+
+		webhooks[i].ObjectSelector.MatchExpressions = append(webhooks[i].ObjectSelector.MatchExpressions, metav1.LabelSelectorRequirement{
+			Key:      "static-pod",
+			Operator: metav1.LabelSelectorOpNotIn,
+			Values:   []string{"true"},
+		})
+	}
+}
 
 // Secrets is collection of secrets for the gardener-resource-manager.
 type Secrets struct {

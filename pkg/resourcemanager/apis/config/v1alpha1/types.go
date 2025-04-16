@@ -344,6 +344,8 @@ type SeccompProfileWebhookConfig struct {
 }
 
 const (
-	// DefaultResourceClass is used as resource class if no class is specified on the command line
+	// DefaultResourceClass is used as resource class if no class is specified on the command line.
 	DefaultResourceClass = "resources"
+	// AllResourceClass is used as resource class when all values for resource classes should be covered.
+	AllResourceClass = "*"
 )

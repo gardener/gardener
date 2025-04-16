@@ -5,6 +5,7 @@
 package controllerinstallation_test
 
 import (
+	"fmt"
 	"math"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -38,12 +39,17 @@ var _ = Describe("Reconciler", func() {
 		)
 
 		BeforeEach(func() {
-			pod = &corev1.Pod{}
-			deployment = &appsv1.Deployment{}
-			statefulSet = &appsv1.StatefulSet{}
-			daemonSet = &appsv1.DaemonSet{}
-			job = &batchv1.Job{}
-			cronJob = &batchv1.CronJob{}
+			podSpec := corev1.PodSpec{
+				InitContainers: []corev1.Container{{}},
+				Containers:     []corev1.Container{{}},
+			}
+
+			pod = &corev1.Pod{Spec: podSpec}
+			deployment = &appsv1.Deployment{Spec: appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+			statefulSet = &appsv1.StatefulSet{Spec: appsv1.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+			daemonSet = &appsv1.DaemonSet{Spec: appsv1.DaemonSetSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+			job = &batchv1.Job{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}
+			cronJob = &batchv1.CronJob{Spec: batchv1.CronJobSpec{JobTemplate: batchv1.JobTemplateSpec{Spec: batchv1.JobSpec{Template: corev1.PodTemplateSpec{Spec: podSpec}}}}}
 		})
 
 		It("should not change objects if not bootstrapping control plane node", func() {
@@ -77,13 +83,21 @@ var _ = Describe("Reconciler", func() {
 		It("should adapt objects if bootstrapping control plane node", func() {
 			reconciler.BootstrapControlPlaneNode = true
 
-			checkHostNetworkAndTolerations := func(podSpec *corev1.PodSpec) {
+			checkPodSpec := func(podSpec *corev1.PodSpec) {
 				GinkgoHelper()
+
 				Expect(podSpec.HostNetwork).To(BeTrue())
 				Expect(podSpec.Tolerations).To(Equal([]corev1.Toleration{
 					{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
 					{Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute},
 				}))
+
+				for _, container := range podSpec.InitContainers {
+					Expect(container.Env).To(ContainElement(corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}), fmt.Sprintf("init container %s should have KUBERNETES_SERVICE_HOST env var", container.Name))
+				}
+				for _, container := range podSpec.Containers {
+					Expect(container.Env).To(ContainElement(corev1.EnvVar{Name: "KUBERNETES_SERVICE_HOST", Value: "localhost"}), fmt.Sprintf("container %s should have KUBERNETES_SERVICE_HOST env var", container.Name))
+				}
 			}
 
 			for _, obj := range []struct {
@@ -91,23 +105,25 @@ var _ = Describe("Reconciler", func() {
 				checkFunc func()
 			}{
 				{pod, func() {
-					checkHostNetworkAndTolerations(&pod.Spec)
+					checkPodSpec(&pod.Spec)
 				}},
 				{deployment, func() {
 					Expect(deployment.Spec.Replicas).To(Equal(ptr.To(int32(1))))
-					checkHostNetworkAndTolerations(&deployment.Spec.Template.Spec)
+					Expect(deployment.Spec.Strategy.Type).To(Equal(appsv1.RecreateDeploymentStrategyType))
+					Expect(deployment.Spec.Strategy.RollingUpdate).To(BeNil())
+					checkPodSpec(&deployment.Spec.Template.Spec)
 				}},
 				{statefulSet, func() {
-					checkHostNetworkAndTolerations(&statefulSet.Spec.Template.Spec)
+					checkPodSpec(&statefulSet.Spec.Template.Spec)
 				}},
 				{daemonSet, func() {
-					checkHostNetworkAndTolerations(&daemonSet.Spec.Template.Spec)
+					checkPodSpec(&daemonSet.Spec.Template.Spec)
 				}},
 				{job, func() {
-					checkHostNetworkAndTolerations(&job.Spec.Template.Spec)
+					checkPodSpec(&job.Spec.Template.Spec)
 				}},
 				{cronJob, func() {
-					checkHostNetworkAndTolerations(&cronJob.Spec.JobTemplate.Spec.Template.Spec)
+					checkPodSpec(&cronJob.Spec.JobTemplate.Spec.Template.Spec)
 				}},
 			} {
 				Expect(reconciler.MutateSpecForControlPlaneNodeBootstrapping(obj.object)).To(Succeed(), "for %T", obj.object)

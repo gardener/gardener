@@ -7,6 +7,4 @@ package constants
 const (
 	// ServiceName is the name of the service.
 	ServiceName = "gardener-resource-manager"
-	// ServerPort is the port of the server.
-	ServerPort = 10250
 )

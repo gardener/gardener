@@ -15,9 +15,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -35,21 +37,30 @@ import (
 type AutonomousBotanist struct {
 	*botanistpkg.Botanist
 
-	HostName string
-	DBus     dbus.DBus
-	FS       afero.Afero
+	HostName   string
+	DBus       dbus.DBus
+	FS         afero.Afero
+	Extensions []Extension
 
 	operatingSystemConfigSecret *corev1.Secret
+}
+
+// Extension contains the resources needed for an extension registration.
+type Extension struct {
+	ControllerRegistration *gardencorev1beta1.ControllerRegistration
+	ControllerDeployment   *gardencorev1.ControllerDeployment
+	ControllerInstallation *gardencorev1beta1.ControllerInstallation
 }
 
 // NewAutonomousBotanist creates a new botanist.AutonomousBotanist instance for the gardenadm command execution.
 func NewAutonomousBotanist(
 	ctx context.Context,
 	log logr.Logger,
-	seedClientSet kubernetes.Interface,
+	clientSet kubernetes.Interface,
 	project *gardencorev1beta1.Project,
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
+	extensions []Extension,
 ) (
 	*AutonomousBotanist,
 	error,
@@ -75,32 +86,62 @@ func NewAutonomousBotanist(
 	}
 
 	keysAndValues := []any{"cloudProfile", cloudProfile, "project", project, "shoot", shoot}
-	if seedClientSet == nil {
-		seedClientSet = newFakeSeedClientSet(seedObj.KubernetesVersion.String())
+	if clientSet == nil {
+		clientSet = newFakeSeedClientSet(seedObj.KubernetesVersion.String())
 		log.Info("Initializing autonomous botanist with fake client set", keysAndValues...) //nolint:logcheck
 	} else {
 		log.Info("Initializing autonomous botanist with control plane client set", keysAndValues...) //nolint:logcheck
 	}
 
 	b, err := botanistpkg.New(ctx, &operation.Operation{
-		Logger:        log,
-		GardenClient:  newFakeGardenClient(),
-		SeedClientSet: seedClientSet,
-		Garden:        gardenObj,
-		Seed:          seedObj,
-		Shoot:         shootObj,
+		Logger:         log,
+		GardenClient:   newFakeGardenClient(),
+		SeedClientSet:  clientSet,
+		ShootClientSet: clientSet,
+		Garden:         gardenObj,
+		Seed:           seedObj,
+		Shoot:          shootObj,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
-	return &AutonomousBotanist{
+	autonomousBotanist := &AutonomousBotanist{
 		Botanist: b,
 
-		HostName: hostName,
-		DBus:     dbus.New(log),
-		FS:       afero.Afero{Fs: afero.NewOsFs()},
-	}, nil
+		HostName:   hostName,
+		DBus:       dbus.New(log),
+		FS:         afero.Afero{Fs: afero.NewOsFs()},
+		Extensions: extensions,
+	}
+
+	if err := autonomousBotanist.initializeFakeGardenResources(ctx); err != nil {
+		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
+	}
+
+	return autonomousBotanist, nil
+}
+
+func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context) error {
+	if err := b.GardenClient.Create(ctx, b.Seed.GetInfo().DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+		return fmt.Errorf("failed creating Seed %s: %w", b.Seed.GetInfo().Name, err)
+	}
+
+	for _, extension := range b.Extensions {
+		if err := b.GardenClient.Create(ctx, extension.ControllerRegistration.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating ControllerRegistration %s: %w", extension.ControllerRegistration.Name, err)
+		}
+
+		if err := b.GardenClient.Create(ctx, extension.ControllerDeployment.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating ControllerDeployment %s: %w", extension.ControllerDeployment.Name, err)
+		}
+
+		if err := b.GardenClient.Create(ctx, extension.ControllerInstallation.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating ControllerInstallation %s: %w", extension.ControllerInstallation.Name, err)
+		}
+	}
+
+	return nil
 }
 
 func newGardenObject(ctx context.Context, project *gardencorev1beta1.Project) (*gardenpkg.Garden, error) {
@@ -111,9 +152,15 @@ func newGardenObject(ctx context.Context, project *gardencorev1beta1.Project) (*
 }
 
 func newSeedObject(ctx context.Context, shootObj *shootpkg.Shoot) (*seedpkg.Seed, error) {
+	seed := &gardencorev1beta1.Seed{
+		ObjectMeta: metav1.ObjectMeta{Name: shootObj.GetInfo().Name},
+		Status:     gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(shootObj.GetInfo().Name)},
+	}
+	kubernetes.GardenScheme.Default(seed)
+
 	obj, err := seedpkg.
 		NewBuilder().
-		WithSeedObject(&gardencorev1beta1.Seed{}).
+		WithSeedObject(seed).
 		Build(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed building seed object: %w", err)
@@ -154,6 +201,7 @@ func newFakeGardenClient() client.Client {
 	return fakeclient.
 		NewClientBuilder().
 		WithScheme(kubernetes.GardenScheme).
+		WithStatusSubresource(&gardencorev1beta1.ControllerInstallation{}).
 		Build()
 }
 

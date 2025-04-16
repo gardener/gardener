@@ -75,107 +75,123 @@ var _ = Describe("ClassFilter", func() {
 		}
 	)
 
-	BeforeEach(func() {
-		filter = NewClassFilter("")
+	When("class is empty", func() {
+		BeforeEach(func() {
+			filter = NewClassFilter("")
+		})
+
+		DescribeTable("Responsible",
+			func(mr *resourcesv1alpha1.ManagedResource, responsible bool) {
+				resp := filter.Responsible(mr)
+				Expect(resp).To(Equal(responsible))
+			},
+			Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
+			Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
+			Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, false),
+			Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
+			Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
+			Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
+		)
+
+		DescribeTable("IsTransferringResponsibility",
+			func(mr *resourcesv1alpha1.ManagedResource, shouldCleanup bool) {
+				cleanup := filter.IsTransferringResponsibility(mr)
+				Expect(cleanup).To(Equal(shouldCleanup))
+			},
+			Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
+			Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
+			Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
+			Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, false),
+			Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, false),
+			Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, false),
+		)
+
+		DescribeTable("IsWaitForCleanupRequired",
+			func(mr *resourcesv1alpha1.ManagedResource, shouldWait bool) {
+				wait := filter.IsWaitForCleanupRequired(mr)
+				Expect(wait).To(Equal(shouldWait))
+			},
+			Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
+			Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
+			Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, false),
+			Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, false),
+			Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
+			Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, false),
+		)
+
+		DescribeTable("Create",
+			func(mr *resourcesv1alpha1.ManagedResource, expected bool) {
+				got := filter.Create(event.CreateEvent{
+					Object: mr,
+				})
+				Expect(got).To(Equal(expected))
+			},
+			Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
+			Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
+			Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
+			Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
+			Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
+			Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
+		)
+
+		DescribeTable("Delete",
+			func(mr *resourcesv1alpha1.ManagedResource, expected bool) {
+				got := filter.Delete(event.DeleteEvent{
+					Object: mr,
+				})
+				Expect(got).To(Equal(expected))
+			},
+			Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
+			Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
+			Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
+			Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
+			Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
+			Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
+		)
+
+		DescribeTable("Update",
+			func(mr *resourcesv1alpha1.ManagedResource, expected bool) {
+				got := filter.Update(event.UpdateEvent{
+					ObjectNew: mr,
+				})
+				Expect(got).To(Equal(expected))
+			},
+			Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
+			Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
+			Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
+			Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
+			Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
+			Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
+		)
+
+		DescribeTable("Generic",
+			func(mr *resourcesv1alpha1.ManagedResource, expected bool) {
+				got := filter.Generic(event.GenericEvent{
+					Object: mr,
+				})
+				Expect(got).To(Equal(expected))
+			},
+			Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
+			Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
+			Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
+			Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
+			Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
+			Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
+		)
 	})
 
-	DescribeTable("Responsible",
-		func(mr *resourcesv1alpha1.ManagedResource, responsible bool) {
-			resp := filter.Responsible(mr)
-			Expect(resp).To(Equal(responsible))
-		},
-		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
-		Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
-		Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, false),
-		Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
-		Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
-		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
-	)
+	When("class is 'all'", func() {
+		BeforeEach(func() {
+			filter = NewClassFilter("*")
+		})
 
-	DescribeTable("IsTransferringResponsibility",
-		func(mr *resourcesv1alpha1.ManagedResource, shouldCleanup bool) {
-			cleanup := filter.IsTransferringResponsibility(mr)
-			Expect(cleanup).To(Equal(shouldCleanup))
-		},
-		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
-		Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
-		Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
-		Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, false),
-		Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, false),
-		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, false),
-	)
-
-	DescribeTable("IsWaitForCleanupRequired",
-		func(mr *resourcesv1alpha1.ManagedResource, shouldWait bool) {
-			wait := filter.IsWaitForCleanupRequired(mr)
-			Expect(wait).To(Equal(shouldWait))
-		},
-		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
-		Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
-		Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, false),
-		Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, false),
-		Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
-		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, false),
-	)
-
-	DescribeTable("Create",
-		func(mr *resourcesv1alpha1.ManagedResource, expected bool) {
-			got := filter.Create(event.CreateEvent{
-				Object: mr,
+		Describe("#Responsible", func() {
+			It("should be responsible for any class", func() {
+				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{})).To(BeTrue())
+				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("")}})).To(BeTrue())
+				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("foo")}})).To(BeTrue())
+				Expect(filter.Responsible(&resourcesv1alpha1.ManagedResource{Spec: resourcesv1alpha1.ManagedResourceSpec{Class: ptr.To("bar")}})).To(BeTrue())
 			})
-			Expect(got).To(Equal(expected))
-		},
-		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
-		Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
-		Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
-		Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
-		Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
-		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
-	)
-
-	DescribeTable("Delete",
-		func(mr *resourcesv1alpha1.ManagedResource, expected bool) {
-			got := filter.Delete(event.DeleteEvent{
-				Object: mr,
-			})
-			Expect(got).To(Equal(expected))
-		},
-		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
-		Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
-		Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
-		Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
-		Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
-		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
-	)
-
-	DescribeTable("Update",
-		func(mr *resourcesv1alpha1.ManagedResource, expected bool) {
-			got := filter.Update(event.UpdateEvent{
-				ObjectNew: mr,
-			})
-			Expect(got).To(Equal(expected))
-		},
-		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
-		Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
-		Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
-		Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
-		Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
-		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
-	)
-
-	DescribeTable("Generic",
-		func(mr *resourcesv1alpha1.ManagedResource, expected bool) {
-			got := filter.Generic(event.GenericEvent{
-				Object: mr,
-			})
-			Expect(got).To(Equal(expected))
-		},
-		Entry("MR without a finalizer and with different class", mrWithoutFinalizerDifferentClass, false),
-		Entry("MR with different finalizer and with different class", mrDifferentFinalizerDifferentClass, false),
-		Entry("MR with same finalizer and with different class", mrSameFinalizerDifferentClass, true),
-		Entry("MR without a finalizer and with same class", mrWithoutFinalizerSameClass, true),
-		Entry("MR with different finalizer and with same class", mrDifferentFinalizerSameClass, true),
-		Entry("MR with same finalizer and with same class", mrSameFinalizerSameClass, true),
-	)
-
+		})
+	})
 })

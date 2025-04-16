@@ -649,19 +649,26 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) sets.Set[string] {
 	requiredExtensions := sets.New[string]()
 
-	if seed.Spec.Backup != nil {
+	if seed != nil && seed.Spec.Backup != nil {
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider))
 	}
-	// Hint: This is actually a temporary work-around to request the control plane extension of the seed provider type as
-	// it might come with webhooks that are configuring the exposure of shoot control planes. The ControllerRegistration resource
-	// does not reflect this today.
-	requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
+
+	if seed != nil {
+		// Hint: This is actually a temporary work-around to request the control plane extension of the seed provider type as
+		// it might come with webhooks that are configuring the exposure of shoot control planes. The ControllerRegistration resource
+		// does not reflect this today.
+		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
+	}
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type))
-		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
-		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
+
+		if !v1beta1helper.IsShootAutonomous(shoot) {
+			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
+			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
+		}
+
 		if shoot.Spec.Networking != nil && shoot.Spec.Networking.Type != nil {
 			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.NetworkResource, *shoot.Spec.Networking.Type))
 		}

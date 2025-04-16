@@ -224,6 +224,7 @@ build:
             - pkg/component/observability/plutono/dashboards/garden-shoot
             - pkg/component/observability/plutono/dashboards/seed
             - pkg/component/observability/plutono/dashboards/shoot
+            - pkg/component/seed/system
             - pkg/component/shared
             - pkg/component/shoot/namespaces
             - pkg/component/shoot/system
@@ -248,6 +249,8 @@ build:
             - pkg/gardenadm/staticpod
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/apis/config/v1alpha1/helper
+            - pkg/gardenlet/controller/controllerinstallation/controllerinstallation
+            - pkg/gardenlet/controller/controllerinstallation/utils
             - pkg/gardenlet/features
             - pkg/gardenlet/operation
             - pkg/gardenlet/operation/botanist
@@ -282,6 +285,7 @@ build:
             - pkg/utils/errors
             - pkg/utils/flow
             - pkg/utils/gardener
+            - pkg/utils/gardener/gardenlet
             - pkg/utils/gardener/secretsrotation
             - pkg/utils/gardener/tokenrequest
             - pkg/utils/imagevector
@@ -295,6 +299,7 @@ build:
             - pkg/utils/managedresources
             - pkg/utils/managedresources/builder
             - pkg/utils/net
+            - pkg/utils/oci
             - pkg/utils/retry
             - pkg/utils/secrets
             - pkg/utils/secrets/manager
@@ -432,13 +437,118 @@ build:
         after:
           - command:
               - bash
-              - -ec
-              - |
-                cat <<EOF > example/gardenadm-local/.imagevector-overwrite.yaml
-                images:
-                - name: gardener-node-agent
-                  ref: "$SKAFFOLD_IMAGE"
-                EOF
+              - hack/generate-gardenadm-imagevector-overwrite.sh
+              - gardener-node-agent
+    - image: local-skaffold/gardener-resource-manager
+      ko:
+        dependencies:
+          paths:
+            - cmd/gardener-resource-manager
+            - cmd/gardener-resource-manager/app
+            - cmd/gardener-resource-manager/app/bootstrappers
+            - cmd/utils
+            - cmd/utils/initrun
+            - pkg/api/extensions
+            - pkg/api/indexer
+            - pkg/apis/core
+            - pkg/apis/core/install
+            - pkg/apis/core/v1
+            - pkg/apis/core/v1beta1
+            - pkg/apis/core/v1beta1/constants
+            - pkg/apis/core/v1beta1/helper
+            - pkg/apis/extensions
+            - pkg/apis/extensions/v1alpha1
+            - pkg/apis/extensions/v1alpha1/helper
+            - pkg/apis/extensions/validation
+            - pkg/apis/operations
+            - pkg/apis/operations/install
+            - pkg/apis/operations/v1alpha1
+            - pkg/apis/operator
+            - pkg/apis/operator/v1alpha1
+            - pkg/apis/resources
+            - pkg/apis/resources/v1alpha1
+            - pkg/apis/resources/v1alpha1/helper
+            - pkg/apis/security
+            - pkg/apis/security/install
+            - pkg/apis/security/v1alpha1
+            - pkg/apis/seedmanagement
+            - pkg/apis/seedmanagement/encoding
+            - pkg/apis/seedmanagement/install
+            - pkg/apis/seedmanagement/v1alpha1
+            - pkg/apis/settings
+            - pkg/apis/settings/install
+            - pkg/apis/settings/v1alpha1
+            - pkg/chartrenderer
+            - pkg/client/kubernetes
+            - pkg/client/kubernetes/cache
+            - pkg/controller/tokenrequestor
+            - pkg/controllerutils
+            - pkg/controllerutils/predicate
+            - pkg/controllerutils/reconciler
+            - pkg/controllerutils/routes
+            - pkg/gardenlet/apis/config/v1alpha1
+            - pkg/healthz
+            - pkg/logger
+            - pkg/resourcemanager/apis/config/v1alpha1
+            - pkg/resourcemanager/apis/config/v1alpha1/validation
+            - pkg/resourcemanager/client
+            - pkg/resourcemanager/controller
+            - pkg/resourcemanager/controller/csrapprover
+            - pkg/resourcemanager/controller/garbagecollector
+            - pkg/resourcemanager/controller/garbagecollector/references
+            - pkg/resourcemanager/controller/health
+            - pkg/resourcemanager/controller/health/health
+            - pkg/resourcemanager/controller/health/progressing
+            - pkg/resourcemanager/controller/health/utils
+            - pkg/resourcemanager/controller/managedresource
+            - pkg/resourcemanager/controller/networkpolicy
+            - pkg/resourcemanager/controller/node
+            - pkg/resourcemanager/controller/node/agentreconciliationdelay
+            - pkg/resourcemanager/controller/node/criticalcomponents
+            - pkg/resourcemanager/controller/node/criticalcomponents/helper
+            - pkg/resourcemanager/predicate
+            - pkg/resourcemanager/webhook
+            - pkg/resourcemanager/webhook/crddeletionprotection
+            - pkg/resourcemanager/webhook/endpointslicehints
+            - pkg/resourcemanager/webhook/extensionvalidation
+            - pkg/resourcemanager/webhook/highavailabilityconfig
+            - pkg/resourcemanager/webhook/kubernetesservicehost
+            - pkg/resourcemanager/webhook/nodeagentauthorizer
+            - pkg/resourcemanager/webhook/podschedulername
+            - pkg/resourcemanager/webhook/podtopologyspreadconstraints
+            - pkg/resourcemanager/webhook/projectedtokenmount
+            - pkg/resourcemanager/webhook/seccompprofile
+            - pkg/resourcemanager/webhook/systemcomponentsconfig
+            - pkg/utils
+            - pkg/utils/context
+            - pkg/utils/errors
+            - pkg/utils/flow
+            - pkg/utils/gardener
+            - pkg/utils/kubernetes
+            - pkg/utils/kubernetes/client
+            - pkg/utils/kubernetes/health
+            - pkg/utils/kubernetes/unstructured
+            - pkg/utils/retry
+            - pkg/utils/secrets
+            - pkg/utils/time
+            - pkg/utils/timewindow
+            - pkg/utils/validation
+            - pkg/utils/validation/cidr
+            - pkg/utils/validation/kubernetes/core
+            - pkg/utils/validation/kubernetesversion
+            - pkg/utils/version
+            - pkg/webhook/authorizer
+            - third_party/gopkg.in/yaml.v2
+            - VERSION
+        ldflags:
+          - '{{.LD_FLAGS}}'
+        main: ./cmd/gardener-resource-manager
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-gardenadm-imagevector-overwrite.sh
+              - gardener-resource-manager
   insecureRegistries:
     - garden.local.gardener.cloud:5001
   tagPolicy:
@@ -676,6 +786,11 @@ build:
       requires:
         - image: local-skaffold/gardener-extension-provider-local
           alias: IMG
+      hooks:
+        after:
+          - command:
+              - bash
+              - hack/generate-kustomize-patch-controllerdeployment-provider-local-gardenadm.sh
   insecureRegistries:
     - garden.local.gardener.cloud:5001
   tagPolicy:

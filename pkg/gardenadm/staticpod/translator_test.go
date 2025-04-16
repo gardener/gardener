@@ -69,6 +69,7 @@ metadata:
   creationTimestamp: null
   labels:
     baz: foo
+    static-pod: "true"
   name: foo
   namespace: kube-system
 spec:
@@ -185,6 +186,7 @@ metadata:
   creationTimestamp: null
   labels:
     baz: foo
+    static-pod: "true"
   name: foo
   namespace: kube-system
 spec:
@@ -292,6 +294,7 @@ metadata:
   creationTimestamp: null
   labels:
     baz: foo
+    static-pod: "true"
   name: foo
   namespace: kube-system
 spec:
@@ -406,6 +409,7 @@ metadata:
   creationTimestamp: null
   labels:
     baz: foo
+    static-pod: "true"
   name: foo
   namespace: kube-system
 spec:
