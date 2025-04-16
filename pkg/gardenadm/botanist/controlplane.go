@@ -33,35 +33,6 @@ import (
 // PathKubeconfig is the path to a file on the control plane node containing an admin kubeconfig.
 var PathKubeconfig = filepath.Join(string(filepath.Separator), "etc", "kubernetes", "admin.conf")
 
-func (b *AutonomousBotanist) filesForStaticControlPlanePods(ctx context.Context) ([]extensionsv1alpha1.File, error) {
-	var files []extensionsv1alpha1.File
-
-	for _, component := range []struct {
-		deploy       func(context.Context) error
-		name         string
-		targetObject client.Object
-	}{
-		{b.deployETCD(v1beta1constants.ETCDRoleMain), "etcd-" + v1beta1constants.ETCDRoleMain + "-0", &corev1.Pod{}},
-		{b.deployETCD(v1beta1constants.ETCDRoleEvents), "etcd-" + v1beta1constants.ETCDRoleEvents + "-0", &corev1.Pod{}},
-		{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}},
-		{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}},
-		{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}},
-	} {
-		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name); err != nil {
-			return nil, fmt.Errorf("failed deploying %q: %w", component.name, err)
-		}
-
-		f, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject)
-		if err != nil {
-			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)
-		}
-
-		files = append(files, f...)
-	}
-
-	return files, nil
-}
-
 func (b *AutonomousBotanist) deployETCD(role string) func(context.Context) error {
 	var portClient, portPeer, portMetrics int32 = 2379, 2380, 2381
 	if role == v1beta1constants.ETCDRoleEvents {
@@ -87,6 +58,33 @@ func (b *AutonomousBotanist) deployETCD(role string) func(context.Context) error
 func (b *AutonomousBotanist) deployKubeAPIServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
 	return b.DeployKubeAPIServer(ctx, false)
+}
+
+type staticControlPlaneComponent struct {
+	deploy       func(context.Context) error
+	name         string
+	targetObject client.Object
+}
+
+func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlaneComponent {
+	return []staticControlPlaneComponent{
+		{b.deployETCD(v1beta1constants.ETCDRoleMain), "etcd-" + v1beta1constants.ETCDRoleMain + "-0", &corev1.Pod{}},
+		{b.deployETCD(v1beta1constants.ETCDRoleEvents), "etcd-" + v1beta1constants.ETCDRoleEvents + "-0", &corev1.Pod{}},
+		{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}},
+		{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}},
+		{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}},
+	}
+}
+
+// DeployControlPlaneDeployments deploys the deployments for the static control plane components.
+func (b *AutonomousBotanist) DeployControlPlaneDeployments(ctx context.Context) error {
+	for _, component := range b.staticControlPlaneComponents() {
+		if err := b.deployControlPlaneComponent(ctx, component.deploy, component.targetObject, component.name); err != nil {
+			return fmt.Errorf("failed deploying %q: %w", component.name, err)
+		}
+	}
+
+	return nil
 }
 
 func (b *AutonomousBotanist) deployControlPlaneComponent(ctx context.Context, deploy func(context.Context) error, targetObject client.Object, componentName string) error {
@@ -133,6 +131,25 @@ func (b *AutonomousBotanist) populateStaticAdminTokenToAccessTokenSecret(ctx con
 	secret.Data["token"] = []byte(adminToken.Token)
 
 	return b.SeedClientSet.Client().Update(ctx, secret)
+}
+
+func (b *AutonomousBotanist) filesForStaticControlPlanePods(ctx context.Context) ([]extensionsv1alpha1.File, error) {
+	var files []extensionsv1alpha1.File
+
+	for _, component := range b.staticControlPlaneComponents() {
+		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(component.targetObject), component.targetObject); err != nil {
+			return nil, fmt.Errorf("failed reading object %s for %q: %w", client.ObjectKeyFromObject(component.targetObject), component.name, err)
+		}
+
+		f, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject)
+		if err != nil {
+			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)
+		}
+
+		files = append(files, f...)
+	}
+
+	return files, nil
 }
 
 // CreateClientSet creates a client set for the control plane.

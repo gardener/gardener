@@ -33,6 +33,10 @@ import (
 // DeployOperatingSystemConfigSecretForNodeAgent deploys the OperatingSystemConfig resource and adds its content into
 // a Secret so that gardener-node-agent can read it and reconcile its content.
 func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForNodeAgent(ctx context.Context) error {
+	if err := b.DeployControlPlaneDeployments(ctx); err != nil {
+		return fmt.Errorf("failed deploying control plane deployments: %w", err)
+	}
+
 	oscData, controlPlaneWorkerPoolName, err := b.deployOperatingSystemConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
