@@ -127,7 +127,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 	// If we had reached this point, we can safely say that AutoInPlaceUpdate worker pools have been updated.
 	// Hence we can update their hash in the status.
 	// But for ManualInPlaceUpdate worker pools, we need to check if all the machine deployments for the worker pool are updated.
-	// The worker controller is triggered when a machine deployment is updated, so this can also happen later.
+	// The worker controller is triggered when a machine is updated, so this can also happen later.
 	if err := a.updateWorkerStatusInPlaceUpdateWorkerPoolHash(ctx, worker, cluster); err != nil {
 		return fmt.Errorf("failed to update the worker status with the worker pool hash for in-place update worker pools: %w", err)
 	}
@@ -313,7 +313,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines,
-			numDesiredManualInPlace, numUpdatedManualInPlace, numNeedUpdatedManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace int32
+			numDesiredManualInPlace, numUpdatedManualInPlace, numNeedUpdateManualInPlace, numOldMachinesNotUpdateCandidateManualInPlace int32
 
 		// Get the list of all machine deployments
 		machineDeployments := &machinev1alpha1.MachineDeploymentList{}
@@ -392,10 +392,13 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			}
 
 			if gardenerutils.IsMachineDeploymentStrategyManualInPlace(deployment.Spec.Strategy) {
-				oldMachineSetsTotalReplicas := 0
+				oldMachineSetsTotalReplicas := int32(0)
 				oldMachineSets := extensionsworkerhelper.GetOldMachineSets(machineSets, *latestMachineSet)
 				for _, oldMachineSet := range oldMachineSets {
-					oldMachineSetsTotalReplicas += int(oldMachineSet.Status.Replicas)
+					// We're not relying on MachineDeployment's status.replicas and status.updatedReplicas,
+					// because while the underlying MachineSet's replica count is updated immediately after a machine update,
+					// the MachineDeployment status may take additional time to reflect the changes.
+					oldMachineSetsTotalReplicas += oldMachineSet.Status.Replicas
 					machines := machineSetToMachinesMap[oldMachineSet.Name]
 					for _, machine := range machines {
 						cond := extensionsworkercontroller.GetMachineCondition(&machine, machinev1alpha1.NodeInPlaceUpdate)
@@ -406,7 +409,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				}
 
 				numDesiredManualInPlace += deployment.Spec.Replicas
-				numNeedUpdatedManualInPlace += int32(oldMachineSetsTotalReplicas) // #nosec: G115 - `oldMachineSetsTotalReplicas` cannot be higher than max int32.
+				numNeedUpdateManualInPlace += oldMachineSetsTotalReplicas
 				numUpdatedManualInPlace += deployment.Status.UpdatedReplicas
 			} else {
 				numDesired += deployment.Spec.Replicas
@@ -422,12 +425,12 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 		case !extensionscontroller.IsHibernationEnabled(cluster):
 			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
-			if numUnavailable == 0 && (numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
+			if numUnavailable == 0 && (numUpdated+numUpdatedManualInPlace+numNeedUpdateManualInPlace) == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) &&
 				numOldMachinesNotUpdateCandidateManualInPlace == 0 {
 				return retryutils.Ok()
 			}
 
-			if numUnavailable == 0 && numAvailable == (numDesired+numDesiredManualInPlace) && (numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace) < numberOfAwakeMachines {
+			if numUnavailable == 0 && numAvailable == (numDesired+numDesiredManualInPlace) && (numUpdated+numUpdatedManualInPlace+numNeedUpdateManualInPlace) < numberOfAwakeMachines {
 				msg = fmt.Sprintf("Waiting until all old machines are drained and terminated. Waiting for %d machine(s)...", numberOfAwakeMachines-numUpdated)
 			}
 
@@ -441,7 +444,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			}
 
 			msg = fmt.Sprintf("Waiting until machines are available (%d/%d desired machine(s) available, %d/%d machine(s) updated, %d machine(s) pending, %d/%d machinedeployments available)...",
-				numAvailable, numDesired+numDesiredManualInPlace, numUpdated+numUpdatedManualInPlace+numNeedUpdatedManualInPlace+numDesiredManualInPlace, numDesired, numUnavailable, numHealthyDeployments, len(wantedMachineDeployments))
+				numAvailable, numDesired+numDesiredManualInPlace, numUpdated+numUpdatedManualInPlace+numNeedUpdateManualInPlace+numDesiredManualInPlace, numDesired, numUnavailable, numHealthyDeployments, len(wantedMachineDeployments))
 		default:
 			if numberOfAwakeMachines == 0 {
 				return retryutils.Ok()
