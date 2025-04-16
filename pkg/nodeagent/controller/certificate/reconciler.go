@@ -52,6 +52,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 
 	if r.Clock.Now().After(*r.renewalDeadline) {
 		log.Info("Start rotating client certificate because renewal deadline exceeded", "renewalDeadline", *r.renewalDeadline)
+
+		// Always read the gardener-node-agent config for the latest API server CA bundle.
+		// This is needed to prevent races between this reconciler and the osc reconciler during in-place certificate rotation.
+		// Otherwise, if the renewal deadline is reached right after the osc reconciler requests a new certificate, but node-agent has
+		// not restarted yet, this reconciler could use the old CA bundle to request a new certificate. This could lead to osc reconciler
+		// marking the certificate rotation as complete, while the persisted certificate is still using the old CA bundle.
+		apiServerConfig, err := nodeagent.GetAPIServerConfig(r.FS)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed reading the API server config: %w", err)
+		}
+		r.Config.CAData = apiServerConfig.CABundle
+
 		if err := nodeagent.RequestAndStoreKubeconfig(ctx, log, r.FS, r.Config, r.MachineName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error rotating certificate: %w", err)
 		}

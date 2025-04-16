@@ -15,6 +15,8 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,9 +57,9 @@ var _ = Describe("Authorizer", func() {
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		sourceClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
-		authorizer = NewAuthorizer(log, sourceClient, targetClient, machineNamespace)
-
 		machineNamespace = "shoot--foo"
+		authorizer = NewAuthorizer(log, sourceClient, targetClient, machineNamespace, true)
+
 		machineName = "foo-machine"
 		machineSecretName = "foo-machine-secret"
 		newMachineName = "bar-machine"
@@ -110,6 +112,12 @@ var _ = Describe("Authorizer", func() {
 			},
 		}
 		Expect(targetClient.Create(ctx, node)).To(Succeed())
+
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(sourceClient.Delete(ctx, machine))).To(Succeed())
+			Expect(client.IgnoreNotFound(sourceClient.Delete(ctx, newMachine))).To(Succeed())
+			Expect(client.IgnoreNotFound(targetClient.Delete(ctx, node))).To(Succeed())
+		})
 	})
 
 	Describe("#Authorize", func() {
@@ -662,6 +670,233 @@ var _ = Describe("Authorizer", func() {
 				Entry("update", "update"),
 				Entry("delete", "delete"),
 				Entry("deletecollection", "deletecollection"),
+			)
+		})
+
+		Context("#Pods", func() {
+			var (
+				nodeName     string
+				podName      string
+				podNamespace string
+				pod          *corev1.Pod
+				attrs        auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				nodeName = "foo-node"
+				podName = "foo-pod"
+				podNamespace = "default"
+
+				pod = &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      podName,
+						Namespace: podNamespace,
+					},
+					Spec: corev1.PodSpec{
+						NodeName: nodeName,
+					},
+				}
+				Expect(targetClient.Create(ctx, pod)).To(Succeed())
+
+				attrs = auth.AttributesRecord{
+					User:            nodeAgentUser,
+					Name:            podName,
+					Namespace:       podNamespace,
+					APIGroup:        "",
+					Resource:        "pods",
+					ResourceRequest: true,
+					Verb:            "get",
+				}
+			})
+
+			DescribeTable("should allow accessing the pods which belong to the same node", func(verb string) {
+				attrs.Verb = verb
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			},
+				Entry("get", "get"),
+				Entry("delete", "delete"),
+			)
+
+			DescribeTable("should allow accessing the pods because authorizeWithSelectors is false", func(verb string) {
+				attrs.Name = ""
+				attrs.Verb = verb
+				authorizer = NewAuthorizer(log, sourceClient, targetClient, machineNamespace, false)
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			},
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+			)
+
+			DescribeTable("should allow accessing the pods because the request has a field selector for this node", func(verb string) {
+				attrs.Name = ""
+				attrs.Verb = verb
+				attrs.FieldSelectorRequirements = fields.Requirements{
+					{
+						Field:    "spec.nodeName",
+						Operator: selection.Equals,
+						Value:    nodeName,
+					},
+				}
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			},
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+			)
+
+			DescribeTable("should allow accessing the pods because the request is a list for a particular pod, and the pod belongs to this node", func(verb string) {
+				attrs.Name = podName
+				attrs.Namespace = podNamespace
+				attrs.Verb = verb
+				attrs.FieldSelectorRequirements = fields.Requirements{
+					{
+						Field:    "metadata.name",
+						Operator: selection.In,
+						Value:    podName,
+					},
+				}
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			},
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+			)
+
+			DescribeTable("should allow accessing the pods because the request is a list for a particular pod, and the pod doesn't belong to this node", func(verb string) {
+				attrs.Name = podName
+				attrs.Namespace = podNamespace
+				attrs.Verb = verb
+
+				pod.Spec.NodeName = "different-node"
+				Expect(targetClient.Update(ctx, pod)).To(Succeed())
+
+				attrs.FieldSelectorRequirements = fields.Requirements{
+					{
+						Field:    "metadata.name",
+						Operator: selection.In,
+						Value:    podName,
+					},
+				}
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionDeny))
+				Expect(reason).To(ContainSubstring(fmt.Sprintf("pod %q does not belong to node %q", client.ObjectKeyFromObject(pod), nodeName)))
+			},
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+			)
+
+			DescribeTable("should deny accessing the pods because the request doesn't have a field selector for this node", func(verb string) {
+				attrs.Name = ""
+				attrs.Verb = verb
+				attrs.FieldSelectorRequirements = fields.Requirements{
+					{
+						Field:    "spec.nodeName",
+						Operator: selection.Equals,
+						Value:    "different-node",
+					},
+				}
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionDeny))
+				Expect(reason).To(ContainSubstring("can only list/watch pods with spec.nodeName=%s field selector", nodeName))
+			},
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+			)
+
+			DescribeTable("should deny because no allowed verb", func(verb string) {
+				attrs.Verb = verb
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionDeny))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch delete]"))
+			},
+				Entry("create", "create"),
+				Entry("patch", "patch"),
+				Entry("update", "update"),
+				Entry("deletecollection", "deletecollection"),
+			)
+
+			DescribeTable("should deny access if the machine does not exist", func(verb string) {
+				attrs.Verb = verb
+				Expect(sourceClient.Delete(ctx, machine)).To(Succeed())
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionDeny))
+				Expect(reason).To(BeEmpty())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("error getting machine %q", machineName)))
+			},
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("delete", "delete"),
+			)
+
+			DescribeTable("should deny access if the machine does not have a 'node' label", func(verb string) {
+				attrs.Verb = verb
+				delete(machine.Labels, machinev1alpha1.NodeLabelKey)
+				Expect(sourceClient.Update(ctx, machine)).To(Succeed())
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionDeny))
+				Expect(reason).To(ContainSubstring(fmt.Sprintf(`expecting "node" label on machine %q`, machineName)))
+			},
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("delete", "delete"),
+			)
+
+			DescribeTable("should deny access if the pod does not exist", func(verb string) {
+				attrs.Verb = verb
+				Expect(targetClient.Delete(ctx, pod)).To(Succeed())
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionDeny))
+				Expect(reason).To(BeEmpty())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("error getting pod %q", client.ObjectKey{Name: podName, Namespace: podNamespace})))
+			},
+				Entry("get", "get"),
+				Entry("delete", "delete"),
+			)
+
+			DescribeTable("should deny access if the pod belongs to a different node", func(verb string) {
+				attrs.Verb = verb
+				pod.Spec.NodeName = "different-node"
+				Expect(targetClient.Update(ctx, pod)).To(Succeed())
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionDeny))
+				Expect(reason).To(ContainSubstring(fmt.Sprintf("pod %q does not belong to node %q", client.ObjectKeyFromObject(pod), nodeName)))
+			},
+				Entry("get", "get"),
+				Entry("delete", "delete"),
 			)
 		})
 	})

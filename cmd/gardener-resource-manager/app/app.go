@@ -174,6 +174,13 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 			// but is rate-limited to not issue to many discovery calls (rate-limit shared across all reconciliations)
 			opts.MapperProvider = apiutil.NewDynamicRESTMapper
 
+			if cfg.Webhooks.NodeAgentAuthorizer.Enabled {
+				opts.Cache.ByObject = map[client.Object]cache.ByObject{
+					// Needed for node-agent-authorizer webhook
+					&corev1.Pod{}: {Namespaces: map[string]cache.Config{cache.AllNamespaces: {}}},
+				}
+			}
+
 			opts.Cache.DefaultNamespaces = getCacheConfig(cfg.TargetClientConnection.Namespaces)
 			opts.Cache.SyncPeriod = &cfg.TargetClientConnection.CacheResyncPeriod.Duration
 

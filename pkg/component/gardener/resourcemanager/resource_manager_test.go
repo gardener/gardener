@@ -324,17 +324,19 @@ var _ = Describe("ResourceManager", func() {
 				{Key: "b"},
 				{Key: "c"},
 			},
-			ResponsibilityMode:                  ForTarget,
-			TargetDisableCache:                  &targetDisableCache,
-			WatchedNamespace:                    &watchedNamespace,
-			SchedulingProfile:                   &binPackingSchedulingProfile,
-			DefaultSeccompProfileEnabled:        false,
-			EndpointSliceHintsEnabled:           false,
-			PodTopologySpreadConstraintsEnabled: true,
-			LogLevel:                            "info",
-			LogFormat:                           "json",
-			Zones:                               []string{"a", "b"},
-			ManagedResourceLabels:               map[string]string{"foo": "bar"},
+			ResponsibilityMode:                        ForTarget,
+			TargetDisableCache:                        &targetDisableCache,
+			WatchedNamespace:                          &watchedNamespace,
+			SchedulingProfile:                         &binPackingSchedulingProfile,
+			DefaultSeccompProfileEnabled:              false,
+			EndpointSliceHintsEnabled:                 false,
+			PodTopologySpreadConstraintsEnabled:       true,
+			LogLevel:                                  "info",
+			LogFormat:                                 "json",
+			Zones:                                     []string{"a", "b"},
+			ManagedResourceLabels:                     map[string]string{"foo": "bar"},
+			NodeAgentAuthorizerEnabled:                true,
+			NodeAgentAuthorizerAuthorizeWithSelectors: ptr.To(true),
 		}
 		resourceManager = New(c, deployNamespace, sm, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -430,12 +432,17 @@ var _ = Describe("ResourceManager", func() {
 					SystemComponentsConfig: resourcemanagerconfigv1alpha1.SystemComponentsConfigWebhookConfig{
 						Enabled: false,
 					},
+					NodeAgentAuthorizer: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
+						Enabled:                true,
+						AuthorizeWithSelectors: ptr.To(true),
+					},
 				},
 			}
 
 			if watchedNamespace != nil {
 				config.SourceClientConnection.Namespaces = []string{*watchedNamespace}
 				config.Controllers.CSRApprover.MachineNamespace = *watchedNamespace
+				config.Webhooks.NodeAgentAuthorizer.MachineNamespace = *watchedNamespace
 			}
 
 			if responsibilityMode == ForTarget {

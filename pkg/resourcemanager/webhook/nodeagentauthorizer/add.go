@@ -5,6 +5,7 @@
 package nodeagentauthorizer
 
 import (
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
@@ -21,7 +22,7 @@ const (
 // AddToManager adds Handler to the given manager.
 func (w *Webhook) AddToManager(mgr manager.Manager, sourceClient, targetClient client.Client) error {
 	if w.Handler == nil {
-		authorizer := NewAuthorizer(w.Logger, sourceClient, targetClient, w.Config.MachineNamespace)
+		authorizer := NewAuthorizer(w.Logger, sourceClient, targetClient, w.Config.MachineNamespace, ptr.Deref(w.Config.AuthorizeWithSelectors, false))
 		w.Handler = &authorizerwebhook.Handler{Logger: w.Logger, Authorizer: authorizer}
 	}
 
