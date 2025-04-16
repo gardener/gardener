@@ -43,9 +43,12 @@ spec:
     ipam:
       cidr: usePodCIDR
       type: host-local
+status:
+  ipFamilies:
+  - IPv4
 ```
 
-The above resources is divided into two parts (more information can be found at [Using the Networking Calico Extension](https://github.com/gardener/gardener-extension-networking-calico/blob/master/docs/usage/usage.md)):
+The spec of above resources is divided into two parts (more information can be found at [Using the Networking Calico Extension](https://github.com/gardener/gardener-extension-networking-calico/blob/master/docs/usage/usage.md)):
 
 - global configuration (e.g., podCIDR, serviceCIDR, and type)
 - provider specific config (e.g., for calico we can choose to configure a `bird` backend)
@@ -91,6 +94,12 @@ The networking extensions need to handle this twofold:
 
 1. During the reconciliation of the networking resources, the extension needs to check whether `kube-proxy` takes care of the service routing or the networking extension itself should handle it. In case the networking extension should be responsible according to `.spec.kubernetes.kubeproxy.enabled` (but is unable to perform the service routing), it should raise an error during the reconciliation. If the networking extension should handle the service routing, it may reconfigure itself accordingly.
 1. (Optional) In case the networking extension does not support taking over the service routing (in some scenarios), it is recommended to also provide a validating admission webhook to reject corresponding changes early on. The validation may take the current operating mode of the networking extension into consideration.
+
+## Supporting Migration of `ipFamilies`
+
+To enable the migration from a shoot cluster with single-stack networking to a cluster with dual-stack networking, the `status` field of the `Network` resource includes the `ipFamilies` field. 
+
+This field reflects the currently deployed configuration and is used to verify whether the migration process has been completed successfully. To support the migration from single-stack to dual-stack networking, a network extension provider must ensure that this field is properly maintained and updated during the migration process.
 
 ## Related Links
 

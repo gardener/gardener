@@ -1557,6 +1557,11 @@ func (in *NetworkSpec) DeepCopy() *NetworkSpec {
 func (in *NetworkStatus) DeepCopyInto(out *NetworkStatus) {
 	*out = *in
 	in.DefaultStatus.DeepCopyInto(&out.DefaultStatus)
+	if in.IPFamilies != nil {
+		in, out := &in.IPFamilies, &out.IPFamilies
+		*out = make([]IPFamily, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
