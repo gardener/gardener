@@ -14,6 +14,7 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -123,15 +124,31 @@ func getWildcardCertificate(ctx context.Context, c client.Client, namespace, rol
 
 // ComputeRequiredExtensionsForSeed computes the extension kind/type combinations that are required for the
 // seed reconciliation flow.
-func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed) sets.Set[string] {
+func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList) sets.Set[string] {
 	wantedKindTypeCombinations := sets.New[string]()
 
 	if seed.Spec.DNS.Provider != nil {
 		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
 	}
 
+	disabledExtensions := sets.New[string]()
 	for _, extension := range seed.Spec.Extensions {
-		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type))
+		id := ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type)
+
+		if ptr.Deref(extension.Disabled, false) {
+			disabledExtensions.Insert(id)
+		} else {
+			wantedKindTypeCombinations.Insert(id)
+		}
+	}
+
+	for _, controllerRegistration := range controllerRegistrationList.Items {
+		for _, resource := range controllerRegistration.Spec.Resources {
+			id := ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type)
+			if extensionEnabledForMode(id, gardencorev1beta1.AutoEnableModeSeed, resource, disabledExtensions) {
+				wantedKindTypeCombinations.Insert(id)
+			}
+		}
 	}
 
 	// add extension combinations for seed provider type

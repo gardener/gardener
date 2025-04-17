@@ -236,11 +236,11 @@ var _ = Describe("ExtensionLabels tests", func() {
 			crType4          = "containerRuntime-type-4"
 			dnsProviderType1 = "dns-external-1"
 			dnsProviderType2 = "dns-external-2"
-			extensionType1   = "extension-type-1" // globally enabled
-			extensionType2   = "extension-type-2" // globally enabled + disabled for shoot
+			extensionType1   = "extension-type-1" // automatically enabled
+			extensionType2   = "extension-type-2" // automatically enabled + disabled for shoot
 			extensionType3   = "extension-type-3" // enabled for shoot
 			extensionType4   = "extension-type-4" // not enabled
-			extensionType5   = "extension-type-5" // globally enabled +  workerlessSupported
+			extensionType5   = "extension-type-5" // automatically enabled +  workerlessSupported
 		)
 
 		BeforeEach(func() {
@@ -249,19 +249,19 @@ var _ = Describe("ExtensionLabels tests", func() {
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{
-							Kind:            extensionsv1alpha1.ExtensionResource,
-							Type:            extensionType1,
-							GloballyEnabled: ptr.To(true),
+							Kind:       extensionsv1alpha1.ExtensionResource,
+							Type:       extensionType1,
+							AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
 						},
 						{
-							Kind:            extensionsv1alpha1.ExtensionResource,
-							Type:            extensionType2,
-							GloballyEnabled: ptr.To(true),
+							Kind:       extensionsv1alpha1.ExtensionResource,
+							Type:       extensionType2,
+							AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
 						},
 						{
 							Kind:                extensionsv1alpha1.ExtensionResource,
 							Type:                extensionType5,
-							GloballyEnabled:     ptr.To(true),
+							AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
 							WorkerlessSupported: ptr.To(true),
 						},
 					},

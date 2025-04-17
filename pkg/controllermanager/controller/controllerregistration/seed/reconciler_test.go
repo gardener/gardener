@@ -237,9 +237,9 @@ var _ = Describe("Reconciler", func() {
 						Type: type1,
 					},
 					{
-						Kind:            extensionsv1alpha1.ExtensionResource,
-						GloballyEnabled: ptr.To(true),
-						Type:            type10,
+						Kind:       extensionsv1alpha1.ExtensionResource,
+						AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+						Type:       type10,
 					},
 					{
 						Kind:    extensionsv1alpha1.NetworkResource,
@@ -525,7 +525,7 @@ var _ = Describe("Reconciler", func() {
 				extensionsv1alpha1.WorkerResource+"/"+type6,
 				extensionsv1alpha1.ContainerRuntimeResource+"/"+type12,
 
-				// internal domain + globally enabled extensions
+				// internal domain + automatically enabled extensions
 				extensionsv1alpha1.ExtensionResource+"/"+type10,
 				extensionsv1alpha1.DNSRecordResource+"/"+type9,
 			)))
@@ -580,7 +580,7 @@ var _ = Describe("Reconciler", func() {
 				extensionsv1alpha1.NetworkResource+"/"+type3,
 				extensionsv1alpha1.ExtensionResource+"/"+type4,
 
-				// internal domain + globally enabled extensions
+				// internal domain + automatically enabled extensions
 				extensionsv1alpha1.ExtensionResource+"/"+type10,
 				extensionsv1alpha1.DNSRecordResource+"/"+type9,
 			)))
@@ -610,7 +610,7 @@ var _ = Describe("Reconciler", func() {
 				extensionsv1alpha1.InfrastructureResource+"/type1",
 				extensionsv1alpha1.WorkerResource+"/type1",
 			)
-			actual := computeKindTypesForSeed(seed)
+			actual := computeKindTypesForSeed(seed, &gardencorev1beta1.ControllerRegistrationList{})
 			Expect(actual).To(Equal(expected))
 		})
 
@@ -630,7 +630,7 @@ var _ = Describe("Reconciler", func() {
 			}
 
 			expected := sets.New[string]()
-			actual := computeKindTypesForSeed(seed)
+			actual := computeKindTypesForSeed(seed, &gardencorev1beta1.ControllerRegistrationList{})
 			Expect(actual).To(Equal(expected))
 		})
 
@@ -648,7 +648,7 @@ var _ = Describe("Reconciler", func() {
 				extensionsv1alpha1.InfrastructureResource+"/type1",
 				extensionsv1alpha1.WorkerResource+"/type1",
 			)
-			actual := computeKindTypesForSeed(seed)
+			actual := computeKindTypesForSeed(seed, &gardencorev1beta1.ControllerRegistrationList{})
 			Expect(actual).To(Equal(expected))
 		})
 	})
