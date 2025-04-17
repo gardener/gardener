@@ -57,14 +57,38 @@ var _ = Describe("Garden", func() {
 	)
 
 	Describe("#ComputeRequiredExtensionsForGarden", func() {
-		var garden *operatorv1alpha1.Garden
+		var (
+			garden        *operatorv1alpha1.Garden
+			extensionList *operatorv1alpha1.ExtensionList
+		)
 
 		BeforeEach(func() {
 			garden = &operatorv1alpha1.Garden{}
+			extensionList = &operatorv1alpha1.ExtensionList{
+				Items: []operatorv1alpha1.Extension{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "local-extension-1"},
+						Spec: operatorv1alpha1.ExtensionSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{Kind: "Extension", Type: "local-extension-1"},
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "local-extension-2"},
+						Spec: operatorv1alpha1.ExtensionSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{Kind: "Extension", Type: "local-extension-2-1", AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"}},
+								{Kind: "Extension", Type: "local-extension-2-2", AutoEnable: []gardencorev1beta1.AutoEnableMode{"seed"}},
+							},
+						},
+					},
+				},
+			}
 		})
 
 		It("should return no extension types", func() {
-			Expect(ComputeRequiredExtensionsForGarden(garden).UnsortedList()).To(BeEmpty())
+			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(BeEmpty())
 		})
 
 		It("should return required BackupBucket extension type", func() {
@@ -76,7 +100,7 @@ var _ = Describe("Garden", func() {
 				},
 			}
 
-			Expect(ComputeRequiredExtensionsForGarden(garden).UnsortedList()).To(ConsistOf(
+			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(ConsistOf(
 				"BackupBucket/local-infrastructure",
 			))
 		})
@@ -89,21 +113,32 @@ var _ = Describe("Garden", func() {
 				},
 			}
 
-			Expect(ComputeRequiredExtensionsForGarden(garden).UnsortedList()).To(ConsistOf(
+			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(ConsistOf(
 				"DNSRecord/local-dns-1",
 				"DNSRecord/local-dns-2",
 			))
 		})
 
 		It("should return required Extension extension types", func() {
+			autoEnabledExtension := operatorv1alpha1.Extension{
+				ObjectMeta: metav1.ObjectMeta{Name: "local-extension-3"},
+				Spec: operatorv1alpha1.ExtensionSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "Extension", Type: "auto-enabled-local-extension", AutoEnable: []gardencorev1beta1.AutoEnableMode{"garden"}},
+					},
+				},
+			}
+			extensionList.Items = append(extensionList.Items, autoEnabledExtension)
+
 			garden.Spec.Extensions = []operatorv1alpha1.GardenExtension{
 				{Type: "local-extension-1"},
 				{Type: "local-extension-2"},
 			}
 
-			Expect(ComputeRequiredExtensionsForGarden(garden).UnsortedList()).To(ConsistOf(
+			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(ConsistOf(
 				"Extension/local-extension-1",
 				"Extension/local-extension-2",
+				"Extension/auto-enabled-local-extension",
 			))
 		})
 
@@ -125,7 +160,7 @@ var _ = Describe("Garden", func() {
 				{Type: "local-extension-2"},
 			}
 
-			Expect(ComputeRequiredExtensionsForGarden(garden).UnsortedList()).To(ConsistOf(
+			Expect(ComputeRequiredExtensionsForGarden(garden, extensionList).UnsortedList()).To(ConsistOf(
 				"BackupBucket/local-infrastructure",
 				"DNSRecord/local-dns",
 				"Extension/local-extension-1",

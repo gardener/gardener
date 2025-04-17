@@ -148,6 +148,7 @@ func (r *Reconciler) instantiateComponents(
 	applier kubernetes.Applier,
 	wildcardCertSecret *corev1.Secret,
 	enableSeedAuthorizer bool,
+	extensionList *operatorv1alpha1.ExtensionList,
 ) (
 	c components,
 	err error,
@@ -207,10 +208,7 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// garden extensions
-	c.extensions, err = r.newExtensions(ctx, log, garden)
-	if err != nil {
-		return
-	}
+	c.extensions = r.newExtensions(log, garden, extensionList)
 
 	// virtual garden control plane components
 	c.etcdMain, err = r.newEtcd(log, garden, secretsManager, v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
@@ -1496,17 +1494,9 @@ func domainNames(domains []operatorv1alpha1.DNSDomain) []string {
 	return names
 }
 
-func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) (extension.Interface, error) {
-	values := &extension.Values{
-		Class:      ptr.To(extensionsv1alpha1.ExtensionClassGarden),
-		Namespace:  r.GardenNamespace,
-		NamePrefix: ptr.To("garden-"),
-		Extensions: make(map[string]extension.Extension),
-	}
-
-	// Transform extension definition from Garden to extensionsv1alpha1.Extension resource.
-	for _, ext := range garden.Spec.Extensions {
-		values.Extensions[ext.Type] = extension.Extension{
+func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Garden, extensionList *operatorv1alpha1.ExtensionList) extension.Interface {
+	newDefaultExtension := func(ext operatorv1alpha1.GardenExtension) extension.Extension {
+		return extension.Extension{
 			Extension: extensionsv1alpha1.Extension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: ext.Type,
@@ -1522,16 +1512,29 @@ func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden 
 		}
 	}
 
-	extensions := &operatorv1alpha1.ExtensionList{}
-	if err := r.RuntimeClientSet.Client().List(ctx, extensions); err != nil {
-		return nil, fmt.Errorf("error calculating extensions: %w", err)
+	values := &extension.Values{
+		Class:      ptr.To(extensionsv1alpha1.ExtensionClassGarden),
+		Namespace:  r.GardenNamespace,
+		NamePrefix: ptr.To("garden-"),
+		Extensions: make(map[string]extension.Extension),
+	}
+
+	// Transform extension definition from Garden to extensionsv1alpha1.Extension resource.
+	for _, ext := range garden.Spec.Extensions {
+		values.Extensions[ext.Type] = newDefaultExtension(ext)
 	}
 
 	// Apply resource specific settings from operatorv1alpha1.Extension resource.
-	for _, ext := range extensions.Items {
+	for _, ext := range extensionList.Items {
 		for _, res := range ext.Spec.Resources {
+			if res.Kind != extensionsv1alpha1.ExtensionResource {
+				continue
+			}
+
 			wantedExtension, ok := values.Extensions[res.Type]
-			if !ok || res.Kind != extensionsv1alpha1.ExtensionResource {
+			if !ok && slices.Contains(res.AutoEnable, operatorv1alpha1.AutoEnableModeGarden) {
+				wantedExtension = newDefaultExtension(operatorv1alpha1.GardenExtension{Type: res.Type})
+			} else if !ok {
 				continue
 			}
 
@@ -1544,7 +1547,7 @@ func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, garden 
 		}
 	}
 
-	return extension.New(log, r.RuntimeClientSet.Client(), values, extension.DefaultInterval, extension.DefaultSevereThreshold, extension.DefaultTimeout), nil
+	return extension.New(log, r.RuntimeClientSet.Client(), values, extension.DefaultInterval, extension.DefaultSevereThreshold, extension.DefaultTimeout)
 }
 
 func discoveryServerDomain(garden *operatorv1alpha1.Garden) string {

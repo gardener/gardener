@@ -23,7 +23,7 @@ spec:
 ```
 
 If `spec.resources[].autoEnable` is set to `shoot`, then the `Extension` resources of the given `type` is created for every shoot cluster. Set to `none` (default), the `Extension` resource is only created if configured in the `Shoot` manifest. In case of workerless `Shoot`, an automatically enabled `Extension` resource is created only if `spec.resources[].workerlessSupported` is also set to `true`. If an extension configured in the spec of a workerless `Shoot` is not supported yet, the admission request will be rejected.
-Another valid values is `seed` (-> automatically enabled for all seeds).
+Other valid values are `seed` (-> automatically enabled for all seeds), as well as `garden` (enabled for shoots, seeds and the garden cluster).
 
 The `Extension` resources are created in the shoot namespace of the seed cluster.
 

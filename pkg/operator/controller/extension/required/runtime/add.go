@@ -128,7 +128,7 @@ func (r *Reconciler) MapGardenToExtensions(log logr.Logger) handler.MapFunc {
 
 		var (
 			requests           []reconcile.Request
-			requiredExtensions = operator.ComputeRequiredExtensionsForGarden(garden)
+			requiredExtensions = operator.ComputeRequiredExtensionsForGarden(garden, extensionList)
 		)
 
 		for _, extension := range extensionList.Items {

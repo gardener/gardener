@@ -7,6 +7,7 @@ package controllerregistration
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -61,6 +62,14 @@ func (r *registration) Reconcile(ctx context.Context, log logr.Logger, extension
 }
 
 func (r *registration) createOrUpdateControllerRegistration(ctx context.Context, extension *operatorv1alpha1.Extension) error {
+	resources := make([]gardencorev1beta1.ControllerResource, 0, len(extension.Spec.Resources))
+	for _, resource := range extension.Spec.Resources {
+		resource.AutoEnable = slices.DeleteFunc(slices.Clone(resource.AutoEnable), func(m gardencorev1beta1.AutoEnableMode) bool {
+			return m == operatorv1alpha1.AutoEnableModeGarden
+		})
+		resources = append(resources, resource)
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.GardenScheme, kubernetes.GardenCodec, kubernetes.GardenSerializer)
 
@@ -80,7 +89,7 @@ func (r *registration) createOrUpdateControllerRegistration(ctx context.Context,
 				Name: extension.Name,
 			},
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
-				Resources: extension.Spec.Resources,
+				Resources: resources,
 				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 					Policy:       extension.Spec.Deployment.ExtensionDeployment.Policy,
 					SeedSelector: extension.Spec.Deployment.ExtensionDeployment.SeedSelector,
