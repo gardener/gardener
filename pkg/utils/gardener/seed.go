@@ -131,22 +131,19 @@ func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed, controllerRe
 		wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
 	}
 
-	disabledExtensions := sets.New[string]()
+	disabledExtensionTypes := sets.New[string]()
 	for _, extension := range seed.Spec.Extensions {
-		id := ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type)
-
 		if ptr.Deref(extension.Disabled, false) {
-			disabledExtensions.Insert(id)
+			disabledExtensionTypes.Insert(extension.Type)
 		} else {
-			wantedKindTypeCombinations.Insert(id)
+			wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type))
 		}
 	}
 
 	for _, controllerRegistration := range controllerRegistrationList.Items {
 		for _, resource := range controllerRegistration.Spec.Resources {
-			id := ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type)
-			if extensionEnabledForMode(id, gardencorev1beta1.AutoEnableModeSeed, resource, disabledExtensions) {
-				wantedKindTypeCombinations.Insert(id)
+			if extensionEnabledForMode(gardencorev1beta1.AutoEnableModeSeed, resource, disabledExtensionTypes) {
+				wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type))
 			}
 		}
 	}
