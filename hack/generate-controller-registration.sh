@@ -13,7 +13,9 @@ Usage:
 generate-controller-registration [options] <name> <chart-dir> <version> <dest> <kind-and-type> [kinds-and-types ...]
 
     -h, --help        Display this help and exit.
-    --optional        Sets 'globallyEnabled: false' for controller resources of the controller registration.
+    -m, --auto-enable-modes[=shoot,seed]
+                      Sets the auto-enable mode for the controller registration. Possible values are:
+                      'shoot' and 'seed'
     -e, --pod-security-enforce[=pod-security-standard]
                       Sets 'security.gardener.cloud/pod-security-enforce' annotation in the
                       controller registration. Defaults to 'baseline'.
@@ -34,14 +36,19 @@ EOM
 
 POD_SECURITY_ENFORCE="baseline"
 INJECT_GARDEN_KUBECONFIG=false
+AUTO_ENABLE_MODES=""
 
 while :; do
   case $1 in
     -h|--help)
       usage
       ;;
-    --optional)
-      MODE=$'\n    globallyEnabled: false'
+    -m|--auto-enable-modes)
+      AUTO_ENABLE_MODES=$2
+      shift
+      ;;
+    --auto-enable-modes=*)
+      AUTO_ENABLE_MODES=${1#*=}
       ;;
     -e|--pod-security-enforce)
       POD_SECURITY_ENFORCE=$2
@@ -61,6 +68,18 @@ while :; do
       break
   esac
   shift
+done
+
+IFS=', ' read -r -a AUTO_ENABLE_MODES_ARRAY <<< "$AUTO_ENABLE_MODES"
+for mode in "${AUTO_ENABLE_MODES_ARRAY[@]}"; do
+  case $mode in
+    shoot|seed)
+      ;;
+    *)
+      echo "Invalid auto-enable mode: $mode"
+      usage
+      ;;
+  esac
 done
 
 NAME="$1"
@@ -146,12 +165,18 @@ spec:
   resources:
 EOM
 
+MODE_STRING=""
+if [[ -n $AUTO_ENABLE_MODES ]]; then
+  MODE_STRING=$(printf "autoEnable: [%s]" "${AUTO_ENABLE_MODES}")
+fi
+
 for kind_and_type in "${KINDS_AND_TYPES[@]}"; do
   KIND="$(echo "$kind_and_type" | cut -d ':' -f 1)"
   TYPE="$(echo "$kind_and_type" | cut -d ':' -f 2)"
   cat <<EOM >> "$DEST"
   - kind: $KIND
-    type: $TYPE$MODE
+    type: $TYPE
+    $MODE_STRING
 EOM
 done
 
