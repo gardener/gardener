@@ -18,9 +18,7 @@ import (
 type NewHealthCheckFunc func(*gardencorev1beta1.Seed, client.Client, clock.Clock, *string, map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
-var defaultNewHealthCheck NewHealthCheckFunc = func(seed *gardencorev1beta1.Seed, client client.Client, clock clock.Clock, namespace *string, conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration) HealthCheck {
-	return NewHealth(seed, client, clock, namespace, conditionThresholds)
-}
+var defaultNewHealthCheck NewHealthCheckFunc = NewHealth
 
 // HealthCheck is an interface used to perform health checks.
 type HealthCheck interface {

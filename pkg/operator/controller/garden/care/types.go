@@ -20,9 +20,7 @@ import (
 type NewHealthCheckFunc func(*operatorv1alpha1.Garden, client.Client, kubernetes.Interface, clock.Clock, map[gardencorev1beta1.ConditionType]time.Duration, string) HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
-var defaultNewHealthCheck NewHealthCheckFunc = func(garden *operatorv1alpha1.Garden, runtimeClient client.Client, gardenClientSet kubernetes.Interface, clock clock.Clock, conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration, gardenNamespace string) HealthCheck {
-	return NewHealth(garden, runtimeClient, gardenClientSet, clock, conditionThresholds, gardenNamespace)
-}
+var defaultNewHealthCheck NewHealthCheckFunc = NewHealth
 
 // HealthCheck is an interface used to perform health checks.
 type HealthCheck interface {
