@@ -46,10 +46,11 @@ import (
 const (
 	// DeploymentName is the name of the coredns Deployment.
 	DeploymentName = "coredns"
+	// ManagedResourceName is the name of the ManagedResource.
+	ManagedResourceName = "shoot-core-coredns"
 
 	clusterProportionalAutoscalerDeploymentName = "coredns-autoscaler"
 	clusterProportionalDNSAutoscalerLabelValue  = "coredns-autoscaler"
-	managedResourceName                         = "shoot-core-coredns"
 
 	containerName = "coredns"
 	serviceName   = "kube-dns" // this is due to legacy reasons
@@ -187,7 +188,7 @@ func (c *coreDNS) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, c.client, c.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
+	return managedresources.CreateForShoot(ctx, c.client, c.namespace, ManagedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (c *coreDNS) Destroy(ctx context.Context) error {
@@ -198,7 +199,7 @@ func (c *coreDNS) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.DeleteForShoot(ctx, c.client, c.namespace, managedResourceName)
+	return managedresources.DeleteForShoot(ctx, c.client, c.namespace, ManagedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -209,14 +210,14 @@ func (c *coreDNS) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, ManagedResourceName)
 }
 
 func (c *coreDNS) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, ManagedResourceName)
 }
 
 func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {

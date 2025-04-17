@@ -733,6 +733,19 @@ var _ = Describe("Shoot", func() {
 			})).To(BeEmpty())
 		})
 
+		It("should return the control plane toleration when the pool is a control plane pool", func() {
+			Expect(ExtractSystemComponentsTolerations([]gardencorev1beta1.Worker{
+				{
+					ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+				},
+			})).To(HaveExactElements(
+				corev1.Toleration{
+					Key:      "node-role.kubernetes.io/control-plane",
+					Operator: corev1.TolerationOpExists,
+				},
+			))
+		})
+
 		It("should return tolerations in order", func() {
 			Expect(ExtractSystemComponentsTolerations([]gardencorev1beta1.Worker{
 				{

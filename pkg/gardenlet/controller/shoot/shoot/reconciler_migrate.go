@@ -122,7 +122,7 @@ func (r *Reconciler) runMigrateShootFlow(ctx context.Context, o *operation.Opera
 
 		deployNamespace = g.Add(flow.Task{
 			Name:   "Deploying Shoot namespace in Seed",
-			Fn:     flow.TaskFn(botanist.DeploySeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:     flow.TaskFn(botanist.DeployControlPlaneNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf: !nonTerminatingNamespace,
 		})
 		initializeSecretsManagement = g.Add(flow.Task{

@@ -228,6 +228,9 @@ build:
             - pkg/component/shared
             - pkg/component/shoot/namespaces
             - pkg/component/shoot/system
+            - pkg/controller/networkpolicy
+            - pkg/controller/networkpolicy/helper
+            - pkg/controller/networkpolicy/hostnameresolver
             - pkg/controllerutils
             - pkg/controllerutils/predicate
             - pkg/extensions

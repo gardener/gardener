@@ -816,6 +816,15 @@ func (r *resourceManager) ensureDeployment(ctx context.Context, configMap *corev
 		priorityClassName = r.values.PriorityClassName
 	)
 
+	// If system component pods shall tolerate the control plane taint, we should add it for gardener-resource-manager
+	// itself as well (otherwise, it cannot be scheduled in order to add the toleration to other pods).
+	for _, toleration := range r.values.SystemComponentTolerations {
+		if toleration.Key == "node-role.kubernetes.io/control-plane" {
+			tolerations = append(tolerations, toleration)
+			break
+		}
+	}
+
 	if r.values.DefaultNotReadyToleration != nil {
 		tolerations = append(tolerations, corev1.Toleration{
 			Key:               corev1.TaintNodeNotReady,
@@ -1128,12 +1137,12 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 var SuggestPort = netutils.SuggestPort
 
 func (r *resourceManager) chooseServerPort() error {
-	if r.port != 0 {
+	if !r.values.BootstrapControlPlaneNode {
+		r.port = 10250
 		return nil
 	}
 
-	if !r.values.BootstrapControlPlaneNode {
-		r.port = 10250
+	if r.port != 0 {
 		return nil
 	}
 
@@ -1972,15 +1981,24 @@ func GetEndpointSliceHintsMutatingWebhook(
 }
 
 func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector {
-	namespaceSelectorOperator := metav1.LabelSelectorOpIn
+	if r.values.ResponsibilityMode == ForSourceAndTarget {
+		return &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key:      v1beta1constants.GardenRole,
+				Operator: metav1.LabelSelectorOpExists,
+			}},
+		}
+	}
+
+	operator := metav1.LabelSelectorOpIn
 	if r.values.ResponsibilityMode != ForTarget {
-		namespaceSelectorOperator = metav1.LabelSelectorOpNotIn
+		operator = metav1.LabelSelectorOpNotIn
 	}
 
 	return &metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
 			Key:      v1beta1constants.GardenerPurpose,
-			Operator: namespaceSelectorOperator,
+			Operator: operator,
 			Values:   []string{metav1.NamespaceSystem, "kubernetes-dashboard"},
 		}},
 	}
@@ -2058,18 +2076,7 @@ func (r *resourceManager) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForDeployment)
 	defer cancel()
 
-	return Until(timeoutCtx, IntervalWaitForDeployment, func(ctx context.Context) (done bool, err error) {
-		deployment := r.emptyDeployment()
-		if err := r.client.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if err := health.CheckDeployment(deployment); err != nil {
-			return retry.MinorError(err)
-		}
-
-		return retry.Ok()
-	})
+	return Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(r.client, r.emptyDeployment()))
 }
 
 // WaitCleanup for destruction to finish and component to be fully removed. Gardener-Resource-manager does not need to wait for cleanup.

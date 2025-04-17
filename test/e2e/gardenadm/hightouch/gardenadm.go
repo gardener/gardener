@@ -63,9 +63,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 		})
 
 		It("should initialize as control plane node", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0,
-				"gardenadm", "init", "-d", "/gardenadm/resources",
-			)
+			stdOut, _, err := execute(ctx, 0, "gardenadm", "init", "-d", "/gardenadm/resources")
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
@@ -120,20 +118,73 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 				podList := &corev1.PodList{}
 				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace("kube-system"))).To(Succeed())
 				return podList.Items
-			}).Should(ConsistOf(
+			}).Should(ContainElements(
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-events-0-machine-0")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-main-0-machine-0")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-machine-0")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-controller-manager-machine-0")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-scheduler-machine-0")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("kube-proxy")})}),
 				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("gardener-resource-manager")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("calico")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("coredns")})}),
+				MatchFields(IgnoreExtras, Fields{"ObjectMeta": MatchFields(IgnoreExtras, Fields{"Name": HavePrefix("local-path-provisioner")})}),
 			))
 		}, SpecTimeout(time.Minute))
 
+		It("should ensure the control plane namespace is properly labeled", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) map[string]string {
+				namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}}
+				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(namespace), namespace)).To(Succeed())
+				return namespace.Labels
+			}).Should(HaveKeyWithValue("gardener.cloud/role", "shoot"))
+		}, SpecTimeout(time.Minute))
+
+		It("should ensure extensions and gardener-resource-manager run in pod network", func(ctx SpecContext) {
+			By("Check extensions")
+			Eventually(ctx, func(g Gomega) {
+				namespaceList := &corev1.NamespaceList{}
+				g.Expect(shootClientSet.Client().List(ctx, namespaceList, client.MatchingLabels{"gardener.cloud/role": "extension"})).To(Succeed())
+
+				for _, namespace := range namespaceList.Items {
+					podList := &corev1.PodList{}
+					g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace(namespace.Name))).To(Succeed())
+
+					for _, pod := range podList.Items {
+						g.Expect(pod.Spec.HostNetwork).To(BeFalse(), "pod %s", client.ObjectKeyFromObject(&pod))
+					}
+				}
+			}).Should(Succeed())
+
+			By("Check gardener-resource-manager")
+			Eventually(ctx, func(g Gomega) {
+				podList := &corev1.PodList{}
+				g.Expect(shootClientSet.Client().List(ctx, podList, client.InNamespace("kube-system"), client.MatchingLabels{"app": "gardener-resource-manager"})).To(Succeed())
+
+				for _, pod := range podList.Items {
+					g.Expect(pod.Spec.HostNetwork).To(BeFalse(), "pod %s", client.ObjectKeyFromObject(&pod))
+				}
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
+
+		It("should ensure gardener-node-agent is running", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) *gbytes.Buffer {
+				stdOut, _, err := execute(ctx, 0, "systemctl", "status", "gardener-node-agent")
+				g.Expect(err).NotTo(HaveOccurred())
+				return stdOut
+			}).Should(gbytes.Say(`Active: active \(running\)`))
+		}, SpecTimeout(time.Minute))
+
+		It("should ensure that extension webhooks on control plane components are functioning", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) map[string]string {
+				pod := &corev1.Pod{}
+				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Name: "kube-scheduler-machine-0", Namespace: "kube-system"}, pod)).To(Succeed())
+				return pod.Labels
+			}).Should(HaveKeyWithValue("injected-by", "provider-local"))
+		}, SpecTimeout(time.Minute))
+
 		It("should join as worker node", func(ctx SpecContext) {
-			_, stdErr, err := execute(ctx, 1,
-				"gardenadm", "join",
-			)
+			_, stdErr, err := execute(ctx, 1, "gardenadm", "join")
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdErr).Should(gbytes.Say("Not implemented either"))

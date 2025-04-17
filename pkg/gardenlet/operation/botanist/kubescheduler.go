@@ -18,12 +18,17 @@ func (b *Botanist) DefaultKubeScheduler() (component.DeployWaiter, error) {
 		return nil, err
 	}
 
+	replicas := b.Shoot.GetReplicas(1)
+	if b.Shoot.RunsControlPlane() {
+		replicas = 0
+	}
+
 	return kubescheduler.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		image.String(),
-		b.Shoot.GetReplicas(1),
+		replicas,
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeScheduler,
 	), nil
 }

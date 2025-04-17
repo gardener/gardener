@@ -5,15 +5,27 @@
 package botanist_test
 
 import (
+	"context"
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
+	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Extensions", func() {
@@ -72,10 +84,12 @@ var _ = Describe("Extensions", func() {
 				},
 			}
 			controllerDeployment1 = &gardencorev1.ControllerDeployment{
-				ObjectMeta: metav1.ObjectMeta{Name: "ext1"},
+				ObjectMeta:             metav1.ObjectMeta{Name: "ext1"},
+				InjectGardenKubeconfig: ptr.To(true),
 			}
 			controllerDeployment3 = &gardencorev1.ControllerDeployment{
-				ObjectMeta: metav1.ObjectMeta{Name: "ext3"},
+				ObjectMeta:             metav1.ObjectMeta{Name: "ext3"},
+				InjectGardenKubeconfig: ptr.To(false),
 			}
 
 			controllerRegistrations = []*gardencorev1beta1.ControllerRegistration{controllerRegistration1, controllerRegistration2, controllerRegistration3}
@@ -110,7 +124,7 @@ var _ = Describe("Extensions", func() {
 			Expect(extensions).To(Equal([]Extension{
 				{
 					ControllerRegistration: controllerRegistration1,
-					ControllerDeployment:   controllerDeployment1,
+					ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment1),
 					ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
 						ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration1.Name},
 						Spec: gardencorev1beta1.ControllerInstallationSpec{
@@ -122,7 +136,7 @@ var _ = Describe("Extensions", func() {
 				},
 				{
 					ControllerRegistration: controllerRegistration3,
-					ControllerDeployment:   controllerDeployment3,
+					ControllerDeployment:   controllerDeploymentWithoutInjectGardenKubeconfig(controllerDeployment3),
 					ControllerInstallation: &gardencorev1beta1.ControllerInstallation{
 						ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration3.Name},
 						Spec: gardencorev1beta1.ControllerInstallationSpec{
@@ -135,4 +149,95 @@ var _ = Describe("Extensions", func() {
 			}))
 		})
 	})
+
+	Describe("#WaitUntilExtensionControllerInstallationsHealthy", func() {
+		var (
+			ctx                   = context.Background()
+			controlPlaneNamespace = "foo"
+			extension1            = "ext1"
+			extension2            = "ext2"
+
+			fakeClient client.Client
+			b          *AutonomousBotanist
+
+			managedResource1 *resourcesv1alpha1.ManagedResource
+			managedResource2 *resourcesv1alpha1.ManagedResource
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithStatusSubresource(&resourcesv1alpha1.ManagedResource{}).Build()
+			b = &AutonomousBotanist{
+				Botanist: &botanistpkg.Botanist{
+					Operation: &operation.Operation{
+						SeedClientSet: fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build(),
+						Shoot: &shootpkg.Shoot{
+							ControlPlaneNamespace: controlPlaneNamespace,
+						},
+					},
+				},
+				Extensions: []Extension{
+					{ControllerInstallation: &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: extension1}}},
+					{ControllerInstallation: &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: extension2}}},
+				},
+			}
+
+			managedResource1 = &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: extension1, Namespace: controlPlaneNamespace}}
+			managedResource2 = &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: extension2, Namespace: controlPlaneNamespace}}
+
+			DeferCleanup(test.WithVar(&TimeoutManagedResourceHealthCheck, time.Millisecond))
+		})
+
+		It("should fail if a ManagedResource does not exist", func() {
+			Expect(b.WaitUntilExtensionControllerInstallationsHealthy(ctx)).To(MatchError(ContainSubstring("not found")))
+		})
+
+		It("should fail if a ManagedResource is not healthy", func() {
+			Expect(fakeClient.Create(ctx, managedResource1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, managedResource2)).To(Succeed())
+
+			Expect(b.WaitUntilExtensionControllerInstallationsHealthy(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+		})
+
+		It("should succeed if all ManagedResource are healthy", func() {
+			Expect(fakeClient.Create(ctx, managedResource1)).To(Succeed())
+			Expect(fakeClient.Create(ctx, managedResource2)).To(Succeed())
+
+			Expect(makeManagedResourceHealthy(ctx, fakeClient, managedResource1)).To(Succeed())
+			Expect(makeManagedResourceHealthy(ctx, fakeClient, managedResource2)).To(Succeed())
+
+			Expect(b.WaitUntilExtensionControllerInstallationsHealthy(ctx)).To(Succeed())
+		})
+	})
 })
+
+func makeManagedResourceHealthy(ctx context.Context, fakeClient client.Client, mr *resourcesv1alpha1.ManagedResource) error {
+	patch := client.MergeFrom(mr.DeepCopy())
+	mr.Status.ObservedGeneration = mr.Generation
+	mr.Status.Conditions = []gardencorev1beta1.Condition{
+		{
+			Type:               "ResourcesHealthy",
+			Status:             "True",
+			LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+			LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+		},
+		{
+			Type:               "ResourcesApplied",
+			Status:             "True",
+			LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+			LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+		},
+		{
+			Type:               "ResourcesProgressing",
+			Status:             "False",
+			LastUpdateTime:     metav1.NewTime(time.Unix(0, 0)),
+			LastTransitionTime: metav1.NewTime(time.Unix(0, 0)),
+		},
+	}
+	return fakeClient.Status().Patch(ctx, mr, patch)
+}
+
+func controllerDeploymentWithoutInjectGardenKubeconfig(in *gardencorev1.ControllerDeployment) *gardencorev1.ControllerDeployment {
+	out := in.DeepCopy()
+	out.InjectGardenKubeconfig = nil
+	return out
+}

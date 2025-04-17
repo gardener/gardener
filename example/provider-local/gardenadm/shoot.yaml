@@ -4,6 +4,7 @@ metadata:
   name: root
   namespace: garden
 spec:
+  region: local
   provider:
     type: local
     workers:
@@ -27,4 +28,4 @@ spec:
     type: calico
     pods: 10.3.0.0/16
     services: 10.4.0.0/16
-    nodes: 10.10.0.0/16
+    nodes: 10.1.0.0/16 # pod network range of the kind cluster

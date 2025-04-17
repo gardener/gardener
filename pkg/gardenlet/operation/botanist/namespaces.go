@@ -32,10 +32,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
-// DeploySeedNamespace creates a namespace in the Seed cluster which is used to deploy all the control plane
+// DeployControlPlaneNamespace creates a namespace in the Seed cluster which is used to deploy all the control plane
 // components for the Shoot cluster. Moreover, the cloud provider configuration and all the secrets will be
 // stored as ConfigMaps/Secrets.
-func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
+func (b *Botanist) DeployControlPlaneNamespace(ctx context.Context) error {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: b.Shoot.ControlPlaneNamespace,

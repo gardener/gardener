@@ -35,6 +35,10 @@ spec:
           readOnly: true
         - name: gardenadm
           mountPath: /gardenadm
+      hostAliases:
+        - hostnames:
+          - api.root.garden.internal.gardenadm.local
+          ip: 10.2.0.99
       securityContext:
         seccompProfile:
           type: RuntimeDefault

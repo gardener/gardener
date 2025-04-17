@@ -242,12 +242,12 @@ The chart and the values can be updated at any time - Gardener will recognize it
 In order to allow extension controller deployments to get information about the garden and the seed cluster, additional properties are mixed into the values (root level) of every deployed Helm chart:
 
 - Additional properties for garden deployment
-```yaml
-  gardener:
-    runtimeCluster:
-      enabled: true
-      priorityClassName: <priority-class-name-for-extension>
-```
+  ```yaml
+    gardener:
+      runtimeCluster:
+        enabled: true
+        priorityClassName: <priority-class-name-for-extension>
+  ```
 
 - Additional properties for seed deployment
   ```yaml
@@ -275,6 +275,7 @@ In order to allow extension controller deployments to get information about the 
     gardenlet:
       featureGates: <gardenlet-feature-gates>
   ```
+- If the extension is deployed in an [autonomous shoot cluster](../proposals/28-autonomous-shoot-clusters.md), then the `.gardener.autonomousShootCluster` field is additionally propagated and set to `true`.
 
 Extension controller deployments can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
 The list might be extended in the future.

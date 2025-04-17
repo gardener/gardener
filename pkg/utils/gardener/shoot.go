@@ -530,6 +530,10 @@ func ExtractSystemComponentsTolerations(workers []gardencorev1beta1.Worker) []co
 	)
 
 	for _, worker := range workers {
+		if worker.ControlPlane != nil {
+			tolerations.Insert(corev1.Toleration{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists})
+		}
+
 		if v1beta1helper.SystemComponentsAllowed(&worker) {
 			for _, taint := range worker.Taints {
 				toleration := kubernetesutils.TolerationForTaint(taint)

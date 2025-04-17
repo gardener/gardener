@@ -7,12 +7,15 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync/atomic"
 
 	"github.com/spf13/pflag"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -193,7 +196,13 @@ type AddToManagerOptions struct {
 
 // NewAddToManagerOptions creates new AddToManagerOptions with the given server name, server, and switch options.
 // It is supposed to be used for webhooks which should be automatically registered in the cluster via a MutatingWebhookConfiguration.
-func NewAddToManagerOptions(extensionName string, shootWebhookManagedResourceName string, shootNamespaceSelector map[string]string, serverOpts *ServerOptions, switchOpts *SwitchOptions) *AddToManagerOptions {
+func NewAddToManagerOptions(
+	extensionName string,
+	shootWebhookManagedResourceName string,
+	shootNamespaceSelector map[string]string,
+	serverOpts *ServerOptions,
+	switchOpts *SwitchOptions,
+) *AddToManagerOptions {
 	return &AddToManagerOptions{
 		extensionName:                   extensionName,
 		shootWebhookManagedResourceName: shootWebhookManagedResourceName,
@@ -244,7 +253,7 @@ type AddToManagerConfig struct {
 // AddToManager instantiates all webhooks of this configuration. If there are any webhooks, it creates a
 // webhook server, registers the webhooks and adds the server to the manager. Otherwise, it is a no-op.
 // It generates and registers the seed targeted webhooks via a MutatingWebhookConfiguration.
-func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster) (*atomic.Value, error) {
+func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager, sourceCluster cluster.Cluster, mergeShootWebhooksIntoSeedWebhooks bool) (*atomic.Value, error) {
 	if c.Clock == nil {
 		c.Clock = &clock.RealClock{}
 	}
@@ -292,6 +301,45 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not create webhooks: %w", err)
+	}
+
+	if mergeShootWebhooksIntoSeedWebhooks {
+		clientConfig := func(in admissionregistrationv1.WebhookClientConfig) (admissionregistrationv1.WebhookClientConfig, error) {
+			var path string
+			if in.Service != nil {
+				path = ptr.Deref(in.Service.Path, "")
+			} else if u := in.URL; u != nil {
+				parsedURL, err := url.Parse(*u)
+				if err != nil {
+					return admissionregistrationv1.WebhookClientConfig{}, fmt.Errorf("failed to parse URL %q: %w", *u, err)
+				}
+				path = parsedURL.Path
+			}
+
+			return extensionswebhook.BuildClientConfigFor(path, c.Server.Namespace, c.extensionName, servicePort, c.Server.Mode, c.Server.URL, nil), nil
+		}
+
+		if shootWebhookConfigs.ValidatingWebhookConfig != nil {
+			for _, webhook := range shootWebhookConfigs.ValidatingWebhookConfig.Webhooks {
+				mutatedClientConfig, err := clientConfig(webhook.ClientConfig)
+				if err != nil {
+					return nil, fmt.Errorf("failed computing new client config while merging shoot validating webhook %q into seed webhooks: %w", webhook.Name, err)
+				}
+				webhook.ClientConfig = mutatedClientConfig
+				seedWebhookConfigs.ValidatingWebhookConfig.Webhooks = append(seedWebhookConfigs.ValidatingWebhookConfig.Webhooks, webhook)
+			}
+		}
+
+		if shootWebhookConfigs.MutatingWebhookConfig != nil {
+			for _, webhook := range shootWebhookConfigs.MutatingWebhookConfig.Webhooks {
+				mutatedClientConfig, err := clientConfig(webhook.ClientConfig)
+				if err != nil {
+					return nil, fmt.Errorf("failed computing new client config while merging shoot mutating webhook %q into seed webhooks: %w", webhook.Name, err)
+				}
+				webhook.ClientConfig = mutatedClientConfig
+				seedWebhookConfigs.MutatingWebhookConfig.Webhooks = append(seedWebhookConfigs.MutatingWebhookConfig.Webhooks, webhook)
+			}
+		}
 	}
 
 	atomicShootWebhookConfigs := &atomic.Value{}

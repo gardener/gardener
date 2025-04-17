@@ -149,7 +149,7 @@ func (r *Reconciler) reconcileNetworkPolicy(ctx context.Context, log logr.Logger
 		return nil
 	}
 
-	log.Info("Reconciling NetworkPolicy")
+	log.Info("Reconciling NetworkPolicy", "networkPolicy", client.ObjectKeyFromObject(networkPolicy))
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.RuntimeClient, networkPolicy, func() error {
 		mutateFunc(networkPolicy)

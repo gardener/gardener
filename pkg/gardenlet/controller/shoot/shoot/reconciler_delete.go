@@ -163,7 +163,7 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 		deployNamespace = g.Add(flow.Task{
 			Name:   "Deploying Shoot namespace in Seed",
-			Fn:     flow.TaskFn(botanist.DeploySeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:     flow.TaskFn(botanist.DeployControlPlaneNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			SkipIf: !nonTerminatingNamespace,
 		})
 		ensureShootClusterIdentity = g.Add(flow.Task{

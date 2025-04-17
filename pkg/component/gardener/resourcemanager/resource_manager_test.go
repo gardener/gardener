@@ -323,6 +323,7 @@ var _ = Describe("ResourceManager", func() {
 				{Key: "a"},
 				{Key: "b"},
 				{Key: "c"},
+				{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists},
 			},
 			ResponsibilityMode:                        ForTarget,
 			TargetDisableCache:                        &targetDisableCache,
@@ -494,6 +495,7 @@ var _ = Describe("ResourceManager", func() {
 						{Key: "a"},
 						{Key: "b"},
 						{Key: "c"},
+						{Key: "node-role.kubernetes.io/control-plane", Operator: corev1.TolerationOpExists},
 					},
 				}
 				config.Controllers.NodeCriticalComponents.Enabled = !isWorkerless
@@ -619,6 +621,10 @@ var _ = Describe("ResourceManager", func() {
 								},
 							},
 							Tolerations: []corev1.Toleration{
+								{
+									Key:      "node-role.kubernetes.io/control-plane",
+									Operator: corev1.TolerationOpExists,
+								},
 								{
 									Key:               corev1.TaintNodeNotReady,
 									Operator:          corev1.TolerationOpExists,
@@ -885,6 +891,28 @@ var _ = Describe("ResourceManager", func() {
 		}
 
 		mutatingWebhookConfigurationFor = func(responsibilityMode ResponsibilityMode, bootstrapControlPlaneNode bool) *admissionregistrationv1.MutatingWebhookConfiguration {
+			var namespaceSelectorMatchExpressions []metav1.LabelSelectorRequirement
+
+			switch responsibilityMode {
+			case ForSource:
+				namespaceSelectorMatchExpressions = []metav1.LabelSelectorRequirement{{
+					Key:      "gardener.cloud/purpose",
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"kube-system", "kubernetes-dashboard"},
+				}}
+			case ForTarget:
+				namespaceSelectorMatchExpressions = []metav1.LabelSelectorRequirement{{
+					Key:      "gardener.cloud/purpose",
+					Operator: metav1.LabelSelectorOpIn,
+					Values:   []string{"kube-system", "kubernetes-dashboard"},
+				}}
+			case ForSourceAndTarget:
+				namespaceSelectorMatchExpressions = []metav1.LabelSelectorRequirement{{
+					Key:      "gardener.cloud/role",
+					Operator: metav1.LabelSelectorOpExists,
+				}}
+			}
+
 			ignoreStaticPodsInBootstrapMode := func(in []metav1.LabelSelectorRequirement) []metav1.LabelSelectorRequirement {
 				if !bootstrapControlPlaneNode {
 					return in
@@ -917,13 +945,7 @@ var _ = Describe("ResourceManager", func() {
 							},
 							Operations: []admissionregistrationv1.OperationType{"CREATE"},
 						}},
-						NamespaceSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{{
-								Key:      "gardener.cloud/purpose",
-								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{"kube-system", "kubernetes-dashboard"},
-							}},
-						},
+						NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 						ObjectSelector: &metav1.LabelSelector{
 							MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 								{
@@ -975,11 +997,7 @@ var _ = Describe("ResourceManager", func() {
 						},
 					},
 					NamespaceSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "gardener.cloud/purpose",
-							Operator: metav1.LabelSelectorOpNotIn,
-							Values:   []string{"kube-system", "kubernetes-dashboard"},
-						}},
+						MatchExpressions: namespaceSelectorMatchExpressions,
 						MatchLabels: map[string]string{
 							"high-availability-config.resources.gardener.cloud/consider": "true",
 						},
@@ -1018,13 +1036,7 @@ var _ = Describe("ResourceManager", func() {
 						},
 						Operations: []admissionregistrationv1.OperationType{"CREATE"},
 					}},
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "gardener.cloud/purpose",
-							Operator: metav1.LabelSelectorOpNotIn,
-							Values:   []string{"kube-system", "kubernetes-dashboard"},
-						}},
-					},
+					NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 					ObjectSelector: &metav1.LabelSelector{
 						MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 							{
@@ -1106,13 +1118,7 @@ var _ = Describe("ResourceManager", func() {
 							},
 							Operations: []admissionregistrationv1.OperationType{"CREATE", "UPDATE"},
 						}},
-						NamespaceSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{{
-								Key:      "gardener.cloud/purpose",
-								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{"kube-system", "kubernetes-dashboard"},
-							}},
-						},
+						NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 						ObjectSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"endpoint-slice-hints.resources.gardener.cloud/consider": "true",
@@ -1144,13 +1150,7 @@ var _ = Describe("ResourceManager", func() {
 							},
 							Operations: []admissionregistrationv1.OperationType{"CREATE"},
 						}},
-						NamespaceSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{{
-								Key:      "gardener.cloud/purpose",
-								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{"kube-system", "kubernetes-dashboard"},
-							}},
-						},
+						NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 						ObjectSelector: &metav1.LabelSelector{
 							MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{{
 								Key:      "system-components-config.resources.gardener.cloud/skip",
@@ -1183,13 +1183,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					Operations: []admissionregistrationv1.OperationType{"CREATE"},
 				}},
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{{
-						Key:      "gardener.cloud/purpose",
-						Operator: metav1.LabelSelectorOpNotIn,
-						Values:   []string{"kube-system", "kubernetes-dashboard"},
-					}},
-				},
+				NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 				ObjectSelector: &metav1.LabelSelector{
 					MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
 						{
@@ -2885,10 +2879,18 @@ subjects:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
 			timer := time.AfterFunc(10*time.Millisecond, func() {
+				deployment.Spec.Replicas = ptr.To[int32](0)
+				Expect(fakeClient.Update(ctx, deployment)).To(Succeed())
+
 				deployment.Status.Conditions = []appsv1.DeploymentCondition{
 					{
 						Type:   appsv1.DeploymentAvailable,
 						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   appsv1.DeploymentProgressing,
+						Status: corev1.ConditionTrue,
+						Reason: "NewReplicaSetAvailable",
 					},
 				}
 				Expect(fakeClient.Status().Update(ctx, deployment)).To(Succeed())
@@ -2898,7 +2900,7 @@ subjects:
 			Expect(resourceManager.Wait(ctx)).To(Succeed())
 		})
 
-		It("should fail while waiting for the deployment to be ready", func() {
+		It("should fail while waiting for the deployment to be ready because it is unavailable", func() {
 			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
 			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
 
@@ -2907,12 +2909,61 @@ subjects:
 					Type:   appsv1.DeploymentAvailable,
 					Status: corev1.ConditionFalse,
 				},
+				{
+					Type:   appsv1.DeploymentProgressing,
+					Status: corev1.ConditionTrue,
+					Reason: "NewReplicaSetAvailable",
+				},
 			}
 
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
 			Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring(`condition "Available" has invalid status False (expected True)`)))
+		})
+
+		It("should fail while waiting for the deployment to be ready because it is still progressing", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:    appsv1.DeploymentProgressing,
+					Status:  corev1.ConditionFalse,
+					Message: "still progressing",
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring("still progressing")))
+		})
+
+		It("should fail while waiting for the deployment to be ready because there are old non-terminated pods", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   appsv1.DeploymentProgressing,
+					Status: corev1.ConditionTrue,
+					Reason: "NewReplicaSetAvailable",
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring("there are still non-terminated old pods")))
 		})
 	})
 

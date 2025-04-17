@@ -181,6 +181,6 @@ func addTestWebhookToManager(mgr manager.Manager) error {
 		return err
 	}
 
-	_, err := addToManagerOptions.Completed().AddToManager(ctx, mgr, nil)
+	_, err := addToManagerOptions.Completed().AddToManager(ctx, mgr, nil, false)
 	return err
 }

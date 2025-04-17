@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -732,6 +733,13 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		}
 	}
 
+	taints := slices.Clone(worker.Taints)
+	if key := "node-role.kubernetes.io/control-plane"; worker.ControlPlane != nil && !slices.ContainsFunc(taints, func(taint corev1.Taint) bool {
+		return taint.Key == key
+	}) {
+		taints = append(taints, corev1.Taint{Key: key, Effect: corev1.TaintEffectNoSchedule})
+	}
+
 	return deployer{
 		client:                       o.client,
 		osc:                          osc,
@@ -760,7 +768,7 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		nodeMonitorGracePeriod:       o.values.NodeMonitorGracePeriod,
 		nodeLocalDNSEnabled:          o.values.NodeLocalDNSEnabled,
 		primaryIPFamily:              o.values.PrimaryIPFamily,
-		taints:                       worker.Taints,
+		taints:                       taints,
 		caRotationLastInitiationTime: caRotationLastInitiationTime,
 		serviceAccountKeyRotationLastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
 	}, nil

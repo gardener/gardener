@@ -102,7 +102,7 @@ var _ = Describe("Namespaces", func() {
 		}
 	})
 
-	Describe("#DeploySeedNamespace", func() {
+	Describe("#DeployControlPlaneNamespace", func() {
 		var (
 			seedProviderType       = "seed-provider"
 			seedZones              = []string{"a", "b", "c", "d", "e"}
@@ -173,7 +173,7 @@ var _ = Describe("Namespaces", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations("", 1)
 		})
@@ -185,7 +185,7 @@ var _ = Describe("Namespaces", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations("", 0)
 		})
@@ -197,7 +197,7 @@ var _ = Describe("Namespaces", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations("", 1)
 			Expect(botanist.SeedNamespaceObject.Labels).To(And(
@@ -216,7 +216,7 @@ var _ = Describe("Namespaces", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations("", 1)
 			Expect(botanist.SeedNamespaceObject.Labels).To(And(
@@ -238,13 +238,13 @@ var _ = Describe("Namespaces", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
 		})
 
 		It("should successfully deploy the namespace when failure tolerance type is zone and zones annotation already exists with too less zones", func() {
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations("", 1)
 			zone := botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"]
@@ -258,7 +258,7 @@ var _ = Describe("Namespaces", func() {
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
 			Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ContainElement(zone))
@@ -274,12 +274,12 @@ var _ = Describe("Namespaces", func() {
 			}
 			botanist.Shoot.SetInfo(defaultShootInfo)
 
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
 			zones := botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"]
 
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
 			Expect(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"]).To(Equal(zones))
@@ -301,7 +301,7 @@ var _ = Describe("Namespaces", func() {
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-			Expect(botanist.DeploySeedNamespace(ctx)).To(MatchError(ContainSubstring("cannot select 3 zones for shoot because seed only specifies 2 zones in its specification")))
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(MatchError(ContainSubstring("cannot select 3 zones for shoot because seed only specifies 2 zones in its specification")))
 		})
 
 		Context("zone pinning backwards compatibility", func() {
@@ -357,7 +357,7 @@ var _ = Describe("Namespaces", func() {
 					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+					Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 					defaultExpectations("", 2)
 					Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "a,b"))
@@ -376,7 +376,7 @@ var _ = Describe("Namespaces", func() {
 					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+					Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 					defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
 					Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
@@ -407,7 +407,7 @@ var _ = Describe("Namespaces", func() {
 
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+					Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 					defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 3)
 					Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
@@ -423,7 +423,7 @@ var _ = Describe("Namespaces", func() {
 					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+					Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 					defaultExpectations("", 1)
 					Expect(strings.Split(botanist.SeedNamespaceObject.Annotations["high-availability-config.resources.gardener.cloud/zones"], ",")).To(ConsistOf(
@@ -453,7 +453,7 @@ var _ = Describe("Namespaces", func() {
 
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+					Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 					defaultExpectations(gardencorev1beta1.FailureToleranceTypeZone, 4)
 					Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("high-availability-config.resources.gardener.cloud/zones", "1,2,a,b"))
@@ -476,7 +476,7 @@ var _ = Describe("Namespaces", func() {
 					Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())
 					Expect(botanist.SeedNamespaceObject).To(BeNil())
 
-					Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+					Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 					defaultExpectations("", 1)
 				})
@@ -510,7 +510,7 @@ var _ = Describe("Namespaces", func() {
 			})).To(Succeed())
 
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 
 			defaultExpectations("", 1)
 			Expect(botanist.SeedNamespaceObject.Labels).To(And(
@@ -530,7 +530,7 @@ var _ = Describe("Namespaces", func() {
 			})).To(Succeed())
 
 			Expect(botanist.SeedNamespaceObject).To(BeNil())
-			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.DeployControlPlaneNamespace(ctx)).To(Succeed())
 			Expect(botanist.SeedNamespaceObject.Annotations).To(HaveKeyWithValue("foo", "bar"))
 			Expect(botanist.SeedNamespaceObject.Labels).To(HaveKeyWithValue("bar", "foo"))
 		})

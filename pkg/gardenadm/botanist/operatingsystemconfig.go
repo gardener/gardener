@@ -33,6 +33,10 @@ import (
 // DeployOperatingSystemConfigSecretForNodeAgent deploys the OperatingSystemConfig resource and adds its content into
 // a Secret so that gardener-node-agent can read it and reconcile its content.
 func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForNodeAgent(ctx context.Context) error {
+	if err := b.DeployControlPlaneDeployments(ctx); err != nil {
+		return fmt.Errorf("failed deploying control plane deployments: %w", err)
+	}
+
 	oscData, controlPlaneWorkerPoolName, err := b.deployOperatingSystemConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
@@ -44,6 +48,20 @@ func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForNodeAgent(ctx c
 	}
 
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)
+}
+
+// ActivateGardenerNodeAgent deploys the OperatingSystemConfig and the corresponding ManagedResource containing the
+// Secret for gardener-node-agent. Then it activates the gardener-node-agent unit.
+func (b *AutonomousBotanist) ActivateGardenerNodeAgent(ctx context.Context) error {
+	if _, _, err := b.deployOperatingSystemConfig(ctx); err != nil {
+		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
+	}
+
+	if err := b.DeployManagedResourceForGardenerNodeAgent(ctx); err != nil {
+		return fmt.Errorf("failed deploying ManagedResource containing Secret with OperatingSystemConfig for gardener-node-agent: %w", err)
+	}
+
+	return b.DBus.Start(ctx, nil, nil, nodeagentconfigv1alpha1.UnitName)
 }
 
 func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
@@ -106,7 +124,7 @@ func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) err
 	}
 
 	reconcilerCtx, cancelFunc := context.WithCancel(ctx)
-	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler"))
+	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler").WithValues("secret", client.ObjectKeyFromObject(b.operatingSystemConfigSecret)))
 
 	_, err := (&operatingsystemconfigcontroller.Reconciler{
 		Client: b.SeedClientSet.Client(),

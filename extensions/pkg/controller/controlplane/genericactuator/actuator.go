@@ -232,7 +232,7 @@ func (a *actuator) reconcileControlPlane(
 	bool,
 	error,
 ) {
-	if a.atomicShootWebhookConfig != nil {
+	if a.hasShootWebhooks(cluster.Shoot) {
 		value := a.atomicShootWebhookConfig.Load()
 		webhookConfig, ok := value.(*webhook.Configs)
 		if !ok {
@@ -523,7 +523,7 @@ func (a *actuator) deleteControlPlane(
 		}
 	}
 
-	if a.atomicShootWebhookConfig != nil {
+	if a.hasShootWebhooks(cluster.Shoot) {
 		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ShootWebhooksResourceName, false); err != nil {
 			return fmt.Errorf("could not delete managed resource containing shoot webhooks for controlplane '%s': %w", client.ObjectKeyFromObject(cp), err)
 		}
@@ -540,6 +540,10 @@ func (a *actuator) deleteControlPlane(
 	return nil
 }
 
+func (a *actuator) hasShootWebhooks(shoot *gardencorev1beta1.Shoot) bool {
+	return a.atomicShootWebhookConfig != nil && !v1beta1helper.IsShootAutonomous(shoot)
+}
+
 // computeChecksums computes and returns all needed checksums. This includes the checksums for the given deployed secrets,
 // as well as the cloud provider secret and configmap that are fetched from the cluster.
 func (a *actuator) computeChecksums(
@@ -549,7 +553,7 @@ func (a *actuator) computeChecksums(
 ) (map[string]string, error) {
 	// Get cloud provider secret and config from cluster
 	cpSecret := &corev1.Secret{}
-	if err := a.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}, cpSecret); err != nil {
+	if err := a.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.SecretNameCloudProvider}, cpSecret); client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf("could not get secret '%s/%s': %w", namespace, v1beta1constants.SecretNameCloudProvider, err)
 	}
 

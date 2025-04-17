@@ -128,9 +128,6 @@ func combinedGardenerResourceManagerDefaultValues() resourcemanager.Values {
 
 	values.ResourceClass = ptr.To(resourcemanagerconfigv1alpha1.AllResourceClass)
 	values.ResponsibilityMode = resourcemanager.ForSourceAndTarget
-	// TODO(rfranzke): Later, we should deploy two replicas (as usual) when there are at least two nodes in the
-	//  autonomous shoot cluster.
-	values.Replicas = ptr.To[int32](1)
 
 	return values
 }
@@ -153,6 +150,11 @@ func NewCombinedGardenerResourceManager(c client.Client,
 
 	defaultValues := combinedGardenerResourceManagerDefaultValues()
 	defaultValues.Image = image.String()
+
+	values.Replicas = ptr.To[int32](2)
+	if values.BootstrapControlPlaneNode {
+		values.Replicas = ptr.To[int32](1)
+	}
 
 	applyDefaults(&values, defaultValues)
 	return resourcemanager.New(c, namespaceName, secretsManager, values), nil

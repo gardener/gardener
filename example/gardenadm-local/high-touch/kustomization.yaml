@@ -3,5 +3,5 @@ kind: Kustomization
 
 resources:
 - namespace.yaml
+- service.yaml
 - machine.yaml
-
