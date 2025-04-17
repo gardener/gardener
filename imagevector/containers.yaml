@@ -285,7 +285,7 @@ images:
 - name: gardener-metrics-exporter
   sourceRepository: github.com/gardener/gardener-metrics-exporter
   repository: europe-docker.pkg.dev/gardener-project/releases/gardener/metrics-exporter
-  tag: "0.37.0"
+  tag: "0.38.0"
   resourceId:
     name: metrics-exporter
 - name: node-exporter
