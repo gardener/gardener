@@ -98,9 +98,9 @@ var _ = Describe("Extensions", func() {
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{
-							Kind:            extensionKind,
-							Type:            barExtensionType,
-							GloballyEnabled: ptr.To(true),
+							Kind:       extensionKind,
+							Type:       barExtensionType,
+							AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
 						},
 					},
 				},
@@ -111,7 +111,7 @@ var _ = Describe("Extensions", func() {
 						{
 							Kind:                extensionKind,
 							Type:                barExtensionType,
-							GloballyEnabled:     ptr.To(true),
+							AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
 							WorkerlessSupported: ptr.To(true),
 						},
 					},
@@ -197,7 +197,7 @@ var _ = Describe("Extensions", func() {
 				BeEmpty(),
 			),
 			Entry(
-				"Globally enabled extension registration, w/o extension",
+				"Automatically enabled extension registration, w/o extension",
 				[]gardencorev1beta1.ControllerRegistration{barRegistration},
 				nil,
 				false,
@@ -221,7 +221,7 @@ var _ = Describe("Extensions", func() {
 				),
 			),
 			Entry(
-				"Globally enabled extension registration but explicitly disabled",
+				"Automatically enabled extension registration but explicitly disabled",
 				[]gardencorev1beta1.ControllerRegistration{barRegistration},
 				[]gardencorev1beta1.Extension{barExtensionDisabled},
 				false,
@@ -292,7 +292,7 @@ var _ = Describe("Extensions", func() {
 				),
 			),
 			Entry(
-				"Globally enabled extension supported for workerless",
+				"Automatically enabled extension supported for workerless",
 				[]gardencorev1beta1.ControllerRegistration{
 					barRegistrationSupportedForWorkerless,
 				},
@@ -314,7 +314,7 @@ var _ = Describe("Extensions", func() {
 				),
 			),
 			Entry(
-				"Globally enabled extension not supported for workerless",
+				"Automatically enabled extension not supported for workerless",
 				[]gardencorev1beta1.ControllerRegistration{
 					barRegistration,
 				},

@@ -126,7 +126,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		wantedKindTypeCombinationForBackupBuckets = computeKindTypesForBackupBuckets(backupBucketNameToObject, seed.Name)
 		wantedKindTypeCombinationForBackupEntries = computeKindTypesForBackupEntries(log, backupEntryList, backupBucketNameToObject)
 		wantedKindTypeCombinationForShoots        = computeKindTypesForShoots(ctx, log, r.Client, shootList, seed, controllerRegistrationList, internalDomain, defaultDomains)
-		wantedKindTypeCombinationForSeed          = computeKindTypesForSeed(seed)
+		wantedKindTypeCombinationForSeed          = computeKindTypesForSeed(seed, controllerRegistrationList)
 
 		wantedKindTypeCombinations = sets.
 						New[string]().
@@ -249,13 +249,14 @@ func computeKindTypesForShoots(
 // Seed configuration
 func computeKindTypesForSeed(
 	seed *gardencorev1beta1.Seed,
+	controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList,
 ) sets.Set[string] {
 	// enable clean up of controller installations in case of seed deletion
 	if seed.DeletionTimestamp != nil {
 		return sets.New[string]()
 	}
 
-	return gardenerutils.ComputeRequiredExtensionsForSeed(seed)
+	return gardenerutils.ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList)
 }
 
 type controllerRegistration struct {

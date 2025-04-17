@@ -1145,9 +1145,9 @@ var _ = Describe("Shoot", func() {
 						Spec: gardencorev1beta1.ControllerRegistrationSpec{
 							Resources: []gardencorev1beta1.ControllerResource{
 								{
-									Kind:            extensionsv1alpha1.ExtensionResource,
-									Type:            extensionType2,
-									GloballyEnabled: ptr.To(true),
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType2,
+									AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
 								},
 							},
 						},
@@ -1236,7 +1236,7 @@ var _ = Describe("Shoot", func() {
 			)))
 		})
 
-		It("should compute the correct list of required extensions (shoot explicitly disables globally enabled extension)", func() {
+		It("should compute the correct list of required extensions (shoot explicitly disables automatically enabled extension)", func() {
 			shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{
 				Type:     extensionType2,
 				Disabled: ptr.To(true),
@@ -1301,7 +1301,7 @@ var _ = Describe("Shoot", func() {
 			)))
 		})
 
-		It("should compute the correct list of required extensions (workerless Shoot and globally enabled extension)", func() {
+		It("should compute the correct list of required extensions (workerless Shoot and automatically enabled extension)", func() {
 			shoot.Spec.Extensions = []gardencorev1beta1.Extension{}
 			shoot.Spec.Provider.Workers = nil
 			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
@@ -1312,7 +1312,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType1,
-									GloballyEnabled:     ptr.To(true),
+									AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
 									WorkerlessSupported: ptr.To(false),
 								},
 							},
@@ -1324,7 +1324,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType2,
-									GloballyEnabled:     ptr.To(true),
+									AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
 									WorkerlessSupported: ptr.To(true),
 								},
 							},
@@ -1334,9 +1334,9 @@ var _ = Describe("Shoot", func() {
 						Spec: gardencorev1beta1.ControllerRegistrationSpec{
 							Resources: []gardencorev1beta1.ControllerResource{
 								{
-									Kind:            extensionsv1alpha1.ExtensionResource,
-									Type:            extensionType3,
-									GloballyEnabled: ptr.To(true),
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType3,
+									AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
 								},
 							},
 						},

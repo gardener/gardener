@@ -6,6 +6,7 @@ package shared
 
 import (
 	"context"
+	"slices"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,16 +88,21 @@ func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 				Lifecycle: res.Lifecycle,
 			}
 
-			if res.GloballyEnabled != nil && *res.GloballyEnabled {
-				// For backwards compatibility, GloballyEnabled must only be considered for Shoots.
-				if class != extensionsv1alpha1.ExtensionClassShoot {
+			switch class {
+			case extensionsv1alpha1.ExtensionClassShoot:
+				if !slices.Contains(res.AutoEnable, gardencorev1beta1.AutoEnableModeShoot) {
 					continue
 				}
 				if workerlessShoot && !ptr.Deref(res.WorkerlessSupported, false) {
 					continue
 				}
-				requiredExtensions[res.Type] = typeToExtension[res.Type]
+			case extensionsv1alpha1.ExtensionClassSeed:
+				if !slices.Contains(res.AutoEnable, gardencorev1beta1.AutoEnableModeSeed) {
+					continue
+				}
 			}
+
+			requiredExtensions[res.Type] = typeToExtension[res.Type]
 		}
 	}
 

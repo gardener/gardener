@@ -98,9 +98,9 @@ var _ = Describe("Extension", func() {
 				Spec: gardencorev1beta1.ControllerRegistrationSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
 						{
-							Kind:            extensionKind,
-							Type:            barExtensionType,
-							GloballyEnabled: ptr.To(true),
+							Kind:       extensionKind,
+							Type:       barExtensionType,
+							AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
 						},
 					},
 				},
@@ -114,7 +114,7 @@ var _ = Describe("Extension", func() {
 						{
 							Kind:                extensionKind,
 							Type:                barExtensionType,
-							GloballyEnabled:     ptr.To(true),
+							AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
 							WorkerlessSupported: ptr.To(true),
 						},
 					},
@@ -234,32 +234,195 @@ var _ = Describe("Extension", func() {
 			)
 		})
 
-		It("should not return the globally enabled extension when class is not shoot", func() {
-			test(
-				[]gardencorev1beta1.ControllerRegistration{
-					barRegistration,
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "another-extension",
-						},
-						Spec: gardencorev1beta1.ControllerRegistrationSpec{
-							Resources: []gardencorev1beta1.ControllerResource{
-								{
-									Kind: "kind",
-									Type: "type",
-								},
-							},
-						},
-					},
-				},
-				[]gardencorev1beta1.Extension{},
-				extensionsv1alpha1.ExtensionClassSeed,
-				false,
-				BeEmpty(),
-			)
-		})
+		When("automatically enabled", func() {
+			Context("for shoots", func() {
+				BeforeEach(func() {
+					fooRegistration.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"shoot"}
+				})
 
-		Context("Globally enabled", func() {
+				It("should return the extension for class shoot", func() {
+					test(
+						[]gardencorev1beta1.ControllerRegistration{
+							fooRegistration,
+						},
+						nil,
+						extensionsv1alpha1.ExtensionClassShoot,
+						false,
+						HaveKeyWithValue(
+							Equal(fooExtensionType),
+							MatchAllFields(
+								Fields{
+									"Extension": MatchFields(IgnoreExtras, Fields{
+										"Spec": MatchAllFields(Fields{
+											"DefaultSpec": MatchAllFields(Fields{
+												"Type":           Equal(fooExtensionType),
+												"ProviderConfig": BeNil(),
+												"Class":          BeNil(),
+											}),
+										}),
+									}),
+									"Timeout":   Equal(fooReconciliationTimeout.Duration),
+									"Lifecycle": Equal(lifecycle),
+								},
+							),
+						),
+					)
+				})
+
+				It("should not return the extension for class seed", func() {
+					test(
+						[]gardencorev1beta1.ControllerRegistration{
+							fooRegistration,
+						},
+						nil,
+						extensionsv1alpha1.ExtensionClassSeed,
+						false,
+						BeEmpty(),
+					)
+				})
+			})
+
+			Context("for seeds", func() {
+				BeforeEach(func() {
+					fooRegistration.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"seed"}
+				})
+
+				It("should return the extension for class seed", func() {
+					test(
+						[]gardencorev1beta1.ControllerRegistration{
+							fooRegistration,
+						},
+						nil,
+						extensionsv1alpha1.ExtensionClassSeed,
+						false,
+						HaveKeyWithValue(
+							Equal(fooExtensionType),
+							MatchAllFields(
+								Fields{
+									"Extension": MatchFields(IgnoreExtras, Fields{
+										"Spec": MatchAllFields(Fields{
+											"DefaultSpec": MatchAllFields(Fields{
+												"Type":           Equal(fooExtensionType),
+												"ProviderConfig": BeNil(),
+												"Class":          BeNil(),
+											}),
+										}),
+									}),
+									"Timeout":   Equal(fooReconciliationTimeout.Duration),
+									"Lifecycle": Equal(lifecycle),
+								},
+							),
+						),
+					)
+				})
+
+				It("should not return the extension for class shoot", func() {
+					test(
+						[]gardencorev1beta1.ControllerRegistration{
+							fooRegistration,
+						},
+						nil,
+						extensionsv1alpha1.ExtensionClassShoot,
+						false,
+						BeEmpty(),
+					)
+				})
+			})
+
+			Context("for all clusters", func() {
+				BeforeEach(func() {
+					fooRegistration.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"shoot", "seed"}
+				})
+
+				It("should return the extension for class shoot", func() {
+					test(
+						[]gardencorev1beta1.ControllerRegistration{
+							fooRegistration,
+						},
+						nil,
+						extensionsv1alpha1.ExtensionClassShoot,
+						false,
+						HaveKeyWithValue(
+							Equal(fooExtensionType),
+							MatchAllFields(
+								Fields{
+									"Extension": MatchFields(IgnoreExtras, Fields{
+										"Spec": MatchAllFields(Fields{
+											"DefaultSpec": MatchAllFields(Fields{
+												"Type":           Equal(fooExtensionType),
+												"ProviderConfig": BeNil(),
+												"Class":          BeNil(),
+											}),
+										}),
+									}),
+									"Timeout":   Equal(fooReconciliationTimeout.Duration),
+									"Lifecycle": Equal(lifecycle),
+								},
+							),
+						),
+					)
+				})
+
+				It("should return the extension for class seed", func() {
+					test(
+						[]gardencorev1beta1.ControllerRegistration{
+							fooRegistration,
+						},
+						nil,
+						extensionsv1alpha1.ExtensionClassSeed,
+						false,
+						HaveKeyWithValue(
+							Equal(fooExtensionType),
+							MatchAllFields(
+								Fields{
+									"Extension": MatchFields(IgnoreExtras, Fields{
+										"Spec": MatchAllFields(Fields{
+											"DefaultSpec": MatchAllFields(Fields{
+												"Type":           Equal(fooExtensionType),
+												"ProviderConfig": BeNil(),
+												"Class":          BeNil(),
+											}),
+										}),
+									}),
+									"Timeout":   Equal(fooReconciliationTimeout.Duration),
+									"Lifecycle": Equal(lifecycle),
+								},
+							),
+						),
+					)
+				})
+			})
+
+			Context("none", func() {
+				BeforeEach(func() {
+					fooRegistration.Spec.Resources[0].AutoEnable = nil
+				})
+
+				It("should return the extension for class shoot", func() {
+					test(
+						[]gardencorev1beta1.ControllerRegistration{
+							fooRegistration,
+						},
+						nil,
+						extensionsv1alpha1.ExtensionClassShoot,
+						false,
+						BeEmpty(),
+					)
+				})
+
+				It("should return the extension for class seed", func() {
+					test(
+						[]gardencorev1beta1.ControllerRegistration{
+							fooRegistration,
+						},
+						nil,
+						extensionsv1alpha1.ExtensionClassSeed,
+						false,
+						BeEmpty(),
+					)
+				})
+			})
+
 			It("should return the expected extension", func() {
 				test([]gardencorev1beta1.ControllerRegistration{barRegistration},
 					nil,
@@ -322,7 +485,7 @@ var _ = Describe("Extension", func() {
 		})
 
 		Context("Workerless", func() {
-			It("should return globally enabled for workerless", func() {
+			It("should return automatically enabled for workerless", func() {
 				test(
 					[]gardencorev1beta1.ControllerRegistration{
 						barRegistrationSupportedForWorkerless,
@@ -347,7 +510,7 @@ var _ = Describe("Extension", func() {
 				)
 			})
 
-			It("should return no extension when globally enabled but not supported for workerless", func() {
+			It("should return no extension when automatically enabled but not supported for workerless", func() {
 				test(
 					[]gardencorev1beta1.ControllerRegistration{
 						barRegistration,
