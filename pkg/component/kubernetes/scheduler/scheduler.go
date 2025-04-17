@@ -192,7 +192,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if err := managedresources.CreateForShoot(ctx, k.client, service.Namespace, service.Name, managedresources.LabelValueGardener, false, data); err != nil {
 		return err
 	}
