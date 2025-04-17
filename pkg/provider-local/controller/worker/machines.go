@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
@@ -157,20 +158,22 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			},
 		}
 
-		if pool.UpdateStrategy != nil {
-			switch *pool.UpdateStrategy {
-			case gardencorev1beta1.AutoInPlaceUpdate:
-				machineDeploymentStrategy.Type = machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType
-				machineDeploymentStrategy.InPlaceUpdate = &machinev1alpha1.InPlaceUpdateMachineDeployment{
+		switch ptr.Deref(pool.UpdateStrategy, "") {
+		case gardencorev1beta1.AutoInPlaceUpdate:
+			machineDeploymentStrategy = machinev1alpha1.MachineDeploymentStrategy{
+				Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+				InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
 					UpdateConfiguration: updateConfiguration,
 					OrchestrationType:   machinev1alpha1.OrchestrationTypeAuto,
-				}
-			case gardencorev1beta1.ManualInPlaceUpdate:
-				machineDeploymentStrategy.Type = machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType
-				machineDeploymentStrategy.InPlaceUpdate = &machinev1alpha1.InPlaceUpdateMachineDeployment{
+				},
+			}
+		case gardencorev1beta1.ManualInPlaceUpdate:
+			machineDeploymentStrategy = machinev1alpha1.MachineDeploymentStrategy{
+				Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+				InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
 					UpdateConfiguration: updateConfiguration,
 					OrchestrationType:   machinev1alpha1.OrchestrationTypeManual,
-				}
+				},
 			}
 		}
 

@@ -254,6 +254,16 @@ type WorkerStatus struct {
 	// MachineDeploymentsLastUpdateTime is the timestamp when the status.MachineDeployments slice was last updated.
 	// +optional
 	MachineDeploymentsLastUpdateTime *metav1.Time `json:"machineDeploymentsLastUpdateTime,omitempty"`
+	// InPlaceUpdates contains the status for in-place updates.
+	// +optional
+	InPlaceUpdates *InPlaceUpdatesWorkerStatus `json:"inPlaceUpdates,omitempty"`
+}
+
+// InPlaceUpdatesWorkerStatus contains the configuration for in-place updates.
+type InPlaceUpdatesWorkerStatus struct {
+	// WorkerPoolToHashMap is a map of worker pool names to their corresponding hash.
+	// +optional
+	WorkerPoolToHashMap map[string]string `json:"workerPoolToHashMap,omitempty"`
 }
 
 // MachineDeployment is a created machine deployment.

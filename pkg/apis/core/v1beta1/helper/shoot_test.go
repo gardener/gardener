@@ -1504,6 +1504,17 @@ var _ = Describe("Helper", func() {
 		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
 	)
 
+	DescribeTable("#IsUpdateStrategyManualInPlace",
+		func(updateStrategy *gardencorev1beta1.MachineUpdateStrategy, expected bool) {
+			Expect(IsUpdateStrategyManualInPlace(updateStrategy)).To(Equal(expected))
+		},
+
+		Entry("with nil", nil, false),
+		Entry("with AutoRollingUpdate update strategy", ptr.To(gardencorev1beta1.AutoRollingUpdate), false),
+		Entry("with AutoInPlaceUpdate update strategy", ptr.To(gardencorev1beta1.AutoInPlaceUpdate), false),
+		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(gardencorev1beta1.ManualInPlaceUpdate), true),
+	)
+
 	DescribeTable("#IsShootIstioTLSTerminationEnabled",
 		func(shootAnnotations map[string]string, expected bool) {
 			shoot := &gardencorev1beta1.Shoot{

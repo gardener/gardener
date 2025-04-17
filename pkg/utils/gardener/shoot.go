@@ -875,3 +875,40 @@ func IsAuthorizeWithSelectorsEnabled(kubeAPIServer *gardencorev1beta1.KubeAPISer
 
 	return false
 }
+
+// CalculateWorkerPoolHashForInPlaceUpdate calculates the data string for the worker pool hash to be used for in-place updates.
+//
+// WARNING: Changing this function will cause an in-place update of all the existing nodes. Use with caution.
+func CalculateWorkerPoolHashForInPlaceUpdate(workerPoolName string, kubernetesVersion *string, kubeletConfig *gardencorev1beta1.KubeletConfig, machineImageVersion string, credentials *gardencorev1beta1.ShootCredentials) (string, error) {
+	var data []string
+
+	kubernetesSemverVersion, err := semver.NewVersion(ptr.Deref(kubernetesVersion, ""))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse kubernetes version %s: %w", ptr.Deref(kubernetesVersion, ""), err)
+	}
+	kubernetesMajorMinorVersion := fmt.Sprintf("%d.%d", kubernetesSemverVersion.Major(), kubernetesSemverVersion.Minor())
+
+	data = append(data, kubernetesMajorMinorVersion, machineImageVersion)
+
+	if credentials != nil && credentials.Rotation != nil {
+		if credentials.Rotation.CertificateAuthorities != nil {
+			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(workerPoolName, credentials.Rotation.CertificateAuthorities.PendingWorkersRollouts, credentials.Rotation.CertificateAuthorities.LastInitiationTime); lastInitiationTime != nil {
+				data = append(data, lastInitiationTime.String())
+			}
+		}
+		if credentials.Rotation.ServiceAccountKey != nil {
+			if lastInitiationTime := v1beta1helper.LastInitiationTimeForWorkerPool(workerPoolName, credentials.Rotation.ServiceAccountKey.PendingWorkersRollouts, credentials.Rotation.ServiceAccountKey.LastInitiationTime); lastInitiationTime != nil {
+				data = append(data, lastInitiationTime.String())
+			}
+		}
+	}
+
+	data = append(data, CalculateDataStringForKubeletConfiguration(kubeletConfig)...)
+
+	var result string
+	for _, v := range data {
+		result += utils.ComputeSHA256Hex([]byte(v))
+	}
+
+	return utils.ComputeSHA256Hex([]byte(result))[:16], nil
+}

@@ -3586,6 +3586,37 @@ OSUpdate
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.InPlaceUpdatesWorkerStatus">InPlaceUpdatesWorkerStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerStatus">WorkerStatus</a>)
+</p>
+<p>
+<p>InPlaceUpdatesWorkerStatus contains the configuration for in-place updates.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>workerPoolToHashMap</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>WorkerPoolToHashMap is a map of worker pool names to their corresponding hash.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.InfrastructureSpec">InfrastructureSpec
 </h3>
 <p>
@@ -5242,6 +5273,20 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>MachineDeploymentsLastUpdateTime is the timestamp when the status.MachineDeployments slice was last updated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>inPlaceUpdates</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdatesWorkerStatus">
+InPlaceUpdatesWorkerStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InPlaceUpdates contains the status for in-place updates.</p>
 </td>
 </tr>
 </tbody>

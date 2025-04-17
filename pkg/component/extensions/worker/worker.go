@@ -47,6 +47,7 @@ var TimeNow = time.Now
 // Interface is an interface for managing Workers.
 type Interface interface {
 	component.DeployMigrateWaiter
+	Get(context.Context) (*extensionsv1alpha1.Worker, error)
 	SetSSHPublicKey([]byte)
 	SetInfrastructureProviderStatus(*runtime.RawExtension)
 	SetWorkerPoolNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
@@ -68,6 +69,8 @@ type Values struct {
 	Workers []gardencorev1beta1.Worker
 	// KubernetesVersion is the Kubernetes version of the cluster for which the worker nodes shall be created.
 	KubernetesVersion *semver.Version
+	// KubeletConfig is the configuration of the Kubelet
+	KubeletConfig *gardencorev1beta1.KubeletConfig
 	// MachineTypes is the list of machine types present in the CloudProfile referenced by the shoot
 	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKey is the public SSH key that shall be installed on the worker nodes.
@@ -183,8 +186,15 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		}
 
 		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()
-		if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
-			workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
+		kubeletConfig := w.values.KubeletConfig
+		if workerPool.Kubernetes != nil {
+			if workerPool.Kubernetes.Version != nil {
+				workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
+			}
+
+			if workerPool.Kubernetes.Kubelet != nil {
+				kubeletConfig = workerPool.Kubernetes.Kubelet
+			}
 		}
 
 		nodeTemplate, machineType := w.findNodeTemplateAndMachineTypeByPoolName(obj, workerPool.Name)
@@ -249,6 +259,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			DataVolumes:                      dataVolumes,
 			KubeletDataVolumeName:            workerPool.KubeletDataVolumeName,
 			KubernetesVersion:                &workerPoolKubernetesVersion,
+			KubeletConfig:                    kubeletConfig,
 			Zones:                            workerPool.Zones,
 			MachineControllerManagerSettings: workerPool.MachineControllerManagerSettings,
 			Architecture:                     workerPool.Machine.Architecture,
@@ -376,6 +387,15 @@ func (w *worker) WaitCleanup(ctx context.Context) error {
 		w.waitInterval,
 		w.waitTimeout,
 	)
+}
+
+// Get retrieves and returns the Worker resource.
+func (w *worker) Get(ctx context.Context) (*extensionsv1alpha1.Worker, error) {
+	if err := w.client.Get(ctx, client.ObjectKeyFromObject(w.worker), w.worker); err != nil {
+		return nil, err
+	}
+
+	return w.worker, nil
 }
 
 // SetSSHPublicKey sets the public SSH key in the values.

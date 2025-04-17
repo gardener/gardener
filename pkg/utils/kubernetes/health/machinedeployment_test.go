@@ -32,6 +32,28 @@ var _ = Describe("MachineDeployment", func() {
 				},
 			}},
 		}, BeNil()),
+		Entry("healthy for manual in-place update with UpdatedReplicas != Replicas", &machinev1alpha1.MachineDeployment{
+			Spec: machinev1alpha1.MachineDeploymentSpec{
+				Strategy: machinev1alpha1.MachineDeploymentStrategy{
+					Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+					InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
+						OrchestrationType: machinev1alpha1.OrchestrationTypeManual,
+					}},
+			},
+			Status: machinev1alpha1.MachineDeploymentStatus{
+				UpdatedReplicas: 1,
+				Replicas:        2,
+				Conditions: []machinev1alpha1.MachineDeploymentCondition{
+					{
+						Type:   machinev1alpha1.MachineDeploymentAvailable,
+						Status: machinev1alpha1.ConditionTrue,
+					},
+					{
+						Type:   machinev1alpha1.MachineDeploymentProgressing,
+						Status: machinev1alpha1.ConditionTrue,
+					},
+				}},
+		}, BeNil()),
 		Entry("healthy without progressing", &machinev1alpha1.MachineDeployment{
 			Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
 				{
@@ -64,6 +86,26 @@ var _ = Describe("MachineDeployment", func() {
 					Status: machinev1alpha1.ConditionFalse,
 				},
 			}},
+		}, HaveOccurred()),
+		Entry("unhealthy with false progressing for manual in-place update", &machinev1alpha1.MachineDeployment{
+			Spec: machinev1alpha1.MachineDeploymentSpec{
+				Strategy: machinev1alpha1.MachineDeploymentStrategy{
+					Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+					InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
+						OrchestrationType: machinev1alpha1.OrchestrationTypeManual,
+					}},
+			},
+			Status: machinev1alpha1.MachineDeploymentStatus{
+				Conditions: []machinev1alpha1.MachineDeploymentCondition{
+					{
+						Type:   machinev1alpha1.MachineDeploymentAvailable,
+						Status: machinev1alpha1.ConditionTrue,
+					},
+					{
+						Type:   machinev1alpha1.MachineDeploymentProgressing,
+						Status: machinev1alpha1.ConditionFalse,
+					},
+				}},
 		}, HaveOccurred()),
 		Entry("unhealthy with bad condition", &machinev1alpha1.MachineDeployment{
 			Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{

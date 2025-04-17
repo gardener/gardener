@@ -46,7 +46,7 @@ func AddToManagerWithOptions(ctx context.Context, mgr manager.Manager, opts AddO
 		return err
 	}
 
-	return worker.Add(mgr, worker.AddArgs{
+	return worker.Add(ctx, mgr, worker.AddArgs{
 		Actuator:          NewActuator(mgr, opts.GardenCluster),
 		ControllerOptions: opts.Controller,
 		Predicates:        worker.DefaultPredicates(ctx, mgr, opts.IgnoreOperationAnnotation),
