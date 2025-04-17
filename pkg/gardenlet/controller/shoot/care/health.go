@@ -788,7 +788,6 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 			}
 			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
 				checkScaleUp = true
-				break
 			}
 		}
 	}
