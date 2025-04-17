@@ -6,7 +6,6 @@ package validator_test
 
 import (
 	"context"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -20,6 +19,7 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/namespacedcloudprofile/validator"
 )
