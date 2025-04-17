@@ -101,6 +101,7 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 
 	statefulSet := e.emptyStatefulSet()
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, e.client, statefulSet, func() error {
+		statefulSet.Labels = e.labels()
 		statefulSet.Spec = appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: e.labels(),
@@ -256,12 +257,6 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 					},
 				},
 			},
-		}
-
-		statefulSet.Labels = map[string]string{
-			v1beta1constants.LabelApp:   "etcd",
-			v1beta1constants.LabelRole:  e.values.Role,
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
 
 		return nil
