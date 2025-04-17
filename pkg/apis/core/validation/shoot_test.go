@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -6497,16 +6498,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 			var fldPath *field.Path
 
 			BeforeEach(func() {
-				fldPath = field.NewPath("cloudProfile")
+				fldPath = field.NewPath("spec")
 			})
 
 			It("should not allow using no cloudProfile reference", func() {
-				errList := ValidateCloudProfileReference(nil, nil, fldPath)
+				errList := ValidateCloudProfileReference(nil, nil, nil, fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeRequired),
-						"Field":  Equal("cloudProfile.name"),
+						"Field":  Equal("spec.cloudProfile.name"),
 						"Detail": Equal("must specify a cloud profile"),
 					}))))
 			})
@@ -6517,12 +6518,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeRequired),
-						"Field":  Equal("cloudProfile.name"),
+						"Field":  Equal("spec.cloudProfile.name"),
 						"Detail": Equal("must specify a cloud profile"),
 					}))))
 			})
@@ -6533,12 +6534,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
 
 				Expect(errList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeNotSupported),
-						"Field":  Equal("cloudProfile.kind"),
+						"Field":  Equal("spec.cloudProfile.kind"),
 						"Detail": Equal("supported values: \"CloudProfile\", \"NamespacedCloudProfile\""),
 					}))))
 			})
@@ -6549,7 +6550,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -6560,9 +6561,42 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Name: "my-profile",
 				}
 
-				errList := ValidateCloudProfileReference(cloudProfileReference, nil, fldPath)
+				errList := ValidateCloudProfileReference(cloudProfileReference, nil, nil, fldPath)
 
 				Expect(errList).To(BeEmpty())
+			})
+
+			It("should still allow creation using the cloudProfileName for k8s < v1.34", func() {
+				var (
+					k8sVersion            = semver.MustParse("v1.33.0")
+					cloudProfileReference = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "my-profile",
+					}
+				)
+
+				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), k8sVersion, fldPath)
+
+				Expect(errList).To(BeEmpty())
+			})
+
+			It("should not allow creation using the cloudProfileName for k8s >= v1.34", func() {
+				var (
+					k8sVersion            = semver.MustParse("v1.34.0")
+					cloudProfileReference = &core.CloudProfileReference{
+						Kind: "CloudProfile",
+						Name: "my-profile",
+					}
+				)
+
+				errList := ValidateCloudProfileReference(cloudProfileReference, ptr.To(cloudProfileReference.Name), k8sVersion, fldPath)
+
+				Expect(errList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.cloudProfileName"),
+						"Detail": ContainSubstring("cloudProfileName must not be set"),
+					}))))
 			})
 		})
 
