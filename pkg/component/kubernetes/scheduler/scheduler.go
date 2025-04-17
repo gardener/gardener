@@ -172,25 +172,28 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, service, func() error {
-		service.Labels = getLabels()
+	// Service Resource
+	service.Labels = getLabels()
+	utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
+		Port:     ptr.To(intstr.FromInt32(port)),
+		Protocol: ptr.To(corev1.ProtocolTCP),
+	}))
+	service.Spec.Selector = getLabels()
+	service.Spec.Type = corev1.ServiceTypeClusterIP
+	desiredPorts := []corev1.ServicePort{{
+		Name:     portNameMetrics,
+		Protocol: corev1.ProtocolTCP,
+		Port:     port,
+	}}
+	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
 
-		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{
-			Port:     ptr.To(intstr.FromInt32(port)),
-			Protocol: ptr.To(corev1.ProtocolTCP),
-		}))
-
-		service.Spec.Selector = getLabels()
-		service.Spec.Type = corev1.ServiceTypeClusterIP
-		desiredPorts := []corev1.ServicePort{{
-			Name:     portNameMetrics,
-			Protocol: corev1.ProtocolTCP,
-			Port:     port,
-		}}
-		service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
-
-		return nil
-	}); err != nil {
+	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+	data, err := registry.AddAllAndSerialize(client.Object(service))
+	if err != nil {
+		return err
+	}
+	
+	if err := managedresources.CreateForShoot(ctx, k.client, service.Namespace, service.Name, managedresources.LabelValueGardener, false, data); err != nil {
 		return err
 	}
 
