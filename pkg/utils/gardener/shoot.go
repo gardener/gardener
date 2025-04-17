@@ -721,7 +721,7 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 	for _, controllerRegistration := range controllerRegistrationList.Items {
 		for _, resource := range controllerRegistration.Spec.Resources {
 			id := ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type)
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) && !disabledExtensions.Has(id) {
+			if extensionEnabledForMode(id, gardencorev1beta1.AutoEnableModeShoot, resource, disabledExtensions) {
 				if v1beta1helper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
 					continue
 				}
@@ -731,6 +731,12 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 	}
 
 	return requiredExtensions
+}
+
+func extensionEnabledForMode(extensionID string, enableMode gardencorev1beta1.AutoEnableMode, resource gardencorev1beta1.ControllerResource, disabledExtensions sets.Set[string]) bool {
+	return resource.Kind == extensionsv1alpha1.ExtensionResource &&
+		!disabledExtensions.Has(extensionID) &&
+		slices.Contains(resource.AutoEnable, enableMode)
 }
 
 // ExtensionsID returns an identifier for the given extension kind/type.

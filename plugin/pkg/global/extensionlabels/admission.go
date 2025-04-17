@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -282,10 +283,10 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) sets.Set[string] {
 	enabledExtensions := sets.New[string]()
 
-	// add globally enabled extensions
+	// add automatically enabled extensions
 	for _, reg := range controllerRegistrations {
 		for _, resource := range reg.Spec.Resources {
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && slices.Contains(resource.AutoEnable, gardencorev1beta1.AutoEnableModeShoot) {
 				if gardencorehelper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
 					continue
 				}
