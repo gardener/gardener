@@ -427,7 +427,7 @@ var _ = Describe("health check", func() {
 			It("should return true if number of ready nodes equal number of desired machines", func() {
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
 						},
@@ -453,7 +453,7 @@ var _ = Describe("health check", func() {
 			It("should return an error if not enough machine objects as desired were created", func() {
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
 							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
@@ -482,7 +482,7 @@ var _ = Describe("health check", func() {
 
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
 							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
@@ -511,7 +511,7 @@ var _ = Describe("health check", func() {
 				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
 							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
@@ -540,7 +540,7 @@ var _ = Describe("health check", func() {
 				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
 							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
@@ -564,7 +564,7 @@ var _ = Describe("health check", func() {
 				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
 							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
@@ -582,7 +582,7 @@ var _ = Describe("health check", func() {
 				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
 						},
