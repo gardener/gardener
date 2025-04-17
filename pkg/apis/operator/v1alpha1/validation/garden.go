@@ -498,10 +498,8 @@ func validateGardenerFeatureGates(featureGates map[string]bool, fldPath *field.P
 		spec, supported := features.AllFeatureGates[featuregate.Feature(featureGate)]
 		if !supported {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), "not supported by Gardener"))
-		} else {
-			if spec.LockToDefault && featureGates[featureGate] != spec.Default {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("cannot set feature gate to %v, feature is locked to %v", featureGates[featureGate], spec.Default)))
-			}
+		} else if spec.LockToDefault && featureGates[featureGate] != spec.Default {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("cannot set feature gate to %v, feature is locked to %v", featureGates[featureGate], spec.Default)))
 		}
 	}
 

@@ -84,12 +84,11 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 		// to properly determine that the operation is "restore, and not "reconcile"
 		if newBackupEntry.Annotations[v1beta1constants.GardenerOperation] != v1beta1constants.GardenerOperationRestore {
 			delete(newBackupEntry.Annotations, v1beta1constants.GardenerOperation)
-		} else {
+		} else if oldBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore {
 			// we don't want to cause duplicate reconciliations because this annotation is removed only at the end of operation
-			if oldBackupEntry.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore {
-				return false
-			}
+			return false
 		}
+
 		return true
 	}
 

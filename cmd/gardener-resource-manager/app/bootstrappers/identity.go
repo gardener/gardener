@@ -59,10 +59,8 @@ func (i *IdentityDeterminer) determineClusterIdentity(ctx context.Context, force
 		if force {
 			return "", errors.New("cannot determine cluster identity from configmap: no cluster-identity entry")
 		}
-	} else {
-		if force || !apierrors.IsNotFound(err) {
-			return "", fmt.Errorf("cannot determine cluster identity from configmap: %s", err)
-		}
+	} else if force || !apierrors.IsNotFound(err) {
+		return "", fmt.Errorf("cannot determine cluster identity from configmap: %s", err)
 	}
 
 	return "", nil
