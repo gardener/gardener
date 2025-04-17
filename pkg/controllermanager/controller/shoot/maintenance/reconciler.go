@@ -679,7 +679,7 @@ func filterForArchitecture(machineImageFromCloudProfile *gardencorev1beta1.Machi
 	}
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
-		if slices.Contains(cloudProfileVersion.Architectures, *arch) {
+		if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(cloudProfileVersion), *arch) {
 			filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
 		}
 	}

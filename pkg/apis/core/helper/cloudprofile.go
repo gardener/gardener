@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -229,4 +230,37 @@ func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version se
 		result = append(result, v)
 	}
 	return result, nil
+}
+
+// HasCapability returns true of the passed capabilities contain the capability with the given name.
+func HasCapability(capabilities []core.CapabilityDefinition, capabilityName string) bool {
+	for _, capability := range capabilities {
+		if capability.Name == capabilityName {
+			return true
+		}
+	}
+	return false
+}
+
+// ExtractArchitecturesFromCapabilitySets extracts all architectures from a list of CapabilitySets.
+func ExtractArchitecturesFromCapabilitySets(capabilities []core.CapabilitySet) []string {
+	architectures := sets.New[string]()
+	for _, capabilitySet := range capabilities {
+		for _, architectureValue := range capabilitySet.Capabilities[constants.ArchitectureName] {
+			architectures.Insert(architectureValue)
+		}
+	}
+	return architectures.UnsortedList()
+}
+
+// CapabilityDefinitionsToCapabilities takes the capability definitions and converts them to capabilities.
+func CapabilityDefinitionsToCapabilities(capabilityDefinitions []core.CapabilityDefinition) core.Capabilities {
+	if len(capabilityDefinitions) == 0 {
+		return nil
+	}
+	capabilities := make(core.Capabilities, len(capabilityDefinitions))
+	for _, capability := range capabilityDefinitions {
+		capabilities[capability.Name] = capability.Values
+	}
+	return capabilities
 }

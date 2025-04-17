@@ -14,6 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // MachineSpec define all bastion vm details derived from the CloudProfile
@@ -63,51 +64,58 @@ func getMachine(bastion *gardencorev1beta1.Bastion, machineTypes []gardencorev1b
 	}
 
 	machine := machineTypes[machineIndex]
-	if machine.Architecture == nil {
+	machineArch = machine.GetArchitecture()
+	if machineArch == "" {
 		return "", "",
 			fmt.Errorf("architecture for specified bastion machine type %s is <nil>", bastion.MachineType.Name)
 	}
-	return machine.Name, *machine.Architecture, nil
+	return machine.Name, machineArch, nil
+}
+
+func findSupportedArchitectures(images []gardencorev1beta1.MachineImage, machineImageName, machineImageVersion string) []string {
+	architectures := sets.New[string]()
+
+	for _, image := range images {
+		if machineImageName != "" && image.Name != machineImageName {
+			// Skip images that are not the specified one.
+			continue
+		}
+		for _, version := range image.Versions {
+			if machineImageVersion != "" && version.Version != machineImageVersion {
+				// Skip versions that are not the specified one.
+				continue
+			}
+			if version.Classification != nil && *version.Classification == gardencorev1beta1.ClassificationSupported {
+				architectures.Insert(v1beta1helper.GetArchitecturesFromImageVersion(version)...)
+			}
+			if machineImageVersion != "" {
+				// If an image version has been specified, we have now found it and extracted the architectures.
+				break
+			}
+		}
+		if machineImageName != "" {
+			// If an image name has been specified, we have now found it and extracted the architectures.
+			break
+		}
+	}
+
+	return maps.Keys(architectures)
 }
 
 // getImageArchitectures finds the supported architectures of the cloudProfile images
 // returning an empty array means all architectures are allowed
-func getImageArchitectures(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1.MachineImage) ([]string, error) {
-	architectures := sets.New[string]()
-
-	findSupportedArchs := func(versions []gardencorev1beta1.MachineImageVersion, bastionImageVersion *string) {
-		for _, version := range versions {
-			if bastionImageVersion != nil && version.Version == *bastionImageVersion {
-				architectures = sets.New[string]()
-				for _, arch := range version.Architectures {
-					architectures.Insert(arch)
-				}
-				return
-			}
-
-			if version.Classification != nil && *version.Classification == gardencorev1beta1.ClassificationSupported {
-				for _, arch := range version.Architectures {
-					architectures.Insert(arch)
-				}
-			}
-		}
+func getImageArchitectures(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1.MachineImage) []string {
+	var (
+		machineImageName, machineImageVersion string
+	)
+	// If bastion or bastion.Image is nil: find all supported architectures of all images.
+	// Else, find all supported architectures of the specified image.
+	if bastion != nil && bastion.MachineImage != nil {
+		machineImageName = bastion.MachineImage.Name
+		machineImageVersion = ptr.Deref(bastion.MachineImage.Version, "")
 	}
 
-	// if bastion or bastion.Image is nil: find all supported architectures of all images
-	if bastion == nil || bastion.MachineImage == nil {
-		for _, image := range images {
-			findSupportedArchs(image.Versions, nil)
-		}
-		return maps.Keys(architectures), nil
-	}
-
-	// find architectures of the specified image
-	image, err := findImageByName(images, bastion.MachineImage.Name)
-	if err != nil {
-		return nil, err
-	}
-	findSupportedArchs(image.Versions, bastion.MachineImage.Version)
-	return maps.Keys(architectures), nil
+	return findSupportedArchitectures(images, machineImageName, machineImageVersion)
 }
 
 // getImageName returns the image name for the bastion.
@@ -127,7 +135,7 @@ func getImageName(bastion *gardencorev1beta1.Bastion, images []gardencorev1beta1
 			if version.Classification == nil || *version.Classification != gardencorev1beta1.ClassificationSupported {
 				continue
 			}
-			if !slices.Contains(version.Architectures, arch) {
+			if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version), arch) {
 				continue
 			}
 			return image.Name, nil
@@ -166,7 +174,7 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 			continue
 		}
 
-		if !slices.Contains(version.Architectures, machineArch) {
+		if !slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version), machineArch) {
 			continue
 		}
 
@@ -189,16 +197,16 @@ func getImageVersion(bastion *gardencorev1beta1.Bastion, imageName, machineArch 
 // findMostSuitableMachineType searches for the machine type that satisfies certain criteria
 // currently we try to find the machine with the lowest amount of cpus
 func findMostSuitableMachineType(profile *gardencorev1beta1.CloudProfile) (machineName string, machineArch string, err error) {
-	supportedArchs, err := getImageArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages)
+	supportedArchs := getImageArchitectures(profile.Spec.Bastion, profile.Spec.MachineImages)
 
 	var minCpu *int64
 
 	for _, machine := range profile.Spec.MachineTypes {
-		if machine.Architecture == nil {
+		arch := machine.GetArchitecture()
+		if arch == "" {
 			continue
 		}
 
-		arch := *machine.Architecture
 		if minCpu == nil || machine.CPU.Value() < *minCpu &&
 			(supportedArchs == nil || slices.Contains(supportedArchs, arch)) {
 			minCpu = ptr.To(machine.CPU.Value())

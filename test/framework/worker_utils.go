@@ -11,7 +11,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -72,13 +72,13 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 
 	// select first machine type of CPU architecture amd64
 	for _, machine := range cloudProfile.Spec.MachineTypes {
-		if *machine.Architecture == v1beta1constants.ArchitectureAMD64 {
+		if machine.GetArchitecture() == v1beta1constants.ArchitectureAMD64 {
 			machineType = machine
 			break
 		}
 	}
 
-	if *machineType.Architecture != v1beta1constants.ArchitectureAMD64 {
+	if machineType.GetArchitecture() != v1beta1constants.ArchitectureAMD64 {
 		return fmt.Errorf("no MachineTypes of architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
 
@@ -88,7 +88,7 @@ func AddWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.C
 		return fmt.Errorf("no MachineImage that supports architecture amd64 configured in the Cloudprofile '%s'", cloudProfile.Name)
 	}
 
-	qualifyingVersionFound, latestImageVersion, err := helper.GetLatestQualifyingVersion(helper.ToExpirableVersions(machineImage.Versions))
+	qualifyingVersionFound, latestImageVersion, err := v1beta1helper.GetLatestQualifyingVersion(v1beta1helper.ToExpirableVersions(machineImage.Versions))
 	if err != nil {
 		return fmt.Errorf("an error occurred while determining the latest Shoot machine image for machine image %q: %w", machineImage.Name, err)
 	}
@@ -150,7 +150,7 @@ func generateRandomWorkerName(prefix string) (string, error) {
 func firstMachineImageWithAMDSupport(machineImageFromCloudProfile []gardencorev1beta1.MachineImage) *gardencorev1beta1.MachineImage {
 	for _, machineImage := range machineImageFromCloudProfile {
 		for _, version := range machineImage.Versions {
-			if slices.Contains(version.Architectures, v1beta1constants.ArchitectureAMD64) {
+			if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version), v1beta1constants.ArchitectureAMD64) {
 				return &machineImage
 			}
 		}

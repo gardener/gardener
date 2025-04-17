@@ -5,6 +5,8 @@
 package helper_test
 
 import (
+	"strings"
+
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -403,4 +405,61 @@ var _ = Describe("Helper", func() {
 			})))
 		})
 	})
+
+	DescribeTable("#HasCapability",
+		func(capabilityNames []string, requestedCapability string, expectedResult bool) {
+			capabilities := []core.CapabilityDefinition{}
+			for _, capabilityName := range capabilityNames {
+				capabilities = append(capabilities, core.CapabilityDefinition{Name: capabilityName})
+			}
+			Expect(HasCapability(capabilities, requestedCapability)).To(Equal(expectedResult))
+		},
+		Entry("Should return false - no capabilities", nil, "foo", false),
+		Entry("Should return true - one capability", []string{"foo"}, "foo", true),
+		Entry("Should return true - many capabilities", []string{"foo", "bar"}, "foo", true),
+	)
+
+	DescribeTable("#ExtractArchitecturesFromCapabilitySets",
+		func(architecturesInSet1, architecturesInSet2, expectedResult []string) {
+			var capabilitySets []core.CapabilitySet
+
+			capabilitySets = append(capabilitySets, core.CapabilitySet{
+				Capabilities: core.Capabilities{"architecture": architecturesInSet1},
+			})
+
+			capabilitySets = append(capabilitySets, core.CapabilitySet{
+				Capabilities: core.Capabilities{"architecture": architecturesInSet2},
+			})
+
+			Expect(ExtractArchitecturesFromCapabilitySets(capabilitySets)).To(ConsistOf(expectedResult))
+		},
+		Entry("Should return no values", nil, nil, []string{}),
+		Entry("Should return architecture in sets (sets partially filled)", []string{"amd64", "arm64"}, []string{"ia-64"}, []string{"amd64", "arm64", "ia-64"}),
+		Entry("Should return architecture in sets (all sets filled)", []string{"amd64", "arm64"}, nil, []string{"amd64", "arm64"}),
+	)
+
+	DescribeTable("#CapabilityDefinitionsToCapabilities",
+		func(capabilityNames ...string) {
+			var (
+				capabilities = make([]core.CapabilityDefinition, 0, len(capabilityNames))
+				values       = core.CapabilityValues{"value-1", "value-2"}
+			)
+
+			for _, capabilityName := range capabilityNames {
+				capabilities = append(capabilities, core.CapabilityDefinition{Name: capabilityName, Values: values})
+			}
+
+			capabilitiesMap := CapabilityDefinitionsToCapabilities(capabilities)
+
+			if len(capabilityNames) == 0 {
+				Expect(capabilitiesMap).To(BeEmpty())
+			} else {
+				for _, capability := range capabilities {
+					Expect(capabilitiesMap).To(HaveKeyWithValue(capability.Name, values), "capability "+capability.Name+" with values "+strings.Join(values, ",")+" not found")
+				}
+			}
+		},
+		Entry("without capabilities", nil),
+		Entry("with capabilities", "architecture", "network"),
+	)
 })

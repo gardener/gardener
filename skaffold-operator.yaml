@@ -652,9 +652,16 @@ build:
             - cmd/gardener-controller-manager/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
+            - extensions/pkg/apis/config/v1alpha1
+            - extensions/pkg/util
+            - pkg/api
             - pkg/api/extensions
             - pkg/api/indexer
+            - pkg/apis/authentication
+            - pkg/apis/authentication/install
+            - pkg/apis/authentication/v1alpha1
             - pkg/apis/core
+            - pkg/apis/core/helper
             - pkg/apis/core/install
             - pkg/apis/core/v1
             - pkg/apis/core/v1beta1
@@ -681,8 +688,12 @@ build:
             - pkg/apis/settings/install
             - pkg/apis/settings/v1alpha1
             - pkg/chartrenderer
+            - pkg/client/core/listers/core/v1beta1
             - pkg/client/kubernetes
             - pkg/client/kubernetes/cache
+            - pkg/client/seedmanagement/clientset/versioned
+            - pkg/client/seedmanagement/clientset/versioned/scheme
+            - pkg/client/seedmanagement/clientset/versioned/typed/seedmanagement/v1alpha1
             - pkg/component
             - pkg/component/garden/projectrbac
             - pkg/controller/reference
@@ -757,6 +768,7 @@ build:
             - pkg/utils/validation/features
             - pkg/utils/validation/kubernetesversion
             - pkg/utils/version
+            - plugin/pkg/utils
             - third_party/gopkg.in/yaml.v2
             - VERSION
         ldflags:

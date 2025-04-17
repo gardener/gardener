@@ -14,6 +14,7 @@ spec:
 # seedSelector:
 #   matchLabels:
 #     foo: bar
+# ---
 # Optional bastion section defining bastions machine type and image properties.
 # If not provided, these properties depend on the implicit ordering of the CloudProfile.
 # In this case, the provider extension will use the first found supported image, and the first usable machine type.
@@ -23,6 +24,10 @@ spec:
 #     version: 1443.3.0 # optional -> will use the newest supported version for the specified image name
 #   machineType: # optional -> will use the machine with the lowest amount of CPUs
 #     name: n1-standard-2
+# ---
+# capabilities: # CloudProfileCapabilities feature gate enabled
+# - name: architecture
+#   values: [amd64,arm64]
   kubernetes:
     versions:
     - version: 1.30.1
@@ -41,6 +46,9 @@ spec:
     # architectures: # optional
     # - amd64
     # - arm64
+    # capabilitySets: # CloudProfileCapabilities feature gate enabled
+    # - architecture: [amd64]
+    # - architecture: [arm64]
     # cri: # Even though gardener doesn't support docker CRI, gardener requires machine images to have the docker daemon installed. See https://github.com/gardener/gardener/issues/4673 for more information.
     # - name: containerd    
     #   containerRuntimes:
@@ -69,6 +77,8 @@ spec:
   #   minSize: 10Gi  # optional, either size or minSize must be configured
     usable: true
     # architecture: amd64 # optional
+    # capabilities: # CloudProfileCapabilities feature gate enabled
+    #   architecture: [amd64]
   volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
   - name: gp3
     class: standard

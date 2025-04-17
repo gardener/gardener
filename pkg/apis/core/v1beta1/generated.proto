@@ -342,6 +342,29 @@ message CRI {
   repeated ContainerRuntime containerRuntimes = 2;
 }
 
+// CapabilityDefinition contains the Name and Values of a capability.
+message CapabilityDefinition {
+  optional string name = 1;
+
+  optional CapabilityValues values = 2;
+}
+
+// CapabilitySet is a wrapper for Capabilities.
+// This is a workaround as the Protobuf generator can't handle a slice of maps.
+message CapabilitySet {
+  map<string, CapabilityValues> capabilities = 1;
+}
+
+// CapabilityValues contains capability values.
+// This is a workaround as the Protobuf generator can't handle a map with slice values.
+// +protobuf.nullable=true
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+message CapabilityValues {
+  // items, if empty, will result in an empty slice
+
+  repeated string items = 1;
+}
+
 // CloudProfile represents certain properties about a provider environment.
 message CloudProfile {
   // Standard object metadata.
@@ -426,6 +449,13 @@ message CloudProfileSpec {
   // See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
   // +optional
   optional Limits limits = 11;
+
+  // Capabilities contains the definition of all possible capabilities in the CloudProfile.
+  // Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+  // The order of values for a given capability is relevant. The most important value is listed first.
+  // During maintenance upgrades, the image that matches most capabilities will be selected.
+  // +optional
+  repeated CapabilityDefinition capabilities = 12;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -1838,6 +1868,11 @@ message MachineImageVersion {
   // InPlaceUpdates contains the configuration for in-place updates for this machine image version.
   // +optional
   optional InPlaceUpdates inPlaceUpdates = 5;
+
+  // CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+  // the machine image version.
+  // +optional
+  repeated CapabilitySet capabilitySets = 6;
 }
 
 // MachineType contains certain properties of a machine type.
@@ -1865,6 +1900,10 @@ message MachineType {
   // Architecture is the CPU architecture of this machine type.
   // +optional
   optional string architecture = 7;
+
+  // Capabilities contains the machine type capabilities.
+  // +optional
+  map<string, CapabilityValues> capabilities = 8;
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.

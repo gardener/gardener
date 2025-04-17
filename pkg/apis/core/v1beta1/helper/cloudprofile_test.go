@@ -1415,5 +1415,43 @@ var _ = Describe("Helper", func() {
 				false,
 			),
 		)
+
+		DescribeTable("#GetArchitecturesFromImageVersion",
+			func(valuesInCapabilitySets, valuesInArchitecturesField, expectedResult []string) {
+				imageVersion := gardencorev1beta1.MachineImageVersion{
+					Architectures: valuesInArchitecturesField,
+				}
+
+				for _, architecture := range valuesInCapabilitySets {
+					imageVersion.CapabilitySets = append(imageVersion.CapabilitySets, gardencorev1beta1.CapabilitySet{
+						Capabilities: gardencorev1beta1.Capabilities{"architecture": gardencorev1beta1.CapabilityValues{architecture}},
+					})
+				}
+
+				Expect(GetArchitecturesFromImageVersion(imageVersion)).To(ConsistOf(expectedResult))
+			},
+			Entry("Should return nil", nil, nil, nil),
+			Entry("Should return architecture in set", []string{"amd64", "arm64"}, []string{"ia-64"}, []string{"amd64", "arm64"}),
+			Entry("Should fall back to architectures field", nil, []string{"amd64", "arm64"}, []string{"amd64", "arm64"}),
+		)
+
+		DescribeTable("#ArchitectureSupportedByImageVersion",
+			func(supportedArchitectures []string, requestedArchitecture string, expectedResult bool) {
+				imageVersion := gardencorev1beta1.MachineImageVersion{
+					Architectures: supportedArchitectures,
+				}
+
+				for _, architecture := range supportedArchitectures {
+					imageVersion.CapabilitySets = append(imageVersion.CapabilitySets, gardencorev1beta1.CapabilitySet{
+						Capabilities: gardencorev1beta1.Capabilities{"architecture": gardencorev1beta1.CapabilityValues{architecture}},
+					})
+				}
+
+				Expect(ArchitectureSupportedByImageVersion(imageVersion, requestedArchitecture)).To(Equal(expectedResult))
+			},
+			Entry("Should be false for void architectures", nil, "arm64", false),
+			Entry("Should be false for unsupported architecture", []string{"amd64", "arm64"}, "ia-64", false),
+			Entry("Should be true for supported architecture", []string{"amd64", "arm64"}, "arm64", true),
+		)
 	})
 })

@@ -5,9 +5,14 @@
 package core
 
 import (
+	"slices"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 // +genclient
@@ -64,6 +69,11 @@ type CloudProfileSpec struct {
 	// Limits configures operational limits for Shoot clusters using this CloudProfile.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot/shoot_limits.md.
 	Limits *Limits
+	// Capabilities contains the definition of all possible capabilities in the CloudProfile.
+	// Only capabilities and values defined here can be used to describe MachineImages and MachineTypes.
+	// The order of values for a given capability is relevant. The most important value is listed first.
+	// During maintenance upgrades, the image that matches most capabilities will be selected.
+	Capabilities []CapabilityDefinition
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
@@ -110,6 +120,22 @@ type MachineImageVersion struct {
 	KubeletVersionConstraint *string
 	// InPlaceUpdates contains the configuration for in-place updates for this machine image version.
 	InPlaceUpdates *InPlaceUpdates
+	// CapabilitySets is an array of capability sets. Each entry represents a combination of capabilities that is provided by
+	// the machine image version.
+	CapabilitySets []CapabilitySet
+}
+
+// SupportsArchitecture checks if the machine image version supports a given architecture.
+func (m *MachineImageVersion) SupportsArchitecture(capabilities Capabilities, architecture string) bool {
+	if len(capabilities) == 0 {
+		return slices.Contains(m.Architectures, architecture)
+	}
+	for _, capability := range m.CapabilitySets {
+		if slices.Contains(capability.Capabilities[constants.ArchitectureName], architecture) {
+			return true
+		}
+	}
+	return slices.Contains(capabilities[constants.ArchitectureName], architecture)
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -138,6 +164,16 @@ type MachineType struct {
 	Usable *bool
 	// Architecture is the CPU architecture of this machine type.
 	Architecture *string
+	// Capabilities contains the machine type capabilities.
+	Capabilities Capabilities
+}
+
+// GetArchitecture returns the architecture of the machine type.
+func (m *MachineType) GetArchitecture() string {
+	if len(m.Capabilities[constants.ArchitectureName]) == 1 {
+		return m.Capabilities[constants.ArchitectureName][0]
+	}
+	return ptr.Deref(m.Architecture, "")
 }
 
 // MachineTypeStorage is the amount of storage associated with the root volume of this machine type.
@@ -261,4 +297,23 @@ type InPlaceUpdates struct {
 	Supported bool
 	// MinVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
 	MinVersionForUpdate *string
+}
+
+// CapabilityDefinition contains the Name and Values of a capability.
+type CapabilityDefinition struct {
+	Name   string
+	Values CapabilityValues
+}
+
+// CapabilityValues contains capability values.
+// This is a workaround as the Protobuf generator can't handle a map with slice values.
+type CapabilityValues []string
+
+// Capabilities of a machine type or machine image.
+type Capabilities map[string]CapabilityValues
+
+// CapabilitySet is a wrapper for Capabilities.
+// This is a workaround as the Protobuf generator can't handle a slice of maps.
+type CapabilitySet struct {
+	Capabilities
 }

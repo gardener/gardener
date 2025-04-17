@@ -33,6 +33,7 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/ptr"
 
+	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -1491,7 +1492,7 @@ func validateMachineTypes(constraints []gardencorev1beta1.MachineType, machine, 
 	)
 
 	for _, t := range constraints {
-		if ptr.Equal(t.Architecture, machine.Architecture) {
+		if t.GetArchitecture() == ptr.Deref(machine.Architecture, "") {
 			machinesWithSupportedArchitecture.Insert(t.Name)
 		}
 		if ptr.Deref(t.Usable, false) {
@@ -1749,18 +1750,13 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 		return nil, field.Invalid(fldPath, imageReference, "the cloud profile does not contain any machine image - cannot create shoot cluster")
 	}
 
-	var defaultImage *core.MachineImage
+	var defaultImage *gardencorev1beta1.MachineImage
 
 	if image != nil && len(image.Name) != 0 {
 		for _, mi := range machineImages {
 			machineImage := mi
 			if machineImage.Name == image.Name {
-				coreMachineImage := &core.MachineImage{}
-				if err := gardencorev1beta1.Convert_v1beta1_MachineImage_To_core_MachineImage(&machineImage, coreMachineImage, nil); err != nil {
-					return nil, field.Invalid(fldPath, machineImage.Name, fmt.Sprintf("failed to convert machine image from cloud profile: %s", err.Error()))
-				}
-				defaultImage = coreMachineImage
-
+				defaultImage = &machineImage
 				break
 			}
 		}
@@ -1772,13 +1768,8 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 		for _, mi := range machineImages {
 			machineImage := mi
 			for _, version := range machineImage.Versions {
-				coreMachineImage := &core.MachineImage{}
-				if err := gardencorev1beta1.Convert_v1beta1_MachineImage_To_core_MachineImage(&machineImage, coreMachineImage, nil); err != nil {
-					return nil, field.Invalid(fldPath, machineImage.Name, fmt.Sprintf("failed to convert machine image from cloud profile: %s", err.Error()))
-				}
-
-				if slices.Contains(version.Architectures, *arch) {
-					defaultImage = coreMachineImage
+				if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(version), *arch) {
+					defaultImage = &machineImage
 					break
 				}
 			}
@@ -1817,7 +1808,7 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 	var validVersions []core.MachineImageVersion
 
 	for _, version := range defaultImage.Versions {
-		if !slices.Contains(version.Architectures, *arch) {
+		if !v1beta1helper.ArchitectureSupportedByImageVersion(version, *arch) {
 			continue
 		}
 
@@ -1832,7 +1823,12 @@ func getDefaultMachineImage(machineImages []gardencorev1beta1.MachineImage, imag
 			machineImageVersionMinor != nil && parsedVersion.Minor() != *machineImageVersionMinor {
 			continue
 		}
-		validVersions = append(validVersions, version)
+
+		var coreVersion core.MachineImageVersion
+		if err := api.Scheme.Convert(&version, &coreVersion, nil); err != nil {
+			return nil, field.InternalError(fldPath, fmt.Errorf("failed to convert machine image from cloud profile: %s", err.Error()))
+		}
+		validVersions = append(validVersions, coreVersion)
 	}
 
 	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(validVersions, true)
@@ -1885,7 +1881,7 @@ func validateMachineImagesConstraints(a admission.Attributes, constraints []gard
 					}
 				}
 
-				if slices.Contains(machineVersion.Architectures, *machine.Architecture) {
+				if slices.Contains(v1beta1helper.GetArchitecturesFromImageVersion(machineVersion), *machine.Architecture) {
 					machineImageVersionsWithSupportedArchitecture.Insert(machineImageVersion)
 				}
 

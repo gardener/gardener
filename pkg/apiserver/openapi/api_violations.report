@@ -3,6 +3,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,AvailabilityZone,UnavailableVolumeTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CARotation,PendingWorkersRollouts
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CRI,ContainerRuntimes
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,Capabilities
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,MachineImages
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,MachineTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,Regions
@@ -30,6 +31,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImage,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,Architectures
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CRI
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CapabilitySets
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,MachineImages
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,MachineTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NamespacedCloudProfileSpec,VolumeTypes
