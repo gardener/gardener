@@ -342,6 +342,12 @@ var _ = Describe("Shoot Status controller tests", func() {
 		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = nil
 		Expect(testClient.Status().Update(ctx, shoot)).To(Succeed())
 
+		By("Waiting until the shoot status is observed by the manager")
+		Eventually(func(g Gomega) {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(BeNil())
+		}).Should(Succeed())
+
 		patch := client.MergeFrom(worker.DeepCopy())
 		workerPoolHashMap := map[string]string{
 			"worker1": "ef492a9674e2778a",

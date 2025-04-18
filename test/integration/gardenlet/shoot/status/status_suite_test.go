@@ -8,7 +8,6 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -19,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
-	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +38,7 @@ import (
 	"github.com/gardener/gardener/test/utils/namespacefinalizer"
 )
 
-func TestState(t *testing.T) {
+func TestStatus(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Test Integration Gardenlet Shoot Status Suite")
 }
@@ -48,9 +46,8 @@ func TestState(t *testing.T) {
 const testID = "shoot-status-controller-test"
 
 var (
-	ctx       = context.Background()
-	log       logr.Logger
-	fakeClock *testclock.FakeClock
+	ctx = context.Background()
+	log logr.Logger
 
 	restConfig *rest.Config
 	testEnv    *gardenerenvtest.GardenerTestEnvironment
@@ -136,8 +133,6 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 	mgrClient = mgr.GetClient()
-
-	fakeClock = testclock.NewFakeClock(time.Now().Round(time.Second))
 
 	By("Register controller")
 	Expect((&status.Reconciler{
