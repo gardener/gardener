@@ -21,7 +21,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/test/e2e/gardener/managedseed"
+	gardenere2e "github.com/gardener/gardener/test/e2e/gardener"
 )
 
 var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
@@ -41,7 +41,7 @@ var _ = Describe("Seed Tests", Label("Seed", "default"), func() {
 			seedList := &gardencorev1beta1.SeedList{}
 			Expect(testClient.List(ctx, seedList)).To(Succeed())
 			for _, s := range seedList.Items {
-				if s.Name != managedseed.GetSeedName() {
+				if s.Name != gardenere2e.DefaultManagedSeedName() {
 					seed = s.DeepCopy()
 					break
 				}
