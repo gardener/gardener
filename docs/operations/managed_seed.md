@@ -45,25 +45,6 @@ In order to make the `ManagedSeed` controller renew the gardenlet's kubeconfig s
 
 It is also possible to trigger the renewal on the secret directly, see [Rotate Certificates Using Bootstrap kubeconfig](../concepts/gardenlet.md#rotate-certificates-using-bootstrap-kubeconfig).
 
-### Specifying `apiServer` `replicas` and `autoscaler` Options
-
-> 📌 **Deprecation Notice**: The annotation `shoot.gardener.cloud/managed-seed-api-server` is deprecated and will be removed in a future release. Instead, consider enabling high availability for the ManagedSeed's Shoot control plane.
-
-There are few configuration options that are not supported in a `Shoot` resource but due to backward compatibility reasons it is possible to specify them for a `Shoot` that is referred by a `ManagedSeed`. These options are:
-
-Option | Description
---- | ---
-`apiServer.autoscaler.minReplicas` | Controls the minimum number of `kube-apiserver` replicas for the shoot registered as seed cluster.
-`apiServer.autoscaler.maxReplicas` | Controls the maximum number of `kube-apiserver` replicas for the shoot registered as seed cluster.
-`apiServer.replicas` | Controls how many `kube-apiserver` replicas the shoot registered as seed cluster gets by default.
-
-It is possible to specify these options via the `shoot.gardener.cloud/managed-seed-api-server` annotation on the Shoot resource. Example configuration:
-
-```yaml
-  annotations:
-    shoot.gardener.cloud/managed-seed-api-server: "apiServer.replicas=3,apiServer.autoscaler.minReplicas=3,apiServer.autoscaler.maxReplicas=6"
-```
-
 ### Enforced Configuration Options
 
 The following configuration options are enforced by Gardener API server for the ManagedSeed resources:
