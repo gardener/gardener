@@ -187,14 +187,14 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	}}
 	service.Spec.Ports = kubernetesutils.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
 
-	registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-	data, err := registry.AddAllAndSerialize(client.Object(service))
+	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+	data, err := registry.AddAllAndSerialize(service)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to serialize objects: %w", err)
 	}
 
-	if err := managedresources.CreateForShoot(ctx, k.client, service.Namespace, service.Name, managedresources.LabelValueGardener, false, data); err != nil {
-		return err
+	if err := managedresources.CreateForSeed(ctx, k.client, k.namespace, managedResourceName, false, data); err != nil {
+		return fmt.Errorf("failed to create resources for seed: %w", err)
 	}
 
 	if err := shootAccessSecret.Reconcile(ctx, k.client); err != nil {
