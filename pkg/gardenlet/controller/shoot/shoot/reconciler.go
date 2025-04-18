@@ -920,20 +920,21 @@ func removeNonExistentPoolsFromPendingWorkersRollouts(shoot *gardencorev1beta1.S
 		}
 	}
 
-	if shoot.Status.InPlaceUpdates != nil && shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
-		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, func(workerName string) bool {
-			return !poolNames.Has(workerName)
-		})
+	if shoot.Status.InPlaceUpdates != nil {
+		if shoot.Status.InPlaceUpdates.PendingWorkerUpdates != nil {
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate, func(workerName string) bool {
+				return !poolNames.Has(workerName)
+			})
 
-		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, func(workerName string) bool {
-			return !poolNames.Has(workerName)
-		})
+			shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, func(workerName string) bool {
+				return !poolNames.Has(workerName)
+			})
 
-		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0 && len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
-			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
-		}
-
-		if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
+			if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0 && len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+				shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
+				shoot.Status.InPlaceUpdates = nil
+			}
+		} else {
 			shoot.Status.InPlaceUpdates = nil
 		}
 	}

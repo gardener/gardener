@@ -39,7 +39,7 @@ kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/oper
 
 ## Force-update a worker pool with InPlace update strategy
 
-Annotate the shoot with `gardener.cloud/operation=force-in-place-update` to force an update for worker pools using the update strategy `AutoInPlaceUpdate` or `ManualInPlaceUpdate`. Without this annotation, any subsequent updates to the same worker pool are denied until the current in-place update has been successfully reconciled.
+Annotate the shoot with `gardener.cloud/operation=force-in-place-update` to force an update for worker pools using the update strategy `AutoInPlaceUpdate` or `ManualInPlaceUpdate`. Without this annotation, any subsequent updates to the same worker pool are denied until the `Shoot` has been successfully reconciled following the current in-place update.
 
 
 ```bash

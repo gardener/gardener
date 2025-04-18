@@ -2756,13 +2756,15 @@ func ValidateInPlaceUpdates(newShoot, oldShoot *core.Shoot) field.ErrorList {
 
 	oldControlPlaneKubernetesVersion, err := semver.NewVersion(oldShoot.Spec.Kubernetes.Version)
 	if err != nil {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), "old control plane kubernetes version is not a valid semver version"))
-		return allErrs
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), fmt.Sprintf("failed to parse old control plane kubernetes version: %v", err)))
 	}
 
 	newControlPlaneKubernetesVersion, err := semver.NewVersion(newShoot.Spec.Kubernetes.Version)
 	if err != nil {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), "new control plane kubernetes version is not a valid semver version"))
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("spec", "kubernetes", "version"), fmt.Sprintf("failed to parse new control plane kubernetes version: %v", err)))
+	}
+
+	if len(allErrs) > 0 {
 		return allErrs
 	}
 
