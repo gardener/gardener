@@ -83,7 +83,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(extensionCRDDeployer.Deploy(ctx)).To(Succeed())
 
-		etcdCRDDeployer, err := etcd.NewCRD(c, k8sVersion)
+		etcdCRDDeployer, err := etcd.NewCRD(c, applier, k8sVersion)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(etcdCRDDeployer.Deploy(ctx)).To(Succeed())
 

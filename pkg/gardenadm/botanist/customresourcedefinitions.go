@@ -19,7 +19,10 @@ import (
 
 // ReconcileCustomResourceDefinitions reconciles the custom resource definitions.
 func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Context) error {
-	vpaCRDDeployer := vpa.NewCRD(b.SeedClientSet.Applier(), nil)
+	vpaCRDDeployer, err := vpa.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier(), nil)
+	if err != nil {
+		return fmt.Errorf("failed creating VPA CRD deployer: %w", err)
+	}
 
 	prometheusCRDDeployer, err := prometheusoperator.NewCRDs(b.SeedClientSet.Client(), b.SeedClientSet.Applier())
 	if err != nil {

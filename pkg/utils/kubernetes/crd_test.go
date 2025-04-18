@@ -154,4 +154,36 @@ spec:
 			Expect(crdObj).ToNot(BeNil())
 		})
 	})
+
+	Describe("EncodeCRD", func() {
+		var (
+			crdObj apiextensionsv1.CustomResourceDefinition
+		)
+		It("should successfully encode the CRD", func() {
+			crdObj = apiextensionsv1.CustomResourceDefinition{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foos.samplecontroller.k8s.io",
+				},
+				Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+					Group: "samplecontroller.k8s.io",
+					Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
+						{
+							Name:    "v1alpha1",
+							Served:  true,
+							Storage: true,
+						},
+					},
+				},
+			}
+			crdString, err := EncodeCRD(&crdObj)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(crdString).ToNot(BeEmpty())
+		})
+
+		It("return 'null' as string when nil pointer is passed", func() {
+			crdString, err := EncodeCRD(nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(crdString).To(Equal("null\n"))
+		})
+	})
 })

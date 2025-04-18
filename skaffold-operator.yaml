@@ -124,7 +124,7 @@ build:
             - pkg/component/kubernetes/scheduler
             - pkg/component/networking/coredns/constants
             - pkg/component/networking/istio
-            - pkg/component/networking/istio/charts/istio/istio-crds
+            - pkg/component/networking/istio/charts/istio/istio-crds/crd-all.gen.yaml
             - pkg/component/networking/istio/charts/istio/istio-ingress
             - pkg/component/networking/istio/charts/istio/istio-istiod
             - pkg/component/networking/nginxingress

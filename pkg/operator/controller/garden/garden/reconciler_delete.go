@@ -352,33 +352,33 @@ func (r *Reconciler) delete(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for extensions",
-			Fn:           c.extensionCRD.Destroy,
+			Fn:           component.OpWait(c.extensionCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for prometheus-operator",
-			Fn:           c.prometheusCRD.Destroy,
+			Fn:           component.OpWait(c.prometheusCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for fluent-operator",
-			Fn:           c.fluentCRD.Destroy,
+			Fn:           component.OpWait(c.fluentCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for Istio",
-			Fn:           c.istioCRD.Destroy,
+			Fn:           component.OpWait(c.istioCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying custom resource definition for VPA",
-			Fn:           c.vpaCRD.Destroy,
+			Fn:           component.OpWait(c.vpaCRD).Destroy,
 			SkipIf:       !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying ETCD-related custom resource definitions",
-			Fn:           c.etcdCRD.Destroy,
+			Fn:           component.OpWait(c.etcdCRD).Destroy,
 			Dependencies: flow.NewTaskIDs(destroyGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
