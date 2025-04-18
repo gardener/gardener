@@ -524,7 +524,7 @@ var _ = Describe("KubeScheduler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
-						ResourceVersion: "1",
+						ResourceVersion: "2",
 						Labels:          map[string]string{"origin": "gardener"},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
