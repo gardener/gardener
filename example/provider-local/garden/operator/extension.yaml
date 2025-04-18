@@ -17,6 +17,7 @@ spec:
       helm:
         ociRepository:
           ref: local-skaffold/gardener-extension-provider-local/charts/extension:v0.0.0
+      injectGardenKubeconfig: true
   resources:
   - kind: BackupBucket
     type: local

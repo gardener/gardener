@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -139,4 +140,5 @@ func ensureProviderExtension(extension *operatorv1alpha1.Extension, opts *Option
 		gardencorev1beta1.ControllerResource{Kind: extensionsv1alpha1.InfrastructureResource, Type: opts.ProviderType},
 		gardencorev1beta1.ControllerResource{Kind: extensionsv1alpha1.WorkerResource, Type: opts.ProviderType},
 	)
+	extension.Spec.Deployment.ExtensionDeployment.InjectGardenKubeconfig = ptr.To(true)
 }
