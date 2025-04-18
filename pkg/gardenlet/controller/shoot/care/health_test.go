@@ -423,11 +423,167 @@ var _ = Describe("health check", func() {
 	})
 
 	Describe("#CheckNodesScaling", func() {
+		Describe("Rolling update", func() {
+			It("should priotitise NodeRollOut over NodesScalingUp when returning an error if not enough machine objects as desired were created", func() {
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse},
+								{Type: machinev1alpha1.MachineDeploymentProgressing, Status: machinev1alpha1.ConditionTrue, Reason: "NewMachineSetNotAvailable"},
+							}},
+						},
+					},
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, []*corev1.Node{}, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(err).To(MatchError(ContainSubstring("not enough machine objects created yet")))
+			})
+
+			It("should return an error if not enough machine objects as desired were created", func() {
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentProgressing, Status: machinev1alpha1.ConditionTrue, Reason: "NewMachineSetNotAvailable"}, {},
+							}},
+						},
+					},
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, []*corev1.Node{}, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(err).To(MatchError(ContainSubstring("not enough machine objects created yet")))
+			})
+
+			It("should return an error when detecting erroneous machines", func() {
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachineUnknown},
+							},
+						},
+					},
+				}
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentProgressing, Status: machinev1alpha1.ConditionTrue, Reason: "NewMachineSetNotAvailable"}, {},
+							}},
+						},
+					},
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, []*corev1.Node{}, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(err).To(MatchError(ContainSubstring("is erroneous")))
+			})
+
+			It("should return an error when not enough ready nodes are registered", func() {
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachineRunning},
+							},
+						},
+					},
+				}
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+				nodeList := []*corev1.Node{{}}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentProgressing, Status: machinev1alpha1.ConditionTrue, Reason: "NewMachineSetNotAvailable"}, {},
+							}},
+						},
+					},
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(err).To(MatchError(ContainSubstring("not enough ready worker nodes registered in the cluster")))
+			})
+
+			It("should return progressing when detecting a regular node rollout (pending status)", func() {
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace},
+							Status: machinev1alpha1.MachineStatus{
+								CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachinePending},
+							},
+						},
+					},
+				}
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+				nodeList := []*corev1.Node{{}}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentProgressing, Status: machinev1alpha1.ConditionTrue, Reason: "NewMachineSetNotAvailable"}, {},
+							}},
+						},
+					},
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(err).To(MatchError(ContainSubstring("provisioning and should join the cluster soon")))
+			})
+
+			It("should return progressing when detecting a regular node rollout (no status)", func() {
+				machineList := &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{ObjectMeta: metav1.ObjectMeta{GenerateName: "obj-", Namespace: controlPlaneNamespace}},
+					},
+				}
+				for _, machine := range machineList.Items {
+					Expect(fakeClient.Create(ctx, &machine)).To(Succeed())
+				}
+				nodeList := []*corev1.Node{{}}
+				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
+					Items: []machinev1alpha1.MachineDeployment{
+						{
+							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
+							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentProgressing, Status: machinev1alpha1.ConditionTrue, Reason: "NewMachineSetNotAvailable"}, {},
+							}},
+						},
+					},
+				}
+				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
+				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(err).To(MatchError(ContainSubstring("provisioning and should join the cluster soon")))
+			})
+		})
+
 		Describe("Scaling up", func() {
 			It("should return true if number of ready nodes equal number of desired machines", func() {
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
 						},
@@ -453,10 +609,12 @@ var _ = Describe("health check", func() {
 			It("should return an error if not enough machine objects as desired were created", func() {
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {},
+							}},
 						},
 					},
 				}
@@ -482,10 +640,12 @@ var _ = Describe("health check", func() {
 
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {},
+							}},
 						},
 					},
 				}
@@ -511,10 +671,12 @@ var _ = Describe("health check", func() {
 				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {},
+							}},
 						},
 					},
 				}
@@ -540,10 +702,12 @@ var _ = Describe("health check", func() {
 				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {},
+							}},
 						},
 					},
 				}
@@ -564,10 +728,12 @@ var _ = Describe("health check", func() {
 				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
-							Status:     machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {}}},
+							Status: machinev1alpha1.MachineDeploymentStatus{Conditions: []machinev1alpha1.MachineDeploymentCondition{
+								{Type: machinev1alpha1.MachineDeploymentAvailable, Status: machinev1alpha1.ConditionFalse}, {},
+							}},
 						},
 					},
 				}
@@ -582,7 +748,7 @@ var _ = Describe("health check", func() {
 				nodeList := []*corev1.Node{{}}
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
-						machinev1alpha1.MachineDeployment{
+						{
 							ObjectMeta: metav1.ObjectMeta{GenerateName: "deploy", Namespace: controlPlaneNamespace},
 							Spec:       machinev1alpha1.MachineDeploymentSpec{Replicas: int32(1)},
 						},
