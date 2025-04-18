@@ -4226,6 +4226,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 					EncryptedResources: []string{"configmaps"},
 				}),
+				Entry("when AutoInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
+							AutoInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
+				Entry("when ManualInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
+							ManualInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
 			)
 
 			DescribeTable("completing rotation of all credentials",
@@ -4529,6 +4549,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
+				Entry("when AutoInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
+							AutoInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
+				Entry("when ManualInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
+							ManualInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
 			)
 
 			DescribeTable("completing CA rotation",
@@ -4697,6 +4737,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 							ServiceAccountKey: &core.ServiceAccountKeyRotation{
 								Phase: core.RotationCompleted,
 							},
+						},
+					},
+				}),
+				Entry("when AutoInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
+							AutoInPlaceUpdate: []string{"worker-1"},
+						},
+					},
+				}),
+				Entry("when ManualInPlaceUpdate workers rollout is pending", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
+							ManualInPlaceUpdate: []string{"worker-1"},
 						},
 					},
 				}),
@@ -7579,6 +7639,236 @@ var _ = Describe("Shoot Validation Tests", func() {
 					})),
 				))
 			})
+		})
+	})
+
+	Describe("#ValidateInPlaceUpdates", func() {
+		var newShoot, oldShoot *core.Shoot
+
+		BeforeEach(func() {
+			oldShoot = &core.Shoot{
+				Spec: core.ShootSpec{
+					Kubernetes: core.Kubernetes{
+						Version: "1.31.0",
+						Kubelet: &core.KubeletConfig{
+							EvictionHard: &core.KubeletConfigEviction{
+								MemoryAvailable:  ptr.To("100Mi"),
+								ImageFSAvailable: ptr.To("100Mi"),
+							},
+						},
+					},
+					Provider: core.Provider{
+						Workers: []core.Worker{
+							{
+								Name:           "worker-1",
+								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+								Kubernetes: &core.WorkerKubernetes{
+									Version: ptr.To("1.30.0"),
+									Kubelet: &core.KubeletConfig{
+										EvictionHard: &core.KubeletConfigEviction{
+											MemoryAvailable:  ptr.To("200Mi"),
+											ImageFSAvailable: ptr.To("200Mi"),
+										},
+									},
+								},
+								Machine: core.Machine{
+									Image: &core.ShootMachineImage{
+										Version: "1.5.0",
+									},
+								},
+							},
+							{
+								Name:           "worker-2",
+								UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+								Machine: core.Machine{
+									Image: &core.ShootMachineImage{
+										Version: "1.5.0",
+									},
+								},
+							},
+						},
+					},
+				},
+				Status: core.ShootStatus{
+					InPlaceUpdates: &core.InPlaceUpdatesStatus{
+						PendingWorkerUpdates: &core.PendingWorkerUpdates{
+							AutoInPlaceUpdate:   []string{"worker-1"},
+							ManualInPlaceUpdate: []string{"worker-2"},
+						},
+					},
+				},
+			}
+
+			newShoot = oldShoot.DeepCopy()
+
+			newShoot.Spec.Provider.Workers[0].Machine.Image.Version = "1.5.1"
+			newShoot.Spec.Provider.Workers[1].Machine.Image.Version = "1.5.1"
+		})
+
+		It("should return no errors if force-update annotation is present", func() {
+			newShoot.Annotations = map[string]string{
+				v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationForceInPlaceUpdate,
+			}
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
+		})
+
+		It("should return no errors if there are no pending in-place updates", func() {
+			newShoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
+		})
+
+		It("should return an error if the Kubernetes version is invalid", func() {
+			oldShoot.Spec.Kubernetes.Version = "invalid-version"
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.version"),
+					"Detail": Equal("failed to parse old control plane kubernetes version: Invalid Semantic Version"),
+				})),
+			))
+		})
+
+		It("should return an error if the new Kubernetes version is invalid", func() {
+			newShoot.Spec.Kubernetes.Version = "invalid-version"
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.version"),
+					"Detail": Equal("failed to parse new control plane kubernetes version: Invalid Semantic Version"),
+				})),
+			))
+		})
+
+		It("should return an error if the old worker Kubernetes version is invalid", func() {
+			oldShoot.Spec.Provider.Workers[0].Kubernetes.Version = ptr.To("invalid-version")
+			newShoot.Spec.Provider.Workers[1].Machine.Image.Version = oldShoot.Spec.Provider.Workers[1].Machine.Image.Version
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[0]"),
+					"Detail": ContainSubstring("failed to calculate effective kubernetes version for old worker"),
+				})),
+			))
+		})
+
+		It("should return an error if the new worker Kubernetes version is invalid", func() {
+			newShoot.Spec.Provider.Workers[0].Kubernetes.Version = ptr.To("invalid-version")
+			newShoot.Spec.Provider.Workers[1].Machine.Image.Version = oldShoot.Spec.Provider.Workers[1].Machine.Image.Version
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[0]"),
+					"Detail": ContainSubstring("failed to calculate effective kubernetes version for new worker"),
+				})),
+			))
+		})
+
+		It("should return an error if the worker pool is undergoing an in-place update and changes are made", func() {
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[0]"),
+					"Detail": Equal("the worker pool \"worker-1\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[1]"),
+					"Detail": Equal("the worker pool \"worker-2\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
+				})),
+			))
+		})
+
+		It("should return an error if the worker pool is undergoing an in-place update and changes are made to the Shoot kubelet config", func() {
+			newShoot.Spec.Kubernetes.Kubelet.EvictionHard.MemoryAvailable = ptr.To("150Mi")
+			newShoot.Spec.Provider.Workers[0].Machine.Image.Version = oldShoot.Spec.Provider.Workers[0].Machine.Image.Version
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[1]"),
+					"Detail": Equal("the worker pool \"worker-2\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
+				})),
+			))
+		})
+
+		It("should return an error if the worker pool is undergoing an in-place update and changes are made to the Shoot kubernetes version", func() {
+			newShoot.Spec.Kubernetes.Version = "1.32.0"
+			newShoot.Spec.Provider.Workers[0].Machine.Image.Version = oldShoot.Spec.Provider.Workers[0].Machine.Image.Version
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[1]"),
+					"Detail": Equal("the worker pool \"worker-2\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
+				})),
+			))
+		})
+
+		It("should return no errors if the worker pool is not undergoing an in-place update", func() {
+			newShoot.Spec.Provider.Workers[0] = oldShoot.Spec.Provider.Workers[0]
+			newShoot.Spec.Provider.Workers[1] = oldShoot.Spec.Provider.Workers[1]
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(BeEmpty())
+		})
+
+		It("should return no errors if the worker pool is newly added", func() {
+			oldShoot.Spec.Provider.Workers = []core.Worker{
+				{
+					Name:           "worker-2",
+					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					Machine: core.Machine{
+						Image: &core.ShootMachineImage{
+							Version: "1.5.0",
+						},
+					},
+				},
+				{
+					Name:           "worker-3",
+					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					Machine: core.Machine{
+						Image: &core.ShootMachineImage{
+							Version: "1.5.0",
+						},
+					},
+				},
+			}
+
+			newShoot.Spec.Provider.Workers = []core.Worker{
+				{
+					Name:           "worker-1",
+					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					Machine: core.Machine{
+						Image: &core.ShootMachineImage{
+							Version: "1.5.1",
+						},
+					},
+				},
+				{
+					Name:           "worker-3",
+					UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+					Machine: core.Machine{
+						Image: &core.ShootMachineImage{
+							Version: "1.5.1",
+						},
+					},
+				},
+			}
+
+			newShoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = []string{"worker-1", "worker-2", "worker-3"}
+
+			Expect(ValidateInPlaceUpdates(newShoot, oldShoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[1]"),
+					"Detail": Equal("the worker pool \"worker-3\" is currently undergoing an in-place update. No changes are allowed to the worker pool, the Shoot Kubernetes version, or the Shoot kubelet configuration. You can force an update with annotating the Shoot with 'gardener.cloud/operation=force-in-place-update'"),
+				})),
+			))
 		})
 	})
 })

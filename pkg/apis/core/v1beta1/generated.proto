@@ -1172,6 +1172,13 @@ message InPlaceUpdates {
   optional string minVersionForUpdate = 2;
 }
 
+// InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.
+message InPlaceUpdatesStatus {
+  // PendingWorkerUpdates contains information about worker pools pending in-place updates.
+  // +optional
+  optional PendingWorkerUpdates pendingWorkerUpdates = 1;
+}
+
 // Ingress configures the Ingress specific settings of the cluster
 message Ingress {
   // Domain specifies the IngressDomain of the cluster pointing to the ingress controller endpoint. It will be used
@@ -2250,6 +2257,17 @@ message OpenIDConnectClientAuthentication {
   // The client Secret for the OpenID Connect client.
   // +optional
   optional string secret = 2;
+}
+
+// PendingWorkerUpdates contains information about worker pools pending in-place update.
+message PendingWorkerUpdates {
+  // AutoInPlaceUpdate contains the names of the pending worker pools with strategy AutoInPlaceUpdate.
+  // +optional
+  repeated string autoInPlaceUpdate = 1;
+
+  // ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate..
+  // +optional
+  repeated string manualInPlaceUpdate = 2;
 }
 
 // PendingWorkersRollout contains the name of a worker pool and the initiation time of their last rollout due to
@@ -3361,6 +3379,10 @@ message ShootStatus {
   // Networking contains information about cluster networking such as CIDRs.
   // +optional
   optional NetworkingStatus networking = 19;
+
+  // InPlaceUpdates contains information about in-place updates for the Shoot workers.
+  // +optional
+  optional InPlaceUpdatesStatus inPlaceUpdates = 20;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

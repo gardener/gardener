@@ -161,6 +161,8 @@ type ShootStatus struct {
 	EncryptedResources []string
 	// Networking contains information about cluster networking such as CIDRs.
 	Networking *NetworkingStatus
+	// InPlaceUpdates contains information about in-place updates for the Shoot workers.
+	InPlaceUpdates *InPlaceUpdatesStatus
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.
@@ -187,6 +189,20 @@ type NetworkingStatus struct {
 	// Infrastructure extension controller. For certain environments the egress IPs may not be stable in which case the
 	// extension controller may opt to not populate this field.
 	EgressCIDRs []string
+}
+
+// InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.
+type InPlaceUpdatesStatus struct {
+	// PendingWorkerUpdates contains information about worker pools pending in-place updates.
+	PendingWorkerUpdates *PendingWorkerUpdates
+}
+
+// PendingWorkerUpdates contains information about worker pools pending in-place update.
+type PendingWorkerUpdates struct {
+	// AutoInPlaceUpdate contains the names of the pending worker pools with strategy AutoInPlaceUpdate.
+	AutoInPlaceUpdate []string
+	// ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate.
+	ManualInPlaceUpdate []string
 }
 
 // ShootCredentials contains information about the shoot credentials.

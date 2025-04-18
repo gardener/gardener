@@ -673,6 +673,13 @@ var _ = Describe("Strategy", func() {
 					true,
 					true,
 				),
+
+				Entry("force-in-place-update",
+					v1beta1constants.ShootOperationForceInPlaceUpdate,
+					nil,
+					false,
+					true,
+				),
 			)
 		})
 

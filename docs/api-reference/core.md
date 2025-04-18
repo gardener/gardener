@@ -6155,6 +6155,39 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.InPlaceUpdatesStatus">InPlaceUpdatesStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
+</p>
+<p>
+<p>InPlaceUpdatesStatus contains information about in-place updates for the Shoot workers.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>pendingWorkerUpdates</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.PendingWorkerUpdates">
+PendingWorkerUpdates
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PendingWorkerUpdates contains information about worker pools pending in-place updates.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Ingress">Ingress
 </h3>
 <p>
@@ -9654,6 +9687,49 @@ string
 <td>
 <em>(Optional)</em>
 <p>The client Secret for the OpenID Connect client.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.PendingWorkerUpdates">PendingWorkerUpdates
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.InPlaceUpdatesStatus">InPlaceUpdatesStatus</a>)
+</p>
+<p>
+<p>PendingWorkerUpdates contains information about worker pools pending in-place update.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>autoInPlaceUpdate</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AutoInPlaceUpdate contains the names of the pending worker pools with strategy AutoInPlaceUpdate.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>manualInPlaceUpdate</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate..</p>
 </td>
 </tr>
 </tbody>
@@ -13296,6 +13372,20 @@ NetworkingStatus
 <td>
 <em>(Optional)</em>
 <p>Networking contains information about cluster networking such as CIDRs.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>inPlaceUpdates</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.InPlaceUpdatesStatus">
+InPlaceUpdatesStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InPlaceUpdates contains information about in-place updates for the Shoot workers.</p>
 </td>
 </tr>
 </tbody>
