@@ -1,19 +1,16 @@
-# GEP-[34]: Introducing OpenTelemetry Operator and Collectors in Shoot Control Planes
-
-**title:** Introducing OpenTelemetry Operator and Collectors in Shoot Control Planes
-**gep-number:** [34]
-**creation-date:** 2025-04-12
-**status:** implementable
-**authors:**
-
+---
+title: Introducing OpenTelemetry Operator and Collectors in Shoot Control Planes
+gep-number: 34
+creation-date: 2025-04-12
+status: implementable
+authors:
 - "@nickytd"
 - "@rrhubenov"
-
-**reviewers:**
-
-- ""
-
+reviewers:
+- 
 ---
+
+# GEP-[34]: Introducing OpenTelemetry Operator and Collectors in Shoot Control Planes
 
 ## Table of Contents
 
