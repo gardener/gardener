@@ -7,7 +7,7 @@ authors:
 - "@nickytd"
 - "@rrhubenov"
 reviewers:
-- 
+-
 ---
 
 # GEP-[34]: Introducing OpenTelemetry Operator and Collectors in Shoot Control Planes
@@ -25,7 +25,7 @@ reviewers:
 
 ## Summary
 
-This proposal introduces the OpenTelemetry operator and deploys OpenTelemetry collectors within the shoot control plane namespaces of Gardener-managed clusters. Building on the foundation laid by [GEP-19](https://github.com/gardener/gardener/blob/master/docs/proposals/19-migrating-observability-stack-to-operators.md) (migration to Prometheus and Fluent-bit operators) and the [Observability 2.0](https://github.com/gardener/logging/blob/master/docs/observability-2.0/Observability%202.0.md) vision, this GEP advances Gardener's observability stack by adopting OpenTelemetry standards. The initiative aims to layout the foundation for building a more cohesive and interoperable observability framework.
+This proposal introduces the OpenTelemetry operator and deploys OpenTelemetry collectors within the shoot control plane namespaces of Gardener-managed clusters. Building on the foundation laid by [GEP-19](https://github.com/gardener/gardener/blob/master/docs/proposals/19-migrating-observability-stack-to-operators.md) (migration to Prometheus and Fluent-bit operators) and the [Observability 2.0](https://github.com/gardener/logging/blob/master/docs/observability-2.0/Observability%202.0.md) vision, this GEP advances Gardener's observability stack by adopting OpenTelemetry standards. The initiative aims to layout the foundation for building a more cohesive and interoperable observability framework. This GEP takes the first step by introducing OpenTelemetry for logging, aligning with the Observability 2.0 vision, with future enhancements planned to include metrics and optionally traces.
 
 ---
 
