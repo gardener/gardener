@@ -31,7 +31,7 @@ This proposal introduces the OpenTelemetry operator and deploys OpenTelemetry co
 
 ## Motivation
 
-Gardener's current observability stack, while improved by the operator-based approach in *GEP-19*, still relies on vendor specific format and protocols for collecting, processing and storing observability signals. This brings challenges in extending both components and scenarios used to process these signals and enforces lock-in integration scenarios with external consumers. By introducing the OpenTelemetry operator and collectors, this proposal addresses these challenges, aligning Gardener with industry trends and preparing it for future observability enhancements, such as unified visualization and tracing support.
+Gardener's current observability stack, while improved by the operator-based approach in [GEP-19](https://github.com/gardener/gardener/blob/master/docs/proposals/19-migrating-observability-stack-to-operators.md), still relies on vendor specific format and protocols for collecting, processing and storing observability signals. This brings challenges in extending both components and scenarios used to process these signals and enforces lock-in integration scenarios with external consumers. By introducing the OpenTelemetry operator and collectors, this proposal addresses these challenges, aligning Gardener with industry trends and preparing it for future observability enhancements, such as unified visualization and tracing support.
 
 ### Goals
 
