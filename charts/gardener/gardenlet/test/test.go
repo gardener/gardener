@@ -740,6 +740,9 @@ func ComputeExpectedGardenletConfiguration(
 				ConcurrentSyncs: &five,
 				SyncPeriod:      &metav1.Duration{Duration: 6 * time.Hour},
 			},
+			ShootStatus: &gardenletconfigv1alpha1.ShootStatusControllerConfiguration{
+				ConcurrentSyncs: &five,
+			},
 			TokenRequestorServiceAccount: &gardenletconfigv1alpha1.TokenRequestorServiceAccountControllerConfiguration{
 				ConcurrentSyncs: &five,
 			},

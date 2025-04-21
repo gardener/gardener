@@ -49,6 +49,10 @@ const (
 func shootHibernatedConstraints(clock clock.Clock, conditions ...gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
+		// During hibernation, this condition will always be True, so we can skip it
+		if cond.Type == gardencorev1beta1.ShootManualInPlaceWorkersUpdated {
+			continue
+		}
 		hibernationConditions = append(hibernationConditions, v1beta1helper.UpdatedConditionWithClock(clock, cond, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated."))
 	}
 	return hibernationConditions
@@ -118,6 +122,9 @@ func (c *Constraint) constraintsChecks(
 		constraints.caCertificateValiditiesAcceptable = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.caCertificateValiditiesAcceptable, status, reason, message, errorCodes...)
 	}
 
+	status, reason, message = c.checkIfManualInPlaceWorkersUpdated()
+	constraints.manualInPlaceWorkersUpdated = v1beta1helper.UpdatedConditionWithClock(c.clock, constraints.manualInPlaceWorkersUpdated, status, reason, message)
+
 	// Now check constraints depending on the shoot's kube-apiserver to be up and running
 	shootClient, apiServerRunning, err := c.initializeShootClients()
 	if err != nil {
@@ -129,14 +136,14 @@ func (c *Constraint) constraintsChecks(
 
 		return filterOptionalConstraints(
 			[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated},
 		)
 	}
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return filterOptionalConstraints(
 			shootControlPlaneNotRunningConstraints(c.clock, constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied),
-			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable},
+			[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.manualInPlaceWorkersUpdated},
 		)
 	}
 	c.shootClient = shootClient.Client()
@@ -159,7 +166,7 @@ func (c *Constraint) constraintsChecks(
 
 	return filterOptionalConstraints(
 		[]gardencorev1beta1.Condition{constraints.hibernationPossible, constraints.maintenancePreconditionsSatisfied},
-		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks},
+		[]gardencorev1beta1.Condition{constraints.caCertificateValiditiesAcceptable, constraints.crdsWithProblematicConversionWebhooks, constraints.manualInPlaceWorkersUpdated},
 	)
 }
 
@@ -236,6 +243,26 @@ func (c *Constraint) CheckIfCACertificateValiditiesAcceptable(ctx context.Contex
 		fmt.Sprintf("All CA certificates are still valid for at least %s.", minimumValidity),
 		nil,
 		nil
+}
+
+func (c *Constraint) checkIfManualInPlaceWorkersUpdated() (gardencorev1beta1.ConditionStatus, string, string) {
+	if v1beta1helper.IsWorkerless(c.shoot.GetInfo()) {
+		return gardencorev1beta1.ConditionTrue,
+			"NoWorkerPoolsWithManualInPlaceUpdateStrategyPending",
+			"Shoot is workerless"
+	}
+
+	if c.shoot.GetInfo().Status.InPlaceUpdates == nil || c.shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates == nil ||
+		len(c.shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+		return gardencorev1beta1.ConditionTrue,
+			"NoWorkerPoolsWithManualInPlaceUpdateStrategyPending",
+			"No worker pools with manual in-place update strategy are pending"
+	}
+
+	return gardencorev1beta1.ConditionFalse,
+		"WorkerPoolsWithManualInPlaceUpdateStrategyPending",
+		fmt.Sprintf("Some worker pools in your Shoot with update strategy ManualInPlaceUpdate are pending update: %s",
+			strings.Join(c.shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, ", "))
 }
 
 // checkIfCRDsWithProblematicConversionWebhooksPresent checks whether there are CRDs with multiple stored versions and
@@ -425,6 +452,7 @@ type ShootConstraints struct {
 	maintenancePreconditionsSatisfied     gardencorev1beta1.Condition
 	caCertificateValiditiesAcceptable     gardencorev1beta1.Condition
 	crdsWithProblematicConversionWebhooks gardencorev1beta1.Condition
+	manualInPlaceWorkersUpdated           gardencorev1beta1.Condition
 }
 
 // ConvertToSlice returns the shoot constraints as a slice.
@@ -434,6 +462,7 @@ func (g ShootConstraints) ConvertToSlice() []gardencorev1beta1.Condition {
 		g.maintenancePreconditionsSatisfied,
 		g.caCertificateValiditiesAcceptable,
 		g.crdsWithProblematicConversionWebhooks,
+		g.manualInPlaceWorkersUpdated,
 	}
 }
 
@@ -444,6 +473,7 @@ func (g ShootConstraints) ConstraintTypes() []gardencorev1beta1.ConditionType {
 		g.maintenancePreconditionsSatisfied.Type,
 		g.caCertificateValiditiesAcceptable.Type,
 		g.crdsWithProblematicConversionWebhooks.Type,
+		g.manualInPlaceWorkersUpdated.Type,
 	}
 }
 
@@ -455,5 +485,6 @@ func NewShootConstraints(clock clock.Clock, shoot *gardencorev1beta1.Shoot) Shoo
 		maintenancePreconditionsSatisfied:     v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootMaintenancePreconditionsSatisfied),
 		caCertificateValiditiesAcceptable:     v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
 		crdsWithProblematicConversionWebhooks: v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks),
+		manualInPlaceWorkersUpdated:           v1beta1helper.GetOrInitConditionWithClock(clock, shoot.Status.Constraints, gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
 	}
 }

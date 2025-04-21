@@ -38,6 +38,7 @@ import (
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	"k8s.io/utils/clock"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -494,6 +495,7 @@ var _ = Describe("Constraints", func() {
 							{Type: gardencorev1beta1.ShootHibernationPossible},
 							{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied},
 							{Type: gardencorev1beta1.ShootCRDsWithProblematicConversionWebhooks},
+							{Type: gardencorev1beta1.ShootManualInPlaceWorkersUpdated},
 						},
 					},
 				}
@@ -559,6 +561,120 @@ var _ = Describe("Constraints", func() {
 					WithReason("CRDsWithProblematicConversionWebhooks"),
 					WithMessage(fmt.Sprintf("Some CRDs in your cluster have multiple stored versions present and have a conversion webhook configured: %s.", crd1.Name)),
 				))
+			})
+
+			Context("#ManualInPlaceWorkersUpdated", func() {
+				BeforeEach(func() {
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
+						{
+							Name:           "worker1",
+							UpdateStrategy: ptr.To(gardencorev1beta1.ManualInPlaceUpdate),
+						},
+					}
+					shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{
+						PendingWorkerUpdates: &gardencorev1beta1.PendingWorkerUpdates{
+							ManualInPlaceUpdate: []string{"worker1"},
+						},
+					}
+					shootPkg := &shootpkg.Shoot{
+						ControlPlaneNamespace: controlPlaneNamespace,
+					}
+					shootPkg.SetInfo(shoot)
+
+					constraint = NewConstraint(
+						logr.Discard(),
+						shootPkg,
+						seedClient,
+						func() (kubernetes.Interface, bool, error) {
+							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+						},
+						clock,
+					)
+				})
+
+				It("should remove the 'ManualInPlaceWorkersUpdated' constraint because it's true", func() {
+					shoot.Status.InPlaceUpdates = nil
+
+					shootPkg := &shootpkg.Shoot{
+						ControlPlaneNamespace: controlPlaneNamespace,
+					}
+					shootPkg.SetInfo(shoot)
+
+					constraint = NewConstraint(
+						logr.Discard(),
+						shootPkg,
+						seedClient,
+						func() (kubernetes.Interface, bool, error) {
+							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+						},
+						clock,
+					)
+
+					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
+					))
+				})
+
+				It("should remove the 'ManualInPlaceWorkersUpdated' constraint because the Shoot is workerless", func() {
+					shoot.Spec.Provider.Workers = nil
+
+					shootPkg := &shootpkg.Shoot{
+						ControlPlaneNamespace: controlPlaneNamespace,
+					}
+					shootPkg.SetInfo(shoot)
+
+					constraint = NewConstraint(
+						logr.Discard(),
+						shootPkg,
+						seedClient,
+						func() (kubernetes.Interface, bool, error) {
+							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+						},
+						clock,
+					)
+
+					Expect(constraint.Check(ctx, constraints)).NotTo(ContainCondition(
+						OfType(gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
+					))
+				})
+
+				It("should keep the 'ManualInPlaceWorkersUpdated' constraint because it's false during create", func() {
+					Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
+						OfType(gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
+						WithStatus(gardencorev1beta1.ConditionProgressing),
+						WithReason("WorkerPoolsWithManualInPlaceUpdateStrategyPending"),
+						WithMessage("Some worker pools in your Shoot with update strategy ManualInPlaceUpdate are pending update: worker1"),
+					))
+				})
+
+				It("should keep the 'ManualInPlaceWorkersUpdated' constraint because it's false during reconcile", func() {
+					shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+						Type:  gardencorev1beta1.LastOperationTypeReconcile,
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+					}
+
+					shootPkg := &shootpkg.Shoot{
+						ControlPlaneNamespace: controlPlaneNamespace,
+					}
+					shootPkg.SetInfo(shoot)
+
+					constraint = NewConstraint(
+						logr.Discard(),
+						shootPkg,
+						seedClient,
+						func() (kubernetes.Interface, bool, error) {
+							return fakekubernetes.NewClientSetBuilder().WithClient(shootClient).Build(), true, nil
+						},
+						clock,
+					)
+
+					Expect(constraint.Check(ctx, constraints)).To(ContainCondition(
+						OfType(gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
+						WithStatus(gardencorev1beta1.ConditionFalse),
+						WithReason("WorkerPoolsWithManualInPlaceUpdateStrategyPending"),
+						WithMessage("Some worker pools in your Shoot with update strategy ManualInPlaceUpdate are pending update: worker1"),
+					))
+				})
 			})
 		})
 
@@ -641,6 +757,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 
@@ -660,6 +777,7 @@ var _ = Describe("Constraints", func() {
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
+					beConditionWithStatusAndMsg("Unknown", "ConditionInitialized", "The condition has been initialized but its semantic check has not been performed yet."),
 				))
 			})
 		})
@@ -673,6 +791,7 @@ var _ = Describe("Constraints", func() {
 					OfType("MaintenancePreconditionsSatisfied"),
 					OfType("CACertificateValiditiesAcceptable"),
 					OfType("CRDsWithProblematicConversionWebhooks"),
+					OfType("ManualInPlaceWorkersUpdated"),
 				))
 			})
 		})
@@ -686,6 +805,7 @@ var _ = Describe("Constraints", func() {
 					gardencorev1beta1.ConditionType("MaintenancePreconditionsSatisfied"),
 					gardencorev1beta1.ConditionType("CACertificateValiditiesAcceptable"),
 					gardencorev1beta1.ConditionType("CRDsWithProblematicConversionWebhooks"),
+					gardencorev1beta1.ConditionType("ManualInPlaceWorkersUpdated"),
 				))
 			})
 		})
