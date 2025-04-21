@@ -226,7 +226,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: map[corev1.ResourceName]resource.Quantity{
-									"cpu":    resource.MustParse("20m"),
+									"cpu":    resource.MustParse("100m"),
 									"memory": resource.MustParse("200M"),
 								},
 							},
@@ -1755,14 +1755,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Main: &core.ETCDConfig{
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: corev1.ResourceList{
-									"memory": resource.MustParse("300M"),
+									"cpu":    resource.MustParse("150m"),
+									"memory": resource.MustParse("150M"),
 								},
 							},
 						},
 						Events: &core.ETCDConfig{
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: corev1.ResourceList{
-									"memory": resource.MustParse("60M"),
+									"cpu":    resource.MustParse("100m"),
+									"memory": resource.MustParse("100M"),
 								},
 							},
 						},
@@ -1776,14 +1778,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Main: &core.ETCDConfig{
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: corev1.ResourceList{
-									"memory": resource.MustParse("299M"),
+									"cpu":    resource.MustParse("149m"),
+									"memory": resource.MustParse("149M"),
 								},
 							},
 						},
 						Events: &core.ETCDConfig{
 							Autoscaling: &core.ControlPlaneAutoscaling{
 								MinAllowed: corev1.ResourceList{
-									"memory": resource.MustParse("59M"),
+									"cpu":    resource.MustParse("99m"),
+									"memory": resource.MustParse("99M"),
 								},
 							},
 						},
@@ -1795,12 +1799,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeInvalid),
 							"Field":    Equal("spec.kubernetes.etcd.main.autoscaling.minAllowed.memory"),
-							"BadValue": Equal(resource.MustParse("299M")),
+							"BadValue": Equal(resource.MustParse("149M")),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.kubernetes.etcd.main.autoscaling.minAllowed.cpu"),
+							"BadValue": Equal(resource.MustParse("149m")),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":     Equal(field.ErrorTypeInvalid),
 							"Field":    Equal("spec.kubernetes.etcd.events.autoscaling.minAllowed.memory"),
-							"BadValue": Equal(resource.MustParse("59M")),
+							"BadValue": Equal(resource.MustParse("99M")),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.kubernetes.etcd.events.autoscaling.minAllowed.cpu"),
+							"BadValue": Equal(resource.MustParse("99m")),
 						})),
 					))
 				})
@@ -2410,7 +2424,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				It("should succeed defining minAllowed values", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.Autoscaling = &core.ControlPlaneAutoscaling{
 						MinAllowed: corev1.ResourceList{
-							"cpu":    resource.MustParse("20m"),
+							"cpu":    resource.MustParse("100m"),
 							"memory": resource.MustParse("200M"),
 						},
 					}
@@ -2421,7 +2435,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				It("should not allow minAllowed values below minimum", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.Autoscaling = &core.ControlPlaneAutoscaling{
 						MinAllowed: corev1.ResourceList{
-							"cpu": resource.MustParse("19m"),
+							"cpu": resource.MustParse("99m"),
 						},
 					}
 
@@ -2430,7 +2444,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeInvalid),
 						"Field":    Equal("spec.kubernetes.kubeAPIServer.autoscaling.minAllowed.cpu"),
-						"BadValue": Equal(resource.MustParse("19m")),
+						"BadValue": Equal(resource.MustParse("99m")),
 					}))))
 				})
 			})

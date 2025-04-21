@@ -950,12 +950,14 @@ func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
 func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
 	minAllowed := corev1.ResourceList{
-		corev1.ResourceMemory: resource.MustParse("60M"),
+		corev1.ResourceMemory: resource.MustParse("100M"),
+		corev1.ResourceCPU:    resource.MustParse("100m"),
 	}
 
 	if e.values.Class == ClassImportant {
 		minAllowed = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("300M"),
+			corev1.ResourceMemory: resource.MustParse("150M"),
+			corev1.ResourceCPU:    resource.MustParse("150m"),
 		}
 	}
 
@@ -964,16 +966,7 @@ func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
 }
 
 func (e *etcd) computeETCDContainerResources(minAllowedETCD corev1.ResourceList) *corev1.ResourceRequirements {
-	resourcesETCD := corev1.ResourceList{
-		corev1.ResourceCPU:    resource.MustParse("300m"),
-		corev1.ResourceMemory: resource.MustParse("1G"),
-	}
-
-	if len(minAllowedETCD) > 0 {
-		return &corev1.ResourceRequirements{Requests: minAllowedETCD}
-	}
-
-	return &corev1.ResourceRequirements{Requests: resourcesETCD}
+	return &corev1.ResourceRequirements{Requests: minAllowedETCD}
 }
 
 func (e *etcd) computeBackupRestoreContainerResources() *corev1.ResourceRequirements {

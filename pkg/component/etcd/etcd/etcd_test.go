@@ -135,12 +135,24 @@ var _ = Describe("Etcd", func() {
 				defragSchedule = existingDefragmentationSchedule
 			}
 
-			resourcesContainerEtcd := &corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("300m"),
-					corev1.ResourceMemory: resource.MustParse("1G"),
-				},
+			resourcesContainerEtcd := &corev1.ResourceRequirements{}
+			if class == ClassImportant {
+				resourcesContainerEtcd = &corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("150m"),
+						corev1.ResourceMemory: resource.MustParse("150M"),
+					},
+				}
 			}
+			if class == ClassNormal {
+				resourcesContainerEtcd = &corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("100m"),
+						corev1.ResourceMemory: resource.MustParse("100M"),
+					},
+				}
+			}
+
 			if existingResourcesContainerEtcd != nil {
 				resourcesContainerEtcd = existingResourcesContainerEtcd
 			}
@@ -366,7 +378,10 @@ var _ = Describe("Etcd", func() {
 		expectedVPAFor = func(class Class, evictionRequirement string, minAllowed corev1.ResourceList) *vpaautoscalingv1.VerticalPodAutoscaler {
 			minAllowedConfig := minAllowed
 			if minAllowedConfig == nil {
-				minAllowedConfig = corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}
+				minAllowedConfig = corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("100M"),
+				}
 			}
 
 			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -413,7 +428,8 @@ var _ = Describe("Etcd", func() {
 
 			if class == ClassImportant {
 				vpa.Spec.ResourcePolicy.ContainerPolicies[0].MinAllowed = corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("300M"),
+					corev1.ResourceCPU:    resource.MustParse("150m"),
+					corev1.ResourceMemory: resource.MustParse("150M"),
 				}
 			}
 
@@ -1765,7 +1781,7 @@ var _ = Describe("Etcd", func() {
 							"",
 							&corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("300m"),
+									corev1.ResourceCPU:    resource.MustParse("250m"),
 									corev1.ResourceMemory: resource.MustParse("1.5Gi"),
 								},
 							},
