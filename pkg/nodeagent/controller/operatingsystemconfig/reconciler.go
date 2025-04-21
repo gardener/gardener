@@ -691,7 +691,7 @@ func (r *Reconciler) checkKubeletHealth(ctx context.Context, log logr.Logger, no
 		return err
 	}
 
-	err = retryutils.UntilTimeout(ctx, KubeletHealthCheckRetryInterval, KubeletHealthCheckRetryTimeout, func(_ context.Context) (done bool, err error) {
+	if err := retryutils.UntilTimeout(ctx, KubeletHealthCheckRetryInterval, KubeletHealthCheckRetryTimeout, func(_ context.Context) (done bool, err error) {
 		if response, err2 := httpClient.Do(request); err2 != nil {
 			return retryutils.MinorError(fmt.Errorf("HTTP request to kubelet health endpoint failed: %w", err2))
 		} else if response.StatusCode == http.StatusOK {
@@ -700,14 +700,15 @@ func (r *Reconciler) checkKubeletHealth(ctx context.Context, log logr.Logger, no
 		}
 
 		return retryutils.NotOk()
-	})
-	if err != nil {
+	}); err != nil {
 		if patchErr := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("kubelet is not healthy after in-place update: %s", err.Error())); patchErr != nil {
 			return patchErr
 		}
+
+		return fmt.Errorf("kubelet is not healthy after in-place update: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 func (r *Reconciler) completeKubeletInPlaceUpdate(ctx context.Context, log logr.Logger, changes *operatingSystemConfigChanges, node *corev1.Node) error {
@@ -966,9 +967,11 @@ func (r *Reconciler) updateOSInPlace(ctx context.Context, log logr.Logger, oscCh
 
 		return retryutils.Ok()
 	}); err != nil {
-		if err2 := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("failed to execute update command: %v", err)); err2 != nil {
-			return err2
+		if patchErr := r.patchNodeUpdateFailed(ctx, log, node, fmt.Sprintf("failed to execute OS update command: %v", err)); patchErr != nil {
+			return patchErr
 		}
+
+		return fmt.Errorf("failed to execute OS update command: %w", err)
 	}
 
 	return nil
