@@ -74,7 +74,12 @@ var _ = Describe("KubeScheduler", func() {
 		secretName                       = "shoot-access-kube-scheduler"
 		deploymentName                   = "kube-scheduler"
 		managedResourceName              = "shoot-core-kube-scheduler"
-		managedResourceSecretName        = "managedresource-shoot-core-kube-scheduler"
+		seedManagedResourceName          = "seed-core-kube-scheduler"
+
+		managedResourceShoot *resourcesv1alpha1.ManagedResource
+		managedResourceSeed  *resourcesv1alpha1.ManagedResource
+
+		managedResourceSecret *corev1.Secret
 
 		configMapFor = func(componentConfigFilePath string) *corev1.ConfigMap {
 			data, err := os.ReadFile(componentConfigFilePath)
@@ -479,8 +484,6 @@ var _ = Describe("KubeScheduler", func() {
 				},
 			},
 		}
-
-		managedResource *resourcesv1alpha1.ManagedResource
 	)
 
 	BeforeEach(func() {
@@ -492,52 +495,98 @@ var _ = Describe("KubeScheduler", func() {
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+
+		managedResourceShoot = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceName,
+				Namespace: namespace,
+			},
+		}
+		managedResourceSeed = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      seedManagedResourceName,
+				Namespace: namespace,
+			},
+		}
+		managedResourceSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "managedresource-",
+				Namespace: namespace,
+			},
+		}
 	})
 
 	Describe("#Deploy", func() {
-		BeforeEach(func() {
-			managedResource = &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      managedResourceName,
-					Namespace: namespace,
-					Labels:    map[string]string{"origin": "gardener"},
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					SecretRefs: []corev1.LocalObjectReference{
-						{Name: managedResourceSecretName},
-					},
-					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  ptr.To(false),
-				},
-			}
-		})
-
-		DescribeTable("success tests w and w/o config",
+		DescribeTable("success tests for shoot w and w/o config",
 			func(config *gardencorev1beta1.KubeSchedulerConfig, expectedComponentConfigFilePath string) {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceShoot), managedResourceShoot)).To(BeNotFoundError())
 
 				kubeScheduler = New(c, namespace, sm, image, replicas, config)
 				Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceShoot), managedResourceShoot)).To(Succeed())
 				expectedMr := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResource.Name,
-						Namespace:       managedResource.Namespace,
+						Name:            managedResourceShoot.Name,
+						Namespace:       managedResourceShoot.Namespace,
 						ResourceVersion: "1",
 						Labels:          map[string]string{"origin": "gardener"},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						SecretRefs: []corev1.LocalObjectReference{{
-							Name: managedResource.Spec.SecretRefs[0].Name,
+							Name: managedResourceShoot.Spec.SecretRefs[0].Name,
 						}},
 						KeepObjects: ptr.To(false),
 					},
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
-				Expect(managedResource).To(DeepEqual(expectedMr))
-				Expect(managedResource).To(consistOf(clusterRoleBinding1, clusterRoleBinding2))
+				Expect(managedResourceShoot).To(DeepEqual(expectedMr))
+				Expect(managedResourceShoot).To(consistOf(clusterRoleBinding1, clusterRoleBinding2))
+
+				managedResourceSecret.Name = managedResourceShoot.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+			},
+
+			Entry("w/o config", configEmpty, "testdata/component-config.yaml"),
+			Entry("w/ full config", configFull, "testdata/component-config-bin-packing.yaml"),
+		)
+
+		DescribeTable("success tests for seed w and w/o config",
+			func(config *gardencorev1beta1.KubeSchedulerConfig, expectedComponentConfigFilePath string) {
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSeed), managedResourceSeed)).To(BeNotFoundError())
+
+				kubeScheduler = New(c, namespace, sm, image, replicas, config)
+				Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSeed), managedResourceSeed)).To(Succeed())
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceSeed.Name,
+						Namespace:       managedResourceSeed.Namespace,
+						ResourceVersion: "1",
+						//Labels:          map[string]string{"origin": "gardener"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: ptr.To("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceSeed.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: ptr.To(false),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResourceSeed).To(DeepEqual(expectedMr))
+				Expect(managedResourceSeed).To(consistOf(clusterRoleBinding1, clusterRoleBinding2))
+
+				managedResourceSecret.Name = managedResourceSeed.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(ptr.To(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				expectedConfigMap := configMapFor(expectedComponentConfigFilePath)
 				actualConfigMap := &corev1.ConfigMap{
