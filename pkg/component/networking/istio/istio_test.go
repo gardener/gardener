@@ -415,7 +415,11 @@ var _ = Describe("istiod", func() {
 				expectedIstioManifests = append(expectedIstioManifests, istioStripTrailingDotEnvoyFilter())
 			}
 
-			if igw[0].TerminateLoadBalancerProxyProtocol {
+			if igw[0].TerminateLoadBalancerProxyProtocol && !igw[0].ProxyProtocolEnabled {
+				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilterSNI(), istioProxyProtocolEnvoyFilterVPN())
+			}
+
+			if igw[0].TerminateLoadBalancerProxyProtocol && igw[0].ProxyProtocolEnabled {
 				expectedIstioManifests = append(expectedIstioManifests, istioProxyProtocolEnvoyFilterDual(), istioProxyProtocolEnvoyFilterSNI(), istioProxyProtocolEnvoyFilterVPN())
 			}
 
@@ -456,10 +460,21 @@ var _ = Describe("istiod", func() {
 			}
 		}
 
-		Context("with proxy protocol termination", func() {
+		Context("with proxy protocol in apiserver-proxy and with proxy protocol termination", func() {
 			BeforeEach(func() {
 				igw[0].TerminateLoadBalancerProxyProtocol = true
 				igw[0].ProxyProtocolEnabled = true
+			})
+
+			It("should successfully deploy all resources", func() {
+				checkSuccessfulDeployment(nil, nil)
+			})
+		})
+
+		Context("without proxy protocol in apiserver-proxy and proxy protocol termination", func() {
+			BeforeEach(func() {
+				igw[0].TerminateLoadBalancerProxyProtocol = true
+				igw[0].ProxyProtocolEnabled = false
 			})
 
 			It("should successfully deploy all resources", func() {
