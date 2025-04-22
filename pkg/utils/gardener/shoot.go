@@ -215,6 +215,8 @@ const (
 	ShootProjectSecretSuffixMonitoring = "monitoring"
 	// ShootProjectConfigMapSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
 	ShootProjectConfigMapSuffixCACluster = "ca-cluster"
+	// ShootProjectConfigMapSuffixCAKubelet is a constant for a shoot project secret with suffix 'ca-kubelet'.
+	ShootProjectConfigMapSuffixCAKubelet = "ca-kubelet"
 )
 
 // GetShootProjectSecretSuffixes returns the list of shoot-related project secret suffixes.
@@ -239,6 +241,7 @@ func GetShootProjectInternalSecretSuffixes() []string {
 func GetShootProjectConfigMapSuffixes() []string {
 	return []string{
 		ShootProjectConfigMapSuffixCACluster,
+		ShootProjectConfigMapSuffixCAKubelet,
 	}
 }
 
