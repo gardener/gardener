@@ -6,6 +6,7 @@ package validation
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -18,11 +19,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-)
-
-var availableExtensionAutoEnableModes = sets.New(
-	core.AutoEnableModeShoot,
-	core.AutoEnableModeSeed,
 )
 
 var availablePolicies = sets.New(
@@ -54,15 +50,51 @@ func ValidateControllerRegistration(controllerRegistration *core.ControllerRegis
 func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	var (
-		resourcesPath  = fldPath.Child("resources")
-		deploymentPath = fldPath.Child("deployment")
+	allErrs = append(allErrs, ValidateControllerResources(spec.Resources, []core.AutoEnableMode{core.AutoEnableModeShoot, core.AutoEnableModeSeed}, fldPath.Child("resources"))...)
 
-		resources                  = make(map[string]string, len(spec.Resources))
-		controlsResourcesPrimarily = false
+	if deployment := spec.Deployment; deployment != nil {
+		deploymentPath := fldPath.Child("deployment")
+
+		if policy := deployment.Policy; policy != nil && !availablePolicies.Has(*policy) {
+			allErrs = append(allErrs, field.NotSupported(deploymentPath.Child("policy"), *policy, sets.List(availablePolicies)))
+		}
+
+		if deployment.SeedSelector != nil {
+			controlsResourcesPrimarily := slices.ContainsFunc(spec.Resources, func(resource core.ControllerResource) bool {
+				return resource.Primary == nil || *resource.Primary
+			})
+
+			if controlsResourcesPrimarily {
+				allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("seedSelector"), "specifying a seed selector is not allowed when controlling resources primarily"))
+			}
+
+			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(deployment.SeedSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, deploymentPath.Child("seedSelector"))...)
+		}
+
+		deploymentRefsCount := len(deployment.DeploymentRefs)
+		if deploymentRefsCount > 1 {
+			allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("deploymentRefs"), "only one deployment reference is allowed"))
+		}
+
+		for i, deploymentRef := range deployment.DeploymentRefs {
+			fld := deploymentPath.Child("deploymentRefs").Index(i)
+			if deploymentRef.Name == "" {
+				allErrs = append(allErrs, field.Required(fld.Child("name"), "must not be empty"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateControllerResources validates the provided list of ControllerResource objects.
+func ValidateControllerResources(resources []core.ControllerResource, validModes []core.AutoEnableMode, resourcesPath *field.Path) field.ErrorList {
+	var (
+		allErrs            = field.ErrorList{}
+		resourceKindToType = make(map[string]string)
 	)
 
-	for i, resource := range spec.Resources {
+	for i, resource := range resources {
 		idxPath := resourcesPath.Index(i)
 
 		if len(resource.Kind) == 0 {
@@ -76,7 +108,7 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 		if len(resource.Type) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "field is required"))
 		}
-		if t, ok := resources[resource.Kind]; ok && t == resource.Type {
+		if t, ok := resourceKindToType[resource.Kind]; ok && t == resource.Type {
 			allErrs = append(allErrs, field.Duplicate(idxPath, gardenerutils.ExtensionsID(resource.Kind, resource.Type)))
 		}
 		if resource.Kind != extensionsv1alpha1.ExtensionResource {
@@ -94,12 +126,15 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			}
 		}
 
-		configuredAutoEnableModes := sets.New[core.AutoEnableMode]()
+		var (
+			validAutoEnableModes      = sets.New(validModes...)
+			configuredAutoEnableModes = sets.New[core.AutoEnableMode]()
+		)
 		for j, autoEnableMode := range resource.AutoEnable {
 			autoEnablePath := idxPath.Child("autoEnable").Index(j)
 
-			if !availableExtensionAutoEnableModes.Has(autoEnableMode) {
-				allErrs = append(allErrs, field.NotSupported(autoEnablePath, autoEnableMode, sets.List(availableExtensionAutoEnableModes)))
+			if !validAutoEnableModes.Has(autoEnableMode) {
+				allErrs = append(allErrs, field.NotSupported(autoEnablePath, autoEnableMode, sets.List(validAutoEnableModes)))
 			}
 
 			if configuredAutoEnableModes.Has(autoEnableMode) {
@@ -121,36 +156,7 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			}
 		}
 
-		resources[resource.Kind] = resource.Type
-		if resource.Primary == nil || *resource.Primary {
-			controlsResourcesPrimarily = true
-		}
-	}
-
-	if deployment := spec.Deployment; deployment != nil {
-		if policy := deployment.Policy; policy != nil && !availablePolicies.Has(*policy) {
-			allErrs = append(allErrs, field.NotSupported(deploymentPath.Child("policy"), *policy, sets.List(availablePolicies)))
-		}
-
-		if deployment.SeedSelector != nil {
-			if controlsResourcesPrimarily {
-				allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("seedSelector"), "specifying a seed selector is not allowed when controlling resources primarily"))
-			}
-
-			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(deployment.SeedSelector, metav1validation.LabelSelectorValidationOptions{AllowInvalidLabelValueInSelector: true}, deploymentPath.Child("seedSelector"))...)
-		}
-
-		deploymentRefsCount := len(deployment.DeploymentRefs)
-		if deploymentRefsCount > 1 {
-			allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("deploymentRefs"), "only one deployment reference is allowed"))
-		}
-
-		for i, deploymentRef := range deployment.DeploymentRefs {
-			fld := deploymentPath.Child("deploymentRefs").Index(i)
-			if deploymentRef.Name == "" {
-				allErrs = append(allErrs, field.Required(fld.Child("name"), "must not be empty"))
-			}
-		}
+		resourceKindToType[resource.Kind] = resource.Type
 	}
 
 	return allErrs
@@ -178,13 +184,13 @@ func ValidateControllerRegistrationSpecUpdate(new, old *core.ControllerRegistrat
 		return apivalidation.ValidateImmutableField(new, old, fldPath)
 	}
 
-	allErrs = append(allErrs, ValidateControllerResourceUpdate(new.Resources, old.Resources, fldPath.Child("resources"))...)
+	allErrs = append(allErrs, ValidateControllerResourcesUpdate(new.Resources, old.Resources, fldPath.Child("resources"))...)
 
 	return allErrs
 }
 
-// ValidateControllerResourceUpdate validates the update of ControllerResource objects.
-func ValidateControllerResourceUpdate(new, old []core.ControllerResource, fldPath *field.Path) field.ErrorList {
+// ValidateControllerResourcesUpdate validates the update of ControllerResource objects.
+func ValidateControllerResourcesUpdate(new, old []core.ControllerResource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	kindTypeToPrimary := make(map[string]*bool, len(old))

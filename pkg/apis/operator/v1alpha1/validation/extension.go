@@ -58,7 +58,7 @@ func validateControllerResourceUpdate(oldResources, newResources []gardencorev1b
 		newCoreResources = append(newCoreResources, *newCoreResource)
 	}
 
-	allErrs = append(allErrs, gardencorevalidation.ValidateControllerResourceUpdate(newCoreResources, oldCoreResources, fldPath)...)
+	allErrs = append(allErrs, gardencorevalidation.ValidateControllerResourcesUpdate(newCoreResources, oldCoreResources, fldPath)...)
 
 	return allErrs
 }
