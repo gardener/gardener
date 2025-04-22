@@ -18,11 +18,17 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "join",
-		Short: "Bootstrap further control plane nodes or worker nodes and join them to the cluster",
-		Long:  "Bootstrap further control plane nodes or worker nodes and join them to the cluster",
+		Short: "Bootstrap worker nodes and join them to the cluster",
+		Long: `Bootstrap worker nodes and join them to the cluster.
 
+This command helps to initialize and configure a node to join an existing autonomous shoot cluster.
+It ensures that the necessary configurations are applied and the node is properly registered as a worker or control plane node.
+
+Note that further control plane nodes cannot be joined currently.`,
 		Example: `# Bootstrap a worker node and join it to the cluster
-gardenadm join`,
+gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --gardener-node-agent-secret-name <secret-name> <control-plane-address>`,
+
+		Args: cobra.ExactArgs(1),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {

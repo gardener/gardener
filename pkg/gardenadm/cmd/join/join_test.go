@@ -32,6 +32,11 @@ var _ = Describe("Join", func() {
 	})
 
 	Describe("#RunE", func() {
+		BeforeEach(func() {
+			Expect(command.Flags().Set("bootstrap-token", "some-token")).To(Succeed())
+			Expect(command.Flags().Set("gardener-node-agent-secret-name", "some-secret-name")).To(Succeed())
+		})
+
 		It("should return the expected output", func() {
 			Expect(command.RunE(command, nil)).To(Succeed())
 

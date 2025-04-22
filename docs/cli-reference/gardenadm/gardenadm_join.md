@@ -1,10 +1,15 @@
 ## gardenadm join
 
-Bootstrap further control plane nodes or worker nodes and join them to the cluster
+Bootstrap worker nodes and join them to the cluster
 
 ### Synopsis
 
-Bootstrap further control plane nodes or worker nodes and join them to the cluster
+Bootstrap worker nodes and join them to the cluster.
+
+This command helps to initialize and configure a node to join an existing autonomous shoot cluster.
+It ensures that the necessary configurations are applied and the node is properly registered as a worker or control plane node.
+
+Note that further control plane nodes cannot be joined currently.
 
 ```
 gardenadm join [flags]
@@ -14,13 +19,16 @@ gardenadm join [flags]
 
 ```
 # Bootstrap a worker node and join it to the cluster
-gardenadm join
+gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --gardener-node-agent-secret-name <secret-name> <control-plane-address>
 ```
 
 ### Options
 
 ```
-  -h, --help   help for join
+      --bootstrap-token string                   Bootstrap token for joining the cluster (create it with gardenadm token)
+      --ca-certificate bytesBase64               Base64-encoded certificate authority bundle of the control plane
+      --gardener-node-agent-secret-name string   Name of the Secret from which gardener-node-agent should download its operating system configuration
+  -h, --help                                     help for join
 ```
 
 ### Options inherited from parent commands
