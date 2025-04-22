@@ -81,7 +81,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 				stdOut, _, err := execute(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
 				g.Expect(err).NotTo(HaveOccurred())
 
-				kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), "localhost", fmt.Sprintf("localhost:%d", localPort))
+				kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), "api.root.garden.internal.gardenadm.local", fmt.Sprintf("localhost:%d", localPort))
 				return os.WriteFile(adminKubeconfigFile, []byte(kubeconfig), 0600)
 			}).Should(Succeed())
 
