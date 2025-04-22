@@ -288,7 +288,7 @@ PRETTY_NAME="Garden Linux 1592"
 				return []byte("network problems"), errors.New("command failed")
 			}))
 
-			Expect(reconciler.updateOSInPlace(ctx, log, oscChanges, osc, node)).To(Succeed())
+			Expect(reconciler.updateOSInPlace(ctx, log, oscChanges, osc, node)).To(MatchError(ContainSubstring("retriable error detected: command failed, output: network problems")))
 
 			Expect(reconciler.Client.Get(ctx, client.ObjectKey{Name: node.Name}, node)).To(Succeed())
 			Expect(node.Annotations).To(HaveKeyWithValue("node-agent.gardener.cloud/updating-operating-system-version", "1.2.3"))
@@ -301,7 +301,7 @@ PRETTY_NAME="Garden Linux 1592"
 				return []byte("invalid arguments"), errors.New("command failed")
 			}))
 
-			Expect(reconciler.updateOSInPlace(ctx, log, oscChanges, osc, node)).To(Succeed())
+			Expect(reconciler.updateOSInPlace(ctx, log, oscChanges, osc, node)).To(MatchError(ContainSubstring("non-retriable error detected: command failed, output: invalid arguments")))
 
 			Expect(reconciler.Client.Get(ctx, client.ObjectKey{Name: node.Name}, node)).To(Succeed())
 			Expect(node.Annotations).To(HaveKeyWithValue("node-agent.gardener.cloud/updating-operating-system-version", "1.2.3"))
