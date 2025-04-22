@@ -6,10 +6,13 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -50,6 +53,8 @@ type AddArgs struct {
 	IgnoreOperationAnnotation bool
 	// ExtensionClass defines the extension class this extension is responsible for.
 	ExtensionClass extensionsv1alpha1.ExtensionClass
+	// AutonomousShootCluster indicates whether the extension runs in an autonomous shoot cluster.
+	AutonomousShootCluster bool
 }
 
 // DefaultPredicates returns the default predicates for a Worker reconciler.
@@ -71,15 +76,24 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicates...),
 		).
-		WatchesRawSource(source.Kind[client.Object](
+		Build(NewReconciler(mgr, args.Actuator))
+	if err != nil {
+		return err
+	}
+
+	if mustWatchMachines, err := wantMachineWatch(args.AutonomousShootCluster, mgr.GetRESTMapper()); err != nil {
+		return fmt.Errorf("failed to determine if machine API exists: %w", err)
+	} else if mustWatchMachines {
+		if err := c.Watch(source.Kind[client.Object](
 			mgr.GetCache(),
 			&machinev1alpha1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(MachineToWorkerMapper()),
 			MachineConditionChangedPredicate(ctx, mgr.GetLogger().WithValues("controller", ControllerName), mgr.GetClient()),
-		)).
-		Build(NewReconciler(mgr, args.Actuator))
-	if err != nil {
-		return err
+		)); err != nil {
+			return err
+		}
+	} else {
+		c.GetLogger().Info("Machine API not present, skipping watch for Machine resources")
 	}
 
 	if args.IgnoreOperationAnnotation {
@@ -93,6 +107,24 @@ func Add(ctx context.Context, mgr manager.Manager, args AddArgs) error {
 	}
 
 	return nil
+}
+
+func wantMachineWatch(isAutonomousShootCluster bool, restMapper meta.RESTMapper) (bool, error) {
+	if !isAutonomousShootCluster {
+		return true, nil
+	}
+	return machineAPIPresent(restMapper)
+}
+
+func machineAPIPresent(restMapper meta.RESTMapper) (bool, error) {
+	if _, err := restMapper.KindsFor(schema.GroupVersionResource{Group: machinev1alpha1.GroupName, Version: machinev1alpha1.SchemeGroupVersion.Version, Resource: "machines"}); err != nil {
+		if !meta.IsNoMatchError(err) {
+			return false, fmt.Errorf("failed checking %s APIs: %w", machinev1alpha1.GroupName, err)
+		}
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // MachineConditionChangedPredicate returns a predicate function that returns
