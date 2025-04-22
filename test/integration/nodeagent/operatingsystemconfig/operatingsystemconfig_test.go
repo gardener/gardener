@@ -1072,16 +1072,15 @@ kubeReserved:
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 			waitForUpdatedNodeLabelUpdateResultSuccessful(node)
 
+			Expect(afero.Exists(fakeFS, "/var/lib/kubelet/cpu_manager_state")).To(BeFalse())
+			test.AssertFileOnDisk(fakeFS, kubeletConfigFilePath, kubeletConfig, 0600)
+
 			By("Assert that unit actions have been applied")
 			Expect(fakeDBus.Actions).To(ConsistOf(
 				fakedbus.SystemdAction{Action: fakedbus.ActionEnable, UnitNames: []string{kubeletUnit.Name}},
 				fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{kubeletUnit.Name}},
 				fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 			))
-
-			Expect(afero.Exists(fakeFS, "/var/lib/kubelet/cpu_manager_state")).To(BeFalse())
-			test.AssertFileOnDisk(fakeFS, kubeletConfigFilePath, kubeletConfig, 0600)
-
 		})
 
 		It("should successfully update the kubelet minor version", func() {
@@ -1185,14 +1184,6 @@ preferences: {}
 			oscSecret.Data["osc.yaml"] = oscRaw
 			Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-			By("Assert that unit actions have been applied")
-			Eventually(func(g Gomega) {
-				g.Expect(fakeDBus.Actions).To(ConsistOf(
-					fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{kubeletUnit.Name}},
-					fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
-				))
-			}).Should(Succeed())
-
 			By("Wait for the manager to observe the updated secret")
 			EventuallyWithOffset(1, func(g Gomega) []byte {
 				updatedSecret := &corev1.Secret{}
@@ -1200,7 +1191,6 @@ preferences: {}
 				return updatedSecret.Data["osc.yaml"]
 			}).Should(Equal(oscSecret.Data["osc.yaml"]))
 
-			Expect(cancelFunc.called).To(BeTrue())
 			waitForUpdatedNodeLabelUpdateResultSuccessful(node)
 
 			Expect(fakeFS.DirExists(kubeletCertDir)).To(BeFalse())
@@ -1230,6 +1220,15 @@ users:
 			expectedNodeAgentKubeConfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CABundle, nodeAgentConfig.APIServer.Server, "new-cert")
 			test.AssertFileOnDisk(fakeFS, nodeagentconfigv1alpha1.KubeconfigFilePath, expectedNodeAgentKubeConfig, 0600)
 
+			By("Assert that unit actions have been applied")
+			Eventually(func(g Gomega) {
+				g.Expect(fakeDBus.Actions).To(ConsistOf(
+					fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{kubeletUnit.Name}},
+					fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
+				))
+			}).Should(Succeed())
+
+			Eventually(cancelFunc.called).Should(BeTrue())
 		})
 	})
 })
