@@ -14,51 +14,81 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
+// ValidateExtension contains functionality for performing extended validation of an Extension object which
+// is not possible with standard CRD validation, see https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules.
+func ValidateExtension(extension *operatorv1alpha1.Extension) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateControllerResources(extension.Spec.Resources, field.NewPath("spec").Child("resources"))...)
+
+	return allErrs
+}
+
+func validateControllerResources(resources []gardencorev1beta1.ControllerResource, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	coreResources, err := convertToCoreResources(resources)
+	if err != nil {
+		allErrs = append(allErrs, field.InternalError(fldPath, err))
+		return allErrs
+	}
+
+	validAutoEnablesModes := []gardencore.AutoEnableMode{
+		gardencore.AutoEnableMode(operatorv1alpha1.AutoEnableModeGarden),
+		gardencore.AutoEnableMode(gardencorev1beta1.AutoEnableModeSeed),
+		gardencore.AutoEnableMode(gardencorev1beta1.AutoEnableModeShoot),
+	}
+
+	allErrs = append(allErrs, gardencorevalidation.ValidateControllerResources(coreResources, validAutoEnablesModes, fldPath)...)
+
+	return allErrs
+}
+
 // ValidateExtensionUpdate contains functionality for performing extended validation of an Extension object under update which
 // is not possible with standard CRD validation, see https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules.
 func ValidateExtensionUpdate(oldExtension, newExtension *operatorv1alpha1.Extension) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateControllerResourceUpdate(oldExtension.Spec.Resources, newExtension.Spec.Resources, field.NewPath("spec").Child("resources"))...)
+	allErrs = append(allErrs, validateControllerResourcesUpdate(oldExtension.Spec.Resources, newExtension.Spec.Resources, field.NewPath("spec").Child("resources"))...)
 
 	return allErrs
 }
 
-func validateControllerResourceUpdate(oldResources, newResources []gardencorev1beta1.ControllerResource, fldPath *field.Path) field.ErrorList {
+func validateControllerResourcesUpdate(oldResources, newResources []gardencorev1beta1.ControllerResource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	var (
-		oldCoreResources []gardencore.ControllerResource
-		newCoreResources []gardencore.ControllerResource
-	)
+	oldCoreResources, err := convertToCoreResources(oldResources)
+	if err != nil {
+		allErrs = append(allErrs, field.InternalError(fldPath, err))
+		return allErrs
+	}
 
-	for i, oldResource := range oldResources {
+	newCoreResources, err := convertToCoreResources(newResources)
+	if err != nil {
+		allErrs = append(allErrs, field.InternalError(fldPath, err))
+		return allErrs
+	}
+
+	allErrs = append(allErrs, gardencorevalidation.ValidateControllerResourcesUpdate(newCoreResources, oldCoreResources, fldPath)...)
+
+	return allErrs
+}
+
+func convertToCoreResources(resources []gardencorev1beta1.ControllerResource) ([]gardencore.ControllerResource, error) {
+	coreResources := make([]gardencore.ControllerResource, 0, len(resources))
+
+	for _, oldResource := range resources {
 		oldCoreResource := &gardencore.ControllerResource{}
 		if err := gardenCoreScheme.Convert(&oldResource, oldCoreResource, nil); err != nil {
-			allErrs = append(allErrs, field.InternalError(fldPath.Index(i), err))
+			return nil, err
 		}
 
 		// Imitate defaulting of ControllerRegistration, since defaulting for extensions was only added later.
 		if oldCoreResource.Primary == nil {
 			oldCoreResource.Primary = ptr.To(true)
 		}
-		oldCoreResources = append(oldCoreResources, *oldCoreResource)
+		coreResources = append(coreResources, *oldCoreResource)
 	}
 
-	for i, newResource := range newResources {
-		newCoreResource := &gardencore.ControllerResource{}
-		if err := gardenCoreScheme.Convert(&newResource, newCoreResource, nil); err != nil {
-			allErrs = append(allErrs, field.InternalError(fldPath.Index(i), err))
-		}
-
-		// Imitate defaulting of ControllerRegistration
-		if newCoreResource.Primary == nil {
-			newCoreResource.Primary = ptr.To(true)
-		}
-		newCoreResources = append(newCoreResources, *newCoreResource)
-	}
-
-	allErrs = append(allErrs, gardencorevalidation.ValidateControllerResourcesUpdate(newCoreResources, oldCoreResources, fldPath)...)
-
-	return allErrs
+	return coreResources, nil
 }
