@@ -136,10 +136,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		)
 	}
 
-	var (
-		registry    *managedresources.Registry
-		crdDeployer component.DeployWaiter
-	)
+	var registry *managedresources.Registry
 	if v.values.ClusterType == component.ClusterTypeSeed {
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	} else {
@@ -163,7 +160,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			}
 		}
 
-		crdDeployer, err = NewCRD(v.client, nil, registry)
+		crdDeployer, err := NewCRD(v.client, nil, registry)
 		if err != nil {
 			return fmt.Errorf("failed to create CRDDeployer: %w", err)
 		}
