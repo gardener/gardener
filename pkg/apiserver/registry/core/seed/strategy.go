@@ -6,7 +6,6 @@ package seed
 
 import (
 	"context"
-	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -60,8 +59,10 @@ func (s Strategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
 	if mustIncreaseGeneration(oldSeed, newSeed) {
 		newSeed.Generation = oldSeed.Generation + 1
 	}
+}
 
-	syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(newSeed, oldSeed)
+// Canonicalize can be used to transform the object into its canonical format.
+func (Strategy) Canonicalize(_ runtime.Object) {
 }
 
 func mustIncreaseGeneration(oldSeed, newSeed *core.Seed) bool {
@@ -97,17 +98,6 @@ func mustIncreaseGeneration(oldSeed, newSeed *core.Seed) bool {
 func (Strategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {
 	seed := obj.(*core.Seed)
 	return validation.ValidateSeed(seed)
-}
-
-// Canonicalize allows an object to be mutated into a canonical form. This
-// ensures that code that operates on these objects can rely on the common
-// form for things like comparison.  Canonicalize is invoked after
-// validation has succeeded but before the object has been persisted.
-// This method may mutate the object.
-func (Strategy) Canonicalize(obj runtime.Object) {
-	seed := obj.(*core.Seed)
-
-	syncLegacyAccessRestrictionLabelWithNewField(seed)
 }
 
 // AllowCreateOnUpdate returns true if the object can be created by a PUT.
@@ -161,46 +151,6 @@ func (s StatusStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obj
 // ValidateUpdate validates the update on the given old and new object.
 func (StatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateSeedStatusUpdate(obj.(*core.Seed), old.(*core.Seed))
-}
-
-// TODO(rfranzke): Remove everything below this line and the legacy access restriction label after
-// https://github.com/gardener/dashboard/issues/2120 has been merged and ~6 months have passed to make sure all clients
-// have adapted to the new fields in the specifications, and are rolled out.
-func syncLegacyAccessRestrictionLabelWithNewField(seed *core.Seed) {
-	if seed.Labels["seed.gardener.cloud/eu-access"] == "true" {
-		if !slices.ContainsFunc(seed.Spec.AccessRestrictions, func(accessRestriction core.AccessRestriction) bool {
-			return accessRestriction.Name == "eu-access-only"
-		}) {
-			seed.Spec.AccessRestrictions = append(seed.Spec.AccessRestrictions, core.AccessRestriction{Name: "eu-access-only"})
-			return
-		}
-	}
-
-	if slices.ContainsFunc(seed.Spec.AccessRestrictions, func(accessRestriction core.AccessRestriction) bool {
-		return accessRestriction.Name == "eu-access-only"
-	}) {
-		if seed.Labels == nil {
-			seed.Labels = make(map[string]string)
-		}
-		seed.Labels["seed.gardener.cloud/eu-access"] = "true"
-	}
-}
-
-func syncLegacyAccessRestrictionLabelWithNewFieldOnUpdate(seed, oldSeed *core.Seed) {
-	removeAccessRestriction := func(accessRestrictions []core.AccessRestriction, name string) []core.AccessRestriction {
-		var updatedAccessRestrictions []core.AccessRestriction
-		for _, accessRestriction := range accessRestrictions {
-			if accessRestriction.Name != name {
-				updatedAccessRestrictions = append(updatedAccessRestrictions, accessRestriction)
-			}
-		}
-		return updatedAccessRestrictions
-	}
-
-	if oldSeed.Labels["seed.gardener.cloud/eu-access"] == "true" &&
-		seed.Labels["seed.gardener.cloud/eu-access"] != "true" {
-		seed.Spec.AccessRestrictions = removeAccessRestriction(seed.Spec.AccessRestrictions, "eu-access-only")
-	}
 }
 
 // SyncBackupSecretRefAndCredentialsRef ensures the backup fields
