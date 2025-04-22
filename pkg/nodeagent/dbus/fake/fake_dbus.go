@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	systemddbus "github.com/coreos/go-systemd/v22/dbus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 
@@ -34,6 +35,8 @@ const (
 	ActionStop
 	// ActionReboot is constant for the 'Reboot' action.
 	ActionReboot
+	// ActionList is constant for the 'List' action.
+	ActionList
 )
 
 // SystemdAction is used for the implementation of the fake dbus.
@@ -46,6 +49,7 @@ type SystemdAction struct {
 type DBus struct {
 	Actions  []SystemdAction
 	failures map[string]error
+	units    []systemddbus.UnitStatus
 
 	mutex sync.Mutex
 }
@@ -130,14 +134,32 @@ func (d *DBus) Restart(_ context.Context, _ record.EventRecorder, _ runtime.Obje
 	return d.maybeError(action)
 }
 
+// List implements dbus.DBus.
+func (d *DBus) List(_ context.Context) ([]systemddbus.UnitStatus, error) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	d.Actions = append(d.Actions, SystemdAction{
+		Action: ActionList,
+	})
+	return d.units, nil
+}
+
+// AddUnitsToList adds the given units to the list of units that will be returned by List.
+func (d *DBus) AddUnitsToList(units ...systemddbus.UnitStatus) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	d.units = append(d.units, units...)
+}
+
 // Reboot implements dbus.DBus.
 func (d *DBus) Reboot() error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
 	d.Actions = append(d.Actions, SystemdAction{
-		Action:    ActionReboot,
-		UnitNames: []string{"reboot"},
+		Action: ActionReboot,
 	})
 	return nil
 }
