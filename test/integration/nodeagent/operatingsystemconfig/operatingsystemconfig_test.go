@@ -1031,9 +1031,7 @@ kind: NodeAgentConfiguration
 
 			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
-
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
+			waitForUpdatedNodeLabelUpdateResultSuccessful(node)
 		})
 
 		It("should successfully update the kubelet config", func() {
@@ -1072,6 +1070,7 @@ kubeReserved:
 
 			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
+			waitForUpdatedNodeLabelUpdateResultSuccessful(node)
 
 			By("Assert that unit actions have been applied")
 			Expect(fakeDBus.Actions).To(ConsistOf(
@@ -1083,8 +1082,6 @@ kubeReserved:
 			Expect(afero.Exists(fakeFS, "/var/lib/kubelet/cpu_manager_state")).To(BeFalse())
 			test.AssertFileOnDisk(fakeFS, kubeletConfigFilePath, kubeletConfig, 0600)
 
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
 		})
 
 		It("should successfully update the kubelet minor version", func() {
@@ -1108,6 +1105,7 @@ kubeReserved:
 
 			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
+			waitForUpdatedNodeLabelUpdateResultSuccessful(node)
 
 			By("Assert that unit actions have been applied")
 			Expect(fakeDBus.Actions).To(ConsistOf(
@@ -1115,9 +1113,6 @@ kubeReserved:
 				fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{kubeletUnit.Name}},
 				fakedbus.SystemdAction{Action: fakedbus.ActionDaemonReload},
 			))
-
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
 		})
 
 		It("should successfully complete service account key rotation", func() {
@@ -1149,9 +1144,7 @@ kubeReserved:
 
 			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
-
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
+			waitForUpdatedNodeLabelUpdateResultSuccessful(node)
 		})
 
 		It("should successfully complete CA rotation", func() {
@@ -1208,6 +1201,7 @@ preferences: {}
 			}).Should(Equal(oscSecret.Data["osc.yaml"]))
 
 			Expect(cancelFunc.called).To(BeTrue())
+			waitForUpdatedNodeLabelUpdateResultSuccessful(node)
 
 			Expect(fakeFS.DirExists(kubeletCertDir)).To(BeFalse())
 			expectedBootStrapConfig := `apiVersion: v1
@@ -1236,8 +1230,6 @@ users:
 			expectedNodeAgentKubeConfig := getNodeAgentKubeConfig(nodeAgentConfig.APIServer.CABundle, nodeAgentConfig.APIServer.Server, "new-cert")
 			test.AssertFileOnDisk(fakeFS, nodeagentconfigv1alpha1.KubeconfigFilePath, expectedNodeAgentKubeConfig, 0600)
 
-			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
-			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
 		})
 	})
 })
@@ -1273,6 +1265,15 @@ func waitForUpdatedNodeLabelKubernetesVersion(node *corev1.Node, value string) {
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
 		return updatedNode.Labels
 	}).Should(HaveKeyWithValue("worker.gardener.cloud/kubernetes-version", value))
+}
+
+func waitForUpdatedNodeLabelUpdateResultSuccessful(node *corev1.Node) {
+	By("Wait for node labels to be updated with update result")
+	EventuallyWithOffset(1, func(g Gomega) map[string]string {
+		updatedNode := &corev1.Node{}
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+		return updatedNode.Labels
+	}).Should(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful))
 }
 
 func getNodeAgentKubeConfig(caBundle []byte, server, clientCertificate string) string {
