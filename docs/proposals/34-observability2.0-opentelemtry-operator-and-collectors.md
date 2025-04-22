@@ -56,7 +56,7 @@ This section outlines the implementation plan to introduce the OpenTelemetry ope
 
 - **Objective:** Establish centralized management of OpenTelemetry collectors across all shoot control planes.
 - **Details:** Deploy the OpenTelemetry operator (e.g., from the [OpenTelemetry Operator for Kubernetes](https://github.com/open-telemetry/opentelemetry-operator)) in the `garden` namespace of each seed cluster using `ManagedResources`, similar to the Prometheus operator deployment in *GEP-19*.
-- **Configuration:** The operator will be deployed following the `botanist` workflow in the same way as the current `prometheus` and `fluent-bit` operators. This meaning that during the `Seed` reconciliation flow, the OpenTelemetryOperator will be deployed into the `garden` namespace.
+- **Configuration:** The operator will be deployed following the `botanist` workflow in the same way as the current `prometheus` and `fluent-bit` operators. This means that during the `Seed` reconciliation flow the OpenTelemetryOperator will be deployed into the `garden` namespace.
 
 ### 2. Create OpenTelemetry Collector Instances per Shoot
 
