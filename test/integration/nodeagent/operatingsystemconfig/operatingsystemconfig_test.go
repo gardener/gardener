@@ -104,6 +104,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(indexer.AddPodNodeName(ctx, mgr.GetFieldIndexer())).To(Succeed())
+		mgrClient = mgr.GetClient()
 
 		node = &corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
@@ -439,7 +440,7 @@ var _ = Describe("OperatingSystemConfig controller tests", func() {
 	})
 
 	It("should reconcile the configuration when there is no previous OSC", func() {
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that files and units have been created")
@@ -531,7 +532,7 @@ units: {}
 	})
 
 	It("should reconcile only parts of the configuration that were not applied yet", func() {
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
@@ -551,7 +552,7 @@ units: {}
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that unit actions have been applied")
@@ -569,7 +570,7 @@ units: {}
 	})
 
 	It("should reconcile the configuration when there is a previous OSC", func() {
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
@@ -618,7 +619,7 @@ units: {}
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that files and units have been created")
@@ -683,7 +684,7 @@ units: {}
 	})
 
 	It("should reconcile the configuration when the containerd registries change", func() {
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
@@ -702,7 +703,7 @@ units: {}
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that files and directories have been created")
@@ -724,7 +725,7 @@ units: {}
 	})
 
 	It("should reconcile the configuration when the containerd plugins change", func() {
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
@@ -748,7 +749,7 @@ units: {}
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that containerd config was updated properly")
@@ -765,7 +766,7 @@ units: {}
 	})
 
 	It("should reconcile the configuration when the cgroup driver changes", func() {
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
@@ -786,7 +787,7 @@ units: {}
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-		waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+		waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 		waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 		By("Assert that containerd config was updated properly")
@@ -853,7 +854,7 @@ units: {}
 		})
 
 		It("should not handle containerd configs", func() {
-			waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 			By("Assert that files and units have been created")
@@ -990,7 +991,7 @@ kind: NodeAgentConfiguration
 		})
 
 		JustBeforeEach(func() {
-			waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 			fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
@@ -1028,7 +1029,7 @@ kind: NodeAgentConfiguration
 			oscSecret.Data["osc.yaml"] = oscRaw
 			Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-			waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
@@ -1069,7 +1070,7 @@ kubeReserved:
 			oscSecret.Data["osc.yaml"] = oscRaw
 			Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-			waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 			By("Assert that unit actions have been applied")
@@ -1105,7 +1106,7 @@ kubeReserved:
 			oscSecret.Data["osc.yaml"] = oscRaw
 			Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-			waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 			By("Assert that unit actions have been applied")
@@ -1146,7 +1147,7 @@ kubeReserved:
 				Expect(event.Object.GetNamespace()).To(Equal("kube-system"))
 			}
 
-			waitForUpdatedNodeAnnotationCloudConfig(node, utils.ComputeSHA256Hex(oscRaw))
+			waitForUpdatedNodeAnnotationCloudConfig(node, oscSecret, utils.ComputeSHA256Hex(oscRaw))
 			waitForUpdatedNodeLabelKubernetesVersion(node, kubernetesVersion.String())
 
 			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
@@ -1199,6 +1200,13 @@ preferences: {}
 				))
 			}).Should(Succeed())
 
+			By("Wait for the manager to observe the updated secret")
+			EventuallyWithOffset(1, func(g Gomega) []byte {
+				updatedSecret := &corev1.Secret{}
+				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(oscSecret), updatedSecret)).To(Succeed())
+				return updatedSecret.Data["osc.yaml"]
+			}).Should(Equal(oscSecret.Data["osc.yaml"]))
+
 			Expect(cancelFunc.called).To(BeTrue())
 
 			Expect(fakeFS.DirExists(kubeletCertDir)).To(BeFalse())
@@ -1242,7 +1250,14 @@ func (c *cancelFuncEnsurer) cancel() {
 	c.called = true
 }
 
-func waitForUpdatedNodeAnnotationCloudConfig(node *corev1.Node, value string) {
+func waitForUpdatedNodeAnnotationCloudConfig(node *corev1.Node, oscSecret *corev1.Secret, value string) {
+	By("Wait for the manager to observe the updated secret")
+	EventuallyWithOffset(1, func(g Gomega) []byte {
+		updatedSecret := &corev1.Secret{}
+		g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(oscSecret), updatedSecret)).To(Succeed())
+		return updatedSecret.Data["osc.yaml"]
+	}).Should(Equal(oscSecret.Data["osc.yaml"]))
+
 	By("Wait for node annotations to be updated")
 	EventuallyWithOffset(1, func(g Gomega) map[string]string {
 		updatedNode := &corev1.Node{}
