@@ -6,9 +6,12 @@ package extension_test
 
 import (
 	"context"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -20,25 +23,73 @@ var _ = Describe("Handler", func() {
 	var (
 		ctx       context.Context
 		handler   *Handler
+		resources []gardencorev1beta1.ControllerResource
 		extension *operatorv1alpha1.Extension
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		handler = &Handler{}
-		extension = &operatorv1alpha1.Extension{}
+		resources = []gardencorev1beta1.ControllerResource{
+			{Kind: "Worker", Type: "test"},
+		}
+		extension = &operatorv1alpha1.Extension{
+			Spec: operatorv1alpha1.ExtensionSpec{
+				Resources: resources,
+			},
+		}
+	})
+
+	Describe("#ValidateCreate", func() {
+		It("should return success for valid resource", func() {
+			warning, err := handler.ValidateCreate(ctx, extension)
+			Expect(warning).To(BeNil())
+			Expect(err).To(Succeed())
+		})
+
+		It("should prevent creation because of invalid resources", func() {
+			extension.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"shoot", "invalid"}
+			extension.Spec.Resources = append(extension.Spec.Resources, resources[0])
+
+			warning, err := handler.ValidateCreate(ctx, extension)
+			Expect(warning).To(BeNil())
+			Expect(err).To(HaveOccurred())
+
+			var statusErr *apierrors.StatusError
+			Expect(errors.As(err, &statusErr)).To(BeTrue(), "error should be of type apierrors.StatusError")
+
+			Expect(statusErr.ErrStatus.Details).NotTo(BeNil())
+			Expect(statusErr.ErrStatus.Details.Causes).To(ConsistOf(
+				metav1.StatusCause{
+					Type:    "FieldValueForbidden",
+					Message: "Forbidden: field must not be set when kind != Extension",
+					Field:   "spec.resources[0].autoEnable",
+				},
+				metav1.StatusCause{
+					Type:    "FieldValueNotSupported",
+					Message: "Unsupported value: \"invalid\": supported values: \"garden\", \"seed\", \"shoot\"",
+					Field:   "spec.resources[0].autoEnable[1]",
+				},
+				metav1.StatusCause{
+					Type:    "FieldValueDuplicate",
+					Message: "Duplicate value: \"Worker/test\"",
+					Field:   "spec.resources[1]",
+				},
+				metav1.StatusCause{
+					Type:    "FieldValueForbidden",
+					Message: "Forbidden: field must not be set when kind != Extension",
+					Field:   "spec.resources[1].autoEnable",
+				},
+				metav1.StatusCause{
+					Type:    "FieldValueNotSupported",
+					Message: "Unsupported value: \"invalid\": supported values: \"garden\", \"seed\", \"shoot\"",
+					Field:   "spec.resources[1].autoEnable[1]",
+				},
+			))
+		})
 	})
 
 	Describe("#ValidateUpdate", func() {
-		var resources []gardencorev1beta1.ControllerResource
-
-		BeforeEach(func() {
-			resources = []gardencorev1beta1.ControllerResource{
-				{Kind: "Worker", Type: "test"},
-			}
-			extension.Spec.Resources = resources
-		})
-
 		It("should return success if the extension resources are not updated", func() {
 			newExtension := extension.DeepCopy()
 
@@ -49,7 +100,7 @@ var _ = Describe("Handler", func() {
 
 		It("should return success if the extension resources are added", func() {
 			newExtension := extension.DeepCopy()
-			newExtension.Spec.Resources = append(newExtension.Spec.Resources, gardencorev1beta1.ControllerResource{Kind: "NewResource", Type: "test", Primary: ptr.To(false)})
+			newExtension.Spec.Resources = append(newExtension.Spec.Resources, gardencorev1beta1.ControllerResource{Kind: "BackupBucket", Type: "test", Primary: ptr.To(false)})
 
 			warning, err := handler.ValidateUpdate(ctx, extension, newExtension)
 			Expect(warning).To(BeNil())
