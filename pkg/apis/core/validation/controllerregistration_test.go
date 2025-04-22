@@ -94,235 +94,10 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
-		It("should forbid empty values in a given resource", func() {
-			controllerRegistration.Spec.Resources[0].Type = ""
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.resources[0].type"),
-			}))))
-		})
-
-		It("should forbid duplicates in given resources", func() {
-			controllerRegistration.Spec.Resources = append(controllerRegistration.Spec.Resources, controllerRegistration.Spec.Resources[0])
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeDuplicate),
-				"Field": Equal("spec.resources[1]"),
-			}))))
-		})
-
-		It("should allow all known extension kinds", func() {
-			controllerRegistration.Spec.Resources = make([]core.ControllerResource, 0, len(extensionsv1alpha1.AllExtensionKinds))
-			for kind := range extensionsv1alpha1.AllExtensionKinds {
-				controllerRegistration.Spec.Resources = append(controllerRegistration.Spec.Resources,
-					core.ControllerResource{
-						Kind: kind,
-						Type: "foo",
-					},
-				)
-			}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should forbid unknown extension kinds", func() {
-			controllerRegistration.Spec.Resources = []core.ControllerResource{
-				{
-					Kind: extensionsv1alpha1.BackupBucketResource,
-					Type: "my-os",
-				},
-				{
-					Kind: "foo",
-					Type: "my-os",
-				},
-			}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.resources[1].kind"),
-			}))))
-		})
-
-		It("should allow specifying no resources", func() {
-			controllerRegistration.Spec.Resources = nil
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
 		It("should allow valid ControllerRegistration resources", func() {
 			errorList := ValidateControllerRegistration(controllerRegistration)
 
 			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should allow to set required field for kind Extension", func() {
-			strategy := core.BeforeKubeAPIServer
-			resource := core.ControllerResource{
-				Kind:             extensionsv1alpha1.ExtensionResource,
-				Type:             "arbitrary",
-				GloballyEnabled:  ptr.To(true),
-				AutoEnable:       []core.AutoEnableMode{core.AutoEnableModeShoot},
-				ReconcileTimeout: &metav1.Duration{Duration: 10 * time.Second},
-				Lifecycle: &core.ControllerResourceLifecycle{
-					Reconcile: &strategy,
-				},
-			}
-
-			controllerRegistration.Spec.Resources = []core.ControllerResource{resource}
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should forbid to set certain fields for kind != Extension", func() {
-			strategy := core.BeforeKubeAPIServer
-			ctrlResource.GloballyEnabled = ptr.To(true)
-			ctrlResource.AutoEnable = []core.AutoEnableMode{core.AutoEnableModeShoot}
-			ctrlResource.ReconcileTimeout = &metav1.Duration{Duration: 10 * time.Second}
-			ctrlResource.Lifecycle = &core.ControllerResourceLifecycle{
-				Reconcile: &strategy,
-			}
-			controllerRegistration.Spec.Resources = []core.ControllerResource{ctrlResource}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.resources[0].globallyEnabled"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.resources[0].autoEnable"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.resources[0].reconcileTimeout"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.resources[0].lifecycle"),
-			}))))
-		})
-
-		It("should allow setting valid autoEnable modes", func() {
-			controllerRegistration.Spec.Resources[0].Kind = "Extension"
-
-			controllerRegistration.Spec.Resources[0].AutoEnable = []core.AutoEnableMode{"shoot", "seed"}
-			Expect(ValidateControllerRegistration(controllerRegistration)).To(BeEmpty())
-		})
-
-		It("should forbid setting an invalid autoEnable mode", func() {
-			controllerRegistration.Spec.Resources[0].Kind = "Extension"
-			controllerRegistration.Spec.Resources[0].AutoEnable = append(controllerRegistration.Spec.Resources[0].AutoEnable, "foo")
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.resources[0].autoEnable[0]"),
-			}))))
-		})
-
-		It("should forbid setting an duplicate autoEnable", func() {
-			controllerRegistration.Spec.Resources[0].Kind = "Extension"
-			controllerRegistration.Spec.Resources[0].AutoEnable = []core.AutoEnableMode{"shoot", "shoot"}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeDuplicate),
-				"Field": Equal("spec.resources[0].autoEnable[1]"),
-			}))))
-		})
-
-		It("should allow setting the BeforeKubeAPIServer lifecycle strategy", func() {
-			beforeStrategy := core.BeforeKubeAPIServer
-			controllerRegistration.Spec.Resources[0].Kind = "Extension"
-			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
-				Reconcile: &beforeStrategy,
-				Delete:    &beforeStrategy,
-				Migrate:   &beforeStrategy,
-			}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should allow setting the AfterKubeAPIServer lifecycle strategy", func() {
-			afterStrategy := core.AfterKubeAPIServer
-			controllerRegistration.Spec.Resources[0].Kind = "Extension"
-			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
-				Reconcile: &afterStrategy,
-				Delete:    &afterStrategy,
-				Migrate:   &afterStrategy,
-			}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should allow setting the AfterWorker lifecycle strategy on reconcile", func() {
-			afterStrategy := core.AfterWorker
-			controllerRegistration.Spec.Resources[0].Kind = "Extension"
-			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
-				Reconcile: &afterStrategy,
-			}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(BeEmpty())
-		})
-
-		It("should not allow setting AfterWorker lifecycle strategy on migrate or delete", func() {
-			afterStrategy := core.AfterWorker
-			controllerRegistration.Spec.Resources[0].Kind = "Extension"
-			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
-				Migrate: &afterStrategy,
-				Delete:  &afterStrategy,
-			}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.resources[0].lifecycle.migrate"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.resources[0].lifecycle.delete"),
-			}))))
-		})
-
-		It("should not allow setting invalid lifecycle strategies", func() {
-			one := core.ControllerResourceLifecycleStrategy("one")
-			two := core.ControllerResourceLifecycleStrategy("two")
-			three := core.ControllerResourceLifecycleStrategy("three")
-			controllerRegistration.Spec.Resources[0].Kind = "Extension"
-			controllerRegistration.Spec.Resources[0].Lifecycle = &core.ControllerResourceLifecycle{
-				Reconcile: &one,
-				Delete:    &two,
-				Migrate:   &three,
-			}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.resources[0].lifecycle.reconcile"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.resources[0].lifecycle.delete"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.resources[0].lifecycle.migrate"),
-			}))))
 		})
 
 		It("should allow setting the OnDemand policy", func() {
@@ -452,7 +227,248 @@ var _ = Describe("validation", func() {
 		})
 	})
 
-	Describe("#ValidateControllerResourceUpdate", func() {
+	Describe("#ValidateControllerResources", func() {
+		var (
+			resources  []core.ControllerResource
+			validModes []core.AutoEnableMode
+			fldPath    *field.Path
+		)
+
+		BeforeEach(func() {
+			resources = []core.ControllerResource{ctrlResource}
+			validModes = []core.AutoEnableMode{core.AutoEnableModeShoot, core.AutoEnableModeSeed}
+			fldPath = field.NewPath("resources")
+		})
+
+		It("should allow specifying no resources", func() {
+			resources = nil
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid an unset type in a given resource", func() {
+			resources[0].Type = ""
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("resources[0].type"),
+			}))))
+		})
+
+		It("should forbid duplicates in given resources", func() {
+			resources = append(resources, resources[0])
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeDuplicate),
+				"Field": Equal("resources[1]"),
+			}))))
+		})
+
+		It("should allow all known extension kinds", func() {
+			resources = make([]core.ControllerResource, 0, len(extensionsv1alpha1.AllExtensionKinds))
+			for kind := range extensionsv1alpha1.AllExtensionKinds {
+				resources = append(resources,
+					core.ControllerResource{
+						Kind: kind,
+						Type: "foo",
+					},
+				)
+			}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid unknown extension kinds", func() {
+			resources = []core.ControllerResource{
+				{
+					Kind: extensionsv1alpha1.BackupBucketResource,
+					Type: "my-os",
+				},
+				{
+					Kind: "foo",
+					Type: "my-os",
+				},
+			}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("resources[1].kind"),
+			}))))
+		})
+
+		It("should allow to set required field for kind Extension", func() {
+			strategy := core.BeforeKubeAPIServer
+			resource := core.ControllerResource{
+				Kind:             extensionsv1alpha1.ExtensionResource,
+				Type:             "arbitrary",
+				GloballyEnabled:  ptr.To(true),
+				AutoEnable:       []core.AutoEnableMode{core.AutoEnableModeShoot},
+				ReconcileTimeout: &metav1.Duration{Duration: 10 * time.Second},
+				Lifecycle: &core.ControllerResourceLifecycle{
+					Reconcile: &strategy,
+				},
+			}
+
+			resources = []core.ControllerResource{resource}
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid to set certain fields for kind != Extension", func() {
+			strategy := core.BeforeKubeAPIServer
+			ctrlResource.GloballyEnabled = ptr.To(true)
+			ctrlResource.AutoEnable = []core.AutoEnableMode{core.AutoEnableModeShoot}
+			ctrlResource.ReconcileTimeout = &metav1.Duration{Duration: 10 * time.Second}
+			ctrlResource.Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &strategy,
+			}
+			resources = []core.ControllerResource{ctrlResource}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("resources[0].globallyEnabled"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("resources[0].autoEnable"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("resources[0].reconcileTimeout"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("resources[0].lifecycle"),
+			}))))
+		})
+
+		It("should allow setting valid autoEnable modes", func() {
+			resources[0].Kind = "Extension"
+			resources[0].AutoEnable = []core.AutoEnableMode{"shoot", "seed"}
+
+			Expect(ValidateControllerResources(resources, validModes, fldPath)).To(BeEmpty())
+		})
+
+		It("should forbid setting an invalid autoEnable mode", func() {
+			resources[0].Kind = "Extension"
+			resources[0].AutoEnable = append(resources[0].AutoEnable, "foo")
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("resources[0].autoEnable[0]"),
+			}))))
+		})
+
+		It("should forbid setting an duplicate autoEnable", func() {
+			resources[0].Kind = "Extension"
+			resources[0].AutoEnable = []core.AutoEnableMode{"shoot", "shoot"}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeDuplicate),
+				"Field": Equal("resources[0].autoEnable[1]"),
+			}))))
+		})
+
+		It("should allow setting the BeforeKubeAPIServer lifecycle strategy", func() {
+			beforeStrategy := core.BeforeKubeAPIServer
+			resources[0].Kind = "Extension"
+			resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &beforeStrategy,
+				Delete:    &beforeStrategy,
+				Migrate:   &beforeStrategy,
+			}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow setting the AfterKubeAPIServer lifecycle strategy", func() {
+			afterStrategy := core.AfterKubeAPIServer
+			resources[0].Kind = "Extension"
+			resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &afterStrategy,
+				Delete:    &afterStrategy,
+				Migrate:   &afterStrategy,
+			}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow setting the AfterWorker lifecycle strategy on reconcile", func() {
+			afterStrategy := core.AfterWorker
+			resources[0].Kind = "Extension"
+			resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &afterStrategy,
+			}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should not allow setting AfterWorker lifecycle strategy on migrate or delete", func() {
+			afterStrategy := core.AfterWorker
+			resources[0].Kind = "Extension"
+			resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Migrate: &afterStrategy,
+				Delete:  &afterStrategy,
+			}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("resources[0].lifecycle.migrate"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("resources[0].lifecycle.delete"),
+			}))))
+		})
+
+		It("should not allow setting invalid lifecycle strategies", func() {
+			one := core.ControllerResourceLifecycleStrategy("one")
+			two := core.ControllerResourceLifecycleStrategy("two")
+			three := core.ControllerResourceLifecycleStrategy("three")
+			resources[0].Kind = "Extension"
+			resources[0].Lifecycle = &core.ControllerResourceLifecycle{
+				Reconcile: &one,
+				Delete:    &two,
+				Migrate:   &three,
+			}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("resources[0].lifecycle.reconcile"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("resources[0].lifecycle.delete"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("resources[0].lifecycle.migrate"),
+			}))))
+		})
+	})
+
+	Describe("#ValidateControllerResourcesUpdate", func() {
 		var resources []core.ControllerResource
 
 		BeforeEach(func() {
@@ -472,7 +488,7 @@ var _ = Describe("validation", func() {
 			newResources := slices.Clone(resources)
 			newResources[0].Primary = ptr.To(false)
 
-			errorList := ValidateControllerResourceUpdate(newResources, resources, field.NewPath("spec.resources"))
+			errorList := ValidateControllerResourcesUpdate(newResources, resources, field.NewPath("spec.resources"))
 
 			Expect(errorList).To(ContainElement(MatchError(ContainSubstring("field is immutable"))))
 		})
@@ -485,7 +501,7 @@ var _ = Describe("validation", func() {
 				Primary: ptr.To(true),
 			})
 
-			errorList := ValidateControllerResourceUpdate(newResources, resources, field.NewPath("spec.resources"))
+			errorList := ValidateControllerResourcesUpdate(newResources, resources, field.NewPath("spec.resources"))
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -493,7 +509,7 @@ var _ = Describe("validation", func() {
 		It("should allow update without changes", func() {
 			newResources := slices.Clone(resources)
 
-			errorList := ValidateControllerResourceUpdate(newResources, resources, field.NewPath("spec.resources"))
+			errorList := ValidateControllerResourcesUpdate(newResources, resources, field.NewPath("spec.resources"))
 
 			Expect(errorList).To(BeEmpty())
 		})
