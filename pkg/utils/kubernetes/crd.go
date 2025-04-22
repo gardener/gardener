@@ -5,7 +5,6 @@
 package kubernetes
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -86,13 +85,12 @@ func WaitUntilCRDManifestsDestroyed(ctx context.Context, c client.Client, crdNam
 var (
 	crdScheme *runtime.Scheme
 	crdCodec  runtime.Codec
-	ser       *json.Serializer
 )
 
 func init() {
 	crdScheme = runtime.NewScheme()
 	utilruntime.Must(apiextensionsv1.AddToScheme(crdScheme))
-	ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, crdScheme, crdScheme, json.SerializerOptions{
+	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, crdScheme, crdScheme, json.SerializerOptions{
 		Yaml:   true,
 		Pretty: false,
 		Strict: false,
@@ -112,14 +110,4 @@ func DecodeCRD(crdYAML string) (*apiextensionsv1.CustomResourceDefinition, error
 		return nil, fmt.Errorf("expected *apiextensionsv1.CustomResourceDefinition, got %T", obj)
 	}
 	return crd, nil
-}
-
-// EncodeCRD encodes a CRD into YAML.
-func EncodeCRD(crd *apiextensionsv1.CustomResourceDefinition) (string, error) {
-	out := make([]byte, 0)
-	buf := bytes.NewBuffer(out)
-	if err := ser.Encode(crd, buf); err != nil {
-		return "", fmt.Errorf("failed to encode CRD: %w", err)
-	}
-	return buf.String(), nil
 }

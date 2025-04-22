@@ -12,6 +12,7 @@ import (
 	druidcorecrds "github.com/gardener/etcd-druid/api/core/v1alpha1/crds"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -54,7 +55,7 @@ func (c *crdGetterImpl) GetAllCRDsAsStringSlice() ([]string, error) {
 	crds := c.GetAllCRDs()
 	crdStrings := make([]string, 0, len(crds))
 	for _, crd := range crds {
-		crdString, err := kubernetesutils.EncodeCRD(crd)
+		crdString, err := kubernetesutils.Serialize(crd, kubernetesscheme.Scheme)
 		if err != nil {
 			return nil, err
 		}
