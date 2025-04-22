@@ -261,6 +261,8 @@ const (
 	GardenRoleKubeconfig = "kubeconfig"
 	// GardenRoleCACluster is the value of the GardenRole key indicating type 'ca-cluster'.
 	GardenRoleCACluster = "ca-cluster"
+	// GardenRoleCAKubelet is the value of the GardenRole key indicating type 'ca-kubelet'.
+	GardenRoleCAKubelet = "ca-kubelet"
 	// GardenRoleCAClient is the value of the GardenRole key indicating type 'ca-client'.
 	GardenRoleCAClient = "ca-client"
 	// GardenRoleSSHKeyPair is the value of the GardenRole key indicating type 'ssh-keypair'.
@@ -601,6 +603,8 @@ const (
 	LabelDiscoveryPublic = "discovery.gardener.cloud/public"
 	// DiscoveryShootCA is a constant for a label value that indicates that the labeled resource contains shoot cluster certificate authority.
 	DiscoveryShootCA = "shoot-ca"
+	// DiscoveryShootCAKubelet is a constant for a label value that indicates that the labeled resource contains shoot cluster kubelet certificate authority.
+	DiscoveryShootCAKubelet = "shoot-ca-kubelet"
 
 	// LabelExposureClassHandlerName is the label key for exposure class handler names.
 	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
