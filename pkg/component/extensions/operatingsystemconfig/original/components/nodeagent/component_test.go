@@ -254,4 +254,14 @@ server: {}
 			}))
 		})
 	})
+
+	Describe("#FilePathInImage", func() {
+		It("should return the path when registry is not local", func() {
+			Expect(FilePathInImage("some-registry/gna:v1.0")).To(Equal("/gardener-node-agent"))
+		})
+
+		It("should return the path when registry is local", func() {
+			Expect(FilePathInImage("garden.local.gardener.cloud:5001/gna:v1.0")).To(Equal("/ko-app/gardener-node-agent"))
+		})
+	})
 })
