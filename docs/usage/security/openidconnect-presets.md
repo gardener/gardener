@@ -4,7 +4,8 @@ title: OpenIDConnect Presets
 
 # ClusterOpenIDConnectPreset and OpenIDConnectPreset
 
-> **Note:** OpenID Connect is deprecated in favor of [Structured Authentication configuration](../shoot/shoot_access.md#structured-authentication). Setting OpenID Connect configurations is forbidden for clusters with Kubernetes version `>= 1.32`. 
+> [!WARNING]
+> OpenID Connect is deprecated in favor of [Structured Authentication configuration](../shoot/shoot_access.md#structured-authentication). Setting OpenID Connect configurations is forbidden for clusters with Kubernetes version `>= 1.32`.
 
 This page provides an overview of ClusterOpenIDConnectPresets and OpenIDConnectPresets, which are objects for injecting [OpenIDConnect Configuration](https://openid.net/connect/) into `Shoot` at creation time. The injected information contains configuration for the Kube API Server and optionally configuration for kubeconfig generation using said configuration.
 

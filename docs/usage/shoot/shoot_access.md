@@ -114,34 +114,6 @@ The examples for other programming languages are similar to [the above](#shootsa
 >
 > ⚠️ This endpoint is specific to the seed cluster your `Shoot` is scheduled to, i.e., if the seed cluster changes (`.spec.seedName`, for example because of a [control plane migration](../../operations/control_plane_migration.md)), the endpoint changes as well. Have this in mind in case you consider using it!
 
-## OpenID Connect
-
-> **Note:** OpenID Connect is deprecated in favor of [Structured Authentication configuration](#structured-authentication). Setting OpenID Connect configurations is forbidden for clusters with Kubernetes version `>= 1.32`
-
-The `kube-apiserver` of shoot clusters can be provided with [OpenID Connect configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) via the Shoot spec:
-
-```yaml
-apiVersion: core.gardener.cloud/v1beta1
-kind: Shoot
-...
-spec:
-  kubernetes:
-    oidcConfig:
-      ...
-```
-
-It is the end-user's responsibility to incorporate the OpenID Connect configurations in the `kubeconfig` for accessing the cluster (i.e., Gardener will not automatically generate the `kubeconfig` based on these OIDC settings).
-The recommended way is using the `kubectl` plugin called [`kubectl oidc-login`](https://github.com/int128/kubelogin) for OIDC authentication.
-
-If you want to use the same OIDC configuration for all your shoots by default, then you can use the `ClusterOpenIDConnectPreset` and `OpenIDConnectPreset` API resources. They allow defaulting the `.spec.kubernetes.kubeAPIServer.oidcConfig` fields for newly created `Shoot`s such that you don't have to repeat yourself every time (similar to `PodPreset` resources in Kubernetes).
-`ClusterOpenIDConnectPreset` specified OIDC configuration applies to `Projects` and `Shoots` cluster-wide (hence, only available to Gardener operators), while `OpenIDConnectPreset` is `Project`-scoped.
-Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
-
-For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](../security/openidconnect-presets.md).
-
-For shoots with Kubernetes version `>= 1.30`, which have `StructuredAuthenticationConfiguration` feature gate enabled (enabled by default), it is advised to use Structured Authentication instead of configuring `.spec.kubernetes.kubeAPIServer.oidcConfig`.
-If `oidcConfig` is configured, it is translated into an `AuthenticationConfiguration` file to use for [Structured Authentication configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration)
-
 ## Structured Authentication
 
 For shoots with Kubernetes version `>= 1.30`, which have `StructuredAuthenticationConfiguration` feature gate enabled (enabled by default), `kube-apiserver` of shoot clusters can be provided with [Structured Authentication configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration) via the Shoot spec:
@@ -261,3 +233,32 @@ If you want the changes to roll out immediately, [trigger a reconciliation expli
 
 Be aware of the fact that all webhook authorizers are added only after the `RBAC`/`Node` authorizers.
 Hence, if RBAC already allows a request, your webhook authorizer might not get called.
+
+## OpenID Connect
+
+> [!WARNING]
+> OpenID Connect is deprecated in favor of [Structured Authentication configuration](#structured-authentication). Setting OpenID Connect configurations is forbidden for clusters with Kubernetes version `>= 1.32`.
+
+The `kube-apiserver` of shoot clusters can be provided with [OpenID Connect configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) via the Shoot spec:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+...
+spec:
+  kubernetes:
+    oidcConfig:
+      ...
+```
+
+It is the end-user's responsibility to incorporate the OpenID Connect configurations in the `kubeconfig` for accessing the cluster (i.e., Gardener will not automatically generate the `kubeconfig` based on these OIDC settings).
+The recommended way is using the `kubectl` plugin called [`kubectl oidc-login`](https://github.com/int128/kubelogin) for OIDC authentication.
+
+If you want to use the same OIDC configuration for all your shoots by default, then you can use the `ClusterOpenIDConnectPreset` and `OpenIDConnectPreset` API resources. They allow defaulting the `.spec.kubernetes.kubeAPIServer.oidcConfig` fields for newly created `Shoot`s such that you don't have to repeat yourself every time (similar to `PodPreset` resources in Kubernetes).
+`ClusterOpenIDConnectPreset` specified OIDC configuration applies to `Projects` and `Shoots` cluster-wide (hence, only available to Gardener operators), while `OpenIDConnectPreset` is `Project`-scoped.
+Shoots have to "opt-in" for such defaulting by using the `oidc=enable` label.
+
+For further information on `(Cluster)OpenIDConnectPreset`, refer to [ClusterOpenIDConnectPreset and OpenIDConnectPreset](../security/openidconnect-presets.md).
+
+For shoots with Kubernetes version `>= 1.30`, which have `StructuredAuthenticationConfiguration` feature gate enabled (enabled by default), it is advised to use Structured Authentication instead of configuring `.spec.kubernetes.kubeAPIServer.oidcConfig`.
+If `oidcConfig` is configured, it is translated into an `AuthenticationConfiguration` file to use for [Structured Authentication configuration](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#using-authentication-configuration).
