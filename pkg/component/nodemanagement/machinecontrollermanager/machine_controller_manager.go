@@ -7,6 +7,8 @@ package machinecontrollermanager
 import (
 	"context"
 	"fmt"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	"time"
 
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -98,7 +100,8 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	var (
 		shootAccessSecret   = m.newShootAccessSecret()
 		serviceAccount      = m.emptyServiceAccount()
-		clusterRoleBinding  = m.emptyClusterRoleBindingRuntime()
+		roleBinding         = m.emptyRoleBindingRuntime()
+		role                = m.emptyRole()
 		service             = m.emptyService()
 		deployment          = m.emptyDeployment()
 		podDisruptionBudget = m.emptyPodDisruptionBudget()
@@ -119,27 +122,64 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, clusterRoleBinding, func() error {
-		clusterRoleBinding.OwnerReferences = []metav1.OwnerReference{{
-			APIVersion:         "v1",
-			Kind:               "Namespace",
-			Name:               m.namespace,
-			UID:                m.values.namespaceUID,
-			Controller:         ptr.To(true),
-			BlockOwnerDeletion: ptr.To(true),
-		}}
-		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     clusterRoleName,
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, role, func() error {
+		role.Rules = []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{machinev1alpha1.GroupName},
+				Resources: []string{
+					"machineclasses",
+					"machineclasses/status",
+					"machinedeployments",
+					"machinedeployments/status",
+					"machines",
+					"machines/status",
+					"machinesets",
+					"machinesets/status",
+				},
+				Verbs: []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
+				Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{coordinationv1.GroupName},
+				Resources: []string{"leases"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{coordinationv1.GroupName},
+				Resources:     []string{"leases"},
+				Verbs:         []string{"get", "watch", "update"},
+				ResourceNames: []string{"machine-controller", "machine-controller-manager"},
+			},
 		}
-		clusterRoleBinding.Subjects = []rbacv1.Subject{{
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, roleBinding, func() error {
+		roleBinding.RoleRef = rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     role.Name,
+		}
+		roleBinding.Subjects = []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      serviceAccount.Name,
 			Namespace: m.namespace,
 		}}
 		return nil
 	}); err != nil {
+		return err
+	}
+
+	//TODO: @aaronfern Remove this after g/g:v1.119 is released
+	if err := kubernetesutils.DeleteObjects(ctx, m.client,
+		m.emptyClusterRoleBindingRuntime(),
+	); err != nil {
 		return err
 	}
 
@@ -450,7 +490,9 @@ func (m *machineControllerManager) Destroy(ctx context.Context) error {
 		m.emptyDeployment(),
 		m.newShootAccessSecret().Secret,
 		m.emptyService(),
-		m.emptyClusterRoleBindingRuntime(),
+		m.emptyClusterRoleBindingRuntime(), //TODO: @aaronfern Remove this after g/g:v1.119 is released
+		m.emptyRoleBindingRuntime(),
+		m.emptyRole(),
 		m.emptyServiceAccount(),
 	)
 }
@@ -595,6 +637,15 @@ func (m *machineControllerManager) emptyServiceAccount() *corev1.ServiceAccount 
 	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
 }
 
+func (m *machineControllerManager) emptyRole() *rbacv1.Role {
+	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
+}
+
+func (m *machineControllerManager) emptyRoleBindingRuntime() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
+}
+
+// TODO: @aaronfern Remove this after g/g:v1.119 is released
 func (m *machineControllerManager) emptyClusterRoleBindingRuntime() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-" + m.namespace}}
 }
