@@ -93,6 +93,7 @@ case $TYPE in
       e2e-rotate.local
       e2e-rotate-wl.local
       e2e-rot-noroll.local
+      e2e-rot-ip.local
       e2e-default.local
       e2e-default-wl.local
       e2e-force-delete.local
@@ -114,6 +115,7 @@ case $TYPE in
       gu-local--e2e-rotate
       gu-local--e2e-rotate-wl
       gu-local--e2e-rot-noroll
+      gu-local--e2e-rot-ip
     )
 
     if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then

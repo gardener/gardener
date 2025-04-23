@@ -6,18 +6,25 @@ package shoot
 
 import (
 	"flag"
+	"fmt"
+	"slices"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/provider-local/machine-provider/local"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
@@ -264,4 +271,157 @@ func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
 			return s.GardenClient.Patch(ctx, s.Shoot, patch)
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldLabelManualInPlaceNodesWithSelectedForUpdate labels all manual in-place nodes with the selected-for-update label.
+// In the actual scenario, this should be done by the user, but for testing purposes, we do it here.
+func ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s *ShootContext) {
+	GinkgoHelper()
+
+	It("should label all the manual in-place nodes with selected-for-update", func(ctx SpecContext) {
+		for _, pool := range s.Shoot.Spec.Provider.Workers {
+			if !v1beta1helper.IsUpdateStrategyManualInPlace(pool.UpdateStrategy) {
+				continue
+			}
+
+			nodeList := &corev1.NodeList{}
+			Eventually(ctx, s.ShootKomega.List(nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: pool.Name})).Should(Succeed())
+
+			for _, node := range nodeList.Items {
+				if metav1.HasLabel(node.ObjectMeta, machinev1alpha1.LabelKeyNodeSelectedForUpdate) {
+					continue
+				}
+
+				Eventually(ctx, s.ShootKomega.Update(&node, func() {
+					metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeSelectedForUpdate, "true")
+				})).Should(Succeed())
+			}
+		}
+	}, SpecTimeout(2*time.Minute))
+}
+
+// ItShouldFindAllMachinePodsBefore finds all machine pods before running the required tests and returns their names.
+func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
+	GinkgoHelper()
+
+	beforeStartMachinePodNames := sets.New[string]()
+
+	It("Find all machine pods to ensure later that they weren't rolled out", func(ctx SpecContext) {
+		beforeStartMachinePodList := &corev1.PodList{}
+		Eventually(ctx, s.SeedKomega.List(beforeStartMachinePodList, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
+			"app":              "machine",
+			"machine-provider": "local",
+		})).Should(Succeed())
+
+		for _, item := range beforeStartMachinePodList.Items {
+			beforeStartMachinePodNames.Insert(item.Name)
+		}
+	}, SpecTimeout(time.Minute))
+
+	return beforeStartMachinePodNames
+}
+
+// ItShouldCompareMachinePodNamesAfter compares the machine pod names before and after running the required tests.
+func ItShouldCompareMachinePodNamesAfter(s *ShootContext, beforeStartMachinePodNames sets.Set[string]) {
+	GinkgoHelper()
+
+	It("Compare machine pod names", func(ctx SpecContext) {
+		afterStartMachinePodList := &corev1.PodList{}
+		Eventually(ctx, s.SeedKomega.List(afterStartMachinePodList, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
+			"app":              "machine",
+			"machine-provider": "local",
+		})).Should(Succeed())
+
+		afterStartMachinePodNames := sets.New[string]()
+		for _, item := range afterStartMachinePodList.Items {
+			afterStartMachinePodNames.Insert(item.Name)
+		}
+
+		Expect(beforeStartMachinePodNames.UnsortedList()).To(ConsistOf(afterStartMachinePodNames.UnsortedList()))
+	}, SpecTimeout(time.Minute))
+}
+
+// ItShouldRewriteOsRelease rewrites the /etc/os-release file for all machine pods to ensure that the version is overwritten for tests.
+// This is a workaround for the fact that the machine image version is not available in the os-release file in the local provider.
+func ItShouldRewriteOsRelease(s *ShootContext) {
+	GinkgoHelper()
+
+	It("should rewrite the /etc/os-release for all machines", func(ctx SpecContext) {
+		podList := &corev1.PodList{}
+		Eventually(ctx, s.SeedKomega.List(podList,
+			client.InNamespace(s.Shoot.Status.TechnicalID),
+			client.MatchingLabels{
+				"app":              "machine",
+				"machine-provider": "local",
+			},
+		)).Should(Succeed())
+
+		for _, pod := range podList.Items {
+			node := &corev1.Node{}
+			Eventually(func() error {
+				return s.ShootClient.Get(ctx, client.ObjectKey{Namespace: pod.Namespace, Name: pod.Name}, node)
+			}).Should(Succeed())
+
+			Expect(node.Labels).To(HaveKey(v1beta1constants.LabelWorkerPool))
+
+			poolIndex := slices.IndexFunc(s.Shoot.Spec.Provider.Workers, func(pool gardencorev1beta1.Worker) bool {
+				return pool.Name == node.Labels[v1beta1constants.LabelWorkerPool]
+			})
+			Expect(poolIndex).To(BeNumerically(">", -1))
+
+			_, _, err := s.SeedClientSet.PodExecutor().Execute(ctx,
+				pod.Namespace,
+				pod.Name,
+				local.MachinePodContainerName,
+				"sed",
+				"-i", "-E",
+				fmt.Sprintf(
+					`s/^PRETTY_NAME="[^"]*"/PRETTY_NAME="Machine Image Version %s (version overwritten for tests, check VERSION_ID for actual version)"/`,
+					*s.Shoot.Spec.Provider.Workers[poolIndex].Machine.Image.Version,
+				),
+				"/etc/os-release",
+			)
+
+			Expect(err).NotTo(HaveOccurred())
+		}
+	}, SpecTimeout(2*time.Minute))
+}
+
+// ItShouldVerifyInPlaceUpdateStart verifies that the starting of in-place update  by checking the
+// .status.inPlaceUpdates and the ManualInPlaceWorkersUpdated constraint of the Shoot.
+func ItShouldVerifyInPlaceUpdateStart(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Verify in-place update start", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Shoot), s.Shoot)).Should(Succeed())
+
+			g.Expect(s.Shoot.Status.InPlaceUpdates).NotTo(BeNil())
+			g.Expect(s.Shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
+			g.Expect(s.Shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).NotTo(BeEmpty())
+			g.Expect(s.Shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).NotTo(BeEmpty())
+			g.Expect(s.Shoot.Status.Constraints).To(ContainCondition(
+				OfType(gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
+				WithReason("WorkerPoolsWithManualInPlaceUpdateStrategyPending"),
+				Or(WithStatus(gardencorev1beta1.ConditionFalse), WithStatus(gardencorev1beta1.ConditionProgressing)),
+			))
+		}).Should(Succeed())
+	}, SpecTimeout(2*time.Minute))
+}
+
+// ItShouldVerifyInPlaceUpdateCompletion verifies that the in-place update was completed successfully by checking the
+// .status.inPlaceUpdates and the ManualInPlaceWorkersUpdated constraint of the Shoot.
+func ItShouldVerifyInPlaceUpdateCompletion(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Verify in-place update completion", func(ctx SpecContext) {
+		Eventually(ctx, func(g Gomega) {
+			g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Shoot), s.Shoot)).Should(Succeed())
+
+			g.Expect(s.Shoot.Status.InPlaceUpdates).To(BeNil())
+			g.Expect(s.Shoot.Status.Constraints).NotTo(ContainCondition(
+				OfType(gardencorev1beta1.ShootManualInPlaceWorkersUpdated),
+			))
+		}).Should(Succeed())
+	}, SpecTimeout(2*time.Minute))
 }

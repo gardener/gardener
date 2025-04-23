@@ -82,20 +82,7 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 		Type:  ptr.To("calico"),
 		Nodes: ptr.To("10.10.0.0/16"),
 	}
-	shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
-		Name: "local",
-		Machine: gardencorev1beta1.Machine{
-			Type: "local",
-		},
-		CRI: &gardencorev1beta1.CRI{
-			Name: gardencorev1beta1.CRINameContainerD,
-		},
-		Labels: map[string]string{
-			"foo": "bar",
-		},
-		Minimum: 1,
-		Maximum: 1,
-	})
+	shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker("local", nil))
 	shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{Type: "local-ext-shoot-after-worker"})
 
 	if os.Getenv("IPFAMILY") == "ipv6" {
@@ -118,6 +105,25 @@ func DefaultWorkerlessShoot(name string) *gardencorev1beta1.Shoot {
 	}
 
 	return shoot
+}
+
+// DefaultWorker returns a Worker object with default values for the e2e tests.
+func DefaultWorker(name string, updateStrategy *gardencorev1beta1.MachineUpdateStrategy) gardencorev1beta1.Worker {
+	return gardencorev1beta1.Worker{
+		Name: name,
+		Machine: gardencorev1beta1.Machine{
+			Type: "local",
+		},
+		CRI: &gardencorev1beta1.CRI{
+			Name: gardencorev1beta1.CRINameContainerD,
+		},
+		Labels: map[string]string{
+			"foo": "bar",
+		},
+		UpdateStrategy: ptr.To(ptr.Deref(updateStrategy, gardencorev1beta1.AutoRollingUpdate)),
+		Minimum:        1,
+		Maximum:        1,
+	}
 }
 
 // DefaultNamespacedCloudProfile returns a NamespacedCloudProfile object with default values for the e2e tests.

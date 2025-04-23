@@ -16,7 +16,9 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -32,7 +34,7 @@ import (
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )
 
-func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rotationutils.Verifiers, startRotationAnnotation, completeRotationAnnotation string) {
+func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rotationutils.Verifiers, startRotationAnnotation, completeRotationAnnotation string, inPlaceUpdate bool) {
 	// the verifier interface requires that we pass a context to some of the verifier functions
 	// this is not needed anymore for refactored tests as these use the SpecContext supplied by the "It" statement
 	// Also we cannot pass a nil as the context argument as this makes the linter unhappy :(
@@ -65,6 +67,10 @@ func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rota
 				utilsverifiers.ExpectPreparingStatus(g)
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
+
+		if inPlaceUpdate {
+			ItShouldVerifyInPlaceUpdateStart(s)
+		}
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
 		shootVerifiers.AfterPrepared(context.TODO())
@@ -122,19 +128,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}, SpecTimeout(5*time.Minute))
 	}
 
-	beforeStartMachinePodNames := sets.New[string]()
-
-	It("Find all machine pods to ensure later that they weren't rolled out", func(ctx SpecContext) {
-		beforeStartMachinePodList := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(beforeStartMachinePodList, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
-			"app":              "machine",
-			"machine-provider": "local",
-		})).Should(Succeed())
-
-		for _, item := range beforeStartMachinePodList.Items {
-			beforeStartMachinePodNames.Insert(item.Name)
-		}
-	}, SpecTimeout(time.Minute))
+	beforeStartMachinePodNames := ItShouldFindAllMachinePodsBefore(s)
 
 	ItShouldAnnotateShoot(s, map[string]string{
 		v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
@@ -158,20 +152,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	It("Compare machine pod names", func(ctx SpecContext) {
-		afterStartMachinePodList := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(afterStartMachinePodList, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
-			"app":              "machine",
-			"machine-provider": "local",
-		})).Should(Succeed())
-
-		afterStartMachinePodNames := sets.New[string]()
-		for _, item := range afterStartMachinePodList.Items {
-			afterStartMachinePodNames.Insert(item.Name)
-		}
-
-		Expect(beforeStartMachinePodNames.UnsortedList()).To(ConsistOf(afterStartMachinePodNames.UnsortedList()))
-	}, SpecTimeout(time.Minute))
+	ItShouldCompareMachinePodNamesAfter(s, beforeStartMachinePodNames)
 
 	It("Ensure all worker pools are marked as 'pending for roll out'", func() {
 		for _, worker := range s.Shoot.Spec.Provider.Workers {
@@ -242,7 +223,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 	Describe("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
-		test := func(s *ShootContext, withoutWorkersRollout bool) {
+		test := func(s *ShootContext, withoutWorkersRollout, inPlaceUpdate bool) {
 			ItShouldCreateShoot(s)
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
@@ -250,8 +231,8 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldInitializeSeedClient(s)
 
 			// isolated test for ssh key rotation (does not trigger node rolling update)
-			if !v1beta1helper.IsWorkerless(s.Shoot) && !withoutWorkersRollout {
-				testCredentialRotation(s, rotationutils.Verifiers{&rotation.SSHKeypairVerifier{ShootContext: s}}, nil, v1beta1constants.ShootOperationRotateSSHKeypair, "")
+			if !v1beta1helper.IsWorkerless(s.Shoot) && !withoutWorkersRollout && !inPlaceUpdate {
+				testCredentialRotation(s, rotationutils.Verifiers{&rotation.SSHKeypairVerifier{ShootContext: s}}, nil, v1beta1constants.ShootOperationRotateSSHKeypair, "", false)
 			}
 
 			// because of the ongoing refactoring efforts, we currently have two sorts of verifiers
@@ -324,15 +305,28 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				},
 			}
 
-			if !v1beta1helper.IsWorkerless(s.Shoot) && !withoutWorkersRollout {
+			if !v1beta1helper.IsWorkerless(s.Shoot) && !withoutWorkersRollout && !inPlaceUpdate {
 				shootVerifiers = append(shootVerifiers, &rotation.SSHKeypairVerifier{ShootContext: s})
+			}
+
+			var beforeStartMachinePodNames sets.Set[string]
+
+			if inPlaceUpdate {
+				ItShouldRewriteOsRelease(s)
+				beforeStartMachinePodNames = ItShouldFindAllMachinePodsBefore(s)
+				ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
 			}
 
 			if !withoutWorkersRollout {
 				// test rotation for every rotation type
-				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete)
+				testCredentialRotation(s, shootVerifiers, utilsVerifiers, v1beta1constants.OperationRotateCredentialsStart, v1beta1constants.OperationRotateCredentialsComplete, inPlaceUpdate)
 			} else {
 				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers)
+			}
+
+			if inPlaceUpdate {
+				ItShouldCompareMachinePodNamesAfter(s, beforeStartMachinePodNames)
+				ItShouldVerifyInPlaceUpdateCompletion(s)
 			}
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
@@ -347,7 +341,28 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 		Context("Shoot with workers", Label("basic"), func() {
 			Context("with workers rollout", Label("with-workers-rollout"), Ordered, func() {
-				test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false)
+				test(NewTestContext().ForShoot(DefaultShoot("e2e-rotate")), false, false)
+			})
+
+			Context("with workers rollout, in-place update strategy", Label("with-workers-rollout", "in-place"), Ordered, func() {
+				var s *ShootContext
+				BeforeTestSetup(func() {
+					shoot := DefaultShoot("e2e-rot-ip")
+
+					worker1 := DefaultWorker("auto", ptr.To(gardencorev1beta1.AutoInPlaceUpdate))
+					worker1.Minimum = 2
+					worker1.Maximum = 2
+					worker1.MaxUnavailable = ptr.To(intstr.FromInt(1))
+					worker1.MaxSurge = ptr.To(intstr.FromInt(0))
+
+					worker2 := DefaultWorker("manual", ptr.To(gardencorev1beta1.ManualInPlaceUpdate))
+
+					shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{worker1, worker2}
+
+					s = NewTestContext().ForShoot(shoot)
+				})
+
+				test(s, false, true)
 			})
 
 			Context("without workers rollout", Label("without-workers-rollout"), Ordered, func() {
@@ -357,19 +372,18 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 					shoot.Name = "e2e-rot-noroll"
 					// Add a second worker pool when worker rollout should not be performed such that we can make proper
 					// assertions of the shoot status
-					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
-					shoot.Spec.Provider.Workers[len(shoot.Spec.Provider.Workers)-1].Name += "2"
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, DefaultWorker(shoot.Spec.Provider.Workers[0].Name+"-2", nil))
 
 					s = NewTestContext().ForShoot(shoot)
 				})
 
-				test(s, true)
+				test(s, true, false)
 			})
 
 		})
 
 		Context("Workerless Shoot", Label("workerless"), Ordered, func() {
-			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false)
+			test(NewTestContext().ForShoot(DefaultWorkerlessShoot("e2e-rotate")), false, false)
 		})
 	})
 })
