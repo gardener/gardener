@@ -225,27 +225,29 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 		return err
 	}
 
-	kubeletCABundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAKubelet)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
-	}
+	if !b.Shoot.IsWorkerless {
+		kubeletCABundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAKubelet)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
+		}
 
-	kubeletCABundle := kubeletCABundleSecret.Data[secretsutils.DataKeyCertificateBundle]
+		kubeletCABundle := kubeletCABundleSecret.Data[secretsutils.DataKeyCertificateBundle]
 
-	if err := b.syncShootConfigMapToGarden(
-		ctx,
-		gardenerutils.ShootProjectConfigMapSuffixCAKubelet,
-		map[string]string{
-			v1beta1constants.GardenRole:             v1beta1constants.GardenRoleCAKubelet,
-			v1beta1constants.LabelDiscoveryPublic:   v1beta1constants.DiscoveryShootCAKubelet,
-			v1beta1constants.LabelShootName:         b.Shoot.GetInfo().Name,
-			v1beta1constants.LabelShootUID:          string(b.Shoot.GetInfo().UID),
-			v1beta1constants.LabelUpdateRestriction: "true",
-		},
-		nil,
-		map[string]string{secretsutils.DataKeyCertificateCA: string(kubeletCABundle)},
-	); err != nil {
-		return err
+		if err := b.syncShootConfigMapToGarden(
+			ctx,
+			gardenerutils.ShootProjectConfigMapSuffixCAKubelet,
+			map[string]string{
+				v1beta1constants.GardenRole:             v1beta1constants.GardenRoleCAKubelet,
+				v1beta1constants.LabelDiscoveryPublic:   v1beta1constants.DiscoveryShootCAKubelet,
+				v1beta1constants.LabelShootName:         b.Shoot.GetInfo().Name,
+				v1beta1constants.LabelShootUID:          string(b.Shoot.GetInfo().UID),
+				v1beta1constants.LabelUpdateRestriction: "true",
+			},
+			nil,
+			map[string]string{secretsutils.DataKeyCertificateCA: string(kubeletCABundle)},
+		); err != nil {
+			return err
+		}
 	}
 
 	// TODO(petersutter): Remove this code and cleanup Secret after v1.135 has been released. The caBundle is now being stored in a <shootname>.ca-cluster ConfigMap.

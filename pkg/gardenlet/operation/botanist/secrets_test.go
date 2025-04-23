@@ -255,17 +255,19 @@ var _ = Describe("Secrets", func() {
 					},
 				))
 
-				gardenConfigMapKubelet := &corev1.ConfigMap{}
-				Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ca-kubelet"}, gardenConfigMapKubelet)).To(Succeed())
-				Expect(gardenConfigMap.Labels).To(Equal(
-					map[string]string{
-						"discovery.gardener.cloud/public":   "shoot-ca",
-						"gardener.cloud/role":               "ca-cluster",
-						"gardener.cloud/update-restriction": "true",
-						"shoot.gardener.cloud/name":         "bar",
-						"shoot.gardener.cloud/uid":          "daa71cd9-c81a-45ac-a3d3-8bc2f4926a30",
-					},
-				))
+				if !botanist.Shoot.IsWorkerless {
+					gardenConfigMapKubelet := &corev1.ConfigMap{}
+					Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ca-kubelet"}, gardenConfigMapKubelet)).To(Succeed())
+					Expect(gardenConfigMapKubelet.Labels).To(Equal(
+						map[string]string{
+							"discovery.gardener.cloud/public":   "shoot-ca-kubelet",
+							"gardener.cloud/role":               "ca-kubelet",
+							"gardener.cloud/update-restriction": "true",
+							"shoot.gardener.cloud/name":         "bar",
+							"shoot.gardener.cloud/uid":          "daa71cd9-c81a-45ac-a3d3-8bc2f4926a30",
+						},
+					))
+				}
 
 				gardenSecret := &corev1.Secret{}
 				Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ca-cluster"}, gardenSecret)).To(Succeed())
