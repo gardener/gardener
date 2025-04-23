@@ -185,19 +185,26 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 						return fmt.Errorf("could not get GroupVersionKind from object %v: %w", obj, err)
 					}
 
-					mgr.GetLogger().Info("Removing legacy seed name labels", "gvk", gvk, "objectKey", client.ObjectKeyFromObject(obj))
+					var patchNeeded bool
 
 					patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
-
 					labels := obj.GetLabels()
 					for k, v := range labels {
 						if strings.HasPrefix(k, "seed.gardener.cloud/") && v == "true" && seedNames.Has(strings.TrimPrefix(k, "seed.gardener.cloud/")) {
 							delete(labels, k)
+							patchNeeded = true
 						}
 					}
-					obj.SetLabels(labels)
 
-					return mgr.GetClient().Patch(ctx, obj, patch)
+					if patchNeeded {
+						mgr.GetLogger().Info("Removing legacy seed name labels", "gvk", gvk, "objectKey", client.ObjectKeyFromObject(obj))
+
+						obj.SetLabels(labels)
+
+						return mgr.GetClient().Patch(ctx, obj, patch)
+					}
+
+					return nil
 				})
 				return nil
 			}); err != nil {
