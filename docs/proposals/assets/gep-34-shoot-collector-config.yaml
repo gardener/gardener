@@ -54,8 +54,6 @@ processors:
           - key: _SYSTEMD_UNIT
             value: kubelet.service
           - key: _SYSTEMD_UNIT
-            value: docker.service
-          - key: _SYSTEMD_UNIT
             value: containerd.service
           - key: _SYSTEMD_UNIT
             value: gardener-node-agent.service
@@ -69,8 +67,6 @@ processors:
             value: kernel
           - key: _SYSTEMD_UNIT
             value: kubelet.service
-          - key: _SYSTEMD_UNIT
-            value: docker.service
           - key: _SYSTEMD_UNIT
             value: containerd.service
           - key: _SYSTEMD_UNIT

@@ -77,10 +77,10 @@ spec:
   config:
     exporters:
       loki:
-      endpoint: https://v-local--local.ingress.local.seed.local.gardener.cloud/vali/api/v1/push
+        endpoint: https://v-local--local.ingress.local.seed.local.gardener.cloud/vali/api/v1/push
         headers:
-        # Authenticate against Vali using a Bearer Token
-        Authorization: "Bearer ${file:{{ .pathAuthToken }}}"
+          # Authenticate against Vali using a Bearer Token
+          Authorization: "Bearer ${file:{{ .pathAuthToken }}}"
     receivers:
       otlp:
         protocols:
