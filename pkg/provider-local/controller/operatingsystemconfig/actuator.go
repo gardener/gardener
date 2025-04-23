@@ -79,7 +79,26 @@ systemctl daemon-reload
 	return operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script), nil
 }
 
-func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, *extensionsv1alpha1.InPlaceUpdatesStatus, error) {
-	// provider-local does not add any additional units or additional files or support in-place updates
-	return nil, nil, nil, nil
+func (a *actuator) handleReconcileOSC(osc *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, *extensionsv1alpha1.InPlaceUpdatesStatus, error) {
+	if osc.Spec.InPlaceUpdates == nil {
+		return nil, nil, nil, nil
+	}
+
+	// provider-local does not add any additional units or additional files
+	return nil,
+		nil,
+		&extensionsv1alpha1.InPlaceUpdatesStatus{
+			OSUpdate: &extensionsv1alpha1.OSUpdate{
+				Command: "sed",
+				Args: []string{
+					"-i", "-E",
+					fmt.Sprintf(
+						`s/^PRETTY_NAME="[^"]*"/PRETTY_NAME="Machine Image Version %s (version overwritten for tests, check VERSION_ID for actual version)"/`,
+						osc.Spec.InPlaceUpdates.OperatingSystemVersion,
+					),
+					"/etc/os-release",
+				},
+			},
+		},
+		nil
 }
