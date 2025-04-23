@@ -637,16 +637,16 @@ var _ = Describe("Seed controller tests", func() {
 						// Usually, the gardener-operator deploys and manages the following resources.
 						// However, it is not really running, so we have to fake its behaviour here.
 						By("Create resources managed by gardener-operator")
-						chartApplier, err := kubernetes.NewChartApplierForConfig(restConfig)
-						Expect(err).NotTo(HaveOccurred())
 
 						var (
 							applier                  = kubernetes.NewApplier(testClient, testClient.RESTMapper())
 							managedResourceCRDReader = kubernetes.NewManifestReader([]byte(managedResourcesCRD))
 							istioSystemNamespace     = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "istio-system"}}
-							istioCRDs                = istio.NewCRD(chartApplier)
-							vpaCRD                   = vpa.NewCRD(applier, nil)
 						)
+						istioCRDs, err := istio.NewCRD(testClient, applier)
+						Expect(err).NotTo(HaveOccurred())
+						vpaCRD, err := vpa.NewCRD(testClient, applier, nil)
+						Expect(err).NotTo(HaveOccurred())
 						fluentCRD, err := fluentoperator.NewCRDs(testClient, applier)
 						Expect(err).NotTo(HaveOccurred())
 						monitoringCRD, err := prometheusoperator.NewCRDs(testClient, applier)
@@ -766,7 +766,7 @@ var _ = Describe("Seed controller tests", func() {
 						Eventually(func() error {
 							deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: testNamespace.Name}}
 							return testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
-						}).WithTimeout(15 * time.Second).Should(BeNotFoundError())
+						}).WithTimeout(25 * time.Second).Should(BeNotFoundError())
 
 						// We should wait for the CRD to be deleted since it is a cluster-scoped resource so that we do not interfere
 						// with other test cases.

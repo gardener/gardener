@@ -13,11 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/networking/istio"
@@ -32,6 +30,7 @@ var _ = Describe("#CRDs", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
+		var err error
 
 		s := runtime.NewScheme()
 		Expect(apiextensionsv1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -41,12 +40,11 @@ var _ = Describe("#CRDs", func() {
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
 		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
 
-		renderer := chartrenderer.NewWithServerVersion(&version.Info{})
+		applier := kubernetes.NewApplier(c, mapper)
+		Expect(applier).NotTo(BeNil(), "should return applier")
 
-		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
-		Expect(ca).NotTo(BeNil(), "should return chart applier")
-
-		crd = NewCRD(ca)
+		crd, err = NewCRD(c, applier)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	JustBeforeEach(func() {

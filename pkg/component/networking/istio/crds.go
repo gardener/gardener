@@ -5,45 +5,24 @@
 package istio
 
 import (
-	"context"
-	"embed"
-	"path/filepath"
+	_ "embed"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
+	"github.com/gardener/gardener/pkg/component/crddeployer"
 )
 
 var (
-	//go:embed charts/istio/istio-crds
-	chartCRDs     embed.FS
-	chartPathCRDs = filepath.Join("charts", "istio", "istio-crds")
+	//go:embed charts/istio/istio-crds/crd-all.gen.yaml
+	crds string
 )
-
-type crds struct {
-	kubernetes.ChartApplier
-}
 
 // NewCRD can be used to deploy istio CRDs.
 func NewCRD(
-	applier kubernetes.ChartApplier,
-) component.DeployWaiter {
-	return &crds{
-		ChartApplier: applier,
-	}
-}
-
-func (c *crds) Deploy(ctx context.Context) error {
-	return c.ApplyFromEmbeddedFS(ctx, chartCRDs, chartPathCRDs, "", "istio")
-}
-
-func (c *crds) Destroy(ctx context.Context) error {
-	return c.DeleteFromEmbeddedFS(ctx, chartCRDs, chartPathCRDs, "", "istio")
-}
-
-func (c *crds) Wait(_ context.Context) error {
-	return nil
-}
-
-func (c *crds) WaitCleanup(_ context.Context) error {
-	return nil
+	client client.Client,
+	applier kubernetes.Applier,
+) (component.DeployWaiter, error) {
+	return crddeployer.New(client, applier, []string{crds}, false)
 }

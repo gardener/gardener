@@ -11,7 +11,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -33,7 +35,10 @@ var _ = Describe("CRD", func() {
 		BeforeEach(func() {
 			c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			var err error
-			crdDeployer, err = NewCRD(c, k8sVersion)
+			mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
+			mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
+			applier := kubernetes.NewApplier(c, mapper)
+			crdDeployer, err = NewCRD(c, applier, k8sVersion)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

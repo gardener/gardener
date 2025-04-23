@@ -614,7 +614,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for fluent-operator",
-			Fn:   c.fluentCRD.Deploy,
+			Fn:   component.OpWait(c.fluentCRD).Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for prometheus-operator",
@@ -622,20 +622,20 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for extensions",
-			Fn:   c.extensionCRD.Deploy,
+			Fn:   component.OpWait(c.extensionCRD).Deploy,
 		})
 		deployEtcdCRD = g.Add(flow.Task{
 			Name: "Deploying ETCD-related custom resource definitions",
-			Fn:   c.etcdCRD.Deploy,
+			Fn:   component.OpWait(c.etcdCRD).Deploy,
 		})
 		deployVPACRD = g.Add(flow.Task{
 			Name:   "Deploying custom resource definitions for VPA",
-			Fn:     c.vpaCRD.Deploy,
+			Fn:     component.OpWait(c.vpaCRD).Deploy,
 			SkipIf: !vpaEnabled(garden.Spec.RuntimeCluster.Settings),
 		})
 		deployIstioCRD = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for Istio",
-			Fn:   c.istioCRD.Deploy,
+			Fn:   component.OpWait(c.istioCRD).Deploy,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
