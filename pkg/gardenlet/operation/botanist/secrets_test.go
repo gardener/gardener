@@ -260,7 +260,6 @@ var _ = Describe("Secrets", func() {
 					Expect(gardenClient.Get(ctx, client.ObjectKey{Namespace: gardenNamespace, Name: shootName + ".ca-kubelet"}, gardenConfigMapKubelet)).To(Succeed())
 					Expect(gardenConfigMapKubelet.Labels).To(Equal(
 						map[string]string{
-							"discovery.gardener.cloud/public":   "shoot-ca-kubelet",
 							"gardener.cloud/role":               "ca-kubelet",
 							"gardener.cloud/update-restriction": "true",
 							"shoot.gardener.cloud/name":         "bar",

@@ -238,7 +238,6 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 			gardenerutils.ShootProjectConfigMapSuffixCAKubelet,
 			map[string]string{
 				v1beta1constants.GardenRole:             v1beta1constants.GardenRoleCAKubelet,
-				v1beta1constants.LabelDiscoveryPublic:   v1beta1constants.DiscoveryShootCAKubelet,
 				v1beta1constants.LabelShootName:         b.Shoot.GetInfo().Name,
 				v1beta1constants.LabelShootUID:          string(b.Shoot.GetInfo().UID),
 				v1beta1constants.LabelUpdateRestriction: "true",

@@ -603,8 +603,6 @@ const (
 	LabelDiscoveryPublic = "discovery.gardener.cloud/public"
 	// DiscoveryShootCA is a constant for a label value that indicates that the labeled resource contains shoot cluster certificate authority.
 	DiscoveryShootCA = "shoot-ca"
-	// DiscoveryShootCAKubelet is a constant for a label value that indicates that the labeled resource contains shoot cluster kubelet certificate authority.
-	DiscoveryShootCAKubelet = "shoot-ca-kubelet"
 
 	// LabelExposureClassHandlerName is the label key for exposure class handler names.
 	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
