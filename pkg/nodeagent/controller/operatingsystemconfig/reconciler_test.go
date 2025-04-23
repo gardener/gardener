@@ -132,6 +132,34 @@ GARDENLINUX_COMMIT_ID_LONG=5b20e1c0436d229b051f0481a72d0a366315b220
 			Expect(version).To(PointTo(Equal("1592.6")))
 		})
 
+		It("should return the OS version when patch version is also present", func() {
+			Expect(fs.WriteFile("/etc/os-release", []byte(`ID=gardenlinux
+NAME="Garden Linux"
+PRETTY_NAME="Garden Linux 1592.6.3"
+`), 0600)).To(Succeed())
+
+			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).To(PointTo(Equal("1592.6.3")))
+		})
+
+		It("should return the OS version when only major version is present", func() {
+			Expect(fs.WriteFile("/etc/os-release", []byte(`PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
+NAME="Debian GNU/Linux"
+VERSION_ID="12"
+VERSION="12 (bookworm)"
+VERSION_CODENAME=bookworm
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+`), 0600)).To(Succeed())
+
+			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).To(PointTo(Equal("12")))
+		})
+
 		It("should return nil when inPlaceUpdates is nil", func() {
 			version, err := GetOSVersion(nil, fs)
 			Expect(err).NotTo(HaveOccurred())
@@ -159,7 +187,7 @@ NAME="Garden Linux"
 		It("should return an error when it is not able to parse the version", func() {
 			Expect(fs.WriteFile("/etc/os-release", []byte(`ID=gardenlinux
 NAME="Garden Linux"
-PRETTY_NAME="Garden Linux 1592"
+PRETTY_NAME="Garden Linux 1592Foo"
 `), 0600)).To(Succeed())
 
 			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)

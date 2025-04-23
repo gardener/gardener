@@ -67,7 +67,7 @@ const (
 
 var (
 	codec                         runtime.Codec
-	osVersionRegex                = regexp.MustCompile(`\d+(?:\.\d+)+`)
+	osVersionRegex                = regexp.MustCompile(`\b\d+(?:\.\d+)*\b`)
 	retriableErrorPatternRegex    = regexp.MustCompile(`(?i)network problems`)
 	nonRetriableErrorPatternRegex = regexp.MustCompile(`(?i)invalid arguments|system failure`)
 
