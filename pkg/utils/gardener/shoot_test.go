@@ -412,6 +412,7 @@ var _ = Describe("Shoot", func() {
 		Entry("unrelated suffix", "foo.bar", "", false),
 		Entry("wrong suffix delimiter", "foo:kubeconfig", "", false),
 		Entry("ca-cluster suffix", "baz.ca-cluster", "baz", true),
+		Entry("ca-kubelet suffix", "baz.ca-kubelet", "baz", true),
 	)
 
 	Describe("#NewShootAccessSecret", func() {
