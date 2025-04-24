@@ -173,7 +173,6 @@ global:
  #      size: 500
 
     audit:
- #    dynamicConfiguration: false                             Enables dynamic audit configuration. This feature also requires the DynamicAuditing feature flag
       log:
  #      batchBufferSize: 10000
  #      batchMaxSize: 1
