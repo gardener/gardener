@@ -5,21 +5,28 @@
 package create_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/token/create"
+	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
 )
 
 var _ = Describe("Options", func() {
 	var (
-		options *Options
+		createOptions *tokenutils.Options
+		options       *Options
 
 		token = "some.token"
 	)
 
 	BeforeEach(func() {
-		options = &Options{}
+		createOptions = &tokenutils.Options{
+			Validity: time.Hour,
+		}
+		options = &Options{CreateOptions: createOptions}
 	})
 
 	Describe("#ParseArgs", func() {
@@ -30,15 +37,19 @@ var _ = Describe("Options", func() {
 
 		It("should generate a random token", func() {
 			Expect(options.ParseArgs(nil)).To(Succeed())
-			Expect(options.Token).To(Equal("foo123.bar4567890baz123"))
+			Expect(options.Token).To(MatchRegexp(`^[a-z0-9]{6}.[a-z0-9]{16}$`))
 		})
 	})
 
 	Describe("#Validate", func() {
 		It("should pass for valid options", func() {
-			options.Token = "foo"
-
+			options.Token = "abcdef.abcdef1234567890"
 			Expect(options.Validate()).To(Succeed())
+		})
+
+		It("should fail because token does not match the expected format", func() {
+			options.Token = "invalid-format"
+			Expect(options.Validate()).To(MatchError(ContainSubstring("does not match the expected format")))
 		})
 
 		It("should fail because token is not set", func() {

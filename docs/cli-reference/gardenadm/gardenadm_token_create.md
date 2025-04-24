@@ -1,10 +1,13 @@
 ## gardenadm token create
 
-Create a bootstrap token on the server
+Create a bootstrap token on the server for joining a node
 
 ### Synopsis
 
-The [token] is the actual token to write.This should be a securely generated random token of the form "[a-z0-9]{6}.[a-z0-9]{16}".If no [token] is given, gardenadm will generate a random token instead.
+The [token] is the bootstrap token to be created on the server.
+This token is used for securely authenticating nodes or clients to the cluster.
+It must follow the format "[a-z0-9]{6}.[a-z0-9]{16}" to ensure compatibility with Kubernetes bootstrap token requirements.
+If no [token] is provided, gardenadm will automatically generate a secure random token for you.
 
 ```
 gardenadm token create [token] [flags]
@@ -13,17 +16,19 @@ gardenadm token create [token] [flags]
 ### Examples
 
 ```
-# Create a bootstrap token with id "foo123" on the server
+# Create a bootstrap token with a specific ID and secret
 gardenadm token create foo123.bar4567890baz123
 
-# Create a bootstrap token generated randomly
+# Generate a random bootstrap token for joining a node
 gardenadm token create
 ```
 
 ### Options
 
 ```
-  -h, --help   help for create
+  -d, --description string                     Description for the bootstrap token (default "Used for joining nodes via `gardenadm join`")
+  -h, --help                                   help for create
+  -v, --validity duration                      Validity duration of the bootstrap token (default 1h0m0s)
 ```
 
 ### Options inherited from parent commands
