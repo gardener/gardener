@@ -19,6 +19,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+// Now computes the current time.
+// Exposed for unit testing.
+var Now = metav1.Now
+
 // validBootstrapTokenRegex is used to check if an existing token can be interpreted as a bootstrap token.
 var validBootstrapTokenRegex = regexp.MustCompile(`[a-z0-9]{16}`)
 
@@ -49,7 +53,7 @@ func computeBootstrapToken(ctx context.Context, c client.Client, tokenID, tokenS
 			bootstraptokenapi.BootstrapTokenDescriptionKey:      []byte(description),
 			bootstraptokenapi.BootstrapTokenIDKey:               []byte(tokenID),
 			bootstraptokenapi.BootstrapTokenSecretKey:           []byte(tokenSecret),
-			bootstraptokenapi.BootstrapTokenExpirationKey:       []byte(metav1.Now().Add(validity).Format(time.RFC3339)),
+			bootstraptokenapi.BootstrapTokenExpirationKey:       []byte(Now().Add(validity).Format(time.RFC3339)),
 			bootstraptokenapi.BootstrapTokenUsageAuthentication: []byte("true"),
 			bootstraptokenapi.BootstrapTokenUsageSigningKey:     []byte("true"),
 		}
