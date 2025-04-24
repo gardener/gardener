@@ -150,13 +150,10 @@ global:
     minReadySeconds: 0
     enableAdmissionPlugins:
     - ShootVPAEnabledByDefault
-    # disable audit log
+    # disable audit log, it is enough to set path to empty string
     audit:
       log:
         path: ""
-        maxBackup: 0
-        maxSize: 0
-        policy: ""
     featureGates:
       ShootForceDeletion: true
       CredentialsRotationWithoutWorkersRollout: true

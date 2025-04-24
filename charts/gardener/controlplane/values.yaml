@@ -182,10 +182,10 @@ global:
  #      batchThrottleQPS: 10.0
  #      format: json
  #      maxAge: 7
-        maxBackup: 5
-        maxSize: 100
+ #      maxBackup: 5
+ #      maxSize: 100
  #      mode: blocking
-        path: /tmp/audit/audit.log
+ #      path: /tmp/audit/audit.log
  #      truncateEnabled: true
  #      truncateMaxBatchSize: 10485760
  #      truncateMaxEventSize: 102400
