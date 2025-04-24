@@ -5,9 +5,11 @@ metadata:
   name: {{ .LoggerName }}
   namespace: {{ .HelmDeployNamespace }}
   labels:
-    origin:                              gardener
-    gardener.cloud/role:                 system-component
-    resources.gardener.cloud/managed-by: gardener
+{{ if .AdditionalLabels }}
+  {{- range $key, $value := .AdditionalLabels }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+{{ end }}
     app: {{ .AppLabel }}
 spec:
   replicas: 1

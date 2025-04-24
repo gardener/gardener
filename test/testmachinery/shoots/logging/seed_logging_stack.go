@@ -29,6 +29,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
+	"github.com/gardener/gardener/test/utils/shoots/logging"
 )
 
 // Logs generator constants
@@ -424,7 +425,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 		ginkgo.By("Verify vali received all logs from all shoot namespaces")
 		framework.ExpectNoError(
-			WaitUntilValiReceivesLogs(ctx, 30*time.Second,
+			logging.EnsureValiLogsCount(ctx, 30*time.Second,
 				shootFramework, shootValiLabels, v1beta1constants.GardenNamespace,
 				"pod_name", loggerRegex, logsCount*numberOfSimulatedClusters,
 				numberOfSimulatedClusters, shootFramework.ShootClient,
@@ -433,7 +434,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 		ginkgo.By("Verify vali received logger application logs for garden namespace")
 		framework.ExpectNoError(
-			WaitUntilValiReceivesLogs(ctx, 30*time.Second,
+			logging.EnsureValiLogsCount(ctx, 30*time.Second,
 				shootFramework, gardenValiLabels, v1beta1constants.GardenNamespace,
 				"pod_name", loggerRegex, logsCount*numberOfSimulatedClusters,
 				numberOfSimulatedClusters, shootFramework.ShootClient,

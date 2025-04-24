@@ -8,8 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -23,8 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/test/framework"
 )
 
 // Checks whether required logging resources are present.
@@ -48,61 +44,6 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 		message := fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging is enabled in GardenletConfiguration: %s", garden, err.Error())
 		ginkgo.Fail(message)
 	}
-}
-
-// WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
-func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, shootFramework *framework.ShootFramework, valiLabels map[string]string, valiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
-	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		search, err := shootFramework.GetValiLogs(ctx, valiLabels, valiNamespace, key, value, c)
-		if err != nil {
-			return retry.SevereError(err)
-		}
-		var actual int
-		for _, result := range search.Data.Result {
-			currentStr, ok := result.Value[1].(string)
-			if !ok {
-				return retry.SevereError(fmt.Errorf("Data.Result.Value[1] is not a string for %s=%s", key, value))
-			}
-			current, err := strconv.Atoi(currentStr)
-			if err != nil {
-				return retry.SevereError(fmt.Errorf("Data.Result.Value[1] string is not parsable to integer for %s=%s", key, value))
-			}
-			actual += current
-		}
-
-		log := shootFramework.Logger.WithValues("expected", expected, "actual", actual)
-
-		if expected > actual {
-			log.Info("Waiting to receive all expected logs")
-			return retry.MinorError(fmt.Errorf("received only %d/%d logs", actual, expected))
-		} else if expected+delta < actual {
-			return retry.SevereError(fmt.Errorf("expected to receive %d logs but was %d", expected, actual))
-		}
-
-		log.Info("Received logs", "delta", delta)
-		return retry.Ok()
-	})
-
-	if err != nil {
-		// ctx might have been cancelled already, make sure we still dump logs, so use context.Background()
-		dumpLogsCtx, dumpLogsCancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		defer dumpLogsCancel()
-
-		shootFramework.Logger.Info("Dump Vali logs")
-		if dumpError := shootFramework.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0",
-			&corev1.PodLogOptions{Container: "vali"}); dumpError != nil {
-			shootFramework.Logger.Error(dumpError, "Error dumping logs for pod")
-		}
-
-		shootFramework.Logger.Info("Dump Fluent-bit logs")
-		labels := client.MatchingLabels{"app": "fluent-bit"}
-		if dumpError := shootFramework.DumpLogsForPodsWithLabelsInNamespace(dumpLogsCtx, c, "garden",
-			labels); dumpError != nil {
-			shootFramework.Logger.Error(dumpError, "Error dumping logs for pod")
-		}
-	}
-
-	return err
 }
 
 func encode(obj runtime.Object) []byte {
@@ -173,22 +114,6 @@ func getLoggingShootService(number int) *corev1.Service {
 			ExternalName: "logging-shoot.garden.svc.cluster.local",
 		},
 	}
-}
-
-func getLogCountFromResult(search *framework.SearchResponse) (int, error) {
-	var totalLogs int
-	for _, result := range search.Data.Result {
-		currentStr, ok := result.Value[1].(string)
-		if !ok {
-			return totalLogs, fmt.Errorf("Data.Result.Value[1] is not a string")
-		}
-		current, err := strconv.Atoi(currentStr)
-		if err != nil {
-			return totalLogs, fmt.Errorf("Data.Result.Value[1] string is not parsable to integer")
-		}
-		totalLogs += current
-	}
-	return totalLogs, nil
 }
 
 func getConfigMapName(volumes []corev1.Volume, wantedVolumeName string) string {
