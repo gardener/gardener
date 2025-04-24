@@ -12,38 +12,40 @@ import (
 )
 
 var _ = Describe("Options", func() {
-	var (
-		options *Options
-
-		tokenID = "token-id"
-	)
+	var options *Options
 
 	BeforeEach(func() {
 		options = &Options{}
 	})
 
 	Describe("#ParseArgs", func() {
-		It("should use the first argument as token ID", func() {
-			Expect(options.ParseArgs([]string{tokenID})).To(Succeed())
-			Expect(options.TokenID).To(Equal(tokenID))
+		It("should trim the spaces form the arguments", func() {
+			Expect(options.ParseArgs([]string{" first", "second "})).To(Succeed())
+			Expect(options.TokenValues).To(ConsistOf("first", "second"))
 		})
 	})
 
 	Describe("#Validate", func() {
 		It("should pass for valid options", func() {
-			options.TokenID = "foo123"
-
+			options.TokenValues = []string{"foo123", "bootstrap-token-foo123", "foo123.abcdef0123456789"}
 			Expect(options.Validate()).To(Succeed())
 		})
 
-		It("should fail because token ID is not set", func() {
-			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a token ID to delete")))
+		It("should fail because a token value is invalid", func() {
+			options.TokenValues = []string{"foo"}
+			Expect(options.Validate()).To(MatchError(ContainSubstring("invalid token value")))
+		})
+
+		It("should fail because no token value is set", func() {
+			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide at least one token value to delete")))
 		})
 	})
 
 	Describe("#Complete", func() {
-		It("should return nil", func() {
+		It("should properly parse the token IDs from the values", func() {
+			options.TokenValues = []string{"foo123", "bootstrap-token-123abc", "987654.abcdef0123456789"}
 			Expect(options.Complete()).To(Succeed())
+			Expect(options.TokenIDs).To(ConsistOf("foo123", "123abc", "987654"))
 		})
 	})
 })
