@@ -25,6 +25,7 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
+	"github.com/gardener/gardener/test/utils/shoots/logging"
 )
 
 const (
@@ -136,7 +137,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		)
 		framework.ExpectNoError(err)
 
-		initialLogs, err := getLogCountFromResult(search)
+		initialLogs, err := logging.GetLogCountFromResult(search)
 		framework.ExpectNoError(err)
 		expectedLogs := shootLogsCount + initialLogs
 
@@ -168,7 +169,7 @@ epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Verify vali received all logger application logs")
-		err = WaitUntilValiReceivesLogs(ctx,
+		err = logging.EnsureValiLogsCount(ctx,
 			30*time.Second, shootFramework, valiLabels, shootFramework.ShootSeedNamespace(),
 			"pod_name", loggerRegex, expectedLogs, shootDeltaLogsCount, shootFramework.SeedClient,
 		)
