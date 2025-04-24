@@ -173,7 +173,7 @@ global:
  #      size: 500
 
     audit:
-      log:
+      log: {}
  #      batchBufferSize: 10000
  #      batchMaxSize: 1
  #      batchMaxWait: 5m
