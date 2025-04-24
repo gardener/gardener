@@ -1,10 +1,12 @@
 ## gardenadm token generate
 
-Generate a random bootstrap token
+Generate a random bootstrap token for joining a node
 
 ### Synopsis
 
-Generate a random bootstrap token
+Generate a random bootstrap token that can be used for joining a node to an autonomous shoot cluster. 
+The token is securely generated and follows the format "[a-z0-9]{6}.[a-z0-9]{16}".
+Read more about it here: https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/
 
 ```
 gardenadm token generate [flags]
@@ -13,14 +15,16 @@ gardenadm token generate [flags]
 ### Examples
 
 ```
-# Generate a random bootstrap token
+# Generate a random bootstrap token for joining a node
 gardenadm token generate
 ```
 
 ### Options
 
 ```
-  -h, --help   help for generate
+  -d, --description string                     Description for the bootstrap token (default "Used for joining nodes via `gardenadm join`")
+  -h, --help                                   help for generate
+  -v, --validity duration                      Validity duration of the bootstrap token (default 1h0m0s)
 ```
 
 ### Options inherited from parent commands

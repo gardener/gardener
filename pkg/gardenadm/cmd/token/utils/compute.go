@@ -8,14 +8,24 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenadm/botanist"
+	"github.com/gardener/gardener/pkg/gardenlet/operation"
+	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
+
+// CreateClientSet creates a new client set using the AutonomousBotanist to create the client set.
+// Exposed for unit testing.
+var CreateClientSet = func(ctx context.Context, log logr.Logger) (kubernetes.Interface, error) {
+	return (&botanist.AutonomousBotanist{Botanist: &botanistpkg.Botanist{Operation: &operation.Operation{Logger: log}}}).CreateClientSet(ctx)
+}
 
 // CreateBootstrapToken creates a bootstrap token with the given ID and secret. If the secret is empty, a random secret
 // will be generated. If the token already exists, an error will be returned. The default is printing the token to the

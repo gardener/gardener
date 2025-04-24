@@ -6,23 +6,33 @@ package generate
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
-	opts := &Options{Options: globalOpts}
+	opts := &Options{
+		Options:       globalOpts,
+		CreateOptions: &tokenutils.Options{Options: globalOpts},
+	}
 
 	cmd := &cobra.Command{
 		Use:   "generate",
-		Short: "Generate a random bootstrap token",
-		Long:  "Generate a random bootstrap token",
+		Short: "Generate a random bootstrap token for joining a node",
+		Long: `Generate a random bootstrap token that can be used for joining a node to an autonomous shoot cluster. 
+The token is securely generated and follows the format "[a-z0-9]{6}.[a-z0-9]{16}".
+Read more about it here: https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/`,
 
-		Example: `# Generate a random bootstrap token
+		Example: `# Generate a random bootstrap token for joining a node
 gardenadm token generate`,
+
+		Args: cobra.ExactArgs(0),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
@@ -46,7 +56,16 @@ gardenadm token generate`,
 	return cmd
 }
 
-func run(_ context.Context, opts *Options) error {
-	opts.Log.Info("Not implemented")
-	return nil
+func run(ctx context.Context, opts *Options) error {
+	clientSet, err := tokenutils.CreateClientSet(ctx, opts.Log)
+	if err != nil {
+		return fmt.Errorf("failed creating client set: %w", err)
+	}
+
+	tokenID, err := utils.GenerateRandomStringFromCharset(6, "0123456789abcdefghijklmnopqrstuvwxyz")
+	if err != nil {
+		return fmt.Errorf("failed computing random token ID: %w", err)
+	}
+
+	return tokenutils.CreateBootstrapToken(ctx, clientSet, opts.CreateOptions, tokenID, "")
 }
