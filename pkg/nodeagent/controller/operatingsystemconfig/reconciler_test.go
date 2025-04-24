@@ -423,6 +423,43 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			Expect(podList.Items).To(HaveLen(2))
 		})
 
+		It("should not patch the node as update successful or delete the pods if the node is already labelled with update-result successful", func() {
+			metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)
+
+			pods := []*corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "pod-1",
+					},
+					Spec: corev1.PodSpec{
+						NodeName: "test-node",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "pod-2",
+					},
+					Spec: corev1.PodSpec{
+						NodeName: "test-node",
+					},
+				},
+			}
+
+			for _, pod := range pods {
+				Expect(c.Create(ctx, pod)).To(Succeed())
+			}
+
+			DeferCleanup(func() {
+				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
+			})
+
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)).To(Succeed())
+
+			podList := &corev1.PodList{}
+			Expect(c.List(ctx, podList)).To(Succeed())
+			Expect(podList.Items).To(HaveLen(2))
+		})
+
 		It("should patch the node as update successful and delete the pods if the node has InPlaceUpdate condition with reason ReadyForUpdate", func() {
 			node.Status.Conditions = []corev1.NodeCondition{
 				{

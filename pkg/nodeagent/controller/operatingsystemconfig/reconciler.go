@@ -669,7 +669,7 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		return fmt.Errorf("failed to perform certificate rotation in-place: %w", err)
 	}
 
-	if nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
+	if nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful) {
 		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
 			return fmt.Errorf("failed to delete remaining pods: %w", err)
 		}

@@ -119,6 +119,19 @@ var _ = Describe("kubernetes", func() {
 		Entry("no matching value", map[string]string{"key": "value"}, "key", "value1", false),
 	)
 
+	DescribeTable("#HasMetaDataLabel",
+		func(labels map[string]string, key, value string, result bool) {
+			meta := &metav1.ObjectMeta{
+				Labels: labels,
+			}
+			Expect(HasMetaDataLabel(meta, key, value)).To(BeIdenticalTo(result))
+		},
+		Entry("no labels", map[string]string{}, "key", "value", false),
+		Entry("matching label", map[string]string{"key": "value"}, "key", "value", true),
+		Entry("no matching key", map[string]string{"key": "value"}, "key1", "value", false),
+		Entry("no matching value", map[string]string{"key": "value"}, "key", "value1", false),
+	)
+
 	Describe("#WaitUntilResourceDeleted", func() {
 		var (
 			namespace = "bar"
