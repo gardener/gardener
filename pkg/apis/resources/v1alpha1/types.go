@@ -108,6 +108,9 @@ const (
 	// ProjectedTokenExpirationSeconds is a constant for an annotation on a Pod which overwrites the default token expiration
 	// seconds for the automatic mount of a projected ServiceAccount token.
 	ProjectedTokenExpirationSeconds = "projected-token-mount.resources.gardener.cloud/expiration-seconds"
+	// ProjectedTokenFileMode is a constant for an annotation on a Pod which overwrites the default file mode for the automatic mount of a
+	// projected ServiceAccount token.
+	ProjectedTokenFileMode = "projected-token-mount.resources.gardener.cloud/file-mode"
 
 	// HighAvailabilityConfigConsider is a constant for a label on a Namespace which indicates that the workload
 	// resources in this namespace should be considered by the HA config webhook.

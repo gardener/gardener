@@ -37,9 +37,13 @@ var _ = Describe("Handler", func() {
 		namespace          = "some-namespace"
 		serviceAccountName = "some-service-account"
 		expirationSeconds  int64
+		mode               int32
 	)
 
 	BeforeEach(func() {
+		expirationSeconds = 1337
+		mode = 420
+
 		ctx = admission.NewContextWithRequest(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Namespace: namespace}})
 		log = logger.MustNewZapLogger(logger.DebugLevel, logger.FormatJSON, logzap.WriteTo(GinkgoWriter))
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
@@ -59,8 +63,6 @@ var _ = Describe("Handler", func() {
 			},
 			AutomountServiceAccountToken: ptr.To(false),
 		}
-
-		expirationSeconds = 1337
 	})
 
 	Describe("#Default", func() {
@@ -138,13 +140,19 @@ var _ = Describe("Handler", func() {
 			})
 
 			Context("should mutate", func() {
+				BeforeEach(func() {
+					expirationSeconds = 1337
+					mode = 420
+					pod.Annotations = map[string]string{}
+				})
+
 				AfterEach(func() {
 					Expect(handler.Default(ctx, pod)).To(Succeed())
 					Expect(pod.Spec.Volumes).To(ConsistOf(corev1.Volume{
 						Name: "kube-api-access-gardener",
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: ptr.To[int32](420),
+								DefaultMode: ptr.To[int32](mode),
 								Sources: []corev1.VolumeProjection{
 									{
 										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
@@ -200,6 +208,11 @@ var _ = Describe("Handler", func() {
 				It("with overridden expiration seconds", func() {
 					expirationSeconds = 8998
 					pod.Annotations = map[string]string{"projected-token-mount.resources.gardener.cloud/expiration-seconds": "8998"}
+				})
+
+				It("with overridden file mode", func() {
+					mode = 416
+					pod.Annotations = map[string]string{"projected-token-mount.resources.gardener.cloud/file-mode": "416"}
 				})
 			})
 		})

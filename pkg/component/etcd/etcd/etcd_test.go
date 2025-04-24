@@ -208,6 +208,9 @@ var _ = Describe("Etcd", func() {
 						"networking.gardener.cloud/to-private-networks":  "allowed",
 						"networking.gardener.cloud/to-runtime-apiserver": "allowed",
 					},
+					Annotations: map[string]string{
+						"projected-token-mount.resources.gardener.cloud/file-mode": "416",
+					},
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"gardener.cloud/role": "controlplane",
@@ -279,7 +282,10 @@ var _ = Describe("Etcd", func() {
 			switch class {
 			case ClassImportant:
 				if replicas == 1 {
-					obj.Spec.Annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
+					if obj.Spec.Annotations == nil {
+						obj.Spec.Annotations = map[string]string{}
+					}
+					obj.Spec.Annotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
 				}
 				obj.Spec.Backup.Resources = &corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{

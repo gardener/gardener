@@ -213,7 +213,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Policy:  &compressionPolicy,
 		}
 
-		annotations         map[string]string
+		annotations         = map[string]string{resourcesv1alpha1.ProjectedTokenFileMode: "416"} // 0640
 		metrics             = druidcorev1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
 
@@ -225,7 +225,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	if e.values.Class == ClassImportant {
 		if !e.values.HighAvailabilityEnabled {
-			annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
+			annotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
 		}
 		metrics = druidcorev1alpha1.Extensive
 		volumeClaimTemplate = e.values.Role + "-" + strings.TrimSuffix(e.etcd.Name, "-"+e.values.Role)

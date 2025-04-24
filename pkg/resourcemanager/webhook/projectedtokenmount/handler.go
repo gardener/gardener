@@ -21,6 +21,12 @@ import (
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+const (
+	serviceAccountVolumeNamePrefix = "kube-api-access-"
+	serviceAccountVolumeNameSuffix = "gardener"
+	defaultFileMode                = 420 // 0644
+)
+
 // Handler handles admission requests and configures volumes and mounts for projected ServiceAccount tokens in Pod
 // resources.
 type Handler struct {
@@ -78,9 +84,15 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		return err
 	}
 
+	mode, err := fileMode(pod.Annotations, defaultFileMode)
+	if err != nil {
+		log.Error(err, "Error getting the file mode")
+		return err
+	}
+
 	log.Info("Pod meets requirements for auto-mounting the projected token")
 
-	pod.Spec.Volumes = append(pod.Spec.Volumes, getVolume(expirationSeconds))
+	pod.Spec.Volumes = append(pod.Spec.Volumes, getVolume(mode, expirationSeconds))
 	for i := range pod.Spec.Containers {
 		pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, getVolumeMount())
 	}
@@ -90,11 +102,6 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 
 	return nil
 }
-
-const (
-	serviceAccountVolumeNamePrefix = "kube-api-access-"
-	serviceAccountVolumeNameSuffix = "gardener"
-)
 
 func volumeName() string {
 	return serviceAccountVolumeNamePrefix + serviceAccountVolumeNameSuffix
@@ -107,12 +114,23 @@ func tokenExpirationSeconds(annotations map[string]string, defaultExpirationSeco
 	return defaultExpirationSeconds, nil
 }
 
-func getVolume(expirationSeconds int64) corev1.Volume {
+func fileMode(labels map[string]string, defaultMode int32) (int32, error) {
+	if v, ok := labels[resourcesv1alpha1.ProjectedTokenFileMode]; ok {
+		mode, err := strconv.ParseInt(v, 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse file mode: %w", err)
+		}
+		return int32(mode), nil
+	}
+	return defaultMode, nil
+}
+
+func getVolume(mode int32, expirationSeconds int64) corev1.Volume {
 	return corev1.Volume{
 		Name: volumeName(),
 		VolumeSource: corev1.VolumeSource{
 			Projected: &corev1.ProjectedVolumeSource{
-				DefaultMode: ptr.To[int32](420),
+				DefaultMode: ptr.To[int32](mode),
 				Sources: []corev1.VolumeProjection{
 					{
 						ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
