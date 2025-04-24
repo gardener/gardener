@@ -357,7 +357,7 @@ frontend:
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Args: []string{
 										"--optimize-for-size",
-										"server.js",
+										"server.mjs",
 									},
 									Env: []corev1.EnvVar{
 										{
