@@ -39,8 +39,16 @@ var _ = Describe("Options", func() {
 			Expect(options.Validate()).To(MatchError(ContainSubstring("maximum validity duration is 24h0m0s")))
 		})
 
-		It("should succeed when valid validity is used", func() {
+		It("should an error when the print-join-command flag is set but no worker pool name is provided", func() {
 			options.Validity = time.Hour
+			options.PrintJoinCommand = true
+			Expect(options.Validate()).To(MatchError(ContainSubstring("must specify a worker pool name when using --print-join-command")))
+		})
+
+		It("should succeed when options are valid", func() {
+			options.Validity = time.Hour
+			options.PrintJoinCommand = true
+			options.WorkerPoolName = "worker-pool"
 			Expect(options.Validate()).To(Succeed())
 		})
 	})

@@ -259,12 +259,24 @@ To start using your cluster, you need to run the following as a regular user:
   sudo cp -i %s $HOME/.kube/config
   sudo chown $(id -u):$(id -g) $HOME/.kube/config
   kubectl get nodes
+`, botanist.PathKubeconfig)
 
-You can now join any number of machines by running the following on each node
-as root:
+	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
+		if worker.ControlPlane == nil {
+			fmt.Fprintf(opts.Out, `
+You can now join any number of worker machines to pool %q (or any other
+worker pool). Run this on a control plane node:
 
-  gardenadm join <TODO>
+  gardenadm token generate --print-join-command --join-command-worker-pool-name %s
 
+Copy the output and run it as root on each node you would like to join the
+cluster.
+`, worker.Name, worker.Name)
+			break
+		}
+	}
+
+	fmt.Fprintf(opts.Out, `
 Note that the mentioned kubeconfig file will be disabled once you deploy the
 gardenlet and connect this cluster to an existing Gardener installation by
 running on any node:
@@ -273,7 +285,7 @@ running on any node:
 
 Please use the shoots/adminkubeconfig subresource to retrieve a kubeconfig,
 see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
-`, botanist.PathKubeconfig)
+`)
 
 	return nil
 }

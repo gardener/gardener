@@ -30,7 +30,10 @@ The token is securely generated and follows the format "[a-z0-9]{6}.[a-z0-9]{16}
 Read more about it here: https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/`,
 
 		Example: `# Generate a random bootstrap token for joining a node
-gardenadm token generate`,
+gardenadm token generate
+
+# Generate a random bootstrap token for joining a node and secret and directly print the gardenadm join command
+gardenadm token generate --print-join-command`,
 
 		Args: cobra.ExactArgs(0),
 

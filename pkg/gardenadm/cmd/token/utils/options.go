@@ -20,6 +20,11 @@ type Options struct {
 	Description string
 	// Validity duration of the bootstrap token.
 	Validity time.Duration
+	// PrintJoinCommand specifies whether to print the full `gardenadm join` command.
+	PrintJoinCommand bool
+	// WorkerPoolName is the name of the worker pool to use for the join command. If not provided, it is defaulted to
+	// 'worker'.
+	WorkerPoolName string
 }
 
 // ParseArgs parses the arguments to the options.
@@ -34,6 +39,10 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("maximum validity duration is %s", maxValidity)
 	}
 
+	if o.PrintJoinCommand && len(o.WorkerPoolName) == 0 {
+		return fmt.Errorf("must specify a worker pool name when using --print-join-command")
+	}
+
 	return nil
 }
 
@@ -44,4 +53,6 @@ func (o *Options) Complete() error { return nil }
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&o.Description, "description", "d", "Used for joining nodes via `gardenadm join`", "Description for the bootstrap token")
 	fs.DurationVarP(&o.Validity, "validity", "v", time.Hour, "Validity duration of the bootstrap token")
+	fs.BoolVarP(&o.PrintJoinCommand, "print-join-command", "c", false, "Instead of only printing the token, print the full machine-readable `gardenadm join` command that can be copied and ran on a machine that should join the cluster")
+	fs.StringVarP(&o.WorkerPoolName, "join-command-worker-pool-name", "w", "worker", "Name of the worker pool to use for the join command. If not provided, it is defaulted to 'worker'.")
 }

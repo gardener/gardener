@@ -19,6 +19,9 @@ gardenadm token create [token] [flags]
 # Create a bootstrap token with a specific ID and secret
 gardenadm token create foo123.bar4567890baz123
 
+# Create a bootstrap token with a specific ID and secret and directly print the gardenadm join command
+gardenadm token create foo123.bar4567890baz123 --print-join-command
+
 # Generate a random bootstrap token for joining a node
 gardenadm token create
 ```
@@ -28,6 +31,8 @@ gardenadm token create
 ```
   -d, --description string                     Description for the bootstrap token (default "Used for joining nodes via `gardenadm join`")
   -h, --help                                   help for create
+  -w, --join-command-worker-pool-name string   Name of the worker pool to use for the join command. If not provided, it is defaulted to 'worker'. (default "worker")
+  -c, --print-join-command gardenadm join      Instead of only printing the token, print the full machine-readable gardenadm join command that can be copied and ran on a machine that should join the cluster
   -v, --validity duration                      Validity duration of the bootstrap token (default 1h0m0s)
 ```
 

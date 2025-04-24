@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega/gbytes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -32,6 +33,7 @@ var _ = Describe("Compute", func() {
 
 			tokenID     = "abcdef"
 			tokenSecret = "1234567890abcdef"
+			restConfig  = &rest.Config{Host: "some-host", TLSClientConfig: rest.TLSClientConfig{CAData: []byte("ca-data")}}
 
 			stdOut     *Buffer
 			globalOpts *cmd.Options
@@ -40,7 +42,10 @@ var _ = Describe("Compute", func() {
 
 		BeforeEach(func() {
 			fakeClient = fakeclient.NewClientBuilder().Build()
-			clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
+			clientSet = fakekubernetes.NewClientSetBuilder().
+				WithClient(fakeClient).
+				WithRESTConfig(restConfig).
+				Build()
 
 			globalOpts = &cmd.Options{}
 			globalOpts.IOStreams, _, stdOut, _ = clitest.NewTestIOStreams()
@@ -61,6 +66,31 @@ var _ = Describe("Compute", func() {
 		It("should successfully create the secret and print the token", func() {
 			Expect(CreateBootstrapToken(ctx, clientSet, opts, tokenID, tokenSecret)).To(Succeed())
 			Eventually(stdOut).Should(Say(tokenID + "." + tokenSecret))
+		})
+
+		When("the join command should be printed", func() {
+			BeforeEach(func() {
+				opts.PrintJoinCommand = true
+				opts.WorkerPoolName = "test-pool"
+			})
+
+			It("should fail because there are no gardener-node-agent-secrets", func() {
+				Expect(CreateBootstrapToken(ctx, clientSet, opts, tokenID, tokenSecret)).To(MatchError(ContainSubstring("no gardener-node-agent secrets found")))
+			})
+
+			It("should successfully print the join command", func() {
+				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-node-agent-test-pool",
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"gardener.cloud/role":        "operating-system-config",
+						"worker.gardener.cloud/pool": "test-pool",
+					},
+				}})).To(Succeed())
+
+				Expect(CreateBootstrapToken(ctx, clientSet, opts, tokenID, tokenSecret)).To(Succeed())
+				Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" --gardener-node-agent-secret-name gardener-node-agent-test-pool some-host`))
+			})
 		})
 	})
 })

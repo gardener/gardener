@@ -33,6 +33,9 @@ If no [token] is provided, gardenadm will automatically generate a secure random
 		Example: `# Create a bootstrap token with a specific ID and secret
 gardenadm token create foo123.bar4567890baz123
 
+# Create a bootstrap token with a specific ID and secret and directly print the gardenadm join command
+gardenadm token create foo123.bar4567890baz123 --print-join-command
+
 # Generate a random bootstrap token for joining a node
 gardenadm token create`,
 
