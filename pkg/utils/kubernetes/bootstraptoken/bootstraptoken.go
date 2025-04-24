@@ -22,12 +22,7 @@ import (
 // validBootstrapTokenRegex is used to check if an existing token can be interpreted as a bootstrap token.
 var validBootstrapTokenRegex = regexp.MustCompile(`[a-z0-9]{16}`)
 
-// ComputeBootstrapToken computes and creates a new bootstrap token, and returns it.
-func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, description string, validity time.Duration) (secret *corev1.Secret, err error) {
-	var (
-		bootstrapTokenSecretKey string
-	)
-
+func computeBootstrapToken(ctx context.Context, c client.Client, tokenID, tokenSecret, description string, validity time.Duration) (secret *corev1.Secret, err error) {
 	secret = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bootstraptokenutil.BootstrapTokenSecretName(tokenID),
@@ -40,30 +35,38 @@ func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, descri
 	}
 
 	if existingSecretToken, ok := secret.Data[bootstraptokenapi.BootstrapTokenSecretKey]; ok && validBootstrapTokenRegex.Match(existingSecretToken) {
-		bootstrapTokenSecretKey = string(existingSecretToken)
-	} else {
-		bootstrapTokenSecretKey, err = utils.GenerateRandomStringFromCharset(16, "0123456789abcdefghijklmnopqrstuvwxyz")
+		tokenSecret = string(existingSecretToken)
+	} else if tokenSecret == "" {
+		tokenSecret, err = utils.GenerateRandomStringFromCharset(16, "0123456789abcdefghijklmnopqrstuvwxyz")
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	data := map[string][]byte{
-		bootstraptokenapi.BootstrapTokenDescriptionKey:      []byte(description),
-		bootstraptokenapi.BootstrapTokenIDKey:               []byte(tokenID),
-		bootstraptokenapi.BootstrapTokenSecretKey:           []byte(bootstrapTokenSecretKey),
-		bootstraptokenapi.BootstrapTokenExpirationKey:       []byte(metav1.Now().Add(validity).Format(time.RFC3339)),
-		bootstraptokenapi.BootstrapTokenUsageAuthentication: []byte("true"),
-		bootstraptokenapi.BootstrapTokenUsageSigningKey:     []byte("true"),
-	}
-
-	_, err2 := controllerutils.GetAndCreateOrMergePatch(ctx, c, secret, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, c, secret, func() error {
 		secret.Type = bootstraptokenapi.SecretTypeBootstrapToken
-		secret.Data = data
+		secret.Data = map[string][]byte{
+			bootstraptokenapi.BootstrapTokenDescriptionKey:      []byte(description),
+			bootstraptokenapi.BootstrapTokenIDKey:               []byte(tokenID),
+			bootstraptokenapi.BootstrapTokenSecretKey:           []byte(tokenSecret),
+			bootstraptokenapi.BootstrapTokenExpirationKey:       []byte(metav1.Now().Add(validity).Format(time.RFC3339)),
+			bootstraptokenapi.BootstrapTokenUsageAuthentication: []byte("true"),
+			bootstraptokenapi.BootstrapTokenUsageSigningKey:     []byte("true"),
+		}
 		return nil
 	})
 
-	return secret, err2
+	return secret, err
+}
+
+// ComputeBootstrapToken computes and creates a new bootstrap token with a randomly-generated secret, and returns it.
+func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, description string, validity time.Duration) (secret *corev1.Secret, err error) {
+	return computeBootstrapToken(ctx, c, tokenID, "", description, validity)
+}
+
+// ComputeBootstrapTokenWithSecret computes and creates a new bootstrap token with a specified token secret, and returns it.
+func ComputeBootstrapTokenWithSecret(ctx context.Context, c client.Client, tokenID, tokenSecret, description string, validity time.Duration) (secret *corev1.Secret, err error) {
+	return computeBootstrapToken(ctx, c, tokenID, tokenSecret, description, validity)
 }
 
 // FromSecretData returns the bootstrap token based on the secret data.
