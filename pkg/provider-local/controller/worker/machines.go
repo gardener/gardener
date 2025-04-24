@@ -184,6 +184,7 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 			Minimum:                      pool.Minimum,
 			Maximum:                      pool.Maximum,
 			Strategy:                     machineDeploymentStrategy,
+			PoolName:                     pool.Name,
 			Priority:                     pool.Priority,
 			Labels:                       pool.Labels,
 			Annotations:                  pool.Annotations,
