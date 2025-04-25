@@ -19,6 +19,7 @@ The following steps are required to perform the rotation:
 
 1. Update the data in the `Secret` with new credentials.
 2. ⚠️ Wait until all `Shoot`s using the `Secret` are reconciled before you disable the old credentials in your cloud provider account! Otherwise, the `Shoot`s will no longer work as expected. Check out [this document](shoot_operations.md#immediate-reconciliation) to learn how to trigger a reconciliation of your `Shoot`s.
+   - (Optional) If you want to verify that the new credentials are valid you can trigger [immediate maintenance operation](shoot_operations.md#immediate-maintenance) for the corresponding shoot cluster(s) and wait for to subsequent reconciliation(s) to complete successfully. The maintenance operation triggers infrastructure reconciliation during the subsequent shoot reconciliation which makes use of the new cloud provider credentials.
 3. After all `Shoot`s using the `Secret` were reconciled, you can go ahead and deactivate the old credentials in your provider account.
 
 ## Gardener-Provided Credentials

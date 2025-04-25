@@ -77,11 +77,12 @@ When the `gardenlet` starts, it scans the `garden` namespace of the garden clust
 
 * **Shoot Service Account Issuer secret** (optional) - contains the configuration needed to centrally configure gardenlets in order to implement [GEP-24](../proposals/24-shoot-oidc-issuer.md). Please see [the example configuration](../../example/10-secret-shoot-service-account-issuer.yaml) for more details.
   * This secret contains the hostname which will be used to configure the shoot's managed issuer, therefore the value of the hostname should not be changed once configured.
-    > [!CAUTION]
-    > [Gardener Operator](../concepts/operator.md) manages this field automatically if Gardener Discovery Server is enabled and does not provide a way to change the default value of it as of now.
-    > It calculates it based on the first ingress domain for the runtime Garden cluster. The domain is prefixed with "discovery." using the formula `discovery.{garden.spec.runtimeCluster.ingress.domains[0]}`.
-    > If you are not yet using Gardener Operator it is **EXTREMELY** important to follow the same convention as Gardener Operator,
-    > so that during migration to Gardener Operator the `hostname` can stay the same and avoid disruptions for shoots that already have a managed service account issuer.
+
+> [!CAUTION]
+> [Gardener Operator](../concepts/operator.md) manages this field automatically if Gardener Discovery Server is enabled and does not provide a way to change the default value of it as of now.
+> It calculates it based on the first ingress domain for the runtime Garden cluster. The domain is prefixed with "discovery." using the formula `discovery.{garden.spec.runtimeCluster.ingress.domains[0]}`.
+> If you are not yet using Gardener Operator it is **EXTREMELY** important to follow the same convention as Gardener Operator,
+> so that during migration to Gardener Operator the `hostname` can stay the same and avoid disruptions for shoots that already have a managed service account issuer.
 
 Apart from this "static" configuration there are several custom resources extending the Kubernetes API and used by Gardener.
 As an operator/administrator, you have to configure some of them to make the system work.
