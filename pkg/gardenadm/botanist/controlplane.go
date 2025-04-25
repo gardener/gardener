@@ -11,10 +11,14 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +32,7 @@ import (
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -187,4 +192,32 @@ func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.In
 	}
 
 	return clientSet, nil
+}
+
+// NewClientFromBytes in alias for kubernetes.NewClientFromBytes.
+// Exposed for unit testing.
+var NewClientFromBytes = kubernetes.NewClientFromBytes
+
+// DiscoverKubernetesVersion discovers the Kubernetes version of the control plane.
+func (b *AutonomousBotanist) DiscoverKubernetesVersion(controlPlaneAddress string, caBundle []byte, token string) (*semver.Version, error) {
+	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kubernetesutils.NewKubeconfig(
+		"local",
+		clientcmdv1.Cluster{Server: controlPlaneAddress, CertificateAuthorityData: caBundle},
+		clientcmdv1.AuthInfo{Token: token},
+	))
+	if err != nil {
+		return nil, fmt.Errorf("unable to encode kubeconfig: %w", err)
+	}
+
+	clientSet, err := NewClientFromBytes(kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating a new client: %w", err)
+	}
+
+	version, err := semver.NewVersion(clientSet.Version())
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing semver version %q: %w", clientSet.Version(), err)
+	}
+
+	return version, nil
 }

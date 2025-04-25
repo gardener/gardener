@@ -6,10 +6,14 @@ package join
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
 
+	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	shootpkg "github.com/gardener/gardener/pkg/gardenlet/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -52,7 +56,57 @@ gardenadm join --bootstrap-token <token> --ca-certificate <ca-cert> --gardener-n
 	return cmd
 }
 
-func run(_ context.Context, opts *Options) error {
-	opts.Log.Info("Not implemented either")
+func run(ctx context.Context, opts *Options) error {
+	b, err := botanist.NewAutonomousBotanistWithoutResources(opts.Log)
+	if err != nil {
+		return fmt.Errorf("failed creating autonomous botanist: %w", err)
+	}
+
+	version, err := b.DiscoverKubernetesVersion(opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
+	if err != nil {
+		return fmt.Errorf("failed discovering Kubernetes version of cluster: %w", err)
+	}
+	b.Shoot = &shootpkg.Shoot{KubernetesVersion: version}
+
+	alreadyJoined, err := b.IsGardenerNodeAgentInitialized(ctx)
+	if err != nil {
+		return fmt.Errorf("failed checking if gardener-node-agent was already initialized: %w", err)
+	}
+
+	if !alreadyJoined {
+		var (
+			g = flow.NewGraph("join")
+
+			generateGardenerNodeInitConfig = g.Add(flow.Task{
+				Name: "Preparing gardener-node-init configuration",
+				Fn: func(ctx context.Context) error {
+					return b.PrepareGardenerNodeInitConfiguration(ctx, opts.GardenerNodeAgentSecretName, opts.ControlPlaneAddress, opts.CertificateAuthority, opts.BootstrapToken)
+				},
+			})
+			_ = g.Add(flow.Task{
+				Name:         "Applying OperatingSystemConfig using gardener-node-agent's reconciliation logic",
+				Fn:           b.ApplyOperatingSystemConfig,
+				Dependencies: flow.NewTaskIDs(generateGardenerNodeInitConfig),
+			})
+		)
+
+		if err := g.Compile().Run(ctx, flow.Opts{
+			Log: opts.Log,
+		}); err != nil {
+			return flow.Errors(err)
+		}
+	}
+
+	fmt.Fprintf(opts.Out, `
+Your node has successfully been instructed to join the cluster as a worker!
+
+Please do not forget to delete this bootstrap token by running on the control plane node:
+
+  gardenadm token delete %s
+
+Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
+In case it isn't appearing within two minutes, you should check gardener-node-agent's logs by running 'journalctl -u gardener-node-agent', or kubelet's logs by running 'journalctl -u kubelet'.
+`, opts.BootstrapToken)
+
 	return nil
 }
