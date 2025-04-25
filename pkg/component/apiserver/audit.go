@@ -114,11 +114,6 @@ func InjectAuditSettings(deployment *appsv1.Deployment, configMapAuditPolicy *co
 	})
 
 	if auditConfig == nil || auditConfig.Webhook == nil {
-		deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args,
-			"--audit-log-path=/tmp/audit/audit.log",
-			"--audit-log-maxsize=100",
-			"--audit-log-maxbackup=5",
-		)
 		return
 	}
 

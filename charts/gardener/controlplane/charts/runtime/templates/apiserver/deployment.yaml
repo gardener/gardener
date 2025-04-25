@@ -98,9 +98,6 @@ spec:
         {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
         - --admission-control-config-file=/etc/gardener-apiserver/admission/configuration.yaml
         {{- end }}
-        {{- if .Values.global.apiserver.audit.dynamicConfiguration }}
-        - --audit-dynamic-configuration={{ .Values.global.apiserver.audit.dynamicConfiguration }}
-        {{- end }}
         {{- if .Values.global.apiserver.audit.log.batchBufferSize }}
         - --audit-log-batch-buffer-size={{ .Values.global.apiserver.audit.log.batchBufferSize }}
         {{- end }}
