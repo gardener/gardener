@@ -81,7 +81,6 @@ var _ = Describe("MachineControllerManager", func() {
 			Replicas: replicas,
 		}
 		mcm = New(fakeClient, namespace, sm, values)
-		mcm.SetNamespaceUID(namespaceUID)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
@@ -656,13 +655,14 @@ subjects:
 				roleBindingYAML,
 			))
 		})
+	})
 
-		//TODO: @aaronfern Remove this after g/g:v1.119 is released
-		It("should successfully delete existing clusterRoleBinding when deploy is called", func() {
+	Describe("#DeployMigrate", func() {
+		It("should successfully delete existing clusterRoleBinding when deployMigrate is called", func() {
 			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(Succeed())
 
-			Expect(mcm.Deploy(ctx)).To(Succeed())
+			Expect(mcm.DeployMigrate(ctx)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).ToNot(Succeed())
 		})
 	})

@@ -8,9 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -30,6 +34,10 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 		if err := verifyRemoveAPIServerProxyLegacyPortFeatureGate(ctx, gardenClient, g.config.SeedConfig.Name); err != nil {
 			return err
 		}
+	}
+
+	if err := migrateMCMRBAC(ctx, log, g.mgr.GetClient()); err != nil {
+		return err
 	}
 
 	return nil
@@ -164,4 +172,45 @@ func syncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.SeedBackup) 
 	// - both fields are unset -> we have nothing to sync
 	// - both fields are set -> let the validation check if they are correct
 	// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
+}
+
+func migrateMCMRBAC(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+	namespaceList := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
+		return err
+	}
+
+	var tasks []flow.TaskFn
+
+	for _, ns := range namespaceList.Items {
+		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
+			continue
+		}
+		namespace := ns
+		tasks = append(tasks, func(ctx context.Context) error {
+			clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+			if err := seedClient.Get(ctx, client.ObjectKey{Name: "machine-controller-manager-" + namespace.Name}, clusterRoleBinding); err != nil {
+				//If MCM clusterRoleBinding does not exist, nothing to do
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+
+			mcm := machinecontrollermanager.New(seedClient, namespace.Name, nil, machinecontrollermanager.Values{})
+			err := mcm.DeployMigrate(ctx)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+	}
+
+	err := flow.Parallel(tasks...)(ctx)
+	if err != nil {
+		log.Info("Error with flow task", "err", err)
+		return err
+	}
+	return managedresources.DeleteForSeed(ctx, seedClient, "garden", "machine-controller-manager")
 }

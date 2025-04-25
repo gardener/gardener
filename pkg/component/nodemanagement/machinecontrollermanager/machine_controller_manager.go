@@ -21,7 +21,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -58,10 +57,11 @@ const (
 // Interface contains functions for a machine-controller-manager deployer.
 type Interface interface {
 	component.DeployWaiter
-	// SetNamespaceUID sets the UID of the namespace into which the machine-controller-manager shall be deployed.
-	SetNamespaceUID(types.UID)
 	// SetReplicas sets the replicas.
 	SetReplicas(int32)
+	//TODO: @aaronfern Remove this after g/g:v1.119 is released
+	// DeployMigrate migrates RBAC permissions from clusterrole/clusterrolebinding to role/rolebinding
+	DeployMigrate(ctx context.Context) error
 }
 
 // New creates a new instance of DeployWaiter for the machine-controller-manager.
@@ -92,8 +92,76 @@ type Values struct {
 	Image string
 	// Replicas is the number of replicas for the deployment.
 	Replicas int32
+}
 
-	namespaceUID types.UID
+// TODO: @aaronfern Remove this after g/g:v1.119 is released
+func (m *machineControllerManager) DeployMigrate(ctx context.Context) error {
+	var (
+		roleBinding    = m.emptyRoleBindingRuntime()
+		role           = m.emptyRole()
+		serviceAccount = m.emptyServiceAccount()
+	)
+
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, role, func() error {
+		role.Rules = []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{machinev1alpha1.GroupName},
+				Resources: []string{
+					"machineclasses",
+					"machineclasses/status",
+					"machinedeployments",
+					"machinedeployments/status",
+					"machines",
+					"machines/status",
+					"machinesets",
+					"machinesets/status",
+				},
+				Verbs: []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
+				Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{coordinationv1.GroupName},
+				Resources: []string{"leases"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{coordinationv1.GroupName},
+				Resources:     []string{"leases"},
+				Verbs:         []string{"get", "watch", "update"},
+				ResourceNames: []string{"machine-controller", "machine-controller-manager"},
+			},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, roleBinding, func() error {
+		roleBinding.RoleRef = rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     role.Name,
+		}
+		roleBinding.Subjects = []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      serviceAccount.Name,
+			Namespace: m.namespace,
+		}}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	if err := kubernetesutils.DeleteObjects(ctx, m.client,
+		m.emptyClusterRoleBindingRuntime(),
+	); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {
@@ -173,13 +241,6 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		}}
 		return nil
 	}); err != nil {
-		return err
-	}
-
-	//TODO: @aaronfern Remove this after g/g:v1.119 is released
-	if err := kubernetesutils.DeleteObjects(ctx, m.client,
-		m.emptyClusterRoleBindingRuntime(),
-	); err != nil {
 		return err
 	}
 
@@ -531,8 +592,7 @@ func (m *machineControllerManager) WaitCleanup(ctx context.Context) error {
 	})
 }
 
-func (m *machineControllerManager) SetNamespaceUID(uid types.UID) { m.values.namespaceUID = uid }
-func (m *machineControllerManager) SetReplicas(replicas int32)    { m.values.Replicas = replicas }
+func (m *machineControllerManager) SetReplicas(replicas int32) { m.values.Replicas = replicas }
 
 func (m *machineControllerManager) computeShootResourcesData(serviceAccountName string) (map[string][]byte, error) {
 	var (
