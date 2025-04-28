@@ -216,7 +216,8 @@ func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 	if err != nil {
 		return err
 	}
-	return managedresources.DeleteForSeed(ctx, seedClient, "garden", "machine-controller-manager")
+	_ = managedresources.DeleteForSeed(ctx, seedClient, "garden", "machine-controller-manager")
+	return nil
 }
 
 func migrateAutoscalerRBAC(ctx context.Context, seedClient client.Client) error {
@@ -256,5 +257,6 @@ func migrateAutoscalerRBAC(ctx context.Context, seedClient client.Client) error 
 	if err != nil {
 		return err
 	}
-	return managedresources.DeleteForSeed(ctx, seedClient, "garden", "cluster-autoscaler")
+	_ = managedresources.DeleteForSeed(ctx, seedClient, "garden", "cluster-autoscaler")
+	return nil
 }
