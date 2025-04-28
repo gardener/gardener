@@ -96,6 +96,7 @@ case $TYPE in
       e2e-rot-ip.local
       e2e-default.local
       e2e-default-wl.local
+      e2e-default-ip.local
       e2e-force-delete.local
       e2e-fd-hib.local
       e2e-upd-node.local

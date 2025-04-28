@@ -73,36 +73,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			verifyViewerKubeconfigShootAccess(s)
 
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
-				It("Verify worker node labels", func(ctx SpecContext) {
-					commonNodeLabels := utils.MergeStringMaps(s.Shoot.Spec.Provider.Workers[0].Labels)
-					commonNodeLabels["networking.gardener.cloud/node-local-dns-enabled"] = "false"
-					commonNodeLabels["node.kubernetes.io/role"] = "node"
-
-					Eventually(ctx, func(g Gomega) {
-						for _, workerPool := range s.Shoot.Spec.Provider.Workers {
-							expectedNodeLabels := utils.MergeStringMaps(commonNodeLabels)
-							expectedNodeLabels["worker.gardener.cloud/pool"] = workerPool.Name
-							expectedNodeLabels["worker.gardener.cloud/cri-name"] = string(workerPool.CRI.Name)
-							expectedNodeLabels["worker.gardener.cloud/system-components"] = strconv.FormatBool(workerPool.SystemComponents.Allow)
-
-							kubernetesVersion := s.Shoot.Spec.Kubernetes.Version
-							if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
-								kubernetesVersion = *workerPool.Kubernetes.Version
-							}
-							expectedNodeLabels["worker.gardener.cloud/kubernetes-version"] = kubernetesVersion
-
-							nodeList := &corev1.NodeList{}
-							g.Expect(s.ShootClient.List(ctx, nodeList, client.MatchingLabels{
-								"worker.gardener.cloud/pool": workerPool.Name,
-							})).To(Succeed())
-							g.Expect(nodeList.Items).To(HaveLen(1), "worker pool %s should have exactly one Node", workerPool.Name)
-
-							for key, value := range expectedNodeLabels {
-								g.Expect(nodeList.Items[0].Labels).To(HaveKeyWithValue(key, value), "worker pool %s should have expected labels", workerPool.Name)
-							}
-						}
-					}).Should(Succeed())
-				}, SpecTimeout(time.Minute))
+				verifyWorkerNodeLabels(s)
 
 				It("Verify reported CIDRs", func(ctx SpecContext) {
 					// For workerless shoots, the status.networking section is not reported. Skip its verification accordingly.
@@ -229,6 +200,44 @@ func verifyNodeKubernetesVersions(s *ShootContext) {
 	It("Verify that the Kubernetes versions for all existing nodes match the versions defined in the Shoot spec", func(ctx SpecContext) {
 		Eventually(ctx, func(g Gomega) {
 			g.Expect(shootupdatesuite.VerifyKubernetesVersions(ctx, s.ShootClientSet, s.Shoot)).To(Succeed())
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
+
+func verifyWorkerNodeLabels(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Verify worker node labels", func(ctx SpecContext) {
+		commonNodeLabels := utils.MergeStringMaps(s.Shoot.Spec.Provider.Workers[0].Labels)
+		commonNodeLabels["networking.gardener.cloud/node-local-dns-enabled"] = "false"
+		commonNodeLabels["node.kubernetes.io/role"] = "node"
+
+		Eventually(ctx, func(g Gomega) {
+			for _, workerPool := range s.Shoot.Spec.Provider.Workers {
+				expectedNodeLabels := utils.MergeStringMaps(commonNodeLabels)
+				expectedNodeLabels["worker.gardener.cloud/pool"] = workerPool.Name
+				expectedNodeLabels["worker.gardener.cloud/cri-name"] = string(workerPool.CRI.Name)
+				expectedNodeLabels["worker.gardener.cloud/system-components"] = strconv.FormatBool(workerPool.SystemComponents.Allow)
+
+				kubernetesVersion := s.Shoot.Spec.Kubernetes.Version
+				if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
+					kubernetesVersion = *workerPool.Kubernetes.Version
+				}
+				expectedNodeLabels["worker.gardener.cloud/kubernetes-version"] = kubernetesVersion
+
+				nodeList := &corev1.NodeList{}
+				g.Expect(s.ShootClient.List(ctx, nodeList, client.MatchingLabels{
+					"worker.gardener.cloud/pool": workerPool.Name,
+				})).To(Succeed())
+				g.Expect(len(nodeList.Items)).To(BeNumerically(">=", workerPool.Minimum), "worker pool %s should have at least %d nodes", workerPool.Name, workerPool.Minimum)
+				g.Expect(len(nodeList.Items)).To(BeNumerically("<=", workerPool.Maximum), "worker pool %s should have at most %d nodes", workerPool.Name, workerPool.Maximum)
+
+				for _, node := range nodeList.Items {
+					for key, value := range expectedNodeLabels {
+						g.Expect(node.Labels).To(HaveKeyWithValue(key, value), "worker pool %s node %s should have label %s=%s", workerPool.Name, node.Name, key, value)
+					}
+				}
+			}
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
