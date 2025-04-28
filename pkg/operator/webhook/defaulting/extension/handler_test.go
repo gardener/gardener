@@ -134,14 +134,14 @@ var _ = Describe("Handler", func() {
 							Type:            "test",
 							Primary:         ptr.To(true),
 							GloballyEnabled: ptr.To(true),
-							AutoEnable:      []gardencorev1beta1.AutoEnableMode{"shoot"},
+							AutoEnable:      []gardencorev1beta1.ClusterType{"shoot"},
 						},
 					))
 				})
 
 				It("should not overwrite the autoEnable field if already set", func() {
 					extension.Spec.Resources[0].GloballyEnabled = ptr.To(true)
-					extension.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"seed"}
+					extension.Spec.Resources[0].AutoEnable = []gardencorev1beta1.ClusterType{"seed"}
 
 					Expect(handler.Default(ctx, extension)).To(Succeed())
 					Expect(extension.Spec.Resources).To(ConsistOf(
@@ -150,7 +150,7 @@ var _ = Describe("Handler", func() {
 							Type:            "test",
 							Primary:         ptr.To(true),
 							GloballyEnabled: ptr.To(true),
-							AutoEnable:      []gardencorev1beta1.AutoEnableMode{"seed"},
+							AutoEnable:      []gardencorev1beta1.ClusterType{"seed"},
 						},
 					))
 				})

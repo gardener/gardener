@@ -42,15 +42,14 @@ type ControllerRegistrationSpec struct {
 	Deployment *ControllerRegistrationDeployment
 }
 
-// AutoEnableMode defines the mode for automatically enabling a resource.
-// It specifies whether the resource is enabled for all clusters, only shoot clusters, only seed clusters, or none.
-type AutoEnableMode string
+// ClusterType defines the type of cluster.
+type ClusterType string
 
 const (
-	// AutoEnableModeShoot enables the resource only for shoot clusters.
-	AutoEnableModeShoot AutoEnableMode = "shoot"
-	// AutoEnableModeSeed enables the resource only for seed clusters.
-	AutoEnableModeSeed AutoEnableMode = "seed"
+	// ClusterTypeShoot represents the shoot cluster type.
+	ClusterTypeShoot ClusterType = "shoot"
+	// ClusterTypeSeed represents the seed cluster type.
+	ClusterTypeSeed ClusterType = "seed"
 )
 
 // ControllerResource is a combination of a kind (Infrastructure, Generic, ...) and the actual type for this
@@ -81,9 +80,12 @@ type ControllerResource struct {
 	// This field is only relevant when kind is "Extension".
 	WorkerlessSupported *bool
 	// AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
-	// Valid values are "shoot" and "seed".
 	// This field can only be set for resources of kind "Extension".
-	AutoEnable []AutoEnableMode
+	AutoEnable []ClusterType
+	// ClusterCompatibility defines the compatibility of this resource with different cluster types.
+	// If compatibility is not specified, it will be defaulted to 'shoot'.
+	// This field can only be set for resources of kind "Extension".
+	ClusterCompatibility []ClusterType
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.

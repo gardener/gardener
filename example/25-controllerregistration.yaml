@@ -13,6 +13,9 @@ spec:
   # autoEnable: # only valid if kind=Extension
   # - shoot
   # - seed
+  # clusterCompatibility: # only valid if kind=Extension
+  # - shoot
+  # - seed
   # reconcileTimeout: 30s # only valid if kind=Extension
   # workerlessSupported: true|false # only valid if kind=Extension
   deployment:

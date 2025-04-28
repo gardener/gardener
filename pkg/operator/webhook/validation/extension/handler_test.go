@@ -48,7 +48,7 @@ var _ = Describe("Handler", func() {
 		})
 
 		It("should prevent creation because of invalid resources", func() {
-			extension.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"shoot", "invalid"}
+			extension.Spec.Resources[0].AutoEnable = []gardencorev1beta1.ClusterType{"shoot", "invalid"}
 			extension.Spec.Resources = append(extension.Spec.Resources, resources[0])
 
 			warning, err := handler.ValidateCreate(ctx, extension)

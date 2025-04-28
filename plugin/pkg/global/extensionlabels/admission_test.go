@@ -251,17 +251,17 @@ var _ = Describe("ExtensionLabels tests", func() {
 						{
 							Kind:       extensionsv1alpha1.ExtensionResource,
 							Type:       extensionType1,
-							AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+							AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 						},
 						{
 							Kind:       extensionsv1alpha1.ExtensionResource,
 							Type:       extensionType2,
-							AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+							AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 						},
 						{
 							Kind:                extensionsv1alpha1.ExtensionResource,
 							Type:                extensionType5,
-							AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
+							AutoEnable:          []gardencorev1beta1.ClusterType{"shoot"},
 							WorkerlessSupported: ptr.To(true),
 						},
 					},

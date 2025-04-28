@@ -100,7 +100,7 @@ var _ = Describe("Extensions", func() {
 						{
 							Kind:       extensionKind,
 							Type:       barExtensionType,
-							AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+							AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 						},
 					},
 				},
@@ -111,7 +111,7 @@ var _ = Describe("Extensions", func() {
 						{
 							Kind:                extensionKind,
 							Type:                barExtensionType,
-							AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
+							AutoEnable:          []gardencorev1beta1.ClusterType{"shoot"},
 							WorkerlessSupported: ptr.To(true),
 						},
 					},

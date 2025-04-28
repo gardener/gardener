@@ -100,7 +100,7 @@ var _ = Describe("Extension", func() {
 						{
 							Kind:       extensionKind,
 							Type:       barExtensionType,
-							AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+							AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 						},
 					},
 				},
@@ -114,7 +114,7 @@ var _ = Describe("Extension", func() {
 						{
 							Kind:                extensionKind,
 							Type:                barExtensionType,
-							AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
+							AutoEnable:          []gardencorev1beta1.ClusterType{"shoot"},
 							WorkerlessSupported: ptr.To(true),
 						},
 					},
@@ -237,7 +237,7 @@ var _ = Describe("Extension", func() {
 		When("automatically enabled", func() {
 			Context("for shoots", func() {
 				BeforeEach(func() {
-					fooRegistration.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"shoot"}
+					fooRegistration.Spec.Resources[0].AutoEnable = []gardencorev1beta1.ClusterType{"shoot"}
 				})
 
 				It("should return the extension for class shoot", func() {
@@ -284,7 +284,7 @@ var _ = Describe("Extension", func() {
 
 			Context("for seeds", func() {
 				BeforeEach(func() {
-					fooRegistration.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"seed"}
+					fooRegistration.Spec.Resources[0].AutoEnable = []gardencorev1beta1.ClusterType{"seed"}
 				})
 
 				It("should return the extension for class seed", func() {
@@ -331,7 +331,7 @@ var _ = Describe("Extension", func() {
 
 			Context("for all clusters", func() {
 				BeforeEach(func() {
-					fooRegistration.Spec.Resources[0].AutoEnable = []gardencorev1beta1.AutoEnableMode{"shoot", "seed"}
+					fooRegistration.Spec.Resources[0].AutoEnable = []gardencorev1beta1.ClusterType{"shoot", "seed"}
 				})
 
 				It("should return the extension for class shoot", func() {

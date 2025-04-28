@@ -297,12 +297,18 @@ spec:
                     autoEnable:
                       description: |-
                         AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
-                        Valid values are "shoot" and "seed".
                         This field can only be set for resources of kind "Extension".
                       items:
-                        description: |-
-                          AutoEnableMode defines the mode for automatically enabling a resource.
-                          It specifies whether the resource is enabled for all clusters, only shoot clusters, only seed clusters, or none.
+                        description: ClusterType defines the type of cluster.
+                        type: string
+                      type: array
+                    clusterCompatibility:
+                      description: |-
+                        ClusterCompatibility defines the compatibility of this resource with different cluster types.
+                        If compatibility is not specified, it will be defaulted to 'shoot'.
+                        This field can only be set for resources of kind "Extension".
+                      items:
+                        description: ClusterType defines the type of cluster.
                         type: string
                       type: array
                     globallyEnabled:

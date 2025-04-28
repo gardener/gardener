@@ -1147,7 +1147,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:       extensionsv1alpha1.ExtensionResource,
 									Type:       extensionType2,
-									AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+									AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 								},
 							},
 						},
@@ -1297,7 +1297,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType1,
-									AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
+									AutoEnable:          []gardencorev1beta1.ClusterType{"shoot"},
 									WorkerlessSupported: ptr.To(false),
 								},
 							},
@@ -1309,7 +1309,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:                extensionsv1alpha1.ExtensionResource,
 									Type:                extensionType2,
-									AutoEnable:          []gardencorev1beta1.AutoEnableMode{"shoot"},
+									AutoEnable:          []gardencorev1beta1.ClusterType{"shoot"},
 									WorkerlessSupported: ptr.To(true),
 								},
 							},
@@ -1321,7 +1321,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Kind:       extensionsv1alpha1.ExtensionResource,
 									Type:       extensionType3,
-									AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+									AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 								},
 							},
 						},

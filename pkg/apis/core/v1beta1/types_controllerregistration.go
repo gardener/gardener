@@ -45,15 +45,14 @@ type ControllerRegistrationSpec struct {
 	Deployment *ControllerRegistrationDeployment `json:"deployment,omitempty" protobuf:"bytes,2,opt,name=deployment"`
 }
 
-// AutoEnableMode defines the mode for automatically enabling a resource.
-// It specifies whether the resource is enabled for all clusters, only shoot clusters, only seed clusters, or none.
-type AutoEnableMode string
+// ClusterType defines the type of cluster.
+type ClusterType string
 
 const (
-	// AutoEnableModeShoot enables the resource only for shoot clusters.
-	AutoEnableModeShoot AutoEnableMode = "shoot"
-	// AutoEnableModeSeed enables the resource only for seed clusters.
-	AutoEnableModeSeed AutoEnableMode = "seed"
+	// ClusterTypeShoot represents the shoot cluster type.
+	ClusterTypeShoot ClusterType = "shoot"
+	// ClusterTypeSeed represents the seed cluster type.
+	ClusterTypeSeed ClusterType = "seed"
 )
 
 // ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this
@@ -88,10 +87,14 @@ type ControllerResource struct {
 	// +optional
 	WorkerlessSupported *bool `json:"workerlessSupported,omitempty" protobuf:"varint,7,opt,name=workerlessSupported"`
 	// AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
-	// Valid values are "shoot" and "seed".
 	// This field can only be set for resources of kind "Extension".
 	// +optional
-	AutoEnable []AutoEnableMode `json:"autoEnable,omitempty" protobuf:"bytes,8,rep,name=autoEnable,casttype=AutoEnableMode"`
+	AutoEnable []ClusterType `json:"autoEnable,omitempty" protobuf:"bytes,8,rep,name=autoEnable,casttype=ClusterType"`
+	// ClusterCompatibility defines the compatibility of this resource with different cluster types.
+	// If compatibility is not specified, it will be defaulted to 'shoot'.
+	// This field can only be set for resources of kind "Extension".
+	// +optional
+	ClusterCompatibility []ClusterType `json:"clusterCompatibility,omitempty" protobuf:"bytes,9,rep,name=clusterCompatibility,casttype=ClusterType"`
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.
