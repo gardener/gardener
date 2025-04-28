@@ -147,7 +147,7 @@ var _ = Describe("utils", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should fail due to missing fields", func() {
+		It("should not fail due to missing fields", func() {
 			errorList := ValidateNetworkDisjointedness(
 				field.NewPath(""),
 				nil,
@@ -160,19 +160,10 @@ var _ = Describe("utils", func() {
 				false,
 			)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].services"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].pods"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should fail due to missing fields (workerless Shoots)", func() {
+		It("should not fail due to missing fields (workerless Shoots)", func() {
 			errorList := ValidateNetworkDisjointedness(
 				field.NewPath(""),
 				nil,
@@ -185,15 +176,10 @@ var _ = Describe("utils", func() {
 				false,
 			)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].services"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should fail due to missing fields (HA VPN)", func() {
+		It("should not fail due to missing fields (HA VPN)", func() {
 			errorList := ValidateNetworkDisjointedness(
 				field.NewPath(""),
 				nil,
@@ -206,19 +192,10 @@ var _ = Describe("utils", func() {
 				true,
 			)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].services"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].pods"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should fail due to missing fields (workerless Shoots + HA VPN)", func() {
+		It("should not fail due to missing fields (workerless Shoots + HA VPN)", func() {
 			errorList := ValidateNetworkDisjointedness(
 				field.NewPath(""),
 				nil,
@@ -231,12 +208,7 @@ var _ = Describe("utils", func() {
 				true,
 			)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].services"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should fail due to reserved kube-apiserver mapping range overlap in pod cidr", func() {
@@ -679,7 +651,7 @@ var _ = Describe("utils", func() {
 			)
 		})
 
-		It("should fail due to missing fields", func() {
+		It("should not fail due to missing fields", func() {
 			errorList := ValidateNetworkDisjointedness(
 				field.NewPath(""),
 				nil,
@@ -692,19 +664,10 @@ var _ = Describe("utils", func() {
 				false,
 			)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].services"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].pods"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should fail due to missing fields (workerless Shoots)", func() {
+		It("should not fail due to missing fields (workerless Shoots)", func() {
 			errorList := ValidateNetworkDisjointedness(
 				field.NewPath(""),
 				nil,
@@ -717,15 +680,10 @@ var _ = Describe("utils", func() {
 				false,
 			)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].services"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should fail due to missing fields (workerless Shoots, HA VPN)", func() {
+		It("should not fail due to missing fields (workerless Shoots, HA VPN)", func() {
 			errorList := ValidateNetworkDisjointedness(
 				field.NewPath(""),
 				nil,
@@ -738,12 +696,7 @@ var _ = Describe("utils", func() {
 				true,
 			)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("[].services"),
-				})),
-			))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should fail due to default vpn range overlap in pod cidr", func() {

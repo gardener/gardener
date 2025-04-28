@@ -17,8 +17,8 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("nodes"), shootNodes, "node", false, allowOverlap, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("services"), shootServices, "service", true, allowOverlap, seedNodes, seedPods, seedServices)...)
-	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("pods"), shootPods, "pod", !workerless, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("services"), shootServices, "service", false, allowOverlap, seedNodes, seedPods, seedServices)...)
+	allErrs = append(allErrs, validateOverlapWithSeedWrapper(fldPath.Child("pods"), shootPods, "pod", false, allowOverlap, seedNodes, seedPods, seedServices)...)
 
 	return allErrs
 }
