@@ -252,13 +252,17 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		}
 	}
 
+	if a.GetOperation() == admission.Create {
+		addCreatedByAnnotation(shoot, a.GetUserInfo().GetName())
+
+		if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
+			return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
+		}
+	}
+
 	cloudProfileSpec, err := admissionutils.GetCloudProfileSpec(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
-	}
-
-	if a.GetOperation() == admission.Create && len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
-		return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
 	}
 
 	if err := admissionutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot, oldShoot); err != nil {
@@ -2137,4 +2141,13 @@ func validateMaxNodesTotal(workers []core.Worker, maxNodesTotal int32) field.Err
 	}
 
 	return allErrs
+}
+
+func addCreatedByAnnotation(shoot *core.Shoot, userName string) {
+	annotations := shoot.Annotations
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations[v1beta1constants.GardenCreatedBy] = userName
+	shoot.Annotations = annotations
 }
