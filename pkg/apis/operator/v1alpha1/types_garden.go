@@ -682,8 +682,8 @@ type DashboardTerminalContainer struct {
 type GardenerDiscoveryServerConfig struct{}
 
 const (
-	// AutoEnableModeGarden enables the resource only for the garden cluster.
-	AutoEnableModeGarden gardencorev1beta1.AutoEnableMode = "garden"
+	// ClusterTypeGarden enables the resource only for the garden cluster.
+	ClusterTypeGarden gardencorev1beta1.ClusterType = "garden"
 )
 
 // GardenExtension contains type and provider information for Garden extensions.

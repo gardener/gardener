@@ -32,7 +32,11 @@ patches:
       value: {
         "kind": "Extension",
         "type": "local-ext-shoot",
-        "workerlessSupported": true
+        "clusterCompatibility": [
+          "shoot",
+          "garden"
+        ],
+        "workerlessSupported": true,
       }
     - op: add
       path: /spec/resources/-

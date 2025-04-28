@@ -183,7 +183,7 @@ var _ = Describe("utils", func() {
 								{
 									Kind:       extensionsv1alpha1.ExtensionResource,
 									Type:       extensionType1,
-									AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot", "seed"},
+									AutoEnable: []gardencorev1beta1.ClusterType{"shoot", "seed"},
 								},
 							},
 						},
@@ -194,7 +194,7 @@ var _ = Describe("utils", func() {
 								{
 									Kind:       extensionsv1alpha1.ExtensionResource,
 									Type:       extensionType2,
-									AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+									AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 								},
 							},
 						},
@@ -215,7 +215,7 @@ var _ = Describe("utils", func() {
 								{
 									Kind:       extensionsv1alpha1.ExtensionResource,
 									Type:       extensionType3,
-									AutoEnable: []gardencorev1beta1.AutoEnableMode{"seed"},
+									AutoEnable: []gardencorev1beta1.ClusterType{"seed"},
 								},
 							},
 						},
