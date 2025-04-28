@@ -9,7 +9,7 @@ resources:
 - ../garden/local
 - project.yaml
 - shoot.yaml
-- https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.41.0/example/controller-registration.yaml
+- https://raw.githubusercontent.com/gardener/gardener-extension-networking-cilium/v1.41.1/example/controller-registration.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.48.1/example/controller-registration.yaml
 
 patches:
