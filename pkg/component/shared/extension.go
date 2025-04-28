@@ -90,14 +90,14 @@ func mergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 
 			switch class {
 			case extensionsv1alpha1.ExtensionClassShoot:
-				if !slices.Contains(res.AutoEnable, gardencorev1beta1.AutoEnableModeShoot) {
+				if !slices.Contains(res.AutoEnable, gardencorev1beta1.ClusterTypeShoot) {
 					continue
 				}
 				if workerlessShoot && !ptr.Deref(res.WorkerlessSupported, false) {
 					continue
 				}
 			case extensionsv1alpha1.ExtensionClassSeed:
-				if !slices.Contains(res.AutoEnable, gardencorev1beta1.AutoEnableModeSeed) {
+				if !slices.Contains(res.AutoEnable, gardencorev1beta1.ClusterTypeSeed) {
 					continue
 				}
 			}

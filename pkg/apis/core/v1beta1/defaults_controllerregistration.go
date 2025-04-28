@@ -20,15 +20,19 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 
 	if obj.Kind == "Extension" {
 		if obj.GloballyEnabled == nil {
-			if slices.Contains(obj.AutoEnable, AutoEnableModeShoot) {
+			if slices.Contains(obj.AutoEnable, ClusterTypeShoot) {
 				obj.GloballyEnabled = ptr.To(true)
 			} else {
 				obj.GloballyEnabled = ptr.To(false)
 			}
 		}
 
+		if len(obj.ClusterCompatibility) == 0 {
+			obj.ClusterCompatibility = []ClusterType{ClusterTypeShoot}
+		}
+
 		if len(obj.AutoEnable) == 0 && *obj.GloballyEnabled {
-			obj.AutoEnable = []AutoEnableMode{AutoEnableModeShoot}
+			obj.AutoEnable = []ClusterType{ClusterTypeShoot}
 		}
 
 		if obj.ReconcileTimeout == nil {

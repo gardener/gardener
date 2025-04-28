@@ -3267,7 +3267,8 @@ func autoConvert_v1beta1_ControllerResource_To_core_ControllerResource(in *Contr
 	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.Lifecycle = (*core.ControllerResourceLifecycle)(unsafe.Pointer(in.Lifecycle))
 	out.WorkerlessSupported = (*bool)(unsafe.Pointer(in.WorkerlessSupported))
-	out.AutoEnable = *(*[]core.AutoEnableMode)(unsafe.Pointer(&in.AutoEnable))
+	out.AutoEnable = *(*[]core.ClusterType)(unsafe.Pointer(&in.AutoEnable))
+	out.ClusterCompatibility = *(*[]core.ClusterType)(unsafe.Pointer(&in.ClusterCompatibility))
 	return nil
 }
 
@@ -3284,7 +3285,8 @@ func autoConvert_core_ControllerResource_To_v1beta1_ControllerResource(in *core.
 	out.Primary = (*bool)(unsafe.Pointer(in.Primary))
 	out.Lifecycle = (*ControllerResourceLifecycle)(unsafe.Pointer(in.Lifecycle))
 	out.WorkerlessSupported = (*bool)(unsafe.Pointer(in.WorkerlessSupported))
-	out.AutoEnable = *(*[]AutoEnableMode)(unsafe.Pointer(&in.AutoEnable))
+	out.AutoEnable = *(*[]ClusterType)(unsafe.Pointer(&in.AutoEnable))
+	out.ClusterCompatibility = *(*[]ClusterType)(unsafe.Pointer(&in.ClusterCompatibility))
 	return nil
 }
 

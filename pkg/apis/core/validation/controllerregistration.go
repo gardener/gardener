@@ -50,7 +50,7 @@ func ValidateControllerRegistration(controllerRegistration *core.ControllerRegis
 func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, ValidateControllerResources(spec.Resources, []core.AutoEnableMode{core.AutoEnableModeShoot, core.AutoEnableModeSeed}, fldPath.Child("resources"))...)
+	allErrs = append(allErrs, ValidateControllerResources(spec.Resources, []core.ClusterType{core.ClusterTypeShoot, core.ClusterTypeSeed}, fldPath.Child("resources"))...)
 
 	if deployment := spec.Deployment; deployment != nil {
 		deploymentPath := fldPath.Child("deployment")
@@ -88,7 +88,7 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 }
 
 // ValidateControllerResources validates the provided list of ControllerResource objects.
-func ValidateControllerResources(resources []core.ControllerResource, validModes []core.AutoEnableMode, resourcesPath *field.Path) field.ErrorList {
+func ValidateControllerResources(resources []core.ControllerResource, clusterTypes []core.ClusterType, resourcesPath *field.Path) field.ErrorList {
 	var (
 		allErrs            = field.ErrorList{}
 		resourceKindToType = make(map[string]string)
@@ -115,8 +115,11 @@ func ValidateControllerResources(resources []core.ControllerResource, validModes
 			if resource.GloballyEnabled != nil {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("globallyEnabled"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
 			}
-			if resource.AutoEnable != nil {
+			if len(resource.AutoEnable) > 0 {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("autoEnable"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
+			if len(resource.ClusterCompatibility) > 0 {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("clusterCompatibility"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
 			}
 			if resource.ReconcileTimeout != nil {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("reconcileTimeout"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
@@ -127,20 +130,34 @@ func ValidateControllerResources(resources []core.ControllerResource, validModes
 		}
 
 		var (
-			validAutoEnableModes      = sets.New(validModes...)
-			configuredAutoEnableModes = sets.New[core.AutoEnableMode]()
+			validClusterTypes      = sets.New(clusterTypes...)
+			configuredClusterTypes = sets.New[core.ClusterType]()
 		)
-		for j, autoEnableMode := range resource.AutoEnable {
+
+		for j, clusterType := range resource.AutoEnable {
 			autoEnablePath := idxPath.Child("autoEnable").Index(j)
 
-			if !validAutoEnableModes.Has(autoEnableMode) {
-				allErrs = append(allErrs, field.NotSupported(autoEnablePath, autoEnableMode, sets.List(validAutoEnableModes)))
+			if !validClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.NotSupported(autoEnablePath, clusterType, sets.List(validClusterTypes)))
 			}
 
-			if configuredAutoEnableModes.Has(autoEnableMode) {
-				allErrs = append(allErrs, field.Duplicate(autoEnablePath, autoEnableMode))
+			if configuredClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.Duplicate(autoEnablePath, clusterType))
 			}
-			configuredAutoEnableModes.Insert(autoEnableMode)
+			configuredClusterTypes.Insert(clusterType)
+		}
+
+		for j, clusterType := range resource.ClusterCompatibility {
+			autoEnablePath := idxPath.Child("clusterCompatibility").Index(j)
+
+			if !validClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.NotSupported(autoEnablePath, clusterType, sets.List(validClusterTypes)))
+			}
+
+			if configuredClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.Duplicate(autoEnablePath, clusterType))
+			}
+			configuredClusterTypes.Insert(clusterType)
 		}
 
 		if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.Lifecycle != nil {

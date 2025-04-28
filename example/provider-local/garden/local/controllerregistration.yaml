@@ -26,6 +26,9 @@ spec:
       type: local
     - kind: Extension
       type: local-ext-seed
+      clusterCompatibility:
+      - shoot
+      - seed
       lifecycle:
         reconcile: BeforeKubeAPIServer
         delete: AfterKubeAPIServer

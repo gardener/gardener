@@ -3216,7 +3216,22 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					},
 					"autoEnable": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both. Valid values are \"shoot\" and \"seed\". This field can only be set for resources of kind \"Extension\".",
+							Description: "AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both. This field can only be set for resources of kind \"Extension\".",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"clusterCompatibility": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClusterCompatibility defines the compatibility of this resource with different cluster types. If compatibility is not specified, it will be defaulted to 'shoot'. This field can only be set for resources of kind \"Extension\".",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

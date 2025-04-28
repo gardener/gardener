@@ -64,8 +64,11 @@ func (r *registration) Reconcile(ctx context.Context, log logr.Logger, extension
 func (r *registration) createOrUpdateControllerRegistration(ctx context.Context, extension *operatorv1alpha1.Extension) error {
 	resources := make([]gardencorev1beta1.ControllerResource, 0, len(extension.Spec.Resources))
 	for _, resource := range extension.Spec.Resources {
-		resource.AutoEnable = slices.DeleteFunc(slices.Clone(resource.AutoEnable), func(m gardencorev1beta1.AutoEnableMode) bool {
-			return m == operatorv1alpha1.AutoEnableModeGarden
+		resource.AutoEnable = slices.DeleteFunc(slices.Clone(resource.AutoEnable), func(m gardencorev1beta1.ClusterType) bool {
+			return m == operatorv1alpha1.ClusterTypeGarden
+		})
+		resource.ClusterCompatibility = slices.DeleteFunc(slices.Clone(resource.ClusterCompatibility), func(m gardencorev1beta1.ClusterType) bool {
+			return m == operatorv1alpha1.ClusterTypeGarden
 		})
 		resources = append(resources, resource)
 	}

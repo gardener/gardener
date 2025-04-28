@@ -1532,7 +1532,7 @@ func (r *Reconciler) newExtensions(log logr.Logger, garden *operatorv1alpha1.Gar
 			}
 
 			wantedExtension, ok := values.Extensions[res.Type]
-			if !ok && slices.Contains(res.AutoEnable, operatorv1alpha1.AutoEnableModeGarden) {
+			if !ok && slices.Contains(res.AutoEnable, operatorv1alpha1.ClusterTypeGarden) {
 				wantedExtension = newDefaultExtension(operatorv1alpha1.GardenExtension{Type: res.Type})
 			} else if !ok {
 				continue

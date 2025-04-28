@@ -805,10 +805,15 @@ message ControllerResource {
   optional bool workerlessSupported = 7;
 
   // AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
-  // Valid values are "shoot" and "seed".
   // This field can only be set for resources of kind "Extension".
   // +optional
   repeated string autoEnable = 8;
+
+  // ClusterCompatibility defines the compatibility of this resource with different cluster types.
+  // If compatibility is not specified, it will be defaulted to 'shoot'.
+  // This field can only be set for resources of kind "Extension".
+  // +optional
+  repeated string clusterCompatibility = 9;
 }
 
 // ControllerResourceLifecycle defines the lifecycle of a controller resource.

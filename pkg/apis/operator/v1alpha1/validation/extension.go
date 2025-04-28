@@ -33,10 +33,10 @@ func validateControllerResources(resources []gardencorev1beta1.ControllerResourc
 		return allErrs
 	}
 
-	validAutoEnablesModes := []gardencore.AutoEnableMode{
-		gardencore.AutoEnableMode(operatorv1alpha1.AutoEnableModeGarden),
-		gardencore.AutoEnableMode(gardencorev1beta1.AutoEnableModeSeed),
-		gardencore.AutoEnableMode(gardencorev1beta1.AutoEnableModeShoot),
+	validAutoEnablesModes := []gardencore.ClusterType{
+		gardencore.ClusterType(operatorv1alpha1.ClusterTypeGarden),
+		gardencore.ClusterType(gardencorev1beta1.ClusterTypeSeed),
+		gardencore.ClusterType(gardencorev1beta1.ClusterTypeShoot),
 	}
 
 	allErrs = append(allErrs, gardencorevalidation.ValidateControllerResources(coreResources, validAutoEnablesModes, fldPath)...)

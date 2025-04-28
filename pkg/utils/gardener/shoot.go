@@ -733,7 +733,7 @@ func ComputeEnabledTypesForKindExtension(shoot *gardencorev1beta1.Shoot, control
 
 	for _, controllerRegistration := range controllerRegistrationList.Items {
 		for _, resource := range controllerRegistration.Spec.Resources {
-			if extensionEnabledForMode(gardencorev1beta1.AutoEnableModeShoot, resource, disabledTypes) {
+			if extensionEnabledForMode(gardencorev1beta1.ClusterTypeShoot, resource, disabledTypes) {
 				if v1beta1helper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
 					continue
 				}
@@ -745,7 +745,7 @@ func ComputeEnabledTypesForKindExtension(shoot *gardencorev1beta1.Shoot, control
 	return enabledTypes
 }
 
-func extensionEnabledForMode(enableMode gardencorev1beta1.AutoEnableMode, resource gardencorev1beta1.ControllerResource, disabledExtensions sets.Set[string]) bool {
+func extensionEnabledForMode(enableMode gardencorev1beta1.ClusterType, resource gardencorev1beta1.ControllerResource, disabledExtensions sets.Set[string]) bool {
 	return resource.Kind == extensionsv1alpha1.ExtensionResource &&
 		!disabledExtensions.Has(resource.Type) &&
 		slices.Contains(resource.AutoEnable, enableMode)

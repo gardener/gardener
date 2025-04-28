@@ -238,7 +238,7 @@ var _ = Describe("Reconciler", func() {
 					},
 					{
 						Kind:       extensionsv1alpha1.ExtensionResource,
-						AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+						AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 						Type:       type10,
 					},
 					{

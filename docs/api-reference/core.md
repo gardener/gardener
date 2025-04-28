@@ -2788,16 +2788,6 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.AutoEnableMode">AutoEnableMode
-(<code>string</code> alias)</p></h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ControllerResource">ControllerResource</a>)
-</p>
-<p>
-<p>AutoEnableMode defines the mode for automatically enabling a resource.
-It specifies whether the resource is enabled for all clusters, only shoot clusters, only seed clusters, or none.</p>
-</p>
 <h3 id="core.gardener.cloud/v1beta1.AvailabilityZone">AvailabilityZone
 </h3>
 <p>
@@ -4213,6 +4203,15 @@ Kubernetes meta/v1.Duration
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ClusterType">ClusterType
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControllerResource">ControllerResource</a>)
+</p>
+<p>
+<p>ClusterType defines the type of cluster.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.Condition">Condition
 </h3>
 <p>
@@ -4797,15 +4796,30 @@ This field is only relevant when kind is &ldquo;Extension&rdquo;.</p>
 <td>
 <code>autoEnable</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.AutoEnableMode">
-[]AutoEnableMode
+<a href="#core.gardener.cloud/v1beta1.ClusterType">
+[]ClusterType
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
 <p>AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
-Valid values are &ldquo;shoot&rdquo; and &ldquo;seed&rdquo;.
+This field can only be set for resources of kind &ldquo;Extension&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>clusterCompatibility</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ClusterType">
+[]ClusterType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ClusterCompatibility defines the compatibility of this resource with different cluster types.
+If compatibility is not specified, it will be defaulted to &lsquo;shoot&rsquo;.
 This field can only be set for resources of kind &ldquo;Extension&rdquo;.</p>
 </td>
 </tr>

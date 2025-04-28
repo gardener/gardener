@@ -60,7 +60,7 @@ var _ = Describe("Namespaces", func() {
 					{
 						Kind:       extensionsv1alpha1.ExtensionResource,
 						Type:       extensionType3,
-						AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"},
+						AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 					},
 				},
 			},

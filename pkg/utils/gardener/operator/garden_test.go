@@ -78,8 +78,8 @@ var _ = Describe("Garden", func() {
 						ObjectMeta: metav1.ObjectMeta{Name: "local-extension-2"},
 						Spec: operatorv1alpha1.ExtensionSpec{
 							Resources: []gardencorev1beta1.ControllerResource{
-								{Kind: "Extension", Type: "local-extension-2-1", AutoEnable: []gardencorev1beta1.AutoEnableMode{"shoot"}},
-								{Kind: "Extension", Type: "local-extension-2-2", AutoEnable: []gardencorev1beta1.AutoEnableMode{"seed"}},
+								{Kind: "Extension", Type: "local-extension-2-1", AutoEnable: []gardencorev1beta1.ClusterType{"shoot"}},
+								{Kind: "Extension", Type: "local-extension-2-2", AutoEnable: []gardencorev1beta1.ClusterType{"seed"}},
 							},
 						},
 					},
@@ -124,7 +124,7 @@ var _ = Describe("Garden", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "local-extension-3"},
 				Spec: operatorv1alpha1.ExtensionSpec{
 					Resources: []gardencorev1beta1.ControllerResource{
-						{Kind: "Extension", Type: "auto-enabled-local-extension", AutoEnable: []gardencorev1beta1.AutoEnableMode{"garden"}},
+						{Kind: "Extension", Type: "auto-enabled-local-extension", AutoEnable: []gardencorev1beta1.ClusterType{"garden"}},
 					},
 				},
 			}

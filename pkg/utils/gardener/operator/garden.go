@@ -72,7 +72,7 @@ func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden, extensi
 
 	for _, extension := range extensionList.Items {
 		for _, resource := range extension.Spec.Resources {
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && slices.Contains(resource.AutoEnable, operatorv1alpha1.AutoEnableModeGarden) {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && slices.Contains(resource.AutoEnable, operatorv1alpha1.ClusterTypeGarden) {
 				requiredExtensions.Insert(gardener.ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type))
 			}
 		}

@@ -309,6 +309,9 @@ spec:
     primary: true
     autoEnable:
     - shoot
+    clusterCompatibility:
+    - seed
+    - shoot
     reconcileTimeout: 30s
     lifecycle:
       reconcile: AfterKubeAPIServer
@@ -317,6 +320,8 @@ spec:
 ```
 
 The `autoEnable=[shoot]` option specifies that the `Extension/foo` object shall be created by default for all shoots (unless they opted out by setting `.spec.extensions[].enabled=false` in the `Shoot` spec).
+
+The `autoEnable=[seed,shoot]` option specifies that the `Extension/foo` can be enabled in seed and shoot clusters.
 
 The `reconcileTimeout` tells Gardener how long it should wait during its reconciliation flow for the `Extension/foo`'s reconciliation to finish.
 
