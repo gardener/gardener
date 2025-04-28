@@ -28,8 +28,12 @@ func (credentialsBindingStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (credentialsBindingStrategy) PrepareForCreate(_ context.Context, _ runtime.Object) {
+func (c credentialsBindingStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
+	credentialsbinding := obj.(*security.CredentialsBinding)
 
+	if credentialsbinding.GetName() == "" {
+		credentialsbinding.SetName(c.GenerateName(credentialsbinding.GetGenerateName()))
+	}
 }
 
 func (credentialsBindingStrategy) PrepareForUpdate(_ context.Context, _, _ runtime.Object) {
