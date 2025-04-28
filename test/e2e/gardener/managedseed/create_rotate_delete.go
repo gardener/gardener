@@ -35,22 +35,18 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 	BeforeTestSetup(func() {
 		shoot := DefaultShoot(DefaultManagedSeedName())
 		shoot.Namespace = v1beta1constants.GardenNamespace
-		managedSeed, err := buildManagedSeed(shoot)
-		if err != nil {
-			s.Log.Error(err, "Failed to build managed seed")
-			Fail(err.Error())
-		}
+		managedSeed := buildManagedSeed(shoot)
 
 		s = NewTestContext().ForManagedSeed(managedSeed).WithShoot(shoot)
 	})
 
 	ItShouldCreateShoot(&s.ShootContext)
 	ItShouldWaitForShootToBeReconciledAndHealthy(&s.ShootContext)
+	ItShouldInitializeShootClient(&s.ShootContext)
 	ItShouldCreateManagedSeed(s)
 	ItShouldWaitForManagedSeedToBeReady(s)
 	ItShouldInitializeSeedContext(s)
 	ItShouldWaitForSeedToBeReady(&s.SeedContext)
-	ItShouldInitializeShootClient(&s.ShootContext)
 
 	verifier := &rotation.GardenletKubeconfigRotationVerifier{
 		GardenReader:                       s.GardenClient,
@@ -157,7 +153,7 @@ const (
 	gardenletKubeconfigSecretNamespace = "garden"
 )
 
-func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.ManagedSeed, error) {
+func buildManagedSeed(shoot *gardencorev1beta1.Shoot) *seedmanagementv1alpha1.ManagedSeed {
 	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gardenletconfigv1alpha1.SchemeGroupVersion.String(),
@@ -193,9 +189,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 		gardenletConfig.SeedConfig.Spec.Networks.IPFamilies = []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv6}
 	}
 	rawGardenletConfig, err := encoding.EncodeGardenletConfiguration(gardenletConfig)
-	if err != nil {
-		return nil, err
-	}
+	Expect(err).NotTo(HaveOccurred())
 
 	return &seedmanagementv1alpha1.ManagedSeed{
 		ObjectMeta: metav1.ObjectMeta{
@@ -211,7 +205,7 @@ func buildManagedSeed(shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.M
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 func itShouldVerifyGardenletKubeconfigRotation(v *rotation.GardenletKubeconfigRotationVerifier, expectPodRestart bool, rotationFunc func()) {

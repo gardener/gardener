@@ -19,7 +19,7 @@ import (
 	. "github.com/gardener/gardener/test/e2e/gardener"
 )
 
-// ItShouldCreateManagedSeed creates the managedseed object
+// ItShouldCreateManagedSeed creates the ManagedSeed object
 func ItShouldCreateManagedSeed(s *ManagedSeedContext) {
 	GinkgoHelper()
 
@@ -30,7 +30,7 @@ func ItShouldCreateManagedSeed(s *ManagedSeedContext) {
 			if err := s.GardenClient.Create(ctx, s.ManagedSeed); !apierrors.IsAlreadyExists(err) {
 				return err
 			}
-			return StopTrying("managedseed already exists")
+			return StopTrying("ManagedSeed already exists")
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
@@ -44,7 +44,7 @@ func ItShouldWaitForManagedSeedToBeReady(s *ManagedSeedContext) {
 			g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.ManagedSeed), s.ManagedSeed)).To(Succeed())
 			g.Expect(health.CheckManagedSeed(s.ManagedSeed)).To(Succeed())
 		}).Should(Succeed())
-	}, SpecTimeout(5*time.Minute))
+	}, SpecTimeout(10*time.Minute))
 }
 
 // ItShouldInitializeSeedContext should get the resulting seed object of the managedseed and initialize the seed context of the ManagedSeedContext

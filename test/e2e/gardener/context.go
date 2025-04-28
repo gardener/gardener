@@ -267,12 +267,12 @@ type ManagedSeedContext struct {
 }
 
 // ForManagedSeed copies the receiver ShootContext for deriving a ManagedSeedContext.
-func (t *TestContext) ForManagedSeed(managedseed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
+func (t *TestContext) ForManagedSeed(managedSeed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
 	ms := &ManagedSeedContext{
 		TestContext: *t,
-		ManagedSeed: managedseed,
+		ManagedSeed: managedSeed,
 	}
-	t.Log = t.Log.WithValues("managedseed", client.ObjectKeyFromObject(managedseed))
+	t.Log = t.Log.WithValues("managedSeed", client.ObjectKeyFromObject(managedSeed))
 
 	return ms
 }
