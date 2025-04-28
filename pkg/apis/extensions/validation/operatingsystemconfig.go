@@ -57,10 +57,8 @@ func ValidateOperatingSystemConfigSpec(spec *extensionsv1alpha1.OperatingSystemC
 
 	if len(spec.Purpose) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("purpose"), "field is required"))
-	} else {
-		if spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeProvision && spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("purpose"), spec.Purpose, []string{string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision), string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)}))
-		}
+	} else if spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeProvision && spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("purpose"), spec.Purpose, []string{string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision), string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)}))
 	}
 
 	allErrs = append(allErrs, ValidateCRIConfig(spec.CRIConfig, spec.Purpose, fldPath.Child("criConfig"))...)
@@ -187,10 +185,8 @@ func validateContainerdRegistryConfigs(registries []extensionsv1alpha1.RegistryC
 
 			if u, err := url.Parse(host.URL); err != nil {
 				allErrs = append(allErrs, field.Required(fldHost.Child("url"), "url must be a valid URL: "+err.Error()+form))
-			} else {
-				if len(u.Host) == 0 {
-					allErrs = append(allErrs, field.Invalid(fldHost.Child("url"), u.Host, "host must be provided"+form))
-				}
+			} else if len(u.Host) == 0 {
+				allErrs = append(allErrs, field.Invalid(fldHost.Child("url"), u.Host, "host must be provided"+form))
 			}
 
 			for k, capability := range host.Capabilities {

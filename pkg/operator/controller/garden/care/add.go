@@ -54,7 +54,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, gardenClientMap clientmap
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 			// if going into exponential backoff, wait at most the configured sync period
-			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter[reconcile.Request](
+			RateLimiter: workqueue.NewTypedWithMaxWaitRateLimiter(
 				workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](),
 				r.Config.Controllers.GardenCare.SyncPeriod.Duration,
 			),

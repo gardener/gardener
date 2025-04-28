@@ -29,7 +29,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, channel <-chan event.Type
 	return builder.
 		TypedControllerManagedBy[Request](mgr).
 		Named(ControllerName).
-		WatchesRawSource(source.TypedChannel[*rest.Config, Request](channel, r.EventHandler())).
+		WatchesRawSource(source.TypedChannel(channel, r.EventHandler())).
 		WithOptions(controller.TypedOptions[Request]{
 			MaxConcurrentReconciles: 1,
 		}).

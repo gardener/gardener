@@ -51,9 +51,7 @@ func (r *Reconciler) AddToManager(mgr manager.Manager, targetCluster cluster.Clu
 func (r *Reconciler) NodePredicate() predicate.Predicate {
 	return predicate.And(
 		predicateutils.ForEventTypes(predicateutils.Create, predicateutils.Update),
-		predicate.NewPredicateFuncs(func(obj client.Object) bool {
-			return NodeHasCriticalComponentsNotReadyTaint(obj)
-		}),
+		predicate.NewPredicateFuncs(NodeHasCriticalComponentsNotReadyTaint),
 	)
 }
 

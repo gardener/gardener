@@ -389,11 +389,9 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 			fieldErr := field.Invalid(namePath, c.shoot.Name, fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, c.project.Name, c.shoot.GenerateName))
 			return apierrors.NewInvalid(a.GetKind().GroupKind(), c.shoot.Name, field.ErrorList{fieldErr})
 		}
-	} else {
-		if len(c.project.Name+c.shoot.Name) > lengthLimit {
-			fieldErr := field.Invalid(namePath, c.shoot.Name, fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
-			return apierrors.NewInvalid(a.GetKind().GroupKind(), c.shoot.Name, field.ErrorList{fieldErr})
-		}
+	} else if len(c.project.Name+c.shoot.Name) > lengthLimit {
+		fieldErr := field.Invalid(namePath, c.shoot.Name, fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
+		return apierrors.NewInvalid(a.GetKind().GroupKind(), c.shoot.Name, field.ErrorList{fieldErr})
 	}
 
 	if c.project.DeletionTimestamp != nil {
@@ -1583,12 +1581,12 @@ func validateKubeletConfig(fldPath *field.Path, machineTypes []gardencorev1beta1
 }
 
 func validateVolumeTypes(constraints []gardencorev1beta1.VolumeType, volume, oldVolume *core.Volume, regions []gardencorev1beta1.Region, region string, zones []string) (bool, bool, bool, []string) {
-	if volume == nil || volume.Type == nil || (volume != nil && oldVolume != nil && volume.Type != nil && oldVolume.Type != nil && *volume.Type == *oldVolume.Type) {
+	if volume == nil || volume.Type == nil || (oldVolume != nil && volume.Type != nil && oldVolume.Type != nil && *volume.Type == *oldVolume.Type) {
 		return true, true, true, nil
 	}
 
 	var volumeType string
-	if volume != nil && volume.Type != nil {
+	if volume.Type != nil {
 		volumeType = *volume.Type
 	}
 
@@ -2039,11 +2037,9 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []g
 				return worker.Machine.Image, nil
 			}
 			return oldWorker.Machine.Image, nil
-		} else {
+		} else if len(worker.Machine.Image.Version) != 0 {
 			// image name was changed -> keep version from new worker if specified, otherwise default the image version
-			if len(worker.Machine.Image.Version) != 0 {
-				return worker.Machine.Image, nil
-			}
+			return worker.Machine.Image, nil
 		}
 	}
 

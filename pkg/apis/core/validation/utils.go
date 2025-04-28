@@ -52,18 +52,14 @@ func validateCrossVersionObjectReference(ref autoscalingv1.CrossVersionObjectRef
 
 	if len(ref.APIVersion) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("apiVersion"), "must provide an apiVersion"))
-	} else {
-		if ref.APIVersion != corev1.SchemeGroupVersion.String() {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("apiVersion"), ref.APIVersion, []string{corev1.SchemeGroupVersion.String()}))
-		}
+	} else if ref.APIVersion != corev1.SchemeGroupVersion.String() {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("apiVersion"), ref.APIVersion, []string{corev1.SchemeGroupVersion.String()}))
 	}
 
 	if len(ref.Kind) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "must provide a kind"))
-	} else {
-		if ref.Kind != "Secret" && ref.Kind != "ConfigMap" {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), ref.Kind, []string{"Secret", "ConfigMap"}))
-		}
+	} else if ref.Kind != "Secret" && ref.Kind != "ConfigMap" {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), ref.Kind, []string{"Secret", "ConfigMap"}))
 	}
 
 	if len(ref.Name) == 0 {

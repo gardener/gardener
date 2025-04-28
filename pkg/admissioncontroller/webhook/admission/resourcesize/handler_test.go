@@ -271,7 +271,6 @@ var _ = Describe("handler", func() {
 	})
 
 	It("should pass because size is in range for v1beta1 shoot without considering managed fields", func() {
-		//fieldsV1Content, err := json.(map[string]any{})
 		largeShoot := func() runtime.Object {
 			shootWithLargeStatus := &gardencorev1beta1.Shoot{
 				TypeMeta: metav1.TypeMeta{
@@ -289,7 +288,7 @@ var _ = Describe("handler", func() {
 			Expect(shootsv1beta1SizeLimit.CmpInt64(int64(len(objData)))).Should(Equal(-1))
 			return shootWithLargeStatus
 		}
-		//Expect(largeShoot()).To(BeEmpty())
+
 		test(largeShoot, restrictedUser, true)
 	})
 
