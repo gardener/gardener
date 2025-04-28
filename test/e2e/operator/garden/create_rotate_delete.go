@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
-	. "github.com/gardener/gardener/test/e2e/operator/garden/internal"
 	"github.com/gardener/gardener/test/e2e/operator/garden/internal/rotation"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
 )

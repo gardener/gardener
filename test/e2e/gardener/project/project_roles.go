@@ -22,7 +22,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
-	. "github.com/gardener/gardener/test/e2e/gardener/project/internal"
 )
 
 var _ = Describe("Project Tests", Ordered, Label("Project", "default"), func() {
