@@ -6,9 +6,11 @@ package apiserver
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"strconv"
 	"strings"
+	"text/template"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,15 +39,22 @@ import (
 )
 
 const (
-	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"    // #nosec G101 -- No credential.
-	secretNameKubeAggregator         = "kube-aggregator"           // #nosec G101 -- No credential.
-	secretNameHTTPProxy              = "kube-apiserver-http-proxy" // #nosec G101 -- No credential.
-	secretNameHAVPNSeedClient        = "vpn-seed-client"           // #nosec G101 -- No credential.
+	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"           // #nosec G101 -- No credential.
+	secretNameKubeAggregator         = "kube-aggregator"                  // #nosec G101 -- No credential.
+	secretNameHTTPProxyClient        = "kube-apiserver-http-proxy-client" // #nosec G101 -- No credential.
+	secretNameHTTPProxy              = "kube-apiserver-http-proxy"        // #nosec G101 -- No credential.
+	secretNameHAVPNSeedClient        = "vpn-seed-client"                  // #nosec G101 -- No credential.
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer     = "kube-apiserver"
 	containerNameVPNPathController = "vpn-path-controller"
 	containerNameVPNSeedClient     = "vpn-client"
+	containerNameVPNEnvoyProxy     = "envoy-proxy"
+
+	// EnvoyPortHAVPN is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
+	EnvoyPortHAVPN        = 9443
+	EnvoyHostHAVPN        = "kube-apiserver-http-proxy"
+	EnvoyMetricsPortHAVPN = 15000
 
 	volumeNameAuthenticationWebhookKubeconfig = "authentication-webhook-kubeconfig"
 	volumeNameCA                              = "ca"
@@ -54,7 +63,7 @@ const (
 	volumeNameCAKubelet                       = "ca-kubelet"
 	volumeNameCAVPN                           = "ca-vpn"
 	volumeNameEgressSelector                  = "egress-selection-config"
-	volumeNameHTTPProxy                       = "http-proxy"
+	volumeNameHTTPProxyClient                 = "http-proxy"
 	volumeNameKubeAPIServerToKubelet          = "kubelet-client"
 	volumeNameKubeAggregator                  = "kube-aggregator"
 	volumeNameOIDCCABundle                    = "oidc-cabundle"
@@ -66,6 +75,8 @@ const (
 	volumeNameAPIServerAccess                 = "kube-api-access-gardener"
 	volumeNameVPNSeedTLSAuth                  = "vpn-seed-tlsauth"
 	volumeNameDevNetTun                       = "dev-net-tun"
+	volumeNameEnvoyConfig                     = "envoy-config"
+	volumeNameCerts                           = "certs"
 
 	volumeMountPathAuthenticationWebhookKubeconfig = "/etc/kubernetes/webhook/authentication"
 	volumeMountPathCA                              = "/srv/kubernetes/ca"
@@ -74,7 +85,7 @@ const (
 	volumeMountPathCAKubelet                       = "/srv/kubernetes/ca-kubelet"
 	volumeMountPathCAVPN                           = "/srv/kubernetes/ca-vpn"
 	volumeMountPathEgressSelector                  = "/etc/kubernetes/egress"
-	volumeMountPathHTTPProxy                       = "/etc/srv/kubernetes/envoy"
+	volumeMountPathHTTPProxyClient                 = "/etc/srv/kubernetes/envoy"
 	volumeMountPathKubeAPIServerToKubelet          = "/srv/kubernetes/apiserver-kubelet"
 	volumeMountPathKubeAggregator                  = "/srv/kubernetes/aggregator"
 	volumeMountPathServiceAccountKey               = "/srv/kubernetes/service-account-key"
@@ -84,8 +95,27 @@ const (
 	volumeMountPathVPNSeedClient                   = "/srv/secrets/vpn-client"
 	volumeMountPathAPIServerAccess                 = "/var/run/secrets/kubernetes.io/serviceaccount"
 	volumeMountPathVPNSeedTLSAuth                  = "/srv/secrets/tlsauth"
+	volumeMountPathCerts                           = "/srv/secrets/vpn-server"
 	volumeMountPathDevNetTun                       = "/dev/net/tun"
+	volumeMountPathEnvoyConfig                     = "/etc/envoy"
+
+	fileNameCABundle = "ca.crt"
 )
+
+var (
+	tplNameEnvoy = "envoy.yaml.tpl"
+	//go:embed templates/envoy.yaml.tpl
+	tplContentEnvoy string
+	tplEnvoy        *template.Template
+)
+
+func init() {
+	var err error
+	tplEnvoy, err = template.
+		New(tplNameEnvoy).
+		Parse(tplContentEnvoy)
+	utilruntime.Must(err)
+}
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
@@ -101,6 +131,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	configMapAdmissionConfigs *corev1.ConfigMap,
 	secretAdmissionKubeconfigs *corev1.Secret,
 	configMapEgressSelector *corev1.ConfigMap,
+	configMapEnvoyConfig *corev1.ConfigMap,
 	secretETCDEncryptionConfiguration *corev1.Secret,
 	secretOIDCCABundle *corev1.Secret,
 	secretServiceAccountKey *corev1.Secret,
@@ -108,6 +139,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretServer *corev1.Secret,
 	secretKubeletClient *corev1.Secret,
 	secretKubeAggregator *corev1.Secret,
+	secretHTTPProxyClient *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
@@ -375,7 +407,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 		k.handleAuthenticationWebhookSettings(deployment, secretAuthenticationWebhookKubeconfig)
 		k.handleAuthorizationSettings(deployment, configMapAuthorizationConfig, secretAuthorizationWebhooksKubeconfigs)
-		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
+		if err := k.handleVPNSettings(deployment, serviceAccount, configMapEgressSelector, configMapEnvoyConfig, secretHTTPProxyClient, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth); err != nil {
 			return err
 		}
 		if err := k.handleKubeletSettings(deployment, secretKubeletClient); err != nil {
@@ -460,8 +492,8 @@ func (k *kubeAPIServer) computeKubeAPIServerArgs() []string {
 
 func (k *kubeAPIServer) etcdServersOverrides() string {
 	addGroupResourceIfNotPresent := func(groupResources []schema.GroupResource, groupResource schema.GroupResource) []schema.GroupResource {
-		for _, resource := range groupResources {
-			if resource.Group == groupResource.Group && resource.Resource == groupResource.Resource {
+		for _, res := range groupResources {
+			if res.Group == groupResource.Group && res.Resource == groupResource.Resource {
 				return groupResources
 			}
 		}
@@ -474,8 +506,8 @@ func (k *kubeAPIServer) etcdServersOverrides() string {
 	}
 
 	var overrides []string
-	for _, resource := range addGroupResourceIfNotPresent(k.values.ResourcesToStoreInETCDEvents, schema.GroupResource{Resource: "events"}) {
-		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s:%d", resource.Group, resource.Resource, hostName, port))
+	for _, res := range addGroupResourceIfNotPresent(k.values.ResourcesToStoreInETCDEvents, schema.GroupResource{Resource: "events"}) {
+		overrides = append(overrides, fmt.Sprintf("%s/%s#https://%s:%d", res.Group, res.Resource, hostName, port))
 	}
 	return strings.Join(overrides, ",")
 }
@@ -522,6 +554,8 @@ func (k *kubeAPIServer) handleVPNSettings(
 	deployment *appsv1.Deployment,
 	serviceAccount *corev1.ServiceAccount,
 	configMapEgressSelector *corev1.ConfigMap,
+	configMapEnvoyConfig *corev1.ConfigMap,
+	secretHTTPProxyClient *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
@@ -536,9 +570,9 @@ func (k *kubeAPIServer) handleVPNSettings(
 	}
 
 	if k.values.VPN.HighAvailabilityEnabled {
-		k.handleVPNSettingsHA(deployment, serviceAccount, secretCAVPN, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth)
+		return k.handleVPNSettingsHA(deployment, serviceAccount, secretCAVPN, secretHTTPProxyClient, secretHTTPProxy, secretHAVPNSeedClient, secretHAVPNSeedClientSeedTLSAuth, configMapEgressSelector, configMapEnvoyConfig)
 	} else {
-		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxy, configMapEgressSelector)
+		k.handleVPNSettingsNonHA(deployment, secretCAVPN, secretHTTPProxyClient, configMapEgressSelector)
 	}
 
 	return nil
@@ -547,7 +581,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 func (k *kubeAPIServer) handleVPNSettingsNonHA(
 	deployment *appsv1.Deployment,
 	secretCAVPN *corev1.Secret,
-	secretHTTPProxy *corev1.Secret,
+	secretHTTPProxyClient *corev1.Secret,
 	configMapEgressSelector *corev1.ConfigMap,
 ) {
 	deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
@@ -560,8 +594,8 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 			MountPath: volumeMountPathCAVPN,
 		},
 		{
-			Name:      volumeNameHTTPProxy,
-			MountPath: volumeMountPathHTTPProxy,
+			Name:      volumeNameHTTPProxyClient,
+			MountPath: volumeMountPathHTTPProxyClient,
 		},
 		{
 			Name:      volumeNameEgressSelector,
@@ -578,10 +612,10 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 			},
 		},
 		{
-			Name: volumeNameHTTPProxy,
+			Name: volumeNameHTTPProxyClient,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName:  secretHTTPProxy.Name,
+					SecretName:  secretHTTPProxyClient.Name,
 					DefaultMode: ptr.To[int32](0640),
 				},
 			},
@@ -603,9 +637,13 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	deployment *appsv1.Deployment,
 	serviceAccount *corev1.ServiceAccount,
 	secretCAVPN *corev1.Secret,
+	secretHTTPProxyClient *corev1.Secret,
+	secretHTTPProxy *corev1.Secret,
 	secretHAVPNSeedClient *corev1.Secret,
 	secretHAVPNSeedClientSeedTLSAuth *corev1.Secret,
-) {
+	configMapEgressSelector *corev1.ConfigMap,
+	configMapEnvoyConfig *corev1.ConfigMap,
+) error {
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 		serviceName := fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, i)
 
@@ -613,6 +651,28 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			gardenerutils.NetworkPolicyLabel(serviceName, vpnseedserver.OpenVPNPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	}
+
+	deployment.Spec.Template.Spec.Containers[0].Args = append(deployment.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
+	deployment.Spec.Template.Spec.HostAliases = append(deployment.Spec.Template.Spec.HostAliases, corev1.HostAlias{
+		IP: "127.0.0.1",
+		Hostnames: []string{
+			EnvoyHostHAVPN,
+		},
+	})
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+		{
+			Name:      volumeNameCAVPN,
+			MountPath: volumeMountPathCAVPN,
+		},
+		{
+			Name:      volumeNameHTTPProxyClient,
+			MountPath: volumeMountPathHTTPProxyClient,
+		},
+		{
+			Name:      volumeNameEgressSelector,
+			MountPath: volumeMountPathEgressSelector,
+		},
+	}...)
 
 	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount.Name
 	deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer] = v1beta1constants.LabelNetworkPolicyAllowed
@@ -628,6 +688,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedClientContainer(i))
 	}
+	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedEnvoyProxyContainer())
 	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedPathControllerContainer())
 	deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, *k.vpnSeedClientInitContainer())
 
@@ -710,6 +771,44 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			},
 		},
 		{
+			Name: volumeNameCerts,
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: ptr.To[int32](420),
+					Sources: []corev1.VolumeProjection{
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: secretCAVPN.Name,
+								},
+								Items: []corev1.KeyToPath{{
+									Key:  secrets.DataKeyCertificateBundle,
+									Path: fileNameCABundle,
+								}},
+							},
+						},
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: secretHTTPProxy.Name,
+								},
+								Items: []corev1.KeyToPath{
+									{
+										Key:  secrets.DataKeyCertificate,
+										Path: secrets.DataKeyCertificate,
+									},
+									{
+										Key:  secrets.DataKeyPrivateKey,
+										Path: secrets.DataKeyPrivateKey,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			Name: volumeNameVPNSeedTLSAuth,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -727,7 +826,66 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 				},
 			},
 		},
+		{
+			Name: volumeNameHTTPProxyClient,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  secretHTTPProxyClient.Name,
+					DefaultMode: ptr.To[int32](0640),
+				},
+			},
+		},
+		{
+			Name: volumeNameEgressSelector,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: configMapEgressSelector.Name,
+					},
+				},
+			},
+		},
+		{
+			Name: volumeNameEnvoyConfig,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: configMapEnvoyConfig.Name,
+					},
+				},
+			},
+		},
+		{
+			Name: volumeNameCAVPN,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretCAVPN.Name,
+				},
+			},
+		},
 	}...)
+	return nil
+}
+
+func (k *kubeAPIServer) getEnvoyConfig() (string, error) {
+	values := map[string]any{
+		"listenAddress":   "0.0.0.0",
+		"listenAddressV6": "::",
+		"dnsLookupFamily": "ALL",
+		"envoyPort":       EnvoyPortHAVPN,
+		"certChain":       volumeMountPathCerts + `/` + secrets.DataKeyCertificate,
+		"privateKey":      volumeMountPathCerts + `/` + secrets.DataKeyPrivateKey,
+		"caCert":          volumeMountPathCerts + `/` + fileNameCABundle,
+		"metricsPort":     EnvoyMetricsPortHAVPN,
+	}
+
+	var envoyConfig strings.Builder
+	err := tplEnvoy.Execute(&envoyConfig, values)
+	if err != nil {
+		return "", err
+	}
+
+	return envoyConfig.String(), nil
 }
 
 func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
@@ -961,6 +1119,64 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		},
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+	}
+}
+
+func (k *kubeAPIServer) vpnSeedEnvoyProxyContainer() *corev1.Container {
+	return &corev1.Container{
+		Name:            containerNameVPNEnvoyProxy,
+		Image:           k.values.Images.EnvoyProxy,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command: []string{
+			"envoy",
+			"--concurrency",
+			"2",
+			"-c",
+			fmt.Sprintf("%s/%s", volumeMountPathEnvoyConfig, configMapEnvoyConfigDataKey),
+		},
+		ReadinessProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				TCPSocket: &corev1.TCPSocketAction{
+					Port: intstr.FromInt32(EnvoyPortHAVPN),
+				},
+			},
+		},
+		LivenessProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				TCPSocket: &corev1.TCPSocketAction{
+					Port: intstr.FromInt32(EnvoyPortHAVPN),
+				},
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("20m"),
+				corev1.ResourceMemory: resource.MustParse("100Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("850M"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{
+					"all",
+				},
+			},
+			RunAsUser:    ptr.To(int64(v1beta1constants.EnvoyNonRootUserId)),
+			RunAsNonRoot: ptr.To(true),
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      volumeNameCerts,
+				MountPath: volumeMountPathCerts,
+			},
+			{
+				Name:      volumeNameEnvoyConfig,
+				MountPath: volumeMountPathEnvoyConfig,
+			},
+		},
 	}
 }
 

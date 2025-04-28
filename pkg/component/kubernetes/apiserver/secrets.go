@@ -196,16 +196,31 @@ func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*cor
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAFrontProxy), secretsmanager.Rotate(secretsmanager.InPlace))
 }
 
-func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.Secret, error) {
-	if !k.values.VPN.Enabled || k.values.VPN.HighAvailabilityEnabled {
+func (k *kubeAPIServer) reconcileSecretHTTPProxyClient(ctx context.Context) (*corev1.Secret, error) {
+	if !k.values.VPN.Enabled {
 		return nil, nil
 	}
 
 	return k.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
-		Name:                        secretNameHTTPProxy,
-		CommonName:                  "kube-apiserver-http-proxy",
+		Name:                        secretNameHTTPProxyClient,
+		CommonName:                  "kube-apiserver-http-proxy-client",
 		CertType:                    secretsutils.ClientCert,
 		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
+}
+
+func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.Secret, error) {
+	if !k.values.VPN.Enabled || !k.values.VPN.HighAvailabilityEnabled {
+		return nil, nil
+	}
+
+	return k.secretsManager.Generate(ctx, &secretsutils.CertificateSecretConfig{
+		Name:                              secretNameHTTPProxy,
+		CommonName:                        "kube-apiserver-http-proxy",
+		CertType:                          secretsutils.ServerCert,
+		DNSNames:                          []string{"kube-apiserver-http-proxy"},
+		SkipPublishingCACertificate:       true,
+		IncludeCACertificateInServerChain: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
 }
 
