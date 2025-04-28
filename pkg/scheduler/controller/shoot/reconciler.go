@@ -510,10 +510,20 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 
 	if seed.Spec.Networks.ShootDefaults != nil {
 		if shootPodsNetwork == nil && !workerless {
-			shootPodsNetwork = seed.Spec.Networks.ShootDefaults.Pods
+			if cidrvalidation.NewCIDR(*seed.Spec.Networks.ShootDefaults.Pods, field.NewPath("spec", "networks", "shootDefaults", "pods")).IsIPv6() &&
+				slices.Contains(shoot.Spec.Networking.IPFamilies, gardencorev1beta1.IPFamilyIPv6) ||
+				cidrvalidation.NewCIDR(*seed.Spec.Networks.ShootDefaults.Pods, field.NewPath("spec", "networks", "shootDefaults", "pods")).IsIPv4() &&
+					slices.Contains(shoot.Spec.Networking.IPFamilies, gardencorev1beta1.IPFamilyIPv4) {
+				shootPodsNetwork = seed.Spec.Networks.ShootDefaults.Pods
+			}
 		}
 		if shootServicesNetwork == nil {
-			shootServicesNetwork = seed.Spec.Networks.ShootDefaults.Services
+			if cidrvalidation.NewCIDR(*seed.Spec.Networks.ShootDefaults.Services, field.NewPath("spec", "networks", "shootDefaults", "services")).IsIPv6() &&
+				slices.Contains(shoot.Spec.Networking.IPFamilies, gardencorev1beta1.IPFamilyIPv6) ||
+				cidrvalidation.NewCIDR(*seed.Spec.Networks.ShootDefaults.Services, field.NewPath("spec", "networks", "shootDefaults", "services")).IsIPv4() &&
+					slices.Contains(shoot.Spec.Networking.IPFamilies, gardencorev1beta1.IPFamilyIPv4) {
+				shootServicesNetwork = seed.Spec.Networks.ShootDefaults.Services
+			}
 		}
 	}
 
