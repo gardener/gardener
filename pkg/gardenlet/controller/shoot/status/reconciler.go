@@ -129,7 +129,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	patch := client.StrategicMergeFrom(shoot.DeepCopy())
+	// gardenlet's shoot reconciler might concurrently try to update the status.inPlaceUpdates field.
+	// Hence, we need to use optimistic locking to ensure we don't accidentally overwrite concurrent updates.
+	patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, func(pool string) bool {
 		return !manualInPlacePendingWorkers.Has(pool)
 	})
@@ -142,8 +144,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if noManualInPlacePendingWorkers {
 		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
+
 		if noInPlacePendingWorkers {
-			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
 			shoot.Status.InPlaceUpdates = nil
 		}
 	}
@@ -159,7 +161,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if shootNeedsReconcile || (noInPlacePendingWorkers && kubernetesutils.HasMetaDataAnnotation(shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate)) {
-		patch := client.MergeFrom(shoot.DeepCopy())
+		patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
 		if shootNeedsReconcile {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		} else {

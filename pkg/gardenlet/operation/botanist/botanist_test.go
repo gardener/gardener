@@ -251,7 +251,7 @@ var _ = Describe("Botanist", func() {
 			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(Equal([]string{"pool-1", "pool-3", "pool-4"}))
 			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(Equal([]string{"pool-2", "pool-5", "pool-6"}))
 
-			Expect(botanist.Shoot.UpdateInfo(ctx, gardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+			Expect(botanist.Shoot.UpdateInfo(ctx, gardenClient, false, true, func(shoot *gardencorev1beta1.Shoot) error {
 				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 					{
 						Name:           "pool-1",
@@ -287,7 +287,7 @@ var _ = Describe("Botanist", func() {
 			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(Equal([]string{"pool-1", "pool-3", "pool-4"}))
 			Expect(botanist.Shoot.GetInfo().Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(Equal([]string{"pool-2", "pool-5", "pool-6"}))
 
-			Expect(botanist.Shoot.UpdateInfo(ctx, gardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+			Expect(botanist.Shoot.UpdateInfo(ctx, gardenClient, false, true, func(shoot *gardencorev1beta1.Shoot) error {
 				shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{
 					{
 						Name:           "pool-1",
