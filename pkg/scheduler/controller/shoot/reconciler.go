@@ -535,7 +535,6 @@ func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta
 		seed.Spec.Networks.Nodes,
 		seed.Spec.Networks.Pods,
 		seed.Spec.Networks.Services,
-		workerless,
 		!haVPN,
 	) {
 		errorMessages = append(errorMessages, e.ErrorBody())
