@@ -964,7 +964,6 @@ func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
 }
 
 func (e *etcd) computeETCDContainerResources(minAllowedETCD corev1.ResourceList) *corev1.ResourceRequirements {
-
 	resourcesETCD := kubernetesutils.MaximumResourcesFromResourceList(
 		corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("30m"),

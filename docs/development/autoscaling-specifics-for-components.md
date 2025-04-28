@@ -19,7 +19,7 @@ The Shoot Kubernetes API server is scaled simultaneously by VPA and HPA on the s
 The pod-trashing cycle between VPA and HPA scaling on the same metric is avoided by configuring the HPA to scale on average usage (not on average utilization).
 This makes possible VPA to first scale vertically on CPU/memory usage.
 Once all Pods' average CPU/memory usage exceeds the HPA's target average usage, HPA is scaling horizontally (by adding a new replica). HPA's average target usage values are `6` CPU and `24G`.
-The initial API server resource request will follow the minAllowed configuration in shoot api, if minAllowed is not configured then the initial API server resource request is `100m` and `200M` according to the lower bound of the min value of minAllowed configuration
+The initial API server resource requests are `250m` and `500Mi`.
 
 The API server's min replica count is 2, the max replica count - 6.
 The min replica count of 2 is imposed by the [High Availability of Shoot Control Plane Components](../development/high-availability-of-components.md#control-plane-components).
