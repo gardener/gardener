@@ -17,7 +17,6 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -289,8 +288,8 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	return nil
 }
 
-// Admit ensures that referenced resources do actually exist.
-func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+// Validate ensures that referenced resources do actually exist.
+func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if r.readyFunc == nil {
 		r.AssignReadyFunc(func() bool {
@@ -352,14 +351,6 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 
 		switch a.GetOperation() {
 		case admission.Create:
-			// Add createdBy annotation to Shoot
-			annotations := shoot.Annotations
-			if annotations == nil {
-				annotations = map[string]string{}
-			}
-			annotations[v1beta1constants.GardenCreatedBy] = a.GetUserInfo().GetName()
-			shoot.Annotations = annotations
-
 			oldShoot = &core.Shoot{}
 		case admission.Update:
 			// skip verification if spec wasn't changed
@@ -410,31 +401,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 		if utils.SkipVerification(operation, project.ObjectMeta) {
 			return nil
 		}
-		// Set createdBy field in Project
+
 		switch a.GetOperation() {
 		case admission.Create:
-			project.Spec.CreatedBy = &rbacv1.Subject{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     rbacv1.UserKind,
-				Name:     a.GetUserInfo().GetName(),
-			}
-
-			if project.Spec.Owner == nil {
-				owner := project.Spec.CreatedBy
-
-			outer:
-				for _, member := range project.Spec.Members {
-					for _, role := range member.Roles {
-						if role == core.ProjectMemberOwner {
-							owner = member.Subject.DeepCopy()
-							break outer
-						}
-					}
-				}
-
-				project.Spec.Owner = owner
-			}
-
 			err = r.ensureProjectNamespace(project)
 		case admission.Update:
 			oldProject, ok := a.GetOldObject().(*core.Project)
@@ -443,24 +412,6 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			}
 			if oldProject.Spec.Namespace == nil && project.Spec.Namespace != nil {
 				err = r.ensureProjectNamespace(project)
-			}
-		}
-
-		if project.Spec.Owner != nil {
-			ownerIsMember := false
-			for _, member := range project.Spec.Members {
-				if member.Subject == *project.Spec.Owner {
-					ownerIsMember = true
-				}
-			}
-			if !ownerIsMember {
-				project.Spec.Members = append(project.Spec.Members, core.ProjectMember{
-					Subject: *project.Spec.Owner,
-					Roles: []string{
-						core.ProjectMemberAdmin,
-						core.ProjectMemberOwner,
-					},
-				})
 			}
 		}
 

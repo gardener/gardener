@@ -34,6 +34,35 @@ var _ = Describe("Strategy", func() {
 		}
 	})
 
+	Describe("#PrepareForCreate", func() {
+		It("should set the name if not set", func() {
+			secretBinding.SetName("")
+
+			secretbindingregistry.Strategy.PrepareForCreate(context.TODO(), secretBinding)
+
+			Expect(secretBinding.GetName()).NotTo(BeEmpty())
+		})
+
+		It("should set name with generateName as prefix", func() {
+			genName := "prefix-"
+			secretBinding.GenerateName = genName
+			secretBinding.Name = ""
+
+			secretbindingregistry.Strategy.PrepareForCreate(context.TODO(), secretBinding)
+
+			Expect(secretBinding.GetGenerateName()).To(Equal(genName))
+			Expect(secretBinding.GetName()).To(HavePrefix(genName))
+		})
+
+		It("should not overwrite already set name", func() {
+			secretBinding.SetName("bar")
+
+			secretbindingregistry.Strategy.PrepareForCreate(context.TODO(), secretBinding)
+
+			Expect(secretBinding.GetName()).To(Equal("bar"))
+		})
+	})
+
 	Describe("#Validate", func() {
 		It("should forbid creating SecretBinding when provider is nil or empty", func() {
 			secretBinding.Provider = nil
