@@ -1583,12 +1583,12 @@ func validateKubeletConfig(fldPath *field.Path, machineTypes []gardencorev1beta1
 }
 
 func validateVolumeTypes(constraints []gardencorev1beta1.VolumeType, volume, oldVolume *core.Volume, regions []gardencorev1beta1.Region, region string, zones []string) (bool, bool, bool, []string) {
-	if volume == nil || volume.Type == nil || (volume != nil && oldVolume != nil && volume.Type != nil && oldVolume.Type != nil && *volume.Type == *oldVolume.Type) {
+	if volume == nil || volume.Type == nil || (oldVolume != nil && volume.Type != nil && oldVolume.Type != nil && *volume.Type == *oldVolume.Type) {
 		return true, true, true, nil
 	}
 
 	var volumeType string
-	if volume != nil && volume.Type != nil {
+	if volume.Type != nil {
 		volumeType = *volume.Type
 	}
 

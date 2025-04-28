@@ -391,7 +391,7 @@ func IsProblematicWebhook(
 ) bool {
 	// this is a special case, webhook affecting lease in kube-system namespace can block hibernation
 	// even if FailurePolicy is set to `Ignore` and timeoutSeconds is 10 seconds.
-	if timeoutSeconds == nil || (timeoutSeconds != nil && *timeoutSeconds > WebhookMaximumTimeoutSecondsNotProblematicForLeases) {
+	if timeoutSeconds == nil || *timeoutSeconds > WebhookMaximumTimeoutSecondsNotProblematicForLeases {
 		for _, rule := range rules {
 			for _, matcher := range matchers.WebhookConstraintMatchersForLeases {
 				if matcher.Match(rule, objSelector, nsSelector) {
