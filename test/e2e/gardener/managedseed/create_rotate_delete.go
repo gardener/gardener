@@ -37,7 +37,8 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 		shoot.Namespace = v1beta1constants.GardenNamespace
 		managedSeed, err := buildManagedSeed(shoot)
 		if err != nil {
-			panic(err)
+			s.Log.Error(err, "Failed to build managed seed")
+			Fail(err.Error())
 		}
 
 		s = NewTestContext().ForManagedSeed(managedSeed).WithShoot(shoot)
@@ -57,7 +58,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 		GardenletKubeconfigSecretNamespace: gardenletKubeconfigSecretNamespace,
 	}
 
-	It("Should initialize verifier seed fields", func() {
+	It("Should initialize seed fields in verifier", func() {
 		verifier.SeedReader = s.ShootContext.ShootClient
 		verifier.Seed = s.SeedContext.Seed
 	})
@@ -80,7 +81,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 
 	Describe("Trigger gardenlet kubeconfig rotation by annotating its kubeconfig secret", func() {
 		itShouldVerifyGardenletKubeconfigRotation(verifier, false, func() {
-			It("Should annotating kubeconfig secret", func(ctx SpecContext) {
+			It("Should annotate kubeconfig secret", func(ctx SpecContext) {
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      gardenletKubeconfigSecretName,

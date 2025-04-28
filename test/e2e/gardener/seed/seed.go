@@ -44,7 +44,7 @@ func ItShouldWaitForSeedToBeReady(s *SeedContext) {
 			g.Expect(s.GardenClient.Get(ctx, client.ObjectKeyFromObject(s.Seed), s.Seed)).To(Succeed())
 			g.Expect(health.CheckSeed(s.Seed, s.Seed.Status.Gardener)).To(Succeed())
 		}).Should(Succeed())
-	}, SpecTimeout(15*time.Minute))
+	}, SpecTimeout(10*time.Minute))
 }
 
 // ItShouldWaitForSeedToBeDeleted waits for the seed object to be gone
@@ -61,5 +61,5 @@ func ItShouldWaitForSeedToBeDeleted(s *SeedContext) {
 		}).WithPolling(30 * time.Second).Should(BeNotFoundError())
 
 		s.Log.Info("Seed has been deleted")
-	}, SpecTimeout(15*time.Minute))
+	}, SpecTimeout(10*time.Minute))
 }
