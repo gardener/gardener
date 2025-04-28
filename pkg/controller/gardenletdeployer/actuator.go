@@ -19,7 +19,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -28,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletbootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
@@ -61,7 +59,6 @@ type Actuator struct {
 	GardenClient            client.Client
 	GetTargetClientFunc     func(ctx context.Context) (kubernetes.Interface, error)
 	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)
-	GetInfrastructureSecret func(ctx context.Context) (*corev1.Secret, error)
 	GetTargetDomain         func() string
 	ApplyGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
 	DeleteGardenletChart    func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
@@ -116,7 +113,7 @@ func (a *Actuator) Reconcile(
 	// Create or update seed secrets
 	log.Info("Reconciling seed secrets")
 	a.Recorder.Event(obj, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling seed secrets")
-	if err := a.reconcileSeedSecrets(ctx, obj, &seedTemplate.Spec, gardenletDeployment); err != nil {
+	if err := a.reconcileSeedSecrets(ctx, &seedTemplate.Spec, gardenletDeployment); err != nil {
 		a.Recorder.Eventf(obj, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, err.Error())
 		return updateCondition(a.Clock, conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error()), fmt.Errorf("could not reconcile seed %s secrets: %w", obj.GetName(), err)
 	}
@@ -426,59 +423,24 @@ func (a *Actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.Se
 	return nil
 }
 
-func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, spec *gardencorev1beta1.SeedSpec, gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment) error {
-	// Get infrastructure secret
-	infrastructureSecret, err := a.GetInfrastructureSecret(ctx)
+func (a *Actuator) reconcileSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment) error {
+	if spec.Backup == nil {
+		return nil
+	}
+
+	// If backup is specified, check that the backup secret exists and inject hash into the pod annotations
+	// TODO(vpnachev): Add support for WorkloadIdentity
+	backupSecret, err := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
 	if err != nil {
 		return err
 	}
 
-	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the object
-	// TODO(vpnachev): Add support for WorkloadIdentity
-	if spec.Backup != nil {
-		var checksum string
-
-		// Get backup secret
-		backupSecret, err := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
-		if err == nil {
-			checksum = utils.ComputeSecretChecksum(backupSecret.Data)[:8]
-		} else if client.IgnoreNotFound(err) != nil {
-			return err
-		}
-
-		// Create or update backup secret if it doesn't exist or is owned by the object
-		if apierrors.IsNotFound(err) || metav1.IsControlledBy(backupSecret, obj) {
-			gvk, err := apiutil.GVKForObject(obj, a.GardenClient.Scheme())
-			if err != nil {
-				return fmt.Errorf("could not get GroupVersionKind from object %v: %w", obj, err)
-			}
-
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.CredentialsRef.Namespace, Name: spec.Backup.CredentialsRef.Name},
-			}
-
-			if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.GardenClient, secret, func() error {
-				secret.OwnerReferences = []metav1.OwnerReference{
-					*metav1.NewControllerRef(obj, gvk),
-				}
-				secret.Type = corev1.SecretTypeOpaque
-				secret.Data = infrastructureSecret.Data
-				return nil
-			}); err != nil {
-				return err
-			}
-
-			checksum = utils.ComputeSecretChecksum(secret.Data)[:8]
-		}
-
-		// Inject backup-secret hash into the pod annotations
-		if gardenletDeployment == nil {
-			gardenletDeployment = &seedmanagementv1alpha1.GardenletDeployment{}
-		}
-		gardenletDeployment.PodAnnotations = utils.MergeStringMaps[string](gardenletDeployment.PodAnnotations, map[string]string{
-			"checksum/seed-backup-secret": spec.Backup.CredentialsRef.Name + "-" + checksum,
-		})
+	if gardenletDeployment == nil {
+		gardenletDeployment = &seedmanagementv1alpha1.GardenletDeployment{}
 	}
+	gardenletDeployment.PodAnnotations = utils.MergeStringMaps(gardenletDeployment.PodAnnotations, map[string]string{
+		"checksum/seed-backup-secret": spec.Backup.CredentialsRef.Name + "-" + utils.ComputeSecretChecksum(backupSecret.Data)[:8],
+	})
 
 	return nil
 }
