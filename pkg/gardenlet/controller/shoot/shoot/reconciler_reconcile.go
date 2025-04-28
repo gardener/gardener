@@ -522,7 +522,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				}
 
 				if !apiequality.Semantic.DeepEqual(o.Shoot.ResourcesToEncrypt, o.Shoot.EncryptedResources) {
-					if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+					if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
 						var encryptedResources []string
 						if o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil {
 							encryptedResources = shared.GetResourcesForEncryptionFromConfig(o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.EncryptionConfig)
@@ -1085,7 +1085,7 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 	if _, ok := o.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootSkipReadiness]; ok {
 		o.Logger.Info("Removing skip-readiness annotation")
 
-		if err := o.Shoot.UpdateInfo(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+		if err := o.Shoot.UpdateInfo(ctx, o.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
 			delete(shoot.Annotations, v1beta1constants.AnnotationShootSkipReadiness)
 			return nil
 		}); err != nil {
@@ -1109,7 +1109,7 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 		return nil
 	}
 
-	return o.Shoot.UpdateInfo(ctx, o.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+	return o.Shoot.UpdateInfo(ctx, o.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})

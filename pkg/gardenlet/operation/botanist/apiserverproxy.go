@@ -60,7 +60,7 @@ func (b *Botanist) DeployAPIServerProxy(ctx context.Context) error {
 		return err
 	}
 
-	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
 		condition := v1beta1helper.GetOrInitConditionWithClock(b.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootAPIServerProxyUsesHTTPProxy)
 		condition = v1beta1helper.UpdatedConditionWithClock(b.Clock, condition, gardencorev1beta1.ConditionTrue, "APIServerProxyUsesHTTPProxy", "The API server proxy was reconfigured to use the HTTP proxy method.")
 		shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, condition)
