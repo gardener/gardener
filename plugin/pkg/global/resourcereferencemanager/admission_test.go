@@ -16,7 +16,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
@@ -30,7 +29,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/security"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -471,13 +469,13 @@ var _ = Describe("resourcereferencemanager", func() {
 		It("should return nil because the resource is not BackupBucket and operation is delete", func() {
 			attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 
 			attrs = admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), "", controllerRegistration.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-			err = admissionHandler.Admit(context.TODO(), attrs, nil)
+			err = admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -489,7 +487,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -502,7 +500,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -514,7 +512,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					return true, nil, errors.New("nope, out of luck")
 				})
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("nope, out of luck"))
@@ -529,7 +527,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -552,7 +550,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					return true, nil, nil
 				})
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -575,7 +573,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					return true, nil, fmt.Errorf("sanity check failed")
 				})
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("test provider secret sanity check failed: sanity check failed")))
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("test provider secret sanity check failed: sanity check failed")))
 			})
 
 			It("should reject because the referenced secret does not exist", func() {
@@ -587,7 +585,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -599,7 +597,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -610,7 +608,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -622,7 +620,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -657,7 +655,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -692,7 +690,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -707,7 +705,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreSecretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), coreSecretBinding.Namespace, coreSecretBinding.Name, core.Resource("secretbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(`SecretBinding is referenced by shoot "shoot-1", but provider types ([another-provider]) do not match with the shoot provider type "local"`)))
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(`SecretBinding is referenced by shoot "shoot-1", but provider types ([another-provider]) do not match with the shoot provider type "local"`)))
 			})
 		})
 
@@ -719,7 +717,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -742,7 +740,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					return true, nil, nil
 				})
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -765,7 +763,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					return true, nil, fmt.Errorf("sanity check failed")
 				})
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("test provider secret sanity check failed: sanity check failed")))
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("test provider secret sanity check failed: sanity check failed")))
 			})
 
 			It("should reject because the referenced secret does not exist", func() {
@@ -777,7 +775,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -789,7 +787,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -800,7 +798,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -812,7 +810,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -847,7 +845,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -882,7 +880,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -897,7 +895,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefSecret, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefSecret.Namespace, securityCredentialsBindingRefSecret.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(`CredentialsBinding is referenced by shoot "shoot-1", but provider types ([another-provider]) do not match with the shoot provider type "local"`)))
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(`CredentialsBinding is referenced by shoot "shoot-1", but provider types ([another-provider]) do not match with the shoot provider type "local"`)))
 			})
 		})
 
@@ -909,7 +907,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -923,7 +921,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -936,7 +934,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(MatchError(ContainSubstring("does not match with WorkloadIdentity provider type")))
 			})
@@ -950,7 +948,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -962,7 +960,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -973,7 +971,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -985,7 +983,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -1021,7 +1019,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1075,31 +1073,13 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&securityCredentialsBindingRefWorkloadIdentity, nil, security.Kind("CredentialsBinding").WithVersion("version"), securityCredentialsBindingRefWorkloadIdentity.Namespace, securityCredentialsBindingRefWorkloadIdentity.Name, security.Resource("credentialsbindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
 		})
 
 		Context("tests for Shoot objects", func() {
-			It("should add the created-by annotation", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
-				Expect(gardenSecurityInformerFactory.Security().V1alpha1().CredentialsBindings().Informer().GetStore().Add(&credentialsBindingRefSecret)).To(Succeed())
-				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
-
-				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
-
-				Expect(coreShoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, user.Name))
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(coreShoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, user.Name))
-			})
-
 			It("should accept because all referenced objects have been found", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -1110,7 +1090,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1126,7 +1106,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				coreShoot.Status.TechnicalID = "should-never-change"
 				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1135,7 +1115,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				It("should reject because the referenced cloud profile does not exist (create)", func() {
 					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
 				})
@@ -1146,7 +1126,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
 				})
@@ -1161,7 +1141,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
 				})
@@ -1178,7 +1158,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 					Expect(err).To(HaveOccurred())
 				})
@@ -1191,7 +1171,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -1203,7 +1183,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -1215,7 +1195,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -1230,7 +1210,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -1250,7 +1230,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				It("should reject because the referenced exposure class does not exists", func() {
 					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 					Expect(err).To(HaveOccurred())
 				})
 
@@ -1264,7 +1244,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Expect(gardenCoreInformerFactory.Core().V1beta1().ExposureClasses().Informer().GetStore().Add(&exposureClass)).To(Succeed())
 					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					err := admissionHandler.Validate(context.TODO(), attrs, nil)
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -1276,7 +1256,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -1291,7 +1271,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(MatchError("shoots.core.gardener.cloud \"shoot-1\" is forbidden: cannot reference a resource you are not allowed to read"))
 			})
@@ -1318,7 +1298,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(MatchError("shoots.core.gardener.cloud \"shoot-1\" is forbidden: cannot reference a resource you are not allowed to read"))
 			})
@@ -1334,7 +1314,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 			})
@@ -1351,7 +1331,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(MatchError(ContainSubstring("failed to resolve resource reference")))
 			})
@@ -1373,7 +1353,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					user := &user.DefaultInfo{Name: allowedUser}
 					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(expectedErrorMessage)))
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(expectedErrorMessage)))
 				})
 
 				It("should reject because the referenced "+description+" does not exist (update)", func() {
@@ -1393,7 +1373,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					user := &user.DefaultInfo{Name: allowedUser}
 					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
-					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(expectedErrorMessage)))
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring(expectedErrorMessage)))
 				})
 
 				It("should pass because the referenced "+description+" does not exist but shoot has deletion timestamp", func() {
@@ -1416,7 +1396,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					user := &user.DefaultInfo{Name: allowedUser}
 					attrs := admission.NewAttributesRecord(&coreShoot, oldShoot, core.Kind("Shoot").WithVersion("version"), coreShoot.Namespace, coreShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
-					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				It("should pass because the referenced "+description+" exists", func() {
@@ -1435,7 +1415,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					user := &user.DefaultInfo{Name: allowedUser}
 					attrs := admission.NewAttributesRecord(&coreShoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
 			}
 
@@ -1509,7 +1489,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&coreSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", coreSeed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(MatchError("seeds.core.gardener.cloud \"seed-1\" is forbidden: cannot reference a resource you are not allowed to read"))
 			})
@@ -1520,7 +1500,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&coreSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", coreSeed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 			})
@@ -1529,7 +1509,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&coreSeed, nil, core.Kind("Seed").WithVersion("version"), "", coreSeed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(MatchError(ContainSubstring("failed to resolve resource reference")))
 			})
@@ -1539,7 +1519,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject if the referred Seed is not found", func() {
 				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: seed.core.gardener.cloud %q not found", coreBackupBucket.Name, seed.Name)))
@@ -1553,7 +1533,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("secret not found")))
@@ -1572,7 +1552,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1583,7 +1563,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1598,7 +1578,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1617,7 +1597,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", backupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: cannot delete BackupBucket because BackupEntries are still referencing it, backupEntryNames: %s/%s,%s/%s", backupBucket.Name, backupEntry.Namespace, backupEntry.Name, backupEntry2.Namespace, backupEntry2.Name)))
@@ -1633,7 +1613,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -1661,7 +1641,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", "", core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: cannot delete BackupBucket because BackupEntries are still referencing it, backupEntryNames: %s/%s,%s/%s", backupBucket2.Name, backupEntry.Namespace, backupEntry.Name, backupEntry2.Namespace, backupEntry2.Name)))
@@ -1690,7 +1670,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(nil, nil, core.Kind("BackupBucket").WithVersion("version"), "", "", core.Resource("backupBuckets").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1700,7 +1680,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject if the referred Seed is not found", func() {
 				attrs := admission.NewAttributesRecord(&coreBackupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), coreBackupEntry.Namespace, coreBackupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("backupEntries.core.gardener.cloud %q is forbidden: seed.core.gardener.cloud %q not found", coreBackupEntry.Name, seed.Name)))
@@ -1710,7 +1690,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&coreBackupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), coreBackupEntry.Namespace, coreBackupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("backupEntries.core.gardener.cloud %q is forbidden: backupbucket.core.gardener.cloud %q not found", coreBackupEntry.Name, coreBackupBucket.Name)))
@@ -1721,102 +1701,13 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(&backupBucket)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&coreBackupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), coreBackupEntry.Namespace, coreBackupEntry.Name, core.Resource("backupEntries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		Context("tests for Project objects", func() {
-			It("should set the created-by field", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(coreProject.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     rbacv1.UserKind,
-					Name:     defaultUserName,
-				}))
-			})
-
-			It("should set the owner field (member with owner role found)", func() {
-				projectCopy := project.DeepCopy()
-				coreProjectCopy := coreProject.DeepCopy()
-				ownerMember := &rbacv1.Subject{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     rbacv1.UserKind,
-					Name:     "owner",
-				}
-				projectCopy.Name = "foo"
-				projectCopy.Spec.Members = []gardencorev1beta1.ProjectMember{
-					{
-						Subject: *ownerMember,
-						Roles:   []string{core.ProjectMemberOwner},
-					},
-				}
-				coreProjectCopy.Name = "foo"
-				coreProjectCopy.Spec.Members = []core.ProjectMember{
-					{
-						Subject: *ownerMember,
-						Roles:   []string{core.ProjectMemberOwner},
-					},
-				}
-
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(projectCopy)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(coreProjectCopy, nil, core.Kind("Project").WithVersion("version"), coreProjectCopy.Namespace, coreProjectCopy.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(coreProjectCopy.Spec.Owner).To(Equal(ownerMember))
-				Expect(coreProjectCopy.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     rbacv1.UserKind,
-					Name:     defaultUserName,
-				}))
-			})
-
-			It("should set the owner field", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(coreProject.Spec.Owner).To(Equal(&rbacv1.Subject{
-					APIGroup: "rbac.authorization.k8s.io",
-					Kind:     rbacv1.UserKind,
-					Name:     defaultUserName,
-				}))
-			})
-
-			It("should add the owner to members", func() {
-				Expect(gardenCoreInformerFactory.Core().V1beta1().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(coreProject.Spec.Members).To(ContainElement(Equal(core.ProjectMember{
-					Subject: rbacv1.Subject{
-						APIGroup: "rbac.authorization.k8s.io",
-						Kind:     rbacv1.UserKind,
-						Name:     defaultUserName,
-					},
-					Roles: []string{
-						core.ProjectMemberAdmin,
-						core.ProjectMemberOwner,
-					},
-				})))
-			})
-
 			It("should allow specifying a namespace which is not in use (create)", func() {
 				project.Spec.Namespace = ptr.To("garden-foo")
 				projectCopy := project.DeepCopy()
@@ -1827,7 +1718,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				coreProject.Spec.Namespace = ptr.To("garden-foo")
 				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 			})
@@ -1845,7 +1736,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				coreProject.Spec.Namespace = ptr.To("garden-foo")
 				attrs := admission.NewAttributesRecord(&coreProject, coreProjectOld, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 			})
@@ -1857,7 +1748,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
 			})
@@ -1871,7 +1762,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				coreProject.Spec.Namespace = ptr.To("garden-foo")
 				attrs := admission.NewAttributesRecord(&coreProject, nil, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
@@ -1893,7 +1784,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				coreProject.Spec.Namespace = ptr.To("garden-foo")
 				attrs := admission.NewAttributesRecord(&coreProject, &coreProjectOld, core.Kind("Project").WithVersion("version"), coreProject.Namespace, coreProject.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
@@ -1935,7 +1826,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfile, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1956,7 +1847,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -1976,7 +1867,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("1.24.1"))
@@ -2004,7 +1895,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(And(
 					ContainSubstring("unable to delete Kubernetes version"),
 					ContainSubstring("1.24.1"),
 					ContainSubstring("still in use by NamespacedCloudProfile"),
@@ -2035,7 +1926,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(And(
 					ContainSubstring("unable to delete Kubernetes version"),
 					ContainSubstring("1.24.1"),
 					ContainSubstring("still in use by shoot '/shoot-Two'"),
@@ -2064,7 +1955,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should accept removal of kubernetes versions that are used by shoots using another unrelated NamespacedCloudProfile of same name", func() {
@@ -2087,7 +1978,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should accept removal of kubernetes version that is still in use by a shoot that is being deleted", func() {
@@ -2109,7 +2000,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -2205,7 +2096,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfile, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -2248,7 +2139,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -2292,7 +2183,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("1.17.2"))
@@ -2344,7 +2235,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -2412,7 +2303,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("1.17.2"))
 				Expect(err.Error()).To(ContainSubstring(s.Spec.Provider.Workers[1].Name))
@@ -2463,7 +2354,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("1.17.2"))
@@ -2528,7 +2419,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should fail for removal of a machine version that is used by a NamespacedCloudProfile", func() {
@@ -2587,7 +2478,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(And(
 					ContainSubstring("unable to delete MachineImage version"),
 					ContainSubstring("1.16.0"),
 					ContainSubstring("still in use by NamespacedCloudProfile"),
@@ -2634,7 +2525,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(And(
 					ContainSubstring("unable to delete MachineImage version"),
 					ContainSubstring("1.16.0"),
 					ContainSubstring("still in use by NamespacedCloudProfile"),
@@ -2681,7 +2572,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(And(
 					ContainSubstring("unable to delete MachineImage \"coreos\""),
 					ContainSubstring("still in use by NamespacedCloudProfile"),
 				)))
@@ -2734,7 +2625,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(And(
 					ContainSubstring("unable to add MachineImage \"gardenlinux\""),
 					ContainSubstring("already defined by NamespacedCloudProfile \"project-123/profile-42\""),
 				)))
@@ -2816,7 +2707,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(ctx, attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -2834,7 +2725,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(ctx, attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
@@ -2872,7 +2763,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootOne)).To(Succeed())
 				attrs := admission.NewAttributesRecord(cloudProfile, oldCloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(ctx, attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
@@ -2917,7 +2808,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should succeed for the complete Kubernetes section being removed without usages", func() {
@@ -2939,7 +2830,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should succeed if a used and already extended kubernetes version expiration is changed to another value still in the future", func() {
@@ -2967,7 +2858,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should succeed if a used and extended kubernetes version already expired is not modified", func() {
@@ -3003,7 +2894,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should succeed if an extended and used Kubernetes version is removed with the base version still being valid", func() {
@@ -3037,7 +2928,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should fail if an extended and used Kubernetes version is being removed with the base version being already expired", func() {
@@ -3072,7 +2963,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(MatchError(And(
 					ContainSubstring("unable to delete Kubernetes version"),
 					ContainSubstring("1.29.0"),
@@ -3105,7 +2996,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(And(
 					ContainSubstring("unable to delete Kubernetes version"),
 					ContainSubstring("1.29.0"),
 					ContainSubstring("still in use by shoot"),
@@ -3144,7 +3035,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 		})
 
@@ -3210,7 +3101,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should succeed if a used and extended MachineImage version already expired is not modified", func() {
@@ -3237,7 +3128,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should succeed if an extended and used MachineImage version is removed with the base version still being valid", func() {
@@ -3264,7 +3155,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should fail if an extended and used MachineImage version is being removed with the base version being already expired", func() {
@@ -3292,7 +3183,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(MatchError(And(
 					ContainSubstring("unable to delete Machine image version"),
 					ContainSubstring("1.17.3"),
@@ -3336,7 +3227,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(MatchError(And(
 					ContainSubstring("unable to delete Machine image version"),
 					ContainSubstring("'coreos/1.1.2'"),
@@ -3380,7 +3271,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 				Expect(err).To(MatchError(And(
 					ContainSubstring("unable to delete Machine image version"),
 					ContainSubstring("'custom-namespaced-image/1.1.2'"),
@@ -3413,7 +3304,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(And(
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(And(
 					ContainSubstring("unable to delete Machine image version"),
 					ContainSubstring("1.17.3"),
 					ContainSubstring("still in use by shoot"),
@@ -3444,7 +3335,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should succeed if a new but unused MachineImage version is removed", func() {
@@ -3471,7 +3362,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(updatedNamespacedCloudProfile, namespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 		})
 
@@ -3564,7 +3455,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(ctx, attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -3582,7 +3473,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shootTwo)).To(Succeed())
 				attrs := admission.NewAttributesRecord(namespacedCloudProfile, oldNamespacedCloudProfile, core.Kind("NamespacedCloudProfile").WithVersion("version"), namespacedCloudProfile.Namespace, namespacedCloudProfile.Name, core.Resource("NamespacedCloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(ctx, attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
@@ -3611,7 +3502,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should accept because there is no managed seed with the same name", func() {
 				attrs := admission.NewAttributesRecord(gardenlet, nil, seedmanagement.Kind("Gardenlet").WithVersion("version"), gardenlet.Namespace, gardenlet.Name, seedmanagement.Resource("gardenlets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, &user.DefaultInfo{Name: allowedUser})
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should forbid because there is a managed seed with the same name", func() {
@@ -3619,7 +3510,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(gardenlet, nil, seedmanagement.Kind("Gardenlet").WithVersion("version"), gardenlet.Namespace, gardenlet.Name, seedmanagement.Resource("gardenlets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, &user.DefaultInfo{Name: allowedUser})
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("there is already a ManagedSeed object with the same name")))
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("there is already a ManagedSeed object with the same name")))
 			})
 		})
 
@@ -3637,7 +3528,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should accept because there is no gardenlet with the same name", func() {
 				attrs := admission.NewAttributesRecord(managedSeed, nil, seedmanagement.Kind("ManagedSeed").WithVersion("version"), gardenlet.Namespace, gardenlet.Name, seedmanagement.Resource("gardenlets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, &user.DefaultInfo{Name: allowedUser})
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should forbid because there is a gardenlet with the same name", func() {
@@ -3645,7 +3536,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(managedSeed, nil, seedmanagement.Kind("ManagedSeed").WithVersion("version"), managedSeed.Namespace, managedSeed.Name, seedmanagement.Resource("managedseeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, &user.DefaultInfo{Name: allowedUser})
 
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("there is already a Gardenlet object with the same name")))
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(MatchError(ContainSubstring("there is already a Gardenlet object with the same name")))
 			})
 		})
 	})
