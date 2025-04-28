@@ -950,14 +950,12 @@ func (e *etcd) SetReplicas(replicas *int32) { e.values.Replicas = replicas }
 
 func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
 	minAllowed := corev1.ResourceList{
-		corev1.ResourceMemory: resource.MustParse("100M"),
-		corev1.ResourceCPU:    resource.MustParse("100m"),
+		corev1.ResourceMemory: resource.MustParse("60M"),
 	}
 
 	if e.values.Class == ClassImportant {
 		minAllowed = corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("150M"),
-			corev1.ResourceCPU:    resource.MustParse("150m"),
+			corev1.ResourceMemory: resource.MustParse("300M"),
 		}
 	}
 
@@ -966,7 +964,26 @@ func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
 }
 
 func (e *etcd) computeETCDContainerResources(minAllowedETCD corev1.ResourceList) *corev1.ResourceRequirements {
-	return &corev1.ResourceRequirements{Requests: minAllowedETCD}
+
+	resourcesETCD := kubernetesutils.MaximumResourcesFromResourceList(
+		corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("30m"),
+			corev1.ResourceMemory: resource.MustParse("150M"),
+		},
+		minAllowedETCD,
+	)
+
+	if e.values.Class == ClassImportant {
+		resourcesETCD = kubernetesutils.MaximumResourcesFromResourceList(
+			corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("150m"),
+				corev1.ResourceMemory: resource.MustParse("500M"),
+			},
+			minAllowedETCD,
+		)
+	}
+
+	return &corev1.ResourceRequirements{Requests: resourcesETCD}
 }
 
 func (e *etcd) computeBackupRestoreContainerResources() *corev1.ResourceRequirements {

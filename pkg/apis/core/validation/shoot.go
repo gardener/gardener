@@ -877,29 +877,11 @@ func validateETCD(etcd *core.ETCD, fldPath *field.Path) field.ErrorList {
 
 	if etcd != nil {
 		if etcd.Main != nil {
-			allErrs = append(allErrs,
-				ValidateControlPlaneAutoscaling(
-					etcd.Main.Autoscaling,
-					corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("150m"),
-						corev1.ResourceMemory: resource.MustParse("150M"),
-					},
-					fldPath.Child("main", "autoscaling"),
-				)...,
-			)
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Main.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("300M")}, fldPath.Child("main", "autoscaling"))...)
 		}
 
 		if etcd.Events != nil {
-			allErrs = append(allErrs,
-				ValidateControlPlaneAutoscaling(
-					etcd.Events.Autoscaling,
-					corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("100m"),
-						corev1.ResourceMemory: resource.MustParse("100M"),
-					},
-					fldPath.Child("events", "autoscaling"),
-				)...,
-			)
+			allErrs = append(allErrs, ValidateControlPlaneAutoscaling(etcd.Events.Autoscaling, corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}, fldPath.Child("events", "autoscaling"))...)
 		}
 	}
 
@@ -1485,7 +1467,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 	allErrs = append(allErrs, ValidateControlPlaneAutoscaling(
 		kubeAPIServer.Autoscaling,
 		corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceCPU:    resource.MustParse("20m"),
 			corev1.ResourceMemory: resource.MustParse("200M"),
 		},
 		fldPath.Child("autoscaling"))...,

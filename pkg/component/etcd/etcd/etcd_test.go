@@ -135,20 +135,18 @@ var _ = Describe("Etcd", func() {
 				defragSchedule = existingDefragmentationSchedule
 			}
 
-			resourcesContainerEtcd := &corev1.ResourceRequirements{}
+			resourcesContainerEtcd := &corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("30m"),
+					corev1.ResourceMemory: resource.MustParse("150M"),
+				},
+			}
+
 			if class == ClassImportant {
 				resourcesContainerEtcd = &corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("150m"),
-						corev1.ResourceMemory: resource.MustParse("150M"),
-					},
-				}
-			}
-			if class == ClassNormal {
-				resourcesContainerEtcd = &corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("100m"),
-						corev1.ResourceMemory: resource.MustParse("100M"),
+						corev1.ResourceMemory: resource.MustParse("500M"),
 					},
 				}
 			}
@@ -379,8 +377,7 @@ var _ = Describe("Etcd", func() {
 			minAllowedConfig := minAllowed
 			if minAllowedConfig == nil {
 				minAllowedConfig = corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("100m"),
-					corev1.ResourceMemory: resource.MustParse("100M"),
+					corev1.ResourceMemory: resource.MustParse("60M"),
 				}
 			}
 
@@ -428,8 +425,7 @@ var _ = Describe("Etcd", func() {
 
 			if class == ClassImportant {
 				vpa.Spec.ResourcePolicy.ContainerPolicies[0].MinAllowed = corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("150m"),
-					corev1.ResourceMemory: resource.MustParse("150M"),
+					corev1.ResourceMemory: resource.MustParse("300M"),
 				}
 			}
 

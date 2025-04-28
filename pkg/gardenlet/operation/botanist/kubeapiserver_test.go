@@ -190,9 +190,16 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().Autoscaling).To(Equal(expectedConfig))
 				},
+
 				Entry("default behaviour",
 					nil,
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+						},
 						MinReplicas:       2,
 						MaxReplicas:       6,
 						ScaleDownDisabled: false,
@@ -203,6 +210,12 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
 					},
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+						},
 						MinReplicas:       4,
 						MaxReplicas:       6,
 						ScaleDownDisabled: true,
@@ -213,6 +226,12 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 					},
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+						},
 						MinReplicas:       2,
 						MaxReplicas:       6,
 						ScaleDownDisabled: false,
@@ -230,6 +249,12 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 					},
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+						},
 						MinReplicas:       16,
 						MaxReplicas:       32,
 						ScaleDownDisabled: false,
@@ -244,6 +269,12 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 					},
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("500Mi"),
+							},
+						},
 						MinReplicas:       3,
 						MaxReplicas:       6,
 						ScaleDownDisabled: false,
@@ -263,7 +294,7 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeapiserver.AutoscalingConfig{
 						APIServerResources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("200m"),
+								corev1.ResourceCPU:    resource.MustParse("250m"),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
 						},

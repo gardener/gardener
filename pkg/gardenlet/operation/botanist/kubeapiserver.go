@@ -12,6 +12,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	apiserverv1beta1 "k8s.io/apiserver/pkg/apis/apiserver/v1beta1"
@@ -104,7 +105,13 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 
 	return kubeapiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
-			Requests: minAllowed,
+			Requests: kubernetesutils.MaximumResourcesFromResourceList(
+				corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("250m"),
+					corev1.ResourceMemory: resource.MustParse("500Mi"),
+				},
+				minAllowed,
+			),
 		},
 		MinReplicas:       minReplicas,
 		MaxReplicas:       maxReplicas,
