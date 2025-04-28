@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/go-logr/logr"
@@ -36,7 +37,11 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 		}
 	}
 
-	if err := migrateMCMRBAC(ctx, log, g.mgr.GetClient()); err != nil {
+	if err := migrateMCMRBAC(ctx, g.mgr.GetClient()); err != nil {
+		return err
+	}
+
+	if err := migrateAutoscalerRBAC(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
 
@@ -174,7 +179,7 @@ func syncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.SeedBackup) 
 	// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
 }
 
-func migrateMCMRBAC(ctx context.Context, log logr.Logger, seedClient client.Client) error {
+func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
 		return err
@@ -209,8 +214,47 @@ func migrateMCMRBAC(ctx context.Context, log logr.Logger, seedClient client.Clie
 
 	err := flow.Parallel(tasks...)(ctx)
 	if err != nil {
-		log.Info("Error with flow task", "err", err)
 		return err
 	}
 	return managedresources.DeleteForSeed(ctx, seedClient, "garden", "machine-controller-manager")
+}
+
+func migrateAutoscalerRBAC(ctx context.Context, seedClient client.Client) error {
+	namespaceList := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
+		return err
+	}
+
+	var tasks []flow.TaskFn
+
+	for _, ns := range namespaceList.Items {
+		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
+			continue
+		}
+		namespace := ns
+		tasks = append(tasks, func(ctx context.Context) error {
+			clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+			if err := seedClient.Get(ctx, client.ObjectKey{Name: "cluster-autoscaler-" + namespace.Name}, clusterRoleBinding); err != nil {
+				//If autoscaler clusterRoleBinding does not exist, nothing to do
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+
+			autoscaler := clusterautoscaler.New(seedClient, namespace.Name, nil, "", 0, nil, []gardencorev1beta1.Worker{}, nil)
+			err := autoscaler.DeployMigrate(ctx)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+	}
+
+	err := flow.Parallel(tasks...)(ctx)
+	if err != nil {
+		return err
+	}
+	return managedresources.DeleteForSeed(ctx, seedClient, "garden", "cluster-autoscaler")
 }

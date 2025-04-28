@@ -15,14 +15,12 @@ import (
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
-	types "k8s.io/apimachinery/pkg/types"
 )
 
 // MockInterface is a mock of Interface interface.
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
-	isgomock struct{}
 }
 
 // MockInterfaceMockRecorder is the mock recorder for MockInterface.
@@ -43,31 +41,45 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // Deploy mocks base method.
-func (m *MockInterface) Deploy(ctx context.Context) error {
+func (m *MockInterface) Deploy(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Deploy", ctx)
+	ret := m.ctrl.Call(m, "Deploy", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Deploy indicates an expected call of Deploy.
-func (mr *MockInterfaceMockRecorder) Deploy(ctx any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Deploy(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockInterface)(nil).Deploy), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockInterface)(nil).Deploy), arg0)
+}
+
+// DeployMigrate mocks base method.
+func (m *MockInterface) DeployMigrate(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployMigrate", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployMigrate indicates an expected call of DeployMigrate.
+func (mr *MockInterfaceMockRecorder) DeployMigrate(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployMigrate", reflect.TypeOf((*MockInterface)(nil).DeployMigrate), arg0)
 }
 
 // Destroy mocks base method.
-func (m *MockInterface) Destroy(ctx context.Context) error {
+func (m *MockInterface) Destroy(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Destroy", ctx)
+	ret := m.ctrl.Call(m, "Destroy", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Destroy indicates an expected call of Destroy.
-func (mr *MockInterfaceMockRecorder) Destroy(ctx any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Destroy(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
 // SetMachineDeployments mocks base method.
@@ -94,42 +106,30 @@ func (mr *MockInterfaceMockRecorder) SetMaxNodesTotal(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMaxNodesTotal", reflect.TypeOf((*MockInterface)(nil).SetMaxNodesTotal), arg0)
 }
 
-// SetNamespaceUID mocks base method.
-func (m *MockInterface) SetNamespaceUID(arg0 types.UID) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetNamespaceUID", arg0)
-}
-
-// SetNamespaceUID indicates an expected call of SetNamespaceUID.
-func (mr *MockInterfaceMockRecorder) SetNamespaceUID(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNamespaceUID", reflect.TypeOf((*MockInterface)(nil).SetNamespaceUID), arg0)
-}
-
 // Wait mocks base method.
-func (m *MockInterface) Wait(ctx context.Context) error {
+func (m *MockInterface) Wait(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", ctx)
+	ret := m.ctrl.Call(m, "Wait", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Wait indicates an expected call of Wait.
-func (mr *MockInterfaceMockRecorder) Wait(ctx any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Wait(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockInterface)(nil).Wait), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockInterface)(nil).Wait), arg0)
 }
 
 // WaitCleanup mocks base method.
-func (m *MockInterface) WaitCleanup(ctx context.Context) error {
+func (m *MockInterface) WaitCleanup(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitCleanup", ctx)
+	ret := m.ctrl.Call(m, "WaitCleanup", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitCleanup indicates an expected call of WaitCleanup.
-func (mr *MockInterfaceMockRecorder) WaitCleanup(ctx any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) WaitCleanup(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockInterface)(nil).WaitCleanup), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockInterface)(nil).WaitCleanup), arg0)
 }

@@ -93,7 +93,6 @@ type components struct {
 	nginxIngressController  component.DeployWaiter
 	verticalPodAutoscaler   component.DeployWaiter
 	etcdDruid               component.DeployWaiter
-	clusterAutoscaler       component.DeployWaiter
 	dwdWeeder               component.DeployWaiter
 	dwdProber               component.DeployWaiter
 
@@ -188,7 +187,6 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.clusterAutoscaler = r.newClusterAutoscaler()
 	c.dwdWeeder, c.dwdProber, err = r.newDependencyWatchdogs(seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return
@@ -757,10 +755,6 @@ func (r *Reconciler) newFluentBit() (component.DeployWaiter, error) {
 		gardenlethelper.IsValiEnabled(&r.Config),
 		v1beta1constants.PriorityClassNameSeedSystem600,
 	)
-}
-
-func (r *Reconciler) newClusterAutoscaler() component.DeployWaiter {
-	return clusterautoscaler.NewBootstrapper(r.SeedClientSet.Client(), r.GardenNamespace)
 }
 
 func (r *Reconciler) newClusterIdentity(seed *gardencorev1beta1.Seed) component.DeployWaiter {
