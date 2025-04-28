@@ -148,6 +148,7 @@ data:
         audiences:
         - audience1
         - audience2
+        audienceMatchPolicy: MatchAny
       claimMappings:
         username:
           expression: 'claims.username'
@@ -156,7 +157,7 @@ data:
         uid:
           expression: 'claims.uid'
       claimValidationRules:
-        expression: 'claims.hd == "example.com"'
+      - expression: 'claims.hd == "example.com"'
         message: "the hosted domain name must be example.com"
 ```
 
