@@ -96,8 +96,6 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 		return r.markProjectAsNotStale(ctx, project)
 	}
 
-	// TODO(dimityrmirchev): This code should eventually handle credentials bindings
-	// referencing workload identities
 	for _, check := range []struct {
 		resource  string
 		checkFunc func(context.Context, string) (bool, error)
@@ -105,6 +103,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, project *ga
 		{"Shoots", r.projectInUseDueToShoots},
 		{"BackupEntries", r.projectInUseDueToBackupEntries},
 		{"Secrets", r.projectInUseDueToSecrets},
+		{"WorkloadIdentities", r.projectInUseDueToWorkloadIdentities},
 		{"Quotas", r.projectInUseDueToQuotas},
 	} {
 		projectInUse, err := check.checkFunc(ctx, *project.Spec.Namespace)
@@ -151,9 +150,40 @@ func (r *Reconciler) projectInUseDueToBackupEntries(ctx context.Context, namespa
 	return kubernetesutils.ResourcesExist(ctx, r.Client, &gardencorev1beta1.BackupEntryList{}, r.Client.Scheme(), client.InNamespace(namespace))
 }
 
+func (r *Reconciler) projectInUseDueToWorkloadIdentities(ctx context.Context, namespace string) (bool, error) {
+	workloadIdentityList := &metav1.PartialObjectMetadataList{}
+	workloadIdentityList.SetGroupVersionKind(securityv1alpha1.SchemeGroupVersion.WithKind("WorkloadIdentityList"))
+	err := r.Client.List(
+		ctx,
+		workloadIdentityList,
+		client.InNamespace(namespace),
+		gardenerutils.UncontrolledSecretSelector,
+		client.MatchingLabels{v1beta1constants.LabelCredentialsBindingReference: "true"},
+	)
+	if err != nil {
+		return false, err
+	}
+
+	workloadIdentityNames := sets.New[string]()
+	for _, workloadIdentity := range workloadIdentityList.Items {
+		workloadIdentityNames.Insert(workloadIdentity.Name)
+	}
+	if workloadIdentityNames.Len() == 0 {
+		return false, nil
+	}
+
+	return r.relevantCredentialsBindingsInUse(ctx, func(credentialsBinding securityv1alpha1.CredentialsBinding) bool {
+		return credentialsBinding.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+			credentialsBinding.CredentialsRef.Kind == "WorkloadIdentity" &&
+			credentialsBinding.CredentialsRef.Namespace == namespace &&
+			workloadIdentityNames.Has(credentialsBinding.CredentialsRef.Name)
+	})
+}
+
 func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
-	getSecrets := func(matchKeyLabel string) (*corev1.SecretList, error) {
-		secretList := &corev1.SecretList{}
+	getSecrets := func(matchKeyLabel string) (*metav1.PartialObjectMetadataList, error) {
+		secretList := &metav1.PartialObjectMetadataList{}
+		secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
 		err := r.Client.List(
 			ctx,
 			secretList,
@@ -201,7 +231,6 @@ func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace str
 	}
 
 	return r.relevantCredentialsBindingsInUse(ctx, func(credentialsBinding securityv1alpha1.CredentialsBinding) bool {
-		// TODO(dimityrmirchev): This code should eventually handle references to workload identities
 		return credentialsBinding.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
 			credentialsBinding.CredentialsRef.Kind == "Secret" &&
 			credentialsBinding.CredentialsRef.Namespace == namespace &&
