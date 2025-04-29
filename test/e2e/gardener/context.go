@@ -25,6 +25,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
+	shootutils "github.com/gardener/gardener/test/utils/shoots"
 )
 
 // TestContext carries test state and helpers through e2e test cases with multiple steps (ordered containers).
@@ -90,6 +91,8 @@ func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
 	s := &ShootContext{
 		TestContext: *t,
 		Shoot:       shoot,
+		// Namespace of the Shoot is the same as the Project name.
+		ShootSeedNamespace: shootutils.ComputeTechnicalID(shoot.Namespace, shoot),
 	}
 	s.Log = s.Log.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
@@ -133,6 +136,9 @@ type ShootContext struct {
 	//    HaveField("Items", HaveLen(1)),
 	//  )
 	SeedKomega komega.Komega
+
+	// ShootSeedNamespace contains the namespace for the Shoot Control Plane in the Seed.
+	ShootSeedNamespace string
 }
 
 // WithShootClientSet initializes the shoot clients of this ShootContext from the given client set.
