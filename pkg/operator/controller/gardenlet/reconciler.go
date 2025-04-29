@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
@@ -66,7 +67,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// Deletion is not implemented - once gardenlet got deployed by gardener-operator, it doesn't care about it ever
-	// again. Gardenlet will perform self-upgrades. Seed deprovisioning must be handled by human operators.
+	// again (unless a forceful re-deployment is requested by the user). Gardenlet will perform self-upgrades. Seed
+	// deprovisioning must be handled by human operators.
 	return r.reconcile(ctx, log, gardenlet, r.newActuator(gardenlet))
 }
 
@@ -138,7 +140,7 @@ func (r *Reconciler) reconcile(
 	status.ObservedGeneration = gardenlet.Generation
 
 	log.V(1).Info("Reconciling")
-	if !r.seedDoesNotExist(ctx, gardenlet) {
+	if !hasForceRedeployOperationAnnotation(gardenlet) && !r.seedDoesNotExist(ctx, gardenlet) {
 		if err := r.cleanupKubeconfigSecret(ctx, log, gardenlet); err != nil {
 			status.Conditions = updateCondition(r.Clock, status.Conditions, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
 		} else {
@@ -158,9 +160,12 @@ func (r *Reconciler) reconcile(
 	}
 
 	status.Conditions = updateCondition(r.Clock, status.Conditions, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventReconcileError, "Waiting for seed registration")
+	if err := r.updateStatus(ctx, gardenlet, status); err != nil {
+		return result, fmt.Errorf("failed updating Gardenlet status after successful deployment: %w", err)
+	}
 
 	log.Info("Gardenlet deployment finished successfully. Request is requeued to check seed registration")
-	return reconcile.Result{RequeueAfter: RequeueDurationSeedIsNotYetRegistered}, r.updateStatus(ctx, gardenlet, status)
+	return reconcile.Result{RequeueAfter: RequeueDurationSeedIsNotYetRegistered}, r.removeForceRedeployAnnotationIfNeeded(ctx, log, gardenlet)
 }
 
 func updateCondition(clock clock.Clock, conditions []gardencorev1beta1.Condition, cs gardencorev1beta1.ConditionStatus, reason, message string) []gardencorev1beta1.Condition {
@@ -192,6 +197,22 @@ func (r *Reconciler) cleanupKubeconfigSecret(ctx context.Context, log logr.Logge
 	gardenlet.Spec.KubeconfigSecretRef = nil
 	if err := r.VirtualClient.Patch(ctx, gardenlet, patch); err != nil {
 		return fmt.Errorf("could not remove kubeconfig secret ref: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) removeForceRedeployAnnotationIfNeeded(ctx context.Context, log logr.Logger, gardenlet *seedmanagementv1alpha1.Gardenlet) error {
+	if !hasForceRedeployOperationAnnotation(gardenlet) {
+		return nil
+	}
+
+	log.Info("Removing force-redeploy operation annotation")
+
+	patch := client.MergeFrom(gardenlet.DeepCopy())
+	delete(gardenlet.Annotations, v1beta1constants.GardenerOperation)
+	if err := r.VirtualClient.Patch(ctx, gardenlet, patch); err != nil {
+		return fmt.Errorf("could not remove force-redeploy operation annotation: %w", err)
 	}
 
 	return nil
