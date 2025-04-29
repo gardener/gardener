@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -260,33 +261,28 @@ type ManagedSeedContext struct {
 	ManagedSeed *seedmanagementv1alpha1.ManagedSeed
 
 	// ShootContext object the managed seed is referencing
-	ShootContext ShootContext
+	ShootContext *ShootContext
 
 	// Seed object the managed seed is referencing
-	SeedContext SeedContext
+	SeedContext *SeedContext
 }
 
 // ForManagedSeed copies the receiver ShootContext for deriving a ManagedSeedContext.
-func (t *TestContext) ForManagedSeed(managedSeed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
-	ms := &ManagedSeedContext{
-		TestContext: *t,
-		ManagedSeed: managedSeed,
+func (t *TestContext) ForManagedSeed(baseShoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
+	seed := &gardencorev1beta1.Seed{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: managedSeed.Name,
+		},
 	}
+
+	ms := &ManagedSeedContext{
+		TestContext:  *t,
+		ManagedSeed:  managedSeed,
+		SeedContext:  t.ForSeed(seed),
+		ShootContext: t.ForShoot(baseShoot),
+	}
+
 	t.Log = t.Log.WithValues("managedSeed", client.ObjectKeyFromObject(managedSeed))
 
 	return ms
-}
-
-// WithShoot initialized a ShootContext and adds it to the ManagedSeedContext
-// This function is intended to be used for the shoot the managed seed is "based" on
-func (s *ManagedSeedContext) WithShoot(shoot *gardencorev1beta1.Shoot) *ManagedSeedContext {
-	s.ShootContext = *s.ForShoot(shoot)
-	return s
-}
-
-// WithSeed initialized a SeedContext and adds it to the ManagedSeedContext
-// This function should be called for the resulting seed object from a managed seed
-func (s *ManagedSeedContext) WithSeed(seed *gardencorev1beta1.Seed) *ManagedSeedContext {
-	s.SeedContext = *s.ForSeed(seed)
-	return s
 }

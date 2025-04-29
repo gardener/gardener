@@ -37,16 +37,15 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 		shoot.Namespace = v1beta1constants.GardenNamespace
 		managedSeed := buildManagedSeed(shoot)
 
-		s = NewTestContext().ForManagedSeed(managedSeed).WithShoot(shoot)
+		s = NewTestContext().ForManagedSeed(shoot, managedSeed)
 	})
 
-	ItShouldCreateShoot(&s.ShootContext)
-	ItShouldWaitForShootToBeReconciledAndHealthy(&s.ShootContext)
-	ItShouldInitializeShootClient(&s.ShootContext)
+	ItShouldCreateShoot(s.ShootContext)
+	ItShouldWaitForShootToBeReconciledAndHealthy(s.ShootContext)
+	ItShouldInitializeShootClient(s.ShootContext)
 	ItShouldCreateManagedSeed(s)
 	ItShouldWaitForManagedSeedToBeReady(s)
-	ItShouldInitializeSeedContext(s)
-	ItShouldWaitForSeedToBeReady(&s.SeedContext)
+	ItShouldWaitForSeedToBeReady(s.SeedContext)
 
 	verifier := &rotation.GardenletKubeconfigRotationVerifier{
 		GardenReader:                       s.GardenClient,
@@ -61,7 +60,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 
 	Describe("Trigger gardenlet kubeconfig rotation by annotating Seed", func() {
 		itShouldVerifyGardenletKubeconfigRotation(verifier, false, func() {
-			ItShouldAnnotateSeed(&s.SeedContext, map[string]string{
+			ItShouldAnnotateSeed(s.SeedContext, map[string]string{
 				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig,
 			})
 		})
@@ -107,11 +106,8 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 		}, SpecTimeout(time.Minute))
 
 		It("Should wait until no gardenlet pods exist anymore", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) []corev1.Pod {
-				podList := &corev1.PodList{}
-				g.Expect(s.ShootContext.ShootKomega.List(podList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})()).To(Succeed())
-				return podList.Items
-			}).WithPolling(5 * time.Second).Should(BeEmpty())
+			Eventually(ctx, s.ShootContext.ShootKomega.ObjectList(&corev1.PodList{}, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})).
+				WithPolling(5 * time.Second).To(HaveField("Items", BeEmpty()))
 		}, SpecTimeout(3*time.Minute))
 
 		itShouldVerifyGardenletKubeconfigRotation(verifier, true, func() {
@@ -142,10 +138,10 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 	})
 
 	ItShouldDeleteManagedSeed(s)
-	ItShouldWaitForSeedToBeDeleted(&s.SeedContext)
+	ItShouldWaitForSeedToBeDeleted(s.SeedContext)
 	ItShouldWaitForManagedSeedToBeDeleted(s)
-	ItShouldDeleteShoot(&s.ShootContext)
-	ItShouldWaitForShootToBeDeleted(&s.ShootContext)
+	ItShouldDeleteShoot(s.ShootContext)
+	ItShouldWaitForShootToBeDeleted(s.ShootContext)
 })
 
 const (

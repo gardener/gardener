@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
@@ -45,23 +44,6 @@ func ItShouldWaitForManagedSeedToBeReady(s *ManagedSeedContext) {
 			g.Expect(health.CheckManagedSeed(s.ManagedSeed)).To(Succeed())
 		}).Should(Succeed())
 	}, SpecTimeout(10*time.Minute))
-}
-
-// ItShouldInitializeSeedContext should get the resulting seed object of the managedseed and initialize the seed context of the ManagedSeedContext
-func ItShouldInitializeSeedContext(s *ManagedSeedContext) {
-	GinkgoHelper()
-
-	It("Initialize Seed context", func(ctx SpecContext) {
-		seed := &gardencorev1beta1.Seed{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: s.ManagedSeed.Name,
-			},
-		}
-
-		Eventually(ctx, s.GardenKomega.Get(seed)).Should(Succeed())
-
-		s.WithSeed(seed)
-	}, SpecTimeout(time.Minute))
 }
 
 // ItShouldAnnotateManagedSeed sets the given annotation within the managedseed metadata to the specified value and patches the managedseed object
