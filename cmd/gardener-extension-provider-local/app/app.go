@@ -241,6 +241,14 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 					return fmt.Errorf("failed creating garden cluster object: %w", err)
 				}
 
+				log.Info("Setting up checks for garden cluster cache")
+				if err := mgr.AddHealthzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(gardenCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+					return err
+				}
+				if err := mgr.AddReadyzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthz(gardenCluster.GetCache())); err != nil {
+					return err
+				}
+
 				log.Info("Adding garden cluster to manager")
 				if err := mgr.Add(gardenCluster); err != nil {
 					return fmt.Errorf("failed adding garden cluster to manager: %w", err)
