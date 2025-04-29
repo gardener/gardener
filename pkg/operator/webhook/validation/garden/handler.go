@@ -55,7 +55,12 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admis
 		}
 	}
 
-	if errs := validation.ValidateGarden(garden); len(errs) > 0 {
+	extensionList := &operatorv1alpha1.ExtensionList{}
+	if err := h.RuntimeClient.List(ctx, extensionList); err != nil {
+		return nil, apierrors.NewInternalError(err)
+	}
+
+	if errs := validation.ValidateGarden(garden, extensionList.Items); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), garden.Name, errs)
 	}
 
@@ -63,7 +68,7 @@ func (h *Handler) ValidateCreate(ctx context.Context, obj runtime.Object) (admis
 }
 
 // ValidateUpdate performs the validation.
-func (h *Handler) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	oldGarden, ok := oldObj.(*operatorv1alpha1.Garden)
 	if !ok {
 		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", oldObj)
@@ -73,7 +78,12 @@ func (h *Handler) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Objec
 		return nil, fmt.Errorf("expected *operatorv1alpha1.Garden but got %T", newObj)
 	}
 
-	if errs := validation.ValidateGardenUpdate(oldGarden, newGarden); len(errs) > 0 {
+	extensionList := &operatorv1alpha1.ExtensionList{}
+	if err := h.RuntimeClient.List(ctx, extensionList); err != nil {
+		return nil, apierrors.NewInternalError(err)
+	}
+
+	if errs := validation.ValidateGardenUpdate(oldGarden, newGarden, extensionList.Items); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), newGarden.Name, errs)
 	}
 

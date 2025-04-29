@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/hashicorp/go-multierror"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -128,8 +129,8 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 	}
 
 	var (
-		kindToTypesMap  = computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList)
-		validationError error
+		kindToExtensions = computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList)
+		validationError  error
 	)
 
 	switch a.GetKind().GroupKind() {
@@ -148,7 +149,7 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 		}
 
 		if !apiequality.Semantic.DeepEqual(backupBucket.Spec, oldBackupBucket.Spec) {
-			validationError = e.validateBackupBucket(kindToTypesMap, backupBucket.Spec)
+			validationError = e.validateBackupBucket(kindToExtensions, backupBucket.Spec)
 		}
 
 	case core.Kind("BackupEntry"):
@@ -170,7 +171,7 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 			if err != nil {
 				return err
 			}
-			validationError = e.validateBackupEntry(kindToTypesMap, backupBucket.Spec.Provider.Type)
+			validationError = e.validateBackupEntry(kindToExtensions, backupBucket.Spec.Provider.Type)
 		}
 
 	case core.Kind("Seed"):
@@ -188,7 +189,7 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 		}
 
 		if !apiequality.Semantic.DeepEqual(seed.Spec, oldSeed.Spec) {
-			validationError = e.validateSeed(kindToTypesMap, seed.Spec)
+			validationError = e.validateSeed(kindToExtensions, seed.Spec)
 		}
 
 	case core.Kind("Shoot"):
@@ -206,7 +207,7 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 		}
 
 		if !apiequality.Semantic.DeepEqual(shoot.Spec, oldShoot.Spec) {
-			validationError = e.validateShoot(kindToTypesMap, computeWorkerlessSupportedExtensionTypes(controllerRegistrationList), shoot.Spec, gardencorehelper.IsWorkerless(shoot))
+			validationError = e.validateShoot(kindToExtensions, computeWorkerlessSupportedExtensionTypes(controllerRegistrationList), shoot.Spec, gardencorehelper.IsWorkerless(shoot))
 		}
 	}
 
@@ -217,66 +218,75 @@ func (e *ExtensionValidator) Validate(_ context.Context, a admission.Attributes,
 	return nil
 }
 
-func (e *ExtensionValidator) validateBackupBucket(kindToTypesMap map[string]sets.Set[string], spec core.BackupBucketSpec) error {
+func (e *ExtensionValidator) validateBackupBucket(kindToExtensions map[string][]extension, spec core.BackupBucketSpec) error {
 	return isExtensionRegistered(
-		kindToTypesMap,
+		kindToExtensions,
 		extensionsv1alpha1.BackupBucketResource,
 		spec.Provider.Type,
-		"given BackupBucket uses non-registered provider type: "+field.NewPath("spec", "provider", "type").String(),
+		"given BackupBucket uses non-registered provider type",
+		field.NewPath("spec", "provider", "type"),
+		nil,
 	)
 }
 
-func (e *ExtensionValidator) validateBackupEntry(kindToTypesMap map[string]sets.Set[string], bucketType string) error {
+func (e *ExtensionValidator) validateBackupEntry(kindToExtensions map[string][]extension, bucketType string) error {
 	return isExtensionRegistered(
-		kindToTypesMap,
+		kindToExtensions,
 		extensionsv1alpha1.BackupEntryResource,
 		bucketType,
-		fmt.Sprintf("given BackupEntry references bucket (%s) using non-registered provider type", field.NewPath("spec", "bucketName")),
+		"given BackupEntry references bucket using non-registered provider type",
+		field.NewPath("spec", "bucketName"),
+		nil,
 	)
 }
 
-func (e *ExtensionValidator) validateSeed(kindToTypesMap map[string]sets.Set[string], spec core.SeedSpec) error {
+func (e *ExtensionValidator) validateSeed(kindToExtensions map[string][]extension, spec core.SeedSpec) error {
 	var (
 		message = "given Seed uses non-registered"
 
 		requiredExtensions = requiredExtensions{
-			{extensionsv1alpha1.ControlPlaneResource, spec.Provider.Type, fmt.Sprintf("%s provider type: %s", message, field.NewPath("spec", "provider", "type"))},
+			{extensionsv1alpha1.ControlPlaneResource, spec.Provider.Type, fmt.Sprintf("%s provider type", message), field.NewPath("spec", "provider", "type")},
 		}
 	)
 
 	if spec.Backup != nil {
-		msg := fmt.Sprintf("%s backup provider type: %s", message, field.NewPath("spec", "backup", "provider"))
+		msg := fmt.Sprintf("%s backup provider type", message)
 		requiredExtensions = append(
 			requiredExtensions,
-			requiredExtension{extensionsv1alpha1.BackupBucketResource, spec.Backup.Provider, msg},
-			requiredExtension{extensionsv1alpha1.BackupEntryResource, spec.Backup.Provider, msg},
+			requiredExtension{extensionsv1alpha1.BackupBucketResource, spec.Backup.Provider, msg, field.NewPath("spec", "backup", "provider")},
+			requiredExtension{extensionsv1alpha1.BackupEntryResource, spec.Backup.Provider, msg, field.NewPath("spec", "backup", "provider")},
 		)
 	}
 
 	if spec.Ingress != nil && spec.DNS.Provider != nil {
 		provider := spec.DNS.Provider
-		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.DNSRecordResource, provider.Type, fmt.Sprintf("%s extension type: %s", message, field.NewPath("spec", "dns", "provider").Child("type"))})
+		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.DNSRecordResource, provider.Type, fmt.Sprintf("%s extension type", message), field.NewPath("spec", "dns", "provider").Child("type")})
 	}
 
-	return requiredExtensions.areRegistered(kindToTypesMap)
+	for i, ext := range spec.Extensions {
+		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ExtensionResource, ext.Type, fmt.Sprintf("%s extension type", message), field.NewPath("spec", "extensions").Index(i).Child("type")})
+	}
+
+	return requiredExtensions.areRegistered(kindToExtensions, gardencorev1beta1.ClusterTypeSeed)
 }
 
-func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[string], workerlessSupportedExtensionTypes sets.Set[string], spec core.ShootSpec, workerless bool) error {
+func (e *ExtensionValidator) validateShoot(kindToExtensions map[string][]extension, workerlessSupportedExtensionTypes sets.Set[string], spec core.ShootSpec, workerless bool) error {
 	var (
 		message            = "given Shoot uses non-registered"
-		providerTypeMsg    = fmt.Sprintf("%s provider type: %s", message, field.NewPath("spec", "provider", "type"))
+		providerTypeMsg    = fmt.Sprintf("%s provider type", message)
+		fldPath            = field.NewPath("spec", "provider", "type")
 		requiredExtensions = requiredExtensions{}
 		result             error
 	)
 
 	if !workerless {
 		requiredExtensions = append(requiredExtensions,
-			requiredExtension{extensionsv1alpha1.ControlPlaneResource, spec.Provider.Type, providerTypeMsg},
-			requiredExtension{extensionsv1alpha1.InfrastructureResource, spec.Provider.Type, providerTypeMsg},
-			requiredExtension{extensionsv1alpha1.WorkerResource, spec.Provider.Type, providerTypeMsg},
+			requiredExtension{extensionsv1alpha1.ControlPlaneResource, spec.Provider.Type, providerTypeMsg, fldPath},
+			requiredExtension{extensionsv1alpha1.InfrastructureResource, spec.Provider.Type, providerTypeMsg, fldPath},
+			requiredExtension{extensionsv1alpha1.WorkerResource, spec.Provider.Type, providerTypeMsg, fldPath},
 		)
 		if spec.Networking != nil && spec.Networking.Type != nil {
-			requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.NetworkResource, *spec.Networking.Type, fmt.Sprintf("%s networking type: %s", message, field.NewPath("spec", "networking", "type"))})
+			requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.NetworkResource, *spec.Networking.Type, fmt.Sprintf("%s networking type", message), field.NewPath("spec", "networking", "type")})
 		}
 	}
 
@@ -287,19 +297,19 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[st
 			}
 
 			if provider.Primary != nil && *provider.Primary {
-				requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.DNSRecordResource, *provider.Type, fmt.Sprintf("%s extension type: %s", message, field.NewPath("spec", "dns", "providers").Index(i).Child("type"))})
+				requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.DNSRecordResource, *provider.Type, fmt.Sprintf("%s extension type", message), field.NewPath("spec", "dns", "providers").Index(i).Child("type")})
 			}
 		}
 	}
 
-	for i, extension := range spec.Extensions {
-		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ExtensionResource, extension.Type, fmt.Sprintf("extension type: %s", field.NewPath("spec", "extensions").Index(i).Child("type"))})
+	for i, ext := range spec.Extensions {
+		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ExtensionResource, ext.Type, fmt.Sprintf("%s extension type", message), field.NewPath("spec", "extensions").Index(i).Child("type")})
 	}
 
 	for i, worker := range spec.Provider.Workers {
 		if worker.CRI != nil {
 			for j, cr := range worker.CRI.ContainerRuntimes {
-				requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ContainerRuntimeResource, cr.Type, fmt.Sprintf("%s container runtime type: %s", message, field.NewPath("spec", "provider", "workers").Index(i).Child("cri", "containerRuntimes").Index(j).Child("type"))})
+				requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.ContainerRuntimeResource, cr.Type, fmt.Sprintf("%s container runtime type", message), field.NewPath("spec", "provider", "workers").Index(i).Child("cri", "containerRuntimes").Index(j).Child("type")})
 			}
 		}
 
@@ -307,10 +317,10 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.Set[st
 			continue
 		}
 
-		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.OperatingSystemConfigResource, worker.Machine.Image.Name, fmt.Sprintf("%s operating system type: %s", message, field.NewPath("spec", "provider", "workers").Index(i).Child("machine", "image", "name"))})
+		requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.OperatingSystemConfigResource, worker.Machine.Image.Name, fmt.Sprintf("%s operating system type", message), field.NewPath("spec", "provider", "workers").Index(i).Child("machine", "image", "name")})
 	}
 
-	if err := requiredExtensions.areRegistered(kindToTypesMap); err != nil {
+	if err := requiredExtensions.areRegistered(kindToExtensions, gardencorev1beta1.ClusterTypeShoot); err != nil {
 		result = multierror.Append(result, err)
 	}
 
@@ -329,15 +339,16 @@ type requiredExtension struct {
 	extensionKind string
 	extensionType string
 	message       string
+	fldPath       *field.Path
 }
 
 type requiredExtensions []requiredExtension
 
-func (r requiredExtensions) areRegistered(kindToTypesMap map[string]sets.Set[string]) error {
+func (r requiredExtensions) areRegistered(kindToExtensions map[string][]extension, clusterType gardencorev1beta1.ClusterType) error {
 	var result error
 
 	for _, requiredExtension := range r {
-		if err := isExtensionRegistered(kindToTypesMap, requiredExtension.extensionKind, requiredExtension.extensionType, requiredExtension.message); err != nil {
+		if err := isExtensionRegistered(kindToExtensions, requiredExtension.extensionKind, requiredExtension.extensionType, requiredExtension.message, requiredExtension.fldPath, &clusterType); err != nil {
 			result = multierror.Append(result, err)
 		}
 	}
@@ -347,17 +358,27 @@ func (r requiredExtensions) areRegistered(kindToTypesMap map[string]sets.Set[str
 
 // isExtensionRegistered takes a map of registered kinds to a set of types and a kind/type to verify. If the provided
 // kind/type combination is registered then it returns nil, otherwise it returns an error with the given message.
-func isExtensionRegistered(kindToTypesMap map[string]sets.Set[string], extensionKind, extensionType, message string) error {
-	if types, ok := kindToTypesMap[extensionKind]; !ok || !types.Has(extensionType) {
-		return fmt.Errorf("given Shoot uses non-registered %s (%q)", message, extensionType)
+func isExtensionRegistered(kindToExtensions map[string][]extension, extensionKind, extensionType, message string, fldPath *field.Path, clusterType *gardencorev1beta1.ClusterType) error {
+	if !slices.ContainsFunc(kindToExtensions[extensionKind], func(ext extension) bool {
+		if clusterType != nil && len(ext.clusterCompatibility) > 0 && !sets.New(ext.clusterCompatibility...).Has(*clusterType) {
+			return false
+		}
+		return ext.extensionType == extensionType
+	}) {
+		return fmt.Errorf("%s: %s (%q)", message, fldPath, extensionType)
 	}
 	return nil
 }
 
+type extension struct {
+	extensionType        string
+	clusterCompatibility []gardencorev1beta1.ClusterType
+}
+
 // computeRegisteredPrimaryExtensionKindTypes computes a map that maps the extension kind to the set of types that are
 // registered (only if primary=true), e.g. {ControlPlane=>{foo,bar,baz}, Network=>{a,b,c}}.
-func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) map[string]sets.Set[string] {
-	out := map[string]sets.Set[string]{}
+func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*gardencorev1beta1.ControllerRegistration) map[string][]extension {
+	out := map[string][]extension{}
 
 	for _, controllerRegistration := range controllerRegistrationList {
 		for _, resource := range controllerRegistration.Spec.Resources {
@@ -365,11 +386,7 @@ func computeRegisteredPrimaryExtensionKindTypes(controllerRegistrationList []*ga
 				continue
 			}
 
-			if _, ok := out[resource.Kind]; !ok {
-				out[resource.Kind] = sets.New[string]()
-			}
-
-			out[resource.Kind].Insert(resource.Type)
+			out[resource.Kind] = append(out[resource.Kind], extension{extensionType: resource.Type, clusterCompatibility: resource.ClusterCompatibility})
 		}
 	}
 
@@ -402,7 +419,7 @@ func (r requiredExtensions) areSupportedForWorkerlessShoots(workerlessSupportedE
 		}
 
 		if !workerlessSupportedExtensionTypes.Has(requiredExtension.extensionType) {
-			result = multierror.Append(result, fmt.Errorf("given Shoot is workerless and uses non-supported %s (%q)", requiredExtension.message, requiredExtension.extensionType))
+			result = multierror.Append(result, fmt.Errorf("given Shoot is workerless and uses non-supported extension type: %s (%q)", requiredExtension.fldPath, requiredExtension.extensionType))
 		}
 	}
 

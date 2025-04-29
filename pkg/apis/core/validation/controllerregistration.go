@@ -108,9 +108,12 @@ func ValidateControllerResources(resources []core.ControllerResource, clusterTyp
 		if len(resource.Type) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "field is required"))
 		}
+
 		if t, ok := resourceKindToType[resource.Kind]; ok && t == resource.Type {
 			allErrs = append(allErrs, field.Duplicate(idxPath, gardenerutils.ExtensionsID(resource.Kind, resource.Type)))
 		}
+		resourceKindToType[resource.Kind] = resource.Type
+
 		if resource.Kind != extensionsv1alpha1.ExtensionResource {
 			if resource.GloballyEnabled != nil {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("globallyEnabled"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
@@ -127,25 +130,14 @@ func ValidateControllerResources(resources []core.ControllerResource, clusterTyp
 			if resource.Lifecycle != nil {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("lifecycle"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
 			}
+
+			continue
 		}
 
 		var (
 			validClusterTypes      = sets.New(clusterTypes...)
-			configuredClusterTypes = sets.New[core.ClusterType]()
+			compatibleClusterTypes = sets.New[core.ClusterType]()
 		)
-
-		for j, clusterType := range resource.AutoEnable {
-			autoEnablePath := idxPath.Child("autoEnable").Index(j)
-
-			if !validClusterTypes.Has(clusterType) {
-				allErrs = append(allErrs, field.NotSupported(autoEnablePath, clusterType, sets.List(validClusterTypes)))
-			}
-
-			if configuredClusterTypes.Has(clusterType) {
-				allErrs = append(allErrs, field.Duplicate(autoEnablePath, clusterType))
-			}
-			configuredClusterTypes.Insert(clusterType)
-		}
 
 		for j, clusterType := range resource.ClusterCompatibility {
 			autoEnablePath := idxPath.Child("clusterCompatibility").Index(j)
@@ -154,13 +146,31 @@ func ValidateControllerResources(resources []core.ControllerResource, clusterTyp
 				allErrs = append(allErrs, field.NotSupported(autoEnablePath, clusterType, sets.List(validClusterTypes)))
 			}
 
-			if configuredClusterTypes.Has(clusterType) {
+			if compatibleClusterTypes.Has(clusterType) {
 				allErrs = append(allErrs, field.Duplicate(autoEnablePath, clusterType))
 			}
-			configuredClusterTypes.Insert(clusterType)
+			compatibleClusterTypes.Insert(clusterType)
 		}
 
-		if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.Lifecycle != nil {
+		autoEnabledClusterTypes := sets.New[core.ClusterType]()
+		for j, clusterType := range resource.AutoEnable {
+			autoEnablePath := idxPath.Child("autoEnable").Index(j)
+
+			if !validClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.NotSupported(autoEnablePath, clusterType, sets.List(validClusterTypes)))
+			}
+
+			if !compatibleClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.Forbidden(autoEnablePath, fmt.Sprintf("autoEnable is not allowed for cluster type %q when clusterCompatibility is set to %+v", clusterType, compatibleClusterTypes.UnsortedList())))
+			}
+
+			if autoEnabledClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.Duplicate(autoEnablePath, clusterType))
+			}
+			autoEnabledClusterTypes.Insert(clusterType)
+		}
+
+		if resource.Lifecycle != nil {
 			lifecyclePath := idxPath.Child("lifecycle")
 			if resource.Lifecycle.Reconcile != nil && !availableExtensionStrategiesForReconcile.Has(*resource.Lifecycle.Reconcile) {
 				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("reconcile"), *resource.Lifecycle.Reconcile, sets.List(availableExtensionStrategiesForReconcile)))
@@ -172,8 +182,6 @@ func ValidateControllerResources(resources []core.ControllerResource, clusterTyp
 				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("migrate"), *resource.Lifecycle.Migrate, sets.List(availableExtensionStrategies)))
 			}
 		}
-
-		resourceKindToType[resource.Kind] = resource.Type
 	}
 
 	return allErrs
