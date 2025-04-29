@@ -15,6 +15,7 @@ import (
 	"html/template"
 
 	"github.com/Masterminds/sprig/v3"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +32,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/utils/access"
+	shootutils "github.com/gardener/gardener/test/utils/shoots"
 	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
@@ -253,6 +255,25 @@ func ItShouldInitializeSeedClient(s *ShootContext) {
 	}, SpecTimeout(time.Minute))
 }
 
+func ItShouldComputeControlPlaneNamespace(s *ShootContext) {
+	GinkgoHelper()
+
+	It("Compute technical ID", func(ctx SpecContext) {
+		ns := &corev1.Namespace{}
+
+		err := s.GardenClient.Get(ctx, client.ObjectKey{Name: s.Shoot.Namespace}, ns)
+		Expect(err).NotTo(HaveOccurred(), "could not get namespace %q in Garden cluster: %w", s.Shoot.Namespace, err)
+		Expect(ns.Labels).NotTo(BeEmpty(), "namespace %q does not have any labels", ns.Name)
+
+		projectName, ok := ns.Labels[v1beta1constants.ProjectName]
+		Expect(ok).To(BeTrue(), "namespace %q did not contain a project label", ns.Name)
+
+		namespace := shootutils.ComputeTechnicalID(projectName, s.Shoot)
+
+		s.WithControlPlaneNamespace(namespace)
+	}, SpecTimeout(time.Minute))
+}
+
 // ItShouldAnnotateShoot sets the given annotation within the shoot metadata to the specified value and patches the shoot object
 func ItShouldAnnotateShoot(s *ShootContext, annotations map[string]string) {
 	GinkgoHelper()
@@ -317,6 +338,7 @@ func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string
 
 	// This function was copied from test/framework/template.go
 	It("Render and deploy template to shoot", func(ctx SpecContext) {
+		// TODO(Rado): Need to fix this. Function for finding template just by name isn't working as expected for e2e tests.
 		templateFilepath := filepath.Join("/Users/I748357/go/src/github.com/gardener/gardener/test/framework/resources/templates", templateName)
 		_, err := os.Stat(templateFilepath)
 		Expect(err).NotTo(HaveOccurred(), "could not find template in %q", templateFilepath)

@@ -25,7 +25,6 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	shootutils "github.com/gardener/gardener/test/utils/shoots"
 )
 
 // TestContext carries test state and helpers through e2e test cases with multiple steps (ordered containers).
@@ -91,8 +90,6 @@ func (t *TestContext) ForShoot(shoot *gardencorev1beta1.Shoot) *ShootContext {
 	s := &ShootContext{
 		TestContext: *t,
 		Shoot:       shoot,
-		// Namespace of the Shoot is the same as the Project name.
-		ShootSeedNamespace: shootutils.ComputeTechnicalID(shoot.Namespace, shoot),
 	}
 	s.Log = s.Log.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
@@ -138,7 +135,8 @@ type ShootContext struct {
 	SeedKomega komega.Komega
 
 	// ShootSeedNamespace contains the namespace for the Shoot Control Plane in the Seed.
-	ShootSeedNamespace string
+	// It must me initialized via WithControlPlaneNamespace.
+	ControlPlaneNamespace string
 }
 
 // WithShootClientSet initializes the shoot clients of this ShootContext from the given client set.
@@ -154,6 +152,12 @@ func (s *ShootContext) WithSeedClientSet(clientSet kubernetes.Interface) *ShootC
 	s.SeedClientSet = clientSet
 	s.SeedClient = clientSet.Client()
 	s.SeedKomega = komega.New(s.SeedClient)
+	return s
+}
+
+// WithControlPlaneNamespace sets the namespace for the Shoot Control Plane in the Seed.
+func (s *ShootContext) WithControlPlaneNamespace(namespace string) *ShootContext {
+	s.ControlPlaneNamespace = namespace
 	return s
 }
 

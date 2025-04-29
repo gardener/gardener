@@ -24,7 +24,7 @@ func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[stri
 
 	It("Wait for logs with label to appear in Vali", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
-			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, "shoot--local--e2e-observ", key, value, s.SeedClientSet)
+			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, s.ControlPlaneNamespace, key, value, s.SeedClientSet)
 			if err != nil {
 				return err
 			}
@@ -47,11 +47,11 @@ func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[s
 	GinkgoHelper()
 
 	It("Ensure logs do not exist", func(ctx SpecContext) {
-		// No easy way that something won't be eventually in Vali
+		// No easy way to guarantee that a log won't eventually be in Vali except waiting.
 		time.Sleep(10 * time.Second)
 
 		Eventually(ctx, func() error {
-			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, "shoot--local--e2e-observ", key, value, s.SeedClientSet)
+			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, s.ControlPlaneNamespace, key, value, s.SeedClientSet)
 			if err != nil {
 				return err
 			}
