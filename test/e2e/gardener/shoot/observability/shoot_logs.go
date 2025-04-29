@@ -47,6 +47,7 @@ var _ = FDescribe("Observability Tests", Ordered, Label("Observability", "defaul
 		ItShouldInitializeShootClient(s)
 		ItShouldGetResponsibleSeed(s)
 		ItShouldInitializeSeedClient(s)
+		ItShouldComputeControlPlaneNamespace(s)
 
 		gardenerLoggerAppLabel := "gardener-logger"
 		gardenerLoggerName := "gardener-logger" + "-" + utilrand.String(randomLength)
