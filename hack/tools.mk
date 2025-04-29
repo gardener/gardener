@@ -88,7 +88,6 @@ TYPOS_VERSION ?= v1.33.1
 # tool versions from go.mod
 CONTROLLER_GEN_VERSION ?= $(call version_gomod,sigs.k8s.io/controller-tools)
 GINKGO_VERSION ?= $(call version_gomod,github.com/onsi/ginkgo/v2)
-GINKGO_VERSION ?= 2.22.1
 GEN_CRD_API_REFERENCE_DOCS_VERSION ?= $(call version_gomod,github.com/ahmetb/gen-crd-api-reference-docs)
 GOIMPORTS_VERSION ?= $(call version_gomod,golang.org/x/tools)
 CODE_GENERATOR_VERSION ?= $(call version_gomod,k8s.io/code-generator)
