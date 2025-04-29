@@ -127,6 +127,26 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 			},
 		}
 
+		if g.values.OIDC.CaSecretRef != nil {
+			caSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      g.values.OIDC.CaSecretRef.Name,
+					Namespace: g.namespace,
+				},
+			}
+
+			if err := g.client.Get(ctx, client.ObjectKeyFromObject(caSecret), caSecret); err != nil {
+				return nil, fmt.Errorf("failed reading referenced ca secret: %w", err)
+			}
+
+			caData, ok := caSecret.Data["ca.crt"]
+			if !ok {
+				return nil, fmt.Errorf("failed reading ca secret: missing ca.crt key")
+			}
+
+			cfg.OIDC.CA = string(caData)
+		}
+
 		loginCfg.LoginTypes = append([]string{"oidc"}, loginCfg.LoginTypes...)
 	}
 
