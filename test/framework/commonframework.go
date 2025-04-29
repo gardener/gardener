@@ -77,8 +77,8 @@ func (f *CommonFramework) BeforeEach() {
 		} else {
 			// This is the default location if the framework is running in one of the gardener/shoot suites.
 			// Otherwise the resource dir has to be adjusted
-			// TODO(Rado): This path, without the `test` dir, is not right for e2e tests. Pretty strange
-			f.ResourcesDir, err = filepath.Abs(filepath.Join("..", "..", "..", "test", "framework", "resources"))
+			// Note: This path is not correct for e2e tests.
+			f.ResourcesDir, err = filepath.Abs(filepath.Join("..", "..", "..", "framework", "resources"))
 		}
 		ExpectNoError(err)
 	}

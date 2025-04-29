@@ -45,6 +45,10 @@ import (
 // Ideally, all there are no raw Expect statements. Instead, all network-related operations like API calls are wrapped
 // in an Eventually statement to implement retries for making e2e less susceptible for intermittent failures.
 
+const (
+	templatesDir = "../../framework/resources/templates/"
+)
+
 var (
 	projectNamespace  string
 	existingShootName string
@@ -338,9 +342,10 @@ func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string
 
 	// This function was copied from test/framework/template.go
 	It("Render and deploy template to shoot", func(ctx SpecContext) {
-		// TODO(Rado): Need to fix this. Function for finding template just by name isn't working as expected for e2e tests.
-		templateFilepath := filepath.Join("/Users/I748357/go/src/github.com/gardener/gardener/test/framework/resources/templates", templateName)
-		_, err := os.Stat(templateFilepath)
+		templatesDirAbs, err := filepath.Abs(templatesDir)
+		Expect(err).NotTo(HaveOccurred(), "could not get absolute path for templates dir %q: %w", templatesDir, err)
+		templateFilepath := filepath.Join(templatesDirAbs, templateName)
+		_, err = os.Stat(templateFilepath)
 		Expect(err).NotTo(HaveOccurred(), "could not find template in %q", templateFilepath)
 
 		tpl, err := template.
