@@ -1848,10 +1848,6 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		if !availableUpdateStrategies.Has(*worker.UpdateStrategy) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, sets.List(availableUpdateStrategies)))
 		}
-
-		if !features.DefaultFeatureGate.Enabled(features.InPlaceNodeUpdates) && helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, "can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."))
-		}
 	}
 
 	return allErrs
@@ -2467,6 +2463,26 @@ func ValidateFinalizersOnCreation(finalizers []string, fldPath *field.Path) fiel
 		if ForbiddenShootFinalizersOnCreation.Has(finalizer) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("finalizer %q cannot be added on creation", finalizer)))
 		}
+	}
+
+	return allErrs
+}
+
+// ValidateInPlaceUpdateStrategyOnCreation validates whether the Shoot is using any workers with in-place update strategy
+// when the InPlaceNodeUpdates feature gate is disabled.
+func ValidateInPlaceUpdateStrategyOnCreation(shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if features.DefaultFeatureGate.Enabled(features.InPlaceNodeUpdates) {
+		return allErrs
+	}
+
+	for i, worker := range shoot.Spec.Provider.Workers {
+		if !helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			continue
+		}
+
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("updateStrategy"), *worker.UpdateStrategy, "can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."))
 	}
 
 	return allErrs

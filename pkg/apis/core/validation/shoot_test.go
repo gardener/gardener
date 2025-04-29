@@ -6657,22 +6657,59 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed if the update strategy is supported", func() {
-				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
 				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
 
 				Expect(ValidateWorker(worker, core.Kubernetes{}, fldPath, false)).To(BeEmpty())
 			})
+		})
 
-			It("should fail if the update strategy is AutoInPlaceUpdate/ManualInPlaceUpdate and InPlaceNodeUpdates feature gate is not enabled", func() {
-				worker.UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+		Describe("#ValidateInPlaceUpdateStrategyOnCreation", func() {
+			var (
+				shoot = &core.Shoot{
+					Spec: core.ShootSpec{
+						Provider: core.Provider{
+							Workers: []core.Worker{
+								{
+									Name: "worker-1",
+									Machine: core.Machine{
+										Type: "xlarge",
+									},
+									UpdateStrategy: ptr.To(core.AutoInPlaceUpdate),
+								},
+								{
+									Name: "worker-2",
+									Machine: core.Machine{
+										Type: "xlarge",
+									},
+									UpdateStrategy: ptr.To(core.ManualInPlaceUpdate),
+								},
+							},
+						},
+					},
+				}
+			)
 
-				Expect(ValidateWorker(worker, core.Kubernetes{}, fldPath, false)).To(ConsistOf(
+			It("should not allow to set update strategy to AutoInPlaceUpdate/ManualInPlaceUpdate if feature gate is disabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, false))
+
+				Expect(ValidateInPlaceUpdateStrategyOnCreation(shoot)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("workers[0].updateStrategy"),
+						"Field":  Equal("spec.provider.workers[0].updateStrategy"),
+						"Detail": Equal("can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[1].updateStrategy"),
 						"Detail": Equal("can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."),
 					})),
 				))
+			})
+
+			It("should allow to set update strategy to AutoInPlaceUpdate/ManualInPlaceUpdate if feature gate is enabled", func() {
+				DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, true))
+
+				Expect(ValidateInPlaceUpdateStrategyOnCreation(shoot)).To(BeEmpty())
 			})
 		})
 
