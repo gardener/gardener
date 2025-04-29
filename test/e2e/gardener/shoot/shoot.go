@@ -5,15 +5,24 @@
 package shoot
 
 import (
+	"bytes"
 	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
+	"html/template"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
+	"github.com/Masterminds/sprig/v3"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -374,4 +383,51 @@ func ItShouldVerifyInPlaceUpdateCompletion(s *ShootContext) {
 			))
 		}).Should(Succeed())
 	}, SpecTimeout(2*time.Minute))
+}
+
+func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string, values any) {
+	GinkgoHelper()
+
+	// This function was copied from test/framework/template.go
+	It("Render and deploy template to shoot", func(ctx SpecContext) {
+		templateFilepath := filepath.Join("/Users/I748357/go/src/github.com/gardener/gardener/test/framework/resources/templates", templateName)
+		_, err := os.Stat(templateFilepath)
+		Expect(err).NotTo(HaveOccurred(), "could not find template in %q", templateFilepath)
+
+		tpl, err := template.
+			New(templateName).
+			Funcs(sprig.HtmlFuncMap()).
+			ParseFiles(templateFilepath)
+		Expect(err).NotTo(HaveOccurred(), "unable to parse template in %s: %w", templateFilepath, err)
+
+		var writer bytes.Buffer
+		err = tpl.Execute(&writer, values)
+		Expect(err).NotTo(HaveOccurred(), "unable to execute template %s: %w", templateFilepath, err)
+
+		manifestReader := kubernetes.NewManifestReader(writer.Bytes())
+		err = s.ShootClientSet.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
+		Expect(err).NotTo(HaveOccurred(), "unable to apply template %s: %w", templateFilepath, err)
+	}, SpecTimeout(time.Minute))
+}
+
+func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podLabels labels.Selector) {
+	GinkgoHelper()
+
+	It("Wait for pods in Shoot to be ready", func(ctx SpecContext) {
+		Eventually(ctx, func() error {
+			podList := &corev1.PodList{}
+			err := s.ShootClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: podLabels})
+			if err != nil {
+				return err
+			}
+
+			for _, pod := range podList.Items {
+				if pod.Status.Phase != corev1.PodRunning {
+					return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
+				}
+			}
+
+			return nil
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute*5))
 }
