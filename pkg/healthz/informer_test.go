@@ -10,22 +10,25 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/gardener/gardener/pkg/healthz"
+	. "github.com/gardener/gardener/pkg/healthz"
 )
 
-var _ = Describe("NewCacheSyncHealthz", func() {
-	It("should succeed if all informers sync", func() {
-		checker := healthz.NewCacheSyncHealthz(fakeSyncWaiter(true))
-		Expect(checker(nil)).NotTo(HaveOccurred())
-	})
-	It("should fail if informers don't sync", func() {
-		checker := healthz.NewCacheSyncHealthz(fakeSyncWaiter(false))
-		Expect(checker(nil)).To(MatchError(ContainSubstring("not synced")))
+var _ = Describe("Informer", func() {
+	Describe("#NewCacheSyncHealthz", func() {
+		It("should succeed if all informers sync", func() {
+			checker := NewCacheSyncHealthz(&fakeSyncWaiter{true})
+			Expect(checker(nil)).To(Succeed())
+		})
+
+		It("should fail if informers don't sync", func() {
+			checker := NewCacheSyncHealthz(&fakeSyncWaiter{false})
+			Expect(checker(nil)).To(MatchError(ContainSubstring("not synced")))
+		})
 	})
 })
 
-type fakeSyncWaiter bool
-
-func (f fakeSyncWaiter) WaitForCacheSync(_ context.Context) bool {
-	return bool(f)
+type fakeSyncWaiter struct {
+	value bool
 }
+
+func (f *fakeSyncWaiter) WaitForCacheSync(_ context.Context) bool { return f.value }
