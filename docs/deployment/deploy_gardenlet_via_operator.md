@@ -13,7 +13,7 @@ If you have used the [`gardener/controlplane` Helm chart](../../charts/gardener/
 ## Deployment of gardenlets
 
 Using this method, `gardener-operator` is only taking care of the very first deployment of gardenlet.
-Once running, the gardenlet leverages the [self upgrade](deploy_gardenlet_manually.md#self-upgrades) strategy in order to keep itself up-to-date.
+Once running, the gardenlet leverages the [self-upgrade](deploy_gardenlet_manually.md#self-upgrades) strategy in order to keep itself up-to-date.
 Concretely, `gardener-operator` only acts when there is no respective `Seed` resource yet.
 
 In order to request a gardenlet deployment, create following resource in the (virtual) garden cluster:
@@ -127,3 +127,20 @@ spec:
 > After successful deployment of gardenlet, `gardener-operator` will delete the `remote-cluster-kubeconfig` `Secret` and set `.spec.kubeconfigSecretRef` to `nil`.
 > This is because the kubeconfig will never ever be needed anymore (`gardener-operator` is only responsible for initial deployment, and gardenlet updates itself with an in-cluster kubeconfig).
 > In case your landscape is managed via a GitOps approach, you might want to reflect this change in your repository.
+
+### Forceful Re-Deployment
+
+In certain scenarios, it might be necessary to forcefully re-deploy the gardenlet.
+For example, in case the gardenlet client certificate has been expired or is "lost", or the gardenlet `Deployment` has been "accidentally" (😉) deleted from the seed cluster.
+
+You can trigger the forceful re-deployment by annotating the `Gardenlet` with
+
+```
+gardener.cloud/operation=force-redeploy
+```
+
+> [!TIP]
+> Do not forget to create the kubeconfig `Secret` and re-add the `.spec.kubeconfigSecretRef` to the `Gardenlet` specification if this is a remote cluster.
+
+`gardener-operator` will remove the operation annotation after it's done.
+Just like after the initial deployment, it'll also delete the kubeconfig `Secret` and set `.spec.kubeconfigSecretRef` to `nil`, see above.
