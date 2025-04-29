@@ -309,11 +309,12 @@ var _ = Describe("validation", func() {
 		It("should allow to set required field for kind Extension", func() {
 			strategy := core.BeforeKubeAPIServer
 			resource := core.ControllerResource{
-				Kind:             extensionsv1alpha1.ExtensionResource,
-				Type:             "arbitrary",
-				GloballyEnabled:  ptr.To(true),
-				AutoEnable:       []core.ClusterType{core.ClusterTypeShoot},
-				ReconcileTimeout: &metav1.Duration{Duration: 10 * time.Second},
+				Kind:                 extensionsv1alpha1.ExtensionResource,
+				Type:                 "arbitrary",
+				GloballyEnabled:      ptr.To(true),
+				AutoEnable:           []core.ClusterType{core.ClusterTypeShoot},
+				ClusterCompatibility: []core.ClusterType{core.ClusterTypeShoot},
+				ReconcileTimeout:     &metav1.Duration{Duration: 10 * time.Second},
 				Lifecycle: &core.ControllerResourceLifecycle{
 					Reconcile: &strategy,
 				},
@@ -354,7 +355,8 @@ var _ = Describe("validation", func() {
 
 		It("should allow setting valid autoEnable modes", func() {
 			resources[0].Kind = "Extension"
-			resources[0].AutoEnable = []core.ClusterType{"shoot", "seed"}
+			resources[0].AutoEnable = []core.ClusterType{core.ClusterTypeShoot, core.ClusterTypeSeed}
+			resources[0].ClusterCompatibility = []core.ClusterType{core.ClusterTypeShoot, core.ClusterTypeSeed}
 
 			Expect(ValidateControllerResources(resources, validModes, fldPath)).To(BeEmpty())
 		})
@@ -365,7 +367,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateControllerResources(resources, validModes, fldPath)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("resources[0].autoEnable[0]"),
 			}))))
@@ -374,12 +376,34 @@ var _ = Describe("validation", func() {
 		It("should forbid setting an duplicate autoEnable", func() {
 			resources[0].Kind = "Extension"
 			resources[0].AutoEnable = []core.ClusterType{"shoot", "shoot"}
+			resources[0].ClusterCompatibility = []core.ClusterType{core.ClusterTypeShoot, core.ClusterTypeSeed}
 
 			errorList := ValidateControllerResources(resources, validModes, fldPath)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeDuplicate),
 				"Field": Equal("resources[0].autoEnable[1]"),
+			}))))
+		})
+
+		It("should allow setting a compatible cluster type for autoEnable", func() {
+			resources[0].Kind = "Extension"
+			resources[0].AutoEnable = []core.ClusterType{core.ClusterTypeShoot}
+			resources[0].ClusterCompatibility = []core.ClusterType{core.ClusterTypeShoot}
+
+			Expect(ValidateControllerResources(resources, validModes, fldPath)).To(BeEmpty())
+		})
+
+		It("should forbid setting an incompatible cluster type for autoEnable", func() {
+			resources[0].Kind = "Extension"
+			resources[0].AutoEnable = []core.ClusterType{core.ClusterTypeShoot}
+			resources[0].ClusterCompatibility = []core.ClusterType{core.ClusterTypeSeed}
+
+			errorList := ValidateControllerResources(resources, validModes, fldPath)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("resources[0].autoEnable[0]"),
 			}))))
 		})
 

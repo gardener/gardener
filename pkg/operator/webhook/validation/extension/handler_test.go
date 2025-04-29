@@ -66,11 +66,6 @@ var _ = Describe("Handler", func() {
 					Field:   "spec.resources[0].autoEnable",
 				},
 				metav1.StatusCause{
-					Type:    "FieldValueNotSupported",
-					Message: "Unsupported value: \"invalid\": supported values: \"garden\", \"seed\", \"shoot\"",
-					Field:   "spec.resources[0].autoEnable[1]",
-				},
-				metav1.StatusCause{
 					Type:    "FieldValueDuplicate",
 					Message: "Duplicate value: \"Worker/test\"",
 					Field:   "spec.resources[1]",
@@ -79,11 +74,6 @@ var _ = Describe("Handler", func() {
 					Type:    "FieldValueForbidden",
 					Message: "Forbidden: field must not be set when kind != Extension",
 					Field:   "spec.resources[1].autoEnable",
-				},
-				metav1.StatusCause{
-					Type:    "FieldValueNotSupported",
-					Message: "Unsupported value: \"invalid\": supported values: \"garden\", \"seed\", \"shoot\"",
-					Field:   "spec.resources[1].autoEnable[1]",
 				},
 			))
 		})
