@@ -18,6 +18,14 @@ import (
 	"github.com/gardener/gardener/test/framework"
 )
 
+// DefaultManagedSeedName returns the name of the managed seed used in e2e tests
+func DefaultManagedSeedName() string {
+	if os.Getenv("OPERATOR_SEED") == "true" {
+		return "e2e-mngdseed-op"
+	}
+	return "e2e-managedseed"
+}
+
 // DefaultGardenConfig returns a GardenerConfig framework object with default values for the e2e tests.
 func DefaultGardenConfig(projectNamespace string) *framework.GardenerConfig {
 	return &framework.GardenerConfig{

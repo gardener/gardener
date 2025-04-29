@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 )
@@ -243,4 +245,44 @@ func (t *TestContext) ForSeed(seed *gardencorev1beta1.Seed) *SeedContext {
 	s.Log = s.Log.WithValues("seed", client.ObjectKeyFromObject(seed))
 
 	return s
+}
+
+// ManagedSeedContext is a test case-specific TestContext that carries test state and helpers through multiple steps of the
+// same test case, i.e., within the same ordered container.
+// Accordingly, ManagedSeedContext values must not be reused across multiple test cases (ordered containers). Make sure to
+// declare ManagedSeedContext variables within the ordered container and initialize them during ginkgo tree construction,
+// e.g., in a BeforeTestSetup node or when invoking a shared `test` func.
+//
+// A ManagedSeedContext can be initialized using TestContext.ForManagedSeed.
+type ManagedSeedContext struct {
+	TestContext
+
+	// ManagedSeed object the test is working with
+	ManagedSeed *seedmanagementv1alpha1.ManagedSeed
+
+	// ShootContext object the managed seed is referencing
+	ShootContext *ShootContext
+
+	// Seed object the managed seed is referencing
+	SeedContext *SeedContext
+}
+
+// ForManagedSeed copies the receiver ShootContext for deriving a ManagedSeedContext.
+func (t *TestContext) ForManagedSeed(baseShoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed) *ManagedSeedContext {
+	seed := &gardencorev1beta1.Seed{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: managedSeed.Name,
+		},
+	}
+
+	ms := &ManagedSeedContext{
+		TestContext:  *t,
+		ManagedSeed:  managedSeed,
+		SeedContext:  t.ForSeed(seed),
+		ShootContext: t.ForShoot(baseShoot),
+	}
+
+	t.Log = t.Log.WithValues("managedSeed", client.ObjectKeyFromObject(managedSeed))
+
+	return ms
 }
