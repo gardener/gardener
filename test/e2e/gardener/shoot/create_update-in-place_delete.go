@@ -64,7 +64,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			verifyNodeKubernetesVersions(s)
 
 			var (
-				beforeStartMachinePodNames    = ItShouldFindAllMachinePodsBefore(s)
+				machinePodNamesBeforeTest     = ItShouldFindAllMachinePodsBefore(s)
 				cloudProfile                  *gardencorev1beta1.CloudProfile
 				controlPlaneKubernetesVersion string
 				poolNameToKubernetesVersion   map[string]string
@@ -123,7 +123,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			verifyNodeKubernetesVersions(s)
 			inclusterclient.VerifyInClusterAccessToAPIServer(s)
 
-			ItShouldCompareMachinePodNamesAfter(s, beforeStartMachinePodNames)
+			ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
 			ItShouldVerifyInPlaceUpdateCompletion(s)
 
 			ItShouldDeleteShoot(s)

@@ -128,7 +128,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}, SpecTimeout(5*time.Minute))
 	}
 
-	beforeStartMachinePodNames := ItShouldFindAllMachinePodsBefore(s)
+	machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s)
 
 	ItShouldAnnotateShoot(s, map[string]string{
 		v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
@@ -152,7 +152,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	ItShouldCompareMachinePodNamesAfter(s, beforeStartMachinePodNames)
+	ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
 
 	It("Ensure all worker pools are marked as 'pending for roll out'", func() {
 		for _, worker := range s.Shoot.Spec.Provider.Workers {
@@ -309,11 +309,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				shootVerifiers = append(shootVerifiers, &rotation.SSHKeypairVerifier{ShootContext: s})
 			}
 
-			var beforeStartMachinePodNames sets.Set[string]
+			var machinePodNamesBeforeTest sets.Set[string]
 
 			if inPlaceUpdate {
 				ItShouldRewriteOsRelease(s)
-				beforeStartMachinePodNames = ItShouldFindAllMachinePodsBefore(s)
+				machinePodNamesBeforeTest = ItShouldFindAllMachinePodsBefore(s)
 				ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
 			}
 
@@ -325,7 +325,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			}
 
 			if inPlaceUpdate {
-				ItShouldCompareMachinePodNamesAfter(s, beforeStartMachinePodNames)
+				ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
 				ItShouldVerifyInPlaceUpdateCompletion(s)
 			}
 

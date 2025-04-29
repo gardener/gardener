@@ -304,7 +304,7 @@ func ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s *ShootContext) {
 func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
 	GinkgoHelper()
 
-	beforeStartMachinePodNames := sets.New[string]()
+	machinePodNamesBeforeTest := sets.New[string]()
 
 	It("Find all machine pods to ensure later that they weren't rolled out", func(ctx SpecContext) {
 		beforeStartMachinePodList := &corev1.PodList{}
@@ -314,30 +314,30 @@ func ItShouldFindAllMachinePodsBefore(s *ShootContext) sets.Set[string] {
 		})).Should(Succeed())
 
 		for _, item := range beforeStartMachinePodList.Items {
-			beforeStartMachinePodNames.Insert(item.Name)
+			machinePodNamesBeforeTest.Insert(item.Name)
 		}
 	}, SpecTimeout(time.Minute))
 
-	return beforeStartMachinePodNames
+	return machinePodNamesBeforeTest
 }
 
 // ItShouldCompareMachinePodNamesAfter compares the machine pod names before and after running the required tests.
-func ItShouldCompareMachinePodNamesAfter(s *ShootContext, beforeStartMachinePodNames sets.Set[string]) {
+func ItShouldCompareMachinePodNamesAfter(s *ShootContext, machinePodNamesBeforeTest sets.Set[string]) {
 	GinkgoHelper()
 
 	It("Compare machine pod names", func(ctx SpecContext) {
-		afterStartMachinePodList := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(afterStartMachinePodList, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
+		machinePodListAfterTest := &corev1.PodList{}
+		Eventually(ctx, s.SeedKomega.List(machinePodListAfterTest, client.InNamespace(s.Shoot.Status.TechnicalID), client.MatchingLabels{
 			"app":              "machine",
 			"machine-provider": "local",
 		})).Should(Succeed())
 
-		afterStartMachinePodNames := sets.New[string]()
-		for _, item := range afterStartMachinePodList.Items {
-			afterStartMachinePodNames.Insert(item.Name)
+		machinePodNamesAfterTest := sets.New[string]()
+		for _, item := range machinePodListAfterTest.Items {
+			machinePodNamesAfterTest.Insert(item.Name)
 		}
 
-		Expect(beforeStartMachinePodNames.UnsortedList()).To(ConsistOf(afterStartMachinePodNames.UnsortedList()))
+		Expect(machinePodNamesBeforeTest.UnsortedList()).To(ConsistOf(machinePodNamesAfterTest.UnsortedList()))
 	}, SpecTimeout(time.Minute))
 }
 
