@@ -374,22 +374,24 @@ var _ = Describe("ManagedSeed", func() {
 					Expect(kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 				})
 
-				It("should add the label for the parent seed name", func() {
+				It("should add the label for the parent and the current seed name", func() {
 					Expect(admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
 
 					Expect(managedSeed.Labels).To(And(
 						HaveKeyWithValue("name.seed.gardener.cloud/parent-seed", "true"),
+						HaveKeyWithValue("name.seed.gardener.cloud/foo", "true"),
 					))
 				})
 
 				It("should remove unneeded labels", func() {
-					metav1.SetMetaDataLabel(&seed.ObjectMeta, "name.seed.gardener.cloud/foo", "true")
+					metav1.SetMetaDataLabel(&seed.ObjectMeta, "name.seed.gardener.cloud/bar", "true")
 
 					Expect(admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)).To(Succeed())
 
 					Expect(managedSeed.Labels).To(And(
 						HaveKeyWithValue("name.seed.gardener.cloud/parent-seed", "true"),
-						Not(HaveKey("name.seed.gardener.cloud/foo")),
+						HaveKeyWithValue("name.seed.gardener.cloud/foo", "true"),
+						Not(HaveKey("name.seed.gardener.cloud/bar")),
 					))
 				})
 			})
