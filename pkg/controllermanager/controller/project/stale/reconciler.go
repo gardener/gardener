@@ -157,14 +157,13 @@ func (r *Reconciler) projectInUseDueToWorkloadIdentities(ctx context.Context, na
 		ctx,
 		workloadIdentityList,
 		client.InNamespace(namespace),
-		gardenerutils.UncontrolledSecretSelector,
 		client.MatchingLabels{v1beta1constants.LabelCredentialsBindingReference: "true"},
 	)
 	if err != nil {
 		return false, err
 	}
 
-	workloadIdentityNames := sets.New[string]()
+	workloadIdentityNames := make(sets.Set[string], len(workloadIdentityList.Items))
 	for _, workloadIdentity := range workloadIdentityList.Items {
 		workloadIdentityNames.Insert(workloadIdentity.Name)
 	}
