@@ -234,6 +234,7 @@ This reconciler is enabled by default and works as follows:
     1. `Shoot` resources.
     1. `BackupEntry` resources.
     1. `Secret` resources that are referenced by a `SecretBinding` or a `CredentialsBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
+    1. `WorkloadIdentity` resources that are referenced a `CredentialsBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. `Quota` resources that are referenced by a `SecretBinding` or a `CredentialsBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. The time period when the project was used for the last time (`status.lastActivityTimestamp`) is longer than the configured `minimumLifetimeDays`
 
