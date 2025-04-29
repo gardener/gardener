@@ -156,6 +156,9 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 	if err := mgr.AddHealthzCheck("apiserver-healthz", gardenerhealthz.NewAPIServerHealthz(ctx, sourceClientSet.RESTClient())); err != nil {
 		return err
 	}
+	if err := mgr.AddHealthzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+		return err
+	}
 	if err := mgr.AddReadyzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
@@ -196,7 +199,10 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 			return fmt.Errorf("could not instantiate target cluster: %w", err)
 		}
 
-		log.Info("Setting up ready check for target informer sync")
+		log.Info("Setting up checks for target informer sync")
+		if err := mgr.AddHealthzCheck("target-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(targetCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+			return err
+		}
 		if err := mgr.AddReadyzCheck("target-informer-sync", gardenerhealthz.NewCacheSyncHealthz(targetCluster.GetCache())); err != nil {
 			return err
 		}

@@ -34,6 +34,9 @@ func NewCacheSyncHealthz(cacheSyncWaiter cacheSyncWaiter) healthz.Checker {
 	return func(_ *http.Request) error { return cacheSyncCheckFunc(cacheSyncWaiter) }
 }
 
+// DefaultCacheSyncDeadline is a default deadline for the cache sync healthz check.
+const DefaultCacheSyncDeadline = 3 * time.Minute
+
 // Now is an alias for time.Now.
 // Exposed for unit testing.
 var Now = time.Now

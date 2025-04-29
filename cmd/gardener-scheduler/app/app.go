@@ -119,10 +119,13 @@ func run(ctx context.Context, log logr.Logger, cfg *schedulerconfigv1alpha1.Sche
 	}
 
 	log.Info("Adding health check endpoints to manager")
-	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 		return err
 	}
-	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+	if err := mgr.AddHealthzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+		return err
+	}
+	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
 
