@@ -160,7 +160,7 @@ spec:
     #   requests:
     #     maxNonMutatingInflight: 400
     #     maxMutatingInflight: 200
-    #   enableAnonymousAuthentication: false # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+    #   enableAnonymousAuthentication: false # Deprecated, will be removed in a future version of gardener. Use anonymous authentication configuration instead, see: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration
     #   serviceAccountConfig:
     #     issuer: foo
     #     acceptedIssuers:
