@@ -98,11 +98,9 @@ func StringSet(s string) bool {
 	return len(s) != 0
 }
 
-// FileExists Checks if a file path exists and fail otherwise
+// FileExists Checks if a file path exists. Fails test if an error occurs.
 func FileExists(kc string) bool {
 	ok, err := Exists(kc)
-	// TODO(Rado): Comment says that the test fails if the file does not exist, but
-	// that's a lie. Why?
 	if err != nil {
 		ginkgo.Fail(err.Error())
 	}
