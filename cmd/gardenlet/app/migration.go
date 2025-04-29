@@ -8,10 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -19,10 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
