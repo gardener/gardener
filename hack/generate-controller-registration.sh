@@ -13,8 +13,11 @@ Usage:
 generate-controller-registration [options] <name> <chart-dir> <version> <dest> <kind-and-type> [kinds-and-types ...]
 
     -h, --help        Display this help and exit.
+    -c, --compatible-clusters[=shoot,seed]
+                      Sets the cluster-compatibility types for the controller registration. Possible values are:
+                      'shoot' and 'seed'
     -m, --auto-enable-modes[=shoot,seed]
-                      Sets the auto-enable mode for the controller registration. Possible values are:
+                      Sets the auto-enable types for the controller registration. Possible values are:
                       'shoot' and 'seed'
     -e, --pod-security-enforce[=pod-security-standard]
                       Sets 'security.gardener.cloud/pod-security-enforce' annotation in the
@@ -37,11 +40,19 @@ EOM
 POD_SECURITY_ENFORCE="baseline"
 INJECT_GARDEN_KUBECONFIG=false
 AUTO_ENABLE_MODES=""
+CLUSTER_COMPATIBILITY_TYPES=""
 
 while :; do
   case $1 in
     -h|--help)
       usage
+      ;;
+    -c|--compatible-clusters)
+      CLUSTER_COMPATIBILITY_TYPES=$2
+      shift
+      ;;
+    --compatible-clusters=*)
+      CLUSTER_COMPATIBILITY_TYPES=${1#*=}
       ;;
     -m|--auto-enable-modes)
       AUTO_ENABLE_MODES=$2
@@ -70,13 +81,26 @@ while :; do
   shift
 done
 
-IFS=', ' read -r -a AUTO_ENABLE_MODES_ARRAY <<< "$AUTO_ENABLE_MODES"
-for mode in "${AUTO_ENABLE_MODES_ARRAY[@]}"; do
-  case $mode in
+IFS=', ' read -r -a CLUSTER_COMPATIBILITY_TYPES_ARRAY <<< "$CLUSTER_COMPATIBILITY_TYPES"
+for type in "${CLUSTER_COMPATIBILITY_TYPES_ARRAY[@]}"; do
+  case $type in
     shoot|seed)
       ;;
     *)
-      echo "Invalid auto-enable mode: $mode"
+      echo "Invalid cluster-compatibility type: $type"
+      usage
+      ;;
+  esac
+done
+
+
+IFS=', ' read -r -a AUTO_ENABLE_MODES_ARRAY <<< "$AUTO_ENABLE_MODES"
+for type in "${AUTO_ENABLE_MODES_ARRAY[@]}"; do
+  case $type in
+    shoot|seed)
+      ;;
+    *)
+      echo "Invalid auto-enable type: $type"
       usage
       ;;
   esac
@@ -165,19 +189,26 @@ spec:
   resources:
 EOM
 
-MODE_STRING=""
-if [[ -n $AUTO_ENABLE_MODES ]]; then
-  MODE_STRING=$(printf "autoEnable: [%s]" "${AUTO_ENABLE_MODES}")
-fi
-
 for kind_and_type in "${KINDS_AND_TYPES[@]}"; do
   KIND="$(echo "$kind_and_type" | cut -d ':' -f 1)"
   TYPE="$(echo "$kind_and_type" | cut -d ':' -f 2)"
   cat <<EOM >> "$DEST"
   - kind: $KIND
     type: $TYPE
-    $MODE_STRING
 EOM
+
+  if [[ -n $CLUSTER_COMPATIBILITY_TYPES ]]; then
+    cat <<EOM >> "$DEST"
+    $(printf "clusterCompatibility: [%s]" "${CLUSTER_COMPATIBILITY_TYPES}")
+EOM
+  fi
+
+  if [[ -n $AUTO_ENABLE_MODES ]]; then
+    cat <<EOM >> "$DEST"
+    $(printf "autoEnable: [%s]" "${AUTO_ENABLE_MODES}")
+EOM
+  fi
+
 done
 
 echo "Successfully generated controller registration at $DEST"
