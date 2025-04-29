@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -117,7 +116,7 @@ func wantMachineWatch(isAutonomousShootCluster bool, restMapper meta.RESTMapper)
 }
 
 func machineAPIPresent(restMapper meta.RESTMapper) (bool, error) {
-	if _, err := restMapper.KindsFor(schema.GroupVersionResource{Group: machinev1alpha1.GroupName, Version: machinev1alpha1.SchemeGroupVersion.Version, Resource: "machines"}); err != nil {
+	if _, err := restMapper.KindsFor(machinev1alpha1.SchemeGroupVersion.WithResource("machines")); err != nil {
 		if !meta.IsNoMatchError(err) {
 			return false, fmt.Errorf("failed checking %s APIs: %w", machinev1alpha1.GroupName, err)
 		}
