@@ -7,15 +7,11 @@ package validator_test
 import (
 	"context"
 
-	mockauthorizer "github.com/gardener/gardener/third_party/mock/apiserver/authorization/authorizer"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/utils/ptr"
 
@@ -38,11 +34,7 @@ var _ = Describe("validator", func() {
 			backupBucket            gardencorev1beta1.BackupBucket
 			seed                    core.Seed
 			shoot                   gardencorev1beta1.Shoot
-
-			ctx      context.Context
-			ctrl     *gomock.Controller
-			auth     *mockauthorizer.MockAuthorizer
-			userInfo = &user.DefaultInfo{Name: "foo"}
+			ctx                     context.Context
 
 			backupBucketName     = "backupbucket"
 			seedName             = "seed"
@@ -93,17 +85,6 @@ var _ = Describe("validator", func() {
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 
 			ctx = context.Background()
-			ctrl = gomock.NewController(GinkgoT())
-			auth = nil
-			admissionHandler.SetAuthorizer(auth)
-		})
-
-		JustBeforeEach(func() {
-			if auth == nil {
-				auth = mockauthorizer.NewMockAuthorizer(ctrl)
-				auth.EXPECT().Authorize(ctx, gomock.Any()).Return(authorizer.DecisionAllow, "", nil).AnyTimes()
-			}
-			admissionHandler.SetAuthorizer(auth)
 		})
 
 		Context("Seed Update", func() {
@@ -159,10 +140,6 @@ var _ = Describe("validator", func() {
 					}
 
 					Expect(securityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(workloadIdentity)).To(Succeed())
-					otherWorkloadIdentity := workloadIdentity.DeepCopy()
-					otherWorkloadIdentity.Name = "other-workload-identity"
-					Expect(securityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(otherWorkloadIdentity)).To(Succeed())
-					auth = mockauthorizer.NewMockAuthorizer(ctrl)
 				})
 
 				It("should allow WorkloadIdentity with provider same as Seed backup provider to be used as backup credentials", func() {
@@ -180,57 +157,18 @@ var _ = Describe("validator", func() {
 					Expect(err).To(MatchError(ContainSubstring("seed using backup of type \"anotherProvider\" cannot use WorkloadIdentity of type \"provider\"")))
 				})
 
-				It("should deny the change if user has no permissions to read old credentials", func() {
-					authorizeAttributes := authorizer.AttributesRecord{
-						User:            userInfo,
-						APIGroup:        "security.gardener.cloud",
-						APIVersion:      "v1alpha1",
-						Resource:        "workloadidentities",
-						Namespace:       namespaceName,
-						Name:            workloadIdentityName,
-						Verb:            "get",
-						ResourceRequest: true,
+				It("should forbid seed update if backup credentials reference a non-existent secret", func() {
+					newSeed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  namespaceName,
+						Name:       "bar",
 					}
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-					auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
-
-					newSeed.Spec.Backup.CredentialsRef.Name = "other-workload-identity"
-					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", newSeed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
 					err := admissionHandler.Validate(ctx, attrs, nil)
 					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(ContainSubstring("user %q is not allowed to read the previously referenced WorkloadIdentity %q", userInfo.Name, namespaceName+"/"+workloadIdentityName)))
-				})
-
-				It("should deny the change if user has no permissions to read new credentials", func() {
-					oldAuthorizeAttributes := authorizer.AttributesRecord{
-						User:            userInfo,
-						APIGroup:        "security.gardener.cloud",
-						APIVersion:      "v1alpha1",
-						Resource:        "workloadidentities",
-						Namespace:       namespaceName,
-						Name:            workloadIdentityName,
-						Verb:            "get",
-						ResourceRequest: true,
-					}
-					auth.EXPECT().Authorize(ctx, oldAuthorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
-
-					newAuthorizeAttributes := authorizer.AttributesRecord{
-						User:            userInfo,
-						APIGroup:        "security.gardener.cloud",
-						APIVersion:      "v1alpha1",
-						Resource:        "workloadidentities",
-						Namespace:       namespaceName,
-						Name:            "other-workload-identity",
-						Verb:            "get",
-						ResourceRequest: true,
-					}
-					auth.EXPECT().Authorize(ctx, newAuthorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
-
-					newSeed.Spec.Backup.CredentialsRef.Name = "other-workload-identity"
-					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", newSeed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-					err := admissionHandler.Validate(ctx, attrs, nil)
-					Expect(err).To(BeForbiddenError())
-					Expect(err).To(MatchError(ContainSubstring("user %q is not allowed to read the newly referenced WorkloadIdentity %q", userInfo.Name, namespaceName+"/other-workload-identity")))
+					Expect(err).To(MatchError(ContainSubstring("it is not allowed to reference a non-existent secret: secret \"bar\" not found")))
 				})
 			})
 		})
@@ -355,21 +293,8 @@ var _ = Describe("validator", func() {
 	})
 
 	Describe("#ValidateInitialization", func() {
-		It("should return error if no Authorizer is set", func() {
-			dr, _ := New()
-			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
-			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
-			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
-
-			err := dr.ValidateInitialization()
-
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("missing authorizer"))
-		})
-
 		It("should return error if no ShootLister or SeedLister is set", func() {
 			dr, _ := New()
-			dr.SetAuthorizer(mockauthorizer.NewMockAuthorizer(gomock.NewController(GinkgoT())))
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 
@@ -381,7 +306,6 @@ var _ = Describe("validator", func() {
 
 		It("should return error if no WorkloadIdentityLister is set", func() {
 			dr, _ := New()
-			dr.SetAuthorizer(mockauthorizer.NewMockAuthorizer(gomock.NewController(GinkgoT())))
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 
@@ -393,7 +317,6 @@ var _ = Describe("validator", func() {
 
 		It("should return error if no SecretLister is set", func() {
 			dr, _ := New()
-			dr.SetAuthorizer(mockauthorizer.NewMockAuthorizer(gomock.NewController(GinkgoT())))
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
 
@@ -405,7 +328,6 @@ var _ = Describe("validator", func() {
 
 		It("should not return error if ShootLister, SeedLister, and WorkloadIdentityLister are set", func() {
 			dr, _ := New()
-			dr.SetAuthorizer(mockauthorizer.NewMockAuthorizer(gomock.NewController(GinkgoT())))
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
