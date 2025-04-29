@@ -284,6 +284,8 @@ spec:
     #     additionalScopes: [ profile, offline_access ]
     #     secretRef:
     #       name: gardener-dashboard-oidc
+    #     certificateAuthoritySecretRef:
+    #       name: gardener-dashboard-oidc-ca
     #   terminal:
     #     allowedHosts:
     #     - "*.seed.local.gardener.cloud"

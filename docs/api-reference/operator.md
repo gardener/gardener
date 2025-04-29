@@ -774,7 +774,7 @@ Kubernetes core/v1.LocalObjectReference
 </tr>
 <tr>
 <td>
-<code>caSecretRef</code></br>
+<code>certificateAuthoritySecretRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#localobjectreference-v1-core">
 Kubernetes core/v1.LocalObjectReference
@@ -783,7 +783,7 @@ Kubernetes core/v1.LocalObjectReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>CaSecretRef is the reference to a secret in the garden namespace containing a custom CA certificate under the &ldquo;ca.crt&rdquo; key</p>
+<p>CertificateAuthoritySecretRef is the reference to a secret in the garden namespace containing a custom CA certificate under the &ldquo;ca.crt&rdquo; key</p>
 </td>
 </tr>
 </tbody>

@@ -368,8 +368,8 @@ func (in *DashboardOIDC) DeepCopyInto(out *DashboardOIDC) {
 		copy(*out, *in)
 	}
 	out.SecretRef = in.SecretRef
-	if in.CaSecretRef != nil {
-		in, out := &in.CaSecretRef, &out.CaSecretRef
+	if in.CertificateAuthoritySecretRef != nil {
+		in, out := &in.CertificateAuthoritySecretRef, &out.CertificateAuthoritySecretRef
 		*out = new(corev1.LocalObjectReference)
 		**out = **in
 	}

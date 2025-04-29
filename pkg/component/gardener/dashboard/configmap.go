@@ -127,10 +127,10 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 			},
 		}
 
-		if g.values.OIDC.CaSecretRef != nil {
+		if g.values.OIDC.CertificateAuthoritySecretRef != nil {
 			caSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      g.values.OIDC.CaSecretRef.Name,
+					Name:      g.values.OIDC.CertificateAuthoritySecretRef.Name,
 					Namespace: g.namespace,
 				},
 			}

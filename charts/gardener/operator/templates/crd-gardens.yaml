@@ -1136,10 +1136,10 @@ spec:
                                 items:
                                   type: string
                                 type: array
-                              caSecretRef:
-                                description: CaSecretRef is the reference to a secret
-                                  in the garden namespace containing a custom CA certificate
-                                  under the "ca.crt" key
+                              certificateAuthoritySecretRef:
+                                description: CertificateAuthoritySecretRef is the
+                                  reference to a secret in the garden namespace containing
+                                  a custom CA certificate under the "ca.crt" key
                                 properties:
                                   name:
                                     default: ""
