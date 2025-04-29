@@ -5608,6 +5608,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 				})
+
+				It("should forbid setting in-place update strategy for a new worker pool if the InPlaceNodeUpdates feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, false))
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, newShoot.Spec.Provider.Workers[0])
+					newShoot.Spec.Provider.Workers[1].Name = "worker-2"
+					newShoot.Spec.Provider.Workers[1].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.provider.workers[1].updateStrategy"),
+						"Detail": Equal("can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."),
+					}))))
+				})
+
+				It("should allow using the in-place update strategy for an existing worker pool even if the InPlaceNodeUpdates feature gate is disabled", func() {
+					DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.InPlaceNodeUpdates, false))
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, shoot.Spec.Provider.Workers[0])
+					shoot.Spec.Provider.Workers[1].Name = "worker-2"
+					shoot.Spec.Provider.Workers[1].UpdateStrategy = ptr.To(core.AutoInPlaceUpdate)
+					newShoot := prepareShootForUpdate(shoot)
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
 			})
 
 			Context("worker pool update strategy is either AutoInplaceUpdate or ManualInPlaceUpdate", func() {
