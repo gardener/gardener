@@ -1601,7 +1601,7 @@ var _ = Describe("Validation Tests", func() {
 							Entry("invalid (default<0)", &gardencorev1beta1.WatchCacheSizes{
 								Default: ptr.To(negativeSize),
 							}, ConsistOf(
-								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 							)),
 
 							// APIGroup unset (core group)
@@ -1623,7 +1623,7 @@ var _ = Describe("Validation Tests", func() {
 									CacheSize: negativeSize,
 								}},
 							}, ConsistOf(
-								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 							)),
 							Entry("invalid (core/resource empty)", &gardencorev1beta1.WatchCacheSizes{
 								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
@@ -1656,7 +1656,7 @@ var _ = Describe("Validation Tests", func() {
 									CacheSize: negativeSize,
 								}},
 							}, ConsistOf(
-								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 							)),
 							Entry("invalid (apps/resource empty)", &gardencorev1beta1.WatchCacheSizes{
 								Resources: []gardencorev1beta1.ResourceWatchCacheSize{{
@@ -1695,12 +1695,12 @@ var _ = Describe("Validation Tests", func() {
 							Entry("invalid (verbosity<0)", &gardencorev1beta1.APIServerLogging{
 								Verbosity: ptr.To(negativeSize),
 							}, ConsistOf(
-								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.verbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 							)),
 							Entry("invalid (httpAccessVerbosity<0)", &gardencorev1beta1.APIServerLogging{
 								HTTPAccessVerbosity: ptr.To(negativeSize),
 							}, ConsistOf(
-								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.logging.httpAccessVerbosity"), int64(negativeSize), apivalidation.IsNegativeErrorMsg).WithOrigin("minimum"),
 							)),
 						)
 					})
