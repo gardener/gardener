@@ -35,8 +35,7 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, osc *extensions
 		return []byte(userData), nil, nil, nil, err
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		extensionUnits, extensionFiles, inPlaceUpdates, err := a.handleReconcileOSC(osc)
-		return nil, extensionUnits, extensionFiles, inPlaceUpdates, err
+		return a.handleReconcileOSC(osc)
 
 	default:
 		return nil, nil, nil, nil, fmt.Errorf("unknown purpose: %s", purpose)
@@ -79,13 +78,14 @@ systemctl daemon-reload
 	return operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script), nil
 }
 
-func (a *actuator) handleReconcileOSC(osc *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, *extensionsv1alpha1.InPlaceUpdatesStatus, error) {
+func (a *actuator) handleReconcileOSC(osc *extensionsv1alpha1.OperatingSystemConfig) ([]byte, []extensionsv1alpha1.Unit, []extensionsv1alpha1.File, *extensionsv1alpha1.InPlaceUpdatesStatus, error) {
 	if osc.Spec.InPlaceUpdates == nil {
-		return nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 
 	// provider-local does not add any additional units or additional files
 	return nil,
+		nil,
 		nil,
 		&extensionsv1alpha1.InPlaceUpdatesStatus{
 			OSUpdate: &extensionsv1alpha1.OSUpdate{
