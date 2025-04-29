@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
@@ -31,4 +32,30 @@ type cacheSyncWaiter interface {
 // NewCacheSyncHealthz returns a new healthz.Checker that will pass only if all informers in the given cacheSyncWaiter sync.
 func NewCacheSyncHealthz(cacheSyncWaiter cacheSyncWaiter) healthz.Checker {
 	return func(_ *http.Request) error { return cacheSyncCheckFunc(cacheSyncWaiter) }
+}
+
+// Now is an alias for time.Now.
+// Exposed for unit testing.
+var Now = time.Now
+
+// NewCacheSyncHealthzWithDeadline is like NewCacheSyncHealthz, however, it fails when at least one informer in the
+// given cacheSyncWaiter is not synced for at least the given deadline.
+func NewCacheSyncHealthzWithDeadline(cacheSyncWaiter cacheSyncWaiter, deadline time.Duration) healthz.Checker {
+	var notSyncedSince *time.Time
+
+	return func(_ *http.Request) error {
+		if err := cacheSyncCheckFunc(cacheSyncWaiter); err != nil {
+			if notSyncedSince == nil {
+				notSyncedSince = ptr.To(Now())
+			}
+
+			if Now().Sub(*notSyncedSince) >= deadline {
+				return err
+			}
+			return nil
+		}
+
+		notSyncedSince = nil
+		return nil
+	}
 }
