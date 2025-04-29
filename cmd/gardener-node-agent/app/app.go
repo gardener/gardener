@@ -137,20 +137,6 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 		return fmt.Errorf("failed fetching name of node: %w", err)
 	}
 
-	var (
-		nodeCacheOptions  = cache.ByObject{Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})}
-		leaseCacheOptions = cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
-		podCacheOptions   = cache.ByObject{Field: fields.OneTermEqualSelector(indexer.PodNodeName, hostName)}
-	)
-
-	if nodeName != "" {
-		log.Info("Node already registered, found name", "nodeName", nodeName)
-		nodeCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: nodeName})
-		nodeCacheOptions.Label = nil
-		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenerutils.NodeAgentLeaseName(nodeName)})
-		podCacheOptions.Field = fields.OneTermEqualSelector(indexer.PodNodeName, nodeName)
-	}
-
 	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Logger:                  log,
@@ -162,16 +148,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 			BindAddress:   net.JoinHostPort(cfg.Server.Metrics.BindAddress, strconv.Itoa(cfg.Server.Metrics.Port)),
 			ExtraHandlers: extraHandlers,
 		},
-
-		Cache: cache.Options{ByObject: map[client.Object]cache.ByObject{
-			&corev1.Secret{}: {
-				Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
-				Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: cfg.Controllers.OperatingSystemConfig.SecretName}),
-			},
-			&corev1.Node{}:          nodeCacheOptions,
-			&coordinationv1.Lease{}: leaseCacheOptions,
-			&corev1.Pod{}:           podCacheOptions,
-		}},
+		Cache:          cache.Options{ByObject: getCache(log, hostName, nodeName, cfg.Controllers.OperatingSystemConfig.SecretName)},
 		LeaderElection: false,
 	})
 	if err != nil {
@@ -192,7 +169,7 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 	}
 
 	log.Info("Adding field indexes to informers")
-	if err := addAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
+	if err := addAllFieldIndexes(ctx, mgr.GetFieldIndexer(), nodeName); err != nil {
 		return fmt.Errorf("failed adding indexes: %w", err)
 	}
 
@@ -221,6 +198,35 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *n
 
 	log.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func getCache(log logr.Logger, hostName, nodeName, secretName string) map[client.Object]cache.ByObject {
+	var (
+		nodeCacheOptions  = cache.ByObject{Label: labels.SelectorFromSet(labels.Set{corev1.LabelHostname: hostName})}
+		leaseCacheOptions = cache.ByObject{Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}}}
+	)
+
+	if nodeName != "" {
+		log.Info("Node already registered, found name", "nodeName", nodeName)
+		nodeCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: nodeName})
+		nodeCacheOptions.Label = nil
+		leaseCacheOptions.Field = fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: gardenerutils.NodeAgentLeaseName(nodeName)})
+	}
+
+	out := map[client.Object]cache.ByObject{
+		&corev1.Secret{}: {
+			Namespaces: map[string]cache.Config{metav1.NamespaceSystem: {}},
+			Field:      fields.SelectorFromSet(fields.Set{metav1.ObjectNameField: secretName}),
+		},
+		&corev1.Node{}:          nodeCacheOptions,
+		&coordinationv1.Lease{}: leaseCacheOptions,
+	}
+
+	if nodeName != "" {
+		out[&corev1.Pod{}] = cache.ByObject{Field: fields.OneTermEqualSelector(indexer.PodNodeName, nodeName)}
+	}
+
+	return out
 }
 
 func getRESTConfig(ctx context.Context, log logr.Logger, fs afero.Afero, cfg *nodeagentconfigv1alpha1.NodeAgentConfiguration) (*rest.Config, error) {
@@ -471,7 +477,11 @@ func fetchNodeName(ctx context.Context, restConfig *rest.Config, hostName string
 	return node.Name, nil
 }
 
-func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer, nodeName string) error {
+	if nodeName == "" {
+		return nil
+	}
+
 	for _, fn := range []func(context.Context, client.FieldIndexer) error{
 		// core/v1 API group
 		indexer.AddPodNodeName,
