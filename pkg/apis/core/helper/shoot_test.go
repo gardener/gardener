@@ -594,4 +594,15 @@ var _ = Describe("Helper", func() {
 		Entry("with AutoInPlaceUpdate update strategy", ptr.To(core.AutoInPlaceUpdate), true),
 		Entry("with ManualInPlaceUpdate  update strategy", ptr.To(core.ManualInPlaceUpdate), true),
 	)
+
+	DescribeTable("#IsLegacyAnonymousAuthenticationEnabled",
+		func(kubeAPIServerConfig *core.KubeAPIServerConfig, expected bool) {
+			Expect(IsLegacyAnonymousAuthenticationEnabled(kubeAPIServerConfig)).To(Equal(expected))
+		},
+		Entry("kubeAPIServerConfig is nil", nil, false),
+		Entry("kubeAPIServerConfig is empty", &core.KubeAPIServerConfig{}, false),
+		Entry("EnableAnonymousAuthentication is nil", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: nil}, false),
+		Entry("EnableAnonymousAuthentication is false", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(false)}, false),
+		Entry("EnableAnonymousAuthentication is true", &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}, true),
+	)
 })
