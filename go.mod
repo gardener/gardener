@@ -15,7 +15,7 @@ require (
 	github.com/gardener/cert-management v0.17.5
 	github.com/gardener/dependency-watchdog v1.4.0
 	github.com/gardener/etcd-druid/api v0.29.1
-	github.com/gardener/machine-controller-manager v0.57.2
+	github.com/gardener/machine-controller-manager v0.58.0
 	github.com/gardener/terminal-controller-manager v0.34.0
 	github.com/go-jose/go-jose/v4 v4.1.0
 	github.com/go-logr/logr v1.4.2
