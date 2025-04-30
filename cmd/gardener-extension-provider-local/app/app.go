@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -241,6 +242,14 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 					return fmt.Errorf("failed creating garden cluster object: %w", err)
 				}
 
+				log.Info("Setting up checks for garden cluster cache")
+				if err := mgr.AddHealthzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, gardenCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+					return err
+				}
+				if err := mgr.AddReadyzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthz(gardenCluster.GetCache())); err != nil {
+					return err
+				}
+
 				log.Info("Adding garden cluster to manager")
 				if err := mgr.Add(gardenCluster); err != nil {
 					return fmt.Errorf("failed adding garden cluster to manager: %w", err)
@@ -278,11 +287,14 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(nil, &localhealthcheck.DefaultAddOptions.ExtensionClass)
 			reconcileOpts.Completed().Apply(&localextensionshootcontroller.DefaultAddOptions.IgnoreOperationAnnotation, &localextensionshootcontroller.DefaultAddOptions.ExtensionClass)
 
-			if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
-				return fmt.Errorf("could not add readycheck for informers: %w", err)
-			}
 			if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 				return fmt.Errorf("could not add healthcheck: %w", err)
+			}
+			if err := mgr.AddHealthzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+				return err
+			}
+			if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+				return fmt.Errorf("could not add readycheck for informers: %w", err)
 			}
 			if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
 				return fmt.Errorf("could not add readycheck of webhook to manager: %w", err)
