@@ -957,7 +957,6 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 					c.seed.Spec.Networks.Nodes,
 					c.seed.Spec.Networks.Pods,
 					c.seed.Spec.Networks.Services,
-					workerless,
 					!haVPN,
 				)...)
 			}
@@ -972,7 +971,6 @@ func (c *validationContext) validateShootNetworks(a admission.Attributes, worker
 					c.seed.Spec.Networks.Nodes,
 					c.seed.Spec.Networks.Pods,
 					c.seed.Spec.Networks.Services,
-					workerless,
 					!haVPN,
 				)...)
 

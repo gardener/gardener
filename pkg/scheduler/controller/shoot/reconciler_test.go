@@ -728,18 +728,6 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(bestSeed).To(BeNil())
 		})
 
-		It("should fail because it cannot find a seed cluster due to no shoot networks specified and no defaults", func() {
-			seed.Spec.Networks.ShootDefaults = nil
-			shoot.Spec.Networking = &gardencorev1beta1.Networking{}
-
-			Expect(fakeGardenClient.Create(ctx, cloudProfile)).To(Succeed())
-			Expect(fakeGardenClient.Create(ctx, seed)).To(Succeed())
-
-			bestSeed, err := reconciler.DetermineSeed(ctx, log, shoot)
-			Expect(err).To(HaveOccurred())
-			Expect(bestSeed).To(BeNil())
-		})
-
 		It("should fail because it cannot find a seed cluster due to region that no seed supports", func() {
 			shoot.Spec.Region = "another-region"
 
