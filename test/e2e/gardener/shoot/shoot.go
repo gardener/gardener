@@ -6,8 +6,6 @@ package shoot
 
 import (
 	"flag"
-	"fmt"
-	"slices"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -24,7 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/provider-local/machine-provider/local"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
@@ -342,52 +339,6 @@ func ItShouldCompareMachinePodNamesAfter(s *ShootContext, machinePodNamesBeforeT
 
 		Expect(machinePodNamesBeforeTest.UnsortedList()).To(ConsistOf(machinePodNamesAfterTest.UnsortedList()))
 	}, SpecTimeout(time.Minute))
-}
-
-// ItShouldRewriteOS rewrites the /etc/os-release file for all machine pods to ensure that the version is overwritten for tests.
-// This is a workaround for the fact that the machine image version is not available in the os-release file in the local provider.
-func ItShouldRewriteOS(s *ShootContext) {
-	GinkgoHelper()
-
-	It("should rewrite the /etc/os-release for all machines", func(ctx SpecContext) {
-		podList := &corev1.PodList{}
-		Eventually(ctx, s.SeedKomega.List(podList,
-			client.InNamespace(s.Shoot.Status.TechnicalID),
-			client.MatchingLabels{
-				"app":              "machine",
-				"machine-provider": "local",
-			},
-		)).Should(Succeed())
-
-		for _, pod := range podList.Items {
-			node := &corev1.Node{}
-			Eventually(func() error {
-				return s.ShootClient.Get(ctx, client.ObjectKey{Namespace: pod.Namespace, Name: pod.Name}, node)
-			}).Should(Succeed(), "should get node for pod %s", pod.Name)
-
-			Expect(node.Labels).To(HaveKey(v1beta1constants.LabelWorkerPool))
-
-			poolIndex := slices.IndexFunc(s.Shoot.Spec.Provider.Workers, func(pool gardencorev1beta1.Worker) bool {
-				return pool.Name == node.Labels[v1beta1constants.LabelWorkerPool]
-			})
-			Expect(poolIndex).To(BeNumerically(">", -1))
-
-			_, _, err := s.SeedClientSet.PodExecutor().Execute(ctx,
-				pod.Namespace,
-				pod.Name,
-				local.MachinePodContainerName,
-				"sed",
-				"-i", "-E",
-				fmt.Sprintf(
-					`s/^PRETTY_NAME="[^"]*"/PRETTY_NAME="Machine Image Version %s (version overwritten for tests, check VERSION_ID for actual version)"/`,
-					*s.Shoot.Spec.Provider.Workers[poolIndex].Machine.Image.Version,
-				),
-				"/etc/os-release",
-			)
-
-			Expect(err).NotTo(HaveOccurred(), "should rewrite /etc/os-release for pod %s", pod.Name)
-		}
-	}, SpecTimeout(2*time.Minute))
 }
 
 // ItShouldVerifyInPlaceUpdateStart verifies that the starting of in-place update  by checking the

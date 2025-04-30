@@ -312,7 +312,6 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			var machinePodNamesBeforeTest sets.Set[string]
 
 			if inPlaceUpdate {
-				ItShouldRewriteOS(s)
 				machinePodNamesBeforeTest = ItShouldFindAllMachinePodsBefore(s)
 				ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
 			}

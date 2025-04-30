@@ -112,6 +112,7 @@ rules:
   - jobs
   - pods
   - pods/log
+  - pods/exec
   - mutatingwebhookconfigurations
   - customresourcedefinitions
   - networkpolicies

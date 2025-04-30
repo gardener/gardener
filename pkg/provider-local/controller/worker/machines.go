@@ -24,6 +24,7 @@ import (
 	api "github.com/gardener/gardener/pkg/provider-local/apis/local"
 	"github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	"github.com/gardener/gardener/pkg/provider-local/local"
+	machineproviderlocal "github.com/gardener/gardener/pkg/provider-local/machine-provider/local"
 )
 
 // DeployMachineClasses generates and creates the local provider specific machine classes.
@@ -202,7 +203,36 @@ func (w *workerDelegate) generateMachineConfig(ctx context.Context) error {
 	return nil
 }
 
-func (w *workerDelegate) PreReconcileHook(_ context.Context) error  { return nil }
-func (w *workerDelegate) PostReconcileHook(_ context.Context) error { return nil }
-func (w *workerDelegate) PreDeleteHook(_ context.Context) error     { return nil }
-func (w *workerDelegate) PostDeleteHook(_ context.Context) error    { return nil }
+func (w *workerDelegate) PreReconcileHook(_ context.Context) error { return nil }
+func (w *workerDelegate) PostReconcileHook(ctx context.Context) error {
+	// Rewrite the /etc/os-release file for all machine pods to ensure that the version reflects the current machine image version for in-place update tests.
+	// Overwrite only if Machine Image Version is not present to prevent overwriting the new version after an in-place update.
+
+	podList := &corev1.PodList{}
+	if err := w.client.List(ctx, podList, client.InNamespace(w.worker.Namespace), client.MatchingLabels{
+		"app":              "machine",
+		"machine-provider": "local",
+	}); err != nil {
+		return fmt.Errorf("failed to list machine pods: %w", err)
+	}
+
+	for _, pod := range podList.Items {
+		_, _, err := w.podExecutor.Execute(ctx,
+			pod.Namespace,
+			pod.Name,
+			machineproviderlocal.MachinePodContainerName,
+			"sh",
+			"-c",
+			`if ! grep -q "Machine Image Version" /etc/os-release; then sed -i 's/^PRETTY_NAME="[^"]*"/PRETTY_NAME="Machine Image Version 1.0.0 (version overwritten for tests, check VERSION_ID for actual version)"/' /etc/os-release; fi`,
+		)
+
+		if err != nil {
+			return fmt.Errorf("failed to execute command in machine pod %s: %w", pod.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func (w *workerDelegate) PreDeleteHook(_ context.Context) error  { return nil }
+func (w *workerDelegate) PostDeleteHook(_ context.Context) error { return nil }
