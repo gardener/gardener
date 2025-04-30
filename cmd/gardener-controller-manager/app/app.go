@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
@@ -212,6 +213,41 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 			}
 		}
 
+		managedSeeds := &seedmanagementv1alpha1.ManagedSeedList{}
+		if err := mgr.GetClient().List(ctx, managedSeeds); err != nil {
+			return fmt.Errorf("failed listing objects: %w", err)
+		}
+		if err := meta.EachListItem(managedSeeds, func(o runtime.Object) error {
+			fns = append(fns, func(ctx context.Context) error {
+				obj := o.(client.Object)
+
+				logger := mgr.GetLogger().WithValues("objectKey", client.ObjectKeyFromObject(obj))
+				logger.Info("Check the seed name label for itself")
+				label := v1beta1constants.LabelPrefixSeedName + obj.GetName()
+				logger = logger.WithValues("label", label)
+				if _, ok := obj.GetLabels()[label]; ok {
+					logger.Info("Label exists, send an empty patch to the ManagedSeed so that the mutating webhook can remove the superfluous seed name label")
+					emptyPatch := client.MergeFrom(obj)
+					if err := mgr.GetClient().Patch(ctx, obj, emptyPatch); err != nil {
+						return fmt.Errorf("failed to patch managed seed %s: %w", client.ObjectKeyFromObject(obj), err)
+					}
+
+					// assert the mutating webhook runs on the correct version and removed the label
+					managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+					if err := mgr.GetClient().Get(ctx, client.ObjectKey{Name: obj.GetName()}, managedSeed); err != nil {
+						return fmt.Errorf("failed to get managed seed %s: %w", client.ObjectKeyFromObject(obj), err)
+					} else if _, ok := managedSeed.GetLabels()[label]; ok {
+						return fmt.Errorf("the label %s on the managed seed %s is still present, the mutating webhook is running in an older version", label, client.ObjectKeyFromObject(obj))
+					}
+				} else {
+					logger.Info("The label on the managed seed is not present, nothing to do")
+				}
+				return nil
+			})
+			return nil
+		}); err != nil {
+			return fmt.Errorf("failed preparing managed seed mutating tasks for %T: %w", managedSeeds, err)
+		}
 		return flow.Parallel(fns...)(ctx)
 	})); err != nil {
 		return fmt.Errorf("failed adding seed name label removal runnable to manager: %w", err)
