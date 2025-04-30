@@ -58,26 +58,26 @@ func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[stri
 	}, SpecTimeout(time.Minute))
 }
 
-// func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[string]string, key, value string) {
-// 	GinkgoHelper()
-//
-// 	It("Ensure logs do not exist", func(ctx SpecContext) {
-// 		// No easy way to guarantee that a log won't eventually be in Vali except waiting.
-// 		time.Sleep(10 * time.Second)
-//
-// 		Eventually(ctx, func() error {
-// 			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, s.ControlPlaneNamespace, key, value, s.SeedClientSet)
-// 			if err != nil {
-// 				return err
-// 			}
-//
-// 			logCount := logging.GetLogCountFromSearchResponse(searchResponse)
-//
-// 			if logCount > 0 {
-// 				return fmt.Errorf("found logs in Vali for %s=%s when they were unexpected", key, value)
-// 			}
-//
-// 			return nil
-// 		}).Should(Succeed())
-// 	}, SpecTimeout(time.Minute))
-// }
+func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[string]string, key, value string) {
+	GinkgoHelper()
+
+	It("Ensure logs do not exist", func(ctx SpecContext) {
+		// No easy way to guarantee that a log won't eventually be in Vali except waiting.
+		time.Sleep(10 * time.Second)
+
+		Eventually(ctx, func() error {
+			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, s.ControlPlaneNamespace, key, value, s.SeedClientSet)
+			if err != nil {
+				return err
+			}
+
+			logCount := logging.GetLogCountFromSearchResponse(searchResponse)
+
+			if logCount > 0 {
+				return fmt.Errorf("found logs in Vali for %s=%s when they were unexpected", key, value)
+			}
+
+			return nil
+		}).Should(Succeed())
+	}, SpecTimeout(time.Minute))
+}
