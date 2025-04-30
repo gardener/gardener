@@ -27,5 +27,5 @@ func (o *Options) Validate() error { return nil }
 func (o *Options) Complete() error { return nil }
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
-	fs.BoolVarP(&o.WithTokenSecret, "with-token-secret", "", false, "Display the token secret")
+	fs.BoolVar(&o.WithTokenSecret, "with-token-secret", false, "Display the token secret")
 }

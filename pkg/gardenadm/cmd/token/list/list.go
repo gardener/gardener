@@ -29,11 +29,11 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "Display a list of all bootstrap tokens available on the server.",
-		Long: `The "list" command retrieves and displays all bootstrap tokens currently available on the server. 
+		Short: "Display a list of all bootstrap tokens available on the cluster.",
+		Long: `The "list" command retrieves and displays all bootstrap tokens currently available on the cluster. 
 Bootstrap tokens are used for authenticating nodes during the join process.`,
 
-		Example: `# To list all bootstrap tokens available on the server:
+		Example: `# To list all bootstrap tokens available on the cluster:
 gardenadm token list
 
 # To include additional sensitive details such as token secrets:

@@ -47,11 +47,9 @@ func (o *Options) Validate() error {
 	}
 
 	for _, tokenValue := range o.TokenValues {
-		switch {
-		case validBootstrapToken.Match([]byte(tokenValue)):
-		case validBootstrapTokenID.Match([]byte(tokenValue)):
-		case validBootstrapTokenSecret.Match([]byte(tokenValue)):
-		default:
+		if !validBootstrapToken.Match([]byte(tokenValue)) &&
+			!validBootstrapTokenID.Match([]byte(tokenValue)) &&
+			!validBootstrapTokenSecret.Match([]byte(tokenValue)) {
 			return fmt.Errorf("invalid token value %q - accepted formats are %q or %q or %q", tokenValue, validBootstrapToken, validBootstrapTokenID, validBootstrapTokenSecret)
 		}
 	}

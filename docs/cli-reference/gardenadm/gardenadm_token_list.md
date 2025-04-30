@@ -1,10 +1,10 @@
 ## gardenadm token list
 
-Display a list of all bootstrap tokens available on the server.
+Display a list of all bootstrap tokens available on the cluster.
 
 ### Synopsis
 
-The "list" command retrieves and displays all bootstrap tokens currently available on the server. 
+The "list" command retrieves and displays all bootstrap tokens currently available on the cluster. 
 Bootstrap tokens are used for authenticating nodes during the join process.
 
 ```
@@ -14,7 +14,7 @@ gardenadm token list [flags]
 ### Examples
 
 ```
-# To list all bootstrap tokens available on the server:
+# To list all bootstrap tokens available on the cluster:
 gardenadm token list
 
 # To include additional sensitive details such as token secrets:

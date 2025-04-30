@@ -24,8 +24,8 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create [token]",
-		Short: "Create a bootstrap token on the server for joining a node",
-		Long: `The [token] is the bootstrap token to be created on the server.
+		Short: "Create a bootstrap token on the cluster for joining a node",
+		Long: `The [token] is the bootstrap token to be created on the cluster.
 This token is used for securely authenticating nodes or clients to the cluster.
 It must follow the format "[a-z0-9]{6}.[a-z0-9]{16}" to ensure compatibility with Kubernetes bootstrap token requirements.
 If no [token] is provided, gardenadm will automatically generate a secure random token for you.`,

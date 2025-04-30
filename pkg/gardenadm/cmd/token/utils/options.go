@@ -53,6 +53,6 @@ func (o *Options) Complete() error { return nil }
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVarP(&o.Description, "description", "d", "Used for joining nodes via `gardenadm join`", "Description for the bootstrap token")
 	fs.DurationVarP(&o.Validity, "validity", "v", time.Hour, "Validity duration of the bootstrap token")
-	fs.BoolVarP(&o.PrintJoinCommand, "print-join-command", "c", false, "Instead of only printing the token, print the full machine-readable `gardenadm join` command that can be copied and ran on a machine that should join the cluster")
-	fs.StringVarP(&o.WorkerPoolName, "join-command-worker-pool-name", "w", "worker", "Name of the worker pool to use for the join command. If not provided, it is defaulted to 'worker'.")
+	fs.BoolVarP(&o.PrintJoinCommand, "print-join-command", "j", false, "Instead of only printing the token, print the full machine-readable `gardenadm join` command that can be copied and ran on a machine that should join the cluster")
+	fs.StringVarP(&o.WorkerPoolName, "worker-pool-name", "w", "worker", "Name of the worker pool to use for the join command. If not provided, it is defaulted to 'worker'.")
 }
