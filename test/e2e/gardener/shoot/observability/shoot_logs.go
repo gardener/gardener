@@ -7,13 +7,13 @@ package observability
 import (
 	. "github.com/onsi/ginkgo/v2"
 	"k8s.io/apimachinery/pkg/labels"
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
 	. "github.com/gardener/gardener/test/e2e/gardener/shoot/observability/internal"
 	"github.com/gardener/gardener/test/framework/resources/templates"
-	utilrand "k8s.io/apimachinery/pkg/util/rand"
 )
 
 var (
