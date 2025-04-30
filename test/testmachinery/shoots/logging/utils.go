@@ -1,14 +1,20 @@
 // SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
-
 package logging
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/test/framework"
 	"github.com/onsi/ginkgo/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,10 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // Checks whether required logging resources are present.
@@ -29,15 +31,12 @@ func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interfac
 	if _, err := getFluentBitDaemonSet(ctx, k8sSeedClient); err != nil {
 		return false, err
 	}
-
 	vali := &appsv1.StatefulSet{}
 	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, vali); err != nil {
 		return false, err
 	}
-
 	return true, nil
 }
-
 func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) {
 	enabled, err := hasRequiredResources(ctx, k8sSeedClient)
 	if !enabled {
@@ -46,16 +45,69 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 	}
 }
 
+// WaitUntilValiReceivesLogs waits until the vali instance in <valiNamespace> receives <expected> logs for <key>=<value>
+func WaitUntilValiReceivesLogs(ctx context.Context, interval time.Duration, shootFramework *framework.ShootFramework, valiLabels map[string]string, valiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
+	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
+		search, err := shootFramework.GetValiLogs(ctx, valiLabels, valiNamespace, key, value, c)
+		if err != nil {
+			return retry.SevereError(err)
+		}
+		var actual int
+		for _, result := range search.Data.Result {
+			currentStr, ok := result.Value[1].(string)
+			if !ok {
+				return retry.SevereError(fmt.Errorf("Data.Result.Value[1] is not a string for %s=%s", key, value))
+			}
+			current, err := strconv.Atoi(currentStr)
+			if err != nil {
+				return retry.SevereError(fmt.Errorf("Data.Result.Value[1] string is not parsable to integer for %s=%s", key, value))
+			}
+			actual += current
+		}
+
+		log := shootFramework.Logger.WithValues("expected", expected, "actual", actual)
+
+		if expected > actual {
+			log.Info("Waiting to receive all expected logs")
+			return retry.MinorError(fmt.Errorf("received only %d/%d logs", actual, expected))
+		} else if expected+delta < actual {
+			return retry.SevereError(fmt.Errorf("expected to receive %d logs but was %d", expected, actual))
+		}
+
+		log.Info("Received logs", "delta", delta)
+		return retry.Ok()
+	})
+
+	if err != nil {
+		// ctx might have been cancelled already, make sure we still dump logs, so use context.Background()
+		dumpLogsCtx, dumpLogsCancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer dumpLogsCancel()
+
+		shootFramework.Logger.Info("Dump Vali logs")
+		if dumpError := shootFramework.DumpLogsForPodInNamespace(dumpLogsCtx, c, valiNamespace, "vali-0",
+			&corev1.PodLogOptions{Container: "vali"}); dumpError != nil {
+			shootFramework.Logger.Error(dumpError, "Error dumping logs for pod")
+		}
+
+		shootFramework.Logger.Info("Dump Fluent-bit logs")
+		labels := client.MatchingLabels{"app": "fluent-bit"}
+		if dumpError := shootFramework.DumpLogsForPodsWithLabelsInNamespace(dumpLogsCtx, c, "garden",
+			labels); dumpError != nil {
+			shootFramework.Logger.Error(dumpError, "Error dumping logs for pod")
+		}
+	}
+
+	return err
+}
+
 func encode(obj runtime.Object) []byte {
 	data, _ := json.Marshal(obj)
 	return data
 }
-
 func create(ctx context.Context, c client.Client, obj client.Object) error {
 	obj.SetResourceVersion("")
 	return client.IgnoreAlreadyExists(c.Create(ctx, obj))
 }
-
 func getShootNamespace(number int) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -63,7 +115,6 @@ func getShootNamespace(number int) *corev1.Namespace {
 		},
 	}
 }
-
 func getCluster(number int) *extensionsv1alpha1.Cluster {
 	shoot := &gardencorev1beta1.Shoot{
 		Spec: gardencorev1beta1.ShootSpec{
@@ -80,7 +131,6 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 			},
 		},
 	}
-
 	return &extensionsv1alpha1.Cluster{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Cluster",
@@ -102,7 +152,6 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 		},
 	}
 }
-
 func getLoggingShootService(number int) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -116,6 +165,22 @@ func getLoggingShootService(number int) *corev1.Service {
 	}
 }
 
+func getLogCountFromResult(search *framework.SearchResponse) (int, error) {
+	var totalLogs int
+	for _, result := range search.Data.Result {
+		currentStr, ok := result.Value[1].(string)
+		if !ok {
+			return totalLogs, fmt.Errorf("Data.Result.Value[1] is not a string")
+		}
+		current, err := strconv.Atoi(currentStr)
+		if err != nil {
+			return totalLogs, fmt.Errorf("Data.Result.Value[1] string is not parsable to integer")
+		}
+		totalLogs += current
+	}
+	return totalLogs, nil
+}
+
 func getConfigMapName(volumes []corev1.Volume, wantedVolumeName string) string {
 	for _, volume := range volumes {
 		if volume.Name == wantedVolumeName && volume.ConfigMap != nil {
@@ -124,7 +189,6 @@ func getConfigMapName(volumes []corev1.Volume, wantedVolumeName string) string {
 	}
 	return ""
 }
-
 func getSecretNameFromVolume(volumes []corev1.Volume, wantedVolumeName string) string {
 	for _, volume := range volumes {
 		if volume.Name == wantedVolumeName && volume.Secret != nil {
@@ -133,7 +197,6 @@ func getSecretNameFromVolume(volumes []corev1.Volume, wantedVolumeName string) s
 	}
 	return ""
 }
-
 func newEmptyDirVolume(name, size string) corev1.Volume {
 	return corev1.Volume{
 		Name: name,
@@ -144,7 +207,6 @@ func newEmptyDirVolume(name, size string) corev1.Volume {
 		},
 	}
 }
-
 func newPodAntiAffinity(matchLabels map[string]string) *corev1.PodAntiAffinity {
 	return &corev1.PodAntiAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -157,7 +219,6 @@ func newPodAntiAffinity(matchLabels map[string]string) *corev1.PodAntiAffinity {
 		},
 	}
 }
-
 func newGardenNamespace(namespace string) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{

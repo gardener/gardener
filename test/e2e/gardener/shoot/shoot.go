@@ -32,7 +32,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/utils/access"
-	shootutils "github.com/gardener/gardener/test/utils/shoots"
 	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
@@ -262,7 +261,7 @@ func ItShouldInitializeSeedClient(s *ShootContext) {
 func ItShouldComputeControlPlaneNamespace(s *ShootContext) {
 	GinkgoHelper()
 
-	It("Compute technical ID", func(ctx SpecContext) {
+	It("Compute Control Plane Namespace", func(ctx SpecContext) {
 		ns := &corev1.Namespace{}
 
 		err := s.GardenClient.Get(ctx, client.ObjectKey{Name: s.Shoot.Namespace}, ns)
@@ -272,7 +271,7 @@ func ItShouldComputeControlPlaneNamespace(s *ShootContext) {
 		projectName, ok := ns.Labels[v1beta1constants.ProjectName]
 		Expect(ok).To(BeTrue(), "namespace %q did not contain a project label", ns.Name)
 
-		namespace := shootutils.ComputeTechnicalID(projectName, s.Shoot)
+		namespace := gardenerutils.ComputeTechnicalID(projectName, s.Shoot)
 
 		s.WithControlPlaneNamespace(namespace)
 	}, SpecTimeout(time.Minute))
