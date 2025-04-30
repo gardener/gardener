@@ -159,6 +159,10 @@ This document provides a checklist for them that you can walk through.
 
    Enable leader election unconditionally for controllers independently from the number of replicas or from the high availability configurations. Having leader election enabled even for a single replica Deployment prevents having two Pods active at the same time. Otherwise, there are some corner cases that can result in two active Pods - Deployment rolling update or kubelet stops running on a Node and is not able to terminate the old replica while kube-controller-manager creates a new replica to match the Deployment's desired replicas count.
 
+8. **Do not set a `podAntiAffinity` in the deployment**
+
+   Spread across nodes is handled by the TopologySpreadConstraint configuration. Setting a `podAntiAffinity` additionally makes it harder to run the component locally or in smaller setups with only a single node. 
+
 ## Scalability
 
 1. **Provide resource requirements** ([example](https://github.com/gardener/gardener/blob/b0de7db96ad436fe32c25daae5e8cb552dac351f/pkg/component/metricsserver/metrics_server.go#L345-L353))
