@@ -163,12 +163,13 @@ func (r *Reconciler) projectInUseDueToWorkloadIdentities(ctx context.Context, na
 		return false, err
 	}
 
+	if len(workloadIdentityList.Items) == 0 {
+		return false, nil
+	}
+
 	workloadIdentityNames := make(sets.Set[string], len(workloadIdentityList.Items))
 	for _, workloadIdentity := range workloadIdentityList.Items {
 		workloadIdentityNames.Insert(workloadIdentity.Name)
-	}
-	if workloadIdentityNames.Len() == 0 {
-		return false, nil
 	}
 
 	return r.relevantCredentialsBindingsInUse(ctx, func(credentialsBinding securityv1alpha1.CredentialsBinding) bool {
@@ -221,12 +222,13 @@ func (r *Reconciler) projectInUseDueToSecrets(ctx context.Context, namespace str
 		return false, err
 	}
 
-	credentialsBindingsSecretNames := sets.New[string]()
+	if len(credentialsBindingRefSecretList.Items) == 0 {
+		return false, nil
+	}
+
+	credentialsBindingsSecretNames := make(sets.Set[string], len(credentialsBindingRefSecretList.Items))
 	for _, secret := range credentialsBindingRefSecretList.Items {
 		credentialsBindingsSecretNames.Insert(secret.Name)
-	}
-	if credentialsBindingsSecretNames.Len() == 0 {
-		return false, nil
 	}
 
 	return r.relevantCredentialsBindingsInUse(ctx, func(credentialsBinding securityv1alpha1.CredentialsBinding) bool {
