@@ -5,8 +5,6 @@
 package observability
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo/v2"
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -18,17 +16,13 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 )
 
-var parentCtx context.Context
-
 var (
 	valiLabels = map[string]string{
 		"app":  "vali",
 		"role": "logging",
 	}
-	randomLength        = 11
-	loggerName          = "logger"
-	shootLogsCount      = 100
-	shootDeltaLogsCount = 0
+	randomLength   = 11
+	shootLogsCount = 100
 )
 
 const (
@@ -58,7 +52,7 @@ var _ = FDescribe("Observability Tests", Ordered, Label("Observability", "defaul
 			"LoggerName":          gardenerLoggerName,
 			"HelmDeployNamespace": "kube-system",
 			"AppLabel":            gardenerLoggerAppLabel,
-			"LogsCount":           100,
+			"LogsCount":           shootLogsCount,
 			"LogsDuration":        "20s",
 			"AdditionalLabels": map[string]string{
 				"origin":                              "gardener",
@@ -72,7 +66,7 @@ var _ = FDescribe("Observability Tests", Ordered, Label("Observability", "defaul
 			"LoggerName":          nonGardenerLoggerName,
 			"HelmDeployNamespace": "kube-system",
 			"AppLabel":            nonGardenerLoggerAppLabel,
-			"LogsCount":           100,
+			"LogsCount":           shootLogsCount,
 			"LogsDuration":        "20s",
 		}
 		ItShouldRenderAndDeployTemplateToShoot(s, templates.LoggerAppName, loggerParams)
@@ -87,12 +81,13 @@ var _ = FDescribe("Observability Tests", Ordered, Label("Observability", "defaul
 		})
 		ItShouldWaitForPodsInShootToBeReady(s, "kube-system", nonGardenerLoggerLabels)
 
-		ItShouldWaitForLogsCountWithLabelToBeInVali(s, valiLabels, "pod_name", gardenerLoggerAppLabel+".*", 100)
+		ItShouldWaitForLogsCountWithLabelToBeInVali(s, valiLabels, "pod_name", gardenerLoggerAppLabel+".*", shootLogsCount)
 		ItShouldWaitForLogsWithLabelToNotBeInVali(s, valiLabels, "pod_name", nonGardenerLoggerAppLabel+".*")
 
 		ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "unit", "containerd.service")
 		ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "unit", "kubelet.service")
 
 		ItShouldDeleteShoot(s)
+		ItShouldWaitForShootToBeDeleted(s)
 	})
 })

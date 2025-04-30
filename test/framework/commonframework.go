@@ -6,7 +6,6 @@ package framework
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -84,7 +83,6 @@ func (f *CommonFramework) BeforeEach() {
 	}
 	FileExists(f.ResourcesDir)
 
-	fmt.Println("Creating templates dir using resource dir: ", f.ResourcesDir)
 	f.TemplatesDir = filepath.Join(f.ResourcesDir, "templates")
 
 	f.ChartDir = filepath.Join(f.ResourcesDir, "charts")
