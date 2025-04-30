@@ -10,11 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/test/framework"
 	"github.com/onsi/ginkgo/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +18,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/test/framework"
 )
 
 // Checks whether required logging resources are present.
@@ -35,8 +36,10 @@ func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interfac
 	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, vali); err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
+
 func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) {
 	enabled, err := hasRequiredResources(ctx, k8sSeedClient)
 	if !enabled {
@@ -104,10 +107,12 @@ func encode(obj runtime.Object) []byte {
 	data, _ := json.Marshal(obj)
 	return data
 }
+
 func create(ctx context.Context, c client.Client, obj client.Object) error {
 	obj.SetResourceVersion("")
 	return client.IgnoreAlreadyExists(c.Create(ctx, obj))
 }
+
 func getShootNamespace(number int) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -115,6 +120,7 @@ func getShootNamespace(number int) *corev1.Namespace {
 		},
 	}
 }
+
 func getCluster(number int) *extensionsv1alpha1.Cluster {
 	shoot := &gardencorev1beta1.Shoot{
 		Spec: gardencorev1beta1.ShootSpec{
@@ -131,6 +137,7 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 			},
 		},
 	}
+
 	return &extensionsv1alpha1.Cluster{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Cluster",
@@ -152,6 +159,7 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 		},
 	}
 }
+
 func getLoggingShootService(number int) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -165,22 +173,6 @@ func getLoggingShootService(number int) *corev1.Service {
 	}
 }
 
-func getLogCountFromResult(search *framework.SearchResponse) (int, error) {
-	var totalLogs int
-	for _, result := range search.Data.Result {
-		currentStr, ok := result.Value[1].(string)
-		if !ok {
-			return totalLogs, fmt.Errorf("Data.Result.Value[1] is not a string")
-		}
-		current, err := strconv.Atoi(currentStr)
-		if err != nil {
-			return totalLogs, fmt.Errorf("Data.Result.Value[1] string is not parsable to integer")
-		}
-		totalLogs += current
-	}
-	return totalLogs, nil
-}
-
 func getConfigMapName(volumes []corev1.Volume, wantedVolumeName string) string {
 	for _, volume := range volumes {
 		if volume.Name == wantedVolumeName && volume.ConfigMap != nil {
@@ -189,6 +181,7 @@ func getConfigMapName(volumes []corev1.Volume, wantedVolumeName string) string {
 	}
 	return ""
 }
+
 func getSecretNameFromVolume(volumes []corev1.Volume, wantedVolumeName string) string {
 	for _, volume := range volumes {
 		if volume.Name == wantedVolumeName && volume.Secret != nil {
@@ -197,6 +190,7 @@ func getSecretNameFromVolume(volumes []corev1.Volume, wantedVolumeName string) s
 	}
 	return ""
 }
+
 func newEmptyDirVolume(name, size string) corev1.Volume {
 	return corev1.Volume{
 		Name: name,
@@ -207,6 +201,7 @@ func newEmptyDirVolume(name, size string) corev1.Volume {
 		},
 	}
 }
+
 func newPodAntiAffinity(matchLabels map[string]string) *corev1.PodAntiAffinity {
 	return &corev1.PodAntiAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -219,6 +214,7 @@ func newPodAntiAffinity(matchLabels map[string]string) *corev1.PodAntiAffinity {
 		},
 	}
 }
+
 func newGardenNamespace(namespace string) *corev1.Namespace {
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{

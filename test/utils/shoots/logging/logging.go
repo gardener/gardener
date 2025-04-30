@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-
 	"github.com/gardener/gardener/test/framework"
 )
 
