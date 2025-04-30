@@ -52,7 +52,7 @@ Use the following command to prepare the `gardenadm` high-touch scenario:
 make gardenadm-high-touch-up
 ```
 
-This will first build the needed images, deploy 2 machine pods using the [`gardener-extension-provider-local-node` image](../../pkg/provider-local/node), and install the `gardenadm` binary on both of them.
+This will first build the needed images, deploy 2 machine pods using the [`gardener-extension-provider-local-node` image](../../pkg/provider-local/node), install the `gardenadm` binary on both of them, and copy the needed manifests to the `/gardenadm/resources` directory.
 
 Afterward, you can use `kubectl exec` to execute `gardenadm` commands on the machines:
 
@@ -61,6 +61,49 @@ $ kubectl -n gardenadm-high-touch exec -it machine-0 -- bash
 root@machine-0:/# gardenadm -h
 gardenadm bootstraps and manages autonomous shoot clusters in the Gardener project.
 ...
+
+root@machine-0:/# cat /gardenadm/resources/manifests.yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: CloudProfile
+metadata:
+  name: local
+...
+```
+
+### Bootstrapping a Single-Node Control Plane
+
+Use `gardenadm init` to bootstrap the first control plane node using the provided manifests:
+
+```shell
+root@machine-0:/# gardenadm init -d /gardenadm/resources
+...
+Your Shoot cluster control-plane has initialized successfully!
+...
+```
+
+### Connecting to the Autonomous Shoot Cluster
+
+The machine pod's shell environment is configured for easily connecting to the autonomous shoot cluster.
+Just execute `kubectl` within a `bash` shell in the machine pod:
+
+```shell
+$ kubectl -n gardenadm-high-touch exec -it machine-0 -- bash
+root@machine-0:/# kubectl get node
+NAME        STATUS   ROLES    AGE     VERSION
+machine-0   Ready    <none>   4m11s   v1.32.0
+```
+
+You can also copy the kubeconfig to your local machine and use a port-forward to connect to the cluster's API server:
+
+```shell
+$ kubectl -n gardenadm-high-touch exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/localhost/localhost:6443/' > /tmp/shoot--garden--root.conf
+$ kubectl -n gardenadm-high-touch port-forward pod/machine-0 6443:443
+
+# in a new terminal
+$ export KUBECONFIG=/tmp/shoot--garden--root.conf
+$ kubectl get no
+NAME        STATUS   ROLES    AGE   VERSION
+machine-0   Ready    <none>   10m   v1.32.0
 ```
 
 ## Medium-Touch Scenario
@@ -73,7 +116,7 @@ make gardenadm-medium-touch-up
 
 This will first build the needed images and then render the needed manifests for `gardenadm bootstrap` to the [`./example/gardenadm-local/medium-touch`](../../example/gardenadm-local/medium-touch) directory.
 
-Afterwards, you can use `go run` to execute `gardenadm` commands on your machine:
+Afterward, you can use `go run` to execute `gardenadm` commands on your machine:
 
 ```shell
 $ go run ./cmd/gardenadm -h
@@ -81,7 +124,7 @@ gardenadm bootstraps and manages autonomous shoot clusters in the Gardener proje
 ...
 ```
 
-## Running E2E Tests For `gardenadm`
+## Running E2E Tests for `gardenadm`
 
 Based on the described setup, you can execute the e2e test suite for `gardenadm`:
 
