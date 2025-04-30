@@ -8,16 +8,14 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
 	"time"
 
-	"html/template"
-
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 
 	"github.com/Masterminds/sprig/v3"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"

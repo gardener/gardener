@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/test/e2e/gardener"
-
 	"github.com/gardener/gardener/test/utils/shoots/logging"
 )
 
