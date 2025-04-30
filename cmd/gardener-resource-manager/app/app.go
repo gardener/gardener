@@ -22,6 +22,7 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version/verflag"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -156,7 +157,7 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 	if err := mgr.AddHealthzCheck("apiserver-healthz", gardenerhealthz.NewAPIServerHealthz(ctx, sourceClientSet.RESTClient())); err != nil {
 		return err
 	}
-	if err := mgr.AddHealthzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+	if err := mgr.AddHealthzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
 		return err
 	}
 	if err := mgr.AddReadyzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
@@ -200,7 +201,7 @@ func run(ctx context.Context, log logr.Logger, cfg *resourcemanagerconfigv1alpha
 		}
 
 		log.Info("Setting up checks for target informer sync")
-		if err := mgr.AddHealthzCheck("target-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(targetCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+		if err := mgr.AddHealthzCheck("target-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, targetCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
 			return err
 		}
 		if err := mgr.AddReadyzCheck("target-informer-sync", gardenerhealthz.NewCacheSyncHealthz(targetCluster.GetCache())); err != nil {

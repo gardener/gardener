@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-logr/logr"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
@@ -37,24 +39,22 @@ func NewCacheSyncHealthz(cacheSyncWaiter cacheSyncWaiter) healthz.Checker {
 // DefaultCacheSyncDeadline is a default deadline for the cache sync healthz check.
 const DefaultCacheSyncDeadline = 3 * time.Minute
 
-// Now is an alias for time.Now.
-// Exposed for unit testing.
-var Now = time.Now
-
 // NewCacheSyncHealthzWithDeadline is like NewCacheSyncHealthz, however, it fails when at least one informer in the
 // given cacheSyncWaiter is not synced for at least the given deadline.
-func NewCacheSyncHealthzWithDeadline(cacheSyncWaiter cacheSyncWaiter, deadline time.Duration) healthz.Checker {
+func NewCacheSyncHealthzWithDeadline(log logr.Logger, clock clock.Clock, cacheSyncWaiter cacheSyncWaiter, deadline time.Duration) healthz.Checker {
 	var notSyncedSince *time.Time
 
 	return func(_ *http.Request) error {
 		if err := cacheSyncCheckFunc(cacheSyncWaiter); err != nil {
 			if notSyncedSince == nil {
-				notSyncedSince = ptr.To(Now())
+				notSyncedSince = ptr.To(clock.Now())
 			}
 
-			if Now().Sub(*notSyncedSince) >= deadline {
+			if clock.Now().Sub(*notSyncedSince) >= deadline {
 				return err
 			}
+
+			log.WithName("cache-sync-healthz").Info("Cache sync check failed, but deadline not yet exceeded", "notSyncedSince", notSyncedSince, "deadline", deadline, "error", err)
 			return nil
 		}
 

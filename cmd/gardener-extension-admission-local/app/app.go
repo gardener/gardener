@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/component-base/version/verflag"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -138,7 +139,7 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 					return err
 				}
 
-				if err := mgr.AddHealthzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(sourceCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+				if err := mgr.AddHealthzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, sourceCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
 					return err
 				}
 				if err := mgr.AddReadyzCheck("source-informer-sync", gardenerhealthz.NewCacheSyncHealthz(sourceCluster.GetCache())); err != nil {
@@ -158,7 +159,7 @@ func NewAdmissionCommand(ctx context.Context) *cobra.Command {
 			if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 				return fmt.Errorf("could not add healthcheck: %w", err)
 			}
-			if err := mgr.AddHealthzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+			if err := mgr.AddHealthzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
 				return err
 			}
 			if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {

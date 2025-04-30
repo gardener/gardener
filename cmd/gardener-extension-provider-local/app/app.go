@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -242,7 +243,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				}
 
 				log.Info("Setting up checks for garden cluster cache")
-				if err := mgr.AddHealthzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(gardenCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+				if err := mgr.AddHealthzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, gardenCluster.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
 					return err
 				}
 				if err := mgr.AddReadyzCheck("garden-informer-sync", gardenerhealthz.NewCacheSyncHealthz(gardenCluster.GetCache())); err != nil {
@@ -289,7 +290,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 				return fmt.Errorf("could not add healthcheck: %w", err)
 			}
-			if err := mgr.AddHealthzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+			if err := mgr.AddHealthzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
 				return err
 			}
 			if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {

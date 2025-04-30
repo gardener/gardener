@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/component-base/version/verflag"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -122,7 +123,7 @@ func run(ctx context.Context, log logr.Logger, cfg *schedulerconfigv1alpha1.Sche
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
 		return err
 	}
-	if err := mgr.AddHealthzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
+	if err := mgr.AddHealthzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthzWithDeadline(mgr.GetLogger(), clock.RealClock{}, mgr.GetCache(), gardenerhealthz.DefaultCacheSyncDeadline)); err != nil {
 		return err
 	}
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {

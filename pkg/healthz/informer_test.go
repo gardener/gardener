@@ -8,12 +8,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	. "github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Informer", func() {
@@ -31,37 +32,37 @@ var _ = Describe("Informer", func() {
 
 	Describe("#NewCacheSyncHealthzWithDeadline", func() {
 		var (
-			deadline = time.Minute
-			checker  healthz.Checker
+			log       = logr.Discard()
+			fakeClock *testclock.FakeClock
+			deadline  = time.Minute
+			checker   healthz.Checker
 		)
 
+		BeforeEach(func() {
+			fakeClock = testclock.NewFakeClock(time.Now())
+		})
+
 		It("should succeed if all informers sync", func() {
-			checker = NewCacheSyncHealthzWithDeadline(&fakeSyncWaiter{true}, deadline)
+			checker = NewCacheSyncHealthzWithDeadline(log, fakeClock, &fakeSyncWaiter{true}, deadline)
 			Expect(checker(nil)).To(Succeed())
 		})
 
 		When("the informers are not synced", func() {
-			var (
-				waiter *fakeSyncWaiter
-				now    time.Time
-			)
+			var waiter *fakeSyncWaiter
 
 			BeforeEach(func() {
 				waiter = &fakeSyncWaiter{false}
-				checker = NewCacheSyncHealthzWithDeadline(waiter, deadline)
-				now = time.Now()
-
-				DeferCleanup(test.WithVar(&Now, func() time.Time { return now }))
+				checker = NewCacheSyncHealthzWithDeadline(log, fakeClock, waiter, deadline)
 			})
 
 			It("should succeed as long as the deadline is not hit even if not all informers sync", func() {
 				By("succeed because deadline is not hit")
 				Expect(checker(nil)).To(Succeed())
-				now = now.Add(deadline / 2)
+				fakeClock.Step(deadline / 2)
 
 				By("succeed because deadline is not hit")
 				Expect(checker(nil)).To(Succeed())
-				now = now.Add(deadline / 2)
+				fakeClock.Step(deadline / 2)
 
 				By("fail because deadline is hit")
 				Expect(checker(nil)).To(MatchError(ContainSubstring("not synced")))
@@ -70,11 +71,11 @@ var _ = Describe("Informer", func() {
 			It("should reset the time all informers are synced after not working for a certain time", func() {
 				By("succeed because deadline is not hit")
 				Expect(checker(nil)).To(Succeed())
-				now = now.Add(deadline / 2)
+				fakeClock.Step(deadline / 2)
 
 				By("succeed because deadline is not hit")
 				Expect(checker(nil)).To(Succeed())
-				now = now.Add(deadline / 2)
+				fakeClock.Step(deadline / 2)
 
 				By("succeed because caches are synced")
 				waiter.value = true
@@ -83,11 +84,11 @@ var _ = Describe("Informer", func() {
 				By("succeed because deadline is not hit")
 				waiter.value = false
 				Expect(checker(nil)).To(Succeed())
-				now = now.Add(deadline / 2)
+				fakeClock.Step(deadline / 2)
 
 				By("succeed because deadline is not hit")
 				Expect(checker(nil)).To(Succeed())
-				now = now.Add(deadline / 2)
+				fakeClock.Step(deadline / 2)
 
 				By("fail because deadline is hit")
 				Expect(checker(nil)).To(MatchError(ContainSubstring("not synced")))
