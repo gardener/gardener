@@ -850,29 +850,6 @@ deploy:
         - --force-conflicts
     hooks:
       after:
-        - container:
-            command:
-              - bash
-              - -ec
-              - |
-                set -o errexit
-                set -o nounset
-                set -o pipefail
-
-                echo "> Prepare machine pods"
-                rm -rf /gardenadm/resources
-                
-                # shell profile for the developer's convenience
-                if ! grep 'kubectl environment' ~/.bashrc >/dev/null ; then
-                  cat <<EOF >> ~/.bashrc
-                # BEGIN kubectl environment
-                export KUBECONFIG=/etc/kubernetes/admin.conf
-                alias k=kubectl
-                # END kubectl environment
-                EOF
-                fi
-            podName: machine-*
-            containerName: node
         - host:
             command:
               - bash
@@ -880,6 +857,8 @@ deploy:
               - |
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-0:/tmp/.skaffold-image
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.skaffold-image machine-1:/tmp/.skaffold-image
+                kubectl -n $SKAFFOLD_NAMESPACES exec machine-0 -- /bin/sh -c 'rm -rf /gardenadm/resources'
+                kubectl -n $SKAFFOLD_NAMESPACES exec machine-1 -- /bin/sh -c 'rm -rf /gardenadm/resources'
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources machine-0:/gardenadm/resources
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/resources machine-1:/gardenadm/resources
                 kubectl -n $SKAFFOLD_NAMESPACES cp example/gardenadm-local/.imagevector-overwrite.yaml machine-0:/gardenadm/imagevector-overwrite.yaml
@@ -910,5 +889,15 @@ deploy:
                 mkdir -p "/gardenadm"
                 cp -f "$tmp_dir/ko-app/gardenadm" "/gardenadm"
                 chmod +x "/gardenadm/gardenadm"
+
+                echo "> Prepare shell profile"
+                if ! grep 'kubectl environment' ~/.bashrc >/dev/null ; then
+                  cat <<EOF >> ~/.bashrc
+                # BEGIN kubectl environment
+                export KUBECONFIG=/etc/kubernetes/admin.conf
+                alias k=kubectl
+                # END kubectl environment
+                EOF
+                fi
             podName: machine-*
             containerName: node
