@@ -87,7 +87,7 @@ var _ = FDescribe("Observability Tests", Ordered, Label("Observability", "defaul
 		})
 		ItShouldWaitForPodsInShootToBeReady(s, "kube-system", nonGardenerLoggerLabels)
 
-		ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "pod_name", gardenerLoggerAppLabel+".*")
+		ItShouldWaitForLogsCountWithLabelToBeInVali(s, valiLabels, "pod_name", gardenerLoggerAppLabel+".*", 100)
 		ItShouldWaitForLogsWithLabelToNotBeInVali(s, valiLabels, "pod_name", nonGardenerLoggerAppLabel+".*")
 
 		ItShouldWaitForLogsWithLabelToBeInVali(s, valiLabels, "unit", "containerd.service")
