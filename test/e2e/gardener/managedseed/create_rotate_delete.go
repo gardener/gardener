@@ -92,7 +92,7 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 	})
 
 	Describe("Trigger gardenlet kubeconfig auto-rotation by reducing kubeconfig validity", func() {
-		It("Scale down gardenlet deployment", func(ctx SpecContext) {
+		It("Scale down gardenlet deployment and wait until no gardenlet pods exist anymore", func(ctx SpecContext) {
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      v1beta1constants.DeploymentNameGardenlet,
@@ -100,15 +100,19 @@ var _ = Describe("ManagedSeed Tests", Label("ManagedSeed", "default"), Ordered, 
 				},
 			}
 
-			Eventually(ctx, s.ShootContext.ShootKomega.Update(deployment, func() {
-				deployment.Spec.Replicas = ptr.To(int32(0))
-			})).Should(Succeed())
-		}, SpecTimeout(time.Minute))
+			Eventually(ctx, func(g Gomega) {
+				g.Expect(s.ShootContext.ShootClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
-		It("Should wait until no gardenlet pods exist anymore", func(ctx SpecContext) {
-			Eventually(ctx, s.ShootContext.ShootKomega.ObjectList(&corev1.PodList{}, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})).
-				WithPolling(5 * time.Second).To(HaveField("Items", BeEmpty()))
-		}, SpecTimeout(3*time.Minute))
+				if ptr.Deref(deployment.Spec.Replicas, 0) != 0 {
+					g.Expect(s.ShootContext.ShootKomega.Update(deployment, func() {
+						deployment.Spec.Replicas = ptr.To(int32(0))
+					})()).To(Succeed())
+				}
+
+				g.Expect(s.ShootContext.ShootKomega.ObjectList(&corev1.PodList{}, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{"app": "gardener", "role": "gardenlet"})()).
+					To(HaveField("Items", BeEmpty()))
+			}).Should(Succeed())
+		}, SpecTimeout(time.Minute))
 
 		itShouldVerifyGardenletKubeconfigRotation(verifier, true, func() {
 			It("Update kubeconfig validity settings and trigger manual rotation so that gardenlet picks up new kubeconfig validity settings", func(ctx SpecContext) {
