@@ -285,7 +285,10 @@ func ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s *ShootContext) {
 			}
 
 			nodeList := &corev1.NodeList{}
-			Eventually(ctx, s.ShootKomega.List(nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: pool.Name})).Should(Succeed())
+			Eventually(
+				ctx,
+				s.ShootKomega.List(nodeList, client.MatchingLabels{v1beta1constants.LabelWorkerPool: pool.Name}),
+			).Should(Succeed(), "nodes for pool %s should be listed", pool.Name)
 
 			for _, node := range nodeList.Items {
 				if metav1.HasLabel(node.ObjectMeta, machinev1alpha1.LabelKeyNodeSelectedForUpdate) {
@@ -294,7 +297,7 @@ func ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s *ShootContext) {
 
 				Eventually(ctx, s.ShootKomega.Update(&node, func() {
 					metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeSelectedForUpdate, "true")
-				})).Should(Succeed())
+				})).Should(Succeed(), "node %s should be labeled", node.Name)
 			}
 		}
 	}, SpecTimeout(2*time.Minute))
@@ -341,9 +344,9 @@ func ItShouldCompareMachinePodNamesAfter(s *ShootContext, machinePodNamesBeforeT
 	}, SpecTimeout(time.Minute))
 }
 
-// ItShouldRewriteOsRelease rewrites the /etc/os-release file for all machine pods to ensure that the version is overwritten for tests.
+// ItShouldRewriteOS rewrites the /etc/os-release file for all machine pods to ensure that the version is overwritten for tests.
 // This is a workaround for the fact that the machine image version is not available in the os-release file in the local provider.
-func ItShouldRewriteOsRelease(s *ShootContext) {
+func ItShouldRewriteOS(s *ShootContext) {
 	GinkgoHelper()
 
 	It("should rewrite the /etc/os-release for all machines", func(ctx SpecContext) {
@@ -360,7 +363,7 @@ func ItShouldRewriteOsRelease(s *ShootContext) {
 			node := &corev1.Node{}
 			Eventually(func() error {
 				return s.ShootClient.Get(ctx, client.ObjectKey{Namespace: pod.Namespace, Name: pod.Name}, node)
-			}).Should(Succeed())
+			}).Should(Succeed(), "should get node for pod %s", pod.Name)
 
 			Expect(node.Labels).To(HaveKey(v1beta1constants.LabelWorkerPool))
 
@@ -382,7 +385,7 @@ func ItShouldRewriteOsRelease(s *ShootContext) {
 				"/etc/os-release",
 			)
 
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred(), "should rewrite /etc/os-release for pod %s", pod.Name)
 		}
 	}, SpecTimeout(2*time.Minute))
 }

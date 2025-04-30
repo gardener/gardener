@@ -57,7 +57,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldGetResponsibleSeed(s)
 			ItShouldInitializeSeedClient(s)
 
-			ItShouldRewriteOsRelease(s)
+			ItShouldRewriteOS(s)
 			ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
 			verifyWorkerNodeLabels(s)
 			inclusterclient.VerifyInClusterAccessToAPIServer(s)

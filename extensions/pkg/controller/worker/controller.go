@@ -109,7 +109,7 @@ func MachineConditionChangedPredicate(ctx context.Context, log logr.Logger, c cl
 
 			machineDeploymentName, ok := machine.Labels[LabelKeyMachineDeploymentName]
 			if !ok {
-				log.Error(nil, "Machine does not have machine deployment label", "machine", machine.Name)
+				log.Info("Machine does not have machine deployment label", "machine", machine.Name)
 				return false
 			}
 
@@ -163,7 +163,7 @@ func MachineConditionChangedPredicate(ctx context.Context, log logr.Logger, c cl
 			oldCond := GetMachineCondition(oldMachine, machinev1alpha1.NodeInPlaceUpdate)
 			newCond := GetMachineCondition(newMachine, machinev1alpha1.NodeInPlaceUpdate)
 
-			// Consider only the condition transition from CandidateForUpdate to another condition
+			// Consider only the condition transition from CandidateForUpdate to another condition.
 			return oldCond != nil && newCond != nil && oldCond.Reason == machinev1alpha1.CandidateForUpdate && newCond.Reason != machinev1alpha1.CandidateForUpdate
 		},
 		DeleteFunc: func(_ event.DeleteEvent) bool {
