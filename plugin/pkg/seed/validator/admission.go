@@ -10,9 +10,12 @@ import (
 	"fmt"
 	"io"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
@@ -38,12 +41,14 @@ type ValidateSeed struct {
 	seedLister             gardencorev1beta1listers.SeedLister
 	shootLister            gardencorev1beta1listers.ShootLister
 	workloadIdentityLister gardensecurityv1alpha1listers.WorkloadIdentityLister
+	secretLister           kubecorev1listers.SecretLister
 	readyFunc              admission.ReadyFunc
 }
 
 var (
 	_ = admissioninitializer.WantsCoreInformerFactory(&ValidateSeed{})
 	_ = admissioninitializer.WantsSecurityInformerFactory(&ValidateSeed{})
+	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateSeed{})
 
 	readyFuncs []admission.ReadyFunc
 )
@@ -82,6 +87,14 @@ func (v *ValidateSeed) SetSecurityInformerFactory(f gardensecurityinformers.Shar
 	readyFuncs = append(readyFuncs, wiInformer.Informer().HasSynced)
 }
 
+// SetKubeInformerFactory gets Lister from SharedInformerFactory.
+func (v *ValidateSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
+	secretInformer := f.Core().V1().Secrets()
+	v.secretLister = secretInformer.Lister()
+
+	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateSeed) ValidateInitialization() error {
 	if v.seedLister == nil {
@@ -92,6 +105,9 @@ func (v *ValidateSeed) ValidateInitialization() error {
 	}
 	if v.workloadIdentityLister == nil {
 		return errors.New("missing workloadidentity lister")
+	}
+	if v.secretLister == nil {
+		return errors.New("missing secret lister")
 	}
 	return nil
 }
@@ -148,7 +164,7 @@ func (v *ValidateSeed) validateSeedUpdate(a admission.Attributes) error {
 		return err
 	}
 
-	return v.validateCredentialsRef(a, newSeed)
+	return v.validateBackupCredentialsRef(a, newSeed)
 }
 
 func (v *ValidateSeed) validateSeedCreate(a admission.Attributes) error {
@@ -157,7 +173,7 @@ func (v *ValidateSeed) validateSeedCreate(a admission.Attributes) error {
 		return apierrors.NewInternalError(errors.New("failed to convert resource into Seed object"))
 	}
 
-	return v.validateCredentialsRef(a, seed)
+	return v.validateBackupCredentialsRef(a, seed)
 }
 
 func (v *ValidateSeed) validateSeedDeletion(a admission.Attributes) error {
@@ -191,22 +207,34 @@ func getOldAndNewSeeds(attrs admission.Attributes) (*core.Seed, *core.Seed, erro
 	return oldSeed, newSeed, nil
 }
 
-func (v *ValidateSeed) validateCredentialsRef(attrs admission.Attributes, seed *core.Seed) error {
+func (v *ValidateSeed) validateBackupCredentialsRef(attrs admission.Attributes, seed *core.Seed) error {
 	if seed.Spec.Backup == nil {
 		return nil
 	}
 
-	if seed.Spec.Backup.CredentialsRef.APIVersion != securityv1alpha1.SchemeGroupVersion.String() || seed.Spec.Backup.CredentialsRef.Kind != "WorkloadIdentity" {
-		return nil
-	}
+	backup := seed.Spec.Backup
+	switch {
+	case backup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
+		backup.CredentialsRef.Kind == "WorkloadIdentity":
+		workloadIdentity, err := v.workloadIdentityLister.WorkloadIdentities(backup.CredentialsRef.Namespace).Get(backup.CredentialsRef.Name)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
 
-	workloadIdentity, err := v.workloadIdentityLister.WorkloadIdentities(seed.Spec.Backup.CredentialsRef.Namespace).Get(seed.Spec.Backup.CredentialsRef.Name)
-	if err != nil {
-		return apierrors.NewInternalError(err)
-	}
-
-	if seedBackupType, workloadIdentityType := seed.Spec.Backup.Provider, workloadIdentity.Spec.TargetSystem.Type; seedBackupType != workloadIdentityType {
-		return admission.NewForbidden(attrs, fmt.Errorf("seed using backup of type %q cannot use WorkloadIdentity of type %q", seedBackupType, workloadIdentityType))
+		if seedBackupType, workloadIdentityType := backup.Provider, workloadIdentity.Spec.TargetSystem.Type; seedBackupType != workloadIdentityType {
+			return admission.NewForbidden(attrs, fmt.Errorf("seed using backup of type %q cannot use WorkloadIdentity of type %q", seedBackupType, workloadIdentityType))
+		}
+	case backup.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+		backup.CredentialsRef.Kind == "Secret":
+		_, err := v.secretLister.Secrets(backup.CredentialsRef.Namespace).Get(backup.CredentialsRef.Name)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.NewForbidden(attrs, fmt.Errorf("it is not allowed to reference a non-existent secret: %w", err))
+			}
+			return apierrors.NewInternalError(err)
+		}
+	default:
+		return apierrors.NewBadRequest("unsupported credentials reference: backup config is referencing neither a Secret nor a WorkloadIdentity")
 	}
 
 	return nil

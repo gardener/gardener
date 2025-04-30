@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -29,9 +30,11 @@ var _ = Describe("validator", func() {
 			admissionHandler        *ValidateSeed
 			coreInformerFactory     gardencoreinformers.SharedInformerFactory
 			securityInformerFactory gardensecurityinformers.SharedInformerFactory
+			kubeInformerFactory     kubeinformers.SharedInformerFactory
 			backupBucket            gardencorev1beta1.BackupBucket
 			seed                    core.Seed
 			shoot                   gardencorev1beta1.Shoot
+			ctx                     context.Context
 
 			backupBucketName     = "backupbucket"
 			seedName             = "seed"
@@ -76,8 +79,12 @@ var _ = Describe("validator", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			securityInformerFactory = gardensecurityinformers.NewSharedInformerFactory(nil, 0)
+			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetCoreInformerFactory(coreInformerFactory)
 			admissionHandler.SetSecurityInformerFactory(securityInformerFactory)
+			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
+
+			ctx = context.Background()
 		})
 
 		Context("Seed Update", func() {
@@ -95,14 +102,14 @@ var _ = Describe("validator", func() {
 				It("should allow zone removal when there are no shoots", func() {
 					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
 				It("should forbid zone removal when there are shoots", func() {
 					Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(BeForbiddenError())
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(BeForbiddenError())
 				})
 			})
 
@@ -131,22 +138,37 @@ var _ = Describe("validator", func() {
 							},
 						},
 					}
+
 					Expect(securityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(workloadIdentity)).To(Succeed())
 				})
 
 				It("should allow WorkloadIdentity with provider same as Seed backup provider to be used as backup credentials", func() {
 					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+					Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 				})
 
 				It("should forbid WorkloadIdentity of provider other than Seed backup provider to be used as backup credentials", func() {
 					newSeed.Spec.Backup.Provider = "anotherProvider"
 					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-					err := admissionHandler.Validate(context.TODO(), attrs, nil)
+					err := admissionHandler.Validate(ctx, attrs, nil)
 					Expect(err).To(BeForbiddenError())
 					Expect(err).To(MatchError(ContainSubstring("seed using backup of type \"anotherProvider\" cannot use WorkloadIdentity of type \"provider\"")))
+				})
+
+				It("should forbid seed update if backup credentials reference a non-existent secret", func() {
+					newSeed.Spec.Backup.CredentialsRef = &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  namespaceName,
+						Name:       "bar",
+					}
+					attrs := admission.NewAttributesRecord(newSeed, oldSeed, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+					err := admissionHandler.Validate(ctx, attrs, nil)
+					Expect(err).To(BeForbiddenError())
+					Expect(err).To(MatchError(ContainSubstring("it is not allowed to reference a non-existent secret: secret \"bar\" not found")))
 				})
 			})
 		})
@@ -161,7 +183,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeForbiddenError())
@@ -172,7 +194,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(&backupBucket)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -184,7 +206,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeForbiddenError())
@@ -195,7 +217,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -233,14 +255,14 @@ var _ = Describe("validator", func() {
 			It("should allow WorkloadIdentity with provider same as Seed backup provider to be used as backup credentials", func() {
 				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
 			})
 
 			It("should forbid WorkloadIdentity of provider other than Seed backup provider to be used as backup credentials", func() {
 				seed.Spec.Backup.Provider = "anotherProvider"
 				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
-				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+				err := admissionHandler.Validate(ctx, attrs, nil)
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("seed using backup of type \"anotherProvider\" cannot use WorkloadIdentity of type \"provider\"")))
 
@@ -274,6 +296,7 @@ var _ = Describe("validator", func() {
 		It("should return error if no ShootLister or SeedLister is set", func() {
 			dr, _ := New()
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 
@@ -284,6 +307,7 @@ var _ = Describe("validator", func() {
 		It("should return error if no WorkloadIdentityLister is set", func() {
 			dr, _ := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 
@@ -291,10 +315,22 @@ var _ = Describe("validator", func() {
 			Expect(err).To(MatchError("missing workloadidentity lister"))
 		})
 
+		It("should return error if no SecretLister is set", func() {
+			dr, _ := New()
+			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
+
+			err := dr.ValidateInitialization()
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("missing secret lister"))
+		})
+
 		It("should not return error if ShootLister, SeedLister, and WorkloadIdentityLister are set", func() {
 			dr, _ := New()
 			dr.SetCoreInformerFactory(gardencoreinformers.NewSharedInformerFactory(nil, 0))
 			dr.SetSecurityInformerFactory(gardensecurityinformers.NewSharedInformerFactory(nil, 0))
+			dr.SetKubeInformerFactory(kubeinformers.NewSharedInformerFactory(nil, 0))
 
 			err := dr.ValidateInitialization()
 
