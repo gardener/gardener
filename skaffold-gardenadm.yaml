@@ -889,5 +889,15 @@ deploy:
                 mkdir -p "/gardenadm"
                 cp -f "$tmp_dir/ko-app/gardenadm" "/gardenadm"
                 chmod +x "/gardenadm/gardenadm"
+
+                echo "> Prepare shell profile"
+                if ! grep 'kubectl environment' ~/.bashrc >/dev/null ; then
+                  cat <<EOF >> ~/.bashrc
+                # BEGIN kubectl environment
+                export KUBECONFIG=/etc/kubernetes/admin.conf
+                alias k=kubectl
+                # END kubectl environment
+                EOF
+                fi
             podName: machine-*
             containerName: node
