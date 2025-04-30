@@ -238,10 +238,11 @@ var _ = Describe("Etcd", func() {
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 							{
-								ContainerName: "*",
+								ContainerName: "etcd-druid",
 								MinAllowed: corev1.ResourceList{
 									corev1.ResourceMemory: resource.MustParse("100M"),
 								},
+								ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 							},
 						},
 					},
@@ -329,9 +330,6 @@ var _ = Describe("Etcd", func() {
 										},
 									},
 									Resources: corev1.ResourceRequirements{
-										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("512Mi"),
-										},
 										Requests: corev1.ResourceList{
 											corev1.ResourceCPU:    resource.MustParse("50m"),
 											corev1.ResourceMemory: resource.MustParse("128Mi"),
@@ -433,9 +431,6 @@ var _ = Describe("Etcd", func() {
 										},
 									},
 									Resources: corev1.ResourceRequirements{
-										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("512Mi"),
-										},
 										Requests: corev1.ResourceList{
 											corev1.ResourceCPU:    resource.MustParse("50m"),
 											corev1.ResourceMemory: resource.MustParse("128Mi"),

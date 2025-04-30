@@ -260,10 +260,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				},
 				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+						ContainerName: Druid,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceMemory: resource.MustParse("100M"),
 						},
+						ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
 					}},
 				},
 			},
@@ -453,9 +454,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("50m"),
 										corev1.ResourceMemory: resource.MustParse("128Mi"),
-									},
-									Limits: corev1.ResourceList{
-										corev1.ResourceMemory: resource.MustParse("512Mi"),
 									},
 								},
 								Ports: []corev1.ContainerPort{{
