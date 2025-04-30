@@ -6,6 +6,7 @@ package gardenletdeployer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -61,7 +62,8 @@ type Actuator struct {
 	GardenClient            client.Client
 	GetTargetClientFunc     func(ctx context.Context) (kubernetes.Interface, error)
 	CheckIfVPAAlreadyExists func(ctx context.Context) (bool, error)
-	GetInfrastructureSecret func(ctx context.Context) (*corev1.Secret, error)
+	// GetInfrastructureSecret will return the infrastructure secret or nil if other kind of credentials are used instead.
+	GetInfrastructureSecret func(ctx context.Context) (*corev1.Secret, error) // TODO(dimityrmirchev): Deprecate and eventually remove this function.
 	GetTargetDomain         func() string
 	ApplyGardenletChart     func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
 	DeleteGardenletChart    func(ctx context.Context, targetChartApplier kubernetes.ChartApplier, values map[string]interface{}) error
@@ -427,55 +429,60 @@ func (a *Actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.Se
 }
 
 func (a *Actuator) reconcileSeedSecrets(ctx context.Context, obj client.Object, spec *gardencorev1beta1.SeedSpec, gardenletDeployment *seedmanagementv1alpha1.GardenletDeployment) error {
-	// Get infrastructure secret
-	infrastructureSecret, err := a.GetInfrastructureSecret(ctx)
-	if err != nil {
-		return err
-	}
-
 	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the object
 	// TODO(vpnachev): Add support for WorkloadIdentity
 	if spec.Backup != nil {
 		var checksum string
 
 		// Get backup secret
-		backupSecret, err := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
-		if err == nil {
+		backupSecret, originalErr := kubernetesutils.GetSecretByObjectReference(ctx, a.GardenClient, spec.Backup.CredentialsRef)
+		if originalErr == nil {
 			checksum = utils.ComputeSecretChecksum(backupSecret.Data)[:8]
-		} else if client.IgnoreNotFound(err) != nil {
-			return err
+		} else if client.IgnoreNotFound(originalErr) != nil {
+			return originalErr
 		}
 
 		// Create or update backup secret if it doesn't exist or is owned by the object
-		if apierrors.IsNotFound(err) || metav1.IsControlledBy(backupSecret, obj) {
+		if apierrors.IsNotFound(originalErr) || metav1.IsControlledBy(backupSecret, obj) {
 			gvk, err := apiutil.GVKForObject(obj, a.GardenClient.Scheme())
 			if err != nil {
 				return fmt.Errorf("could not get GroupVersionKind from object %v: %w", obj, err)
 			}
 
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.CredentialsRef.Namespace, Name: spec.Backup.CredentialsRef.Name},
-			}
-
-			if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.GardenClient, secret, func() error {
-				secret.OwnerReferences = []metav1.OwnerReference{
-					*metav1.NewControllerRef(obj, gvk),
-				}
-				secret.Type = corev1.SecretTypeOpaque
-				secret.Data = infrastructureSecret.Data
-				return nil
-			}); err != nil {
+			infrastructureSecret, err := a.GetInfrastructureSecret(ctx)
+			if err != nil {
 				return err
 			}
 
-			checksum = utils.ComputeSecretChecksum(secret.Data)[:8]
+			// If there is no infrastructure Secret, e.g. WorkloadIdentity is used instead
+			// we skip the copying as it is not supported.
+			if infrastructureSecret != nil {
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Namespace: spec.Backup.CredentialsRef.Namespace, Name: spec.Backup.CredentialsRef.Name},
+				}
+
+				if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.GardenClient, secret, func() error {
+					secret.OwnerReferences = []metav1.OwnerReference{
+						*metav1.NewControllerRef(obj, gvk),
+					}
+					secret.Type = corev1.SecretTypeOpaque
+					secret.Data = infrastructureSecret.Data
+					return nil
+				}); err != nil {
+					return err
+				}
+
+				checksum = utils.ComputeSecretChecksum(secret.Data)[:8]
+			} else if apierrors.IsNotFound(originalErr) {
+				return errors.New("backup is configured to reference a secret, but there is no infrastructure secret to copy")
+			}
 		}
 
 		// Inject backup-secret hash into the pod annotations
 		if gardenletDeployment == nil {
 			gardenletDeployment = &seedmanagementv1alpha1.GardenletDeployment{}
 		}
-		gardenletDeployment.PodAnnotations = utils.MergeStringMaps[string](gardenletDeployment.PodAnnotations, map[string]string{
+		gardenletDeployment.PodAnnotations = utils.MergeStringMaps(gardenletDeployment.PodAnnotations, map[string]string{
 			"checksum/seed-backup-secret": spec.Backup.CredentialsRef.Name + "-" + checksum,
 		})
 	}

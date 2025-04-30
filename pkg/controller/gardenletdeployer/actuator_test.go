@@ -303,6 +303,11 @@ var _ = Describe("Interface", func() {
 		}
 
 		expectCreateSeedSecrets = func() {
+			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
+					return apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName)
+				},
+			)
 			// Get shoot secret
 			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretBindingName}, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, sb *gardencorev1beta1.SecretBinding, _ ...client.GetOption) error {
@@ -316,13 +321,7 @@ var _ = Describe("Interface", func() {
 					return nil
 				},
 			)
-
 			// Create backup secret
-			gardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: backupSecretName}, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret, _ ...client.GetOption) error {
-					return apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName)
-				},
-			)
 			gardenClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
 					Expect(s).To(Equal(backupSecret))

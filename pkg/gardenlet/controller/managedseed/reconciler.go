@@ -118,20 +118,25 @@ func (r *Reconciler) newActuator(shoot *gardencorev1beta1.Shoot) gardenletdeploy
 				return kubernetesutils.GetSecretByReference(ctx, r.GardenClient, &shootSecretBinding.SecretRef)
 			}
 
-			// TODO(dimityrmirchev): This code should eventually handle credentials binding referencing workload
-			//  identities.
 			shootCredentialsBinding := &securityv1alpha1.CredentialsBinding{}
 			if err := r.GardenClient.Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: *shoot.Spec.CredentialsBindingName}, shootCredentialsBinding); err != nil {
 				return nil, err
 			}
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootCredentialsBinding.CredentialsRef.Name,
-					Namespace: shootCredentialsBinding.CredentialsRef.Namespace,
-				},
+
+			// TODO(dimityrmirchev): only handle credentials of kind secret as this function will be eventually removed
+			if shootCredentialsBinding.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
+				shootCredentialsBinding.CredentialsRef.Kind == "Secret" {
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      shootCredentialsBinding.CredentialsRef.Name,
+						Namespace: shootCredentialsBinding.CredentialsRef.Namespace,
+					},
+				}
+
+				return secret, r.GardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
 			}
 
-			return secret, r.GardenClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
+			return nil, nil
 		},
 		GetTargetDomain: func() string {
 			if shoot.Spec.DNS == nil {
