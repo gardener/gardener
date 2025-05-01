@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +61,7 @@ type Interface interface {
 	// AppendAuthorizationWebhook appends an AuthorizationWebhook to AuthorizationWebhooks in the Values of the deployer.
 	// TODO(oliver-goetz): Consider removing this method when we support Kubernetes version with structured authorization only.
 	//  See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
-	AppendAuthorizationWebhook(AuthorizationWebhook) error
+	AppendAuthorizationWebhook(AuthorizationWebhook, logr.Logger)
 	// EnableStaticTokenKubeconfig enables the static token kubeconfig.
 	EnableStaticTokenKubeconfig()
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
@@ -564,16 +565,15 @@ func (k *kubeAPIServer) GetAutoscalingReplicas() *int32 {
 	return k.values.Autoscaling.Replicas
 }
 
-func (k *kubeAPIServer) AppendAuthorizationWebhook(webhook AuthorizationWebhook) error {
+func (k *kubeAPIServer) AppendAuthorizationWebhook(webhook AuthorizationWebhook, log logr.Logger) {
 	for _, existingWebhook := range k.values.AuthorizationWebhooks {
 		if existingWebhook.Name == webhook.Name {
-			return fmt.Errorf("authorization webhook with name %q already exists", webhook.Name)
+			log.Info("Authorization webhook already exists, skipping append", "name", webhook.Name)
+			return
 		}
 	}
 
 	k.values.AuthorizationWebhooks = append(k.values.AuthorizationWebhooks, webhook)
-
-	return nil
 }
 
 func (k *kubeAPIServer) EnableStaticTokenKubeconfig() {

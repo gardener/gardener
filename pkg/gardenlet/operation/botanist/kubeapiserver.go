@@ -180,7 +180,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 			return fmt.Errorf("failed generating authorization webhook kubeconfig: %w", err)
 		}
 
-		if err := b.Shoot.Components.ControlPlane.KubeAPIServer.AppendAuthorizationWebhook(
+		b.Logger.Info("Adding node-agent authorizer webhook to kube-apiserver")
+
+		b.Shoot.Components.ControlPlane.KubeAPIServer.AppendAuthorizationWebhook(
 			kubeapiserver.AuthorizationWebhook{
 				Name:       "node-agent-authorizer",
 				Kubeconfig: kubeconfig,
@@ -198,9 +200,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 						Expression: fmt.Sprintf("'%s' in request.groups", v1beta1constants.NodeAgentsGroup),
 					}},
 				},
-			}); err != nil {
-			return fmt.Errorf("failed appending node-agent-authorizer webhook config to kube-apiserver: %w", err)
-		}
+			}, b.Logger)
 	}
 
 	if err := shared.DeployKubeAPIServer(
