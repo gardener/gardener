@@ -16,6 +16,7 @@ import (
 
 	apiserver "github.com/gardener/gardener/pkg/component/apiserver"
 	apiserver0 "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	logr "github.com/go-logr/logr"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 )
@@ -45,17 +46,15 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // AppendAuthorizationWebhook mocks base method.
-func (m *MockInterface) AppendAuthorizationWebhook(arg0 apiserver0.AuthorizationWebhook) error {
+func (m *MockInterface) AppendAuthorizationWebhook(arg0 apiserver0.AuthorizationWebhook, arg1 logr.Logger) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AppendAuthorizationWebhook", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "AppendAuthorizationWebhook", arg0, arg1)
 }
 
 // AppendAuthorizationWebhook indicates an expected call of AppendAuthorizationWebhook.
-func (mr *MockInterfaceMockRecorder) AppendAuthorizationWebhook(arg0 any) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) AppendAuthorizationWebhook(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendAuthorizationWebhook", reflect.TypeOf((*MockInterface)(nil).AppendAuthorizationWebhook), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendAuthorizationWebhook", reflect.TypeOf((*MockInterface)(nil).AppendAuthorizationWebhook), arg0, arg1)
 }
 
 // Deploy mocks base method.
