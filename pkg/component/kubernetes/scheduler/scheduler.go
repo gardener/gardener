@@ -47,10 +47,10 @@ const (
 	// scheduling profile is configured.
 	BinPackingSchedulerName = "bin-packing-scheduler"
 
-	serviceName             = "kube-scheduler"
-	secretNameServer        = "kube-scheduler-server" // #nosec G101 -- No credential.
-	managedResourceName     = "shoot-core-kube-scheduler"
-	seedManagedResourceName = "seed-core-kube-scheduler"
+	serviceName              = "kube-scheduler"
+	secretNameServer         = "kube-scheduler-server" // #nosec G101 -- No credential.
+	shootManagedResourceName = "shoot-core-kube-scheduler"
+	seedManagedResourceName  = "seed-core-kube-scheduler"
 
 	containerName   = v1beta1constants.DeploymentNameKubeScheduler
 	portNameMetrics = "metrics"
@@ -593,7 +593,7 @@ func (k *kubeScheduler) reconcileShootResources(ctx context.Context, serviceAcco
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, managedresources.LabelValueGardener, false, data)
+	return managedresources.CreateForShoot(ctx, k.client, k.namespace, shootManagedResourceName, managedresources.LabelValueGardener, false, data)
 }
 
 func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {

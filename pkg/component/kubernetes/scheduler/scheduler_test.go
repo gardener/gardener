@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/scheduler"
-	//componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -68,13 +67,11 @@ var _ = Describe("KubeScheduler", func() {
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-scheduler-vpa"
 		pdbName                          = "kube-scheduler"
-		//prometheusRuleName               = "shoot-kube-scheduler"
-		//serviceMonitorName               = "shoot-kube-scheduler"
-		serviceName             = "kube-scheduler"
-		secretName              = "shoot-access-kube-scheduler"
-		deploymentName          = "kube-scheduler"
-		managedResourceName     = "shoot-core-kube-scheduler"
-		seedManagedResourceName = "seed-core-kube-scheduler"
+		serviceName                      = "kube-scheduler"
+		secretName                       = "shoot-access-kube-scheduler"
+		deploymentName                   = "kube-scheduler"
+		managedResourceName              = "shoot-core-kube-scheduler"
+		seedManagedResourceName          = "seed-core-kube-scheduler"
 
 		managedResourceShoot *resourcesv1alpha1.ManagedResource
 		managedResourceSeed  *resourcesv1alpha1.ManagedResource
@@ -90,7 +87,6 @@ var _ = Describe("KubeScheduler", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "kube-scheduler-config",
 					Namespace: namespace,
-					//ResourceVersion: "1",
 				},
 				Data: map[string]string{"config.yaml": componentConfigYAML},
 			}
@@ -123,7 +119,6 @@ var _ = Describe("KubeScheduler", func() {
 					"app":  "kubernetes",
 					"role": "scheduler",
 				},
-				//ResourceVersion: "1",
 			},
 			Spec: policyv1.PodDisruptionBudgetSpec{
 				MaxUnavailable: &pdbMaxUnavailable,
@@ -141,7 +136,6 @@ var _ = Describe("KubeScheduler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      vpaName,
 				Namespace: namespace,
-				//ResourceVersion: "1",
 			},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -171,7 +165,6 @@ var _ = Describe("KubeScheduler", func() {
 				Annotations: map[string]string{
 					"networking.resources.gardener.cloud/from-all-scrape-targets-allowed-ports": `[{"protocol":"TCP","port":10259}]`,
 				},
-				//ResourceVersion: "1",
 			},
 			Spec: corev1.ServiceSpec{
 				Selector: map[string]string{
@@ -210,7 +203,6 @@ var _ = Describe("KubeScheduler", func() {
 						"high-availability-config.resources.gardener.cloud/type":             "controller",
 						"provider.extensions.gardener.cloud/mutated-by-controlplane-webhook": "true",
 					},
-					//ResourceVersion: "1",
 				},
 				Spec: appsv1.DeploymentSpec{
 					RevisionHistoryLimit: ptr.To[int32](1),
@@ -351,7 +343,6 @@ var _ = Describe("KubeScheduler", func() {
 				Name:      "shoot-kube-scheduler",
 				Namespace: namespace,
 				Labels:    map[string]string{"prometheus": "shoot"},
-				//ResourceVersion: "1",
 			},
 			Spec: monitoringv1.PrometheusRuleSpec{
 				Groups: []monitoringv1.RuleGroup{{
@@ -426,7 +417,6 @@ var _ = Describe("KubeScheduler", func() {
 				Name:      "shoot-kube-scheduler",
 				Namespace: namespace,
 				Labels:    map[string]string{"prometheus": "shoot"},
-				//ResourceVersion: "1",
 			},
 			Spec: monitoringv1.ServiceMonitorSpec{
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{
@@ -609,69 +599,6 @@ var _ = Describe("KubeScheduler", func() {
 				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 
 				Expect(managedResourceSeed).To(consistOf(expectedObjects...))
-
-				//actualConfigMap := &corev1.ConfigMap{
-				//	ObjectMeta: metav1.ObjectMeta{
-				//		Name:      expectedConfigMap.Name,
-				//		Namespace: namespace,
-				//	},
-				//}
-				//Expect(c.Get(ctx, client.ObjectKeyFromObject(actualConfigMap), actualConfigMap)).To(Succeed())
-				//Expect(managedResourceSeed).To(consistOf(expectedConfigMap))
-				//Expect(actualConfigMap).To(DeepEqual(expectedConfigMap))
-
-				//actualDeployment := &appsv1.Deployment{
-				//	ObjectMeta: metav1.ObjectMeta{
-				//		Name:      deploymentName,
-				//		Namespace: namespace,
-				//	},
-				//}
-				//Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
-				//Expect(actualDeployment).To(DeepEqual(deploymentFor(config, expectedComponentConfigFilePath)))
-
-				//actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{
-				//	ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace},
-				//}
-				//Expect(c.Get(ctx, client.ObjectKeyFromObject(actualVPA), actualVPA)).To(Succeed())
-				//Expect(actualVPA).To(DeepEqual(vpa))
-
-				//actualService := &corev1.Service{
-				//	ObjectMeta: metav1.ObjectMeta{
-				//		Name:      serviceName,
-				//		Namespace: namespace,
-				//	},
-				//}
-				//Expect(c.Get(ctx, client.ObjectKeyFromObject(actualService), actualService)).To(Succeed())
-				//Expect(actualService).To(DeepEqual(service))
-
-				//actualPDB := &policyv1.PodDisruptionBudget{
-				//	ObjectMeta: metav1.ObjectMeta{
-				//		Name:      pdbName,
-				//		Namespace: namespace,
-				//	},
-				//}
-				//Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPDB), actualPDB)).To(Succeed())
-				//Expect(actualPDB).To(DeepEqual(pdb))
-
-				//actualPrometheusRule := &monitoringv1.PrometheusRule{
-				//	ObjectMeta: metav1.ObjectMeta{
-				//		Name:      prometheusRuleName,
-				//		Namespace: namespace,
-				//	},
-				//}
-				//Expect(c.Get(ctx, client.ObjectKeyFromObject(actualPrometheusRule), actualPrometheusRule)).To(Succeed())
-				//Expect(actualPrometheusRule).To(DeepEqual(prometheusRule))
-
-				//componenttest.PrometheusRule(prometheusRule, "testdata/shoot-kube-scheduler.prometheusrule.test.yaml")
-
-				//actualServiceMonitor := &monitoringv1.ServiceMonitor{
-				//	ObjectMeta: metav1.ObjectMeta{
-				//		Name:      serviceMonitorName,
-				//		Namespace: namespace,
-				//	},
-				//}
-				//Expect(c.Get(ctx, client.ObjectKeyFromObject(actualServiceMonitor), actualServiceMonitor)).To(Succeed())
-				//Expect(actualServiceMonitor).To(DeepEqual(serviceMonitor))
 			},
 
 			Entry("w/o config", configEmpty, "testdata/component-config.yaml"),
