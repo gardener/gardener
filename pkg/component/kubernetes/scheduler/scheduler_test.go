@@ -514,7 +514,7 @@ var _ = Describe("KubeScheduler", func() {
 		var expectedObjects []client.Object
 
 		DescribeTable("success tests for shoot w and w/o config",
-			func(config *gardencorev1beta1.KubeSchedulerConfig, expectedComponentConfigFilePath string) {
+			func(config *gardencorev1beta1.KubeSchedulerConfig, _ string) {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceShoot), managedResourceShoot)).To(BeNotFoundError())
 
 				kubeScheduler = New(c, namespace, sm, image, replicas, config)

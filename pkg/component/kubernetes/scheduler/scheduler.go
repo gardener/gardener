@@ -149,30 +149,6 @@ func (k *kubeScheduler) Destroy(_ context.Context) error     { return nil }
 func (k *kubeScheduler) Wait(_ context.Context) error        { return nil }
 func (k *kubeScheduler) WaitCleanup(_ context.Context) error { return nil }
 
-func (k *kubeScheduler) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
-	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-vpa", Namespace: k.namespace}}
-}
-
-func (k *kubeScheduler) emptyPodDisruptionBudget() *policyv1.PodDisruptionBudget {
-	return &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: k.namespace}}
-}
-
-func (k *kubeScheduler) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: k.namespace}}
-}
-
-func (k *kubeScheduler) emptyPrometheusRule() *monitoringv1.PrometheusRule {
-	return &monitoringv1.PrometheusRule{ObjectMeta: monitoringutils.ConfigObjectMeta(v1beta1constants.DeploymentNameKubeScheduler, k.namespace, shoot.Label)}
-}
-
-func (k *kubeScheduler) emptyServiceMonitor() *monitoringv1.ServiceMonitor {
-	return &monitoringv1.ServiceMonitor{ObjectMeta: monitoringutils.ConfigObjectMeta(v1beta1constants.DeploymentNameKubeScheduler, k.namespace, shoot.Label)}
-}
-
-func (k *kubeScheduler) emptyDeployment() *appsv1.Deployment {
-	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: k.namespace}}
-}
-
 func (k *kubeScheduler) newShootAccessSecret() *gardenerutils.AccessSecret {
 	return gardenerutils.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeScheduler, k.namespace)
 }
