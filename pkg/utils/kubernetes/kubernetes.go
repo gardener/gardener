@@ -83,6 +83,12 @@ func SetAnnotationAndUpdate(ctx context.Context, c client.Client, obj client.Obj
 	return nil
 }
 
+// HasMetaDataLabel checks if the passed meta object has the given key, value set in the labels section.
+func HasMetaDataLabel(meta metav1.Object, key, value string) bool {
+	val, ok := meta.GetLabels()[key]
+	return ok && val == value
+}
+
 // ObjectKeyFromSecretRef returns an ObjectKey for the given SecretReference.
 func ObjectKeyFromSecretRef(ref corev1.SecretReference) client.ObjectKey {
 	return client.ObjectKey{

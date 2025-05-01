@@ -280,7 +280,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 						Minimum:           2,
 						Maximum:           2,
 						MachineType:       "large",
-						UpdateStrategy:    ptr.To(gardencorev1beta1.AutoRollingUpdate),
+						UpdateStrategy:    ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
 						KubernetesVersion: ptr.To("1.30.1"),
 					},
 				},
@@ -403,6 +403,113 @@ var _ = Describe("Shoot Status controller tests", func() {
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(BeNil())
 			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
 			g.Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate))
+		}).Should(Succeed())
+	})
+
+	It("should annotate the shoot with operation Reconcile if manual in-place update workers are empty and credentials rotation phases are in Preparing", func() {
+		shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+			Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+				CertificateAuthorities: &gardencorev1beta1.CARotation{
+					Phase: gardencorev1beta1.RotationPreparing,
+				},
+				ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+					Phase: gardencorev1beta1.RotationPreparing,
+				},
+			},
+		}
+		Expect(testClient.Status().Update(ctx, shoot)).To(Succeed())
+
+		By("Waiting until the shoot status is observed by the manager")
+		Eventually(func(g Gomega) *gardencorev1beta1.ShootCredentials {
+			observedShoot := &gardencorev1beta1.Shoot{}
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), observedShoot)).To(Succeed())
+			return observedShoot.Status.Credentials
+		}).Should(Equal(shoot.Status.Credentials))
+
+		patch := client.MergeFrom(worker.DeepCopy())
+		workerPoolHashMap := map[string]string{
+			"worker1": "ef492a9674e2778a",
+			"worker3": "981b8e740cbbf058",
+			"worker5": "2c12ce1fbb06b184",
+		}
+		worker.Status = extensionsv1alpha1.WorkerStatus{
+			InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
+				WorkerPoolToHashMap: workerPoolHashMap,
+			},
+		}
+		Expect(testClient.Status().Patch(ctx, worker, patch)).To(Succeed())
+
+		By("Waiting until the worker status is observed by the manager")
+		Eventually(func(g Gomega) map[string]string {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
+			g.Expect(worker.Status.InPlaceUpdates).NotTo(BeNil())
+			return worker.Status.InPlaceUpdates.WorkerPoolToHashMap
+		}).Should(Equal(workerPoolHashMap))
+
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
+			// No change for auto in-place update workers
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(BeEmpty())
+			g.Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
+		}).Should(Succeed())
+	})
+
+	It("should not annotate the shoot with operation Reconcile if manual in-place update workers are not empty and credentials rotation phases are in Preparing", func() {
+		// Remove the force-update annotation
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+		Expect(testClient.Update(ctx, shoot)).To(Succeed())
+
+		shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+			Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+				CertificateAuthorities: &gardencorev1beta1.CARotation{
+					Phase: gardencorev1beta1.RotationPreparing,
+				},
+				ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+					Phase: gardencorev1beta1.RotationPreparing,
+				},
+			},
+		}
+		Expect(testClient.Status().Update(ctx, shoot)).To(Succeed())
+
+		By("Waiting until the shoot is observed by the manager")
+		Eventually(func(g Gomega) *gardencorev1beta1.ShootCredentials {
+			observedShoot := &gardencorev1beta1.Shoot{}
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), observedShoot)).To(Succeed())
+			g.Expect(observedShoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+			return observedShoot.Status.Credentials
+		}).Should(Equal(shoot.Status.Credentials))
+
+		patch := client.MergeFrom(worker.DeepCopy())
+		workerPoolHashMap := map[string]string{
+			"worker1": "ef492a9674e2778a",
+			"worker3": "981b8e740cbbf058",
+			"worker5": "different-hash",
+		}
+		worker.Status = extensionsv1alpha1.WorkerStatus{
+			InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
+				WorkerPoolToHashMap: workerPoolHashMap,
+			},
+		}
+		Expect(testClient.Status().Patch(ctx, worker, patch)).To(Succeed())
+
+		By("Waiting until the worker status is observed by the manager")
+		Eventually(func(g Gomega) map[string]string {
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
+			g.Expect(worker.Status.InPlaceUpdates).NotTo(BeNil())
+			return worker.Status.InPlaceUpdates.WorkerPoolToHashMap
+		}).Should(Equal(workerPoolHashMap))
+
+		Eventually(func(g Gomega) {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+			g.Expect(shoot.Status.InPlaceUpdates).NotTo(BeNil())
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates).NotTo(BeNil())
+			// No change for auto in-place update workers
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(ConsistOf("worker2"))
+			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate).To(ConsistOf("worker5"))
+			g.Expect(shoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
 		}).Should(Succeed())
 	})
 })

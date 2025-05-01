@@ -75,7 +75,7 @@ func (b *Botanist) CheckPodCIDRsInNodes(ctx context.Context) error {
 
 	networkReadyForDualStackMigration := len(network.Status.IPFamilies) == 2
 	updateFunction := b.DetermineUpdateFunction(networkReadyForDualStackMigration, nodeList)
-	if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, updateFunction); err != nil {
+	if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, updateFunction); err != nil {
 		return fmt.Errorf("failed to update shoot info status during dual-stack migration: %w", err)
 	}
 	return nil
@@ -87,7 +87,7 @@ func (b *Botanist) UpdateDualStackMigrationConditionIfNeeded(ctx context.Context
 
 	constraint := v1beta1helper.GetCondition(shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
 	if constraint == nil && len(shoot.Spec.Networking.IPFamilies) == 2 && shoot.Status.Networking != nil && len(shoot.Status.Networking.Nodes) == 1 {
-		if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+		if err := b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, false, func(shoot *gardencorev1beta1.Shoot) error {
 			constraint := v1beta1helper.GetOrInitConditionWithClock(b.Clock, shoot.Status.Constraints, gardencorev1beta1.ShootDualStackNodesMigrationReady)
 			constraint = v1beta1helper.UpdatedConditionWithClock(b.Clock, constraint, gardencorev1beta1.ConditionFalse, "DualStackMigration", "The shoot is migrating to dual-stack networking.")
 			shoot.Status.Constraints = v1beta1helper.MergeConditions(shoot.Status.Constraints, constraint)

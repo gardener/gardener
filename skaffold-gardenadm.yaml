@@ -732,6 +732,9 @@ build:
             - pkg/provider-local/imagevector
             - pkg/provider-local/imagevector/images.yaml
             - pkg/provider-local/local
+            - pkg/provider-local/machine-provider/api/v1alpha1
+            - pkg/provider-local/machine-provider/api/validation
+            - pkg/provider-local/machine-provider/local
             - pkg/provider-local/webhook/controlplane
             - pkg/provider-local/webhook/dnsconfig
             - pkg/provider-local/webhook/networkpolicy

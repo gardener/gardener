@@ -67,7 +67,7 @@ const (
 
 var (
 	codec                         runtime.Codec
-	osVersionRegex                = regexp.MustCompile(`\d+(?:\.\d+)+`)
+	osVersionRegex                = regexp.MustCompile(`\b\d+(?:\.\d+)*\b`)
 	retriableErrorPatternRegex    = regexp.MustCompile(`(?i)network problems`)
 	nonRetriableErrorPatternRegex = regexp.MustCompile(`(?i)invalid arguments|system failure`)
 
@@ -172,8 +172,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if isInPlaceUpdate(oscChanges) {
 		if !nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
-			log.Info("Node is not ready for in-place update, will be requeued when the node has the ready-for-update condition", "node", node.Name)
-			return reconcile.Result{}, nil
+			if node.Labels[machinev1alpha1.LabelKeyNodeUpdateResult] != machinev1alpha1.LabelValueNodeUpdateFailed {
+				log.Info("Node is not ready for in-place update, will be requeued when the node has the ready-for-update condition", "node", node.Name)
+				return reconcile.Result{}, nil
+			}
+
+			log.Info("Node has label update-result with failed value, will continue retrying the update")
 		}
 
 		log.Info("In-place update is in progress", "osUpdate", oscChanges.InPlaceUpdates.OperatingSystem,
@@ -665,7 +669,7 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		return fmt.Errorf("failed to perform certificate rotation in-place: %w", err)
 	}
 
-	if nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) {
+	if nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful) {
 		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
 			return fmt.Errorf("failed to delete remaining pods: %w", err)
 		}

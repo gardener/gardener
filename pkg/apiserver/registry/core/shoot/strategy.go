@@ -178,6 +178,8 @@ func (shootStrategy) Validate(_ context.Context, obj runtime.Object) field.Error
 	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
 	allErrs = append(allErrs, validation.ValidateForceDeletion(shoot, nil)...)
 	allErrs = append(allErrs, validation.ValidateFinalizersOnCreation(shoot.Finalizers, field.NewPath("metadata", "finalizers"))...)
+	allErrs = append(allErrs, validation.ValidateInPlaceUpdateStrategyOnCreation(shoot)...)
+
 	return allErrs
 }
 

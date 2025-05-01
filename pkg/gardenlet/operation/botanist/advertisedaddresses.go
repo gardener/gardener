@@ -16,7 +16,7 @@ import (
 // UpdateAdvertisedAddresses updates the shoot.status.advertisedAddresses with the list of
 // addresses on which the API server of the shoot is accessible.
 func (b *Botanist) UpdateAdvertisedAddresses(ctx context.Context) error {
-	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, false, func(shoot *gardencorev1beta1.Shoot) error {
+	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, false, false, func(shoot *gardencorev1beta1.Shoot) error {
 		addresses, err := b.ToAdvertisedAddresses()
 		if err != nil {
 			return err

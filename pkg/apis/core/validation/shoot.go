@@ -383,6 +383,11 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))...)
 
 	for i, newWorker := range newProvider.Workers {
+		var (
+			idxPath              = fldPath.Child("workers").Index(i)
+			newStrategyIsInPlace = helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy)
+		)
+
 		var oldWorker core.Worker
 
 		oldWorkerIndex := slices.IndexFunc(oldProvider.Workers, func(worker core.Worker) bool {
@@ -391,15 +396,15 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 		})
 
 		if oldWorkerIndex == -1 {
+			// Only validate the feature gate if the worker is new. We don't want to break existing workers.
+			if !features.DefaultFeatureGate.Enabled(features.InPlaceNodeUpdates) && newStrategyIsInPlace {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), *newWorker.UpdateStrategy, "can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."))
+			}
+
 			continue
 		}
 
-		var (
-			idxPath              = fldPath.Child("workers").Index(i)
-			oldStrategyIsInPlace = helper.IsUpdateStrategyInPlace(oldWorker.UpdateStrategy)
-			newStrategyIsInPlace = helper.IsUpdateStrategyInPlace(newWorker.UpdateStrategy)
-		)
-
+		oldStrategyIsInPlace := helper.IsUpdateStrategyInPlace(oldWorker.UpdateStrategy)
 		if oldStrategyIsInPlace && !newStrategyIsInPlace {
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "update strategy cannot be changed from AutoInPlaceUpdate/ManualInPlaceUpdate to AutoRollingUpdate"))
 		}
@@ -1848,10 +1853,6 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		if !availableUpdateStrategies.Has(*worker.UpdateStrategy) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, sets.List(availableUpdateStrategies)))
 		}
-
-		if !features.DefaultFeatureGate.Enabled(features.InPlaceNodeUpdates) && helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, "can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."))
-		}
 	}
 
 	return allErrs
@@ -2467,6 +2468,26 @@ func ValidateFinalizersOnCreation(finalizers []string, fldPath *field.Path) fiel
 		if ForbiddenShootFinalizersOnCreation.Has(finalizer) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("finalizer %q cannot be added on creation", finalizer)))
 		}
+	}
+
+	return allErrs
+}
+
+// ValidateInPlaceUpdateStrategyOnCreation validates whether the Shoot is using any workers with in-place update strategy
+// when the InPlaceNodeUpdates feature gate is disabled.
+func ValidateInPlaceUpdateStrategyOnCreation(shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if features.DefaultFeatureGate.Enabled(features.InPlaceNodeUpdates) {
+		return allErrs
+	}
+
+	for i, worker := range shoot.Spec.Provider.Workers {
+		if !helper.IsUpdateStrategyInPlace(worker.UpdateStrategy) {
+			continue
+		}
+
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("updateStrategy"), *worker.UpdateStrategy, "can not configure `AutoInPlaceUpdate` or `ManualInPlaceUpdate` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."))
 	}
 
 	return allErrs

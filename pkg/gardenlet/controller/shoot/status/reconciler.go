@@ -129,21 +129,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	patch := client.StrategicMergeFrom(shoot.DeepCopy())
+	// gardenlet's shoot reconciler might concurrently try to update the status.inPlaceUpdates field.
+	// Hence, we need to use optimistic locking to ensure we don't accidentally overwrite concurrent updates.
+	patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = slices.DeleteFunc(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate, func(pool string) bool {
 		return !manualInPlacePendingWorkers.Has(pool)
 	})
 
-	if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0 {
+	var (
+		noManualInPlacePendingWorkers = len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate) == 0
+		noInPlacePendingWorkers       = noManualInPlacePendingWorkers && len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0
+		shootNeedsReconcile           = false
+	)
+
+	if noManualInPlacePendingWorkers {
 		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate = nil
 
-		if len(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate) == 0 {
-			shoot.Status.InPlaceUpdates.PendingWorkerUpdates = nil
+		if noInPlacePendingWorkers {
+			shoot.Status.InPlaceUpdates = nil
 		}
-	}
-
-	if shoot.Status.InPlaceUpdates.PendingWorkerUpdates == nil {
-		shoot.Status.InPlaceUpdates = nil
 	}
 
 	log.Info("Updating Shoot status with manual in-place pending workers", "shoot", shoot.Name, "manualInPlacePendingWorkers", sets.List(manualInPlacePendingWorkers))
@@ -151,9 +155,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed to patch Shoot status: %w", err)
 	}
 
-	if shoot.Status.InPlaceUpdates == nil && kubernetesutils.HasMetaDataAnnotation(shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate) {
-		patch := client.MergeFrom(shoot.DeepCopy())
-		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+	// The credentials rotation phases are not set to Prepared in the Shoot reconciliation flow if there are manual in-place pending workers. So we need to trigger a reconciliation after they are all updated.
+	if noManualInPlacePendingWorkers {
+		shootNeedsReconcile = (v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials) == gardencorev1beta1.RotationPreparing || v1beta1helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) == gardencorev1beta1.RotationPreparing)
+	}
+
+	if shootNeedsReconcile || (noInPlacePendingWorkers && kubernetesutils.HasMetaDataAnnotation(shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationForceInPlaceUpdate)) {
+		patch := client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		if shootNeedsReconcile {
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		} else {
+			delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+		}
+
 		if err := r.GardenClient.Patch(ctx, shoot, patch); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to patch Shoot: %w", err)
 		}

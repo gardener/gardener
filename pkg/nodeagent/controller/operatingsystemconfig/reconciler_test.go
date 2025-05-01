@@ -132,6 +132,34 @@ GARDENLINUX_COMMIT_ID_LONG=5b20e1c0436d229b051f0481a72d0a366315b220
 			Expect(version).To(PointTo(Equal("1592.6")))
 		})
 
+		It("should return the OS version when patch version is also present", func() {
+			Expect(fs.WriteFile("/etc/os-release", []byte(`ID=gardenlinux
+NAME="Garden Linux"
+PRETTY_NAME="Garden Linux 1592.6.3"
+`), 0600)).To(Succeed())
+
+			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).To(PointTo(Equal("1592.6.3")))
+		})
+
+		It("should return the OS version when only major version is present", func() {
+			Expect(fs.WriteFile("/etc/os-release", []byte(`PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
+NAME="Debian GNU/Linux"
+VERSION_ID="12"
+VERSION="12 (bookworm)"
+VERSION_CODENAME=bookworm
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+`), 0600)).To(Succeed())
+
+			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).To(PointTo(Equal("12")))
+		})
+
 		It("should return nil when inPlaceUpdates is nil", func() {
 			version, err := GetOSVersion(nil, fs)
 			Expect(err).NotTo(HaveOccurred())
@@ -159,7 +187,7 @@ NAME="Garden Linux"
 		It("should return an error when it is not able to parse the version", func() {
 			Expect(fs.WriteFile("/etc/os-release", []byte(`ID=gardenlinux
 NAME="Garden Linux"
-PRETTY_NAME="Garden Linux 1592"
+PRETTY_NAME="Garden Linux 1592Foo"
 `), 0600)).To(Succeed())
 
 			version, err := GetOSVersion(&extensionsv1alpha1.InPlaceUpdates{}, fs)
@@ -389,6 +417,43 @@ PRETTY_NAME="Garden Linux 1592"
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Labels).NotTo(HaveKey(machinev1alpha1.LabelKeyNodeUpdateResult))
+
+			podList := &corev1.PodList{}
+			Expect(c.List(ctx, podList)).To(Succeed())
+			Expect(podList.Items).To(HaveLen(2))
+		})
+
+		It("should not patch the node as update successful or delete the pods if the node is already labelled with update-result successful", func() {
+			metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)
+
+			pods := []*corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "pod-1",
+					},
+					Spec: corev1.PodSpec{
+						NodeName: "test-node",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "pod-2",
+					},
+					Spec: corev1.PodSpec{
+						NodeName: "test-node",
+					},
+				},
+			}
+
+			for _, pod := range pods {
+				Expect(c.Create(ctx, pod)).To(Succeed())
+			}
+
+			DeferCleanup(func() {
+				Expect(c.DeleteAllOf(ctx, &corev1.Pod{})).To(Or(Succeed(), BeNotFoundError()))
+			})
+
+			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)).To(Succeed())
 
 			podList := &corev1.PodList{}
 			Expect(c.List(ctx, podList)).To(Succeed())

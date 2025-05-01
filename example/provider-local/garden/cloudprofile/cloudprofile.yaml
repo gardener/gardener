@@ -24,9 +24,19 @@ spec:
   machineImages:
   - name: local
     versions:
+    # This version is just used for in-place update e2e tests.
+    - version: 2.0.0
+      classification: preview
+      cri:
+      - name: containerd
+      inPlaceUpdates:
+        supported: true
+        minVersionForUpdate: 1.0.0
     - version: 1.0.0
       cri:
       - name: containerd
+      inPlaceUpdates:
+        supported: true
   providerConfig:
     apiVersion: local.provider.extensions.gardener.cloud/v1alpha1
     kind: CloudProfileConfig
@@ -34,4 +44,7 @@ spec:
     - name: local
       versions:
       - version: 1.0.0
+        image: local-skaffold/gardener-extension-provider-local-node:v1.0.0
+      # This version is just used for in-place update e2e tests.
+      - version: 2.0.0
         image: local-skaffold/gardener-extension-provider-local-node:v1.0.0

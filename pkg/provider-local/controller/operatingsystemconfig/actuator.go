@@ -35,8 +35,9 @@ func (a *actuator) Reconcile(ctx context.Context, _ logr.Logger, osc *extensions
 		return []byte(userData), nil, nil, nil, err
 
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		extensionUnits, extensionFiles, inPlaceUpdates, err := a.handleReconcileOSC(osc)
-		return nil, extensionUnits, extensionFiles, inPlaceUpdates, err
+		inPlaceUpdates := a.handleReconcileOSC(osc)
+		// provider-local does not add any additional units or additional files
+		return nil, nil, nil, inPlaceUpdates, nil
 
 	default:
 		return nil, nil, nil, nil, fmt.Errorf("unknown purpose: %s", purpose)
@@ -79,7 +80,22 @@ systemctl daemon-reload
 	return operatingsystemconfig.WrapProvisionOSCIntoOneshotScript(script), nil
 }
 
-func (a *actuator) handleReconcileOSC(_ *extensionsv1alpha1.OperatingSystemConfig) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, *extensionsv1alpha1.InPlaceUpdatesStatus, error) {
-	// provider-local does not add any additional units or additional files or support in-place updates
-	return nil, nil, nil, nil
+func (a *actuator) handleReconcileOSC(osc *extensionsv1alpha1.OperatingSystemConfig) *extensionsv1alpha1.InPlaceUpdatesStatus {
+	if osc.Spec.InPlaceUpdates == nil {
+		return nil
+	}
+
+	return &extensionsv1alpha1.InPlaceUpdatesStatus{
+		OSUpdate: &extensionsv1alpha1.OSUpdate{
+			Command: "sed",
+			Args: []string{
+				"-i", "-E",
+				fmt.Sprintf(
+					`s/^PRETTY_NAME="[^"]*"/PRETTY_NAME="Machine Image Version %s (version overwritten for tests, check VERSION_ID for actual version)"/`,
+					osc.Spec.InPlaceUpdates.OperatingSystemVersion,
+				),
+				"/etc/os-release",
+			},
+		},
+	}
 }

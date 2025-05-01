@@ -24,6 +24,9 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/machine-provider/api/validation"
 )
 
+// MachinePodContainerName is a constant for the name of the container in the machine pod.
+const MachinePodContainerName = "node"
+
 func (d *localDriver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (*driver.CreateMachineResponse, error) {
 	if req.MachineClass.Provider != apiv1alpha1.Provider {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("requested for provider '%s', we only support '%s'", req.MachineClass.Provider, apiv1alpha1.Provider))
@@ -90,7 +93,7 @@ func (d *localDriver) applyPod(
 	pod.Spec = corev1.PodSpec{
 		Containers: []corev1.Container{
 			{
-				Name:            "node",
+				Name:            MachinePodContainerName,
 				Image:           providerSpec.Image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				SecurityContext: &corev1.SecurityContext{

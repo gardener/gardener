@@ -376,7 +376,7 @@ func (s *Shoot) SetShootState(shootState *gardencorev1beta1.ShootState) {
 // using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
 // This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
 // executed at any point in time.
-func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Shoot) error) error {
+func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge, mergeWithOptimisticLock bool, f func(*gardencorev1beta1.Shoot) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
 
@@ -384,8 +384,14 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMer
 	var patch client.Patch
 	if useStrategicMerge {
 		patch = client.StrategicMergeFrom(shoot.DeepCopy())
+		if mergeWithOptimisticLock {
+			patch = client.StrategicMergeFrom(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		}
 	} else {
 		patch = client.MergeFrom(shoot.DeepCopy())
+		if mergeWithOptimisticLock {
+			patch = client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		}
 	}
 	if err := f(shoot); err != nil {
 		return err
@@ -403,7 +409,7 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMer
 // using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
 // This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
 // executed at any point in time.
-func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Shoot) error) error {
+func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrategicMerge, mergeWithOptimisticLock bool, f func(*gardencorev1beta1.Shoot) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
 
@@ -411,8 +417,14 @@ func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrate
 	var patch client.Patch
 	if useStrategicMerge {
 		patch = client.StrategicMergeFrom(shoot.DeepCopy())
+		if mergeWithOptimisticLock {
+			patch = client.StrategicMergeFrom(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		}
 	} else {
 		patch = client.MergeFrom(shoot.DeepCopy())
+		if mergeWithOptimisticLock {
+			patch = client.MergeFromWithOptions(shoot.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		}
 	}
 	if err := f(shoot); err != nil {
 		return err

@@ -330,7 +330,7 @@ func (b *Botanist) SetInPlaceUpdatePendingWorkers(ctx context.Context, worker *e
 		return nil
 	}
 
-	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+	return b.Shoot.UpdateInfoStatus(ctx, b.GardenClient, false, true, func(shoot *gardencorev1beta1.Shoot) error {
 		if shoot.Status.InPlaceUpdates == nil {
 			shoot.Status.InPlaceUpdates = &gardencorev1beta1.InPlaceUpdatesStatus{}
 		}
