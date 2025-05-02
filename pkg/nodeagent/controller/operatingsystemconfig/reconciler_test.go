@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/gardener/gardener/pkg/api/indexer"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -378,11 +379,29 @@ PRETTY_NAME="Garden Linux 1592Foo"
 			node.Annotations = map[string]string{"node-agent.gardener.cloud/updating-operating-system-version": "1.2.4"}
 			osc.Spec.InPlaceUpdates.OperatingSystemVersion = "1.2.4"
 
-			Expect(reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)).To(Succeed())
+			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)
+			Expect(err).To(MatchError(ContainSubstring("OS update might have failed and rolled back to the previous version")))
+			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
 			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed))
 			Expect(node.Annotations).To(HaveKeyWithValue(machinev1alpha1.AnnotationKeyMachineUpdateFailedReason, ContainSubstring("OS update might have failed and rolled back to the previous version. Desired version: %q, Current version: %q", "1.2.4", "1.2.3")))
+		})
+
+		It("should not overwrite the existing error if the lastAttempted version is equal to the osc.Spec.InPlaceUpdates.OperatingSystemVersion but an update failed result is already present", func() {
+			node.Annotations = map[string]string{"node-agent.gardener.cloud/updating-operating-system-version": "1.2.4"}
+			osc.Spec.InPlaceUpdates.OperatingSystemVersion = "1.2.4"
+			node.Annotations[machinev1alpha1.AnnotationKeyMachineUpdateFailedReason] = "previous error"
+			node.Labels = map[string]string{machinev1alpha1.LabelKeyNodeUpdateResult: machinev1alpha1.LabelValueNodeUpdateFailed}
+			Expect(c.Update(ctx, node)).To(Succeed())
+
+			err := reconciler.performInPlaceUpdate(ctx, log, osc, oscChanges, node, &osVersion)
+			Expect(err).To(MatchError(ContainSubstring("OS update has failed with error")))
+			Expect(err).To(MatchError(reconcile.TerminalError(nil)))
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+			Expect(node.Labels).To(HaveKeyWithValue(machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed))
+			Expect(node.Annotations).To(HaveKeyWithValue(machinev1alpha1.AnnotationKeyMachineUpdateFailedReason, "previous error"))
 		})
 
 		It("should not patch the node as update successful or delete the pods if the node does not have InPlaceUpdate condition with reason ReadyForUpdate", func() {
