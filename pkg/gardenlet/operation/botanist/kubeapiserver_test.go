@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -541,7 +542,7 @@ users:
 			kubeAPIServer.EXPECT().SetServiceNetworkCIDRs(gomock.Any())
 			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
-			kubeAPIServer.EXPECT().AppendAuthorizationWebhook(expectedAuthorizationWebhook)
+			kubeAPIServer.EXPECT().AppendAuthorizationWebhook(expectedAuthorizationWebhook, logr.Discard())
 			kubeAPIServer.EXPECT().Deploy(ctx)
 
 			Expect(botanist.DeployKubeAPIServer(ctx, true)).To(Succeed())
