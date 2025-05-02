@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/rotation"
 	"github.com/gardener/gardener/test/utils/access"
 	rotationutils "github.com/gardener/gardener/test/utils/rotation"
+	"github.com/gardener/gardener/test/utils/shoots/update/inplace"
 )
 
 func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rotationutils.Verifiers, startRotationAnnotation, completeRotationAnnotation string, inPlaceUpdate bool) {
@@ -70,7 +71,7 @@ func testCredentialRotation(s *ShootContext, shootVerifiers, utilsverifiers rota
 		}, SpecTimeout(time.Minute))
 
 		if inPlaceUpdate {
-			ItShouldVerifyInPlaceUpdateStart(s)
+			inplace.ItShouldVerifyInPlaceUpdateStart(s.GardenClient, s.Shoot, true, true)
 		}
 
 		ItShouldWaitForShootToBeReconciledAndHealthy(s)
@@ -129,7 +130,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}, SpecTimeout(5*time.Minute))
 	}
 
-	machinePodNamesBeforeTest := ItShouldFindAllMachinePodsBefore(s)
+	nodesOfInPlaceWorkersBeforeTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
 
 	ItShouldAnnotateShoot(s, map[string]string{
 		v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
@@ -153,7 +154,8 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
+	nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+	Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 
 	It("Ensure all worker pools are marked as 'pending for roll out'", func() {
 		for _, worker := range s.Shoot.Spec.Provider.Workers {
@@ -310,11 +312,11 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				shootVerifiers = append(shootVerifiers, &rotation.SSHKeypairVerifier{ShootContext: s})
 			}
 
-			var machinePodNamesBeforeTest sets.Set[string]
+			var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
 
 			if inPlaceUpdate {
-				machinePodNamesBeforeTest = ItShouldFindAllMachinePodsBefore(s)
-				ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
+				nodesOfInPlaceWorkersBeforeTest = inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+				inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
 			}
 
 			if !withoutWorkersRollout {
@@ -324,15 +326,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				testCredentialRotationWithoutWorkersRollout(s, shootVerifiers, utilsVerifiers)
 			}
 
-			if inPlaceUpdate {
-				ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
-				ItShouldVerifyInPlaceUpdateCompletion(s)
-			}
-
 			if !v1beta1helper.IsWorkerless(s.Shoot) {
 				// renew shoot clients after rotation
 				ItShouldInitializeShootClient(s)
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
+			}
+
+			if inPlaceUpdate {
+				nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+				Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
+				inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
 			}
 
 			ItShouldDeleteShoot(s)

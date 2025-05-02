@@ -18,6 +18,7 @@ import (
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
+	"github.com/gardener/gardener/test/utils/shoots/update/inplace"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
@@ -57,16 +58,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			ItShouldGetResponsibleSeed(s)
 			ItShouldInitializeSeedClient(s)
 
-			ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
+			inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
 			verifyWorkerNodeLabels(s)
 			inclusterclient.VerifyInClusterAccessToAPIServer(s)
 			verifyNodeKubernetesVersions(s)
 
 			var (
-				machinePodNamesBeforeTest     = ItShouldFindAllMachinePodsBefore(s)
-				cloudProfile                  *gardencorev1beta1.CloudProfile
-				controlPlaneKubernetesVersion string
-				poolNameToKubernetesVersion   map[string]string
+				nodesOfInPlaceWorkersBeforeTest = inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+				cloudProfile                    *gardencorev1beta1.CloudProfile
+				controlPlaneKubernetesVersion   string
+				poolNameToKubernetesVersion     map[string]string
 			)
 
 			It("Get CloudProfile", func(ctx SpecContext) {
@@ -115,15 +116,16 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				}).Should(Succeed())
 			}, SpecTimeout(time.Minute))
 
-			ItShouldVerifyInPlaceUpdateStart(s)
+			inplace.ItShouldVerifyInPlaceUpdateStart(s.GardenClient, s.Shoot, true, true)
 
 			ItShouldWaitForShootToBeReconciledAndHealthy(s)
 			ItShouldInitializeShootClient(s)
 			verifyNodeKubernetesVersions(s)
 			inclusterclient.VerifyInClusterAccessToAPIServer(s)
 
-			ItShouldCompareMachinePodNamesAfter(s, machinePodNamesBeforeTest)
-			ItShouldVerifyInPlaceUpdateCompletion(s)
+			nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+			Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
+			inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
 
 			ItShouldDeleteShoot(s)
 			ItShouldWaitForShootToBeDeleted(s)
