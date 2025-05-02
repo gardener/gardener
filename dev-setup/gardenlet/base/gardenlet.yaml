@@ -10,8 +10,6 @@ spec:
   config:
     apiVersion: gardenlet.config.gardener.cloud/v1alpha1
     kind: GardenletConfiguration
-    gardenClientConnection:
-      gardenClusterAddress: https://api.virtual-garden.local.gardener.cloud
     featureGates:
       DefaultSeccompProfile: true
       NewWorkerPoolHash: true
