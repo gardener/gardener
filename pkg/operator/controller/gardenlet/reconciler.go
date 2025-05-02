@@ -24,11 +24,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller/gardenletdeployer"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/oci"
@@ -40,14 +42,16 @@ var RequeueDurationSeedIsNotYetRegistered = 30 * time.Second
 
 // Reconciler reconciles the Gardenlet.
 type Reconciler struct {
-	RuntimeCluster        cluster.Cluster
-	VirtualConfig         *rest.Config
-	VirtualClient         client.Client
-	Config                operatorconfigv1alpha1.GardenletDeployerControllerConfig
-	Clock                 clock.Clock
-	Recorder              record.EventRecorder
-	HelmRegistry          oci.Interface
-	GardenNamespaceTarget string
+	RuntimeCluster              cluster.Cluster
+	VirtualConfig               *rest.Config
+	VirtualClient               client.Client
+	Config                      operatorconfigv1alpha1.GardenletDeployerControllerConfig
+	Clock                       clock.Clock
+	Recorder                    record.EventRecorder
+	HelmRegistry                oci.Interface
+	GardenNamespace             string
+	GardenNamespaceTarget       string
+	DefaultGardenClusterAddress string
 }
 
 // Reconcile performs the main reconciliation logic.
@@ -151,6 +155,10 @@ func (r *Reconciler) reconcile(
 		return result, r.updateStatus(ctx, gardenlet, status)
 	}
 
+	if err := r.setDefaultGardenClusterAddress(log, gardenlet); err != nil {
+		return result, fmt.Errorf("failed to set default garden cluster address: %w", err)
+	}
+
 	status.Conditions, err = actuator.Reconcile(ctx, log, gardenlet, status.Conditions, &gardenlet.Spec.Deployment.GardenletDeployment, &gardenlet.Spec.Config, seedmanagementv1alpha1.BootstrapToken, false)
 	if err != nil {
 		if updateErr := r.updateStatus(ctx, gardenlet, status); updateErr != nil {
@@ -214,6 +222,35 @@ func (r *Reconciler) removeForceRedeployAnnotationIfNeeded(ctx context.Context, 
 	if err := r.VirtualClient.Patch(ctx, gardenlet, patch); err != nil {
 		return fmt.Errorf("could not remove force-redeploy operation annotation: %w", err)
 	}
+
+	return nil
+}
+
+func (r *Reconciler) setDefaultGardenClusterAddress(log logr.Logger, gardenlet *seedmanagementv1alpha1.Gardenlet) error {
+	gardenletConfig, err := encoding.DecodeGardenletConfiguration(&gardenlet.Spec.Config, false)
+	if err != nil {
+		return fmt.Errorf("failed to decode gardenlet configuration: %w", err)
+	}
+
+	if gardenletConfig == nil {
+		return nil
+	}
+
+	if gardenletConfig.GardenClientConnection == nil {
+		gardenletConfig.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{}
+	}
+
+	if gardenletConfig.GardenClientConnection.GardenClusterAddress == nil {
+		log.Info("Setting default garden cluster address", "gardenClusterAddress", r.DefaultGardenClusterAddress)
+		gardenletConfig.GardenClientConnection.GardenClusterAddress = &r.DefaultGardenClusterAddress
+	}
+
+	gardenletConfigRaw, err := encoding.EncodeGardenletConfiguration(gardenletConfig)
+	if err != nil {
+		return fmt.Errorf("failed to encode gardenlet configuration: %w", err)
+	}
+
+	gardenlet.Spec.Config = *gardenletConfigRaw
 
 	return nil
 }
