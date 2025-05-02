@@ -9,6 +9,9 @@
     - localhost
     - 127.0.0.1
     - ::1
+{{- if .Values.gardener.controlPlane.kindIsGardenCluster }}
+    - garden.local.gardener.cloud
+{{- end }}
 {{- if .Values.gardener.apiserverRelay.deployed }}
     - gardener-apiserver.relay.svc.cluster.local
 {{- end }}

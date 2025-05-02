@@ -215,7 +215,7 @@ var _ = Describe("Util", func() {
 					})
 				test.EXPECTPatch(ctx, c, updatedSecret, expectedSecret, types.MergePatchType)
 
-				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, expectedKubeconfig, gardenClientConnection)
+				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, nil, c, expectedKubeconfig, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(updatedKubeconfig).ToNot(Equal(expectedKubeconfig))
 				Expect(updatedKubeconfig).To(Equal(expectedUpdatedKubeconfig))
@@ -227,7 +227,7 @@ var _ = Describe("Util", func() {
 				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
-				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, expectedKubeconfig, gardenClientConnection)
+				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, nil, c, expectedKubeconfig, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(updatedKubeconfig).To(Equal(expectedKubeconfig))
 			})
@@ -239,7 +239,7 @@ var _ = Describe("Util", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedCertClientConfig := &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
-					Insecure: false,
+					Insecure: true,
 					CAData:   []byte{},
 				}}
 				expectedUpdatedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
@@ -257,7 +257,7 @@ var _ = Describe("Util", func() {
 					})
 				test.EXPECTPatch(ctx, c, updatedSecret, expectedSecret, types.MergePatchType)
 
-				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, expectedKubeconfig, gardenClientConnection)
+				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, nil, c, expectedKubeconfig, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(updatedKubeconfig).ToNot(Equal(expectedKubeconfig))
 				Expect(updatedKubeconfig).To(Equal(expectedUpdatedKubeconfig))
@@ -270,7 +270,7 @@ var _ = Describe("Util", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				updatedCertClientConfig := &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
-					Insecure: false,
+					Insecure: true,
 					CAData:   []byte{},
 				}}
 				expectedUpdatedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
@@ -288,7 +288,52 @@ var _ = Describe("Util", func() {
 					})
 				test.EXPECTPatch(ctx, c, updatedSecret, expectedSecret, types.MergePatchType)
 
-				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, expectedKubeconfig, gardenClientConnection)
+				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, nil, c, expectedKubeconfig, gardenClientConnection)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(updatedKubeconfig).ToNot(Equal(expectedKubeconfig))
+				Expect(updatedKubeconfig).To(Equal(expectedUpdatedKubeconfig))
+			})
+
+			It("should update the secret from garden cluster", func() {
+				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				Expect(err).ToNot(HaveOccurred())
+
+				caConfigMap := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "kube-root-ca.crt",
+						Namespace: "gardener-system-public",
+					},
+					Data: map[string]string{
+						"ca.crt": "bar",
+					},
+				}
+
+				updatedCertClientConfig := &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
+					Insecure: false,
+					CAData:   []byte(caConfigMap.Data["ca.crt"]),
+				}}
+				expectedUpdatedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(updatedCertClientConfig, nil, nil)
+				Expect(err).ToNot(HaveOccurred())
+
+				updatedSecret := expectedSecret.DeepCopy()
+				expectedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig}
+				updatedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedUpdatedKubeconfig}
+
+				c.EXPECT().
+					Get(ctx, client.ObjectKeyFromObject(caConfigMap), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.ConfigMap, _ ...client.GetOption) error {
+						caConfigMap.DeepCopyInto(obj)
+						return nil
+					})
+				c.EXPECT().
+					Get(ctx, secretKey, gomock.AssignableToTypeOf(&corev1.Secret{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
+						expectedSecret.DeepCopyInto(obj)
+						return nil
+					})
+				test.EXPECTPatch(ctx, c, updatedSecret, expectedSecret, types.MergePatchType)
+
+				updatedKubeconfig, err := UpdateGardenKubeconfigCAIfChanged(ctx, log, c, c, expectedKubeconfig, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(updatedKubeconfig).ToNot(Equal(expectedKubeconfig))
 				Expect(updatedKubeconfig).To(Equal(expectedUpdatedKubeconfig))
