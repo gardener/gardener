@@ -795,7 +795,7 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 	if checkRollingUpdate {
 		// Use the checkNodesScalingUp function since it checks for machines that may be stuck in the pending state, which can happen when rolling out critical components that are stuck.
 		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
-			return "NodeRollOut", err
+			return "NodesRollOutScalingUp", err
 		}
 	}
 

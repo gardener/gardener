@@ -424,7 +424,7 @@ var _ = Describe("health check", func() {
 
 	Describe("#CheckNodesScaling", func() {
 		Describe("Rolling update", func() {
-			It("should priotitise NodeRollOut over NodesScalingUp when returning an error if not enough machine objects as desired were created", func() {
+			It("should prioritize NodesRollOutScalingUp over NodesScalingUp when returning an error if not enough machine objects as desired were created", func() {
 				machineDeploymentList := &machinev1alpha1.MachineDeploymentList{
 					Items: []machinev1alpha1.MachineDeployment{
 						{
@@ -438,7 +438,7 @@ var _ = Describe("health check", func() {
 					},
 				}
 				msg, err := CheckNodesScaling(ctx, fakeClient, []*corev1.Node{}, machineDeploymentList, controlPlaneNamespace)
-				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(msg).To(Equal("NodesRollOutScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("not enough machine objects created yet")))
 			})
 
@@ -455,7 +455,7 @@ var _ = Describe("health check", func() {
 					},
 				}
 				msg, err := CheckNodesScaling(ctx, fakeClient, []*corev1.Node{}, machineDeploymentList, controlPlaneNamespace)
-				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(msg).To(Equal("NodesRollOutScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("not enough machine objects created yet")))
 			})
 
@@ -486,7 +486,7 @@ var _ = Describe("health check", func() {
 					},
 				}
 				msg, err := CheckNodesScaling(ctx, fakeClient, []*corev1.Node{}, machineDeploymentList, controlPlaneNamespace)
-				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(msg).To(Equal("NodesRollOutScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("is erroneous")))
 			})
 
@@ -517,7 +517,7 @@ var _ = Describe("health check", func() {
 					},
 				}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
-				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(msg).To(Equal("NodesRollOutScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("not enough ready worker nodes registered in the cluster")))
 			})
 
@@ -548,7 +548,7 @@ var _ = Describe("health check", func() {
 					},
 				}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
-				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(msg).To(Equal("NodesRollOutScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("provisioning and should join the cluster soon")))
 			})
 
@@ -574,7 +574,7 @@ var _ = Describe("health check", func() {
 					},
 				}
 				msg, err := CheckNodesScaling(ctx, fakeClient, nodeList, machineDeploymentList, controlPlaneNamespace)
-				Expect(msg).To(Equal("NodeRollOut"))
+				Expect(msg).To(Equal("NodesRollOutScalingUp"))
 				Expect(err).To(MatchError(ContainSubstring("provisioning and should join the cluster soon")))
 			})
 		})
