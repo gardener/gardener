@@ -7,6 +7,7 @@ package authenticationconfig
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -65,6 +66,9 @@ func NewHandler(log logr.Logger, apiReader, c client.Reader, decoder admission.D
 			return gardencorehelper.GetShootAuthenticationConfigurationConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
 		},
 		SkipValidationOnShootUpdate: func(shoot, oldShoot *gardencore.Shoot) bool {
+			if !gardencorehelper.IsLegacyAnonymousAuthenticationEnabled(oldShoot.Spec.Kubernetes.KubeAPIServer) && gardencorehelper.IsLegacyAnonymousAuthenticationEnabled(shoot.Spec.Kubernetes.KubeAPIServer) {
+				return false // Don't skip validation when the deprecated anonymous authentication is being enabled.
+			}
 			return sets.New[string](getIssuersFromShoot(shoot)...).Equal(sets.New[string](getIssuersFromShoot(oldShoot)...))
 		},
 		AdmitConfig: admitConfig,
@@ -95,6 +99,12 @@ func admitConfig(authenticationConfigurationRaw string, shoots []*gardencore.Sho
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid authentication configuration: %v", errList)
 	}
 
+	if authenticationConfig.Anonymous != nil && authenticationConfig.Anonymous.Enabled {
+		if anonAuthShoots := getShootsWithLegacyAnonymousAuthentication(shoots); len(anonAuthShoots) > 0 {
+			return handleAnonymousAuthenticationConfigurationConflict(anonAuthShoots)
+		}
+	}
+
 	return 0, nil
 }
 
@@ -115,4 +125,22 @@ func getIssuersFromShoot(shoot *gardencore.Shoot) []string {
 	}
 
 	return issuers
+}
+
+func getShootsWithLegacyAnonymousAuthentication(shoots []*gardencore.Shoot) []*gardencore.Shoot {
+	var filteredShoots []*gardencore.Shoot
+	for _, shoot := range shoots {
+		if gardencorehelper.IsLegacyAnonymousAuthenticationEnabled(shoot.Spec.Kubernetes.KubeAPIServer) {
+			filteredShoots = append(filteredShoots, shoot)
+		}
+	}
+	return filteredShoots
+}
+
+func handleAnonymousAuthenticationConfigurationConflict(shoots []*gardencore.Shoot) (int32, error) {
+	var shootNames []string
+	for _, s := range shoots {
+		shootNames = append(shootNames, s.Name)
+	}
+	return http.StatusUnprocessableEntity, fmt.Errorf("cannot use anonymous authentication configuration when the following shoots have the legacy configuration enabled: %s", strings.Join(shootNames, ", "))
 }
