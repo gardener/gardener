@@ -252,5 +252,10 @@ var _ = Describe("Warnings", func() {
 			shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.enableStaticTokenKubeconfig field. The field is deprecated and will be removed in Gardener v1.120. Please adapt your machinery to no longer set this field")))
 		})
+
+		It("should return a warning when enableAnonymousAuthentication is set", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{EnableAnonymousAuthentication: ptr.To(true)}
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.31 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")))
+		})
 	})
 })

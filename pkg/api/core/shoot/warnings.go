@@ -36,6 +36,10 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 		warnings = append(warnings, "you are setting the spec.kubernetes.enableStaticTokenKubeconfig field. The field is deprecated and will be removed in Gardener v1.120. Please adapt your machinery to no longer set this field")
 	}
 
+	if helper.IsLegacyAnonymousAuthenticationEnabled(shoot.Spec.Kubernetes.KubeAPIServer) {
+		warnings = append(warnings, "you are setting the spec.kubernetes.kubeAPIServer.enableAnonymousAuthentication field. The field is deprecated. Using Kubernetes v1.31 and above, please use anonymous authentication configuration. See: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#anonymous-authenticator-configuration")
+	}
+
 	return warnings
 }
 
