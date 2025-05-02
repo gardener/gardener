@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -75,6 +76,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	log = log.WithValues("shootName", shoot.Name)
 	actuator := r.newActuator(shoot)
+
+	if err := r.setDefaultGardenClusterAddress(log, &ms.Spec.Gardenlet); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to set default garden cluster address: %w", err)
+	}
 
 	if ms.DeletionTimestamp != nil {
 		return r.delete(ctx, log, ms, actuator)
@@ -285,4 +290,33 @@ func (r *Reconciler) updateStatus(ctx context.Context, ms *seedmanagementv1alpha
 	patch := client.StrategicMergeFrom(ms.DeepCopy())
 	ms.Status = *status
 	return r.GardenClient.Status().Patch(ctx, ms, patch)
+}
+
+func (r *Reconciler) setDefaultGardenClusterAddress(log logr.Logger, gardenlet *seedmanagementv1alpha1.GardenletConfig) error {
+	gardenletConfig, err := encoding.DecodeGardenletConfiguration(&gardenlet.Config, false)
+	if err != nil {
+		return fmt.Errorf("failed to decode gardenlet configuration: %w", err)
+	}
+
+	if gardenletConfig == nil {
+		return nil
+	}
+
+	if gardenletConfig.GardenClientConnection == nil {
+		gardenletConfig.GardenClientConnection = &gardenletconfigv1alpha1.GardenClientConnection{}
+	}
+
+	if gardenletConfig.GardenClientConnection.GardenClusterAddress == nil {
+		log.Info("Setting default garden cluster address", "gardenClusterAddress", r.GardenConfig.Host)
+		gardenletConfig.GardenClientConnection.GardenClusterAddress = &r.GardenConfig.Host
+	}
+
+	gardenletConfigRaw, err := encoding.EncodeGardenletConfiguration(gardenletConfig)
+	if err != nil {
+		return fmt.Errorf("failed to encode gardenlet configuration: %w", err)
+	}
+
+	gardenlet.Config = *gardenletConfigRaw
+
+	return nil
 }

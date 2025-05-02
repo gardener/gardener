@@ -93,7 +93,7 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 			},
 			{
 				Name: gardenlet.ControllerName,
-				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, _ *operatorv1alpha1.Garden) (bool, error) {
+				AddToManagerFunc: func(ctx context.Context, mgr manager.Manager, garden *operatorv1alpha1.Garden) (bool, error) {
 					if virtualCluster == nil {
 						logf.FromContext(ctx).Info("Virtual cluster object has not been created yet, cannot add Gardenlet reconciler")
 						return false, nil
@@ -101,6 +101,8 @@ func AddToManager(operatorCancel context.CancelFunc, mgr manager.Manager, cfg *o
 
 					return true, (&gardenlet.Reconciler{
 						Config: cfg.Controllers.GardenletDeployer,
+						// garden.Spec.VirtualCluster.DNS.Domains[0].Name is immutable and always set.
+						DefaultGardenClusterAddress: fmt.Sprintf("https://%s", gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name)),
 					}).AddToManager(ctx, mgr, virtualCluster)
 				},
 			},
