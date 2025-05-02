@@ -96,13 +96,6 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		scaleDownDisabled = true
 	}
 
-	if b.ManagedSeed != nil {
-		if b.ManagedSeedAPIServer != nil {
-			minReplicas = *b.ManagedSeedAPIServer.Autoscaler.MinReplicas
-			maxReplicas = b.ManagedSeedAPIServer.Autoscaler.MaxReplicas
-		}
-	}
-
 	return kubeapiserver.AutoscalingConfig{
 		APIServerResources: corev1.ResourceRequirements{
 			Requests: kubernetesutils.MaximumResourcesFromResourceList(
