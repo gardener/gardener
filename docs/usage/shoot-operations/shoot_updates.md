@@ -53,15 +53,45 @@ We consider shoot upgrades to change either the:
 Generally, an upgrade is also performed through a reconciliation of the `Shoot` resource, i.e., the same concepts as for [shoot updates](#updates) apply.
 If an end-user triggers an upgrade (e.g., by changing the Kubernetes version) after a new Gardener version was deployed but before the shoot was reconciled again, then this upgrade might incorporate the changes delivered with this new Gardener version.
 
+`UpdateStrategy` field under shoot worker enables the end user to choose between different behaviour of MCM during the upgrade process. Currently gardener support three update strategies:
+* `AutoRollingUpdate`
+* `AutoInPlaceUpdate`
+* `ManualInPlaceUpdate`
+
+
+
 ### In-Place vs. Rolling Updates
 
-If the Kubernetes patch version is changed, then the upgrade happens in-place.
-This means that the shoot worker nodes remain untouched and only the `kubelet` process restarts with the new Kubernetes version binary.
-The same applies for configuration changes of the kubelet.
+In case of in-place update worker nodes are updated without the need for replacing the VMs with the new ones. This means that the shoot worker nodes remain untouched. There is some downtime expected as the node needs to be drained and then workload will be scheduled again once the node is updated. If the Kubernetes patch version is changed, then the upgrade is always in-place.
 
-If the Kubernetes minor version is changed, then the upgrade is done in a "rolling update" fashion, similar to how pods in Kubernetes are updated (when backed by a `Deployment`).
+In case of rolling update, upgrade is done in a "rolling update" fashion, similar to how pods in Kubernetes are updated (when backed by a `Deployment`).
 The worker nodes will be terminated one after another and replaced by new machines.
 The existing workload is gracefully drained and evicted from the old worker nodes to new worker nodes, respecting the configured `PodDisruptionBudget`s (see [Specifying a Disruption Budget for your Application](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)).
+
+### AutoRollingUpdate
+
+When auto rollling update strategy is selected, upgrade is done in a "rolling update" fashion. Machine controller manager terminates the worker nodes one after the other and replaces it with new machines. This is the default update strategy. In order to create workers with `AutoRollingUpdate` either skip setting the `workers.updateStrategy` field (in this case the field will be defualted to `AutoInPlaceUpdate`) or set the field explicitly to `AutoInPlaceUpdate` for each workers.
+
+```yaml
+spec:
+  provider:
+    workers:
+      - name: cpu-worker
+        minimum: 5
+        maximum: 5
+        maxSurge: 0
+        maxUnavailable: 2
+        updateStrategy: AutoRollingUpdate
+        machine:
+          type: m5.large
+          image:
+            name: <some-image-name>
+            version: <some-image-version>
+          architecture: <some-cpu-architecture>
+        providerConfig: <some-machine-image-specific-configuration>
+```
+    
+Note: Infra need to have enough resource to create new nodes.
 
 #### Customize Rolling Update Behaviour of Shoot Worker Nodes
 
@@ -77,7 +107,7 @@ Additionally, you might customize how the machine-controller-manager (abbrev.: M
 
 #### Rolling Update Triggers
 
-Apart from the above mentioned triggers, a rolling update of the shoot worker nodes is also triggered for some changes to your worker pool specification (`.spec.provider.workers[]`, even if you don't change the Kubernetes or machine image version).
+A rolling update of the shoot worker nodes is triggered for some changes to your worker pool specification (`.spec.provider.workers[]`, even if you don't change the Kubernetes or machine image version).
 The complete list of fields that trigger a rolling update:
 
 * `.spec.kubernetes.version` (except for patch version changes)
@@ -108,6 +138,138 @@ Changes to `kubeReserved` or `systemReserved` do not trigger a node roll if thei
 
 Generally, the provider extension controllers might have additional constraints for changes leading to rolling updates, so please consult the respective documentation as well.
 In particular, if the feature gate `NewWorkerPoolHash` is enabled and a worker pool uses the new hash, then the `providerConfig` as a whole is not included. Instead only fields selected by the provider extension are considered.
+
+### InPlace updates
+
+For the scenarios where user would like to keep the current node and avoid deletion of such nodes even after the updates, Gardener comes with the option of `in-place` update. Currently `in-place` update is kept under `InPlaceNodeUpdates` feature gate.
+
+Machine image version in the cloudprofile has the `inPlaceUpdates` field which contains the configuration for in-place updates. For an OS to support in-place update `inPlaceUpdates.supported` field should be set to true. Moreoever `inPlaceUpdates.minVersionForInPlaceUpdate` specifies the minimum supported version from which an in-place update to this machine image version can be performed.
+
+```yaml
+machineImages:
+- name: gardenlinux
+  updateStrategy: minor
+  versions:
+  - architectures:
+    - amd64
+    - arm64
+    classification: preview
+    cri:
+    - containerRuntimes:
+      - type: gvisor
+      name: containerd
+    version: 1630.0.0-inplace-update-poc
+    inPlaceUpdates:
+      supported: true
+```
+
+#### InPlace Update Triggers
+
+An in-place update of the shoot worker nodes is triggered for rolling update triggers listed under [Rolling Update Triggers](#rolling-update-triggers) except the following:
+* `.spec.provider.workers[].machine.image.name`
+* `.spec.provider.workers[].machine.type`
+* `.spec.provider.workers[].volume.type`
+* `.spec.provider.workers[].volume.size`
+* `.spec.provider.workers[].cri.name`
+* `.spec.systemComponents.nodeLocalDNS.enabled`
+
+#### Validations for In-Place update
+
+Validations are in place to restrict any further updates when the current update is going on.
+For the cases where in-place update fails and the nodes are in problematic state, it requires user intervention to fix the node manually . After the fix user should be able to restart the update by the force update annotation `gardener.cloud/operation=force-in-place-update`. Without this annotation, any subsequent updates to the same worker pool are denied, refer [Force-update a worker pool with InPlace update strategy](shoot_operations.md#force-update-a-worker-pool-with-inplace-update-strategy) on how to force an update for worker pools.
+
+At present it is not allowed to change the update strategy of a worker from AutoRollingUpdate to Auto/Manual in-place update. Same applies for the other way round as well that is once the update strategy is selected as Auto/Manual in-place update , it cannot be changed to AutoRolling update. Though switching between Auto and Manual auto in-place update is allowed. 
+
+#### AutoInPlaceUpdate
+
+In case of AutoInPlaceUpdate update strategy, the update process is fully carried out by the MCM and gardener without user intervention. Use `updateStrategy` as `AutoInPlaceUpdate` in worker for auto in-place update.
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: crazy-botany
+  namespace: garden-dev
+spec:
+  secretBindingName: my-provider-account
+  cloudProfile:
+    name: cloudprofile1
+  region: europe-central-1
+  provider:
+    type: <some-provider-name> # {aws,azure,gcp,...}
+    workers:
+      - name: cpu-worker
+        minimum: 5
+        maximum: 5
+        maxSurge: 0
+        maxUnavailable: 2
+        updateStrategy: AutoInPlaceUpdate
+        machine:
+          type: m5.large
+          image:
+            name: <some-image-name>
+            version: <some-image-version>
+          architecture: <some-cpu-architecture>
+        providerConfig: <some-machine-image-specific-configuration>
+  kubernetes:
+    version: 1.27.3
+  networking:
+```
+
+#### Customize Auto In-Place Update Behaviour of Shoot Worker Nodes
+
+The `.spec.provider.workers[]` list exposes two fields that you might configure based on your workload's needs: `maxSurge` and `maxUnavailable`.
+The same concepts [like in Kubernetes](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment) apply.
+Additionally, you might customize how the machine-controller-manager (abbrev.: MCM; the component instrumenting this rolling update) is behaving. You can configure the following fields in `.spec.provider.worker[].machineControllerManager`:
+
+* `MachineInPlaceUpdateTimeout`:  Timeout (in duration) after which an in-place update is declared as failed.
+* `DisableHealthTimeout`: Boolean value if set to true, health timeout will be ignored, leading to machine never being declared as failed (default: `true` for in-place updates). 
+
+#### ManualInPlaceUpdate
+
+ManualInPlaceUpdate update strategy is useful in scenarios where user wants to control and drive the update process. Here user has the option to select the particular node which needs to be updated at a time. In order to update a node, label the node with `node.machine.sapcloud.io/selected-for-update=true`. Once the node is labeled  with `node.machine.sapcloud.io/selected-for-update=true`, MCM will carry out the update process.
+
+`ManualInPlaceWorkersUpdated` [constraint](../shoot/shoot_status.md/#constraints) in shoot status indicates that at least one worker pool with the update strategy `ManualInPlaceUpdate` is pending an update. Shoot reconciliation succeeds even with worker pools pending for an update.
+
+<!-- mention about manual inplace credential rotation in the credential rotation doc-->
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: crazy-botany
+  namespace: garden-dev
+spec:
+  secretBindingName: my-provider-account
+  cloudProfile:
+    name: cloudprofile1
+  region: europe-central-1
+  provider:
+    type: <some-provider-name> # {aws,azure,gcp,...}
+    workers:
+      - name: cpu-worker
+        minimum: 5
+        maximum: 5
+        maxSurge: 0
+        maxUnavailable: 2
+        updateStrategy: ManualInPlaceUpdate
+        machine:
+          type: m5.large
+          image:
+            name: <some-image-name>
+            version: <some-image-version>
+          architecture: <some-cpu-architecture>
+        providerConfig: <some-machine-image-specific-configuration>
+  kubernetes:
+    version: 1.27.3
+  networking:
+```
+
+#### Customize Manual InPlace Update Behaviour of Shoot Worker Nodes
+
+The `.spec.provider.workers[]` list exposes two fields that you might configure based on your workload's needs: `maxSurge` and `maxUnavailable`. In case of manual in-place update, `maxSurge` is defaulted to `0` and `maxUnavailable` is defaulted to `1`. `maxSurge` value is always taken as `0` for manual in-place update irrespective of value set by the end user.
+
+Additionally, `.spec.provider.worker[].machineControllerManager` can be customised in same way as mentioned in [Customize Auto InPlace Update Behaviour of Shoot Worker Nodes](#customize-auto-inplace-update-behaviour-of-shoot-worker-nodes).
 
 ## Related Documentation
 
