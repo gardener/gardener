@@ -72,8 +72,9 @@ func mustIncreaseGeneration(oldGardenlet, newGardenlet *seedmanagement.Gardenlet
 		return true
 	}
 
-	// The operation annotation was added with value "renew-kubeconfig"
-	if kubernetesutils.HasMetaDataAnnotation(&newGardenlet.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig) {
+	// The operation annotation was added with value "renew-kubeconfig" or "force-redeploy"
+	if kubernetesutils.HasMetaDataAnnotation(&newGardenlet.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig) ||
+		kubernetesutils.HasMetaDataAnnotation(&newGardenlet.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.OperationForceRedeploy) {
 		return true
 	}
 

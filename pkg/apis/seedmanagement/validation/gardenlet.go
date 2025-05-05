@@ -13,7 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 )
 
-var availableGardenletOperations = availableManagedSeedOperations.Clone()
+var availableGardenletOperations = availableManagedSeedOperations.Clone().Insert(v1beta1constants.OperationForceRedeploy)
 
 // ValidateGardenlet validates a Gardenlet object.
 func ValidateGardenlet(gardenlet *seedmanagement.Gardenlet) field.ErrorList {
