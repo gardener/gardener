@@ -146,7 +146,7 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 			}
 
 			if _, err := utils.DecodeCertificate(caData); err != nil {
-				return nil, fmt.Errorf("failed decoding ca certificate: %w", err)
+				return nil, fmt.Errorf("invalid ca certificate: failed decoding ca certificate: %w", err)
 			}
 
 			cfg.OIDC.CA = string(caData)
