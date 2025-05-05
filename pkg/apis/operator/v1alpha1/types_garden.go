@@ -655,6 +655,9 @@ type DashboardOIDC struct {
 	AdditionalScopes []string `json:"additionalScopes,omitempty"`
 	// SecretRef is the reference to a secret in the garden namespace containing the OIDC client ID and secret for the dashboard.
 	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+	// CertificateAuthoritySecretRef is the reference to a secret in the garden namespace containing a custom CA certificate under the "ca.crt" key
+	// +optional
+	CertificateAuthoritySecretRef *corev1.LocalObjectReference `json:"certificateAuthoritySecretRef,omitempty"`
 }
 
 // DashboardTerminal contains configuration for the terminal settings.

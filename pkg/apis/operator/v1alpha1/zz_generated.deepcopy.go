@@ -10,9 +10,9 @@
 package v1alpha1
 
 import (
-	corev1 "github.com/gardener/gardener/pkg/apis/core/v1"
+	apiscorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	apicorev1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -368,6 +368,11 @@ func (in *DashboardOIDC) DeepCopyInto(out *DashboardOIDC) {
 		copy(*out, *in)
 	}
 	out.SecretRef = in.SecretRef
+	if in.CertificateAuthoritySecretRef != nil {
+		in, out := &in.CertificateAuthoritySecretRef, &out.CertificateAuthoritySecretRef
+		*out = new(corev1.LocalObjectReference)
+		**out = **in
+	}
 	return
 }
 
@@ -629,7 +634,7 @@ func (in *ExtensionHelm) DeepCopyInto(out *ExtensionHelm) {
 	*out = *in
 	if in.OCIRepository != nil {
 		in, out := &in.OCIRepository, &out.OCIRepository
-		*out = new(corev1.OCIRepository)
+		*out = new(apiscorev1.OCIRepository)
 		(*in).DeepCopyInto(*out)
 	}
 	return
@@ -1059,12 +1064,12 @@ func (in *GardenerDashboardConfig) DeepCopyInto(out *GardenerDashboardConfig) {
 	}
 	if in.FrontendConfigMapRef != nil {
 		in, out := &in.FrontendConfigMapRef, &out.FrontendConfigMapRef
-		*out = new(apicorev1.LocalObjectReference)
+		*out = new(corev1.LocalObjectReference)
 		**out = **in
 	}
 	if in.AssetsConfigMapRef != nil {
 		in, out := &in.AssetsConfigMapRef, &out.AssetsConfigMapRef
-		*out = new(apicorev1.LocalObjectReference)
+		*out = new(corev1.LocalObjectReference)
 		**out = **in
 	}
 	if in.GitHub != nil {

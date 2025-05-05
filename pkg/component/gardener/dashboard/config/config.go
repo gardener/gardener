@@ -83,6 +83,7 @@ type OIDC struct {
 	Scope              string     `yaml:"scope"`
 	RejectUnauthorized bool       `yaml:"rejectUnauthorized"`
 	Public             OIDCPublic `yaml:"public"`
+	CA                 string     `yaml:"ca,omitempty"`
 }
 
 // OIDCPublic is the public OIDC configuration.
