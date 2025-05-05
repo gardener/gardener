@@ -204,19 +204,3 @@ spec:
           secretName: "istio-ingressgateway-ca-certs"
           optional: true
       priorityClassName: gardener-system-critical
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - istio-ingressgateway
-                - key: foo
-                  operator: In
-                  values:
-                  - bar
-              topologyKey: "kubernetes.io/hostname"
