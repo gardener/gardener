@@ -396,8 +396,8 @@ var _ = Describe("GardenerAPIServer", func() {
 			})
 
 			It("should set the field to the configured values", func() {
-				adminKubeconfigMaxExpiration := ptr.To[metav1.Duration](metav1.Duration{Duration: 1 * time.Hour})
-				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{AdminKubeconfigMaxExpiration: adminKubeconfigMaxExpiration}
+				adminKubeconfigMaxExpiration := &metav1.Duration{Duration: 1 * time.Hour}
+				apiServerConfig.AdminKubeconfigMaxExpiration = adminKubeconfigMaxExpiration
 
 				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())

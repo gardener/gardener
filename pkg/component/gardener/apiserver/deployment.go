@@ -56,7 +56,7 @@ func (g *gardenerAPIServer) deployment(
 	}
 
 	if g.values.AdminKubeconfigMaxExpiration != nil {
-		args = append(args, fmt.Sprintf("--shoot-admin-kubeconfig-max-expiration=%v", g.values.AdminKubeconfigMaxExpiration.Duration.String()))
+		args = append(args, fmt.Sprintf("--shoot-admin-kubeconfig-max-expiration=%s", g.values.AdminKubeconfigMaxExpiration.Duration))
 	}
 
 	if g.values.GoAwayChance != nil {
