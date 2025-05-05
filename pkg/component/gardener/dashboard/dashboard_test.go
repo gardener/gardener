@@ -58,7 +58,7 @@ var _ = Describe("GardenerDashboard", func() {
 		image                 = "gardener-dashboard-image:latest"
 		apiServerURL          = "api.local.gardener.cloud"
 		logLevel              = "debug"
-		ingressValues         = IngressValues{Domains: []string{"first", "second"}}
+		ingressValues         = IngressValues{Enabled: true, Domains: []string{"first", "second"}}
 		enableTokenLogin      bool
 		terminal              *TerminalValues
 		oidc                  *OIDCValues

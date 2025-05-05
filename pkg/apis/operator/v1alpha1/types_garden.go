@@ -606,6 +606,8 @@ type GardenerDashboardConfig struct {
 	// Terminal contains configuration for the terminal settings.
 	// +optional
 	Terminal *DashboardTerminal `json:"terminal,omitempty"`
+	// Ingress contains configuration for the ingress settings.
+	Ingress *DashboardIngress `json:"ingress,omitempty"`
 }
 
 // DashboardGitHub contains configuration for the GitHub ticketing feature.
@@ -676,6 +678,14 @@ type DashboardTerminalContainer struct {
 	// Description is a description for the dashboard terminal container with hints for the user.
 	// +optional
 	Description *string `json:"description,omitempty"`
+}
+
+// DashboardIngress contains configuration for the dashboard ingress resource.
+type DashboardIngress struct {
+	// Enabled controls whether the Dashboard Ingress resource will be deployed to the cluster.
+	// +kubebuilder:default=true
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.

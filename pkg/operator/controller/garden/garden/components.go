@@ -1172,12 +1172,18 @@ func (r *Reconciler) newGardenerDashboard(garden *operatorv1alpha1.Garden, secre
 		return nil, err
 	}
 
+	dashboardIngressEnabled := true
+	if garden.Spec.VirtualCluster.Gardener.Dashboard.Ingress != nil {
+		dashboardIngressEnabled = ptr.Deref(garden.Spec.VirtualCluster.Gardener.Dashboard.Ingress.Enabled, true)
+	}
+
 	values := gardenerdashboard.Values{
 		Image:            image.String(),
 		LogLevel:         logger.InfoLevel,
 		APIServerURL:     gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0].Name),
 		EnableTokenLogin: true,
 		Ingress: gardenerdashboard.IngressValues{
+			Enabled:                dashboardIngressEnabled,
 			Domains:                domainNames(garden.Spec.RuntimeCluster.Ingress.Domains),
 			WildcardCertSecretName: wildcardCertSecretName,
 		},

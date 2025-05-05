@@ -1113,6 +1113,16 @@ spec:
                             - repository
                             - secretRef
                             type: object
+                          ingress:
+                            description: Ingress contains configuration for the ingress
+                              settings.
+                            properties:
+                              enabled:
+                                default: true
+                                description: Enabled controls whether the Dashboard
+                                  Ingress resource will be deployed to the cluster.
+                                type: boolean
+                            type: object
                           logLevel:
                             default: info
                             description: |-

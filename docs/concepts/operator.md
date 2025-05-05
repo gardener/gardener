@@ -364,6 +364,8 @@ This section highlights the most prominent fields:
   When set, the [`terminal-controller-manager`](https://github.com/gardener/terminal-controller-manager) will be deployed to the runtime cluster.
   The `allowedHosts` field is explained [here](https://github.com/gardener/dashboard/blob/master/docs/operations/webterminals.md#configuration).
   The `container` section allows you to specify a container image and a description that should be used for the web terminals.
+- `ingress`: This allows you to customize the `Ingress` resource of the dashboard.
+  The `enabled` field allows you to control whether to deploy the `Ingress` resource to the cluster.
 
 ##### Observability
 

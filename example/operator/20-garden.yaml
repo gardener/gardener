@@ -290,6 +290,8 @@ spec:
     #     container:
     #       image: busybox:latest
     #       description: A nice container for debugging purposes
+    #   ingress:
+    #     enabled: true
       gardenerDiscoveryServer: {}
     maintenance:
       timeWindow:
