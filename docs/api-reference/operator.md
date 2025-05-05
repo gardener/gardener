@@ -1992,6 +1992,22 @@ of requests that will be sent a GOAWAY. Min is 0 (off), Max is 0.02 (<sup>1</sup
 recommended starting point.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>adminKubeconfigMaxExpiration</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdminKubeconfigMaxExpiration is the maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest.
+If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested,
+a credential will be issued with a validity duration of this value.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.GardenerAdmissionControllerConfig">GardenerAdmissionControllerConfig

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
@@ -73,6 +74,8 @@ type Values struct {
 	WorkloadIdentityTokenIssuer string
 	// WorkloadIdentityKeyRotationPhase is the rotation phase of workload identity key.
 	WorkloadIdentityKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
+	// AdminKubeconfigMaxExpiration is the maximum expiration time of the admin kubeconfig.
+	AdminKubeconfigMaxExpiration *metav1.Duration
 }
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the API server.

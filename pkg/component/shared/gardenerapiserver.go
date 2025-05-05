@@ -50,13 +50,14 @@ func NewGardenerAPIServer(
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	var (
-		auditConfig              *apiserver.AuditConfig
-		enabledAdmissionPlugins  []gardencorev1beta1.AdmissionPlugin
-		disabledAdmissionPlugins []gardencorev1beta1.AdmissionPlugin
-		featureGates             map[string]bool
-		requests                 *gardencorev1beta1.APIServerRequests
-		watchCacheSizes          *gardencorev1beta1.WatchCacheSizes
-		logging                  *gardencorev1beta1.APIServerLogging
+		auditConfig                  *apiserver.AuditConfig
+		enabledAdmissionPlugins      []gardencorev1beta1.AdmissionPlugin
+		disabledAdmissionPlugins     []gardencorev1beta1.AdmissionPlugin
+		featureGates                 map[string]bool
+		requests                     *gardencorev1beta1.APIServerRequests
+		watchCacheSizes              *gardencorev1beta1.WatchCacheSizes
+		logging                      *gardencorev1beta1.APIServerLogging
+		adminKubeconfigMaxExpiration *metav1.Duration
 	)
 
 	if apiServerConfig != nil {
@@ -71,6 +72,7 @@ func NewGardenerAPIServer(
 		logging = apiServerConfig.Logging
 		requests = apiServerConfig.Requests
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
+		adminKubeconfigMaxExpiration = apiServerConfig.AdminKubeconfigMaxExpiration
 	}
 
 	logLevel := logger.InfoLevel
@@ -98,14 +100,15 @@ func NewGardenerAPIServer(
 				RuntimeVersion:           runtimeVersion,
 				WatchCacheSizes:          watchCacheSizes,
 			},
-			Autoscaling:                 autoscalingConfig,
-			ClusterIdentity:             clusterIdentity,
-			Image:                       image.String(),
-			LogLevel:                    logLevel,
-			LogFormat:                   logger.FormatJSON,
-			GoAwayChance:                goAwayChance,
-			TopologyAwareRoutingEnabled: topologyAwareRoutingEnabled,
-			WorkloadIdentityTokenIssuer: workloadIdentityTokenIssuer,
+			Autoscaling:                  autoscalingConfig,
+			ClusterIdentity:              clusterIdentity,
+			Image:                        image.String(),
+			LogLevel:                     logLevel,
+			LogFormat:                    logger.FormatJSON,
+			GoAwayChance:                 goAwayChance,
+			AdminKubeconfigMaxExpiration: adminKubeconfigMaxExpiration,
+			TopologyAwareRoutingEnabled:  topologyAwareRoutingEnabled,
+			WorkloadIdentityTokenIssuer:  workloadIdentityTokenIssuer,
 		},
 	), nil
 }
