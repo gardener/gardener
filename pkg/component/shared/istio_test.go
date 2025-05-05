@@ -291,7 +291,7 @@ var _ = Describe("Istio", func() {
 			Context("with nodes in the zones", func() {
 				JustBeforeEach(func() {
 					testValues.client = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-					testValues.enforceSpreadAcrossHosts = true
+					testValues.enforceSpreadAcrossHosts = false
 					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
 					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "1"}}})).To(Succeed())
 					Expect(testValues.client.Create(context.Background(), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "2"}}})).To(Succeed())
@@ -558,7 +558,7 @@ var _ = Describe("Istio", func() {
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-2", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-3", Labels: map[string]string{"topology.kubernetes.io/zone": "z2"}}},
-		}, []string{"z1", "z2"}, true),
+		}, []string{"z1", "z2"}, false),
 		Entry("four nodes with different zones targeting different zone", []corev1.Node{
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-0", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "node-1", Labels: map[string]string{"topology.kubernetes.io/zone": "z1"}}},
