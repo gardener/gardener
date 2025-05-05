@@ -2255,6 +2255,7 @@ DashboardIngress
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Ingress contains configuration for the ingress settings.</p>
 </td>
 </tr>

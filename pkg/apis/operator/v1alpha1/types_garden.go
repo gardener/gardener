@@ -607,6 +607,7 @@ type GardenerDashboardConfig struct {
 	// +optional
 	Terminal *DashboardTerminal `json:"terminal,omitempty"`
 	// Ingress contains configuration for the ingress settings.
+	// +optional
 	Ingress *DashboardIngress `json:"ingress,omitempty"`
 }
 
