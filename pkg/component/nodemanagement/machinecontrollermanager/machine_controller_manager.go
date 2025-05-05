@@ -59,7 +59,7 @@ type Interface interface {
 	component.DeployWaiter
 	// SetReplicas sets the replicas.
 	SetReplicas(int32)
-	//TODO: @aaronfern Remove this after g/g:v1.119 is released
+	//TODO(@aaronfern): Remove this after g/g:v1.120 is released.
 	// DeployMigrate migrates RBAC permissions from clusterrole/clusterrolebinding to role/rolebinding
 	DeployMigrate(ctx context.Context) error
 }
@@ -94,7 +94,7 @@ type Values struct {
 	Replicas int32
 }
 
-// TODO: @aaronfern Remove this after g/g:v1.119 is released
+// TODO(@aaronfern): Remove this after g/g:v1.120 is released.
 func (m *machineControllerManager) DeployMigrate(ctx context.Context) error {
 	var (
 		roleBinding    = m.emptyRoleBindingRuntime()
@@ -156,12 +156,7 @@ func (m *machineControllerManager) DeployMigrate(ctx context.Context) error {
 		return err
 	}
 
-	if err := kubernetesutils.DeleteObjects(ctx, m.client,
-		m.emptyClusterRoleBindingRuntime(),
-	); err != nil {
-		return err
-	}
-	return nil
+	return kubernetesutils.DeleteObjects(ctx, m.client, m.emptyClusterRoleBindingRuntime())
 }
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {
@@ -551,7 +546,7 @@ func (m *machineControllerManager) Destroy(ctx context.Context) error {
 		m.emptyDeployment(),
 		m.newShootAccessSecret().Secret,
 		m.emptyService(),
-		m.emptyClusterRoleBindingRuntime(), //TODO: @aaronfern Remove this after g/g:v1.119 is released
+		m.emptyClusterRoleBindingRuntime(),
 		m.emptyRoleBindingRuntime(),
 		m.emptyRole(),
 		m.emptyServiceAccount(),
@@ -705,7 +700,7 @@ func (m *machineControllerManager) emptyRoleBindingRuntime() *rbacv1.RoleBinding
 	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
 }
 
-// TODO: @aaronfern Remove this after g/g:v1.119 is released
+// TODO(@aaronfern): Remove this after g/g:v1.120 is released.
 func (m *machineControllerManager) emptyClusterRoleBindingRuntime() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-" + m.namespace}}
 }

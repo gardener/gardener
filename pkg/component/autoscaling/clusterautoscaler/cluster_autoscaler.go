@@ -60,7 +60,7 @@ type Interface interface {
 	SetMachineDeployments([]extensionsv1alpha1.MachineDeployment)
 	// SetMaxNodesTotal sets the maximum number of nodes that can be created in the cluster. 0 means unlimited.
 	SetMaxNodesTotal(int64)
-	//TODO: @aaronfern Remove this after g/g:v1.119 is released
+	//TODO(@aaronfern): Remove this after g/g:v1.120 is released.
 	// DeployMigrate migrates RBAC permissions from clusterrole/clusterrolebinding to role/rolebinding
 	DeployMigrate(ctx context.Context) error
 }
@@ -102,7 +102,7 @@ type clusterAutoscaler struct {
 	machineDeployments []extensionsv1alpha1.MachineDeployment
 }
 
-// TODO: @aaronfern Remove this after g/g:v1.119 is released
+// TODO(@aaronfern): Remove this after g/g:v1.120 is released.
 func (c *clusterAutoscaler) DeployMigrate(ctx context.Context) error {
 	var (
 		roleBinding    = c.emptyRoleBinding()
@@ -144,12 +144,7 @@ func (c *clusterAutoscaler) DeployMigrate(ctx context.Context) error {
 		return err
 	}
 
-	if err := kubernetesutils.DeleteObjects(ctx, c.client,
-		c.emptyClusterRoleBinding(),
-	); err != nil {
-		return err
-	}
-	return nil
+	return kubernetesutils.DeleteObjects(ctx, c.client, c.emptyClusterRoleBinding())
 }
 
 func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
@@ -433,7 +428,7 @@ func (c *clusterAutoscaler) Destroy(ctx context.Context) error {
 		c.emptyVPA(),
 		c.emptyPodDisruptionBudget(),
 		c.emptyDeployment(),
-		c.emptyClusterRoleBinding(), //TODO: @aaronfern Remove this after g/g:v1.119 is released
+		c.emptyClusterRoleBinding(),
 		c.emptyRole(),
 		c.emptyRoleBinding(),
 		c.newShootAccessSecret().Secret,

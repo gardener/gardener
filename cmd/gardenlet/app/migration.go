@@ -38,10 +38,12 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 		}
 	}
 
+	log.Info("Migrating RBAC resources for machine-controller-manager")
 	if err := migrateMCMRBAC(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
 
+	log.Info("Migrating RBAC resources for cluster-autoscaler")
 	if err := migrateAutoscalerRBAC(ctx, g.mgr.GetClient()); err != nil {
 		return err
 	}
@@ -180,6 +182,7 @@ func syncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.SeedBackup) 
 	// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
 }
 
+// TODO(@aaronfern): Remove this after g/g:v1.120 is released
 func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
@@ -188,11 +191,10 @@ func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 
 	var tasks []flow.TaskFn
 
-	for _, ns := range namespaceList.Items {
-		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
+	for _, namespace := range namespaceList.Items {
+		if namespace.DeletionTimestamp != nil || namespace.Status.Phase == corev1.NamespaceTerminating {
 			continue
 		}
-		namespace := ns
 		tasks = append(tasks, func(ctx context.Context) error {
 			clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
 			if err := seedClient.Get(ctx, client.ObjectKey{Name: "machine-controller-manager-" + namespace.Name}, clusterRoleBinding); err != nil {
@@ -203,24 +205,18 @@ func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 				return err
 			}
 
-			mcm := machinecontrollermanager.New(seedClient, namespace.Name, nil, machinecontrollermanager.Values{})
-			err := mcm.DeployMigrate(ctx)
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return machinecontrollermanager.New(seedClient, namespace.Name, nil, machinecontrollermanager.Values{}).DeployMigrate(ctx)
 		})
 	}
 
-	err := flow.Parallel(tasks...)(ctx)
-	if err != nil {
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
 		return err
 	}
 	_ = managedresources.DeleteForSeed(ctx, seedClient, "garden", "machine-controller-manager")
 	return nil
 }
 
+// TODO(@aaronfern): Remove this after g/g:v1.120 is released
 func migrateAutoscalerRBAC(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
@@ -229,11 +225,10 @@ func migrateAutoscalerRBAC(ctx context.Context, seedClient client.Client) error 
 
 	var tasks []flow.TaskFn
 
-	for _, ns := range namespaceList.Items {
-		if ns.DeletionTimestamp != nil || ns.Status.Phase == corev1.NamespaceTerminating {
+	for _, namespace := range namespaceList.Items {
+		if namespace.DeletionTimestamp != nil || namespace.Status.Phase == corev1.NamespaceTerminating {
 			continue
 		}
-		namespace := ns
 		tasks = append(tasks, func(ctx context.Context) error {
 			clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
 			if err := seedClient.Get(ctx, client.ObjectKey{Name: "cluster-autoscaler-" + namespace.Name}, clusterRoleBinding); err != nil {
@@ -244,18 +239,11 @@ func migrateAutoscalerRBAC(ctx context.Context, seedClient client.Client) error 
 				return err
 			}
 
-			autoscaler := clusterautoscaler.New(seedClient, namespace.Name, nil, "", 0, nil, []gardencorev1beta1.Worker{}, nil)
-			err := autoscaler.DeployMigrate(ctx)
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return clusterautoscaler.New(seedClient, namespace.Name, nil, "", 0, nil, []gardencorev1beta1.Worker{}, nil).DeployMigrate(ctx)
 		})
 	}
 
-	err := flow.Parallel(tasks...)(ctx)
-	if err != nil {
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
 		return err
 	}
 	_ = managedresources.DeleteForSeed(ctx, seedClient, "garden", "cluster-autoscaler")
