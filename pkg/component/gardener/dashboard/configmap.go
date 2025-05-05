@@ -21,6 +21,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/gardener/dashboard/config"
+	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -136,12 +137,16 @@ func (g *gardenerDashboard) configMap(ctx context.Context) (*corev1.ConfigMap, e
 			}
 
 			if err := g.client.Get(ctx, client.ObjectKeyFromObject(caSecret), caSecret); err != nil {
-				return nil, fmt.Errorf("failed reading referenced ca secret: %w", err)
+				return nil, fmt.Errorf("failed to get referenced ca secret: %w", err)
 			}
 
 			caData, ok := caSecret.Data["ca.crt"]
 			if !ok {
 				return nil, fmt.Errorf("failed reading ca secret: missing ca.crt key")
+			}
+
+			if _, err := utils.DecodeCertificate(caData); err != nil {
+				return nil, fmt.Errorf("failed decoding ca certificate: %w", err)
 			}
 
 			cfg.OIDC.CA = string(caData)
