@@ -7,11 +7,11 @@ package create
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/spf13/pflag"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
-	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
@@ -19,11 +19,17 @@ import (
 // Options contains options for this command.
 type Options struct {
 	*cmd.Options
-	// CreateOptions are the options for creating a bootstrap token.
-	CreateOptions *tokenutils.Options
-
 	// Token contains the token ID and secret.
 	Token Token
+	// Description is the description for the bootstrap token.
+	Description string
+	// Validity duration of the bootstrap token.
+	Validity time.Duration
+	// PrintJoinCommand specifies whether to print the full `gardenadm join` command.
+	PrintJoinCommand bool
+	// WorkerPoolName is the name of the worker pool to use for the join command. If not provided, it is defaulted to
+	// 'worker'.
+	WorkerPoolName string
 }
 
 // Token contains the token ID and secret.
@@ -56,7 +62,7 @@ func (o *Options) ParseArgs(args []string) error {
 		o.Token.Combined = fmt.Sprintf("%s.%s", tokenID, tokenSecret)
 	}
 
-	return o.CreateOptions.ParseArgs(args)
+	return nil
 }
 
 // Validate validates the options.
@@ -69,7 +75,18 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("provided token %q does not match the expected format %q", o.Token.Combined, bootstraptoken.ValidBootstrapTokenRegex.String())
 	}
 
-	return o.CreateOptions.Validate()
+	if minValidity := 10 * time.Minute; o.Validity < minValidity {
+		return fmt.Errorf("minimum validity duration is %s", minValidity)
+	}
+	if maxValidity := 24 * time.Hour; o.Validity > maxValidity {
+		return fmt.Errorf("maximum validity duration is %s", maxValidity)
+	}
+
+	if o.PrintJoinCommand && len(o.WorkerPoolName) == 0 {
+		return fmt.Errorf("must specify a worker pool name when using --print-join-command")
+	}
+
+	return nil
 }
 
 // Complete completes the options.
@@ -80,9 +97,12 @@ func (o *Options) Complete() error {
 	}
 	o.Token.ID, o.Token.Secret = split[0], split[1]
 
-	return o.CreateOptions.Complete()
+	return nil
 }
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
-	o.CreateOptions.AddFlags(fs)
+	fs.StringVarP(&o.Description, "description", "d", "Used for joining nodes via `gardenadm join`", "Description for the bootstrap token")
+	fs.DurationVarP(&o.Validity, "validity", "", time.Hour, "Validity duration of the bootstrap token. Minimum is 10m, maximum is 24h.")
+	fs.BoolVarP(&o.PrintJoinCommand, "print-join-command", "j", false, "Instead of only printing the token, print the full machine-readable `gardenadm join` command that can be copied and ran on a machine that should join the cluster")
+	fs.StringVarP(&o.WorkerPoolName, "worker-pool-name", "w", "worker", "Name of the worker pool to use for the join command.")
 }

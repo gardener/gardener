@@ -11,22 +11,17 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/token/create"
-	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
 )
 
 var _ = Describe("Options", func() {
 	var (
-		createOptions *tokenutils.Options
-		options       *Options
+		options *Options
 
 		token = "some.token"
 	)
 
 	BeforeEach(func() {
-		createOptions = &tokenutils.Options{
-			Validity: time.Hour,
-		}
-		options = &Options{CreateOptions: createOptions}
+		options = &Options{Validity: time.Hour}
 	})
 
 	Describe("#ParseArgs", func() {
@@ -44,6 +39,9 @@ var _ = Describe("Options", func() {
 	Describe("#Validate", func() {
 		It("should pass for valid options", func() {
 			options.Token.Combined = "abcdef.abcdef1234567890"
+			options.Validity = time.Hour
+			options.PrintJoinCommand = true
+			options.WorkerPoolName = "worker-pool"
 			Expect(options.Validate()).To(Succeed())
 		})
 
@@ -54,6 +52,25 @@ var _ = Describe("Options", func() {
 
 		It("should fail because token is not set", func() {
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a token to create")))
+		})
+
+		It("should return an error when the validity is less than 10m", func() {
+			options.Token.Combined = "abcdef.abcdef1234567890"
+			options.Validity = time.Minute
+			Expect(options.Validate()).To(MatchError(ContainSubstring("minimum validity duration is 10m0s")))
+		})
+
+		It("should return an error when the validity is longer than 24h", func() {
+			options.Token.Combined = "abcdef.abcdef1234567890"
+			options.Validity = 25 * time.Hour
+			Expect(options.Validate()).To(MatchError(ContainSubstring("maximum validity duration is 24h0m0s")))
+		})
+
+		It("should an error when the print-join-command flag is set but no worker pool name is provided", func() {
+			options.Token.Combined = "abcdef.abcdef1234567890"
+			options.Validity = time.Hour
+			options.PrintJoinCommand = true
+			Expect(options.Validate()).To(MatchError(ContainSubstring("must specify a worker pool name when using --print-join-command")))
 		})
 	})
 

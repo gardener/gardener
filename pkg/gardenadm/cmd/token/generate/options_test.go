@@ -5,26 +5,17 @@
 package generate_test
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/token/generate"
-	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
 )
 
 var _ = Describe("Options", func() {
-	var (
-		createOptions *tokenutils.Options
-		options       *Options
-	)
+	var options *Options
 
 	BeforeEach(func() {
-		createOptions = &tokenutils.Options{
-			Validity: time.Hour,
-		}
-		options = &Options{CreateOptions: createOptions}
+		options = &Options{}
 	})
 
 	Describe("#ParseArgs", func() {

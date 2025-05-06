@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -36,6 +37,11 @@ var _ = Describe("Create", func() {
 
 		fakeClient client.Client
 		clientSet  kubernetes.Interface
+		restConfig = &rest.Config{Host: "some-host", TLSClientConfig: rest.TLSClientConfig{CAData: []byte("ca-data")}}
+
+		tokenID     = "abcdef"
+		tokenSecret = "1234567890abcdef"
+		token       = tokenID + "." + tokenSecret
 	)
 
 	BeforeEach(func() {
@@ -44,7 +50,7 @@ var _ = Describe("Create", func() {
 		command = NewCommand(globalOpts)
 
 		fakeClient = fakeclient.NewClientBuilder().Build()
-		clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
+		clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).WithRESTConfig(restConfig).Build()
 
 		DeferCleanup(test.WithVar(&tokenutils.CreateClientSet, func(context.Context, logr.Logger) (kubernetes.Interface, error) { return clientSet, nil }))
 	})
@@ -67,11 +73,6 @@ var _ = Describe("Create", func() {
 		})
 
 		It("should create the specified bootstrap token and print it", func() {
-			var (
-				tokenID, tokenSecret = "abcdef", "abcdef1234567890"
-				token                = tokenID + "." + tokenSecret
-			)
-
 			Expect(command.RunE(command, []string{token})).To(Succeed())
 
 			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "bootstrap-token-" + tokenID, Namespace: "kube-system"}}
@@ -83,6 +84,38 @@ var _ = Describe("Create", func() {
 			))
 
 			Eventually(stdOut).Should(Say(token))
+		})
+
+		It("should return an error because a bootstrap token with the ID already exists", func() {
+			Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "bootstrap-token-" + tokenID, Namespace: "kube-system"}})).To(Succeed())
+
+			Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("already exists")))
+		})
+
+		When("the join command should be printed", func() {
+			BeforeEach(func() {
+				Expect(command.Flags().Set("print-join-command", "true")).To(Succeed())
+				Expect(command.Flags().Set("worker-pool-name", "test-pool")).To(Succeed())
+			})
+
+			It("should fail because there are no gardener-node-agent-secrets", func() {
+				Expect(command.RunE(command, []string{token})).To(MatchError(ContainSubstring("no gardener-node-agent secrets found")))
+			})
+
+			It("should successfully print the join command", func() {
+				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener-node-agent-test-pool",
+					Namespace: "kube-system",
+					Labels: map[string]string{
+						"gardener.cloud/role":        "operating-system-config",
+						"worker.gardener.cloud/pool": "test-pool",
+					},
+				}})).To(Succeed())
+
+				Expect(command.RunE(command, []string{token})).To(Succeed())
+				Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" --gardener-node-agent-secret-name gardener-node-agent-test-pool some-host
+`))
+			})
 		})
 	})
 })

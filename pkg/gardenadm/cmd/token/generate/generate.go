@@ -9,19 +9,16 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
-	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 // NewCommand creates a new cobra.Command.
 func NewCommand(globalOpts *cmd.Options) *cobra.Command {
-	opts := &Options{
-		Options:       globalOpts,
-		CreateOptions: &tokenutils.Options{Options: globalOpts},
-	}
+	opts := &Options{Options: globalOpts}
 
 	cmd := &cobra.Command{
 		Use:   "generate",
@@ -58,16 +55,17 @@ gardenadm token generate`,
 	return cmd
 }
 
-func run(ctx context.Context, opts *Options) error {
-	clientSet, err := tokenutils.CreateClientSet(ctx, opts.Log)
-	if err != nil {
-		return fmt.Errorf("failed creating client set: %w", err)
-	}
-
-	tokenID, err := utils.GenerateRandomStringFromCharset(6, bootstraptoken.CharSet)
+func run(_ context.Context, opts *Options) error {
+	tokenID, err := utils.GenerateRandomStringFromCharset(bootstraptoken.IDLength, bootstraptoken.CharSet)
 	if err != nil {
 		return fmt.Errorf("failed computing random token ID: %w", err)
 	}
 
-	return tokenutils.CreateBootstrapToken(ctx, clientSet, opts.CreateOptions, tokenID, "")
+	tokenSecret, err := utils.GenerateRandomStringFromCharset(bootstraptoken.SecretLength, bootstraptoken.CharSet)
+	if err != nil {
+		return fmt.Errorf("failed computing random token secret: %w", err)
+	}
+
+	fmt.Fprintln(opts.Out, bootstraptokenutil.TokenFromIDAndSecret(tokenID, tokenSecret))
+	return nil
 }

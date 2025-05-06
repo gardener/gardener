@@ -6,6 +6,7 @@ package bootstraptoken
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"time"
 
@@ -19,14 +20,20 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-// CharSet defines which characters are allowed to be used for bootstrap token ids and secrets.
-const CharSet = "0123456789abcdefghijklmnopqrstuvwxyz"
+const (
+	// CharSet defines which characters are allowed to be used for bootstrap token ids and secrets.
+	CharSet = "0123456789abcdefghijklmnopqrstuvwxyz"
+	// IDLength is the length of the token id.
+	IDLength = 6
+	// SecretLength is the length of the token secret.
+	SecretLength = 16
+)
 
 var (
 	// ValidBootstrapTokenRegex is used to check if an existing token can be interpreted as a bootstrap token.
-	ValidBootstrapTokenRegex = regexp.MustCompile(`^[a-z0-9]{6}.[a-z0-9]{16}$`)
+	ValidBootstrapTokenRegex = regexp.MustCompile(fmt.Sprintf(`^[a-z0-9]{%d}.[a-z0-9]{%d}$`, IDLength, SecretLength))
 	// validBootstrapTokenSecretRegex is used to check if an existing token can be interpreted as a bootstrap token.
-	validBootstrapTokenSecretRegex = regexp.MustCompile(`[a-z0-9]{16}`)
+	validBootstrapTokenSecretRegex = regexp.MustCompile(fmt.Sprintf(`[a-z0-9]{%d}`, SecretLength))
 
 	// Now computes the current time.
 	// Exposed for unit testing.
@@ -49,7 +56,7 @@ func ComputeBootstrapTokenWithSecret(ctx context.Context, c client.Client, token
 	if existingSecretToken, ok := secret.Data[bootstraptokenapi.BootstrapTokenSecretKey]; ok && validBootstrapTokenSecretRegex.Match(existingSecretToken) {
 		tokenSecret = string(existingSecretToken)
 	} else if tokenSecret == "" {
-		tokenSecret, err = utils.GenerateRandomStringFromCharset(16, CharSet)
+		tokenSecret, err = utils.GenerateRandomStringFromCharset(SecretLength, CharSet)
 		if err != nil {
 			return nil, err
 		}
@@ -88,5 +95,5 @@ func TokenID(meta metav1.ObjectMeta) string {
 		value = meta.Namespace + "--" + meta.Name
 	}
 
-	return utils.ComputeSHA256Hex([]byte(value))[:6]
+	return utils.ComputeSHA256Hex([]byte(value))[:IDLength]
 }
