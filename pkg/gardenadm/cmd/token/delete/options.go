@@ -13,10 +13,10 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 var (
-	validBootstrapToken       = regexp.MustCompile(`^[a-z0-9]{6}.[a-z0-9]{16}$`)
 	validBootstrapTokenID     = regexp.MustCompile(`^[a-z0-9]{6}$`)
 	validBootstrapTokenSecret = regexp.MustCompile(`^bootstrap-token-[a-z0-9]{6}$`)
 )
@@ -47,10 +47,10 @@ func (o *Options) Validate() error {
 	}
 
 	for _, tokenValue := range o.TokenValues {
-		if !validBootstrapToken.Match([]byte(tokenValue)) &&
+		if !bootstraptoken.ValidBootstrapTokenRegex.Match([]byte(tokenValue)) &&
 			!validBootstrapTokenID.Match([]byte(tokenValue)) &&
 			!validBootstrapTokenSecret.Match([]byte(tokenValue)) {
-			return fmt.Errorf("invalid token value %q - accepted formats are %q or %q or %q", tokenValue, validBootstrapToken, validBootstrapTokenID, validBootstrapTokenSecret)
+			return fmt.Errorf("invalid token value %q - accepted formats are %q or %q or %q", tokenValue, bootstraptoken.ValidBootstrapTokenRegex, validBootstrapTokenID, validBootstrapTokenSecret)
 		}
 	}
 
@@ -61,7 +61,7 @@ func (o *Options) Validate() error {
 func (o *Options) Complete() error {
 	for _, tokenValue := range o.TokenValues {
 		switch {
-		case validBootstrapToken.Match([]byte(tokenValue)):
+		case bootstraptoken.ValidBootstrapTokenRegex.Match([]byte(tokenValue)):
 			o.TokenIDs = append(o.TokenIDs, strings.Split(tokenValue, ".")[0])
 		case validBootstrapTokenID.Match([]byte(tokenValue)):
 			o.TokenIDs = append(o.TokenIDs, tokenValue)

@@ -19,14 +19,22 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-// Now computes the current time.
-// Exposed for unit testing.
-var Now = metav1.Now
+// CharSet defines which characters are allowed to be used for bootstrap token ids and secrets.
+const CharSet = "0123456789abcdefghijklmnopqrstuvwxyz"
 
-// validBootstrapTokenRegex is used to check if an existing token can be interpreted as a bootstrap token.
-var validBootstrapTokenRegex = regexp.MustCompile(`[a-z0-9]{16}`)
+var (
+	// ValidBootstrapTokenRegex is used to check if an existing token can be interpreted as a bootstrap token.
+	ValidBootstrapTokenRegex = regexp.MustCompile(`^[a-z0-9]{6}.[a-z0-9]{16}$`)
+	// validBootstrapTokenSecretRegex is used to check if an existing token can be interpreted as a bootstrap token.
+	validBootstrapTokenSecretRegex = regexp.MustCompile(`[a-z0-9]{16}`)
 
-func computeBootstrapToken(ctx context.Context, c client.Client, tokenID, tokenSecret, description string, validity time.Duration) (secret *corev1.Secret, err error) {
+	// Now computes the current time.
+	// Exposed for unit testing.
+	Now = metav1.Now
+)
+
+// ComputeBootstrapTokenWithSecret computes and creates a new bootstrap token with a specified token secret, and returns it.
+func ComputeBootstrapTokenWithSecret(ctx context.Context, c client.Client, tokenID, tokenSecret, description string, validity time.Duration) (secret *corev1.Secret, err error) {
 	secret = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bootstraptokenutil.BootstrapTokenSecretName(tokenID),
@@ -38,10 +46,10 @@ func computeBootstrapToken(ctx context.Context, c client.Client, tokenID, tokenS
 		return nil, err
 	}
 
-	if existingSecretToken, ok := secret.Data[bootstraptokenapi.BootstrapTokenSecretKey]; ok && validBootstrapTokenRegex.Match(existingSecretToken) {
+	if existingSecretToken, ok := secret.Data[bootstraptokenapi.BootstrapTokenSecretKey]; ok && validBootstrapTokenSecretRegex.Match(existingSecretToken) {
 		tokenSecret = string(existingSecretToken)
 	} else if tokenSecret == "" {
-		tokenSecret, err = utils.GenerateRandomStringFromCharset(16, "0123456789abcdefghijklmnopqrstuvwxyz")
+		tokenSecret, err = utils.GenerateRandomStringFromCharset(16, CharSet)
 		if err != nil {
 			return nil, err
 		}
@@ -65,12 +73,7 @@ func computeBootstrapToken(ctx context.Context, c client.Client, tokenID, tokenS
 
 // ComputeBootstrapToken computes and creates a new bootstrap token with a randomly-generated secret, and returns it.
 func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, description string, validity time.Duration) (secret *corev1.Secret, err error) {
-	return computeBootstrapToken(ctx, c, tokenID, "", description, validity)
-}
-
-// ComputeBootstrapTokenWithSecret computes and creates a new bootstrap token with a specified token secret, and returns it.
-func ComputeBootstrapTokenWithSecret(ctx context.Context, c client.Client, tokenID, tokenSecret, description string, validity time.Duration) (secret *corev1.Secret, err error) {
-	return computeBootstrapToken(ctx, c, tokenID, tokenSecret, description, validity)
+	return ComputeBootstrapTokenWithSecret(ctx, c, tokenID, "", description, validity)
 }
 
 // FromSecretData returns the bootstrap token based on the secret data.

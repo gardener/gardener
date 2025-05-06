@@ -49,6 +49,9 @@ var _ = Describe("bootstraptoken", func() {
 				HaveKeyWithValue("usage-bootstrap-signing", Equal([]byte("true"))),
 			))
 
+			By("Ensure secret was actually created on the server")
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(Succeed())
+
 			By("Ensure it doesn't recompute the token secret")
 			tokenSecret := secret.Data["token-secret"]
 
@@ -77,8 +80,11 @@ var _ = Describe("bootstraptoken", func() {
 				HaveKeyWithValue("usage-bootstrap-signing", Equal([]byte("true"))),
 			))
 
+			By("Ensure secret was actually created on the server")
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(Succeed())
+
 			By("Ensure it doesn't recompute the token secret")
-			secret, err = ComputeBootstrapTokenWithSecret(ctx, fakeClient, tokenID, tokenSecret, description, validity)
+			secret, err = ComputeBootstrapTokenWithSecret(ctx, fakeClient, tokenID, "some-other-secret", description, validity)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.Data["token-secret"]).To(Equal([]byte(tokenSecret)))
 		})
@@ -99,11 +105,11 @@ var _ = Describe("bootstraptoken", func() {
 			name      = "baz"
 		)
 
-		It("should compute the expected id (w/o namespace", func() {
+		It("should compute the expected id (w/o namespace)", func() {
 			Expect(TokenID(metav1.ObjectMeta{Name: name})).To(Equal("baa5a0"))
 		})
 
-		It("should compute the expected id (w/ namespace", func() {
+		It("should compute the expected id (w/ namespace)", func() {
 			Expect(TokenID(metav1.ObjectMeta{Name: name, Namespace: namespace})).To(Equal("cc19de"))
 		})
 	})

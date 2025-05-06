@@ -32,8 +32,8 @@ gardenadm token create
   -d, --description string                  Description for the bootstrap token (default "Used for joining nodes via `gardenadm join`")
   -h, --help                                help for create
   -j, --print-join-command gardenadm join   Instead of only printing the token, print the full machine-readable gardenadm join command that can be copied and ran on a machine that should join the cluster
-  -v, --validity duration                   Validity duration of the bootstrap token (default 1h0m0s)
-  -w, --worker-pool-name string             Name of the worker pool to use for the join command. If not provided, it is defaulted to 'worker'. (default "worker")
+      --validity duration                   Validity duration of the bootstrap token. Minimum is 10m, maximum is 24h. (default 1h0m0s)
+  -w, --worker-pool-name string             Name of the worker pool to use for the join command. (default "worker")
 ```
 
 ### Options inherited from parent commands

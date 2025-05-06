@@ -76,7 +76,8 @@ func printJoinCommand(ctx context.Context, opts *Options, clientSet kubernetes.I
 		opts.Log.V(1).Info("Multiple gardener-node-agent secrets found, using the first one", "secretName", gardenerNodeAgentSecret.Name)
 	}
 
-	return fmt.Sprintf(`gardenadm join --bootstrap-token %s --ca-certificate "%s" --gardener-node-agent-secret-name %s %s`,
+	return fmt.Sprintf(`gardenadm join --bootstrap-token %s --ca-certificate "%s" --gardener-node-agent-secret-name %s %s
+`,
 		bootstraptoken.FromSecretData(bootstrapTokenSecret.Data),
 		utils.EncodeBase64(clientSet.RESTConfig().CAData),
 		gardenerNodeAgentSecret.Name,

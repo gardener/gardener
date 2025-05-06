@@ -59,8 +59,8 @@ var _ = Describe("Delete", func() {
 			Expect(fakeClient.List(ctx, secretList)).To(Succeed())
 			Expect(secretList.Items).To(BeEmpty())
 
-			Eventually(stdOut).Should(Say(`bootstrap token "foo123" deleted
-bootstrap token "123abc" deleted
+			Eventually(stdOut).Should(Say(`Error from server \(NotFound\): bootstrap token "foo123" not found
+Error from server \(NotFound\): bootstrap token "123abc" not found
 bootstrap token "987654" deleted
 `))
 		})

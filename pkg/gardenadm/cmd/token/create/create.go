@@ -7,7 +7,6 @@ package create
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -69,11 +68,5 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating client set: %w", err)
 	}
 
-	split := strings.Split(opts.Token, ".")
-	if len(split) != 2 {
-		return fmt.Errorf("token must be of the form %q, but got %q", validBootstrapToken, opts.Token)
-	}
-	tokenID, tokenSecret := split[0], split[1]
-
-	return tokenutils.CreateBootstrapToken(ctx, clientSet, opts.CreateOptions, tokenID, tokenSecret)
+	return tokenutils.CreateBootstrapToken(ctx, clientSet, opts.CreateOptions, opts.Token.ID, opts.Token.Secret)
 }

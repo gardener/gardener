@@ -264,14 +264,14 @@ To start using your cluster, you need to run the following as a regular user:
 	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
 		if worker.ControlPlane == nil {
 			fmt.Fprintf(opts.Out, `
-You can now join any number of worker machines to pool %q (or any other
+You can now join any number of worker machines to pool %[1]q (or any other
 worker pool). Run this on a control plane node:
 
-  gardenadm token generate --print-join-command --worker-pool-name %s
+  gardenadm token generate --print-join-command --worker-pool-name %[1]s
 
 Copy the output and run it as root on each node you would like to join the
 cluster.
-`, worker.Name, worker.Name)
+`, worker.Name)
 			break
 		}
 	}

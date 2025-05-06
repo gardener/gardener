@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
@@ -73,8 +73,13 @@ func run(ctx context.Context, opts *Options) error {
 	}
 
 	for _, tokenID := range opts.TokenIDs {
-		if err := clientSet.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: bootstraptokenutil.BootstrapTokenSecretName(tokenID), Namespace: metav1.NamespaceSystem}}); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed deleting bootstrap token secret with ID %q: %w", tokenID, err)
+		if err := clientSet.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: bootstraptokenutil.BootstrapTokenSecretName(tokenID), Namespace: metav1.NamespaceSystem}}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("failed deleting bootstrap token secret with ID %q: %w", tokenID, err)
+			}
+
+			fmt.Fprintf(opts.Out, "Error from server (NotFound): bootstrap token %q not found\n", tokenID)
+			continue
 		}
 
 		fmt.Fprintf(opts.Out, "bootstrap token %q deleted\n", tokenID)

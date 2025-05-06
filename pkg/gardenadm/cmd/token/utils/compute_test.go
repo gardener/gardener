@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: 2025 SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -89,7 +89,8 @@ var _ = Describe("Compute", func() {
 				}})).To(Succeed())
 
 				Expect(CreateBootstrapToken(ctx, clientSet, opts, tokenID, tokenSecret)).To(Succeed())
-				Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" --gardener-node-agent-secret-name gardener-node-agent-test-pool some-host`))
+				Eventually(stdOut).Should(Say(`gardenadm join --bootstrap-token abcdef.1234567890abcdef --ca-certificate "Y2EtZGF0YQ==" --gardener-node-agent-secret-name gardener-node-agent-test-pool some-host
+`))
 			})
 		})
 	})

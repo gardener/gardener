@@ -74,9 +74,9 @@ var _ = Describe("List", func() {
 			It("should print a nice table without sensitive information", func() {
 				Expect(command.RunE(command, nil)).To(Succeed())
 
-				Eventually(stdOut).Should(Say(`NAME                     TOKEN ID   EXPIRATION                    DESCRIPTION   AGE
-bootstrap-token-token1   token1     60m \(2050-05-05T06:05:05Z\)    1             <unknown>
-bootstrap-token-token2   token2     120m \(2050-05-05T07:05:05Z\)   2             <unknown>
+				Eventually(stdOut).Should(Say(`NAME\s+TOKEN ID\s+EXPIRATION\s+DESCRIPTION\s+AGE
+bootstrap-token-token1\s+token1\s+ 60m\s+\(2050-05-05T06:05:05Z\)\s+1\s+<unknown>
+bootstrap-token-token2\s+token2\s+120m\s+\(2050-05-05T07:05:05Z\)\s+2\s+<unknown>
 `))
 			})
 
@@ -84,9 +84,9 @@ bootstrap-token-token2   token2     120m \(2050-05-05T07:05:05Z\)   2           
 				Expect(command.Flags().Set("with-token-secret", "true")).To(Succeed())
 				Expect(command.RunE(command, nil)).To(Succeed())
 
-				Eventually(stdOut).Should(Say(`NAME                     TOKEN ID   TOKEN SECRET       TOKEN                     EXPIRATION                    DESCRIPTION   AGE
-bootstrap-token-token1   token1     token1secret1234   token1.token1secret1234   60m \(2050-05-05T06:05:05Z\)    1             <unknown>
-bootstrap-token-token2   token2     token2secret5678   token2.token2secret5678   120m \(2050-05-05T07:05:05Z\)   2             <unknown>
+				Eventually(stdOut).Should(Say(`NAME\s+TOKEN ID\s+TOKEN SECRET\s+TOKEN\s+EXPIRATION\s+DESCRIPTION\s+AGE
+bootstrap-token-token1\s+token1\s+token1secret1234\s+token1.token1secret1234\s+60m\s+\(2050-05-05T06:05:05Z\)\s+1\s+<unknown>
+bootstrap-token-token2\s+token2\s+token2secret5678\s+token2.token2secret5678\s+120m\s+\(2050-05-05T07:05:05Z\)\s+2\s+<unknown>
 `))
 			})
 

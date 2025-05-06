@@ -13,6 +13,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -25,15 +26,13 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "generate",
 		Short: "Generate a random bootstrap token for joining a node",
-		Long: `Generate a random bootstrap token that can be used for joining a node to an autonomous shoot cluster. 
+		Long: `Generate a random bootstrap token that can be used for joining a node to an autonomous shoot cluster.
+Note that the token is not created on the server (use 'gardenadm token create' for it).
 The token is securely generated and follows the format "[a-z0-9]{6}.[a-z0-9]{16}".
 Read more about it here: https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/`,
 
 		Example: `# Generate a random bootstrap token for joining a node
-gardenadm token generate
-
-# Generate a random bootstrap token for joining a node and secret and directly print the gardenadm join command
-gardenadm token generate --print-join-command`,
+gardenadm token generate`,
 
 		Args: cobra.ExactArgs(0),
 
@@ -65,7 +64,7 @@ func run(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed creating client set: %w", err)
 	}
 
-	tokenID, err := utils.GenerateRandomStringFromCharset(6, "0123456789abcdefghijklmnopqrstuvwxyz")
+	tokenID, err := utils.GenerateRandomStringFromCharset(6, bootstraptoken.CharSet)
 	if err != nil {
 		return fmt.Errorf("failed computing random token ID: %w", err)
 	}
