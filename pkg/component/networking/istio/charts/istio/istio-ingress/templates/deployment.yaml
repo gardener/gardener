@@ -211,17 +211,3 @@ spec:
           secretName: "istio-ingressgateway-ca-certs"
           optional: true
       priorityClassName: {{ .Values.priorityClassName }}
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                {{- range $key, $value := .Values.labels }}
-                - key: {{ $key }}
-                  operator: In
-                  values:
-                  - {{ $value }}
-                {{- end }}
-              topologyKey: "kubernetes.io/hostname"

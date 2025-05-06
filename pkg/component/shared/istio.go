@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -264,9 +263,14 @@ func IsZonalIstioExtension(labels map[string]string) (bool, string) {
 
 // ShouldEnforceSpreadAcrossHosts checks whether all given zones have at least two nodes so that Istio can be spread across hosts in each zone.
 func ShouldEnforceSpreadAcrossHosts(ctx context.Context, cl client.Client, zones []string) (bool, error) {
+	// If there are multiple zones, losing multiple Istio ingress replicas on one node is not a big problem since there are also replicas in two other zones.
+	// Hence, we do not need to enforce spreading across hosts. This helps to save resources in small HA clusters like the runtime cluster.
+	if len(zones) > 1 {
+		return false, nil
+	}
+
 	const targetNodeCount = 2
-	nodeList := &metav1.PartialObjectMetadataList{}
-	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	nodeList := &corev1.NodeList{}
 	if err := cl.List(ctx, nodeList); err != nil {
 		return false, err
 	}
@@ -274,6 +278,11 @@ func ShouldEnforceSpreadAcrossHosts(ctx context.Context, cl client.Client, zones
 	zonesIncomplete := len(zones)
 forNode:
 	for _, node := range nodeList.Items {
+		// Skip nodes with taints since Istio pods cannot be scheduled on them.
+		if len(node.Spec.Taints) > 0 {
+			continue
+		}
+
 		nodeZone := node.Labels[corev1.LabelTopologyZone]
 		for i, zone := range zones {
 			// In theory, this should be an equals check, but cloud provider handle regions/zones differently so that we might end up
