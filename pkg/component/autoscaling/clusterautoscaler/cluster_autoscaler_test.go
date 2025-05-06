@@ -737,7 +737,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), actualServiceAccount)).To(Succeed())
 				Expect(actualServiceAccount).To(DeepEqual(serviceAccount))
 
-				//TODO(@aaronfern): Remove this after g/g:v1.120 is released
+				//TODO(@aaronfern): Remove this after v1.120 is released
 				actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).ToNot(Succeed())
 

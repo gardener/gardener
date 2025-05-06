@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -182,7 +183,7 @@ func syncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.SeedBackup) 
 	// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
 }
 
-// TODO(@aaronfern): Remove this after g/g:v1.120 is released
+// TODO(@aaronfern): Remove this after v1.120 is released
 func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
@@ -212,11 +213,15 @@ func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
 	if err := flow.Parallel(tasks...)(ctx); err != nil {
 		return err
 	}
-	_ = managedresources.DeleteForSeed(ctx, seedClient, "garden", "machine-controller-manager")
+	if err := managedresources.DeleteForSeed(ctx, seedClient, "garden", "machine-controller-manager"); err != nil {
+		if !meta.IsNoMatchError(err) {
+			return err
+		}
+	}
 	return nil
 }
 
-// TODO(@aaronfern): Remove this after g/g:v1.120 is released
+// TODO(@aaronfern): Remove this after v1.120 is released
 func migrateAutoscalerRBAC(ctx context.Context, seedClient client.Client) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
@@ -246,6 +251,10 @@ func migrateAutoscalerRBAC(ctx context.Context, seedClient client.Client) error 
 	if err := flow.Parallel(tasks...)(ctx); err != nil {
 		return err
 	}
-	_ = managedresources.DeleteForSeed(ctx, seedClient, "garden", "cluster-autoscaler")
+	if err := managedresources.DeleteForSeed(ctx, seedClient, "garden", "cluster-autoscaler"); err != nil {
+		if !meta.IsNoMatchError(err) {
+			return err
+		}
+	}
 	return nil
 }
