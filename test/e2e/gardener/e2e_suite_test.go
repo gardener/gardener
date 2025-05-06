@@ -16,13 +16,12 @@ import (
 	_ "github.com/gardener/gardener/test/e2e/gardener/managedseed"
 	_ "github.com/gardener/gardener/test/e2e/gardener/project"
 	_ "github.com/gardener/gardener/test/e2e/gardener/seed"
-	_ "github.com/gardener/gardener/test/e2e/gardener/shoot"
+	"github.com/gardener/gardener/test/e2e/gardener/shoot"
 	_ "github.com/gardener/gardener/test/e2e/gardener/shoot/gardenerupgrade"
-	"github.com/gardener/gardener/test/framework"
 )
 
 func TestMain(m *testing.M) {
-	framework.RegisterGardenerFrameworkFlags()
+	shoot.RegisterShootFlags()
 	flag.Parse()
 	os.Exit(m.Run())
 }

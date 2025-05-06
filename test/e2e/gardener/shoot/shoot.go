@@ -25,8 +25,8 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
-	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/utils/access"
+	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
 // This file contains common shoot-related test steps (`It`s) used by multiple test cases (ordered containers).
@@ -43,14 +43,10 @@ var (
 	existingShootName string
 )
 
-// LoadLegacyFlags initializes the above variables by looking up the flag values from the test framework. This is done
-// because we cannot register flags with the same name as the test framework as long as there are still gardener e2e
-// tests using it.
-// TODO(timebertt): drop this function and re-define the flags here once the test/e2e/gardener package no longer uses
-// the test framework (when finishing https://github.com/gardener/gardener/issues/11379)
-func LoadLegacyFlags() {
-	projectNamespace = flag.Lookup("project-namespace").Value.String()
-	existingShootName = flag.Lookup("existing-shoot-name").Value.String()
+// RegisterShootFlags defines and registers flags used by this test package
+func RegisterShootFlags() {
+	flag.StringVar(&projectNamespace, "project-namespace", "", "specify the gardener project namespace to run tests")
+	flag.StringVar(&existingShootName, "existing-shoot-name", "", "specify an existing shoot to run tests against")
 }
 
 // ItShouldCreateShoot creates the shoot. If an existing shoot is specified, the step is skipped.
@@ -157,7 +153,7 @@ func ItShouldWaitForShootToBeReconciledAndHealthy(s *ShootContext) {
 		Eventually(ctx, func(g Gomega) bool {
 			g.Expect(s.GardenKomega.Get(s.Shoot)()).To(Succeed())
 
-			completed, reason := framework.ShootReconciliationSuccessful(s.Shoot)
+			completed, reason := shootoperation.ReconciliationSuccessful(s.Shoot)
 			if !completed {
 				s.Log.Info("Waiting for reconciliation and healthiness", "lastOperation", s.Shoot.Status.LastOperation, "reason", reason)
 			}

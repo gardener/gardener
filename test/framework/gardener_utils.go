@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/utils/access"
+	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
 // GetSeeds returns all registered seeds
@@ -421,7 +422,7 @@ func (f *GardenerFramework) WaitForShootToBeCreated(ctx context.Context, shoot *
 			log.Error(err, "Error while waiting for shoot to be created")
 			return retry.MinorError(err)
 		}
-		completed, msg := ShootReconciliationSuccessful(shoot)
+		completed, msg := shootoperation.ReconciliationSuccessful(shoot)
 		if completed {
 			return retry.Ok()
 		}
@@ -464,7 +465,7 @@ func (f *GardenerFramework) WaitForShootToBeReconciled(ctx context.Context, shoo
 			log.Error(err, "Error while waiting for shoot to be reconciled")
 			return retry.MinorError(err)
 		}
-		completed, msg := ShootReconciliationSuccessful(shoot)
+		completed, msg := shootoperation.ReconciliationSuccessful(shoot)
 		if completed {
 			return retry.Ok()
 		}
