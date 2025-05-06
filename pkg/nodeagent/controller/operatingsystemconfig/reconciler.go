@@ -698,7 +698,7 @@ func (r *Reconciler) performInPlaceUpdate(ctx context.Context, log logr.Logger, 
 		return fmt.Errorf("failed to perform certificate rotation in-place: %w", err)
 	}
 
-	if nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful) {
+	if (nodeHasInPlaceUpdateConditionWithReasonReadyForUpdate(node.Status.Conditions) && !kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateSuccessful)) || kubernetesutils.HasMetaDataLabel(node, machinev1alpha1.LabelKeyNodeUpdateResult, machinev1alpha1.LabelValueNodeUpdateFailed) {
 		if err := r.deleteRemainingPods(ctx, log, node); err != nil {
 			return fmt.Errorf("failed to delete remaining pods: %w", err)
 		}
@@ -724,7 +724,7 @@ func (r *Reconciler) checkKubeletHealth(ctx context.Context, log logr.Logger, no
 		return err
 	}
 
-	if err := retryutils.UntilTimeout(ctx, KubeletHealthCheckRetryInterval, KubeletHealthCheckRetryTimeout, func(_ context.Context) (done bool, err error) {
+	if err := retryutils.UntilTimeout(ctx, KubeletHealthCheckRetryInterval, KubeletHealthCheckRetryTimeout, func(ctx context.Context) (bool, error) {
 		if response, err2 := httpClient.Do(request); err2 != nil {
 			return retryutils.MinorError(fmt.Errorf("HTTP request to kubelet health endpoint failed: %w", err2))
 		} else if response.StatusCode == http.StatusOK {
@@ -985,7 +985,7 @@ func (r *Reconciler) updateOSInPlace(ctx context.Context, log logr.Logger, oscCh
 		return err
 	}
 
-	if err := retryutils.UntilTimeout(ctx, OSUpdateRetryInterval, OSUpdateRetryTimeout, func(_ context.Context) (done bool, err error) {
+	if err := retryutils.UntilTimeout(ctx, OSUpdateRetryInterval, OSUpdateRetryTimeout, func(ctx context.Context) (bool, error) {
 		log.Info("Executing update script", "command", osc.Status.InPlaceUpdates.OSUpdate.Command, "args", strings.Join(osc.Status.InPlaceUpdates.OSUpdate.Args, " "))
 
 		if output, err2 := ExecCommandCombinedOutput(ctx, osc.Status.InPlaceUpdates.OSUpdate.Command, osc.Status.InPlaceUpdates.OSUpdate.Args...); err2 != nil {
