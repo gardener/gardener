@@ -606,7 +606,7 @@ func (k *kubeProxy) getKubeProxyContainer(k8sGreaterEqual129 bool, image string,
 		container.ReadinessProbe = &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/healthz",
+					Path:   "/livez",
 					Port:   intstr.FromInt32(portHealthz),
 					Scheme: corev1.URISchemeHTTP,
 				},

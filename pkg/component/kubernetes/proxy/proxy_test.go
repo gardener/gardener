@@ -600,7 +600,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										ReadinessProbe: &corev1.Probe{
 											ProbeHandler: corev1.ProbeHandler{
 												HTTPGet: &corev1.HTTPGetAction{
-													Path:   "/healthz",
+													Path:   "/livez",
 													Port:   intstr.FromInt32(10256),
 													Scheme: corev1.URISchemeHTTP,
 												},
