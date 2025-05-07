@@ -6,10 +6,16 @@ package delete
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	tokenutils "github.com/gardener/gardener/pkg/gardenadm/cmd/token/utils"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -17,15 +23,26 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 	opts := &Options{Options: globalOpts}
 
 	cmd := &cobra.Command{
-		Use:   "delete [token-id]",
-		Short: "Delete a bootstrap token on the server",
-		Long: "This command will delete a bootstrap token for you." +
-			"The [token-id] is the ID of the token of the form \"[a-z0-9]{6}\" to delete",
+		Use:   "delete [token-values...]",
+		Short: "Delete one or more bootstrap tokens from the cluster",
+		Long: `Delete one or more bootstrap tokens from the cluster.
 
-		Example: `# Delete a bootstrap token with id "foo123" on the server
-gardenadm token delete foo123`,
+The [token-value] is the ID of the token of the form "[a-z0-9]{6}" to delete.
+Alternatively, it can be the full token value of the form "[a-z0-9]{6}.[a-z0-9]{16}".
+A third option is to specify the name of the Secret in the form "bootstrap-token-[a-z0-9]{6}".
 
-		Args: cobra.MaximumNArgs(1),
+You can delete multiple tokens by providing multiple token values separated by spaces.`,
+
+		Example: `# Delete a single bootstrap token with ID "foo123" from the cluster
+gardenadm token delete foo123
+
+# Delete multiple bootstrap tokens with IDs "foo123", "bar456", and "789baz" from the cluster
+gardenadm token delete foo123 bootstrap-token-bar456 789baz.abcdef1234567890
+
+# Attempt to delete a token that does not exist (will not throw an error if the token is already deleted)
+gardenadm token delete nonexisting123`,
+
+		Args: cobra.MinimumNArgs(1),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
@@ -49,7 +66,24 @@ gardenadm token delete foo123`,
 	return cmd
 }
 
-func run(_ context.Context, opts *Options) error {
-	opts.Log.Info("Not implemented")
+func run(ctx context.Context, opts *Options) error {
+	clientSet, err := tokenutils.CreateClientSet(ctx, opts.Log)
+	if err != nil {
+		return fmt.Errorf("failed creating client set: %w", err)
+	}
+
+	for _, tokenID := range opts.TokenIDs {
+		if err := clientSet.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: bootstraptokenutil.BootstrapTokenSecretName(tokenID), Namespace: metav1.NamespaceSystem}}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("failed deleting bootstrap token secret with ID %q: %w", tokenID, err)
+			}
+
+			fmt.Fprintf(opts.Out, "Error from server (NotFound): bootstrap token %q not found\n", tokenID)
+			continue
+		}
+
+		fmt.Fprintf(opts.Out, "bootstrap token %q deleted\n", tokenID)
+	}
+
 	return nil
 }

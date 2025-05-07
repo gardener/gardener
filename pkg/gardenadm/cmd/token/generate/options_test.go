@@ -12,9 +12,7 @@ import (
 )
 
 var _ = Describe("Options", func() {
-	var (
-		options *Options
-	)
+	var options *Options
 
 	BeforeEach(func() {
 		options = &Options{}
