@@ -389,11 +389,8 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("100m"),
-							corev1.ResourceMemory: resource.MustParse("20Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceMemory: resource.MustParse("100Mi"),
+							corev1.ResourceCPU:    resource.MustParse("5m"),
+							corev1.ResourceMemory: resource.MustParse("5M"),
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
@@ -511,11 +508,8 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("20m"),
-					corev1.ResourceMemory: resource.MustParse("100Mi"),
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("850M"),
+					corev1.ResourceCPU:    resource.MustParse("5m"),
+					corev1.ResourceMemory: resource.MustParse("25M"),
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
@@ -622,11 +616,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("10m"),
-					corev1.ResourceMemory: resource.MustParse("10Mi"),
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceMemory: resource.MustParse("20Mi"),
+					corev1.ResourceMemory: resource.MustParse("20M"),
 				},
 			},
 			SecurityContext: &corev1.SecurityContext{
@@ -954,18 +944,16 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName: deploymentName,
-					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("20Mi"),
-					},
+					ContainerName:    deploymentName,
 					ControlledValues: &controlledValues,
 				},
 				{
-					ContainerName: envoyProxyContainerName,
-					MinAllowed: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse("100Mi"),
-					},
+					ContainerName:    envoyProxyContainerName,
 					ControlledValues: &controlledValues,
+				},
+				{
+					ContainerName: "openvpn-exporter",
+					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
 		}
