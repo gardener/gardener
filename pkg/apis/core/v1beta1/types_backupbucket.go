@@ -45,11 +45,19 @@ type BackupBucketSpec struct {
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
+	// Deprecated: This field will be removed after v1.122.0 has been released. Use `CredentialsRef` instead.
+	// Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
 	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,3,opt,name=secretRef"`
 	// SeedName holds the name of the seed allocated to BackupBucket for running controller.
 	// This field is immutable.
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,4,opt,name=seedName"`
+	// CredentialsRef is reference to a resource holding the credentials used for
+	// authentication with the object store service where the backups are stored.
+	// Supported referenced resources are v1.Secrets and
+	// security.gardener.cloud/v1alpha1.WorkloadIdentity
+	// +optional
+	CredentialsRef *corev1.ObjectReference `json:"credentialsRef,omitempty" protobuf:"bytes,5,opt,name=credentialsRef"`
 }
 
 // BackupBucketStatus holds the most recently observed status of the Backup Bucket.
