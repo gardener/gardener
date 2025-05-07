@@ -7,6 +7,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -360,6 +361,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 
 					s = NewTestContext().ForShoot(shoot)
 				})
+
+				// Skip the test for IPv6 single-stack Shoot as it is extremely flaky (success rate < 30%).
+				//
+				// TODO(shafeeqes, acumino, ary1992): Debug and fix the flaky test for ipv6.
+				if os.Getenv("IPFAMILY") == "ipv6" {
+					s.Log.Info("Skip the flaky credentials rotation with in-place update strategy e2e test for ipv6")
+					return
+				}
 
 				test(s, false, true)
 			})
