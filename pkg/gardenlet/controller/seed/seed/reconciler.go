@@ -59,7 +59,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	var isManagedSeed bool
+	var seedIsShoot bool
 	if err := r.SeedClientSet.Client().Get(ctx, client.ObjectKey{
 		Namespace: metav1.NamespaceSystem,
 		Name:      v1beta1constants.ConfigMapNameShootInfo,
@@ -67,9 +67,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		if !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("failed to check if this seed is a shoot: %w", err)
 		}
-		isManagedSeed = false
+		seedIsShoot = false
 	} else {
-		isManagedSeed = true
+		seedIsShoot = true
 	}
 
 	operationType := gardencorev1beta1.LastOperationTypeReconcile
@@ -110,14 +110,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if seed.DeletionTimestamp != nil {
-		result, err := r.delete(ctx, log, seedObj, seedIsGarden, isManagedSeed)
+		result, err := r.delete(ctx, log, seedObj, seedIsGarden, seedIsShoot)
 		if err != nil {
 			return result, r.updateStatusOperationError(ctx, seed, err, operationType)
 		}
 		return result, nil
 	}
 
-	if err := r.reconcile(ctx, log, seedObj, seedIsGarden, isManagedSeed); err != nil {
+	if err := r.reconcile(ctx, log, seedObj, seedIsGarden, seedIsShoot); err != nil {
 		return reconcile.Result{}, r.updateStatusOperationError(ctx, seed, err, operationType)
 	}
 
