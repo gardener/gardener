@@ -412,6 +412,11 @@ func (in *BackupBucketSpec) DeepCopyInto(out *BackupBucketSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.CredentialsRef != nil {
+		in, out := &in.CredentialsRef, &out.CredentialsRef
+		*out = new(v1.ObjectReference)
+		**out = **in
+	}
 	return
 }
 

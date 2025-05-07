@@ -136,7 +136,9 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
-<p>SecretRef is a reference to a secret that contains the credentials to access object store.</p>
+<p>SecretRef is a reference to a secret that contains the credentials to access object store.
+Deprecated: This field will be removed after v1.122.0 has been released. Use <code>CredentialsRef</code> instead.
+Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
 </td>
 </tr>
 <tr>
@@ -150,6 +152,23 @@ string
 <em>(Optional)</em>
 <p>SeedName holds the name of the seed allocated to BackupBucket for running controller.
 This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRef is reference to a resource holding the credentials used for
+authentication with the object store service where the backups are stored.
+Supported referenced resources are v1.Secrets and
+security.gardener.cloud/v1alpha1.WorkloadIdentity</p>
 </td>
 </tr>
 </table>
@@ -3009,7 +3028,9 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
-<p>SecretRef is a reference to a secret that contains the credentials to access object store.</p>
+<p>SecretRef is a reference to a secret that contains the credentials to access object store.
+Deprecated: This field will be removed after v1.122.0 has been released. Use <code>CredentialsRef</code> instead.
+Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
 </td>
 </tr>
 <tr>
@@ -3023,6 +3044,23 @@ string
 <em>(Optional)</em>
 <p>SeedName holds the name of the seed allocated to BackupBucket for running controller.
 This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRef is reference to a resource holding the credentials used for
+authentication with the object store service where the backups are stored.
+Supported referenced resources are v1.Secrets and
+security.gardener.cloud/v1alpha1.WorkloadIdentity</p>
 </td>
 </tr>
 </tbody>
