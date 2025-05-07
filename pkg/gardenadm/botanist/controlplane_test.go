@@ -18,9 +18,7 @@ import (
 )
 
 var _ = Describe("ControlPlane", func() {
-	var (
-		b *AutonomousBotanist
-	)
+	var b *AutonomousBotanist
 
 	BeforeEach(func() {
 		b = &AutonomousBotanist{}
@@ -34,7 +32,7 @@ var _ = Describe("ControlPlane", func() {
 		)
 
 		It("should succeed discovering the version", func() {
-			DeferCleanup(test.WithVar(&NewClientFromBytes, func(_ []byte, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			DeferCleanup(test.WithVar(&NewWithConfig, func(_ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				return fakekubernetes.NewClientSetBuilder().WithVersion("1.33.0").Build(), nil
 			}))
 
@@ -44,7 +42,7 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should fail creating the client set from the kubeconfig", func() {
-			DeferCleanup(test.WithVar(&NewClientFromBytes, func(_ []byte, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			DeferCleanup(test.WithVar(&NewWithConfig, func(_ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				return nil, fmt.Errorf("fake err")
 			}))
 
@@ -54,7 +52,7 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should fail parsing the kubernetes version", func() {
-			DeferCleanup(test.WithVar(&NewClientFromBytes, func(_ []byte, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			DeferCleanup(test.WithVar(&NewWithConfig, func(_ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				return fakekubernetes.NewClientSetBuilder().WithVersion("cannot-parse").Build(), nil
 			}))
 

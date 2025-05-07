@@ -186,7 +186,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 		}, SpecTimeout(time.Minute))
 
 		It("should generate a bootstrap token and join the worker node", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0, "gardenadm", "token", "generate", "--print-join-command")
+			stdOut, _, err := execute(ctx, 0, "gardenadm", "token", "create", "--print-join-command")
 			Expect(err).NotTo(HaveOccurred())
 
 			stdOut, _, err = execute(ctx, 1, strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")...)

@@ -100,12 +100,16 @@ func run(ctx context.Context, opts *Options) error {
 	fmt.Fprintf(opts.Out, `
 Your node has successfully been instructed to join the cluster as a worker!
 
-Please do not forget to delete this bootstrap token by running on the control plane node:
+The bootstrap token will be deleted automatically by kube-controller-manager
+after it has expired. If you want to delete it right awy, run the following
+on any control plane node:
 
   gardenadm token delete %s
 
 Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
-In case it isn't appearing within two minutes, you should check gardener-node-agent's logs by running 'journalctl -u gardener-node-agent', or kubelet's logs by running 'journalctl -u kubelet'.
+In case it isn't appearing within two minutes, you can check the logs of
+gardener-node-agent by running 'journalctl -u gardener-node-agent', or the
+logs of kubelet by running 'journalctl -u kubelet'.
 `, opts.BootstrapToken)
 
 	return nil
