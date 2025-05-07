@@ -336,11 +336,29 @@ func (r *Reconciler) applyChangedImageRefFiles(ctx context.Context, log logr.Log
 			continue
 		}
 
-		if err := r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, file.Content.ImageRef.FilePathInImage, file.Path, getFilePermissions(file)); err != nil {
-			return fmt.Errorf("unable to copy file %q from image %q to %q: %w", file.Content.ImageRef.FilePathInImage, file.Content.ImageRef.Image, file.Path, err)
+		var (
+			permissions     = getFilePermissions(file)
+			filePathInImage = file.Content.ImageRef.FilePathInImage
+			fileLog         = log.WithValues("path", file.Path, "image", file.Content.ImageRef.Image)
+		)
+
+		err := r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, filePathInImage, file.Path, permissions)
+
+		// Fall back to /ko-app/gardener-node-agent if /gardener-node-agent doesn't exist in image to support images built
+		// with ko.
+		// TODO(timebertt): remove this fallback once https://github.com/ko-build/ko/pull/1403 has been released and is used
+		//  to build images in the skaffold-based setup (add a breaking release note!).
+		if errors.Is(err, fs.ErrNotExist) && filePathInImage == "/gardener-node-agent" {
+			filePathInImage = "/ko-app/gardener-node-agent"
+			fileLog.Info("Could not find gardener-node-agent in root directory of image, falling back to ko binary path")
+			err = r.Extractor.CopyFromImage(ctx, file.Content.ImageRef.Image, filePathInImage, file.Path, permissions)
 		}
 
-		log.Info("Successfully applied new or changed file from image", "path", file.Path, "image", file.Content.ImageRef.Image)
+		if err != nil {
+			return fmt.Errorf("unable to copy file %q from image %q to %q: %w", filePathInImage, file.Content.ImageRef.Image, file.Path, err)
+		}
+
+		fileLog.Info("Successfully applied new or changed file from image", "filePathInImage", filePathInImage)
 		if err := changes.completedFileChanged(file.Path); err != nil {
 			return err
 		}
