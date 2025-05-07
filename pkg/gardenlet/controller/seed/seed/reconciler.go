@@ -30,7 +30,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	gardenletutils "github.com/gardener/gardener/pkg/utils/gardener/gardenlet"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles Seed resources and provisions or de-provisions the seed system components.
@@ -60,13 +59,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	managedSeed, err := kubernetesutils.GetManagedSeedByName(ctx, r.GardenClient, seed.Name)
-	if err != nil {
+	var isManagedSeed bool
+	if err := r.SeedClientSet.Client().Get(ctx, client.ObjectKey{
+		Namespace: metav1.NamespaceSystem,
+		Name:      v1beta1constants.ConfigMapNameShootInfo,
+	}, &corev1.ConfigMap{}); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("failed to get managed seed: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to check if this seed is a shoot: %w", err)
 		}
+		isManagedSeed = false
+	} else {
+		isManagedSeed = true
 	}
-	isManagedSeed := managedSeed != nil
 
 	operationType := gardencorev1beta1.LastOperationTypeReconcile
 	if seed.DeletionTimestamp != nil {
