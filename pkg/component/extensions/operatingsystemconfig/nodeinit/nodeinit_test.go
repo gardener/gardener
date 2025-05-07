@@ -130,7 +130,7 @@ ctr images mount "` + image + `" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host (/opt/bin) and make it executable"
 mkdir -p "/opt/bin"
-cp -f "$tmp_dir/gardener-node-agent" "/opt/bin/gardener-node-agent"
+cp -f "$tmp_dir/gardener-node-agent" "/opt/bin" || cp -f "$tmp_dir/ko-app/gardener-node-agent" "/opt/bin"
 chmod +x "/opt/bin/gardener-node-agent"
 
 echo "> Bootstrap gardener-node-agent"
