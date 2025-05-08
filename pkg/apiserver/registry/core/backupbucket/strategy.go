@@ -43,7 +43,7 @@ func (backupBucketStrategy) PrepareForCreate(_ context.Context, obj runtime.Obje
 	backupBucket.Generation = 1
 	backupBucket.Status = core.BackupBucketStatus{}
 
-	syncBackupSecretRefAndCredentialsRef(&backupBucket.Spec)
+	SyncBackupSecretRefAndCredentialsRef(&backupBucket.Spec)
 }
 
 func (backupBucketStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -51,7 +51,7 @@ func (backupBucketStrategy) PrepareForUpdate(_ context.Context, obj, old runtime
 	oldBackupBucket := old.(*core.BackupBucket)
 	newBackupBucket.Status = oldBackupBucket.Status
 
-	syncBackupSecretRefAndCredentialsRef(&newBackupBucket.Spec)
+	SyncBackupSecretRefAndCredentialsRef(&newBackupBucket.Spec)
 
 	if mustIncreaseGeneration(oldBackupBucket, newBackupBucket) {
 		newBackupBucket.Generation = oldBackupBucket.Generation + 1
@@ -172,10 +172,10 @@ func getSeedName(backupBucket *core.BackupBucket) string {
 	return *backupBucket.Spec.SeedName
 }
 
-// syncBackupSecretRefAndCredentialsRef ensures the spec fields
+// SyncBackupSecretRefAndCredentialsRef ensures the spec fields
 // credentialsRef and secretRef are synced.
 // TODO(vpnachev): Remove once the spec.secretRef field is removed.
-func syncBackupSecretRefAndCredentialsRef(backupBucketSpec *core.BackupBucketSpec) {
+func SyncBackupSecretRefAndCredentialsRef(backupBucketSpec *core.BackupBucketSpec) {
 	emptySecretRef := corev1.SecretReference{}
 
 	// secretRef is set and credentialsRef is not, sync both fields.
