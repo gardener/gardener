@@ -174,9 +174,11 @@ var _ = Describe("BackupEntry controller tests", func() {
 					Region: "some-region",
 				},
 				ProviderConfig: providerConfig,
-				SecretRef: corev1.SecretReference{
-					Name:      gardenSecret.Name,
-					Namespace: gardenSecret.Namespace,
+				CredentialsRef: &corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Namespace:  gardenSecret.Namespace,
+					Name:       gardenSecret.Name,
 				},
 				SeedName: &seed.Name,
 			},
