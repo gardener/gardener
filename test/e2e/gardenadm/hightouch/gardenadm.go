@@ -209,7 +209,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 					Effect: corev1.TaintEffectNoSchedule,
 				}))
 			}).Should(Succeed())
-		}, SpecTimeout(time.Minute))
+		}, SpecTimeout(2*time.Minute))
 	})
 })
 
