@@ -65,6 +65,8 @@ const (
 	PluginNameShootVPAEnabledByDefault = "ShootVPAEnabledByDefault"
 	// PluginNameShootResourceReservation is the name of the ShootResourceReservation admission plugin.
 	PluginNameShootResourceReservation = "ShootResourceReservation"
+	// PluginNameBackupBucketValidator is the name of the BackupBucketValidator admission plugin.
+	PluginNameBackupBucketValidator = "BackupBucketValidator"
 )
 
 // AllPluginNames returns the names of all plugins.
@@ -96,6 +98,7 @@ func AllPluginNames() []string {
 		PluginNameManagedSeed,                       // ManagedSeed
 		PluginNameManagedSeedShoot,                  // ManagedSeedShoot
 		PluginNameBastion,                           // Bastion
+		PluginNameBackupBucketValidator,             // BackupBucketValidator
 
 		// new admission plugins should generally be inserted above here
 		// webhook, and resourcequota plugins must go at the end
@@ -137,6 +140,7 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameManagedSeed,                     // ManagedSeed
 		PluginNameManagedSeedShoot,                // ManagedSeedShoot
 		PluginNameBastion,                         // Bastion
+		PluginNameBackupBucketValidator,           // BackupBucketValidator
 		mutatingwebhook.PluginName,                // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,              // ValidatingAdmissionWebhook
 		// TODO(ary1992): Ennable the plugin once our base clusters are updated to k8s >= 1.30
