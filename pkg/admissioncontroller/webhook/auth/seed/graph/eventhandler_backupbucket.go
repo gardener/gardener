@@ -8,11 +8,13 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
 func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informer) error {
@@ -38,6 +40,7 @@ func (g *graph) setupBackupBucketWatch(_ context.Context, informer cache.Informe
 
 			if !apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, newBackupBucket.Spec.SeedName) ||
 				!apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SecretRef, newBackupBucket.Spec.SecretRef) ||
+				!apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.CredentialsRef, newBackupBucket.Spec.CredentialsRef) ||
 				!apiequality.Semantic.DeepEqual(oldBackupBucket.Status.GeneratedSecretRef, newBackupBucket.Status.GeneratedSecretRef) {
 				g.handleBackupBucketCreateOrUpdate(newBackupBucket)
 			}
@@ -66,14 +69,21 @@ func (g *graph) handleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1
 	defer g.lock.Unlock()
 
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeBackupBucket, "", backupBucket.Name)
+	g.deleteAllIncomingEdges(VertexTypeWorkloadIdentity, VertexTypeBackupBucket, "", backupBucket.Name)
 	g.deleteAllOutgoingEdges(VertexTypeBackupBucket, "", backupBucket.Name, VertexTypeSeed)
 
 	var (
 		backupBucketVertex = g.getOrCreateVertex(VertexTypeBackupBucket, "", backupBucket.Name)
-		secretVertex       = g.getOrCreateVertex(VertexTypeSecret, backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name)
+		credentialsVertex  *vertex
 	)
 
-	g.addEdge(secretVertex, backupBucketVertex)
+	if backupBucket.Spec.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && backupBucket.Spec.CredentialsRef.Kind == "WorkloadIdentity" {
+		credentialsVertex = g.getOrCreateVertex(VertexTypeWorkloadIdentity, backupBucket.Spec.CredentialsRef.Namespace, backupBucket.Spec.CredentialsRef.Name)
+	} else if backupBucket.Spec.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() && backupBucket.Spec.CredentialsRef.Kind == "Secret" {
+		credentialsVertex = g.getOrCreateVertex(VertexTypeSecret, backupBucket.Spec.CredentialsRef.Namespace, backupBucket.Spec.CredentialsRef.Name)
+	}
+
+	g.addEdge(credentialsVertex, backupBucketVertex)
 
 	if backupBucket.Spec.SeedName != nil {
 		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *backupBucket.Spec.SeedName)
