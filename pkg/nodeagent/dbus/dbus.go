@@ -32,6 +32,8 @@ type DBus interface {
 	Stop(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
 	// Restart the given unit and record an event to the node object, same as executing "systemctl restart unit".
 	Restart(ctx context.Context, recorder record.EventRecorder, node runtime.Object, unitName string) error
+	// List lists all units and returns the output.
+	List(ctx context.Context) ([]dbus.UnitStatus, error)
 	// Reboot this machines, is the same as executing "systemctl reboot".
 	Reboot() error
 }
@@ -105,6 +107,16 @@ func (d *db) Restart(ctx context.Context, recorder record.EventRecorder, node ru
 	defer dbc.Close()
 
 	return d.runCommand(ctx, recorder, node, unitName, dbc.RestartUnitContext, "SystemDUnitRestart", "restart")
+}
+
+func (d *db) List(ctx context.Context) ([]dbus.UnitStatus, error) {
+	dbc, err := dbus.NewWithContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to dbus: %w", err)
+	}
+	defer dbc.Close()
+
+	return dbc.ListUnitsContext(ctx)
 }
 
 func (*db) DaemonReload(ctx context.Context) error {

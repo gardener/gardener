@@ -17,7 +17,7 @@ ctr images mount "{{ .image }}" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host ({{ .binaryDirectory }}) and make it executable"
 mkdir -p "{{ .binaryDirectory }}"
-cp -f "$tmp_dir/gardener-node-agent" "{{ .binaryDirectory }}"
+cp -f "$tmp_dir{{ .binaryFilePathInImage }}" "{{ .binaryDirectory }}/gardener-node-agent"
 chmod +x "{{ .binaryDirectory }}/gardener-node-agent"
 
 echo "> Bootstrap gardener-node-agent"

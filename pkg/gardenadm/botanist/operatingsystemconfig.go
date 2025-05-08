@@ -8,20 +8,26 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
+	systemddbus "github.com/coreos/go-systemd/v22/dbus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/imagevector"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
-	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
+	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
@@ -42,9 +48,15 @@ func (b *AutonomousBotanist) DeployOperatingSystemConfigSecretForNodeAgent(ctx c
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
 
-	b.operatingSystemConfigSecret, err = nodeagent.OperatingSystemConfigSecret(ctx, b.SeedClientSet.Client(), oscData.Object, oscData.GardenerNodeAgentSecretName, controlPlaneWorkerPoolName)
+	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, oscData.Object, oscData.GardenerNodeAgentSecretName, controlPlaneWorkerPoolName)
+}
+
+func (b *AutonomousBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, secretName, poolName string) error {
+	var err error
+
+	b.operatingSystemConfigSecret, err = nodeagentcomponent.OperatingSystemConfigSecret(ctx, b.SeedClientSet.Client(), osc, secretName, poolName)
 	if err != nil {
-		return fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", controlPlaneWorkerPoolName, err)
+		return fmt.Errorf("failed computing the OperatingSystemConfig secret for gardener-node-agent for pool %q: %w", poolName, err)
 	}
 
 	return b.SeedClientSet.Client().Create(ctx, b.operatingSystemConfigSecret)
@@ -116,7 +128,7 @@ func (b *AutonomousBotanist) deployOperatingSystemConfig(ctx context.Context) (*
 // OperatingSystemConfig.
 func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) error {
 	if b.operatingSystemConfigSecret == nil {
-		return fmt.Errorf("operating system config secret is nil, make sure to call DeployOperatingSystemConfigSecretForNodeAgent first")
+		return fmt.Errorf("operating system config secret is nil, make sure to call createOperatingSystemConfigSecretForNodeAgent() first")
 	}
 
 	if err := b.ensureGardenerNodeAgentDirectories(); err != nil {
@@ -151,4 +163,67 @@ func (b *AutonomousBotanist) ensureGardenerNodeAgentDirectories() error {
 		return fmt.Errorf("failed creating credentials directory (%q): %w", nodeagentconfigv1alpha1.CredentialsDir, err)
 	}
 	return nil
+}
+
+// PrepareGardenerNodeInitConfiguration creates a Secret containing an OperatingSystemConfig with the gardener-node-init
+// unit.
+func (b *AutonomousBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Context, secretName, controlPlaneAddress string, caBundle []byte, bootstrapToken string) error {
+	osc, err := b.generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken, caBundle)
+	if err != nil {
+		return fmt.Errorf("failed computing units and files for gardener-node-init: %w", err)
+	}
+
+	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, osc, secretName, "")
+}
+
+func (b *AutonomousBotanist) generateGardenerNodeInitOperatingSystemConfig(secretName, controlPlaneAddress, bootstrapToken string, caBundle []byte) (*extensionsv1alpha1.OperatingSystemConfig, error) {
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameGardenerNodeAgent)
+	if err != nil {
+		return nil, fmt.Errorf("failed finding image %q: %w", imagevector.ContainerImageNameGardenerNodeAgent, err)
+	}
+	image.WithOptionalTag(version.Get().GitVersion)
+
+	units, files, err := nodeinit.Config(
+		gardencorev1beta1.Worker{},
+		image.String(),
+		nodeagentcomponent.ComponentConfig(secretName, b.Shoot.KubernetesVersion, controlPlaneAddress, caBundle, nil),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing units and files for gardener-node-init: %w", err)
+	}
+
+	for i, file := range files {
+		if file.Path == nodeagentconfigv1alpha1.BootstrapTokenFilePath {
+			files[i].Content.Inline.Data = bootstrapToken
+			break
+		}
+	}
+
+	return &extensionsv1alpha1.OperatingSystemConfig{
+		Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+			Files: files,
+			Units: units,
+		},
+	}, nil
+}
+
+// IsGardenerNodeAgentInitialized returns true if the gardener-node-agent systemd unit exists.
+func (b *AutonomousBotanist) IsGardenerNodeAgentInitialized(ctx context.Context) (bool, error) {
+	unitStatuses, err := b.DBus.List(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed listing systemd units: %w", err)
+	}
+
+	if !slices.ContainsFunc(unitStatuses, func(status systemddbus.UnitStatus) bool {
+		return status.Name == nodeagentconfigv1alpha1.UnitName
+	}) {
+		return false, nil
+	}
+
+	exists, err := b.FS.Exists(nodeagentconfigv1alpha1.BootstrapTokenFilePath)
+	if err != nil {
+		return false, fmt.Errorf("failed checking whether bootstrap token file %s still exists: %w", nodeagentconfigv1alpha1.BootstrapTokenFilePath, err)
+	}
+
+	return !exists, nil
 }

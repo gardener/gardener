@@ -3424,6 +3424,8 @@ kind: AuthorizationConfiguration
 					kubeconfig := &clientcmdv1.Config{}
 					Expect(yaml.Unmarshal(secretList.Items[0].Data["kubeconfig"], kubeconfig)).To(Succeed())
 					Expect(kubeconfig.CurrentContext).To(Equal(namespace))
+					Expect(kubeconfig.Clusters).To(HaveLen(1))
+					Expect(kubeconfig.Clusters[0].Cluster.Server).To(Equal("https://" + externalHostname))
 					Expect(kubeconfig.AuthInfos).To(HaveLen(1))
 					Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
 				})

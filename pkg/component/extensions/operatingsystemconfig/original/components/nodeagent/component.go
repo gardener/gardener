@@ -162,13 +162,18 @@ func Files(config *nodeagentconfigv1alpha1.NodeAgentConfiguration) ([]extensions
 }
 
 func fileContentImageRef(image string) *extensionsv1alpha1.FileContentImageRef {
+	return &extensionsv1alpha1.FileContentImageRef{
+		Image:           image,
+		FilePathInImage: FilePathInImage(image),
+	}
+}
+
+// FilePathInImage returns the path of the gardener-node-agent binary file in its container image.
+func FilePathInImage(image string) string {
 	var prefix string
 	if strings.HasPrefix(image, "garden.local.gardener.cloud:5001") {
 		prefix = "/ko-app"
 	}
 
-	return &extensionsv1alpha1.FileContentImageRef{
-		Image:           image,
-		FilePathInImage: prefix + "/gardener-node-agent",
-	}
+	return prefix + "/gardener-node-agent"
 }

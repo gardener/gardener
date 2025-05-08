@@ -66,11 +66,6 @@ func NewAutonomousBotanist(
 	*AutonomousBotanist,
 	error,
 ) {
-	hostName, err := nodeagent.GetHostName()
-	if err != nil {
-		return nil, fmt.Errorf("failed fetching hostname: %w", err)
-	}
-
 	gardenObj, err := newGardenObject(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating garden object: %w", err)
@@ -94,33 +89,54 @@ func NewAutonomousBotanist(
 		log.Info("Initializing autonomous botanist with control plane client set", keysAndValues...) //nolint:logcheck
 	}
 
-	b, err := botanistpkg.New(ctx, &operation.Operation{
-		Logger:         log,
-		GardenClient:   newFakeGardenClient(),
-		SeedClientSet:  clientSet,
-		ShootClientSet: clientSet,
-		Garden:         gardenObj,
-		Seed:           seedObj,
-		Shoot:          shootObj,
-	})
+	o := newOperation(log, clientSet)
+	o.Garden = gardenObj
+	o.Seed = seedObj
+	o.Shoot = shootObj
+
+	b, err := botanistpkg.New(ctx, o)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
-	autonomousBotanist := &AutonomousBotanist{
-		Botanist: b,
-
-		HostName:   hostName,
-		DBus:       dbus.New(log),
-		FS:         afero.Afero{Fs: afero.NewOsFs()},
-		Extensions: extensions,
+	autonomousBotanist, err := NewAutonomousBotanistWithoutResources(log)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
 	}
+
+	autonomousBotanist.Botanist = b
+	autonomousBotanist.Extensions = extensions
 
 	if err := autonomousBotanist.initializeFakeGardenResources(ctx); err != nil {
 		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
 	}
 
 	return autonomousBotanist, nil
+}
+
+// NewAutonomousBotanistWithoutResources creates a new AutonomousBotanist without instantiating a Botanist struct.
+func NewAutonomousBotanistWithoutResources(log logr.Logger) (*AutonomousBotanist, error) {
+	hostName, err := nodeagent.GetHostName()
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching hostname: %w", err)
+	}
+
+	return &AutonomousBotanist{
+		Botanist: &botanistpkg.Botanist{Operation: newOperation(log, newFakeSeedClientSet(""))},
+
+		HostName: hostName,
+		DBus:     dbus.New(log),
+		FS:       afero.Afero{Fs: afero.NewOsFs()},
+	}, nil
+}
+
+func newOperation(log logr.Logger, clientSet kubernetes.Interface) *operation.Operation {
+	return &operation.Operation{
+		Logger:         log,
+		GardenClient:   newFakeGardenClient(),
+		SeedClientSet:  clientSet,
+		ShootClientSet: clientSet,
+	}
 }
 
 func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context) error {

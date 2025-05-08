@@ -24,9 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardenadm/common"
 )
 
@@ -48,7 +50,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			g.Expect(progressing).To(BeFalse())
 			g.Expect(health.CheckStatefulSet(statefulSet)).To(Succeed())
 		}).Should(Succeed())
-	}, NodeTimeout(time.Minute))
+	}, NodeTimeout(2*time.Minute))
 
 	Describe("Single-node control plane", Ordered, Label("single"), func() {
 		var (
@@ -81,7 +83,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 				stdOut, _, err := execute(ctx, 0, "cat", "/etc/kubernetes/admin.conf")
 				g.Expect(err).NotTo(HaveOccurred())
 
-				kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), "localhost", fmt.Sprintf("localhost:%d", localPort))
+				kubeconfig := strings.ReplaceAll(string(stdOut.Contents()), "api.root.garden.internal.gardenadm.local", fmt.Sprintf("localhost:%d", localPort))
 				return os.WriteFile(adminKubeconfigFile, []byte(kubeconfig), 0600)
 			}).Should(Succeed())
 
@@ -183,12 +185,31 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			}).Should(HaveKeyWithValue("injected-by", "provider-local"))
 		}, SpecTimeout(time.Minute))
 
-		It("should join as worker node", func(ctx SpecContext) {
-			_, stdErr, err := execute(ctx, 1, "gardenadm", "join")
+		It("should generate a bootstrap token and join the worker node", func(ctx SpecContext) {
+			stdOut, _, err := execute(ctx, 0, "gardenadm", "token", "create", "--print-join-command")
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(ctx, stdErr).Should(gbytes.Say("Not implemented either"))
+			stdOut, _, err = execute(ctx, 1, strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")...)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(ctx, stdOut).Should(gbytes.Say("Your node has successfully been instructed to join the cluster as a worker!"))
 		}, SpecTimeout(time.Minute))
+
+		It("should see the joined node and observe its readiness", func(ctx SpecContext) {
+			Eventually(ctx, func(g Gomega) {
+				node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machinePodName(1)}}
+				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKeyFromObject(node), node)).To(Succeed())
+
+				g.Expect(node.Status.Conditions).To(ContainCondition(
+					MatchFields(IgnoreExtras, Fields{"Type": Equal(corev1.NodeReady)}),
+					MatchFields(IgnoreExtras, Fields{"Status": Equal(corev1.ConditionTrue)}),
+				))
+				g.Expect(node.Spec.Taints).NotTo(ContainElement(corev1.Taint{
+					Key:    v1beta1constants.TaintNodeCriticalComponentsNotReady,
+					Effect: corev1.TaintEffectNoSchedule,
+				}))
+			}).Should(Succeed())
+		}, SpecTimeout(2*time.Minute))
 	})
 })
 

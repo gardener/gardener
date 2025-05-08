@@ -11,10 +11,12 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -187,4 +189,27 @@ func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.In
 	}
 
 	return clientSet, nil
+}
+
+// NewWithConfig in alias for kubernetes.NewWithConfig.
+// Exposed for unit testing.
+var NewWithConfig = kubernetes.NewWithConfig
+
+// DiscoverKubernetesVersion discovers the Kubernetes version of the control plane.
+func (b *AutonomousBotanist) DiscoverKubernetesVersion(controlPlaneAddress string, caBundle []byte, token string) (*semver.Version, error) {
+	clientSet, err := NewWithConfig(kubernetes.WithRESTConfig(&rest.Config{
+		Host:            controlPlaneAddress,
+		TLSClientConfig: rest.TLSClientConfig{CAData: caBundle},
+		BearerToken:     token,
+	}))
+	if err != nil {
+		return nil, fmt.Errorf("failed creating a new client: %w", err)
+	}
+
+	version, err := semver.NewVersion(clientSet.Version())
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing semver version %q: %w", clientSet.Version(), err)
+	}
+
+	return version, nil
 }

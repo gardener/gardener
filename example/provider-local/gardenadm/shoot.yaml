@@ -14,6 +14,11 @@ spec:
         type: local
       minimum: 1
       maximum: 1
+    - name: worker
+      machine:
+        type: local
+      minimum: 1
+      maximum: 1
   kubernetes:
     version: 1.32.0
     kubelet:

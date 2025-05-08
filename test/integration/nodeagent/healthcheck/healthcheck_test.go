@@ -253,9 +253,7 @@ var _ = Describe("Healthcheck controller tests", func() {
 		clock.Step(80 * time.Second)
 		Eventually(func() []fakedbus.SystemdAction {
 			return fakeDBus.Actions
-		}).Should(
-			ConsistOf(fakedbus.SystemdAction{Action: fakedbus.ActionReboot, UnitNames: []string{"reboot"}}),
-		)
+		}).Should(ConsistOf(fakedbus.SystemdAction{Action: fakedbus.ActionReboot}))
 	})
 })
 

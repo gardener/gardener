@@ -54,7 +54,9 @@ make gardenadm-high-touch-up
 
 This will first build the needed images, deploy 2 machine pods using the [`gardener-extension-provider-local-node` image](../../pkg/provider-local/node), install the `gardenadm` binary on both of them, and copy the needed manifests to the `/gardenadm/resources` directory.
 
-Afterward, you can use `kubectl exec` to execute `gardenadm` commands on the machines:
+Afterward, you can use `kubectl exec` to execute `gardenadm` commands on the machines.
+
+Let's start with exec'ing into the `machine-0` pod:
 
 ```shell
 $ kubectl -n gardenadm-high-touch exec -it machine-0 -- bash
@@ -96,7 +98,7 @@ machine-0   Ready    <none>   4m11s   v1.32.0
 You can also copy the kubeconfig to your local machine and use a port-forward to connect to the cluster's API server:
 
 ```shell
-$ kubectl -n gardenadm-high-touch exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/localhost/localhost:6443/' > /tmp/shoot--garden--root.conf
+$ kubectl -n gardenadm-high-touch exec -it machine-0 -- cat /etc/kubernetes/admin.conf | sed 's/api.root.garden.internal.gardenadm.local/localhost:6443/' > /tmp/shoot--garden--root.conf
 $ kubectl -n gardenadm-high-touch port-forward pod/machine-0 6443:443
 
 # in a new terminal
@@ -104,6 +106,32 @@ $ export KUBECONFIG=/tmp/shoot--garden--root.conf
 $ kubectl get no
 NAME        STATUS   ROLES    AGE   VERSION
 machine-0   Ready    <none>   10m   v1.32.0
+```
+
+### Joining a Worker Node
+
+If you would like to join a worker node to the cluster, generate a bootstrap token and the corresponding `gardenadm join` command on `machine-0` (the control plane node).
+Then exec into the `machine-1` pod to run the command:
+
+```shell
+root@machine-0:/# gardenadm token create --print-join-command
+# now copy the output, terminate the exec session and start a new one for machine-1
+
+$ kubectl -n gardenadm-high-touch exec -it machine-1 -- bash
+# paste the copied 'gardenadm join' command here and execute it
+root@machine-1:/# gardenadm join ...
+...
+Your node has successfully been instructed to join the cluster as a worker!
+...
+```
+
+Using the kubeconfig as described in [this section](#connecting-to-the-autonomous-shoot-cluster), you should now be able to see the new node in the cluster:
+
+```shell
+$ kubectl get no
+NAME        STATUS   ROLES    AGE   VERSION
+machine-0   Ready    <none>   10m   v1.32.0
+machine-1   Ready    <none>   37s   v1.32.0
 ```
 
 ## Medium-Touch Scenario
