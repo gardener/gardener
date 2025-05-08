@@ -285,11 +285,6 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 		ipFamilies = append(ipFamilies, string(v))
 	}
 
-	nodeNetwork := ""
-	if len(v.values.Network.NodeCIDRs) > 0 {
-		nodeNetwork = v.values.Network.NodeCIDRs[0].String()
-	}
-
 	template := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
@@ -334,27 +329,15 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 							Value: strings.Join(ipFamilies, ","),
 						},
 						{
-							Name:  "SERVICE_NETWORK",
-							Value: v.values.Network.ServiceCIDRs[0].String(),
-						},
-						{
-							Name:  "POD_NETWORK",
-							Value: v.values.Network.PodCIDRs[0].String(),
-						},
-						{
-							Name:  "NODE_NETWORK",
-							Value: nodeNetwork,
-						},
-						{
-							Name:  "SERVICE_NETWORKS",
+							Name:  "SHOOT_SERVICE_NETWORKS",
 							Value: netutils.JoinByComma(v.values.Network.ServiceCIDRs),
 						},
 						{
-							Name:  "POD_NETWORKS",
+							Name:  "SHOOT_POD_NETWORKS",
 							Value: netutils.JoinByComma(v.values.Network.PodCIDRs),
 						},
 						{
-							Name:  "NODE_NETWORKS",
+							Name:  "SHOOT_NODE_NETWORKS",
 							Value: netutils.JoinByComma(v.values.Network.NodeCIDRs),
 						},
 						{
