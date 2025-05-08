@@ -215,6 +215,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context, enableNodeAgentAutho
 		b.Shoot.Networks.Nodes,
 		b.Shoot.Networks.Services,
 		b.Shoot.Networks.Pods,
+		b.Seed.GetInfo().Spec.Networks.Pods,
 		b.Shoot.ResourcesToEncrypt,
 		b.Shoot.EncryptedResources,
 		v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),

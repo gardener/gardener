@@ -132,27 +132,15 @@ var _ = Describe("VpnSeedServer", func() {
 									Value: string(values.Network.IPFamilies[0]),
 								},
 								{
-									Name:  "SERVICE_NETWORK",
+									Name:  "SHOOT_SERVICE_NETWORKS",
 									Value: values.Network.ServiceCIDRs[0].String(),
 								},
 								{
-									Name:  "POD_NETWORK",
+									Name:  "SHOOT_POD_NETWORKS",
 									Value: values.Network.PodCIDRs[0].String(),
 								},
 								{
-									Name:  "NODE_NETWORK",
-									Value: nodes,
-								},
-								{
-									Name:  "SERVICE_NETWORKS",
-									Value: values.Network.ServiceCIDRs[0].String(),
-								},
-								{
-									Name:  "POD_NETWORKS",
-									Value: values.Network.PodCIDRs[0].String(),
-								},
-								{
-									Name:  "NODE_NETWORKS",
+									Name:  "SHOOT_NODE_NETWORKS",
 									Value: nodes,
 								},
 								{

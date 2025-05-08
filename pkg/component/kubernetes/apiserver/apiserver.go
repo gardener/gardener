@@ -73,6 +73,8 @@ type Interface interface {
 	SetServiceNetworkCIDRs([]net.IPNet)
 	// SetPodNetworkCIDRs sets the pod CIDRs of the shoot network.
 	SetPodNetworkCIDRs([]net.IPNet)
+	// SetSeedPodNetwork sets the pod network of the seed.
+	SetSeedPodNetwork(string)
 	// SetServerCertificateConfig sets the ServerCertificateConfig field in the Values of the deployer.
 	SetServerCertificateConfig(ServerCertificateConfig)
 	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
@@ -192,6 +194,8 @@ type Images struct {
 type VPNConfig struct {
 	// Enabled states whether VPN is enabled.
 	Enabled bool
+	// SeedPodNetwork is the CIDR of the seed pod network.
+	SeedPodNetwork string
 	// PodNetworkCIDRs are the CIDRs of the pod network.
 	PodNetworkCIDRs []net.IPNet
 	// NodeNetworkCIDRs are the CIDRs of the node network.
@@ -610,6 +614,10 @@ func (k *kubeAPIServer) SetNodeNetworkCIDRs(nodes []net.IPNet) {
 
 func (k *kubeAPIServer) SetPodNetworkCIDRs(pods []net.IPNet) {
 	k.values.VPN.PodNetworkCIDRs = pods
+}
+
+func (k *kubeAPIServer) SetSeedPodNetwork(pods string) {
+	k.values.VPN.SeedPodNetwork = pods
 }
 
 func (k *kubeAPIServer) SetServiceNetworkCIDRs(services []net.IPNet) {

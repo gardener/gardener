@@ -51,6 +51,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	netutils "github.com/gardener/gardener/pkg/utils/net"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -62,7 +63,7 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretsutils.GenerateRandomString, secretsutils.FakeGenerateRandomString))
 	DeferCleanup(test.WithVar(&secretsutils.GenerateKey, secretsutils.FakeGenerateKey))
 	DeferCleanup(test.WithVar(&secretsutils.Read, func(b []byte) (int, error) {
-		copy(b, []byte(strings.Repeat("_", len(b))))
+		copy(b, strings.Repeat("_", len(b)))
 		return len(b), nil
 	}))
 	DeferCleanup(test.WithVar(&secretsutils.GenerateVPNKey, secretsutils.FakeGenerateVPNKey))
@@ -3064,20 +3065,6 @@ kind: AuthorizationConfiguration
 
 			haVPNClientContainerFor := func(index int) corev1.Container {
 
-				var serviceCIDRs, podCIDRs, nodeCIDRs []string
-
-				for _, v := range values.ServiceNetworkCIDRs {
-					serviceCIDRs = append(serviceCIDRs, v.String())
-				}
-
-				for _, v := range values.VPN.PodNetworkCIDRs {
-					podCIDRs = append(podCIDRs, v.String())
-				}
-
-				for _, v := range values.VPN.NodeNetworkCIDRs {
-					nodeCIDRs = append(nodeCIDRs, v.String())
-				}
-
 				container := corev1.Container{
 					Name:            fmt.Sprintf("vpn-client-%d", index),
 					Image:           "vpn-client-image:really-latest",
@@ -3088,28 +3075,16 @@ kind: AuthorizationConfiguration
 							Value: fmt.Sprintf("vpn-seed-server-%d", index),
 						},
 						{
-							Name:  "SERVICE_NETWORK",
-							Value: values.ServiceNetworkCIDRs[0].String(),
+							Name:  "SHOOT_POD_NETWORKS",
+							Value: netutils.JoinByComma(values.VPN.PodNetworkCIDRs),
 						},
 						{
-							Name:  "POD_NETWORK",
-							Value: values.VPN.PodNetworkCIDRs[0].String(),
+							Name:  "SHOOT_SERVICE_NETWORKS",
+							Value: netutils.JoinByComma(values.ServiceNetworkCIDRs),
 						},
 						{
-							Name:  "NODE_NETWORK",
-							Value: values.VPN.NodeNetworkCIDRs[0].String(),
-						},
-						{
-							Name:  "SERVICE_NETWORKS",
-							Value: strings.Join(serviceCIDRs, ","),
-						},
-						{
-							Name:  "POD_NETWORKS",
-							Value: strings.Join(podCIDRs, ","),
-						},
-						{
-							Name:  "NODE_NETWORKS",
-							Value: strings.Join(nodeCIDRs, ","),
+							Name:  "SHOOT_NODE_NETWORKS",
+							Value: netutils.JoinByComma(values.VPN.NodeNetworkCIDRs),
 						},
 						{
 							Name:  "VPN_SERVER_INDEX",
@@ -3232,16 +3207,6 @@ kind: AuthorizationConfiguration
 					Expect(deployment.Spec.Template.Spec.Containers[i+1]).To(DeepEqual(haVPNClientContainerFor(i)))
 				}
 
-				var serviceCIDRs, podCIDRs, nodeCIDRs []string
-				for _, v := range values.ServiceNetworkCIDRs {
-					serviceCIDRs = append(serviceCIDRs, v.String())
-				}
-				for _, v := range values.VPN.PodNetworkCIDRs {
-					podCIDRs = append(podCIDRs, v.String())
-				}
-				for _, v := range values.VPN.NodeNetworkCIDRs {
-					nodeCIDRs = append(nodeCIDRs, v.String())
-				}
 				pathControllerContainer := corev1.Container{
 					Name:            "vpn-path-controller",
 					Image:           "vpn-client-image:really-latest",
@@ -3249,28 +3214,16 @@ kind: AuthorizationConfiguration
 					Command:         []string{"/bin/vpn-client", "path-controller"},
 					Env: []corev1.EnvVar{
 						{
-							Name:  "SERVICE_NETWORK",
-							Value: values.ServiceNetworkCIDRs[0].String(),
+							Name:  "SHOOT_POD_NETWORKS",
+							Value: netutils.JoinByComma(values.VPN.PodNetworkCIDRs),
 						},
 						{
-							Name:  "POD_NETWORK",
-							Value: values.VPN.PodNetworkCIDRs[0].String(),
+							Name:  "SHOOT_SERVICE_NETWORKS",
+							Value: netutils.JoinByComma(values.ServiceNetworkCIDRs),
 						},
 						{
-							Name:  "NODE_NETWORK",
-							Value: values.VPN.NodeNetworkCIDRs[0].String(),
-						},
-						{
-							Name:  "SERVICE_NETWORKS",
-							Value: strings.Join(serviceCIDRs, ","),
-						},
-						{
-							Name:  "POD_NETWORKS",
-							Value: strings.Join(podCIDRs, ","),
-						},
-						{
-							Name:  "NODE_NETWORKS",
-							Value: strings.Join(nodeCIDRs, ","),
+							Name:  "SHOOT_NODE_NETWORKS",
+							Value: netutils.JoinByComma(values.VPN.NodeNetworkCIDRs),
 						},
 						{
 							Name:  "IS_HA",
