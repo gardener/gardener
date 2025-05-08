@@ -104,7 +104,7 @@ var _ = Describe("Seed BackupBucketsCheck controller tests", func() {
 					APIVersion: "v1",
 					Kind:       "Secret",
 					Namespace:  "garden",
-					Name:       "secretName",
+					Name:       "secret-name",
 				},
 			},
 		}
