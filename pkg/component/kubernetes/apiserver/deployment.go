@@ -924,23 +924,6 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 }
 
 func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
-	var serviceCIDRs, podCIDRs, nodeCIDRs []string
-	nodeCIDR := ""
-	if len(k.values.VPN.NodeNetworkCIDRs) > 0 {
-		nodeCIDR = k.values.VPN.NodeNetworkCIDRs[0].String()
-		for _, v := range k.values.VPN.NodeNetworkCIDRs {
-			nodeCIDRs = append(nodeCIDRs, v.String())
-		}
-	}
-
-	for _, v := range k.values.ServiceNetworkCIDRs {
-		serviceCIDRs = append(serviceCIDRs, v.String())
-	}
-
-	for _, v := range k.values.VPN.PodNetworkCIDRs {
-		podCIDRs = append(podCIDRs, v.String())
-	}
-
 	container := &corev1.Container{
 		Name:            fmt.Sprintf("%s-%d", containerNameVPNSeedClient, index),
 		Image:           k.values.Images.VPNClient,
@@ -951,28 +934,20 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 				Value: fmt.Sprintf("vpn-seed-server-%d", index),
 			},
 			{
-				Name:  "SERVICE_NETWORK",
-				Value: k.values.ServiceNetworkCIDRs[0].String(),
+				Name:  "SHOOT_POD_NETWORKS",
+				Value: netutils.JoinByComma(k.values.VPN.PodNetworkCIDRs),
 			},
 			{
-				Name:  "POD_NETWORK",
-				Value: k.values.VPN.PodNetworkCIDRs[0].String(),
+				Name:  "SHOOT_SERVICE_NETWORKS",
+				Value: netutils.JoinByComma(k.values.ServiceNetworkCIDRs),
 			},
 			{
-				Name:  "NODE_NETWORK",
-				Value: nodeCIDR,
+				Name:  "SHOOT_NODE_NETWORKS",
+				Value: netutils.JoinByComma(k.values.VPN.NodeNetworkCIDRs),
 			},
 			{
-				Name:  "SERVICE_NETWORKS",
-				Value: strings.Join(serviceCIDRs, ","),
-			},
-			{
-				Name:  "POD_NETWORKS",
-				Value: strings.Join(podCIDRs, ","),
-			},
-			{
-				Name:  "NODE_NETWORKS",
-				Value: strings.Join(nodeCIDRs, ","),
+				Name:  "SEED_POD_NETWORK",
+				Value: k.values.VPN.SeedPodNetwork,
 			},
 			{
 				Name:  "VPN_SERVER_INDEX",
@@ -1038,23 +1013,6 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 }
 
 func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
-	var serviceCIDRs, podCIDRs, nodeCIDRs []string
-	nodeCIDR := ""
-	if len(k.values.VPN.NodeNetworkCIDRs) > 0 {
-		nodeCIDR = k.values.VPN.NodeNetworkCIDRs[0].String()
-		for _, v := range k.values.VPN.NodeNetworkCIDRs {
-			nodeCIDRs = append(nodeCIDRs, v.String())
-		}
-	}
-
-	for _, v := range k.values.ServiceNetworkCIDRs {
-		serviceCIDRs = append(serviceCIDRs, v.String())
-	}
-
-	for _, v := range k.values.VPN.PodNetworkCIDRs {
-		podCIDRs = append(podCIDRs, v.String())
-	}
-
 	return &corev1.Container{
 		Name:            containerNameVPNPathController,
 		Image:           k.values.Images.VPNClient,
@@ -1062,28 +1020,16 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		Command:         []string{"/bin/vpn-client", "path-controller"},
 		Env: []corev1.EnvVar{
 			{
-				Name:  "SERVICE_NETWORK",
-				Value: k.values.ServiceNetworkCIDRs[0].String(),
+				Name:  "SHOOT_POD_NETWORKS",
+				Value: netutils.JoinByComma(k.values.VPN.PodNetworkCIDRs),
 			},
 			{
-				Name:  "POD_NETWORK",
-				Value: k.values.VPN.PodNetworkCIDRs[0].String(),
+				Name:  "SHOOT_SERVICE_NETWORKS",
+				Value: netutils.JoinByComma(k.values.ServiceNetworkCIDRs),
 			},
 			{
-				Name:  "NODE_NETWORK",
-				Value: nodeCIDR,
-			},
-			{
-				Name:  "SERVICE_NETWORKS",
-				Value: strings.Join(serviceCIDRs, ","),
-			},
-			{
-				Name:  "POD_NETWORKS",
-				Value: strings.Join(podCIDRs, ","),
-			},
-			{
-				Name:  "NODE_NETWORKS",
-				Value: strings.Join(nodeCIDRs, ","),
+				Name:  "SHOOT_NODE_NETWORKS",
+				Value: netutils.JoinByComma(k.values.VPN.NodeNetworkCIDRs),
 			},
 			{
 				Name:  "IS_HA",
