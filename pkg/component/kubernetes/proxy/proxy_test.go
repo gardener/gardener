@@ -523,7 +523,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 			daemonSetNameFor = func(pool WorkerPool) string {
 				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion.String()
 			}
-			daemonSetFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled, k8sGreaterEqual129 bool) *appsv1.DaemonSet {
+			daemonSetFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled, k8sGreaterEqual129, k8sGreaterEqual128 bool) *appsv1.DaemonSet {
 				referenceAnnotations := func() map[string]string {
 					if ipvsEnabled {
 						return map[string]string{
@@ -600,7 +600,7 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 										ReadinessProbe: &corev1.Probe{
 											ProbeHandler: corev1.ProbeHandler{
 												HTTPGet: &corev1.HTTPGetAction{
-													Path:   "/livez",
+													Path:   "/healthz",
 													Port:   intstr.FromInt32(10256),
 													Scheme: corev1.URISchemeHTTP,
 												},
@@ -769,6 +769,10 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 						},
 						UpdateStrategy: appsv1.DaemonSetUpdateStrategy{Type: appsv1.RollingUpdateDaemonSetStrategyType},
 					},
+				}
+
+				if k8sGreaterEqual128 {
+					ds.Spec.Template.Spec.Containers[0].ReadinessProbe.HTTPGet.Path = "/livez"
 				}
 
 				if k8sGreaterEqual129 {
@@ -942,7 +946,8 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					},
 				}
 
-				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled,
+					versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion), versionutils.ConstraintK8sGreaterEqual128.Check(pool.KubernetesVersion))))
 				managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResource.Spec.SecretRefs[0].Name, Namespace: namespace}}
 				expectedPoolMr.Spec.SecretRefs = []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}}
 				utilruntime.Must(references.InjectAnnotations(expectedPoolMr))
@@ -1033,7 +1038,8 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					Name:      managedResource.Spec.SecretRefs[0].Name,
 					Namespace: namespace,
 				}}
-				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled,
+					versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion), versionutils.ConstraintK8sGreaterEqual128.Check(pool.KubernetesVersion))))
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
@@ -1069,7 +1075,8 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 					Name:      managedResource.Spec.SecretRefs[0].Name,
 					Namespace: namespace,
 				}}
-				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled,
+					versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion), versionutils.ConstraintK8sGreaterEqual128.Check(pool.KubernetesVersion))))
 
 				expectedMr := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1092,7 +1099,8 @@ echo "${KUBE_PROXY_MODE}" >"$1"
 				}
 				utilruntime.Must(references.InjectAnnotations(expectedMr))
 
-				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled, versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion))))
+				Expect(managedResource).To(consistOf(daemonSetFor(pool, values.IPVSEnabled, values.VPAEnabled,
+					versionutils.ConstraintK8sGreaterEqual129.Check(pool.KubernetesVersion), versionutils.ConstraintK8sGreaterEqual128.Check(pool.KubernetesVersion))))
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
