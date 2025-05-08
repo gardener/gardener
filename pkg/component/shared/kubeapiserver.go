@@ -216,6 +216,7 @@ func DeployKubeAPIServer(
 	nodeNetworkCIDRs []net.IPNet,
 	serviceNetworkCIDRs []net.IPNet,
 	podNetworkCIDRs []net.IPNet,
+	seedPodNetwork string,
 	resourcesToEncrypt []string,
 	encryptedResources []string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
@@ -258,6 +259,7 @@ func DeployKubeAPIServer(
 	kubeAPIServer.SetNodeNetworkCIDRs(nodeNetworkCIDRs)
 	kubeAPIServer.SetServiceNetworkCIDRs(serviceNetworkCIDRs)
 	kubeAPIServer.SetPodNetworkCIDRs(podNetworkCIDRs)
+	kubeAPIServer.SetSeedPodNetwork(seedPodNetwork)
 
 	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(
 		ctx,
