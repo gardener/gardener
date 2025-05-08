@@ -79,9 +79,11 @@ var _ = Describe("Controller", func() {
 					Region: "some-region",
 				},
 				ProviderConfig: providerConfig,
-				SecretRef: corev1.SecretReference{
-					Name:      gardenSecret.Name,
-					Namespace: gardenSecret.Namespace,
+				CredentialsRef: &corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Name:       gardenSecret.Name,
+					Namespace:  gardenSecret.Namespace,
 				},
 				SeedName: ptr.To(seedName),
 			},
