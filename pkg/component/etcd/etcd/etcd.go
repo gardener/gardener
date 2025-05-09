@@ -966,11 +966,21 @@ func (e *etcd) computeMinAllowedForETCDContainer() corev1.ResourceList {
 func (e *etcd) computeETCDContainerResources(minAllowedETCD corev1.ResourceList) *corev1.ResourceRequirements {
 	resourcesETCD := kubernetesutils.MaximumResourcesFromResourceList(
 		corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("300m"),
-			corev1.ResourceMemory: resource.MustParse("1G"),
+			corev1.ResourceCPU:    resource.MustParse("30m"),
+			corev1.ResourceMemory: resource.MustParse("150M"),
 		},
 		minAllowedETCD,
 	)
+
+	if e.values.Class == ClassImportant {
+		resourcesETCD = kubernetesutils.MaximumResourcesFromResourceList(
+			corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("150m"),
+				corev1.ResourceMemory: resource.MustParse("500M"),
+			},
+			minAllowedETCD,
+		)
+	}
 
 	return &corev1.ResourceRequirements{Requests: resourcesETCD}
 }
