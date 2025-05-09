@@ -72,9 +72,13 @@ func translateSpec(spec *corev1.PodSpec) {
 		corev1.HostAlias{IP: "::1", Hostnames: hostNames},
 	)
 
-	// The control plane pods need to access their secrets, which are created by gardener-node-agent as user 'root'.
-	// However, the pods run as user 'nobody'. Hence, they cannot read files owned by 'root' with permission '0600'.
-	// Setting the FSGroup to 0 allows the pods to access files as group root so that the access should work.
+	// static pods may not reference service accounts
+	spec.ServiceAccountName = ""
+	spec.DeprecatedServiceAccount = ""
+
+	// gardener-node-agent and kubelet create directories with 'root' user and group. Most of the static pods translated
+	// here are supposed to run as non-root with 'nobody' user and group. In order to allow them reading and writing to
+	// their hostPath volumes, we have to change their user and group to 'root'.
 	if spec.SecurityContext != nil && spec.SecurityContext.FSGroup != nil {
 		spec.SecurityContext.FSGroup = ptr.To[int64](0)
 	}
