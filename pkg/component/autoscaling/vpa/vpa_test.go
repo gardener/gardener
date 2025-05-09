@@ -752,7 +752,7 @@ var _ = Describe("VPA", func() {
 								Args: []string{
 									"--v=3",
 									"--stderrthreshold=info",
-									"--pod-recommendation-min-cpu-millicores=5",
+									"--pod-recommendation-min-cpu-millicores=10",
 									"--pod-recommendation-min-memory-mb=10",
 									fmt.Sprintf("--recommendation-margin-fraction=%f", ptr.Deref(recommendationMarginFraction, 0.15)),
 									fmt.Sprintf("--recommender-interval=%s", ptr.Deref(interval, metav1.Duration{Duration: time.Minute}).Duration),

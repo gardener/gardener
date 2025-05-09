@@ -322,7 +322,7 @@ func (v *vpa) computeRecommenderArgs() []string {
 	out := []string{
 		"--v=3",
 		"--stderrthreshold=info",
-		"--pod-recommendation-min-cpu-millicores=5",
+		"--pod-recommendation-min-cpu-millicores=10",
 		"--pod-recommendation-min-memory-mb=10",
 		fmt.Sprintf("--recommendation-margin-fraction=%f", ptr.Deref(v.values.Recommender.RecommendationMarginFraction, gardencorev1beta1.DefaultRecommendationMarginFraction)),
 		fmt.Sprintf("--recommender-interval=%s", ptr.Deref(v.values.Recommender.Interval, gardencorev1beta1.DefaultRecommenderInterval).Duration),
