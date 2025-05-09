@@ -217,9 +217,9 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 		if err := mgr.GetClient().List(ctx, managedSeedList); err != nil {
 			return fmt.Errorf("failed listing managed seeds: %w", err)
 		}
-		if err := meta.EachListItem(managedSeedList, func(o runtime.Object) error {
+		for _, managedSeed := range managedSeedList.Items {
 			fns = append(fns, func(ctx context.Context) error {
-				obj := o.(client.Object)
+				obj := &managedSeed
 
 				logger := mgr.GetLogger().WithValues("objectKey", client.ObjectKeyFromObject(obj))
 				logger.Info("Check the seed name label for itself")
@@ -241,9 +241,6 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 				}
 				return nil
 			})
-			return nil
-		}); err != nil {
-			return fmt.Errorf("failed preparing managed seed mutating tasks for %T: %w", managedSeedList, err)
 		}
 		return flow.Parallel(fns...)(ctx)
 	})); err != nil {
