@@ -2827,7 +2827,8 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.WorkerControlPlane">WorkerControlPlane</a>)
 </p>
 <p>
 <p>Backup contains the object store configuration for backups for shoot (currently only etcd).</p>
@@ -14754,6 +14755,31 @@ This is only relevant for autonomous shoot clusters.</p>
 <p>
 <p>WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.</p>
 </p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>backup</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Backup">
+Backup
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Backup holds the object store configuration for the backups of shoot (currently only etcd).
+If it is not specified, then there won&rsquo;t be any backups taken.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.WorkerKubernetes">WorkerKubernetes
 </h3>
 <p>

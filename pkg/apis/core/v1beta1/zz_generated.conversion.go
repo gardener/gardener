@@ -7327,6 +7327,7 @@ func Convert_core_Worker_To_v1beta1_Worker(in *core.Worker, out *Worker, s conve
 }
 
 func autoConvert_v1beta1_WorkerControlPlane_To_core_WorkerControlPlane(in *WorkerControlPlane, out *core.WorkerControlPlane, s conversion.Scope) error {
+	out.Backup = (*core.Backup)(unsafe.Pointer(in.Backup))
 	return nil
 }
 
@@ -7336,6 +7337,7 @@ func Convert_v1beta1_WorkerControlPlane_To_core_WorkerControlPlane(in *WorkerCon
 }
 
 func autoConvert_core_WorkerControlPlane_To_v1beta1_WorkerControlPlane(in *core.WorkerControlPlane, out *WorkerControlPlane, s conversion.Scope) error {
+	out.Backup = (*Backup)(unsafe.Pointer(in.Backup))
 	return nil
 }
 

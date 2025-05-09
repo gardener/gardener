@@ -10442,8 +10442,18 @@ func schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref common.ReferenceCallbac
 			SchemaProps: spec.SchemaProps{
 				Description: "WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"backup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Backup holds the object store configuration for the backups of shoot (currently only etcd). If it is not specified, then there won't be any backups taken.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup"),
+						},
+					},
+				},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup"},
 	}
 }
 
