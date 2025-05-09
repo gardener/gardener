@@ -1372,7 +1372,7 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks(
 		webhooks = append(webhooks, GetPodTopologySpreadConstraintsMutatingWebhook(r.values.NamePrefix, namespaceSelector, objectSelector, secretServerCA, buildClientConfigFn))
 	}
 
-	r.skipStaticPodsDuringBootstrapMode(webhooks)
+	r.skipStaticPods(webhooks)
 	return webhooks
 }
 
@@ -2099,8 +2099,8 @@ func (r *resourceManager) SetBootstrapControlPlaneNode(b bool) {
 	r.values.BootstrapControlPlaneNode = b
 }
 
-func (r *resourceManager) skipStaticPodsDuringBootstrapMode(webhooks []admissionregistrationv1.MutatingWebhook) {
-	if !r.values.BootstrapControlPlaneNode {
+func (r *resourceManager) skipStaticPods(webhooks []admissionregistrationv1.MutatingWebhook) {
+	if r.values.ResponsibilityMode != ForSourceAndTarget {
 		return
 	}
 
