@@ -129,14 +129,14 @@ var _ = Describe("GardenerAPIServer", func() {
 				Replicas:           &replicas,
 				APIServerResources: resources,
 			},
-			ClusterIdentity:              clusterIdentity,
-			Image:                        image,
-			LogFormat:                    logFormat,
-			LogLevel:                     logLevel,
-			GoAwayChance:                 ptr.To(0.0015),
-			AdminKubeconfigMaxExpiration: &metav1.Duration{Duration: 1 * time.Hour},
-			TopologyAwareRoutingEnabled:  true,
-			WorkloadIdentityTokenIssuer:  workloadIdentityIssuer,
+			ClusterIdentity:                   clusterIdentity,
+			Image:                             image,
+			LogFormat:                         logFormat,
+			LogLevel:                          logLevel,
+			GoAwayChance:                      ptr.To(0.0015),
+			ShootAdminKubeconfigMaxExpiration: &metav1.Duration{Duration: 1 * time.Hour},
+			TopologyAwareRoutingEnabled:       true,
+			WorkloadIdentityTokenIssuer:       workloadIdentityIssuer,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)

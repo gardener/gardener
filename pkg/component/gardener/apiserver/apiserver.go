@@ -75,7 +75,7 @@ type Values struct {
 	// WorkloadIdentityKeyRotationPhase is the rotation phase of workload identity key.
 	WorkloadIdentityKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase
 	// AdminKubeconfigMaxExpiration is the maximum expiration time of the admin kubeconfig.
-	AdminKubeconfigMaxExpiration *metav1.Duration
+	ShootAdminKubeconfigMaxExpiration *metav1.Duration
 }
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the API server.
