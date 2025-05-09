@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/ptr"
 
@@ -192,6 +193,9 @@ var _ = Describe("ExtensionValidator", func() {
 							Type: "baz",
 						},
 					},
+					Extensions: []core.Extension{
+						{Type: "foo1"},
+					},
 				},
 			}
 		)
@@ -199,15 +203,18 @@ var _ = Describe("ExtensionValidator", func() {
 		var (
 			kindToTypes = []struct {
 				extensionKind, extensionType string
+				clusterCompatibility         []gardencorev1beta1.ClusterType
 			}{
-				{extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type},
-				{extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider},
-				{extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider},
-				{extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type},
+				{extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type, nil},
+				{extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider, nil},
+				{extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider, nil},
+				{extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type, nil},
+				{extensionsv1alpha1.ExtensionResource, seed.Spec.Extensions[0].Type, []gardencorev1beta1.ClusterType{"seed"}},
+				{extensionsv1alpha1.ExtensionResource, "foo2", []gardencorev1beta1.ClusterType{"shoot"}},
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {
-					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil)
+					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil, registration.clusterCompatibility...)
 					Expect(coreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 				}
 			}
@@ -225,6 +232,10 @@ var _ = Describe("ExtensionValidator", func() {
 
 		It("should prevent the object from being created because some extension is not registered", func() {
 			for _, registration := range kindToTypes {
+				if !sets.New(registration.clusterCompatibility...).Has("seed") {
+					continue
+				}
+
 				registerAllExtensions()
 
 				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil)
@@ -237,6 +248,17 @@ var _ = Describe("ExtensionValidator", func() {
 				Expect(err).To(HaveOccurred(), fmt.Sprintf("expected that extension %s is not registered", controllerRegistration.Name))
 				Expect(err.Error()).To(ContainSubstring(registration.extensionType))
 			}
+		})
+
+		It("should prevent the object from being created because extension is not compatible with seed", func() {
+			seed.Spec.Extensions = append(seed.Spec.Extensions, core.Extension{Type: "foo2"})
+			registerAllExtensions()
+
+			attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+			Expect(err).To(MatchError(ContainSubstring(`Seed uses non-registered extension type: spec.extensions[1].type ("foo2")`)))
 		})
 
 		It("should prevent the object from being created because no primary extension is registered for some type", func() {
@@ -316,21 +338,23 @@ var _ = Describe("ExtensionValidator", func() {
 		var (
 			kindToTypes = []struct {
 				extensionKind, extensionType string
+				clusterCompatibility         []gardencorev1beta1.ClusterType
 			}{
-				{extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type},
-				{extensionsv1alpha1.ExtensionResource, shoot.Spec.Extensions[0].Type},
-				{extensionsv1alpha1.ExtensionResource, shoot.Spec.Extensions[1].Type},
-				{extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type},
-				{extensionsv1alpha1.NetworkResource, *shoot.Spec.Networking.Type},
-				{extensionsv1alpha1.OperatingSystemConfigResource, shoot.Spec.Provider.Workers[0].Machine.Image.Name},
-				{extensionsv1alpha1.OperatingSystemConfigResource, shoot.Spec.Provider.Workers[1].Machine.Image.Name},
-				{extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type},
-				{extensionsv1alpha1.ContainerRuntimeResource, shoot.Spec.Provider.Workers[1].CRI.ContainerRuntimes[0].Type},
-				{extensionsv1alpha1.ContainerRuntimeResource, shoot.Spec.Provider.Workers[1].CRI.ContainerRuntimes[1].Type},
+				{extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type, nil},
+				{extensionsv1alpha1.ExtensionResource, shoot.Spec.Extensions[0].Type, []gardencorev1beta1.ClusterType{"shoot"}},
+				{extensionsv1alpha1.ExtensionResource, shoot.Spec.Extensions[1].Type, []gardencorev1beta1.ClusterType{"shoot", "seed"}},
+				{extensionsv1alpha1.ExtensionResource, "foo3", []gardencorev1beta1.ClusterType{"seed"}},
+				{extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type, nil},
+				{extensionsv1alpha1.NetworkResource, *shoot.Spec.Networking.Type, nil},
+				{extensionsv1alpha1.OperatingSystemConfigResource, shoot.Spec.Provider.Workers[0].Machine.Image.Name, nil},
+				{extensionsv1alpha1.OperatingSystemConfigResource, shoot.Spec.Provider.Workers[1].Machine.Image.Name, nil},
+				{extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type, nil},
+				{extensionsv1alpha1.ContainerRuntimeResource, shoot.Spec.Provider.Workers[1].CRI.ContainerRuntimes[0].Type, nil},
+				{extensionsv1alpha1.ContainerRuntimeResource, shoot.Spec.Provider.Workers[1].CRI.ContainerRuntimes[1].Type, nil},
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {
-					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil)
+					controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil, registration.clusterCompatibility...)
 					Expect(coreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 				}
 			}
@@ -348,6 +372,10 @@ var _ = Describe("ExtensionValidator", func() {
 
 		It("should prevent the object from being created because some extension is not registered", func() {
 			for _, registration := range kindToTypes {
+				if !sets.New(registration.clusterCompatibility...).Has("shoot") {
+					continue
+				}
+
 				registerAllExtensions()
 
 				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true, nil)
@@ -360,6 +388,17 @@ var _ = Describe("ExtensionValidator", func() {
 				Expect(err).To(HaveOccurred(), fmt.Sprintf("expected that extension %s is not registered", controllerRegistration.Name))
 				Expect(err.Error()).To(ContainSubstring(registration.extensionType))
 			}
+		})
+
+		It("should prevent the object from being created because extension is not compatible with shoot", func() {
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, core.Extension{Type: "foo3"})
+			registerAllExtensions()
+
+			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+			Expect(err).To(MatchError(ContainSubstring(`Shoot uses non-registered extension type: spec.extensions[2].type ("foo3")`)))
 		})
 
 		It("should prevent the object from being created because no extension type is registered", func() {
@@ -501,7 +540,7 @@ var _ = Describe("ExtensionValidator", func() {
 	})
 })
 
-func createControllerRegistrationForKindType(extensionKind, extensionType string, primary bool, workerlessSupported *bool) *gardencorev1beta1.ControllerRegistration {
+func createControllerRegistrationForKindType(extensionKind, extensionType string, primary bool, workerlessSupported *bool, clusterCompatibility ...gardencorev1beta1.ClusterType) *gardencorev1beta1.ControllerRegistration {
 	return &gardencorev1beta1.ControllerRegistration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: extensionKind + extensionType,
@@ -509,10 +548,11 @@ func createControllerRegistrationForKindType(extensionKind, extensionType string
 		Spec: gardencorev1beta1.ControllerRegistrationSpec{
 			Resources: []gardencorev1beta1.ControllerResource{
 				{
-					Kind:                extensionKind,
-					Type:                extensionType,
-					Primary:             &primary,
-					WorkerlessSupported: workerlessSupported,
+					Kind:                 extensionKind,
+					Type:                 extensionType,
+					Primary:              &primary,
+					WorkerlessSupported:  workerlessSupported,
+					ClusterCompatibility: clusterCompatibility,
 				},
 			},
 		},

@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -243,7 +244,7 @@ func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.Set
 	types := sets.Set[string]{}
 	for _, reg := range controllerRegistrationList.Items {
 		for _, res := range reg.Spec.Resources {
-			if res.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(res.GloballyEnabled, false) {
+			if res.Kind == extensionsv1alpha1.ExtensionResource && slices.Contains(res.AutoEnable, gardencorev1beta1.ClusterTypeShoot) {
 				types.Insert(res.Type)
 			}
 		}
