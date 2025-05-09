@@ -10,7 +10,6 @@ build:
           paths:
             - cmd/gardener-operator
             - cmd/gardener-operator/app
-            - cmd/gardener-operator/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/apis/config/v1alpha1
@@ -230,6 +229,7 @@ build:
             - pkg/logger
             - pkg/operator/apis/config/v1alpha1
             - pkg/operator/apis/config/v1alpha1/validation
+            - pkg/operator/bootstrappers
             - pkg/operator/client
             - pkg/operator/controller
             - pkg/operator/controller/controllerregistrar
