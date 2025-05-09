@@ -68,7 +68,8 @@ const (
 	metricsPortName              = "metrics"
 	metricsPort                  = 15000
 
-	envoyProxyContainerName = "envoy-proxy"
+	envoyProxyContainerName      = "envoy-proxy"
+	openVPNExporterContainerName = "openvpn-exporter"
 
 	fileNameEnvoyConfig = "envoy.yaml"
 	fileNameCABundle    = "ca.crt"
@@ -576,7 +577,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 		})
 
 		exporterContainer := corev1.Container{
-			Name:            "openvpn-exporter",
+			Name:            openVPNExporterContainerName,
 			Image:           v.values.ImageVPNSeedServer,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: []string{
@@ -914,9 +915,8 @@ func (v *vpnSeedServer) deployDestinationRule(ctx context.Context, idx *int) err
 
 func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 	var (
-		vpa              = v.emptyVPA()
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpa           = v.emptyVPA()
+		vpaUpdateMode = ptr.To(vpaautoscalingv1.UpdateModeAuto)
 	)
 
 	targetRefKind := "Deployment"
@@ -924,8 +924,8 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 		targetRefKind = "StatefulSet"
 	}
 
-	if v.values.VPAUpdateDisabled {
-		vpaUpdateMode = vpaautoscalingv1.UpdateModeOff
+	if v.values.VPAUpdateDisabled || v.values.HighAvailabilityEnabled {
+		vpaUpdateMode = ptr.To(vpaautoscalingv1.UpdateModeOff)
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, vpa, func() error {
@@ -935,23 +935,27 @@ func (v *vpnSeedServer) deployVPA(ctx context.Context) error {
 			Name:       deploymentName,
 		}
 		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
-			UpdateMode: &vpaUpdateMode,
+			UpdateMode: vpaUpdateMode,
 		}
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName:    deploymentName,
-					ControlledValues: &controlledValues,
-				},
-				{
-					ContainerName:    envoyProxyContainerName,
-					ControlledValues: &controlledValues,
-				},
-				{
-					ContainerName: "openvpn-exporter",
+					ContainerName: deploymentName,
 					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
 				},
 			},
+		}
+
+		if v.values.HighAvailabilityEnabled {
+			vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName: openVPNExporterContainerName,
+				Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+			})
+		} else {
+			vpa.Spec.ResourcePolicy.ContainerPolicies = append(vpa.Spec.ResourcePolicy.ContainerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+				ContainerName:    envoyProxyContainerName,
+				ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+			})
 		}
 		return nil
 	})
