@@ -9,7 +9,17 @@ spec:
     type: local
     workers:
     - name: control-plane
-      controlPlane: {}
+      controlPlane:
+        backup:
+          provider: local
+          secretRef:
+            name: etcd-backup-local
+            namespace: kube-system
+          credentialsRef:
+            apiVersion: v1
+            kind: Secret
+            name: etcd-backup-local
+            namespace: kube-system
       machine:
         type: local
       minimum: 1
