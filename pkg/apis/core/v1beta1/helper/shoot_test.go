@@ -1530,4 +1530,31 @@ var _ = Describe("Helper", func() {
 		Entry("shoot has no Istio TLS termination if is not disabled by annotation", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "false"}, true),
 		Entry("shoot has no Istio TLS termination if it is annotated with a bogus value", map[string]string{"shoot.gardener.cloud/disable-istio-tls-termination": "foobar"}, true),
 	)
+
+	Describe("#GetBackupConfigForShoot", func() {
+		var (
+			seedBackup  = &gardencorev1beta1.Backup{Provider: "seed"}
+			shootBackup = &gardencorev1beta1.Backup{Provider: "shoot"}
+
+			seed  *gardencorev1beta1.Seed
+			shoot *gardencorev1beta1.Shoot
+		)
+
+		BeforeEach(func() {
+			seed = &gardencorev1beta1.Seed{Spec: gardencorev1beta1.SeedSpec{Backup: seedBackup}}
+			shoot = &gardencorev1beta1.Shoot{}
+		})
+
+		It("should return the seed backup config because shoot is not autonomous", func() {
+			Expect(GetBackupConfigForShoot(shoot, seed)).To(Equal(seedBackup))
+		})
+
+		It("should return the shoot backup config because shoot is autonomous", func() {
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
+				ControlPlane: &gardencorev1beta1.WorkerControlPlane{Backup: shootBackup},
+			})
+
+			Expect(GetBackupConfigForShoot(shoot, seed)).To(Equal(shootBackup))
+		})
+	})
 })

@@ -1338,6 +1338,27 @@ var _ = Describe("Shoot", func() {
 				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
 			)))
 		})
+
+		It("should compute the correct list of required extensions (autonomous shoot with backup)", func() {
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
+				ControlPlane: &gardencorev1beta1.WorkerControlPlane{Backup: &gardencorev1beta1.Backup{Provider: backupProvider}},
+			})
+
+			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
+				ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupProvider),
+				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.InfrastructureResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),
+				ExtensionsID(extensionsv1alpha1.WorkerResource, shootProvider),
+				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType1),
+				ExtensionsID(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
+				ExtensionsID(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
+				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
+				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType2),
+			)))
+		})
 	})
 
 	Describe("#ExtensionsID", func() {
