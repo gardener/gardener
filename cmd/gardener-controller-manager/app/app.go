@@ -215,7 +215,7 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 
 		managedSeedList := &seedmanagementv1alpha1.ManagedSeedList{}
 		if err := mgr.GetClient().List(ctx, managedSeedList); err != nil {
-			return fmt.Errorf("failed listing objects: %w", err)
+			return fmt.Errorf("failed listing managed seeds: %w", err)
 		}
 		if err := meta.EachListItem(managedSeedList, func(o runtime.Object) error {
 			fns = append(fns, func(ctx context.Context) error {
