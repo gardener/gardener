@@ -233,10 +233,7 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 					}
 
 					// assert the mutating webhook runs on the correct version and removed the label
-					managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-					if err := mgr.GetClient().Get(ctx, client.ObjectKey{Name: obj.GetName()}, managedSeed); err != nil {
-						return fmt.Errorf("failed to get managed seed %s: %w", client.ObjectKeyFromObject(obj), err)
-					} else if _, ok := managedSeed.GetLabels()[label]; ok {
+					if _, ok := obj.GetLabels()[label]; ok {
 						return fmt.Errorf("the label %s on the managed seed %s is still present, the mutating webhook is running in an older version", label, client.ObjectKeyFromObject(obj))
 					}
 				} else {
