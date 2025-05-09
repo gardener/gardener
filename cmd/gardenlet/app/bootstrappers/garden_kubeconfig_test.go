@@ -112,6 +112,7 @@ var _ = Describe("GardenKubeconfig", func() {
 							CAData:   []byte("foo"),
 						},
 					}
+					runner.Config.GardenClientConnection.GardenClusterCACert = restConfig.CAData
 
 					var err error
 					existingKubeconfig, err = gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
@@ -159,6 +160,7 @@ var _ = Describe("GardenKubeconfig", func() {
 
 				Context("when bootstrapKubeconfig is set", func() {
 					var (
+						restConfig               *rest.Config
 						bootstrapSecretName      = "bootstrap-secret-name"
 						bootstrapSecretNamespace = "bootstrap-secret-namespace"
 					)
@@ -168,6 +170,15 @@ var _ = Describe("GardenKubeconfig", func() {
 							Name:      bootstrapSecretName,
 							Namespace: bootstrapSecretNamespace,
 						}
+
+						restConfig = &rest.Config{
+							Host: "testhost",
+							TLSClientConfig: rest.TLSClientConfig{
+								Insecure: false,
+								CAData:   []byte("foo"),
+							},
+						}
+						runner.Config.GardenClientConnection.GardenClusterCACert = restConfig.CAData
 					})
 
 					It("should return an error when the bootstrap kubeconfig secret does not exist", func() {
@@ -189,10 +200,10 @@ var _ = Describe("GardenKubeconfig", func() {
 					})
 
 					It("should request a kubeconfig with the bootstrap kubeconfig", func() {
-						var (
-							requestedKubeconfig = []byte("requested-kubeconfig-" + kubeconfigValidity.String())
-							csrName             = "created-csr"
-						)
+						var csrName = "created-csr"
+
+						requestedKubeconfig, err := gardenletbootstraputil.CreateGardenletKubeconfigWithClientCertificate(restConfig, nil, nil)
+						Expect(err).ToNot(HaveOccurred())
 
 						secret := &corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
@@ -207,8 +218,8 @@ var _ = Describe("GardenKubeconfig", func() {
 							&NewClientFromBytes, func(_ []byte, _ ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 								return nil, nil
 							},
-							&RequestKubeconfigWithBootstrapClient, func(_ context.Context, _ logr.Logger, _ client.Client, _ kubernetes.Interface, _, _ client.ObjectKey, seedName string, validity *metav1.Duration) ([]byte, string, string, error) {
-								return []byte("requested-kubeconfig-" + validity.Duration.String()), csrName, seedName, nil
+							&RequestKubeconfigWithBootstrapClient, func(_ context.Context, _ logr.Logger, _ client.Client, _ kubernetes.Interface, _, _ client.ObjectKey, seedName string, _ *metav1.Duration) ([]byte, string, string, error) {
+								return requestedKubeconfig, csrName, seedName, nil
 							},
 						))
 
