@@ -291,6 +291,10 @@ kind: Config
 								DeprecatedServiceAccount: "remove-me",
 							},
 						},
+						VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+							{ObjectMeta: metav1.ObjectMeta{Name: "pvc1"}, Spec: corev1.PersistentVolumeClaimSpec{VolumeName: "foo"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "pvc2"}, Spec: corev1.PersistentVolumeClaimSpec{VolumeName: "bar"}},
+						},
 					},
 				}
 			})
@@ -329,6 +333,13 @@ spec:
   priorityClassName: system-node-critical
   securityContext:
     fsGroup: 0
+  volumes:
+  - hostPath:
+      path: /var/lib/pvc1/data
+    name: pvc1
+  - hostPath:
+      path: /var/lib/pvc2/data
+    name: pvc2
 status: {}
 `))}},
 				}))
@@ -456,6 +467,12 @@ spec:
   - hostPath:
       path: /var/lib/foo/v3
     name: v3
+  - hostPath:
+      path: /var/lib/pvc1/data
+    name: pvc1
+  - hostPath:
+      path: /var/lib/pvc2/data
+    name: pvc2
 status: {}
 `))}},
 					},
@@ -733,6 +750,12 @@ kind: Config
 			It("should return an error", func() {
 				Expect(Translate(ctx, fakeClient, &corev1.ConfigMap{})).Error().To(MatchError(ContainSubstring("unsupported object type")))
 			})
+		})
+	})
+
+	Describe("#StatefulSetVolumeClaimTemplateHostPath", func() {
+		It("should return the expected path", func() {
+			Expect(StatefulSetVolumeClaimTemplateHostPath("foo")).To(Equal("/var/lib/foo/data"))
 		})
 	})
 })
