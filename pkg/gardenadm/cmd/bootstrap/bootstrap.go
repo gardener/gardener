@@ -66,7 +66,7 @@ func run(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	b, err := opts.NewAutonomousBotanist(ctx, opts.Log, clientSet)
+	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir)
 	if err != nil {
 		return err
 	}

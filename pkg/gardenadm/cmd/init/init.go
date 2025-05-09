@@ -289,7 +289,7 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 }
 
 func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.AutonomousBotanist, error) {
-	b, err := opts.NewAutonomousBotanist(ctx, opts.Log, nil)
+	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir)
 	if err != nil {
 		return nil, err
 	}
@@ -354,5 +354,5 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Autono
 		return nil, flow.Errors(err)
 	}
 
-	return opts.NewAutonomousBotanist(ctx, opts.Log, clientSet)
+	return botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir)
 }

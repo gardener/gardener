@@ -7,6 +7,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
@@ -14,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
+	"k8s.io/component-base/version"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -23,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
 	gardenpkg "github.com/gardener/gardener/pkg/gardenlet/operation/garden"
@@ -50,6 +53,30 @@ type Extension struct {
 	ControllerRegistration *gardencorev1beta1.ControllerRegistration
 	ControllerDeployment   *gardencorev1.ControllerDeployment
 	ControllerInstallation *gardencorev1beta1.ControllerInstallation
+}
+
+// DirFS returns an fs.FS for the files in the given directory.
+// Exposed for testing.
+var DirFS = os.DirFS
+
+// NewAutonomousBotanistFromManifests reads the manifests from dir and initializes a new AutonomousBotanist with them.
+func NewAutonomousBotanistFromManifests(ctx context.Context, log logr.Logger, clientSet kubernetes.Interface, dir string) (*AutonomousBotanist, error) {
+	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, err := gardenadm.ReadManifests(log, DirFS(dir))
+	if err != nil {
+		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
+	}
+
+	extensions, err := ComputeExtensions(shoot, controllerRegistrations, controllerDeployments)
+	if err != nil {
+		return nil, fmt.Errorf("failed computing extensions: %w", err)
+	}
+
+	b, err := NewAutonomousBotanist(ctx, log, clientSet, project, cloudProfile, shoot, extensions)
+	if err != nil {
+		return nil, fmt.Errorf("failed constructing botanist: %w", err)
+	}
+
+	return b, nil
 }
 
 // NewAutonomousBotanist creates a new botanist.AutonomousBotanist instance for the gardenadm command execution.
@@ -191,6 +218,7 @@ func newSeedObject(ctx context.Context, shootObj *shootpkg.Shoot) (*seedpkg.Seed
 
 func newShootObject(ctx context.Context, projectName string, cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot) (*shootpkg.Shoot, error) {
 	shoot.Status.TechnicalID = gardenerutils.ComputeTechnicalID(projectName, shoot)
+	shoot.Status.Gardener = gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion}
 	// TODO(rfranzke): This UID is used to compute the name of the BackupEntry object. Consider persisting this random
 	//  UID on the machine in case `gardenadm init` is retried/executed multiple times (otherwise, we'd always generate
 	//  a new one).
