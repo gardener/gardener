@@ -8,11 +8,13 @@ import (
 	"context"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -58,6 +60,8 @@ var _ = Describe("MachineControllerManager", func() {
 
 		serviceAccount        *corev1.ServiceAccount
 		clusterRoleBinding    *rbacv1.ClusterRoleBinding
+		roleBinding           *rbacv1.RoleBinding
+		role                  *rbacv1.Role
 		service               *corev1.Service
 		shootAccessSecret     *corev1.Secret
 		deployment            *appsv1.Deployment
@@ -77,7 +81,6 @@ var _ = Describe("MachineControllerManager", func() {
 			Replicas: replicas,
 		}
 		mcm = New(fakeClient, namespace, sm, values)
-		mcm.SetNamespaceUID(namespaceUID)
 
 		By("Create secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
@@ -112,6 +115,62 @@ var _ = Describe("MachineControllerManager", func() {
 				Name:      "machine-controller-manager",
 				Namespace: namespace,
 			}},
+		}
+
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-controller-manager",
+				Namespace: namespace,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Role",
+				Name:     "machine-controller-manager",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "machine-controller-manager",
+				Namespace: namespace,
+			}},
+		}
+
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-controller-manager",
+				Namespace: namespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{machinev1alpha1.GroupName},
+					Resources: []string{
+						"machineclasses",
+						"machineclasses/status",
+						"machinedeployments",
+						"machinedeployments/status",
+						"machines",
+						"machines/status",
+						"machinesets",
+						"machinesets/status",
+					},
+					Verbs: []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
+					Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
+				},
+				{
+					APIGroups: []string{coordinationv1.GroupName},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{coordinationv1.GroupName},
+					Resources:     []string{"leases"},
+					Verbs:         []string{"get", "watch", "update"},
+					ResourceNames: []string{"machine-controller", "machine-controller-manager"},
+				},
+			},
 		}
 
 		service = &corev1.Service{
@@ -524,10 +583,19 @@ subjects:
 			serviceAccount.ResourceVersion = "1"
 			Expect(actualServiceAccount).To(Equal(serviceAccount))
 
+			//TODO(@aaronfern): Remove this after v1.120 is released
 			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(Succeed())
-			clusterRoleBinding.ResourceVersion = "1"
-			Expect(actualClusterRoleBinding).To(Equal(clusterRoleBinding))
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).ToNot(Succeed())
+
+			actualRoleBinding := &rbacv1.RoleBinding{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), actualRoleBinding)).To(Succeed())
+			roleBinding.ResourceVersion = "1"
+			Expect(actualRoleBinding).To(Equal(roleBinding))
+
+			actualRole := &rbacv1.Role{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), actualRole)).To(Succeed())
+			role.ResourceVersion = "1"
+			Expect(actualRole).To(Equal(role))
 
 			actualService := &corev1.Service{}
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), actualService)).To(Succeed())
@@ -589,10 +657,22 @@ subjects:
 		})
 	})
 
+	Describe("#DeployMigrate", func() {
+		It("should successfully delete existing clusterRoleBinding when deployMigrate is called", func() {
+			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(Succeed())
+
+			Expect(mcm.DeployMigrate(ctx)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).ToNot(Succeed())
+		})
+	})
+
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
 			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			Expect(fakeClient.Create(ctx, clusterRoleBinding)).To(Succeed())
+			Expect(fakeClient.Create(ctx, role)).To(Succeed())
+			Expect(fakeClient.Create(ctx, roleBinding)).To(Succeed())
 			Expect(fakeClient.Create(ctx, service)).To(Succeed())
 			Expect(fakeClient.Create(ctx, shootAccessSecret)).To(Succeed())
 			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
@@ -613,6 +693,8 @@ subjects:
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), &corev1.Service{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), &corev1.ServiceAccount{})).To(BeNotFoundError())
 		})
 	})

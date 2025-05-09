@@ -144,14 +144,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Name: "Destroying AlertManager",
 			Fn:   c.alertManager.Destroy,
 		})
-		destroyClusterAutoscaler = g.Add(flow.Task{
-			Name: "Destroying cluster-autoscaler resources",
-			Fn:   component.OpDestroyAndWait(c.clusterAutoscaler).Destroy,
-		})
-		destroyMachineControllerManager = g.Add(flow.Task{
-			Name: "Destroying machine-controller-manager resources",
-			Fn:   component.OpDestroyAndWait(c.machineControllerManager).Destroy,
-		})
 		destroyNginxIngress = g.Add(flow.Task{
 			Name:   "Destroying nginx-ingress",
 			Fn:     component.OpDestroyAndWait(c.nginxIngressController).Destroy,
@@ -248,8 +240,6 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyAggregatePrometheus,
 			destroyAlertManager,
 			destroyNginxIngress,
-			destroyClusterAutoscaler,
-			destroyMachineControllerManager,
 			destroyDWDWeeder,
 			destroyDWDProber,
 			destroyKubeAPIServerIngress,
