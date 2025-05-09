@@ -13,5 +13,5 @@ import (
 
 func TestBootstrappers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Command ControllerManager App Bootstrappers Suite")
+	RunSpecs(t, "Gardenlet Bootstrappers Suite")
 }

@@ -36,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/gardener/gardener/cmd/gardener-node-agent/app/bootstrappers"
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -48,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/nodeagent/bootstrap"
+	"github.com/gardener/gardener/pkg/nodeagent/bootstrappers"
 	"github.com/gardener/gardener/pkg/nodeagent/controller"
 	"github.com/gardener/gardener/pkg/nodeagent/dbus"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"

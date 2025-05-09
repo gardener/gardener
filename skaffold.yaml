@@ -246,7 +246,6 @@ build:
           paths:
             - cmd/gardener-controller-manager
             - cmd/gardener-controller-manager/app
-            - cmd/gardener-controller-manager/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/apis/config/v1alpha1
@@ -296,6 +295,7 @@ build:
             - pkg/controller/reference
             - pkg/controllermanager/apis/config/v1alpha1
             - pkg/controllermanager/apis/config/v1alpha1/validation
+            - pkg/controllermanager/bootstrappers
             - pkg/controllermanager/controller
             - pkg/controllermanager/controller/bastion
             - pkg/controllermanager/controller/certificatesigningrequest
@@ -960,7 +960,6 @@ build:
             - charts/gardener/gardenlet
             - cmd/gardenlet
             - cmd/gardenlet/app
-            - cmd/gardenlet/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/controller
@@ -1205,6 +1204,7 @@ build:
             - pkg/gardenlet/bootstrap
             - pkg/gardenlet/bootstrap/certificate
             - pkg/gardenlet/bootstrap/util
+            - pkg/gardenlet/bootstrappers
             - pkg/gardenlet/controller
             - pkg/gardenlet/controller/backupbucket
             - pkg/gardenlet/controller/backupentry
@@ -1324,7 +1324,6 @@ build:
           paths:
             - cmd/gardener-resource-manager
             - cmd/gardener-resource-manager/app
-            - cmd/gardener-resource-manager/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - pkg/api/extensions
@@ -1370,6 +1369,7 @@ build:
             - pkg/logger
             - pkg/resourcemanager/apis/config/v1alpha1
             - pkg/resourcemanager/apis/config/v1alpha1/validation
+            - pkg/resourcemanager/bootstrappers
             - pkg/resourcemanager/client
             - pkg/resourcemanager/controller
             - pkg/resourcemanager/controller/csrapprover
@@ -1435,7 +1435,6 @@ build:
           paths:
             - cmd/gardener-node-agent
             - cmd/gardener-node-agent/app
-            - cmd/gardener-node-agent/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/apis/config/v1alpha1
@@ -1500,6 +1499,7 @@ build:
             - pkg/nodeagent/apis/config/v1alpha1/validation
             - pkg/nodeagent/bootstrap
             - pkg/nodeagent/bootstrap/templates/scripts/format-kubelet-data-volume.tpl.sh
+            - pkg/nodeagent/bootstrappers
             - pkg/nodeagent/controller
             - pkg/nodeagent/controller/certificate
             - pkg/nodeagent/controller/healthcheck

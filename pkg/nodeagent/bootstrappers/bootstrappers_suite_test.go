@@ -13,5 +13,5 @@ import (
 
 func TestBootstrappers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Command Gardenlet App Bootstrappers Suite")
+	RunSpecs(t, "NodeAgent Bootstrappers Suite")
 }

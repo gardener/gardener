@@ -13,5 +13,5 @@ import (
 
 func TestBootstrappers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Command ResourceManager App Bootstrappers Suite")
+	RunSpecs(t, "Operator Bootstrappers Suite")
 }

@@ -28,7 +28,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	controllerwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/gardener/gardener/cmd/gardener-operator/app/bootstrappers"
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
@@ -40,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/operator/bootstrappers"
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	"github.com/gardener/gardener/pkg/operator/controller"
 	"github.com/gardener/gardener/pkg/operator/webhook"

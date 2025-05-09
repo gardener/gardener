@@ -10,7 +10,6 @@ build:
           paths:
             - cmd/gardener-operator
             - cmd/gardener-operator/app
-            - cmd/gardener-operator/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/apis/config/v1alpha1
@@ -230,6 +229,7 @@ build:
             - pkg/logger
             - pkg/operator/apis/config/v1alpha1
             - pkg/operator/apis/config/v1alpha1/validation
+            - pkg/operator/bootstrappers
             - pkg/operator/client
             - pkg/operator/controller
             - pkg/operator/controller/controllerregistrar
@@ -318,7 +318,6 @@ build:
           paths:
             - cmd/gardener-resource-manager
             - cmd/gardener-resource-manager/app
-            - cmd/gardener-resource-manager/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - pkg/api/extensions
@@ -364,6 +363,7 @@ build:
             - pkg/logger
             - pkg/resourcemanager/apis/config/v1alpha1
             - pkg/resourcemanager/apis/config/v1alpha1/validation
+            - pkg/resourcemanager/bootstrappers
             - pkg/resourcemanager/client
             - pkg/resourcemanager/controller
             - pkg/resourcemanager/controller/csrapprover
@@ -649,7 +649,6 @@ build:
           paths:
             - cmd/gardener-controller-manager
             - cmd/gardener-controller-manager/app
-            - cmd/gardener-controller-manager/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/apis/config/v1alpha1
@@ -699,6 +698,7 @@ build:
             - pkg/controller/reference
             - pkg/controllermanager/apis/config/v1alpha1
             - pkg/controllermanager/apis/config/v1alpha1/validation
+            - pkg/controllermanager/bootstrappers
             - pkg/controllermanager/controller
             - pkg/controllermanager/controller/bastion
             - pkg/controllermanager/controller/certificatesigningrequest

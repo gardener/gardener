@@ -17,8 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	. "github.com/gardener/gardener/cmd/gardener-resource-manager/app/bootstrappers"
 	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
+	. "github.com/gardener/gardener/pkg/resourcemanager/bootstrappers"
 )
 
 var _ = Describe("Identity", func() {
