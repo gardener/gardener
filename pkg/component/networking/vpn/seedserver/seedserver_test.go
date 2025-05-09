@@ -80,9 +80,8 @@ var _ = Describe("VpnSeedServer", func() {
 		istioNamespace     = "istio-foo"
 		istioNamespaceFunc = func() string { return istioNamespace }
 
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		namespaceUID     = types.UID("123456")
+		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
+		namespaceUID  = types.UID("123456")
 
 		secretNameTLSAuth = "vpn-seed-server-tlsauth-a1d0aa00"
 
@@ -757,6 +756,25 @@ var _ = Describe("VpnSeedServer", func() {
 				targetKindRef = "StatefulSet"
 			}
 
+			containerPolicies := []vpaautoscalingv1.ContainerResourcePolicy{
+				{
+					ContainerName: "vpn-seed-server",
+					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+				},
+			}
+
+			if highAvailabilityEnabled {
+				containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+					ContainerName: "openvpn-exporter",
+					Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
+				})
+			} else {
+				containerPolicies = append(containerPolicies, vpaautoscalingv1.ContainerResourcePolicy{
+					ContainerName:    "envoy-proxy",
+					ControlledValues: ptr.To(vpaautoscalingv1.ContainerControlledValuesRequestsOnly),
+				})
+			}
+
 			return &vpaautoscalingv1.VerticalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "vpn-seed-server" + "-vpa",
@@ -773,20 +791,7 @@ var _ = Describe("VpnSeedServer", func() {
 						UpdateMode: updateMode,
 					},
 					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-						ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
-							{
-								ContainerName:    "vpn-seed-server",
-								ControlledValues: &controlledValues,
-							},
-							{
-								ContainerName:    "envoy-proxy",
-								ControlledValues: &controlledValues,
-							},
-							{
-								ContainerName: "openvpn-exporter",
-								Mode:          ptr.To(vpaautoscalingv1.ContainerScalingModeOff),
-							},
-						},
+						ContainerPolicies: containerPolicies,
 					},
 				},
 			}
@@ -868,7 +873,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				updateMode := vpaUpdateMode
-				if values.VPAUpdateDisabled {
+				if values.VPAUpdateDisabled || values.HighAvailabilityEnabled {
 					updateMode = vpaautoscalingv1.UpdateModeOff
 				}
 				expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, &updateMode)
@@ -1003,7 +1008,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 				actualVPA := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				updateMode := vpaUpdateMode
-				if values.VPAUpdateDisabled {
+				if values.VPAUpdateDisabled || values.HighAvailabilityEnabled {
 					updateMode = vpaautoscalingv1.UpdateModeOff
 				}
 				expectedVPA := expectedVPAFor(values.HighAvailabilityEnabled, &updateMode)
