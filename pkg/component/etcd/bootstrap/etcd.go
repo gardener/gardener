@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	staticpodtranslator "github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
@@ -209,7 +210,9 @@ func (e *etcdDeployer) Deploy(ctx context.Context) error {
 							Name: volumeNameData,
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/var/lib/" + statefulSet.Name + "/data",
+									// etcds managed by etcd-druid store their data in <data-dir>/new.etcd, so let's
+									// prepare for the take-over already now
+									Path: staticpodtranslator.StatefulSetVolumeClaimTemplateHostPath(etcd.Name(e.values.Role)) + "/new.etcd",
 									Type: ptr.To(corev1.HostPathDirectoryOrCreate),
 								},
 							},
@@ -270,7 +273,7 @@ func (e *etcdDeployer) Destroy(_ context.Context) error {
 }
 
 func (e *etcdDeployer) emptyStatefulSet() *appsv1.StatefulSet {
-	return &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + e.values.Role + "-0", Namespace: e.namespace}}
+	return &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: Name(e.values.Role), Namespace: e.namespace}}
 }
 
 func (e *etcdDeployer) labels() map[string]string {
@@ -279,4 +282,12 @@ func (e *etcdDeployer) labels() map[string]string {
 		v1beta1constants.LabelRole:  e.values.Role,
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 	}
+}
+
+// NamePrefix is the prefix of the StatefulSet name. It will be appended with the role.
+const NamePrefix = "etcd-bootstrap-"
+
+// Name is the name of the StatefulSet based on the role.
+func Name(role string) string {
+	return NamePrefix + role
 }

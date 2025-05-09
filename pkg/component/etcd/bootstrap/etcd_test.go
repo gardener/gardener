@@ -10,10 +10,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -35,7 +35,7 @@ var _ = Describe("Etcd", func() {
 		image       = "some-image"
 		statefulSet = &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "etcd-main-0",
+				Name:      "etcd-bootstrap-main",
 				Namespace: namespace,
 			},
 		}
@@ -59,29 +59,43 @@ var _ = Describe("Etcd", func() {
 			Expect(statefulSet.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(statefulSet.Spec.Template.Spec.Containers[0].Image).To(Equal(image))
 			Expect(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts).To(HaveLen(6))
-			Expect(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements([]gomegatypes.GomegaMatcher{
+			Expect(statefulSet.Spec.Template.Spec.Containers[0].VolumeMounts).Should(ContainElements(
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("data"), "MountPath": Equal("/var/etcd/data")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-ca"), "MountPath": Equal("/var/etcd/ssl/ca")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-server-tls"), "MountPath": Equal("/var/etcd/ssl/server")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-client-tls"), "MountPath": Equal("/var/etcd/ssl/client")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-peer-ca"), "MountPath": Equal("/var/etcd/ssl/peer/ca")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-peer-server-tls"), "MountPath": Equal("/var/etcd/ssl/peer/server")}),
-			}))
+			))
 			Expect(statefulSet.Spec.Template.Spec.Volumes).To(HaveLen(6))
-			Expect(statefulSet.Spec.Template.Spec.Volumes).Should(ContainElements([]gomegatypes.GomegaMatcher{
-				MatchFields(IgnoreExtras, Fields{"Name": Equal("data")}),
+			Expect(statefulSet.Spec.Template.Spec.Volumes).Should(ContainElements(
+				corev1.Volume{
+					Name: "data",
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/var/lib/etcd-main/data/new.etcd",
+							Type: ptr.To(corev1.HostPathDirectoryOrCreate),
+						},
+					},
+				},
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-ca")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-server-tls")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-client-tls")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-peer-ca")}),
 				MatchFields(IgnoreExtras, Fields{"Name": Equal("etcd-peer-server-tls")}),
-			}))
+			))
 		})
 	})
 
 	Describe("#Destroy", func() {
 		It("should return nil as it's not implemented as of now", func() {
 			Expect(etcd.Destroy(ctx)).To(Succeed())
+		})
+	})
+
+	Describe("#Name", func() {
+		It("should return the expected name", func() {
+			Expect(Name("foo")).To(Equal("etcd-bootstrap-foo"))
 		})
 	})
 })
