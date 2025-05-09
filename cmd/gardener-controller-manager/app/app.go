@@ -217,11 +217,11 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 			}
 		}
 
-		managedSeeds := &seedmanagementv1alpha1.ManagedSeedList{}
-		if err := mgr.GetClient().List(ctx, managedSeeds); err != nil {
+		managedSeedList := &seedmanagementv1alpha1.ManagedSeedList{}
+		if err := mgr.GetClient().List(ctx, managedSeedList); err != nil {
 			return fmt.Errorf("failed listing objects: %w", err)
 		}
-		if err := meta.EachListItem(managedSeeds, func(o runtime.Object) error {
+		if err := meta.EachListItem(managedSeedList, func(o runtime.Object) error {
 			fns = append(fns, func(ctx context.Context) error {
 				obj := o.(client.Object)
 
@@ -250,7 +250,7 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 			})
 			return nil
 		}); err != nil {
-			return fmt.Errorf("failed preparing managed seed mutating tasks for %T: %w", managedSeeds, err)
+			return fmt.Errorf("failed preparing managed seed mutating tasks for %T: %w", managedSeedList, err)
 		}
 		return flow.Parallel(fns...)(ctx)
 	})); err != nil {
