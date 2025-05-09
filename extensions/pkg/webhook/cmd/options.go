@@ -326,6 +326,13 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 					return nil, fmt.Errorf("failed computing new client config while merging shoot validating webhook %q into seed webhooks: %w", webhook.Name, err)
 				}
 				webhook.ClientConfig = mutatedClientConfig
+
+				if seedWebhookConfigs.ValidatingWebhookConfig == nil {
+					seedWebhookConfigs.ValidatingWebhookConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
+						ObjectMeta: extensionswebhook.InitialWebhookConfig(extensionswebhook.NamePrefix + c.extensionName),
+					}
+				}
+
 				seedWebhookConfigs.ValidatingWebhookConfig.Webhooks = append(seedWebhookConfigs.ValidatingWebhookConfig.Webhooks, webhook)
 			}
 		}
@@ -337,6 +344,13 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 					return nil, fmt.Errorf("failed computing new client config while merging shoot mutating webhook %q into seed webhooks: %w", webhook.Name, err)
 				}
 				webhook.ClientConfig = mutatedClientConfig
+
+				if seedWebhookConfigs.MutatingWebhookConfig == nil {
+					seedWebhookConfigs.MutatingWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
+						ObjectMeta: extensionswebhook.InitialWebhookConfig(extensionswebhook.NamePrefix + c.extensionName),
+					}
+				}
+
 				seedWebhookConfigs.MutatingWebhookConfig.Webhooks = append(seedWebhookConfigs.MutatingWebhookConfig.Webhooks, webhook)
 			}
 		}
