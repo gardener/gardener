@@ -18,7 +18,7 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/e2e/gardener/shoot/internal/inclusterclient"
-	. "github.com/gardener/gardener/test/framework"
+	shootmigration "github.com/gardener/gardener/test/utils/shoots/migration"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func() {
@@ -53,7 +53,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 		It("Populate comparison elements before migration", func(ctx SpecContext) {
 			Eventually(ctx, func() error {
 				var err error
-				secretsBeforeMigration, err = GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
+				secretsBeforeMigration, err = shootmigration.GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
 				return err
 			}).Should(Succeed())
 		}, SpecTimeout(time.Minute))
@@ -74,14 +74,14 @@ var _ = Describe("Shoot Tests", Label("Shoot", "control-plane-migration"), func(
 			var secretsAfterMigration map[string]corev1.Secret
 			Eventually(ctx, func() error {
 				var err error
-				secretsAfterMigration, err = GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
+				secretsAfterMigration, err = shootmigration.GetPersistedSecrets(ctx, s.SeedClientSet.Client(), s.Shoot.Status.TechnicalID)
 				return err
 			}).Should(Succeed())
-			Expect(ComparePersistedSecrets(secretsBeforeMigration, secretsAfterMigration)).To(Succeed())
+			Expect(shootmigration.ComparePersistedSecrets(secretsBeforeMigration, secretsAfterMigration)).To(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		It("Verify that there are no orphaned resources in the source seed", func(ctx SpecContext) {
-			Expect(CheckForOrphanedNonNamespacedResources(ctx, s.Shoot.Namespace, seedClientSourceCluster)).To(Succeed())
+			Expect(shootmigration.CheckForOrphanedNonNamespacedResources(ctx, s.Shoot.Namespace, seedClientSourceCluster)).To(Succeed())
 		}, SpecTimeout(time.Minute))
 
 		ItShouldDeleteShoot(s)

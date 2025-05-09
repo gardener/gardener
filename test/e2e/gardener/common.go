@@ -15,7 +15,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
-	"github.com/gardener/gardener/test/framework"
 )
 
 // DefaultManagedSeedName returns the name of the managed seed used in e2e tests
@@ -24,17 +23,6 @@ func DefaultManagedSeedName() string {
 		return "e2e-mngdseed-op"
 	}
 	return "e2e-managedseed"
-}
-
-// DefaultGardenConfig returns a GardenerConfig framework object with default values for the e2e tests.
-func DefaultGardenConfig(projectNamespace string) *framework.GardenerConfig {
-	return &framework.GardenerConfig{
-		CommonConfig: &framework.CommonConfig{
-			DisableStateDump: true,
-		},
-		ProjectNamespace:   projectNamespace,
-		GardenerKubeconfig: os.Getenv("KUBECONFIG"),
-	}
 }
 
 func baseShoot(name string) *gardencorev1beta1.Shoot {

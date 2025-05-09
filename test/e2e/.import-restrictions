@@ -1,0 +1,8 @@
+rules:
+- selectorRegexp: github[.]com/gardener/gardener
+  transitive: true
+  allowedPrefixes:
+  - ''
+  forbiddenPrefixes:
+  - github.com/gardener/gardener/test/framework
+  - github.com/gardener/gardener/test/testmachinery

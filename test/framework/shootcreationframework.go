@@ -19,6 +19,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
 var shootCreationCfg *ShootCreationConfig
@@ -391,7 +392,7 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 			return fmt.Errorf("failed to get existing shoot %q: %w", shootKey, err)
 		}
 
-		shootHealthy, msg := ShootReconciliationSuccessful(f.Shoot)
+		shootHealthy, msg := shootoperation.ReconciliationSuccessful(f.Shoot)
 		if !shootHealthy {
 			return fmt.Errorf("cannot use existing shoot %q for test because it is unhealthy: %s", shootKey, msg)
 		}

@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
+	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
 var gardenerVersion = flag.String("version", "", "current gardener version")
@@ -66,7 +67,7 @@ var _ = Describe("Shoot reconciliation testing", func() {
 					log.Info("Last acted Gardener version does not match current Gardener version", "last", shoot.Status.Gardener.Version, "current", *gardenerVersion)
 					continue
 				}
-				if completed, msg := framework.ShootReconciliationSuccessful(&shoot); completed {
+				if completed, msg := shootoperation.ReconciliationSuccessful(&shoot); completed {
 					reconciledShoots++
 				} else {
 					log.Info("Shoot not yet successfully reconciled", "reason", msg)

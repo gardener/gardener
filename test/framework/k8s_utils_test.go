@@ -13,7 +13,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/test/framework"
+	shootoperation "github.com/gardener/gardener/test/utils/shoots/operation"
 )
 
 var _ = Describe("Kubernetes Utils", func() {
@@ -22,7 +22,7 @@ var _ = Describe("Kubernetes Utils", func() {
 			shoot *gardencorev1beta1.Shoot
 
 			testShootReconciliationSuccessful = func(matchMessage, matchResult types.GomegaMatcher) {
-				successful, msg := framework.ShootReconciliationSuccessful(shoot)
+				successful, msg := shootoperation.ReconciliationSuccessful(shoot)
 				Expect(msg).To(matchMessage)
 				Expect(successful).To(matchResult)
 			}
