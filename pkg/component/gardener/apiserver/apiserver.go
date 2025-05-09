@@ -26,6 +26,7 @@ import (
 	operatorclient "github.com/gardener/gardener/pkg/operator/client"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
@@ -186,8 +187,13 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	serviceRuntime := &corev1.Service{}
-	if err := g.client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: g.namespace}, serviceRuntime); err != nil {
-		return err
+	if err := retry.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
+		if err := g.client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: g.namespace}, serviceRuntime); err != nil {
+			return retry.MinorError(fmt.Errorf("service gardener-apiserver was not yet created"))
+		}
+		return retry.Ok()
+	}); err != nil {
+		return fmt.Errorf("failed waiting for service gardener-apiserver to get created by gardener-resource-manager: %w", err)
 	}
 
 	virtualResources, err := virtualRegistry.AddAllAndSerialize(
