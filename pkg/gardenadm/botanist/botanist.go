@@ -77,7 +77,7 @@ func NewAutonomousBotanistFromManifests(
 	*AutonomousBotanist,
 	error,
 ) {
-	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, err := gardenadm.ReadManifests(log, DirFS(dir))
+	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, secrets, err := gardenadm.ReadManifests(log, DirFS(dir))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
 	}
@@ -87,7 +87,7 @@ func NewAutonomousBotanistFromManifests(
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
 	}
 
-	b, err := NewAutonomousBotanist(ctx, log, clientSet, project, cloudProfile, shoot, extensions, runsControlPlane)
+	b, err := NewAutonomousBotanist(ctx, log, clientSet, project, cloudProfile, shoot, extensions, secrets, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed constructing botanist: %w", err)
 	}
@@ -104,6 +104,7 @@ func NewAutonomousBotanist(
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
 	extensions []Extension,
+	secrets []*corev1.Secret,
 	runsControlPlane bool,
 ) (
 	*AutonomousBotanist,
@@ -150,7 +151,7 @@ func NewAutonomousBotanist(
 	autonomousBotanist.Botanist = b
 	autonomousBotanist.Extensions = extensions
 
-	if err := autonomousBotanist.initializeFakeGardenResources(ctx); err != nil {
+	if err := autonomousBotanist.initializeFakeGardenResources(ctx, secrets); err != nil {
 		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
 	}
 
@@ -182,7 +183,7 @@ func newOperation(log logr.Logger, clientSet kubernetes.Interface) *operation.Op
 	}
 }
 
-func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context) error {
+func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context, secrets []*corev1.Secret) error {
 	if err := b.GardenClient.Create(ctx, b.Seed.GetInfo().DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
 		return fmt.Errorf("failed creating Seed %s: %w", b.Seed.GetInfo().Name, err)
 	}
@@ -202,6 +203,12 @@ func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context) 
 
 		if err := b.GardenClient.Create(ctx, extension.ControllerInstallation.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
 			return fmt.Errorf("failed creating ControllerInstallation %s: %w", extension.ControllerInstallation.Name, err)
+		}
+	}
+
+	for _, secret := range secrets {
+		if err := b.GardenClient.Create(ctx, secret.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating Secret %s: %w", secret.Name, err)
 		}
 	}
 

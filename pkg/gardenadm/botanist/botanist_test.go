@@ -14,6 +14,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -87,6 +89,14 @@ var _ = Describe("AutonomousBotanist", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("shoot--gardenadm--gardenadm"))
 			})
+		})
+
+		It("should create the secrets with the fake garden client", func() {
+			b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret1"}, &corev1.Secret{})).To(Succeed())
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret2"}, &corev1.Secret{})).To(Succeed())
 		})
 
 		It("should generate a UID for the shoot and write it to the host", func() {
@@ -205,5 +215,17 @@ apiVersion: core.gardener.cloud/v1
 kind: ControllerDeployment
 metadata:
   name: unused
+`)}
+
+	fsys[dir+"/secrets.yaml"] = &fstest.MapFile{Data: []byte(`---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret2
 `)}
 }
