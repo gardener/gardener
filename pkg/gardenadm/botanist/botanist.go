@@ -60,7 +60,13 @@ type Extension struct {
 var DirFS = os.DirFS
 
 // NewAutonomousBotanistFromManifests reads the manifests from dir and initializes a new AutonomousBotanist with them.
-func NewAutonomousBotanistFromManifests(ctx context.Context, log logr.Logger, clientSet kubernetes.Interface, dir string) (*AutonomousBotanist, error) {
+func NewAutonomousBotanistFromManifests(
+	ctx context.Context,
+	log logr.Logger,
+	clientSet kubernetes.Interface,
+	dir string,
+	runsControlPlane bool,
+) (*AutonomousBotanist, error) {
 	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, err := gardenadm.ReadManifests(log, DirFS(dir))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
@@ -71,7 +77,7 @@ func NewAutonomousBotanistFromManifests(ctx context.Context, log logr.Logger, cl
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
 	}
 
-	b, err := NewAutonomousBotanist(ctx, log, clientSet, project, cloudProfile, shoot, extensions)
+	b, err := NewAutonomousBotanist(ctx, log, clientSet, project, cloudProfile, shoot, extensions, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed constructing botanist: %w", err)
 	}
@@ -88,6 +94,7 @@ func NewAutonomousBotanist(
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
 	extensions []Extension,
+	runsControlPlane bool,
 ) (
 	*AutonomousBotanist,
 	error,
@@ -97,7 +104,7 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed creating garden object: %w", err)
 	}
 
-	shootObj, err := newShootObject(ctx, project.Name, cloudProfile, shoot)
+	shootObj, err := newShootObject(ctx, project.Name, cloudProfile, shoot, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating shoot object: %w", err)
 	}
@@ -216,7 +223,13 @@ func newSeedObject(ctx context.Context, shootObj *shootpkg.Shoot) (*seedpkg.Seed
 	return obj, nil
 }
 
-func newShootObject(ctx context.Context, projectName string, cloudProfile *gardencorev1beta1.CloudProfile, shoot *gardencorev1beta1.Shoot) (*shootpkg.Shoot, error) {
+func newShootObject(
+	ctx context.Context,
+	projectName string,
+	cloudProfile *gardencorev1beta1.CloudProfile,
+	shoot *gardencorev1beta1.Shoot,
+	runsControlPlane bool,
+) (*shootpkg.Shoot, error) {
 	shoot.Status.TechnicalID = gardenerutils.ComputeTechnicalID(projectName, shoot)
 	shoot.Status.Gardener = gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion}
 	// TODO(rfranzke): This UID is used to compute the name of the BackupEntry object. Consider persisting this random
@@ -240,7 +253,15 @@ func newShootObject(ctx context.Context, projectName string, cloudProfile *garde
 		return nil, fmt.Errorf("failed computing shoot networks: %w", err)
 	}
 
-	obj.ControlPlaneNamespace = metav1.NamespaceSystem
+	// In autonomous shoot clusters, kube-system is used as the control plane namespace.
+	// However, when bootstrapping an autonomous shoot cluster with `gardenadm bootstrap` using a temporary local cluster,
+	// we want to avoid conflicts with kube-system components of the bootstrap cluster by placing all shoot-related
+	// components in another namespace. In this case, we use the technical ID as the control plane namespace, as usual.
+	// TODO(timebertt): double-check if this causes problems when importing the state into the autonomous shoot cluster
+	if !runsControlPlane {
+		obj.ControlPlaneNamespace = shoot.Status.TechnicalID
+	}
+
 	return obj, nil
 }
 
