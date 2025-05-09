@@ -249,6 +249,7 @@ build:
             - pkg/gardenadm/cmd/token/list
             - pkg/gardenadm/cmd/token/utils
             - pkg/gardenadm/cmd/version
+            - pkg/gardenadm/features
             - pkg/gardenadm/staticpod
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/apis/config/v1alpha1/helper

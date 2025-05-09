@@ -23,9 +23,7 @@ func PrepareBinary() {
 	Expect(err).NotTo(HaveOccurred())
 	logf.Log.Info("Using binary", "path", binaryPath)
 
-	DeferCleanup(func() {
-		gexec.CleanupBuildArtifacts()
-	})
+	DeferCleanup(gexec.CleanupBuildArtifacts)
 }
 
 // NewCommand creates a new exec.Cmd for gardenadm.

@@ -1,28 +1,24 @@
-// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: 2025 SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package bootstrap_test
+package cmd_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/gardener/gardener/pkg/gardenadm/cmd"
-	. "github.com/gardener/gardener/pkg/gardenadm/cmd/bootstrap"
+	. "github.com/gardener/gardener/pkg/gardenadm/cmd"
 )
 
-var _ = Describe("Options", func() {
+var _ = Describe("ManifestOptions", func() {
 	var (
-		options *Options
+		options *ManifestOptions
 	)
 
 	BeforeEach(func() {
-		options = &Options{
-			Kubeconfig: "some-path-to-kubeconfig",
-			ManifestOptions: cmd.ManifestOptions{
-				ConfigDir: "some-path-to-config-dir",
-			},
+		options = &ManifestOptions{
+			ConfigDir: "some-path-to-config-dir",
 		}
 	})
 
@@ -35,11 +31,6 @@ var _ = Describe("Options", func() {
 	Describe("#Validate", func() {
 		It("should pass for valid options", func() {
 			Expect(options.Validate()).To(Succeed())
-		})
-
-		It("should fail because kubeconfig path is not set", func() {
-			options.Kubeconfig = ""
-			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a path to a KinD cluster kubeconfig")))
 		})
 
 		It("should fail because config dir path is not set", func() {

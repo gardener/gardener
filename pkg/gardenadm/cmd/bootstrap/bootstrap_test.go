@@ -53,12 +53,7 @@ var _ = Describe("Bootstrap", func() {
 	Describe("#RunE", func() {
 		BeforeEach(func() {
 			Expect(command.Flags().Set("kubeconfig", "some-path-to-kubeconfig")).To(Succeed())
-		})
-
-		It("should return the expected output", func() {
-			Expect(command.RunE(command, nil)).To(Succeed())
-
-			Eventually(stdErr).Should(Say("work in progress"))
+			Expect(command.Flags().Set("config-dir", "some-path-to-config-dir")).To(Succeed())
 		})
 
 		Describe("safety check", func() {
