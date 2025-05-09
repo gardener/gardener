@@ -8,11 +8,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
@@ -55,9 +57,14 @@ type Extension struct {
 	ControllerInstallation *gardencorev1beta1.ControllerInstallation
 }
 
-// DirFS returns an fs.FS for the files in the given directory.
-// Exposed for testing.
-var DirFS = os.DirFS
+var (
+	// DirFS returns a fs.FS for the files in the given directory.
+	// Exposed for testing.
+	DirFS = os.DirFS
+	// NewFs returns an afero.Fs.
+	// Exposed for testing.
+	NewFs = afero.NewOsFs
+)
 
 // NewAutonomousBotanistFromManifests reads the manifests from dir and initializes a new AutonomousBotanist with them.
 func NewAutonomousBotanistFromManifests(
@@ -66,7 +73,10 @@ func NewAutonomousBotanistFromManifests(
 	clientSet kubernetes.Interface,
 	dir string,
 	runsControlPlane bool,
-) (*AutonomousBotanist, error) {
+) (
+	*AutonomousBotanist,
+	error,
+) {
 	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, err := gardenadm.ReadManifests(log, DirFS(dir))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
@@ -99,12 +109,17 @@ func NewAutonomousBotanist(
 	*AutonomousBotanist,
 	error,
 ) {
+	autonomousBotanist, err := NewAutonomousBotanistWithoutResources(log)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
+	}
+
 	gardenObj, err := newGardenObject(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating garden object: %w", err)
 	}
 
-	shootObj, err := newShootObject(ctx, project.Name, cloudProfile, shoot, runsControlPlane)
+	shootObj, err := newShootObject(ctx, autonomousBotanist.FS, project.Name, cloudProfile, shoot, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating shoot object: %w", err)
 	}
@@ -132,11 +147,6 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
-	autonomousBotanist, err := NewAutonomousBotanistWithoutResources(log)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
-	}
-
 	autonomousBotanist.Botanist = b
 	autonomousBotanist.Extensions = extensions
 
@@ -159,7 +169,7 @@ func NewAutonomousBotanistWithoutResources(log logr.Logger) (*AutonomousBotanist
 
 		HostName: hostName,
 		DBus:     dbus.New(log),
-		FS:       afero.Afero{Fs: afero.NewOsFs()},
+		FS:       afero.Afero{Fs: NewFs()},
 	}, nil
 }
 
@@ -229,17 +239,23 @@ func newSeedObject(ctx context.Context, shootObj *shootpkg.Shoot) (*seedpkg.Seed
 
 func newShootObject(
 	ctx context.Context,
+	fs afero.Afero,
 	projectName string,
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
 	runsControlPlane bool,
-) (*shootpkg.Shoot, error) {
+) (
+	*shootpkg.Shoot,
+	error,
+) {
 	shoot.Status.TechnicalID = gardenerutils.ComputeTechnicalID(projectName, shoot)
 	shoot.Status.Gardener = gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion}
-	// TODO(rfranzke): This UID is used to compute the name of the BackupEntry object. Consider persisting this random
-	//  UID on the machine in case `gardenadm init` is retried/executed multiple times (otherwise, we'd always generate
-	//  a new one).
-	shoot.Status.UID = uuid.NewUUID()
+
+	uid, err := shootUID(fs)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching shoot UID: %w", err)
+	}
+	shoot.Status.UID = uid
 
 	obj, err := shootpkg.
 		NewBuilder().
@@ -291,4 +307,29 @@ func newFakeSeedClientSet(kubernetesVersion string) kubernetes.Interface {
 		WithRESTConfig(&rest.Config{}).
 		WithVersion(kubernetesVersion).
 		Build()
+}
+
+func shootUID(fs afero.Afero) (types.UID, error) {
+	var (
+		path                    = filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
+		permissions os.FileMode = 0600
+	)
+
+	content, err := fs.ReadFile(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("failed reading file %q: %w", path, err)
+		}
+
+		if err := fs.MkdirAll(filepath.Dir(path), permissions); err != nil {
+			return "", fmt.Errorf("failed creating directory %q: %w", filepath.Dir(path), err)
+		}
+
+		content = []byte(uuid.NewUUID())
+		if err := fs.WriteFile(path, content, permissions); err != nil {
+			return "", fmt.Errorf("failed writing file %q: %w", path, err)
+		}
+	}
+
+	return types.UID(content), nil
 }
