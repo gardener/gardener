@@ -1324,7 +1324,6 @@ build:
           paths:
             - cmd/gardener-resource-manager
             - cmd/gardener-resource-manager/app
-            - cmd/gardener-resource-manager/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - pkg/api/extensions
@@ -1370,6 +1369,7 @@ build:
             - pkg/logger
             - pkg/resourcemanager/apis/config/v1alpha1
             - pkg/resourcemanager/apis/config/v1alpha1/validation
+            - pkg/resourcemanager/bootstrappers
             - pkg/resourcemanager/client
             - pkg/resourcemanager/controller
             - pkg/resourcemanager/controller/csrapprover
