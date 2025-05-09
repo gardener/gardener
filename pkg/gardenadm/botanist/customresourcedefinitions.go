@@ -11,6 +11,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	"github.com/gardener/gardener/pkg/component/autoscaling/vpa"
+	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/observability/logging/fluentoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheusoperator"
@@ -39,11 +40,17 @@ func (b *AutonomousBotanist) ReconcileCustomResourceDefinitions(ctx context.Cont
 		return fmt.Errorf("failed creating extension CRD deployer: %w", err)
 	}
 
+	etcdCRDDeployer, err := etcd.NewCRD(b.SeedClientSet.Client(), b.SeedClientSet.Applier(), b.Shoot.KubernetesVersion)
+	if err != nil {
+		return fmt.Errorf("failed creating etcd CRD deployer: %w", err)
+	}
+
 	for description, deploy := range map[string]func(context.Context) error{
 		"VPA":        vpaCRDDeployer.Deploy,
 		"Prometheus": prometheusCRDDeployer.Deploy,
 		"Fluent":     fluentCRDDeployer.Deploy,
 		"Extension":  extensionCRDDeployer.Deploy,
+		"ETCD":       etcdCRDDeployer.Deploy,
 	} {
 		if err := deploy(ctx); err != nil {
 			return fmt.Errorf("failed to deploy CustomResourceDefinition related to %s: %w", description, err)

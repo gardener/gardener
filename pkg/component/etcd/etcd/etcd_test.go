@@ -2194,4 +2194,10 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 	})
+
+	Describe("#Name", func() {
+		It("should return the expected name", func() {
+			Expect(Name("foo")).To(Equal("etcd-foo"))
+		})
+	})
 })

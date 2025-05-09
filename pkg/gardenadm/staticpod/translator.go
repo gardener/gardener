@@ -29,6 +29,16 @@ func Translate(ctx context.Context, c client.Client, o client.Object) ([]extensi
 	case *appsv1.Deployment:
 		return translatePodTemplate(ctx, c, obj.ObjectMeta, obj.Spec.Template)
 	case *appsv1.StatefulSet:
+		for _, volumeClaimTemplate := range obj.Spec.VolumeClaimTemplates {
+			obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeClaimTemplate.Name,
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: StatefulSetVolumeClaimTemplateHostPath(volumeClaimTemplate.Name),
+					},
+				},
+			})
+		}
 		return translatePodTemplate(ctx, c, obj.ObjectMeta, obj.Spec.Template)
 	case *corev1.Pod:
 		return translatePodTemplate(ctx, c, obj.ObjectMeta, corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: obj.Labels, Annotations: obj.Annotations}, Spec: obj.Spec})
@@ -72,9 +82,13 @@ func translateSpec(spec *corev1.PodSpec) {
 		corev1.HostAlias{IP: "::1", Hostnames: hostNames},
 	)
 
-	// The control plane pods need to access their secrets, which are created by gardener-node-agent as user 'root'.
-	// However, the pods run as user 'nobody'. Hence, they cannot read files owned by 'root' with permission '0600'.
-	// Setting the FSGroup to 0 allows the pods to access files as group root so that the access should work.
+	// static pods may not reference service accounts
+	spec.ServiceAccountName = ""
+	spec.DeprecatedServiceAccount = ""
+
+	// gardener-node-agent and kubelet create directories with 'root' user and group. Most of the static pods translated
+	// here are supposed to run as non-root with 'nobody' user and group. In order to allow them reading and writing to
+	// their hostPath volumes, we have to change their user and group to 'root'.
 	if spec.SecurityContext != nil && spec.SecurityContext.FSGroup != nil {
 		spec.SecurityContext.FSGroup = ptr.To[int64](0)
 	}
@@ -155,4 +169,10 @@ func translateVolumes(ctx context.Context, c client.Client, pod *corev1.Pod, sou
 	}
 
 	return files, nil
+}
+
+// StatefulSetVolumeClaimTemplateHostPath returns the host path when a VolumeClaimTemplate in a StatefulSet is
+// translated.
+func StatefulSetVolumeClaimTemplateHostPath(volumeClaimTemplateName string) string {
+	return fmt.Sprintf("/var/lib/%s/data", volumeClaimTemplateName)
 }
