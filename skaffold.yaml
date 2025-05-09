@@ -1435,7 +1435,6 @@ build:
           paths:
             - cmd/gardener-node-agent
             - cmd/gardener-node-agent/app
-            - cmd/gardener-node-agent/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/apis/config/v1alpha1
@@ -1500,6 +1499,7 @@ build:
             - pkg/nodeagent/apis/config/v1alpha1/validation
             - pkg/nodeagent/bootstrap
             - pkg/nodeagent/bootstrap/templates/scripts/format-kubelet-data-volume.tpl.sh
+            - pkg/nodeagent/bootstrappers
             - pkg/nodeagent/controller
             - pkg/nodeagent/controller/certificate
             - pkg/nodeagent/controller/healthcheck
