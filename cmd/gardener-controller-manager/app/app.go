@@ -220,13 +220,8 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 		for _, managedSeed := range managedSeedList.Items {
 			fns = append(fns, func(ctx context.Context) error {
 				obj := &managedSeed
-
-				logger := mgr.GetLogger().WithValues("objectKey", client.ObjectKeyFromObject(obj))
-				logger.Info("Check the seed name label for itself")
 				label := v1beta1constants.LabelPrefixSeedName + obj.GetName()
-				logger = logger.WithValues("label", label)
 				if _, ok := obj.GetLabels()[label]; ok {
-					logger.Info("Label exists, send an empty patch to the ManagedSeed so that the mutating webhook can remove the superfluous seed name label")
 					emptyPatch := client.MergeFrom(obj)
 					if err := mgr.GetClient().Patch(ctx, obj, emptyPatch); err != nil {
 						return fmt.Errorf("failed to patch managed seed %s: %w", client.ObjectKeyFromObject(obj), err)
@@ -234,8 +229,6 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 					if _, ok := obj.GetLabels()[label]; ok {
 						return fmt.Errorf("the label %s on the managed seed %s is still present, the mutating webhook is running in an older version", label, client.ObjectKeyFromObject(obj))
 					}
-				} else {
-					logger.Info("The label on the managed seed is not present, nothing to do")
 				}
 				return nil
 			})
