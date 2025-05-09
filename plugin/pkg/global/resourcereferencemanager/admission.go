@@ -416,6 +416,11 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		}
 
 	case core.Kind("BackupBucket"):
+		// Ignore updates to status or other subresources
+		if a.GetSubresource() != "" {
+			return nil
+		}
+
 		if operation == admission.Delete {
 			// The "delete endpoint" handler of the k8s.io/apiserver library calls the admission controllers
 			// handling DELETECOLLECTION requests with empty resource names:

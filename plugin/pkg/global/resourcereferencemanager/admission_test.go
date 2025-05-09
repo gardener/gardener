@@ -1514,6 +1514,14 @@ var _ = Describe("resourcereferencemanager", func() {
 		})
 
 		Context("tests for BackupBucket objects", func() {
+			It("should accept if the request is for subresource ", func() {
+				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "status", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+
+				attrs = admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "status", admission.Update, &metav1.CreateOptions{}, false, defaultUserInfo)
+				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
 			It("should reject if the referred Seed is not found", func() {
 				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
