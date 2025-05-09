@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	. "github.com/gardener/gardener/pkg/gardenadm/cmd/bootstrap"
 )
 
@@ -17,7 +18,12 @@ var _ = Describe("Options", func() {
 	)
 
 	BeforeEach(func() {
-		options = &Options{}
+		options = &Options{
+			Kubeconfig: "some-path-to-kubeconfig",
+			ManifestOptions: cmd.ManifestOptions{
+				ConfigDir: "some-path-to-config-dir",
+			},
+		}
 	})
 
 	Describe("#ParseArgs", func() {
@@ -28,13 +34,17 @@ var _ = Describe("Options", func() {
 
 	Describe("#Validate", func() {
 		It("should pass for valid options", func() {
-			options.Kubeconfig = "some-path-to-kubeconfig"
-
 			Expect(options.Validate()).To(Succeed())
 		})
 
 		It("should fail because kubeconfig path is not set", func() {
+			options.Kubeconfig = ""
 			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a path to a KinD cluster kubeconfig")))
+		})
+
+		It("should fail because config dir path is not set", func() {
+			options.ConfigDir = ""
+			Expect(options.Validate()).To(MatchError(ContainSubstring("must provide a path to a config directory")))
 		})
 	})
 
