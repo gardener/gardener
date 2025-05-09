@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("PrometheusRules", func() {
 	Describe("#AdditionalScrapeConfigs", func() {
-		When("isManagedSeed", func() {
+		When("seedIsShoot", func() {
 			It("should return the expected objects  (with TLS verification skipped)", func() {
 				result, err := cache.AdditionalScrapeConfigs(true)
 				Expect(err).NotTo(HaveOccurred())

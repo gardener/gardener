@@ -20,20 +20,20 @@ var (
 
 // Data represents the data for the template.
 type Data struct {
-	IsManagedSeed bool
+	SeedIsShoot bool
 }
 
 // AdditionalScrapeConfigs returns the additional scrape configs for the cache prometheus.
-func AdditionalScrapeConfigs(isManagedSeed bool) ([]string, error) {
+func AdditionalScrapeConfigs(seedIsShoot bool) ([]string, error) {
 	var out []string
 
-	if result, err := process(cAdvisor, isManagedSeed); err != nil {
+	if result, err := process(cAdvisor, seedIsShoot); err != nil {
 		return nil, fmt.Errorf("failed processing cadvisor scrape config template: %w", err)
 	} else {
 		out = append(out, result)
 	}
 
-	if result, err := process(kubelet, isManagedSeed); err != nil {
+	if result, err := process(kubelet, seedIsShoot); err != nil {
 		return nil, fmt.Errorf("failed processing kubelet scrape config template: %w", err)
 	} else {
 		out = append(out, result)
@@ -42,9 +42,9 @@ func AdditionalScrapeConfigs(isManagedSeed bool) ([]string, error) {
 	return out, nil
 }
 
-func process(text string, isManagedSeed bool) (string, error) {
+func process(text string, seedIsShoot bool) (string, error) {
 	data := Data{
-		IsManagedSeed: isManagedSeed,
+		SeedIsShoot: seedIsShoot,
 	}
 
 	tmpl, err := template.New("Template").Parse(text)
