@@ -142,6 +142,34 @@ message AvailabilityZone {
   repeated string unavailableVolumeTypes = 3;
 }
 
+// Backup contains the object store configuration for backups for shoot (currently only etcd).
+message Backup {
+  // Provider is a provider name. This field is immutable.
+  optional string provider = 1;
+
+  // ProviderConfig is the configuration passed to BackupBucket resource.
+  // +optional
+  optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
+
+  // Region is a region name. This field is immutable.
+  // +optional
+  optional string region = 3;
+
+  // SecretRef is a reference to a Secret object containing the cloud provider credentials for
+  // the object store where backups should be stored. It should have enough privileges to manipulate
+  // the objects as well as buckets.
+  // Deprecated: This field will be removed after v1.121.0 has been released. Use `CredentialsRef` instead.
+  // Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
+  optional .k8s.io.api.core.v1.SecretReference secretRef = 4;
+
+  // CredentialsRef is reference to a resource holding the credentials used for
+  // authentication with the object store service where the backups are stored.
+  // Supported referenced resources are v1.Secrets and
+  // security.gardener.cloud/v1alpha1.WorkloadIdentity
+  // +optional
+  optional .k8s.io.api.core.v1.ObjectReference credentialsRef = 5;
+}
+
 // BackupBucket holds details about backup bucket
 message BackupBucket {
   // Standard object metadata.
@@ -2576,34 +2604,6 @@ message Seed {
   optional SeedStatus status = 3;
 }
 
-// SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
-message SeedBackup {
-  // Provider is a provider name. This field is immutable.
-  optional string provider = 1;
-
-  // ProviderConfig is the configuration passed to BackupBucket resource.
-  // +optional
-  optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
-
-  // Region is a region name. This field is immutable.
-  // +optional
-  optional string region = 3;
-
-  // SecretRef is a reference to a Secret object containing the cloud provider credentials for
-  // the object store where backups should be stored. It should have enough privileges to manipulate
-  // the objects as well as buckets.
-  // Deprecated: This field will be removed after v1.121.0 has been released. Use `CredentialsRef` instead.
-  // Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
-  optional .k8s.io.api.core.v1.SecretReference secretRef = 4;
-
-  // CredentialsRef is reference to a resource holding the credentials used for
-  // authentication with the object store service where the backups are stored.
-  // Supported referenced resources are v1.Secrets and
-  // security.gardener.cloud/v1alpha1.WorkloadIdentity
-  // +optional
-  optional .k8s.io.api.core.v1.ObjectReference credentialsRef = 5;
-}
-
 // SeedDNS contains DNS-relevant information about this seed cluster.
 message SeedDNS {
   // Provider configures a DNSProvider
@@ -2843,7 +2843,7 @@ message SeedSpec {
   // If backup field is present in seed, then backups of the etcd from shoot control plane will be stored
   // under the configured object store.
   // +optional
-  optional SeedBackup backup = 1;
+  optional Backup backup = 1;
 
   // DNS contains DNS-relevant information about this seed cluster.
   optional SeedDNS dns = 2;

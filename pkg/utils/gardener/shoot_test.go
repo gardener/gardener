@@ -1158,7 +1158,7 @@ var _ = Describe("Shoot", func() {
 			externalDomain = &Domain{Provider: dnsProviderType2}
 			seed = &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
-					Backup: &gardencorev1beta1.SeedBackup{
+					Backup: &gardencorev1beta1.Backup{
 						Provider: backupProvider,
 					},
 					Provider: gardencorev1beta1.SeedProvider{

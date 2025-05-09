@@ -32,7 +32,7 @@ var _ = Describe("Gardenlet Validation Tests", func() {
 				},
 			},
 			Spec: core.SeedSpec{
-				Backup: &core.SeedBackup{
+				Backup: &core.Backup{
 					Provider: "foo",
 					Region:   ptr.To("some-region"),
 					CredentialsRef: &corev1.ObjectReference{

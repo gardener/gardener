@@ -191,7 +191,7 @@ var _ = Describe("Namespaces", func() {
 		})
 
 		It("should successfully deploy the namespace w/ dedicated backup provider", func() {
-			defaultSeedInfo.Spec.Backup = &gardencorev1beta1.SeedBackup{Provider: backupProviderType}
+			defaultSeedInfo.Spec.Backup = &gardencorev1beta1.Backup{Provider: backupProviderType}
 			botanist.Seed.SetInfo(defaultSeedInfo)
 
 			Expect(seedClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(BeNotFoundError())

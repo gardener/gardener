@@ -233,7 +233,7 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	return allErrs
 }
 
-func validateSeedBackup(seedBackup *core.SeedBackup, seedProviderType string, fldPath *field.Path) field.ErrorList {
+func validateSeedBackup(seedBackup *core.Backup, seedProviderType string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if seedBackup == nil {

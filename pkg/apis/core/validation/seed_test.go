@@ -28,7 +28,7 @@ var _ = Describe("Seed Validation Tests", func() {
 	var (
 		seed         *core.Seed
 		seedTemplate *core.SeedTemplate
-		backup       *core.SeedBackup
+		backup       *core.Backup
 	)
 
 	BeforeEach(func() {
@@ -72,7 +72,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						Services: &services,
 					},
 				},
-				Backup: &core.SeedBackup{
+				Backup: &core.Backup{
 					Provider: "foo",
 					Region:   &region,
 					CredentialsRef: &corev1.ObjectReference{
