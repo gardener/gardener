@@ -17,24 +17,24 @@ import (
 
 var _ = Describe("BackupEntry", func() {
 	var (
-		shootTechnicalID      = "seednamespace"
+		controlPlaneNamespace = "shoot--foo--bar"
 		shootStatusUID        = types.UID("5678")
 		shootUID              = types.UID("1234")
-		backupEntryName       = shootTechnicalID + "--" + string(shootStatusUID)
-		sourceBackupEntryName = "source-" + shootTechnicalID + "--" + string(shootStatusUID)
+		backupEntryName       = controlPlaneNamespace + "--" + string(shootStatusUID)
+		sourceBackupEntryName = "source-" + controlPlaneNamespace + "--" + string(shootStatusUID)
 	)
 
 	Describe("#GenerateBackupEntryName", func() {
 		It("should compute the correct name (using status UID)", func() {
-			result, err := GenerateBackupEntryName(shootTechnicalID, shootStatusUID, shootUID)
+			result, err := GenerateBackupEntryName(controlPlaneNamespace, shootStatusUID, shootUID)
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(backupEntryName))
 		})
 
 		It("should compute the correct name (using metadata UID)", func() {
-			result, err := GenerateBackupEntryName(shootTechnicalID, "", shootUID)
+			result, err := GenerateBackupEntryName(controlPlaneNamespace, "", shootUID)
 			Expect(err).To(Not(HaveOccurred()))
-			Expect(result).To(Equal(shootTechnicalID + "--" + string(shootUID)))
+			Expect(result).To(Equal(controlPlaneNamespace + "--" + string(shootUID)))
 		})
 
 		It("should fail if the shoot technical ID is empty", func() {
@@ -43,21 +43,21 @@ var _ = Describe("BackupEntry", func() {
 		})
 
 		It("should fail if the shoot UID is empty", func() {
-			_, err := GenerateBackupEntryName(shootTechnicalID, "", "")
+			_, err := GenerateBackupEntryName(controlPlaneNamespace, "", "")
 			Expect(err).To(HaveOccurred())
 		})
 	})
 
 	Describe("#ExtractShootDetailsFromBackupEntryName", func() {
 		It("should return the correct parts of the name for core backupentry", func() {
-			technicalID, uid := ExtractShootDetailsFromBackupEntryName(backupEntryName)
-			Expect(technicalID).To(Equal(shootTechnicalID))
+			namespace, uid := ExtractShootDetailsFromBackupEntryName(backupEntryName)
+			Expect(namespace).To(Equal(controlPlaneNamespace))
 			Expect(uid).To(Equal(shootStatusUID))
 		})
 
 		It("should return the correct parts of the name for source backupentry", func() {
-			technicalID, uid := ExtractShootDetailsFromBackupEntryName(sourceBackupEntryName)
-			Expect(technicalID).To(Equal(shootTechnicalID))
+			namespace, uid := ExtractShootDetailsFromBackupEntryName(sourceBackupEntryName)
+			Expect(namespace).To(Equal(controlPlaneNamespace))
 			Expect(uid).To(Equal(shootStatusUID))
 		})
 	})
