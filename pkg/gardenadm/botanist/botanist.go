@@ -115,40 +115,11 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
 	}
 
-	gardenObj, err := newGardenObject(ctx, project)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating garden object: %w", err)
-	}
-
-	shootObj, err := newShootObject(ctx, autonomousBotanist.FS, project.Name, cloudProfile, shoot, runsControlPlane)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating shoot object: %w", err)
-	}
-
-	seedObj, err := newSeedObject(ctx, shootObj)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating seed object: %w", err)
-	}
-
-	keysAndValues := []any{"cloudProfile", cloudProfile, "project", project, "shoot", shoot}
-	if clientSet == nil {
-		clientSet = newFakeSeedClientSet(seedObj.KubernetesVersion.String())
-		log.Info("Initializing autonomous botanist with fake client set", keysAndValues...) //nolint:logcheck
-	} else {
-		log.Info("Initializing autonomous botanist with control plane client set", keysAndValues...) //nolint:logcheck
-	}
-
-	o := newOperation(log, clientSet)
-	o.Garden = gardenObj
-	o.Seed = seedObj
-	o.Shoot = shootObj
-
-	b, err := botanistpkg.New(ctx, o)
+	autonomousBotanist.Botanist, err = newBotanist(ctx, log, clientSet, autonomousBotanist.FS, project, cloudProfile, shoot, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
 
-	autonomousBotanist.Botanist = b
 	autonomousBotanist.Extensions = extensions
 
 	if err := autonomousBotanist.initializeFakeGardenResources(ctx, secrets); err != nil {
@@ -181,6 +152,50 @@ func newOperation(log logr.Logger, clientSet kubernetes.Interface) *operation.Op
 		SeedClientSet:  clientSet,
 		ShootClientSet: clientSet,
 	}
+}
+
+func newBotanist(
+	ctx context.Context,
+	log logr.Logger,
+	clientSet kubernetes.Interface,
+	fs afero.Afero,
+	project *gardencorev1beta1.Project,
+	cloudProfile *gardencorev1beta1.CloudProfile,
+	shoot *gardencorev1beta1.Shoot,
+	runsControlPlane bool,
+) (
+	*botanistpkg.Botanist,
+	error,
+) {
+	gardenObj, err := newGardenObject(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating garden object: %w", err)
+	}
+
+	shootObj, err := newShootObject(ctx, fs, project.Name, cloudProfile, shoot, runsControlPlane)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating shoot object: %w", err)
+	}
+
+	seedObj, err := newSeedObject(ctx, shootObj)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating seed object: %w", err)
+	}
+
+	keysAndValues := []any{"cloudProfile", cloudProfile, "project", project, "shoot", shoot}
+	if clientSet == nil {
+		clientSet = newFakeSeedClientSet(seedObj.KubernetesVersion.String())
+		log.Info("Initializing autonomous botanist with fake client set", keysAndValues...) //nolint:logcheck
+	} else {
+		log.Info("Initializing autonomous botanist with control plane client set", keysAndValues...) //nolint:logcheck
+	}
+
+	o := newOperation(log, clientSet)
+	o.Garden = gardenObj
+	o.Seed = seedObj
+	o.Shoot = shootObj
+
+	return botanistpkg.New(ctx, o)
 }
 
 func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context, secrets []*corev1.Secret) error {
