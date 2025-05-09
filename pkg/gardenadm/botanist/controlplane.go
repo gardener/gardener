@@ -156,13 +156,18 @@ func (b *AutonomousBotanist) filesForStaticControlPlanePods(ctx context.Context)
 	return files, nil
 }
 
-// CreateClientSet creates a client set for the control plane.
-func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.Interface, error) {
-	clientSet, err := kubernetes.NewClientFromFile("", PathKubeconfig,
+// NewClientSetFromFile creates a client set from the specified kubeconfig file.
+func NewClientSetFromFile(kubeconfigPath string) (kubernetes.Interface, error) {
+	return kubernetes.NewClientFromFile("", kubeconfigPath,
 		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 		kubernetes.WithClientConnectionOptions(componentbaseconfigv1alpha1.ClientConnectionConfiguration{QPS: 100, Burst: 130}),
 		kubernetes.WithDisabledCachedClient(),
 	)
+}
+
+// CreateClientSet creates a client set for the control plane.
+func (b *AutonomousBotanist) CreateClientSet(ctx context.Context) (kubernetes.Interface, error) {
+	clientSet, err := NewClientSetFromFile(PathKubeconfig)
 	if err != nil {
 		b.Logger.Info("Waiting for kube-apiserver to start", "error", err.Error())
 		return nil, fmt.Errorf("failed creating client set: %w", err)
