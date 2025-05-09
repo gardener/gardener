@@ -6,6 +6,7 @@ package shared_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -384,6 +385,23 @@ var _ = Describe("GardenerAPIServer", func() {
 				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gardenerAPIServer.GetValues().WatchCacheSizes).To(Equal(watchCacheSizes))
+			})
+		})
+
+		Describe("ShootAdminKubeconfigMaxExpiration", func() {
+			It("should set the field to nil by default", func() {
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(gardenerAPIServer.GetValues().ShootAdminKubeconfigMaxExpiration).To(BeNil())
+			})
+
+			It("should set the field to the configured values", func() {
+				shootAdminKubeconfigMaxExpiration := &metav1.Duration{Duration: 1 * time.Hour}
+				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{ShootAdminKubeconfigMaxExpiration: shootAdminKubeconfigMaxExpiration}
+
+				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(gardenerAPIServer.GetValues().ShootAdminKubeconfigMaxExpiration).To(Equal(shootAdminKubeconfigMaxExpiration))
 			})
 		})
 

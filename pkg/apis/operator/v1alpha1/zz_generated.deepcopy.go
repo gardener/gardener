@@ -1007,6 +1007,11 @@ func (in *GardenerAPIServerConfig) DeepCopyInto(out *GardenerAPIServerConfig) {
 		*out = new(float64)
 		**out = **in
 	}
+	if in.ShootAdminKubeconfigMaxExpiration != nil {
+		in, out := &in.ShootAdminKubeconfigMaxExpiration, &out.ShootAdminKubeconfigMaxExpiration
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 

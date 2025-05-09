@@ -6,6 +6,7 @@ package validation_test
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -1665,6 +1666,26 @@ var _ = Describe("Validation Tests", func() {
 								}},
 							}, ConsistOf(
 								field.Required(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.watchCacheSizes.resources[0].resource"), "must not be empty"),
+							)),
+						)
+					})
+
+					Context("ShootAdminKubeconfigMaxExpiration", func() {
+						DescribeTable("ShootAdminKubeconfigMaxExpiration validation",
+							func(duration *metav1.Duration, matcher gomegatypes.GomegaMatcher) {
+								garden.Spec.VirtualCluster.Gardener.APIServer.ShootAdminKubeconfigMaxExpiration = duration
+								Expect(ValidateGarden(garden)).To(matcher)
+							},
+
+							Entry("valid (unset)", nil, BeEmpty()),
+							Entry("valid (1 hour)", &metav1.Duration{Duration: time.Hour}, BeEmpty()),
+							Entry("valid (24 hours)", &metav1.Duration{Duration: 24 * time.Hour}, BeEmpty()),
+							Entry("valid (maximum allowed)", &metav1.Duration{Duration: time.Duration(1<<32) * time.Second}, BeEmpty()),
+							Entry("invalid (less than 1 hour)", &metav1.Duration{Duration: 30 * time.Minute}, ConsistOf(
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.shootAdminKubeconfigMaxExpiration"), 30*time.Minute, "must be between 1h and 2^32 seconds"),
+							)),
+							Entry("invalid (greater than 2^32 seconds)", &metav1.Duration{Duration: time.Duration(1<<32+1) * time.Second}, ConsistOf(
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.shootAdminKubeconfigMaxExpiration"), time.Duration(1<<32+1)*time.Second, "must be between 1h and 2^32 seconds"),
 							)),
 						)
 					})

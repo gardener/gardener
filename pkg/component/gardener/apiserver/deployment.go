@@ -55,6 +55,10 @@ func (g *gardenerAPIServer) deployment(
 		fmt.Sprintf("--secure-port=%d", port),
 	}
 
+	if g.values.ShootAdminKubeconfigMaxExpiration != nil {
+		args = append(args, fmt.Sprintf("--shoot-admin-kubeconfig-max-expiration=%s", g.values.ShootAdminKubeconfigMaxExpiration.Duration))
+	}
+
 	if g.values.GoAwayChance != nil {
 		args = append(args, fmt.Sprintf("--goaway-chance=%f", *g.values.GoAwayChance))
 	}

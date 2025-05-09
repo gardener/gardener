@@ -497,6 +497,11 @@ type GardenerAPIServerConfig struct {
 	// +kubebuilder:validation:Maximum=0.02
 	// +optional
 	GoAwayChance *float64 `json:"goAwayChance,omitempty"`
+	// ShootAdminKubeconfigMaxExpiration is the maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest.
+	// If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested,
+	// a credential will be issued with a validity duration of this value.
+	// +optional
+	ShootAdminKubeconfigMaxExpiration *metav1.Duration `json:"shootAdminKubeconfigMaxExpiration,omitempty"`
 }
 
 // GardenerAdmissionControllerConfig contains configuration settings for the gardener-admission-controller.

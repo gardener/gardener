@@ -6,6 +6,7 @@ package apiserver_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -128,13 +129,14 @@ var _ = Describe("GardenerAPIServer", func() {
 				Replicas:           &replicas,
 				APIServerResources: resources,
 			},
-			ClusterIdentity:             clusterIdentity,
-			Image:                       image,
-			LogFormat:                   logFormat,
-			LogLevel:                    logLevel,
-			GoAwayChance:                ptr.To(0.0015),
-			TopologyAwareRoutingEnabled: true,
-			WorkloadIdentityTokenIssuer: workloadIdentityIssuer,
+			ClusterIdentity:                   clusterIdentity,
+			Image:                             image,
+			LogFormat:                         logFormat,
+			LogLevel:                          logLevel,
+			GoAwayChance:                      ptr.To(0.0015),
+			ShootAdminKubeconfigMaxExpiration: &metav1.Duration{Duration: 1 * time.Hour},
+			TopologyAwareRoutingEnabled:       true,
+			WorkloadIdentityTokenIssuer:       workloadIdentityIssuer,
 		}
 		deployer = New(fakeClient, namespace, fakeSecretManager, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(fakeClient)
@@ -336,6 +338,7 @@ var _ = Describe("GardenerAPIServer", func() {
 								"--log-level=" + logLevel,
 								"--log-format=" + logFormat,
 								"--secure-port=8443",
+								"--shoot-admin-kubeconfig-max-expiration=1h0m0s",
 								"--goaway-chance=0.001500",
 								"--workload-identity-token-issuer=" + workloadIdentityIssuer,
 								"--workload-identity-signing-key-file=/etc/gardener-apiserver/workload-identity/signing/key.pem",

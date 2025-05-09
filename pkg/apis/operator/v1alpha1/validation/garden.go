@@ -9,6 +9,7 @@ import (
 	"net"
 	"slices"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -443,6 +444,12 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 			allErrs = append(allErrs, field.InternalError(fldPath.Child("requests"), err))
 		}
 		allErrs = append(allErrs, gardencorevalidation.ValidateAPIServerRequests(requests, fldPath.Child("requests"))...)
+	}
+
+	if config.ShootAdminKubeconfigMaxExpiration != nil {
+		if config.ShootAdminKubeconfigMaxExpiration.Duration < time.Hour || config.ShootAdminKubeconfigMaxExpiration.Duration > time.Duration(1<<32)*time.Second {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("shootAdminKubeconfigMaxExpiration"), config.ShootAdminKubeconfigMaxExpiration.Duration, "must be between 1h and 2^32 seconds"))
+		}
 	}
 
 	return allErrs
