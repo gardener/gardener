@@ -203,7 +203,7 @@ func (b *backupEntry) GetActualBucketName() string {
 	return b.backupEntry.Spec.BucketName
 }
 
-// SetBackupBucket sets the name of the BackupBucket for this BackupEntry.
+// SetBucketName sets the name of the BackupBucket for this BackupEntry.
 func (b *backupEntry) SetBucketName(name string) {
 	b.values.BucketName = name
 }
