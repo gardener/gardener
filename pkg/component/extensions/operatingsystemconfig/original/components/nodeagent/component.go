@@ -170,6 +170,7 @@ func fileContentImageRef(image string) *extensionsv1alpha1.FileContentImageRef {
 
 // FilePathInImage returns the path of the gardener-node-agent binary file in its container image.
 func FilePathInImage(image string) string {
+	// TODO(timebertt): drop this workaround after https://github.com/gardener/gardener/pull/12021 has been released
 	var prefix string
 	if strings.HasPrefix(image, "garden.local.gardener.cloud:5001") {
 		prefix = "/ko-app"

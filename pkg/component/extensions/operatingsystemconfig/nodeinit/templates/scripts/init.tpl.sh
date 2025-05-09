@@ -17,7 +17,13 @@ ctr images mount "{{ .image }}" "$tmp_dir"
 
 echo "> Copy gardener-node-agent binary to host ({{ .binaryDirectory }}) and make it executable"
 mkdir -p "{{ .binaryDirectory }}"
-cp -f "$tmp_dir{{ .binaryFilePathInImage }}" "{{ .binaryDirectory }}/gardener-node-agent"
+
+{{- /*
+Fall back to /ko-app/gardener-node-agent if /gardener-node-agent doesn't exist in image to support images built with ko.
+TODO(timebertt): remove this fallback once https://github.com/ko-build/ko/pull/1403 has been released and is used to
+ build images in the skaffold-based setup (add a breaking release note!).
+*/}}
+cp -f "$tmp_dir/gardener-node-agent" "{{ .binaryDirectory }}" || cp -f "$tmp_dir/ko-app/gardener-node-agent" "{{ .binaryDirectory }}"
 chmod +x "{{ .binaryDirectory }}/gardener-node-agent"
 
 echo "> Bootstrap gardener-node-agent"
