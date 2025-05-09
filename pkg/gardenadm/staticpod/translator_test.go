@@ -50,7 +50,9 @@ var _ = Describe("Translator", func() {
 								Annotations: map[string]string{"bar": "baz"},
 							},
 							Spec: corev1.PodSpec{
-								SecurityContext: &corev1.PodSecurityContext{FSGroup: ptr.To[int64](65534)},
+								SecurityContext:          &corev1.PodSecurityContext{FSGroup: ptr.To[int64](65534)},
+								ServiceAccountName:       "remove-me",
+								DeprecatedServiceAccount: "remove-me",
 							},
 						},
 					},
@@ -284,7 +286,9 @@ kind: Config
 								Annotations: map[string]string{"bar": "baz"},
 							},
 							Spec: corev1.PodSpec{
-								SecurityContext: &corev1.PodSecurityContext{FSGroup: ptr.To[int64](65534)},
+								SecurityContext:          &corev1.PodSecurityContext{FSGroup: ptr.To[int64](65534)},
+								ServiceAccountName:       "remove-me",
+								DeprecatedServiceAccount: "remove-me",
 							},
 						},
 					},
@@ -512,6 +516,10 @@ kind: Config
 						ResourceVersion: "1",
 						Finalizers:      []string{"bar"},
 						OwnerReferences: []metav1.OwnerReference{{}},
+					},
+					Spec: corev1.PodSpec{
+						ServiceAccountName:       "remove-me",
+						DeprecatedServiceAccount: "remove-me",
 					},
 				}
 			})
