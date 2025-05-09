@@ -960,7 +960,6 @@ build:
             - charts/gardener/gardenlet
             - cmd/gardenlet
             - cmd/gardenlet/app
-            - cmd/gardenlet/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/controller
@@ -1205,6 +1204,7 @@ build:
             - pkg/gardenlet/bootstrap
             - pkg/gardenlet/bootstrap/certificate
             - pkg/gardenlet/bootstrap/util
+            - pkg/gardenlet/bootstrappers
             - pkg/gardenlet/controller
             - pkg/gardenlet/controller/backupbucket
             - pkg/gardenlet/controller/backupentry

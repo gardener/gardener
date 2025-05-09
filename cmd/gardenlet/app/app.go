@@ -41,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/gardener/gardener/cmd/gardenlet/app/bootstrappers"
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -60,6 +59,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
+	bootstrappers2 "github.com/gardener/gardener/pkg/gardenlet/bootstrappers"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/utils"
@@ -174,16 +174,16 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *g
 	}
 
 	log.Info("Adding runnables to manager for bootstrapping")
-	kubeconfigBootstrapResult := &bootstrappers.KubeconfigBootstrapResult{}
+	kubeconfigBootstrapResult := &bootstrappers2.KubeconfigBootstrapResult{}
 
 	if err := mgr.Add(&controllerutils.ControlledRunner{
 		Manager: mgr,
 		BootstrapRunnables: []manager.Runnable{
-			&bootstrappers.SeedConfigChecker{
+			&bootstrappers2.SeedConfigChecker{
 				SeedClient: mgr.GetClient(),
 				SeedConfig: cfg.SeedConfig,
 			},
-			&bootstrappers.GardenKubeconfig{
+			&bootstrappers2.GardenKubeconfig{
 				SeedClient: mgr.GetClient(),
 				Log:        mgr.GetLogger().WithName("bootstrap"),
 				Config:     cfg,
@@ -212,7 +212,7 @@ type garden struct {
 	mgr                       manager.Manager
 	config                    *gardenletconfigv1alpha1.GardenletConfiguration
 	healthManager             gardenerhealthz.Manager
-	kubeconfigBootstrapResult *bootstrappers.KubeconfigBootstrapResult
+	kubeconfigBootstrapResult *bootstrappers2.KubeconfigBootstrapResult
 }
 
 func (g *garden) Start(ctx context.Context) error {
