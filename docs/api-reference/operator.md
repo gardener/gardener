@@ -1994,7 +1994,7 @@ recommended starting point.</p>
 </tr>
 <tr>
 <td>
-<code>adminKubeconfigMaxExpiration</code></br>
+<code>shootAdminKubeconfigMaxExpiration</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#duration-v1-meta">
 Kubernetes meta/v1.Duration
@@ -2003,7 +2003,7 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>AdminKubeconfigMaxExpiration is the maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest.
+<p>ShootAdminKubeconfigMaxExpiration is the maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest.
 If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested,
 a credential will be issued with a validity duration of this value.</p>
 </td>

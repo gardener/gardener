@@ -388,7 +388,7 @@ var _ = Describe("GardenerAPIServer", func() {
 			})
 		})
 
-		Describe("adminKubeconfigMaxExpiration", func() {
+		Describe("ShootAdminKubeconfigMaxExpiration", func() {
 			It("should set the field to nil by default", func() {
 				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())
@@ -396,12 +396,12 @@ var _ = Describe("GardenerAPIServer", func() {
 			})
 
 			It("should set the field to the configured values", func() {
-				adminKubeconfigMaxExpiration := &metav1.Duration{Duration: 1 * time.Hour}
-				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{AdminKubeconfigMaxExpiration: adminKubeconfigMaxExpiration}
+				shootAdminKubeconfigMaxExpiration := &metav1.Duration{Duration: 1 * time.Hour}
+				apiServerConfig = &operatorv1alpha1.GardenerAPIServerConfig{ShootAdminKubeconfigMaxExpiration: shootAdminKubeconfigMaxExpiration}
 
 				gardenerAPIServer, err := NewGardenerAPIServer(ctx, runtimeClient, namespace, objectMeta, runtimeVersion, sm, apiServerConfig, autoscalingConfig, auditWebhookConfig, topologyAwareRoutingEnabled, clusterIdentity, workloadIdentityTokenIssuer, &goAwayChance)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(gardenerAPIServer.GetValues().AdminKubeconfigMaxExpiration).To(Equal(adminKubeconfigMaxExpiration))
+				Expect(gardenerAPIServer.GetValues().AdminKubeconfigMaxExpiration).To(Equal(shootAdminKubeconfigMaxExpiration))
 			})
 		})
 

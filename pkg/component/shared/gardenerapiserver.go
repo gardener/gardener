@@ -50,14 +50,14 @@ func NewGardenerAPIServer(
 	image.WithOptionalTag(version.Get().GitVersion)
 
 	var (
-		auditConfig                  *apiserver.AuditConfig
-		enabledAdmissionPlugins      []gardencorev1beta1.AdmissionPlugin
-		disabledAdmissionPlugins     []gardencorev1beta1.AdmissionPlugin
-		featureGates                 map[string]bool
-		requests                     *gardencorev1beta1.APIServerRequests
-		watchCacheSizes              *gardencorev1beta1.WatchCacheSizes
-		logging                      *gardencorev1beta1.APIServerLogging
-		adminKubeconfigMaxExpiration *metav1.Duration
+		auditConfig                       *apiserver.AuditConfig
+		enabledAdmissionPlugins           []gardencorev1beta1.AdmissionPlugin
+		disabledAdmissionPlugins          []gardencorev1beta1.AdmissionPlugin
+		featureGates                      map[string]bool
+		requests                          *gardencorev1beta1.APIServerRequests
+		watchCacheSizes                   *gardencorev1beta1.WatchCacheSizes
+		logging                           *gardencorev1beta1.APIServerLogging
+		shootAdminKubeconfigMaxExpiration *metav1.Duration
 	)
 
 	if apiServerConfig != nil {
@@ -72,7 +72,7 @@ func NewGardenerAPIServer(
 		logging = apiServerConfig.Logging
 		requests = apiServerConfig.Requests
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
-		adminKubeconfigMaxExpiration = apiServerConfig.AdminKubeconfigMaxExpiration
+		shootAdminKubeconfigMaxExpiration = apiServerConfig.ShootAdminKubeconfigMaxExpiration
 	}
 
 	logLevel := logger.InfoLevel
@@ -106,7 +106,7 @@ func NewGardenerAPIServer(
 			LogLevel:                     logLevel,
 			LogFormat:                    logger.FormatJSON,
 			GoAwayChance:                 goAwayChance,
-			AdminKubeconfigMaxExpiration: adminKubeconfigMaxExpiration,
+			AdminKubeconfigMaxExpiration: shootAdminKubeconfigMaxExpiration,
 			TopologyAwareRoutingEnabled:  topologyAwareRoutingEnabled,
 			WorkloadIdentityTokenIssuer:  workloadIdentityTokenIssuer,
 		},

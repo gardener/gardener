@@ -216,7 +216,7 @@ spec:
     #   featureGates:
     #     SomeGardenerFeature: true
     #   goAwayChance: 0.001
-    #   adminKubeconfigMaxExpiration: 24h
+    #   shootAdminKubeconfigMaxExpiration: 24h
     #   logging:
     #     verbosity: 2
     #     httpAccessVerbosity: 3

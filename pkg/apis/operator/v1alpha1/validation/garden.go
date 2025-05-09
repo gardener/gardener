@@ -446,9 +446,9 @@ func validateGardenerAPIServerConfig(config *operatorv1alpha1.GardenerAPIServerC
 		allErrs = append(allErrs, gardencorevalidation.ValidateAPIServerRequests(requests, fldPath.Child("requests"))...)
 	}
 
-	if config.AdminKubeconfigMaxExpiration != nil {
-		if config.AdminKubeconfigMaxExpiration.Duration < time.Hour || config.AdminKubeconfigMaxExpiration.Duration > time.Duration(1<<32)*time.Second {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("adminKubeconfigMaxExpiration"), config.AdminKubeconfigMaxExpiration.Duration, "must be between 1h and 2^32 seconds"))
+	if config.ShootAdminKubeconfigMaxExpiration != nil {
+		if config.ShootAdminKubeconfigMaxExpiration.Duration < time.Hour || config.ShootAdminKubeconfigMaxExpiration.Duration > time.Duration(1<<32)*time.Second {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("shootAdminKubeconfigMaxExpiration"), config.ShootAdminKubeconfigMaxExpiration.Duration, "must be between 1h and 2^32 seconds"))
 		}
 	}
 

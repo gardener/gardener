@@ -492,12 +492,6 @@ spec:
                         description: APIServer contains configuration settings for
                           the gardener-apiserver.
                         properties:
-                          adminKubeconfigMaxExpiration:
-                            description: |-
-                              AdminKubeconfigMaxExpiration is the maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest.
-                              If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested,
-                              a credential will be issued with a validity duration of this value.
-                            type: string
                           admissionPlugins:
                             description: |-
                               AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener),
@@ -674,6 +668,12 @@ spec:
                                 format: int32
                                 type: integer
                             type: object
+                          shootAdminKubeconfigMaxExpiration:
+                            description: |-
+                              ShootAdminKubeconfigMaxExpiration is the maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest.
+                              If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested,
+                              a credential will be issued with a validity duration of this value.
+                            type: string
                           watchCacheSizes:
                             description: |-
                               WatchCacheSizes contains configuration of the API server's watch cache sizes.

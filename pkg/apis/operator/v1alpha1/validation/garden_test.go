@@ -1670,10 +1670,10 @@ var _ = Describe("Validation Tests", func() {
 						)
 					})
 
-					Context("AdminKubeconfigMaxExpiration", func() {
-						DescribeTable("adminKubeconfigMaxExpiration validation",
+					Context("ShootAdminKubeconfigMaxExpiration", func() {
+						DescribeTable("ShootAdminKubeconfigMaxExpiration validation",
 							func(duration *metav1.Duration, matcher gomegatypes.GomegaMatcher) {
-								garden.Spec.VirtualCluster.Gardener.APIServer.AdminKubeconfigMaxExpiration = duration
+								garden.Spec.VirtualCluster.Gardener.APIServer.ShootAdminKubeconfigMaxExpiration = duration
 								Expect(ValidateGarden(garden)).To(matcher)
 							},
 
@@ -1682,10 +1682,10 @@ var _ = Describe("Validation Tests", func() {
 							Entry("valid (24 hours)", &metav1.Duration{Duration: 24 * time.Hour}, BeEmpty()),
 							Entry("valid (maximum allowed)", &metav1.Duration{Duration: time.Duration(1<<32) * time.Second}, BeEmpty()),
 							Entry("invalid (less than 1 hour)", &metav1.Duration{Duration: 30 * time.Minute}, ConsistOf(
-								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.adminKubeconfigMaxExpiration"), 30*time.Minute, "must be between 1h and 2^32 seconds"),
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.shootAdminKubeconfigMaxExpiration"), 30*time.Minute, "must be between 1h and 2^32 seconds"),
 							)),
 							Entry("invalid (greater than 2^32 seconds)", &metav1.Duration{Duration: time.Duration(1<<32+1) * time.Second}, ConsistOf(
-								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.adminKubeconfigMaxExpiration"), time.Duration(1<<32+1)*time.Second, "must be between 1h and 2^32 seconds"),
+								field.Invalid(field.NewPath("spec.virtualCluster.gardener.gardenerAPIServer.shootAdminKubeconfigMaxExpiration"), time.Duration(1<<32+1)*time.Second, "must be between 1h and 2^32 seconds"),
 							)),
 						)
 					})
