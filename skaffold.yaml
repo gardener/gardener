@@ -246,7 +246,6 @@ build:
           paths:
             - cmd/gardener-controller-manager
             - cmd/gardener-controller-manager/app
-            - cmd/gardener-controller-manager/app/bootstrappers
             - cmd/utils
             - cmd/utils/initrun
             - extensions/pkg/apis/config/v1alpha1
@@ -296,6 +295,7 @@ build:
             - pkg/controller/reference
             - pkg/controllermanager/apis/config/v1alpha1
             - pkg/controllermanager/apis/config/v1alpha1/validation
+            - pkg/controllermanager/bootstrappers
             - pkg/controllermanager/controller
             - pkg/controllermanager/controller/bastion
             - pkg/controllermanager/controller/certificatesigningrequest
