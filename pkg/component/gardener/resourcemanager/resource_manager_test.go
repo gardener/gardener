@@ -913,8 +913,8 @@ var _ = Describe("ResourceManager", func() {
 				}}
 			}
 
-			ignoreStaticPodsInBootstrapMode := func(in []metav1.LabelSelectorRequirement) []metav1.LabelSelectorRequirement {
-				if !bootstrapControlPlaneNode {
+			ignoreStaticPods := func(in []metav1.LabelSelectorRequirement) []metav1.LabelSelectorRequirement {
+				if responsibilityMode != ForSourceAndTarget {
 					return in
 				}
 
@@ -947,7 +947,7 @@ var _ = Describe("ResourceManager", func() {
 						}},
 						NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 						ObjectSelector: &metav1.LabelSelector{
-							MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
+							MatchExpressions: ignoreStaticPods([]metav1.LabelSelectorRequirement{
 								{
 									Key:      "projected-token-mount.resources.gardener.cloud/skip",
 									Operator: metav1.LabelSelectorOpDoesNotExist,
@@ -1038,7 +1038,7 @@ var _ = Describe("ResourceManager", func() {
 					}},
 					NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 					ObjectSelector: &metav1.LabelSelector{
-						MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
+						MatchExpressions: ignoreStaticPods([]metav1.LabelSelectorRequirement{
 							{
 								Key:      "seccompprofile.resources.gardener.cloud/skip",
 								Operator: metav1.LabelSelectorOpDoesNotExist,
@@ -1081,7 +1081,7 @@ var _ = Describe("ResourceManager", func() {
 						}},
 					},
 					ObjectSelector: &metav1.LabelSelector{
-						MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
+						MatchExpressions: ignoreStaticPods([]metav1.LabelSelectorRequirement{
 							{
 								Key:      resourcesv1alpha1.KubernetesServiceHostInject,
 								Operator: metav1.LabelSelectorOpNotIn,
@@ -1152,7 +1152,7 @@ var _ = Describe("ResourceManager", func() {
 						}},
 						NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 						ObjectSelector: &metav1.LabelSelector{
-							MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{{
+							MatchExpressions: ignoreStaticPods([]metav1.LabelSelectorRequirement{{
 								Key:      "system-components-config.resources.gardener.cloud/skip",
 								Operator: metav1.LabelSelectorOpDoesNotExist,
 							}}),
@@ -1185,7 +1185,7 @@ var _ = Describe("ResourceManager", func() {
 				}},
 				NamespaceSelector: &metav1.LabelSelector{MatchExpressions: namespaceSelectorMatchExpressions},
 				ObjectSelector: &metav1.LabelSelector{
-					MatchExpressions: ignoreStaticPodsInBootstrapMode([]metav1.LabelSelectorRequirement{
+					MatchExpressions: ignoreStaticPods([]metav1.LabelSelectorRequirement{
 						{
 							Key:      "app",
 							Operator: metav1.LabelSelectorOpNotIn,
