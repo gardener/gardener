@@ -79,6 +79,8 @@ type OIDCValues struct {
 
 // IngressValues contains the Ingress configuration.
 type IngressValues struct {
+	// Enabled specifies if the ingress resource should be deployed.
+	Enabled bool
 	// Domains is the list of ingress domains.
 	Domains []string
 	// WildcardCertSecretName is name of a secret containing the wildcard TLS certificate which is issued for the
@@ -145,9 +147,15 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	ingress, err := g.ingress(ctx)
-	if err != nil {
-		return err
+	if g.values.Ingress.Enabled {
+		ingress, err := g.ingress(ctx)
+		if err != nil {
+			return err
+		}
+
+		if err := runtimeRegistry.Add(ingress); err != nil {
+			return err
+		}
 	}
 
 	runtimeResources, err := runtimeRegistry.AddAllAndSerialize(
@@ -156,7 +164,6 @@ func (g *gardenerDashboard) Deploy(ctx context.Context) error {
 		g.service(),
 		g.podDisruptionBudget(),
 		g.verticalPodAutoscaler(),
-		ingress,
 		g.serviceMonitor(),
 	)
 	if err != nil {

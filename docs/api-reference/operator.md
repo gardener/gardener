@@ -690,6 +690,37 @@ implicitly defaulted to <code>15m</code>.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="operator.gardener.cloud/v1alpha1.DashboardIngress">DashboardIngress
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.gardener.cloud/v1alpha1.GardenerDashboardConfig">GardenerDashboardConfig</a>)
+</p>
+<p>
+<p>DashboardIngress contains configuration for the dashboard ingress resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enabled controls whether the Dashboard Ingress resource will be deployed to the cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="operator.gardener.cloud/v1alpha1.DashboardOIDC">DashboardOIDC
 </h3>
 <p>
@@ -2226,6 +2257,20 @@ DashboardTerminal
 <td>
 <em>(Optional)</em>
 <p>Terminal contains configuration for the terminal settings.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ingress</code></br>
+<em>
+<a href="#operator.gardener.cloud/v1alpha1.DashboardIngress">
+DashboardIngress
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ingress contains configuration for the ingress settings.</p>
 </td>
 </tr>
 </tbody>
