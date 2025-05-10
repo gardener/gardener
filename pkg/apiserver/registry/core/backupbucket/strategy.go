@@ -119,6 +119,11 @@ func (backupBucketStatusStrategy) PrepareForUpdate(_ context.Context, obj, old r
 	newBackupBucket := obj.(*core.BackupBucket)
 	oldBackupBucket := old.(*core.BackupBucket)
 	newBackupBucket.Spec = oldBackupBucket.Spec
+
+	// Ensure credentialsRef is synced even on /status subresources requests.
+	// Some clients are patching just the status which still results in update events
+	// for those watching the resource.
+	SyncBackupSecretRefAndCredentialsRef(&newBackupBucket.Spec)
 }
 
 func (backupBucketStatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object) field.ErrorList {
