@@ -4,7 +4,9 @@ metadata:
   name: foo
 spec:
   region: eu-west1
-  secretRef:
+  credentialsRef:
+    apiVersion: v1
+    kind: Secret
     name: bucket-foo
     namespace: garden
   type: gcp

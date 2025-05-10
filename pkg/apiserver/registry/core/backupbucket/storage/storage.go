@@ -51,6 +51,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 		CreateStrategy: backupbucket.Strategy,
 		UpdateStrategy: backupbucket.Strategy,
 		DeleteStrategy: backupbucket.Strategy,
+		Decorator:      defaultOnRead,
 
 		TableConvertor: newTableConvertor(),
 	}
@@ -114,4 +115,30 @@ var _ rest.ShortNamesProvider = &REST{}
 // ShortNames implements the ShortNamesProvider interface. Returns a list of short names for a resource.
 func (r *REST) ShortNames() []string {
 	return []string{"bbc"}
+}
+
+// defaultOnRead ensures the backupBucket.spec.credentialsRef field is set on read requests.
+// TODO(vpnachev): Remove once the backupBucket.spec.secretRef field is removed.
+func defaultOnRead(obj runtime.Object) {
+	switch bb := obj.(type) {
+	case *core.BackupBucket:
+		defaultOnReadBackupBucket(bb)
+	case *core.BackupBucketList:
+		defaultOnReadBackupBuckets(bb)
+	default:
+	}
+}
+
+func defaultOnReadBackupBucket(bb *core.BackupBucket) {
+	backupbucket.SyncBackupSecretRefAndCredentialsRef(&bb.Spec)
+}
+
+func defaultOnReadBackupBuckets(backupBucketList *core.BackupBucketList) {
+	if backupBucketList == nil {
+		return
+	}
+
+	for i := range backupBucketList.Items {
+		defaultOnReadBackupBucket(&backupBucketList.Items[i])
+	}
 }
