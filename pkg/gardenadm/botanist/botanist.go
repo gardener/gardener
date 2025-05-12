@@ -72,7 +72,7 @@ func NewAutonomousBotanistFromManifests(
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
 	}
 
-	extensions, err := ComputeExtensions(shoot, controllerRegistrations, controllerDeployments)
+	extensions, err := ComputeExtensions(shoot, controllerRegistrations, controllerDeployments, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
 	}
