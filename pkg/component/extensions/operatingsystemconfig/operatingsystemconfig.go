@@ -1005,7 +1005,7 @@ func calculateKeyForVersion(
 	switch version {
 	case 1:
 		// TODO(MichaelEischer): Remove KeyV1 after support for Kubernetes 1.30 is dropped
-		return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
+		return KeyV1(worker.Name, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), kubernetesVersion, worker.CRI), nil
 	case 2:
 		return KeyV2(kubernetesVersion, values.CredentialsRotationStatus, worker, values.NodeLocalDNSEnabled, kubeletConfiguration), nil
 	default:
@@ -1015,15 +1015,19 @@ func calculateKeyForVersion(
 
 // KeyV1 returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI
 // configuration.
-func KeyV1(workerPoolName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
+func KeyV1(workerPoolName string, inPlaceUpdate bool, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
 	if kubernetesVersion == nil {
 		return ""
 	}
 
 	var (
-		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+		kubernetesMajorMinorVersion string
 		criName                     gardencorev1beta1.CRIName
 	)
+
+	if !inPlaceUpdate {
+		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+	}
 
 	if criConfig != nil {
 		criName = criConfig.Name

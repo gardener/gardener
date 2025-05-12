@@ -33,6 +33,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -250,7 +251,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					}
 				}
 
-				key := KeyV1(worker.Name, k8sVersion, worker.CRI)
+				key := KeyV1(worker.Name, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), k8sVersion, worker.CRI)
 
 				imagesCopy := make(map[string]*imagevector.Image, len(images))
 				for imageName, image := range images {
@@ -603,7 +604,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			) (string, error) {
 				switch oscVersion {
 				case 1:
-					return KeyV1(worker.Name, kubernetesVersion, worker.CRI), nil
+					return KeyV1(worker.Name, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), kubernetesVersion, worker.CRI), nil
 				case 2:
 					return worker.Name + "-version2", nil
 				default:
@@ -797,7 +798,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
 						k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 					}
-					key := KeyV1(worker.Name, k8sVersion, worker.CRI)
+					key := KeyV1(worker.Name, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), k8sVersion, worker.CRI)
 
 					extensions = append(extensions,
 						gardencorev1beta1.ExtensionResourceState{
@@ -1350,16 +1351,20 @@ var _ = Describe("OperatingSystemConfig", func() {
 		)
 
 		It("should return an empty string", func() {
-			Expect(KeyV1(workerName, nil, nil)).To(BeEmpty())
+			Expect(KeyV1(workerName, false, nil, nil)).To(BeEmpty())
 		})
 
 		It("should return the expected key", func() {
-			Expect(KeyV1(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
+			Expect(KeyV1(workerName, false, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-77ac3"))
+		})
+
+		It("should return the expected key for worker with inplace update strategy", func() {
+			Expect(KeyV1(workerName, true, semver.MustParse(kubernetesVersion), nil)).To(Equal("gardener-node-agent-" + workerName + "-e3b0c"))
 		})
 
 		It("is different for different worker.cri configurations", func() {
-			containerDKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
-			otherKey := KeyV1(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
+			containerDKey := KeyV1(workerName, false, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
+			otherKey := KeyV1(workerName, false, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRIName("other")})
 			Expect(containerDKey).NotTo(Equal(otherKey))
 		})
 
