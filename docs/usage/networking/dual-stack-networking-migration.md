@@ -26,7 +26,7 @@ Gardener supports multiple different network configurations, including running w
 
 At the moment, this only affects IPv4-only clusters, which should be migrated to dual-stack networking. IPv6-only clusters always use native routing.
 
-You can check whether you cluster uses overlay network or native routing by looking for `spec.networking.providerConfig.overlay.enabled` in your cluster's manifest. If it is set to `true` or not present, the cluster is using the pod overlay network. If it is set to `false`, the cluster is using native routing.
+You can check whether your cluster uses overlay network or native routing by looking for `spec.networking.providerConfig.overlay.enabled` in your cluster's manifest. If it is set to `true` or not present, the cluster is using the pod overlay network. If it is set to `false`, the cluster is using native routing.
 
 Please note that there are infrastructure-specific limitations with regards to cluster size due to one route being added per node. Therefore, please consult the documentation of your infrastructure if your cluster should grow beyond 50 nodes and adapt the route limit quotas accordingly before switching to native routing.
 
