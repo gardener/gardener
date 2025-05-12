@@ -238,7 +238,7 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, _ admis
 	}
 	allErrs = append(allErrs, errs...)
 
-	gardenerutils.MaintainSeedNameLabels(managedSeed, shoot.Spec.SeedName, &managedSeed.Name)
+	gardenerutils.MaintainSeedNameLabels(managedSeed, shoot.Spec.SeedName)
 
 	switch a.GetOperation() {
 	case admission.Create:

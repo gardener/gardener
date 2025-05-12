@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/cmd/utils/initrun"
 	"github.com/gardener/gardener/pkg/api/indexer"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
@@ -216,6 +217,26 @@ func run(ctx context.Context, log logr.Logger, cfg *controllermanagerconfigv1alp
 			}
 		}
 
+		managedSeedList := &seedmanagementv1alpha1.ManagedSeedList{}
+		if err := mgr.GetClient().List(ctx, managedSeedList); err != nil {
+			return fmt.Errorf("failed listing managed seeds: %w", err)
+		}
+		for _, managedSeed := range managedSeedList.Items {
+			fns = append(fns, func(ctx context.Context) error {
+				obj := &managedSeed
+				label := v1beta1constants.LabelPrefixSeedName + obj.GetName()
+				if _, ok := obj.GetLabels()[label]; ok {
+					emptyPatch := client.MergeFrom(obj)
+					if err := mgr.GetClient().Patch(ctx, obj, emptyPatch); err != nil {
+						return fmt.Errorf("failed to patch managed seed %s: %w", client.ObjectKeyFromObject(obj), err)
+					}
+					if _, ok := obj.GetLabels()[label]; ok {
+						return fmt.Errorf("the label %s on the managed seed %s is still present, the mutating webhook is running in an older version", label, client.ObjectKeyFromObject(obj))
+					}
+				}
+				return nil
+			})
+		}
 		return flow.Parallel(fns...)(ctx)
 	})); err != nil {
 		return fmt.Errorf("failed adding seed name label removal runnable to manager: %w", err)
