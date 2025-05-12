@@ -32,7 +32,7 @@ require (
 	github.com/onsi/gomega v1.37.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pelletier/go-toml v1.9.5
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.82.1
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.82.2
 	github.com/prometheus/blackbox_exporter v0.26.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/common v0.63.0
