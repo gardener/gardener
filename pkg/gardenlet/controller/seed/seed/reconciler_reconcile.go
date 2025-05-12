@@ -334,16 +334,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Dependencies: flow.NewTaskIDs(deployIstio),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying cluster-autoscaler resources",
-			Fn:           c.clusterAutoscaler.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying machine-controller-manager resources",
-			Fn:           c.machineControllerManager.Deploy,
-			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
-		})
-		_ = g.Add(flow.Task{
 			Name:         "Deploying dependency-watchdog-weeder",
 			Fn:           c.dwdWeeder.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),

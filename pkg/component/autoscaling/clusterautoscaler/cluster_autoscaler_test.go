@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -156,6 +157,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 		serviceAccountName               = "cluster-autoscaler"
 		secretName                       = "shoot-access-cluster-autoscaler"
 		clusterRoleBindingName           = "cluster-autoscaler-" + namespace
+		roleName                         = "cluster-autoscaler"
+		roleBindingName                  = "cluster-autoscaler"
 		vpaName                          = "cluster-autoscaler-vpa"
 		pdbName                          = "cluster-autoscaler"
 		serviceName                      = "cluster-autoscaler"
@@ -226,6 +229,43 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Name:      serviceAccountName,
 				Namespace: namespace,
 			}},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "cluster-autoscaler",
+				Namespace:       namespace,
+				ResourceVersion: "1",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     "cluster-autoscaler",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      "cluster-autoscaler",
+				Namespace: namespace,
+			}},
+		}
+
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "cluster-autoscaler",
+				Namespace:       namespace,
+				ResourceVersion: "1",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{machinev1alpha1.GroupName},
+					Resources: []string{"machineclasses", "machinedeployments", "machines", "machinesets"},
+					Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"deployments"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
 		}
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
@@ -651,7 +691,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
 
 		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil, workerConfig, nil)
-		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
 
@@ -677,7 +716,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				}
 
 				clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, config, shootWorkerConfig, semver.MustParse("1.28.1"))
-				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
 				Expect(clusterAutoscaler.Deploy(ctx)).To(Succeed())
@@ -699,9 +737,17 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), actualServiceAccount)).To(Succeed())
 				Expect(actualServiceAccount).To(DeepEqual(serviceAccount))
 
+				//TODO(@aaronfern): Remove this after v1.120 is released
 				actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).To(Succeed())
-				Expect(actualClusterRoleBinding).To(DeepEqual(clusterRoleBinding))
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).ToNot(Succeed())
+
+				actualRoleBinding := &rbacv1.RoleBinding{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), actualRoleBinding)).To(Succeed())
+				Expect(actualRoleBinding).To(DeepEqual(roleBinding))
+
+				actualRole := &rbacv1.Role{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), actualRole)).To(Succeed())
+				Expect(actualRole).To(DeepEqual(role))
 
 				actualService := &corev1.Service{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(service), actualService)).To(Succeed())
@@ -737,6 +783,28 @@ var _ = Describe("ClusterAutoscaler", func() {
 			It("w/ config", func() { test(true, false, false) })
 			It("w/ config, w/ workerConfig", func() { test(true, true, false) })
 			It("w/ config, w/ workerConfig, w/ 'priority' expander already configured", func() { test(true, true, true) })
+		})
+	})
+
+	Describe("#DeployMigrate", func() {
+		It("should delete existing cluster role binding object", func() {
+			clusterAutoscaler = New(fakeClient, namespace, sm, image, replicas, nil, nil, semver.MustParse("1.28.1"))
+
+			Expect(fakeClient.Create(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBinding.Name}})).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(Succeed())
+
+			Expect(clusterAutoscaler.DeployMigrate(ctx)).To(Succeed())
+
+			actualRoleBinding := &rbacv1.RoleBinding{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(roleBinding), actualRoleBinding)).To(Succeed())
+			Expect(actualRoleBinding).To(DeepEqual(roleBinding))
+
+			actualRole := &rbacv1.Role{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(role), actualRole)).To(Succeed())
+			Expect(actualRole).To(DeepEqual(role))
+
+			actualClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(clusterRoleBinding), actualClusterRoleBinding)).ToNot(Succeed())
 		})
 	})
 
@@ -791,6 +859,33 @@ var _ = Describe("ClusterAutoscaler", func() {
 			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
+		It("should fail because the role cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: namespace}}).Return(fakeErr),
+			)
+
+			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should fail because the role binding cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
+				c.EXPECT().Delete(ctx, &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: roleBindingName, Namespace: namespace}}).Return(fakeErr),
+			)
+
+			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
 		It("should fail because the secret cannot be deleted", func() {
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
@@ -798,6 +893,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: roleBindingName, Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}).Return(fakeErr),
 			)
 
@@ -811,6 +908,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: roleBindingName, Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}).Return(fakeErr),
 			)
@@ -825,6 +924,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: roleBindingName, Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}),
 				c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceAccountName}}).Return(fakeErr),
@@ -840,6 +941,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: roleBindingName, Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}),
 				c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceAccountName}}),
@@ -856,6 +959,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: roleBindingName, Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}),
 				c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceAccountName}}),
@@ -873,6 +978,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 				c.EXPECT().Delete(ctx, &policyv1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: pdbName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: namespace}}),
+				c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: roleBindingName, Namespace: namespace}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}),
 				c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceAccountName}}),
