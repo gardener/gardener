@@ -52,7 +52,7 @@ func (r *Reconciler) reconcile(
 	log logr.Logger,
 	seedObj *seedpkg.Seed,
 	seedIsGarden bool,
-	isManagedSeed bool,
+	seedIsShoot bool,
 ) error {
 	seed := seedObj.GetInfo()
 
@@ -68,7 +68,7 @@ func (r *Reconciler) reconcile(
 		return err
 	}
 
-	if err := r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, isManagedSeed); err != nil {
+	if err := r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, seedIsShoot); err != nil {
 		return err
 	}
 
@@ -102,7 +102,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	log logr.Logger,
 	seed *seedpkg.Seed,
 	seedIsGarden bool,
-	isManagedSeed bool,
+	seedIsShoot bool,
 ) error {
 	// VPA is a prerequisite. If it's enabled then we deploy the CRD (and later also the related components) as part of
 	// the flow. However, when it's disabled then we check whether it is indeed available (and fail, otherwise).
@@ -191,7 +191,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	log.Info("Instantiating component deployers")
-	c, err := r.instantiateComponents(ctx, log, seed, secretsManager, seedIsGarden, globalMonitoringSecretSeed, alertingSMTPSecret, wildcardCertSecret, isManagedSeed)
+	c, err := r.instantiateComponents(ctx, log, seed, secretsManager, seedIsGarden, globalMonitoringSecretSeed, alertingSMTPSecret, wildcardCertSecret, seedIsShoot)
 	if err != nil {
 		return err
 	}
