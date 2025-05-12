@@ -148,7 +148,18 @@ func run(ctx context.Context, opts *Options) error {
 			waitUntilExtensionControllersReady,
 		)
 
-		_ = syncPointBootstrapped
+		deployInfrastructure = g.Add(flow.Task{
+			Name:         "Deploying Shoot infrastructure",
+			Fn:           b.DeployInfrastructure,
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
+		waitUntilInfrastructureReady = g.Add(flow.Task{
+			Name:         "Waiting until Shoot infrastructure has been reconciled",
+			Fn:           b.WaitForInfrastructure,
+			Dependencies: flow.NewTaskIDs(deployInfrastructure),
+		})
+
+		_ = waitUntilInfrastructureReady
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{
