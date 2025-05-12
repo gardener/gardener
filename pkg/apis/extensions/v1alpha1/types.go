@@ -7,8 +7,24 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+)
+
+// AllExtensionKinds contains all supported extension kinds.
+var AllExtensionKinds = sets.New[string](
+	BackupBucketResource,
+	BackupEntryResource,
+	BastionResource,
+	ContainerRuntimeResource,
+	ControlPlaneResource,
+	DNSRecordResource,
+	ExtensionResource,
+	InfrastructureResource,
+	NetworkResource,
+	OperatingSystemConfigResource,
+	WorkerResource,
 )
 
 // Status is the status of an Object.

@@ -45,21 +45,6 @@ func ValidateControllerRegistration(controllerRegistration *core.ControllerRegis
 	return allErrs
 }
 
-// SupportedExtensionKinds contains all supported extension kinds.
-var SupportedExtensionKinds = sets.New(
-	extensionsv1alpha1.BackupBucketResource,
-	extensionsv1alpha1.BackupEntryResource,
-	extensionsv1alpha1.BastionResource,
-	extensionsv1alpha1.ContainerRuntimeResource,
-	extensionsv1alpha1.ControlPlaneResource,
-	extensionsv1alpha1.DNSRecordResource,
-	extensionsv1alpha1.ExtensionResource,
-	extensionsv1alpha1.InfrastructureResource,
-	extensionsv1alpha1.NetworkResource,
-	extensionsv1alpha1.OperatingSystemConfigResource,
-	extensionsv1alpha1.WorkerResource,
-)
-
 // ValidateControllerRegistrationSpec validates the specification of a ControllerRegistration object.
 func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -79,8 +64,8 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			allErrs = append(allErrs, field.Required(idxPath.Child("kind"), "field is required"))
 		}
 
-		if !SupportedExtensionKinds.Has(resource.Kind) {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("kind"), resource.Kind, SupportedExtensionKinds.UnsortedList()))
+		if !extensionsv1alpha1.AllExtensionKinds.Has(resource.Kind) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("kind"), resource.Kind, extensionsv1alpha1.AllExtensionKinds.UnsortedList()))
 		}
 
 		if len(resource.Type) == 0 {
