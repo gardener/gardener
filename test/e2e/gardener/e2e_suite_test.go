@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/test/e2e/gardener/shoot"
 	_ "github.com/gardener/gardener/test/e2e/gardener/shoot/gardenerupgrade"
 	_ "github.com/gardener/gardener/test/e2e/gardener/shoot/observability"
-	"github.com/gardener/gardener/test/framework"
 )
 
 func TestMain(m *testing.M) {
