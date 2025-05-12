@@ -134,8 +134,8 @@ type ShootContext struct {
 	//  )
 	SeedKomega komega.Komega
 
-	// ShootSeedNamespace contains the namespace for the Shoot Control Plane in the Seed.
-	// It must me initialized via WithControlPlaneNamespace.
+	// ControlPlaneNamespace contains the namespace for the Shoot Control Plane in the Seed.
+	// It must be initialized via WithControlPlaneNamespace.
 	ControlPlaneNamespace string
 }
 
