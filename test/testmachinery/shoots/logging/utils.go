@@ -173,6 +173,22 @@ func getLoggingShootService(number int) *corev1.Service {
 	}
 }
 
+func getLogCountFromResult(search *framework.SearchResponse) (int, error) {
+	var totalLogs int
+	for _, result := range search.Data.Result {
+		currentStr, ok := result.Value[1].(string)
+		if !ok {
+			return totalLogs, fmt.Errorf("Data.Result.Value[1] is not a string")
+		}
+		current, err := strconv.Atoi(currentStr)
+		if err != nil {
+			return totalLogs, fmt.Errorf("Data.Result.Value[1] string is not parsable to integer")
+		}
+		totalLogs += current
+	}
+	return totalLogs, nil
+}
+
 func getConfigMapName(volumes []corev1.Volume, wantedVolumeName string) string {
 	for _, volume := range volumes {
 		if volume.Name == wantedVolumeName && volume.ConfigMap != nil {
