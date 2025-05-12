@@ -57,7 +57,6 @@ const (
 	garden                        = "garden"
 	fluentBitClusterRoleName      = "fluent-operator-fluent-bit"
 	simulatedShootNamespacePrefix = "shoot--logging--test-"
-	loggerName                    = "logger"
 )
 
 var _ = ginkgo.Describe("Seed logging testing", func() {
