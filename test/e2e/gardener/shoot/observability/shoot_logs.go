@@ -11,8 +11,8 @@ import (
 
 	. "github.com/gardener/gardener/test/e2e"
 	. "github.com/gardener/gardener/test/e2e/gardener"
-	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal"
-	. "github.com/gardener/gardener/test/e2e/gardener/shoot/observability/internal"
+	. "github.com/gardener/gardener/test/e2e/gardener/shoot"
+	. "github.com/gardener/gardener/test/e2e/gardener/shoot/internal/observability"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 )
 
