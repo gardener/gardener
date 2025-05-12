@@ -369,18 +369,13 @@ func createAndAddToWebhookConfig(
 	clientConfig admissionregistrationv1.WebhookClientConfig,
 	sideEffects *admissionregistrationv1.SideEffectClass,
 ) {
-	objectMeta := metav1.ObjectMeta{
-		Name:   name,
-		Labels: map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
-	}
-
 	// Create a validating or mutating webhook configuration based on the webhooks action. If the action is not set or
 	// unknown fall back to mutating webhook since this is the safest option to pick.
 	switch webhook.Action {
 	case ActionValidating:
 		if webhookConfigs.ValidatingWebhookConfig == nil {
 			webhookConfigs.ValidatingWebhookConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
-				ObjectMeta: objectMeta,
+				ObjectMeta: InitialWebhookConfig(name),
 			}
 		}
 		webhookToRegister := admissionregistrationv1.ValidatingWebhook{
@@ -404,7 +399,7 @@ func createAndAddToWebhookConfig(
 	default:
 		if webhookConfigs.MutatingWebhookConfig == nil {
 			webhookConfigs.MutatingWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-				ObjectMeta: objectMeta,
+				ObjectMeta: InitialWebhookConfig(name),
 			}
 		}
 
@@ -426,5 +421,13 @@ func createAndAddToWebhookConfig(
 		webhookToRegister.MatchPolicy = matchPolicy
 		webhookToRegister.ClientConfig = clientConfig
 		webhookConfigs.MutatingWebhookConfig.Webhooks = append(webhookConfigs.MutatingWebhookConfig.Webhooks, webhookToRegister)
+	}
+}
+
+// InitialWebhookConfig returns the initial object meta for a webhook configuration.
+func InitialWebhookConfig(name string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:   name,
+		Labels: map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
 	}
 }
