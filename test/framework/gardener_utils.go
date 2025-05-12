@@ -281,6 +281,23 @@ func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1
 func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, update func(shoot *gardencorev1beta1.Shoot) error) error {
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
+	if err := f.UpdateShootSpec(ctx, shoot, update); err != nil {
+		return err
+	}
+
+	// Then we wait for the shoot to be created
+	if err := f.WaitForShootToBeReconciled(ctx, shoot); err != nil {
+		return err
+	}
+
+	log.Info("Shoot was successfully updated")
+	return nil
+}
+
+// UpdateShootSpec updates a shoot from a shoot Object
+func (f *GardenerFramework) UpdateShootSpec(ctx context.Context, shoot *gardencorev1beta1.Shoot, update func(shoot *gardencorev1beta1.Shoot) error) error {
+	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
+
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		updatedShoot := &gardencorev1beta1.Shoot{}
 		if err := f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot); err != nil {
@@ -302,13 +319,7 @@ func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1
 		return err
 	}
 
-	// Then we wait for the shoot to be created
-	err = f.WaitForShootToBeReconciled(ctx, shoot)
-	if err != nil {
-		return err
-	}
-
-	log.Info("Shoot was successfully updated")
+	log.Info("Shoot spec was successfully updated")
 	return nil
 }
 
