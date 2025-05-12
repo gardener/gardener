@@ -738,7 +738,7 @@ func CheckForExpiredNodeLeases(nodeList *corev1.NodeList, leaseList *coordinatio
 	return nil
 }
 
-// CheckNodesScaling checks whether cluster nodes are being scaled up or down. If scaling is in progress, it returns a string describing the action. An error is returned if any failure occurs.
+// CheckNodesScaling checks whether cluster nodes are in a rolling update or being scaled up or down. If scaling is in progress, it returns a string describing the action. An error is returned if any failure occurs.
 func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList []*corev1.Node, machineDeploymentList *machinev1alpha1.MachineDeploymentList, controlPlaneNamespace string) (string, error) {
 	var (
 		readyAndSchedulableNodes int
@@ -774,16 +774,28 @@ func CheckNodesScaling(ctx context.Context, seedClient client.Client, nodeList [
 	// (e.g., in case of a rolling-update).
 
 	checkScaleUp := false
+	checkRollingUpdate := false
 	for _, deployment := range machineDeploymentList.Items {
 		if len(deployment.Status.FailedMachines) > 0 {
 			break
 		}
 
 		for _, condition := range deployment.Status.Conditions {
-			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
-				checkScaleUp = true
+			// First check for rolling update since it overrules the remaining checks.
+			if condition.Type == machinev1alpha1.MachineDeploymentProgressing && condition.Status == machinev1alpha1.ConditionTrue && condition.Reason != "NewMachineSetAvailable" {
+				checkRollingUpdate = true
 				break
 			}
+			if condition.Type == machinev1alpha1.MachineDeploymentAvailable && condition.Status != machinev1alpha1.ConditionTrue {
+				checkScaleUp = true
+			}
+		}
+	}
+
+	if checkRollingUpdate {
+		// Use the checkNodesScalingUp function since it checks for machines that may be stuck in the pending state, which can happen when rolling out critical components that are stuck.
+		if err := checkNodesScalingUp(machineList, readyAndSchedulableNodes, desiredMachines); err != nil {
+			return "NodesRollOutScalingUp", err
 		}
 	}
 
