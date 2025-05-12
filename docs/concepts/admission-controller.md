@@ -100,6 +100,10 @@ This information can be used by third parties so that they establish trust to sp
 This handler protects `secrets` and `configmaps` against tampering.
 It denies `CREATE`, `UPDATE` and `DELETE` requests if the resource is labeled with `gardener.cloud/update-restriction=true` and the request is not made by a `gardenlet`.
 
+In addition, the following service accounts are allowed to perform certain operations:
+- `system:serviceaccount:kube-system:generic-garbage-collector` is allowed to `DELETE` restricted resources.
+- `system:serviceaccount:kube-system:gardener-internal` is allowed to `UPDATE` restricted resources.
+
 ## Authorization Webhook Handlers
 
 This section describes the authorization webhook handlers that are currently served.
