@@ -13,9 +13,8 @@ import (
 	"path/filepath"
 	"time"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-
 	"github.com/Masterminds/sprig/v3"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -260,6 +259,9 @@ func ItShouldInitializeSeedClient(s *ShootContext) {
 	}, SpecTimeout(time.Minute))
 }
 
+// ItShouldComputeControlPlaneNamespace computes the control plane namespace for the shoot and stores it in ShootContext.ControlPlaneNamespace.
+// This is achiaved via `ComputeTechnicalID`. The namespace is constructed from the project name and the shoot name.
+// It's hard to determine what the namespace of the control-plane will be before shoot creation, thus to compute it we need to first create the Shoot.
 func ItShouldComputeControlPlaneNamespace(s *ShootContext) {
 	GinkgoHelper()
 
@@ -407,6 +409,8 @@ func ItShouldVerifyInPlaceUpdateCompletion(s *ShootContext) {
 	}, SpecTimeout(2*time.Minute))
 }
 
+// ItShouldRenderAndDeployTemplateToShoot finds a template via the given template name. Afterwards, it renders is via the
+// given values and deploys the resources to the shoot.
 func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string, values any) {
 	GinkgoHelper()
 
@@ -434,6 +438,7 @@ func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string
 	}, SpecTimeout(time.Minute))
 }
 
+// ItShouldWaitForPodsInShootToBeReady waits for all pods matching the namespace and labels to be in a Ready state.
 func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podLabels labels.Selector) {
 	GinkgoHelper()
 

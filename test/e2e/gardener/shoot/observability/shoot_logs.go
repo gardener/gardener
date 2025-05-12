@@ -25,10 +25,6 @@ var (
 	shootLogsCount = 100
 )
 
-const (
-	valiName = "vali"
-)
-
 var _ = Describe("Observability Tests", Ordered, Label("Observability", "default"), func() {
 	var s *ShootContext
 	BeforeTestSetup(func() {
