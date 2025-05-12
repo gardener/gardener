@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/test/utils/shoots/logging"
 )
 
+// ItShouldWaitForLogsCountWithLabelToBeInVali waits for a specific number of logs with a given label to be present in Vali.
 func ItShouldWaitForLogsCountWithLabelToBeInVali(s *ShootContext, valiLabels map[string]string, key, value string, count int) {
 	GinkgoHelper()
 
@@ -36,6 +37,7 @@ func ItShouldWaitForLogsCountWithLabelToBeInVali(s *ShootContext, valiLabels map
 	}, SpecTimeout(time.Minute))
 }
 
+// ItShouldWaitForLogsWithLabelToBeInVali waits for logs with a specific label to be present in Vali. Does not regard the count of the logs.
 func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[string]string, key, value string) {
 	GinkgoHelper()
 
@@ -57,6 +59,7 @@ func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[stri
 	}, SpecTimeout(time.Minute))
 }
 
+// ItShouldWaitForLogsWithLabelToNotBeInVali waits for logs with a specific label to NOT be present in Vali. This check is not perfectly strict.
 func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[string]string, key, value string) {
 	GinkgoHelper()
 

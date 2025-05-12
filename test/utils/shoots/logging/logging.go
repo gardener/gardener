@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package logging
 
 import (
@@ -28,6 +32,7 @@ type SearchResponse struct {
 	} `json:"data"`
 }
 
+// GetLogCountFromSearchResponse extracts the log count from the search response.
 func GetLogCountFromSearchResponse(search *SearchResponse) int {
 	total := 0
 	for _, result := range search.Data.Result {
