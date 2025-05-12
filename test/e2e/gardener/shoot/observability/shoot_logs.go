@@ -29,7 +29,7 @@ const (
 	valiName = "vali"
 )
 
-var _ = FDescribe("Observability Tests", Ordered, Label("Observability", "default"), func() {
+var _ = Describe("Observability Tests", Ordered, Label("Observability", "default"), func() {
 	var s *ShootContext
 	BeforeTestSetup(func() {
 		s = NewTestContext().ForShoot(DefaultShoot("e2e-observ"))
