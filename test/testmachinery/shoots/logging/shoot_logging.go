@@ -34,6 +34,7 @@ const (
 
 	randomLength        = 11
 	loggerAppLabel      = "logger"
+	loggerName          = "logger"
 	shootDeltaLogsCount = 0
 	shootLogsCount      = 100
 	shootLogsDuration   = "20s"
