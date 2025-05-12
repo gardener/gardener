@@ -122,7 +122,7 @@ func (r *Reconciler) instantiateComponents(
 	globalMonitoringSecretSeed *corev1.Secret,
 	alertingSMTPSecret *corev1.Secret,
 	wildCardCertSecret *corev1.Secret,
-	isManagedSeed bool,
+	seedIsShoot bool,
 ) (
 	c components,
 	err error,
@@ -228,7 +228,7 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.cachePrometheus, err = r.newCachePrometheus(log, seed, isManagedSeed)
+	c.cachePrometheus, err = r.newCachePrometheus(log, seed, seedIsShoot)
 	if err != nil {
 		return
 	}
@@ -532,8 +532,8 @@ func (r *Reconciler) newPlutono(seed *seedpkg.Seed, secretsManager secretsmanage
 	)
 }
 
-func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, isManagedSeed bool) (component.DeployWaiter, error) {
-	additionalScrapeConfigs, err := cacheprometheus.AdditionalScrapeConfigs(isManagedSeed)
+func (r *Reconciler) newCachePrometheus(log logr.Logger, seed *seedpkg.Seed, seedIsShoot bool) (component.DeployWaiter, error) {
+	additionalScrapeConfigs, err := cacheprometheus.AdditionalScrapeConfigs(seedIsShoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed getting additional scrape configs: %w", err)
 	}
