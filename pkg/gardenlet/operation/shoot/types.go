@@ -77,7 +77,6 @@ type Shoot struct {
 	// ControlPlaneNamespace is the namespace in which the control plane components run.
 	ControlPlaneNamespace string
 	KubernetesVersion     *semver.Version
-	GardenerVersion       *semver.Version
 
 	InternalClusterDomain string
 	ExternalClusterDomain *string

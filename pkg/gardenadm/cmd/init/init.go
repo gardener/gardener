@@ -7,7 +7,6 @@ package init
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -16,7 +15,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -32,7 +30,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Long:  "Bootstrap the first control plane node",
 
 		Example: `# Bootstrap the first control plane node
-gardenadm init`,
+gardenadm init --config-dir /path/to/manifests`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
@@ -291,19 +289,9 @@ see https://gardener.cloud/docs/gardener/shoot/shoot_access/.
 }
 
 func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.AutonomousBotanist, error) {
-	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, err := gardenadm.ReadManifests(opts.Log, os.DirFS(opts.ConfigDir))
+	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, nil, opts.ConfigDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", opts.ConfigDir, err)
-	}
-
-	extensions, err := botanist.ComputeExtensions(shoot, controllerRegistrations, controllerDeployments)
-	if err != nil {
-		return nil, fmt.Errorf("failed computing extensions: %w", err)
-	}
-
-	b, err := botanist.NewAutonomousBotanist(ctx, opts.Log, nil, project, cloudProfile, shoot, extensions)
-	if err != nil {
-		return nil, fmt.Errorf("failed constructing botanist: %w", err)
+		return nil, err
 	}
 
 	kubeconfigFileExists, err := b.FS.Exists(botanist.PathKubeconfig)
@@ -366,5 +354,5 @@ func bootstrapControlPlane(ctx context.Context, opts *Options) (*botanist.Autono
 		return nil, flow.Errors(err)
 	}
 
-	return botanist.NewAutonomousBotanist(ctx, opts.Log, clientSet, project, cloudProfile, shoot, extensions)
+	return botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir)
 }

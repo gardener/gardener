@@ -16,17 +16,18 @@ import (
 // Options contains options for this command.
 type Options struct {
 	*cmd.Options
+	cmd.ManifestOptions
 	// Kubeconfig is the path to the kubeconfig file pointing to the KinD cluster.
 	Kubeconfig string
 }
 
 // ParseArgs parses the arguments to the options.
-func (o *Options) ParseArgs(_ []string) error {
+func (o *Options) ParseArgs(args []string) error {
 	if o.Kubeconfig == "" {
 		o.Kubeconfig = os.Getenv("KUBECONFIG")
 	}
 
-	return nil
+	return o.ManifestOptions.ParseArgs(args)
 }
 
 // Validate validates the options.
@@ -35,12 +36,15 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("must provide a path to a KinD cluster kubeconfig")
 	}
 
-	return nil
+	return o.ManifestOptions.Validate()
 }
 
 // Complete completes the options.
-func (o *Options) Complete() error { return nil }
+func (o *Options) Complete() error {
+	return o.ManifestOptions.Complete()
+}
 
 func (o *Options) addFlags(fs *pflag.FlagSet) {
+	o.ManifestOptions.AddFlags(fs)
 	fs.StringVarP(&o.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file pointing to the KinD cluster")
 }

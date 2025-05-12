@@ -14,7 +14,7 @@ import (
 	"github.com/gardener/gardener/cmd/gardenadm/app"
 	"github.com/gardener/gardener/cmd/utils"
 	featuregates "github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/gardenadm/features"
 )
 
 func main() {

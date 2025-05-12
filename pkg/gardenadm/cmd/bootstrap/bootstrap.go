@@ -28,7 +28,7 @@ func NewCommand(globalOpts *cmd.Options) *cobra.Command {
 		Long:  "Bootstrap the infrastructure for an Autonomous Shoot Cluster (networks, machines, etc.)",
 
 		Example: `# Bootstrap the infrastructure
-gardenadm bootstrap --kubeconfig ~/.kube/config`,
+gardenadm bootstrap --config-dir /path/to/manifests`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.ParseArgs(args); err != nil {
@@ -66,6 +66,12 @@ func run(ctx context.Context, opts *Options) error {
 		return err
 	}
 
+	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir)
+	if err != nil {
+		return err
+	}
+
+	_ = b
 	opts.Log.Info("Command is work in progress")
 	return nil
 }

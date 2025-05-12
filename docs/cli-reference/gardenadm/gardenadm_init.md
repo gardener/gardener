@@ -14,7 +14,7 @@ gardenadm init [flags]
 
 ```
 # Bootstrap the first control plane node
-gardenadm init
+gardenadm init --config-dir /path/to/manifests
 ```
 
 ### Options

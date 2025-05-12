@@ -257,12 +257,6 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.KubernetesVersion = kubernetesVersion
 
-	gardenerVersion, err := semver.NewVersion(shootObject.Status.Gardener.Version)
-	if err != nil {
-		return nil, err
-	}
-	shoot.GardenerVersion = gardenerVersion
-
 	shoot.IsWorkerless = v1beta1helper.IsWorkerless(shoot.GetInfo())
 
 	shoot.VPNHighAvailabilityEnabled = v1beta1helper.IsHAVPNEnabled(shoot.GetInfo())
