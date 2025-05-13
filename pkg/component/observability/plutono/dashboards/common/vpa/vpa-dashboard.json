@@ -148,7 +148,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(container_memory_working_set_bytes{namespace=~\"$namespace\",pod=~\"(?i:$targetKind-)?$targetName(.+)\", container=~\"$container\"}) by (pod)",
+          "expr": "container_memory_working_set_bytes{namespace=~\"$namespace\",pod=~\"(?i:$targetKind-)?$targetName(.+)\", container=~\"$container\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -158,7 +158,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -168,7 +168,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -178,7 +178,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -188,7 +188,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -198,7 +198,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -307,7 +307,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(kube_pod_container_resource_requests{namespace=~\"$namespace\",resource=\"memory\", unit=\"byte\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}) by (pod)",
+          "expr": "kube_pod_container_resource_requests{namespace=~\"$namespace\",resource=\"memory\", unit=\"byte\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -316,7 +316,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"memory\", unit=\"byte\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"})  by (pod)",
+          "expr": "kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"memory\", unit=\"byte\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -325,7 +325,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_memory{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -448,7 +448,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -458,7 +458,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -468,7 +468,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -478,7 +478,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_minallowed_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -488,7 +488,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_spec_resourcepolicy_containerpolicies_maxallowed_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container|\\\\*\"}",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -596,7 +596,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}) by (pod)",
+          "expr": "kube_pod_container_resource_requests{resource=\"cpu\", unit=\"core\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -605,7 +605,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}) by (pod)",
+          "expr": "kube_pod_container_resource_limits{resource=\"cpu\", unit=\"core\", pod=~\"(?i:$targetKind-)?$targetName(.+)\",  container=~\"$container\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -614,7 +614,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container\"})",
+          "expr": "kube_customresource_verticalpodautoscaler_status_recommendation_containerrecommendations_target_cpu{namespace=~\"$namespace\", target_kind=~\"$targetKind\", target_name=~\"$targetName\", container=~\"$container\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
