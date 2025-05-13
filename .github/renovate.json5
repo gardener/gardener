@@ -376,6 +376,19 @@
       ],
     },
     {
+      // Do not update etcd images since they have to be in sync with the etcd-druid version.
+      matchDatasources: [
+        'docker',
+      ],
+      matchFileNames: [
+        'imagevector/**',
+      ],
+      enabled: false,
+      matchPackageNames: [
+        '/quay.io/coreos/etcd/',
+      ],
+    },
+    {
       // Do not use docker for images from gardener registry except those which do not work with github-releases.
       matchDatasources: [
         'docker',
