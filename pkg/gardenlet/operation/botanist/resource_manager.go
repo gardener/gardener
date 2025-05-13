@@ -58,17 +58,16 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	)
 
 	if b.Shoot.IsAutonomous() {
+		values.NodeAgentAuthorizerEnabled = false // TODO(rfranzke): Revisit this once autonomous shoot clusters progress.
+		values.KubernetesServiceHost = nil
+
 		if b.Shoot.RunsControlPlane() {
 			newFunc = shared.NewCombinedGardenerResourceManager
-			values.NodeAgentAuthorizerEnabled = false // TODO(rfranzke): Revisit this once autonomous shoot clusters progress.
 			values.TargetNamespaces = nil
-			values.KubernetesServiceHost = nil
 		} else {
 			newFunc = shared.NewRuntimeGardenerResourceManager
 			// TODO(timebertt): consider disabling the highavailabilityconfig webhook
 			values.PriorityClassName = v1beta1constants.PriorityClassNameSeedSystemCritical
-			values.NodeAgentAuthorizerEnabled = false
-			values.KubernetesServiceHost = nil
 		}
 	}
 
