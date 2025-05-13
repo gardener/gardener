@@ -59,14 +59,11 @@ func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[stri
 	}, SpecTimeout(time.Minute))
 }
 
-// ItShouldWaitForLogsWithLabelToNotBeInVali waits for logs with a specific label to NOT be present in Vali. This check is not perfectly strict.
+// ItShouldWaitForLogsWithLabelToNotBeInVali check that, after a timeout, logs with a specific label are NOT present in Vali. This check is not perfectly strict.
 func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[string]string, key, value string) {
 	GinkgoHelper()
 
 	It("Ensure logs do not exist", func(ctx SpecContext) {
-		// No easy way to guarantee that a log won't eventually be in Vali except waiting.
-		time.Sleep(10 * time.Second)
-
 		Eventually(ctx, func() error {
 			searchResponse, err := logging.GetValiLogs(ctx, valiLabels, s.ControlPlaneNamespace, key, value, s.SeedClientSet)
 			if err != nil {
@@ -80,6 +77,6 @@ func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[s
 			}
 
 			return nil
-		}).Should(Succeed())
+		}).WithTimeout(10 * time.Second).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
