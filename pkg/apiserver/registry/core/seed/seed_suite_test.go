@@ -13,5 +13,5 @@ import (
 
 func TestSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Core Seed Suite")
+	RunSpecs(t, "APIServer Registry Core Seed Suite")
 }
