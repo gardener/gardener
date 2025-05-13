@@ -130,7 +130,8 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 		}
 	}
 
-	if pool.ProviderConfig != nil && pool.ProviderConfig.Raw != nil {
+	// In the case of an in-place update, the following data is omitted here and added on the provider extension side.
+	if !v1beta1helper.IsUpdateStrategyInPlace(pool.UpdateStrategy) && pool.ProviderConfig != nil && pool.ProviderConfig.Raw != nil {
 		data = append(data, string(pool.ProviderConfig.Raw))
 	}
 
