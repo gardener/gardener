@@ -11,6 +11,10 @@ const (
 	ContainerImageNameAlertmanager = "alertmanager"
 	// ContainerImageNameAlpineConntrack is a constant for an image in the image vector with name 'alpine-conntrack'.
 	ContainerImageNameAlpineConntrack = "alpine-conntrack"
+	// ContainerImageNameAlpineIptables is a constant for an image in the image vector with name 'alpine-iptables'.
+	ContainerImageNameAlpineIptables = "alpine-iptables"
+	// ContainerImageNameApiserverProxy is a constant for an image in the image vector with name 'apiserver-proxy'.
+	ContainerImageNameApiserverProxy = "apiserver-proxy"
 	// ContainerImageNameApiserverProxySidecar is a constant for an image in the image vector with name 'apiserver-proxy-sidecar'.
 	ContainerImageNameApiserverProxySidecar = "apiserver-proxy-sidecar"
 	// ContainerImageNameBlackboxExporter is a constant for an image in the image vector with name 'blackbox-exporter'.
