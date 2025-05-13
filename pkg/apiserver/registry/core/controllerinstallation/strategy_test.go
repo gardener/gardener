@@ -20,7 +20,7 @@ import (
 
 func TestControllerInstallation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry ControllerInstallation Suite")
+	RunSpecs(t, "APIServer Registry ControllerInstallation Suite")
 }
 
 var _ = Describe("ToSelectableFields", func() {

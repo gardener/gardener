@@ -143,17 +143,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 	}
 
-	if secretBinding.Provider != nil {
-		types := v1beta1helper.GetSecretBindingTypes(secretBinding)
-		for _, t := range types {
-			labelKey := v1beta1constants.LabelShootProviderPrefix + t
+	types := v1beta1helper.GetSecretBindingTypes(secretBinding)
+	for _, t := range types {
+		labelKey := v1beta1constants.LabelShootProviderPrefix + t
 
-			if !metav1.HasLabel(secret.ObjectMeta, labelKey) {
-				patch := client.MergeFrom(secret.DeepCopy())
-				metav1.SetMetaDataLabel(&secret.ObjectMeta, labelKey, "true")
-				if err := r.Client.Patch(ctx, secret, patch); err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed to add provider type label to Secret referenced in SecretBinding: %w", err)
-				}
+		if !metav1.HasLabel(secret.ObjectMeta, labelKey) {
+			patch := client.MergeFrom(secret.DeepCopy())
+			metav1.SetMetaDataLabel(&secret.ObjectMeta, labelKey, "true")
+			if err := r.Client.Patch(ctx, secret, patch); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to add provider type label to Secret referenced in SecretBinding: %w", err)
 			}
 		}
 	}

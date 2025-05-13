@@ -44,6 +44,6 @@ var _ = Describe("GardenerTestEnvironment", func() {
 
 	It("should be able to manipulate resource from security.gardener.cloud/v1alpha1", func() {
 		credentialsBinding := &securityv1alpha1.CredentialsBinding{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-", Namespace: testNamespace.Name}}
-		Expect(testClient.Create(ctx, credentialsBinding)).To(MatchError(ContainSubstring("credentialsbindings.security.gardener.cloud \"test-\" is forbidden")))
+		Expect(testClient.Create(ctx, credentialsBinding)).To(MatchError(MatchRegexp("CredentialsBinding.security.gardener.cloud \"test-.+\" is invalid")))
 	})
 })

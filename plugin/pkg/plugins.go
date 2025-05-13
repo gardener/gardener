@@ -27,6 +27,8 @@ const (
 	PluginNameExtensionLabels = "ExtensionLabels"
 	// PluginNameExtensionValidator is the name of the ExtensionValidator admission plugin.
 	PluginNameExtensionValidator = "ExtensionValidator"
+	// PluginNameFinalizerRemoval is the name of the FinalizerRemoval admission plugin.
+	PluginNameFinalizerRemoval = "FinalizerRemoval"
 	// PluginNameResourceReferenceManager is the name of the ResourceReferenceManager admission plugin.
 	PluginNameResourceReferenceManager = "ResourceReferenceManager"
 	// PluginNameManagedSeedShoot is the name of the ManagedSeedShoot admission plugin.
@@ -88,6 +90,7 @@ func AllPluginNames() []string {
 		PluginNameNamespacedCloudProfileValidator,   // NamespacedCloudProfileValidator
 		PluginNameProjectValidator,                  // ProjectValidator
 		PluginNameDeletionConfirmation,              // DeletionConfirmation
+		PluginNameFinalizerRemoval,                  // FinalizerRemoval
 		PluginNameOpenIDConnectPreset,               // OpenIDConnectPreset
 		PluginNameClusterOpenIDConnectPreset,        // ClusterOpenIDConnectPreset
 		PluginNameCustomVerbAuthorizer,              // CustomVerbAuthorizer
@@ -131,6 +134,7 @@ func DefaultOnPlugins() sets.Set[string] {
 		PluginNameNamespacedCloudProfileValidator, // NamespacedCloudProfileValidator
 		PluginNameProjectValidator,                // ProjectValidator
 		PluginNameDeletionConfirmation,            // DeletionConfirmation
+		PluginNameFinalizerRemoval,                // FinalizerRemoval
 		PluginNameOpenIDConnectPreset,             // OpenIDConnectPreset
 		PluginNameClusterOpenIDConnectPreset,      // ClusterOpenIDConnectPreset
 		PluginNameCustomVerbAuthorizer,            // CustomVerbAuthorizer
