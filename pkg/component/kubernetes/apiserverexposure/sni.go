@@ -133,10 +133,10 @@ func NewSNI(
 	name string,
 	namespace string,
 	secretsManager secretsmanager.Interface,
-	valuesFunc func() *SNIValues,
+	valuesFunc func() (*SNIValues, error),
 ) component.DeployWaiter {
 	if valuesFunc == nil {
-		valuesFunc = func() *SNIValues { return &SNIValues{} }
+		valuesFunc = func() (*SNIValues, error) { return &SNIValues{}, nil }
 	}
 
 	return &sni{
@@ -153,7 +153,8 @@ type sni struct {
 	name           string
 	namespace      string
 	secretsManager secretsmanager.Interface
-	valuesFunc     func() *SNIValues
+	valuesFunc     func() (*SNIValues, error)
+	values         *SNIValues
 }
 
 type envoyFilterAPIServerProxyTemplateValues struct {
@@ -199,9 +200,11 @@ type istioGatewayConfiguration struct {
 }
 
 func (s *sni) Deploy(ctx context.Context) error {
-	var (
-		values = s.valuesFunc()
+	if err := s.setValues(); err != nil {
+		return err
+	}
 
+	var (
 		destinationRule                  = s.emptyDestinationRule()
 		mTLSDestinationRule              = s.emptyMTLSDestinationRule()
 		connectionUpgradeDestinationRule = s.emptyConnectionUpgradeDestinationRule()
@@ -218,24 +221,24 @@ func (s *sni) Deploy(ctx context.Context) error {
 
 	registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
-	if values.APIServerProxy != nil && (values.APIServerProxy.UseProxyProtocol || values.IstioTLSTermination) {
+	if s.values.APIServerProxy != nil && (s.values.APIServerProxy.UseProxyProtocol || s.values.IstioTLSTermination) {
 		envoyFilter := s.emptyEnvoyFilterAPIServerProxy()
 
-		apiServerClusterIPPrefixLen, err := netutils.GetBitLen(values.APIServerProxy.APIServerClusterIP)
+		apiServerClusterIPPrefixLen, err := netutils.GetBitLen(s.values.APIServerProxy.APIServerClusterIP)
 		if err != nil {
 			return err
 		}
 
 		targetClusterAPIServerProxy := fmt.Sprintf("outbound|%d||%s", kubeapiserverconstants.Port, hostName)
-		if values.IstioTLSTermination {
+		if s.values.IstioTLSTermination {
 			targetClusterAPIServerProxy = GetAPIServerProxyTargetClusterName(s.namespace)
 		}
 
 		var envoyFilterAPIServerProxy bytes.Buffer
 
 		if err := envoyFilterAPIServerProxyTemplate.Execute(&envoyFilterAPIServerProxy, envoyFilterAPIServerProxyTemplateValues{
-			APIServerProxy:                 values.APIServerProxy,
-			IngressGatewayLabels:           values.IstioIngressGateway.Labels,
+			APIServerProxy:                 s.values.APIServerProxy,
+			IngressGatewayLabels:           s.values.IstioIngressGateway.Labels,
 			Name:                           envoyFilter.Name,
 			Namespace:                      envoyFilter.Namespace,
 			ControlPlaneNamespace:          s.namespace,
@@ -247,7 +250,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 			APIServerRequestHeaderUserName: kubeapiserverconstants.RequestHeaderUserName,
 			APIServerRequestHeaderGroup:    kubeapiserverconstants.RequestHeaderGroup,
 			APIServerAuthenticationDynamicMetadataKey: authenticationDynamicMetadataKeyAPIServerProxy,
-			IstioTLSTermination:                       values.IstioTLSTermination,
+			IstioTLSTermination:                       s.values.IstioTLSTermination,
 			IstioTLSSecret:                            s.emptyIstioTLSSecret().Name,
 			TargetClusterAPIServerProxy:               targetClusterAPIServerProxy,
 		}); err != nil {
@@ -262,7 +265,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if values.IstioTLSTermination {
+	if s.values.IstioTLSTermination {
 		for _, configuration := range istioGatewayConfigurations {
 			var (
 				routeConfigurationName         = fmt.Sprintf("https.%d.%s.%s.%s", kubeapiserverconstants.Port, portNameTLS, configuration.gateway.Name, configuration.gateway.Namespace)
@@ -300,7 +303,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if (values.APIServerProxy != nil && values.APIServerProxy.UseProxyProtocol) || values.IstioTLSTermination {
+	if (s.values.APIServerProxy != nil && s.values.APIServerProxy.UseProxyProtocol) || s.values.IstioTLSTermination {
 		serializedObjects, err := registry.SerializedObjects()
 		if err != nil {
 			return err
@@ -316,7 +319,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 	}
 
 	destinationMutateFn := istio.DestinationRuleWithLocalityPreference(destinationRule, getLabels(), hostName)
-	if values.IstioTLSTermination {
+	if s.values.IstioTLSTermination {
 		destinationMutateFn = istio.DestinationRuleWithTLSTermination(destinationRule, getLabels(), hostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_SIMPLE)
 	}
 
@@ -324,7 +327,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if values.IstioTLSTermination {
+	if s.values.IstioTLSTermination {
 		destinationMTLSMutateFn := istio.DestinationRuleWithTLSTermination(mTLSDestinationRule, getLabels(), mTLSHostName, sniHost, s.namespace+istioMTLSSecretSuffix, istioapinetworkingv1beta1.ClientTLSSettings_MUTUAL)
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, mTLSDestinationRule, destinationMTLSMutateFn); err != nil {
 			return err
@@ -347,7 +350,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 
 		gatewayMutateFn := istio.GatewayWithTLSPassthrough(configuration.gateway, getLabels(), configuration.istioIngressGateway.Labels, allHosts, kubeapiserverconstants.Port)
-		if values.IstioTLSTermination {
+		if s.values.IstioTLSTermination {
 			var serverConfigs []istio.ServerConfig
 			if len(configuration.hosts) > 0 {
 				serverConfigs = append(serverConfigs, istio.ServerConfig{Hosts: configuration.hosts, Port: kubeapiserverconstants.Port, PortName: portNameTLS, TLSSecret: s.namespace + istioTLSSecretSuffix})
@@ -363,7 +366,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		}
 
 		virtualServiceMutateFn := istio.VirtualServiceWithSNIMatch(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName)
-		if values.IstioTLSTermination {
+		if s.values.IstioTLSTermination {
 			virtualServiceMutateFn = istio.VirtualServiceForTLSTermination(configuration.virtualService, getLabels(), allHosts, configuration.gateway.Name, kubeapiserverconstants.Port, hostName, connectionUpgradeHostName, connectionUpgradeRouteName)
 		}
 
@@ -382,6 +385,10 @@ func (s *sni) Deploy(ctx context.Context) error {
 }
 
 func (s *sni) Destroy(ctx context.Context) error {
+	if err := s.setValues(); err != nil {
+		return err
+	}
+
 	if err := managedresources.DeleteForSeed(ctx, s.client, s.namespace, managedResourceName); err != nil {
 		return err
 	}
@@ -406,6 +413,15 @@ func (s *sni) Destroy(ctx context.Context) error {
 func (s *sni) Wait(_ context.Context) error        { return nil }
 func (s *sni) WaitCleanup(_ context.Context) error { return nil }
 
+func (s *sni) setValues() error {
+	var err error
+	s.values, err = s.valuesFunc()
+	if err != nil {
+		return err
+	}
+	return err
+}
+
 func (s *sni) emptyDestinationRule() *istionetworkingv1beta1.DestinationRule {
 	return &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: s.name, Namespace: s.namespace}}
 }
@@ -419,7 +435,7 @@ func (s *sni) emptyConnectionUpgradeDestinationRule() *istionetworkingv1beta1.De
 }
 
 func (s *sni) emptyEnvoyFilterAPIServerProxy() *istionetworkingv1alpha3.EnvoyFilter {
-	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace + "-apiserver-proxy", Namespace: s.valuesFunc().IstioIngressGateway.Namespace}}
+	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace + "-apiserver-proxy", Namespace: s.values.IstioIngressGateway.Namespace}}
 }
 
 func (s *sni) emptyEnvoyFilterIstioTLSTermination(namespace string) *istionetworkingv1alpha3.EnvoyFilter {
@@ -446,7 +462,7 @@ func (s *sni) emptyIstioMTLSSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      s.namespace + istioMTLSSecretSuffix,
-			Namespace: s.valuesFunc().IstioIngressGateway.Namespace,
+			Namespace: s.values.IstioIngressGateway.Namespace,
 		},
 	}
 }
@@ -455,15 +471,15 @@ func (s *sni) emptyIstioTLSSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      s.namespace + istioTLSSecretSuffix,
-			Namespace: s.valuesFunc().IstioIngressGateway.Namespace,
+			Namespace: s.values.IstioIngressGateway.Namespace,
 		},
 	}
 }
 
 func (s *sni) emptyIstioWildcardTLSSecret() *corev1.Secret {
-	namespace := s.valuesFunc().IstioIngressGateway.Namespace
-	if s.valuesFunc().WildcardConfiguration != nil && s.valuesFunc().WildcardConfiguration.IstioIngressGateway != nil {
-		namespace = s.valuesFunc().WildcardConfiguration.IstioIngressGateway.Namespace
+	namespace := s.values.IstioIngressGateway.Namespace
+	if s.values.WildcardConfiguration != nil && s.values.WildcardConfiguration.IstioIngressGateway != nil {
+		namespace = s.values.WildcardConfiguration.IstioIngressGateway.Namespace
 	}
 
 	return &corev1.Secret{
@@ -475,7 +491,7 @@ func (s *sni) emptyIstioWildcardTLSSecret() *corev1.Secret {
 }
 
 func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
-	if !s.valuesFunc().IstioTLSTermination {
+	if !s.values.IstioTLSTermination {
 		return managedresources.DeleteForSeed(ctx, s.client, s.namespace, managedResourceNameIstioTLSSecrets)
 	}
 
@@ -523,18 +539,18 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 	}
 	serializeObjects = append(serializeObjects, istioMTLSSecret)
 
-	if s.valuesFunc().WildcardConfiguration != nil && s.valuesFunc().WildcardConfiguration.IstioIngressGateway != nil {
+	if s.values.WildcardConfiguration != nil && s.values.WildcardConfiguration.IstioIngressGateway != nil {
 		istioWildcardMTLSSecret := istioMTLSSecret.DeepCopy()
-		istioWildcardMTLSSecret.Namespace = s.valuesFunc().WildcardConfiguration.IstioIngressGateway.Namespace
+		istioWildcardMTLSSecret.Namespace = s.values.WildcardConfiguration.IstioIngressGateway.Namespace
 		serializeObjects = append(serializeObjects, istioWildcardMTLSSecret)
 	}
 
-	if s.valuesFunc().WildcardConfiguration != nil {
+	if s.values.WildcardConfiguration != nil {
 		istioWildcardTLSSecret := s.emptyIstioWildcardTLSSecret()
 		istioWildcardTLSSecret.Data = map[string][]byte{
 			"cacert": secretCAClient.Data[secretsutils.DataKeyCertificateBundle],
-			"key":    s.valuesFunc().WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyPrivateKey],
-			"cert":   s.valuesFunc().WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyCertificate],
+			"key":    s.values.WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyPrivateKey],
+			"cert":   s.values.WildcardConfiguration.TLSSecret.Data[secretsutils.DataKeyCertificate],
 		}
 		serializeObjects = append(serializeObjects, istioWildcardTLSSecret)
 	}
@@ -552,33 +568,32 @@ func (s *sni) reconcileIstioTLSSecrets(ctx context.Context) error {
 }
 
 func (s *sni) istioGatewayConfigurations() ([]istioGatewayConfiguration, error) {
-	values := s.valuesFunc()
-	if values.WildcardConfiguration != nil && values.WildcardConfiguration.IstioIngressGateway != nil {
-		if values.IstioIngressGateway.Namespace == values.WildcardConfiguration.IstioIngressGateway.Namespace {
+	if s.values.WildcardConfiguration != nil && s.values.WildcardConfiguration.IstioIngressGateway != nil {
+		if s.values.IstioIngressGateway.Namespace == s.values.WildcardConfiguration.IstioIngressGateway.Namespace {
 			return nil, fmt.Errorf("wildcard istio ingress gateway must be nil or in different namespace than istio ingress gateway")
 		}
 		return []istioGatewayConfiguration{
 			{
-				istioIngressGateway: values.IstioIngressGateway,
-				hosts:               values.Hosts,
+				istioIngressGateway: s.values.IstioIngressGateway,
+				hosts:               s.values.Hosts,
 				gateway:             s.emptyGateway(),
 				virtualService:      s.emptyVirtualService(),
 			},
 			{
-				istioIngressGateway:   *values.WildcardConfiguration.IstioIngressGateway,
+				istioIngressGateway:   *s.values.WildcardConfiguration.IstioIngressGateway,
 				gateway:               s.emptyWildcardGateway(),
 				virtualService:        s.emptyWildcardVirtualService(),
-				wildcardConfiguration: values.WildcardConfiguration,
+				wildcardConfiguration: s.values.WildcardConfiguration,
 			},
 		}, nil
 	}
 
 	return []istioGatewayConfiguration{{
-		istioIngressGateway:   values.IstioIngressGateway,
-		hosts:                 values.Hosts,
+		istioIngressGateway:   s.values.IstioIngressGateway,
+		hosts:                 s.values.Hosts,
 		gateway:               s.emptyGateway(),
 		virtualService:        s.emptyVirtualService(),
-		wildcardConfiguration: values.WildcardConfiguration,
+		wildcardConfiguration: s.values.WildcardConfiguration,
 	}}, nil
 }
 

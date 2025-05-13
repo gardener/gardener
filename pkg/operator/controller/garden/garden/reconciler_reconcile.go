@@ -776,10 +776,21 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			}
 
 			if apiServer.SNI != nil {
-				sniConfig.TLS = append(sniConfig.TLS, kubeapiserver.TLSSNIConfig{
-					SecretName:     &apiServer.SNI.SecretName,
-					DomainPatterns: apiServer.SNI.DomainPatterns,
-				})
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      apiServer.SNI.SecretName,
+						Namespace: r.GardenNamespace,
+					},
+				}
+				if r.RuntimeClientSet.Client().Get(ctx, client.ObjectKeyFromObject(secret), secret) == nil {
+					// Only set the SNI config if the secret exists.
+					// This prevents the deployment from being blocked due to the missing secret.
+					// If the secret is missing, the reconciliation will fail later in the task "Deploying Kubernetes API server service SNI"
+					sniConfig.TLS = append(sniConfig.TLS, kubeapiserver.TLSSNIConfig{
+						SecretName:     &apiServer.SNI.SecretName,
+						DomainPatterns: apiServer.SNI.DomainPatterns,
+					})
+				}
 			}
 		}
 

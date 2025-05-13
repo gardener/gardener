@@ -76,7 +76,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
-		func() *kubeapiserverexposure.SNIValues {
+		func() (*kubeapiserverexposure.SNIValues, error) {
 			var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
 
 			if b.ControlPlaneWildcardCert != nil {
@@ -102,7 +102,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 				},
 				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination) && v1beta1helper.IsShootIstioTLSTerminationEnabled(b.Shoot.GetInfo()),
 				WildcardConfiguration: wildcardConfiguration,
-			}
+			}, nil
 		},
 	))
 }
@@ -137,7 +137,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 		v1beta1constants.DeploymentNameKubeAPIServer,
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
-		func() *kubeapiserverexposure.SNIValues {
+		func() (*kubeapiserverexposure.SNIValues, error) {
 			var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
 
 			if b.ControlPlaneWildcardCert != nil {
@@ -173,7 +173,7 @@ func (b *Botanist) setAPIServerServiceClusterIPs(clusterIPs []string) {
 				WildcardConfiguration: wildcardConfiguration,
 			}
 
-			return values
+			return values, nil
 		},
 	)
 }

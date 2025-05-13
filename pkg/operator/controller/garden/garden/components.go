@@ -829,34 +829,15 @@ func (r *Reconciler) newIstio(ctx context.Context, garden *operatorv1alpha1.Gard
 }
 
 func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden, secretsManager secretsmanager.Interface, ingressGatewayValues []istio.IngressGatewayValues) (component.Deployer, error) {
-	var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
-
 	if len(ingressGatewayValues) != 1 {
 		return nil, fmt.Errorf("exactly one Istio Ingress Gateway is required for the SNI config")
 	}
 
 	domains := toDomainNames(getAPIServerDomains(garden.Spec.VirtualCluster.DNS.Domains))
-
+	var sni *operatorv1alpha1.SNI
 	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil && garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
-		sni := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI
-		sniDomains := GetAPIServerSNIDomains(domains, *sni)
-
-		if len(sniDomains) > 0 {
-			var tlsSecret corev1.Secret
-
-			if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: sni.SecretName, Namespace: r.GardenNamespace}, &tlsSecret); err != nil {
-				return nil, fmt.Errorf("failed to get SNI TLS secret %q: %w", sni.SecretName, err)
-			}
-
-			wildcardConfiguration = &kubeapiserverexposure.WildcardConfiguration{
-				Hosts:     sniDomains,
-				TLSSecret: tlsSecret,
-			}
-
-			domains = slices.DeleteFunc(domains, func(domain string) bool {
-				return slices.Contains(sniDomains, domain)
-			})
-		}
+		h := *garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI
+		sni = &h
 	}
 
 	return kubeapiserverexposure.NewSNI(
@@ -864,7 +845,30 @@ func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden
 		namePrefix+v1beta1constants.DeploymentNameKubeAPIServer,
 		r.GardenNamespace,
 		secretsManager,
-		func() *kubeapiserverexposure.SNIValues {
+		func() (*kubeapiserverexposure.SNIValues, error) {
+			var wildcardConfiguration *kubeapiserverexposure.WildcardConfiguration
+
+			if sni != nil {
+				sniDomains := GetAPIServerSNIDomains(domains, *sni)
+
+				if len(sniDomains) > 0 {
+					var tlsSecret corev1.Secret
+
+					if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: sni.SecretName, Namespace: r.GardenNamespace}, &tlsSecret); err != nil {
+						return nil, fmt.Errorf("failed to get SNI TLS secret %q: %w", sni.SecretName, err)
+					}
+
+					wildcardConfiguration = &kubeapiserverexposure.WildcardConfiguration{
+						Hosts:     sniDomains,
+						TLSSecret: tlsSecret,
+					}
+
+					domains = slices.DeleteFunc(domains, func(domain string) bool {
+						return slices.Contains(sniDomains, domain)
+					})
+				}
+			}
+
 			return &kubeapiserverexposure.SNIValues{
 				Hosts: domains,
 				IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
@@ -873,7 +877,7 @@ func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden
 				},
 				IstioTLSTermination:   features.DefaultFeatureGate.Enabled(features.IstioTLSTermination),
 				WildcardConfiguration: wildcardConfiguration,
-			}
+			}, nil
 		},
 	), nil
 }

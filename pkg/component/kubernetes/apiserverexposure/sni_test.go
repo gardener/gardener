@@ -313,7 +313,7 @@ var _ = Describe("#SNI", func() {
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}})).To(Succeed())
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-current", Namespace: namespace}})).To(Succeed())
 
-		defaultDepWaiter = NewSNI(c, v1beta1constants.DeploymentNameKubeAPIServer, namespace, sm, func() *SNIValues {
+		defaultDepWaiter = NewSNI(c, v1beta1constants.DeploymentNameKubeAPIServer, namespace, sm, func() (*SNIValues, error) {
 			val := &SNIValues{
 				Hosts:          hosts,
 				APIServerProxy: apiServerProxyValues,
@@ -324,7 +324,7 @@ var _ = Describe("#SNI", func() {
 				IstioTLSTermination:   istioTLSTermination,
 				WildcardConfiguration: wildcardConfiguration,
 			}
-			return val
+			return val, nil
 		})
 	})
 
