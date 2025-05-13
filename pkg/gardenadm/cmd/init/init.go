@@ -230,8 +230,13 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.Shoot.Components.Extensions.ControlPlane.Wait,
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying ETCD Druid",
+			Fn:           b.DeployEtcdDruid,
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
 		deployControlPlaneDeployments = g.Add(flow.Task{
-			Name:         "Deploying control plane components as Deployments for static pod translation",
+			Name:         "Deploying control plane components as Deployments/StatefulSets for static pod translation",
 			Fn:           b.DeployControlPlaneDeployments,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})

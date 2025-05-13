@@ -72,8 +72,8 @@ type staticControlPlaneComponent struct {
 
 func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlaneComponent {
 	return []staticControlPlaneComponent{
-		{b.deployETCD(v1beta1constants.ETCDRoleMain), "etcd-" + v1beta1constants.ETCDRoleMain + "-0", &appsv1.StatefulSet{}},
-		{b.deployETCD(v1beta1constants.ETCDRoleEvents), "etcd-" + v1beta1constants.ETCDRoleEvents + "-0", &appsv1.StatefulSet{}},
+		{b.deployETCD(v1beta1constants.ETCDRoleMain), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}},
+		{b.deployETCD(v1beta1constants.ETCDRoleEvents), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}},
 		{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}},
 		{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}},
 		{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}},

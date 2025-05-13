@@ -116,7 +116,7 @@ func New(
 	secretsManager secretsmanager.Interface,
 	values Values,
 ) Interface {
-	name := values.NamePrefix + "etcd-" + values.Role
+	name := values.NamePrefix + Name(values.Role)
 	log = log.WithValues("etcd", client.ObjectKey{Namespace: namespace, Name: name})
 
 	return &etcd{
@@ -1100,4 +1100,9 @@ func GenerateClientServerCertificates(
 	}
 
 	return etcdCASecret, serverSecret, clientSecret, nil
+}
+
+// Name returns the name of the etcd based on its role.
+func Name(role string) string {
+	return "etcd-" + role
 }
