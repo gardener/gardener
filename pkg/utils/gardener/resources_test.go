@@ -7,7 +7,6 @@ package gardener_test
 import (
 	"context"
 	"encoding/base64"
-	"maps"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -107,13 +106,10 @@ var _ = Describe("Resources", func() {
 
 			for _, unstructuredObj := range unstructuredObjs {
 				Expect(unstructuredObj.GetNamespace()).To(Equal(targetNamespace), unstructuredObj.GetName()+" should have target namespace "+targetNamespace)
-				Expect(unstructuredObj.GetLabels()).To(Equal(secret.Labels), unstructuredObj.GetName()+" should have no finalizers")
+				Expect(unstructuredObj.GetAnnotations()).To(BeEmpty(), unstructuredObj.GetName()+" should have no annotations")
+				Expect(unstructuredObj.GetLabels()).To(BeEmpty(), unstructuredObj.GetName()+" should have no labels")
 				Expect(unstructuredObj.GetFinalizers()).To(BeEmpty(), unstructuredObj.GetName()+" should have no finalizers")
 				Expect(unstructuredObj.Object).To(HaveKey("data"), unstructuredObj.GetName()+" should have data field")
-
-				expectedAnnotations := maps.Clone(annotations)
-				delete(expectedAnnotations, "kubectl.kubernetes.io/last-applied-configuration")
-				Expect(unstructuredObj.GetAnnotations()).To(Equal(expectedAnnotations), unstructuredObj.GetName()+" should have no annotations")
 
 				switch unstructuredObj.GetKind() {
 				case "Secret":

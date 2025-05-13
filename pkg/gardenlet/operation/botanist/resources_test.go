@@ -142,10 +142,8 @@ var _ = Describe("Resources", func() {
 			expectReferencedResourcesInSeed(
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:        "ref-" + resource.Name,
-						Namespace:   controlPlaneNamespace,
-						Labels:      resource.Labels,
-						Annotations: resource.Annotations,
+						Name:      "ref-" + resource.Name,
+						Namespace: controlPlaneNamespace,
 					},
 					Type: resource.Type,
 					Data: resource.Data,
