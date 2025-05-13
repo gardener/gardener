@@ -670,12 +670,8 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 
 	if !v1beta1helper.IsWorkerless(shoot) {
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type))
-
-		// TODO(timebertt): in the medium-touch scenario we require Infrastructure and Worker extensions too
-		if !v1beta1helper.IsShootAutonomous(shoot) {
-			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
-			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
-		}
+		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
+		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
 
 		if shoot.Spec.Networking != nil && shoot.Spec.Networking.Type != nil {
 			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.NetworkResource, *shoot.Spec.Networking.Type))

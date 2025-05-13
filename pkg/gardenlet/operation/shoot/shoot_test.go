@@ -265,6 +265,35 @@ var _ = Describe("shoot", func() {
 			})
 		})
 
+		Describe("#IsAutonomous", func() {
+			It("should return true", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{
+								Name:         "control-plane",
+								ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
+							}},
+						},
+					},
+				})
+				Expect(shoot.IsAutonomous()).To(BeTrue())
+			})
+
+			It("should return false", func() {
+				shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Provider: gardencorev1beta1.Provider{
+							Workers: []gardencorev1beta1.Worker{{
+								Name: "worker",
+							}},
+						},
+					},
+				})
+				Expect(shoot.IsAutonomous()).To(BeFalse())
+			})
+		})
+
 		Describe("#RunsControlPlane", func() {
 			It("should return true", func() {
 				Expect((&Shoot{ControlPlaneNamespace: "kube-system"}).RunsControlPlane()).To(BeTrue())

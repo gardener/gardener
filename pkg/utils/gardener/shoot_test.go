@@ -1286,21 +1286,6 @@ var _ = Describe("Shoot", func() {
 			)))
 		})
 
-		It("should compute the correct list of required extensions (autonomous shoot)", func() {
-			shoot.Spec.Provider.Workers[0].ControlPlane = &gardencorev1beta1.WorkerControlPlane{}
-
-			Expect(ComputeRequiredExtensionsForShoot(shoot, nil, controllerRegistrationList, internalDomain, externalDomain)).To(Equal(sets.New(
-				ExtensionsID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
-				ExtensionsID(extensionsv1alpha1.NetworkResource, networkingType),
-				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType1),
-				ExtensionsID(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
-				ExtensionsID(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
-				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
-				ExtensionsID(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
-				ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType2),
-			)))
-		})
-
 		It("should compute the correct list of required extensions (workerless Shoot and globally enabled extension)", func() {
 			shoot.Spec.Extensions = []gardencorev1beta1.Extension{}
 			shoot.Spec.Provider.Workers = nil

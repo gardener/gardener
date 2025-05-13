@@ -18,10 +18,10 @@ var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "me
 	}, NodeTimeout(time.Minute))
 
 	Describe("Prepare infrastructure and machines", Ordered, func() {
-		It("should bootstrap the machine pods", func(SpecContext) {
-			Eventually(RunAndWait(
+		It("should bootstrap the machine pods", func(ctx SpecContext) {
+			Eventually(RunAndWait(ctx,
 				"bootstrap", "-d", "../../../example/gardenadm-local/medium-touch",
 			).Err).Should(gbytes.Say("work in progress"))
-		}, SpecTimeout(time.Minute))
+		}, SpecTimeout(2*time.Minute))
 	})
 })

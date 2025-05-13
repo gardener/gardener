@@ -40,20 +40,48 @@ var _ = Describe("AutonomousBotanist", func() {
 		})
 
 		It("should fail if the directory does not exist", func() {
-			Expect(NewAutonomousBotanistFromManifests(ctx, log, nil, "does/not/exist")).Error().To(MatchError(fs.ErrNotExist))
+			Expect(NewAutonomousBotanistFromManifests(ctx, log, nil, "does/not/exist", false)).Error().To(MatchError(fs.ErrNotExist))
 		})
 
-		It("should create a new Autonomous Botanist", func() {
-			b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir)
-			Expect(err).NotTo(HaveOccurred())
+		When("running the control plane (acting on the autonomous shoot cluster)", func() {
+			It("should create a new Autonomous Botanist", func() {
+				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
-			Expect(b.Shoot.GetInfo().Name).To(Equal("gardenadm"))
-			Expect(b.Garden.Project.Name).To(Equal("gardenadm"))
-			Expect(b.Extensions).To(ConsistOf(
-				HaveField("ControllerRegistration.Name", "provider-stackit"),
-				HaveField("ControllerRegistration.Name", "networking-cilium"),
-			))
+				Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
+				Expect(b.Shoot.GetInfo().Name).To(Equal("gardenadm"))
+				Expect(b.Garden.Project.Name).To(Equal("gardenadm"))
+				Expect(b.Extensions).To(ConsistOf(
+					HaveField("ControllerRegistration.Name", "provider-stackit"),
+					HaveField("ControllerRegistration.Name", "networking-cilium"),
+				))
+			})
+
+			It("should use kube-system as the control plane namespace", func() {
+				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("kube-system"))
+			})
+		})
+
+		When("not running the control plane (acting on the bootstrap cluster)", func() {
+			It("should create a new Autonomous Botanist", func() {
+				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(b.Shoot.CloudProfile.Name).To(Equal("stackit"))
+				Expect(b.Shoot.GetInfo().Name).To(Equal("gardenadm"))
+				Expect(b.Garden.Project.Name).To(Equal("gardenadm"))
+				Expect(b.Extensions).To(ConsistOf(
+					HaveField("ControllerRegistration.Name", "provider-stackit"),
+				))
+			})
+
+			It("should use the technical ID as the control plane namespace", func() {
+				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("shoot--gardenadm--gardenadm"))
+			})
 		})
 	})
 })

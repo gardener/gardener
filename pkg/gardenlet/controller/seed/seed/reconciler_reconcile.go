@@ -116,7 +116,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: r.GardenNamespace}}
 	log.Info("Labeling and annotating namespace", "namespaceName", gardenNamespace.Name)
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, r.SeedClientSet.Client(), gardenNamespace, func() error {
-		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
+		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, v1beta1constants.LabelRole, v1beta1constants.GardenNamespace)
 
 		// When the seed is the garden cluster then this information is managed by gardener-operator.
 		if !seedIsGarden {

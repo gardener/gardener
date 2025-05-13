@@ -662,7 +662,14 @@ func copyUniqueCIDRs(src []string, dst []net.IPNet, networkType string) ([]net.I
 	return dst, nil
 }
 
-// RunsControlPlane returns true in case the Kubernetes control plane runs inside the shoot cluster.
+// IsAutonomous returns true in case of an autonomous shoot cluster.
+func (s *Shoot) IsAutonomous() bool {
+	return v1beta1helper.IsShootAutonomous(s.GetInfo())
+}
+
+// RunsControlPlane returns true in case the Kubernetes control plane runs inside the cluster.
+// In contrast to IsAutonomous, this function returns false when bootstrapping autonomous shoot clusters using
+// `gardenadm bootstrap` (medium-touch scenario).
 func (s *Shoot) RunsControlPlane() bool {
 	return s.ControlPlaneNamespace == metav1.NamespaceSystem
 }

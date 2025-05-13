@@ -7,6 +7,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
@@ -14,8 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // NewCommand creates a new cobra.Command.
@@ -66,12 +70,93 @@ func run(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir)
+	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false)
 	if err != nil {
 		return err
 	}
 
-	_ = b
+	var (
+		g = flow.NewGraph("bootstrap")
+
+		deployNamespace = g.Add(flow.Task{
+			Name: "Deploying control plane namespace",
+			Fn:   b.DeployControlPlaneNamespace,
+		})
+		reconcileCustomResourceDefinitions = g.Add(flow.Task{
+			Name: "Reconciling CustomResourceDefinitions",
+			Fn:   b.ReconcileCustomResourceDefinitions,
+		})
+		ensureCustomResourceDefinitionsReady = g.Add(flow.Task{
+			Name:         "Ensuring CustomResourceDefinitions are ready",
+			Fn:           flow.TaskFn(b.EnsureCustomResourceDefinitionsReady).RetryUntilTimeout(time.Second, time.Minute),
+			Dependencies: flow.NewTaskIDs(reconcileCustomResourceDefinitions),
+		})
+		reconcileClusterResource = g.Add(flow.Task{
+			Name: "Reconciling extensions.gardener.cloud/v1alpha1.Cluster resource",
+			Fn: func(ctx context.Context) error {
+				return gardenerextensions.SyncClusterResourceToSeed(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, b.Shoot.GetInfo(), b.Shoot.CloudProfile, b.Seed.GetInfo())
+			},
+			Dependencies: flow.NewTaskIDs(ensureCustomResourceDefinitionsReady),
+		})
+		initializeSecretsManagement = g.Add(flow.Task{
+			Name:         "Initializing internal state of Gardener secrets manager",
+			Fn:           b.InitializeSecretsManagement,
+			Dependencies: flow.NewTaskIDs(reconcileClusterResource),
+		})
+		deployPriorityClassCritical = g.Add(flow.Task{
+			Name:         "Deploying PriorityClass for gardener-resource-manager",
+			Fn:           b.DeployPriorityClassCritical,
+			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement),
+		})
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Deploying gardener-resource-manager",
+			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Deploy,
+			Dependencies: flow.NewTaskIDs(deployNamespace, initializeSecretsManagement, deployPriorityClassCritical),
+		})
+		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
+			Name:         "Waiting until gardener-resource-manager reports readiness",
+			Fn:           b.Shoot.Components.ControlPlane.ResourceManager.Wait,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying seed system resources",
+			Fn: func(ctx context.Context) error {
+				return seedsystem.New(b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, seedsystem.Values{}).Deploy(ctx)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		deployExtensionControllers = g.Add(flow.Task{
+			Name: "Deploying extension controllers",
+			Fn: func(ctx context.Context) error {
+				return b.ReconcileExtensionControllerInstallations(ctx, false)
+			},
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerReady),
+		})
+		waitUntilExtensionControllersReady = g.Add(flow.Task{
+			Name:         "Waiting until extension controllers report readiness",
+			Fn:           b.WaitUntilExtensionControllerInstallationsHealthy,
+			Dependencies: flow.NewTaskIDs(deployExtensionControllers),
+		})
+		deployNetworkPolicies = g.Add(flow.Task{
+			Name:         "Deploying network policies",
+			Fn:           b.ApplyNetworkPolicies,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployExtensionControllers),
+		})
+		syncPointBootstrapped = flow.NewTaskIDs(
+			deployNetworkPolicies,
+			waitUntilGardenerResourceManagerReady,
+			waitUntilExtensionControllersReady,
+		)
+
+		_ = syncPointBootstrapped
+	)
+
+	if err := g.Compile().Run(ctx, flow.Opts{
+		Log: opts.Log,
+	}); err != nil {
+		return flow.Errors(err)
+	}
+
 	opts.Log.Info("Command is work in progress")
 	return nil
 }
