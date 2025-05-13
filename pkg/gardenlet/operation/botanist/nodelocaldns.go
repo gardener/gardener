@@ -6,15 +6,17 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/gardener/gardener/imagevector"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	nodelocaldns "github.com/gardener/gardener/pkg/component/networking/nodelocaldns"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -62,17 +64,40 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetDNSServers(dnsServers)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetIPFamilies(b.Shoot.GetInfo().Spec.Networking.IPFamilies)
 	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetWorkerPools(workerPools)
+	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetShootClientSet(b.ShootClientSet)
+	b.Shoot.Components.SystemComponents.NodeLocalDNS.SetLogger(b.Logger)
 	if b.Shoot.NodeLocalDNSEnabled {
 		return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
 	}
 
+	stillRequired := false
+	var parsedVersion *semver.Version
+	for _, workerPool := range workerPools {
+		if workerPool.KubernetesVersion != nil {
+			parsedVersion, err = semver.NewVersion(workerPool.KubernetesVersion.String())
+			if err != nil {
+				return fmt.Errorf("failed to parse Kubernetes version %q: %w", workerPool.KubernetesVersion.String(), err)
+			}
+		} else {
+			parsedVersion, err = semver.NewVersion(b.Shoot.KubernetesVersion.String())
+			if err != nil {
+				return fmt.Errorf("failed to parse Kubernetes version %q: %w", b.Shoot.KubernetesVersion.String(), err)
+			}
+		}
+
+		if parsedVersion.LessThan(semver.MustParse("1.34.0")) {
+			stillRequired = true
+		}
+
+	}
 	if stillDesired, err := b.isNodeLocalDNSStillDesired(ctx); err != nil {
 		return err
-	} else if stillDesired {
+	} else if stillDesired && stillRequired {
 		// Leave NodeLocalDNS components in the cluster until all nodes have been rolled
 		return nil
 	}
 
+	b.Logger.Info("NodeLocalDNS is disabled, removing NodeLocalDNS components")
 	return b.Shoot.Components.SystemComponents.NodeLocalDNS.Destroy(ctx)
 }
 
@@ -128,4 +153,11 @@ func (b *Botanist) computeWorkerPoolsForNodeLocalDNS(ctx context.Context) ([]nod
 	}
 
 	return workerPools, nil
+}
+
+func (b *Botanist) SetShootClient(ctx context.Context) (kubernetes.Interface, error) {
+	if b.ShootClientSet == nil {
+		return nil, fmt.Errorf("ShootClientSet is nil")
+	}
+	return b.ShootClientSet, nil
 }
