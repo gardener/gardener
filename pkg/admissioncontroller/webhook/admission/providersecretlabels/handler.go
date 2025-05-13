@@ -45,42 +45,42 @@ func (h *Handler) Default(ctx context.Context, obj runtime.Object) error {
 		return fmt.Errorf("failed fetching provider types from CredentialsBindings: %w", err)
 	}
 
-	if len(typesFromSecretBindings)+len(typesFromCredentialsBindings) > 0 {
-		maintainLabels(secret, sets.New(typesFromSecretBindings...).Insert(typesFromCredentialsBindings...).UnsortedList()...)
+	if typesFromSecretBindings.Len()+typesFromCredentialsBindings.Len() > 0 {
+		maintainLabels(secret, typesFromSecretBindings.Union(typesFromCredentialsBindings).UnsortedList()...)
 	}
 
 	return nil
 }
 
-func (h *Handler) fetchProviderTypesFromSecretBindings(ctx context.Context, secret *corev1.Secret) ([]string, error) {
+func (h *Handler) fetchProviderTypesFromSecretBindings(ctx context.Context, secret *corev1.Secret) (sets.Set[string], error) {
 	secretBindingList := &gardencorev1beta1.SecretBindingList{}
 	if err := h.Client.List(ctx, secretBindingList); err != nil {
 		return nil, fmt.Errorf("failed to list SecretBindings: %w", err)
 	}
 
-	var providerTypes []string
+	providerTypes := sets.New[string]()
 	for _, secretBinding := range secretBindingList.Items {
 		if secretBinding.SecretRef.Name == secret.Name &&
 			secretBinding.SecretRef.Namespace == secret.Namespace {
-			providerTypes = append(providerTypes, v1beta1helper.GetSecretBindingTypes(&secretBinding)...)
+			providerTypes.Insert(v1beta1helper.GetSecretBindingTypes(&secretBinding)...)
 		}
 	}
 	return providerTypes, nil
 }
 
-func (h *Handler) fetchProviderTypesFromCredentialsBindings(ctx context.Context, secret *corev1.Secret) ([]string, error) {
+func (h *Handler) fetchProviderTypesFromCredentialsBindings(ctx context.Context, secret *corev1.Secret) (sets.Set[string], error) {
 	credentialsBindingList := &securityv1alpha1.CredentialsBindingList{}
 	if err := h.Client.List(ctx, credentialsBindingList); err != nil {
 		return nil, fmt.Errorf("failed to list CredentialsBindings: %w", err)
 	}
 
-	var providerTypes []string
+	providerTypes := sets.New[string]()
 	for _, credentialsBinding := range credentialsBindingList.Items {
 		if credentialsBinding.CredentialsRef.APIVersion == corev1.SchemeGroupVersion.String() &&
 			credentialsBinding.CredentialsRef.Kind == "Secret" &&
 			credentialsBinding.CredentialsRef.Name == secret.Name &&
 			credentialsBinding.CredentialsRef.Namespace == secret.Namespace {
-			providerTypes = append(providerTypes, credentialsBinding.Provider.Type)
+			providerTypes.Insert(credentialsBinding.Provider.Type)
 		}
 	}
 	return providerTypes, nil

@@ -13,5 +13,5 @@ import (
 
 func TestStorage(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Security WorkloadIdentity Storage Suite")
+	RunSpecs(t, "APIServer Registry Security WorkloadIdentity Storage Suite")
 }

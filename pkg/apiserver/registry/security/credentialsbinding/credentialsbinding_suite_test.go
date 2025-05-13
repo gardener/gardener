@@ -16,5 +16,5 @@ import (
 func TestCredentialsBinding(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Security CredentialsBinding Suite")
+	RunSpecs(t, "APIServer Registry Security CredentialsBinding Suite")
 }
