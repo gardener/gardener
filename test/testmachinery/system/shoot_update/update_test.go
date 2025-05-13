@@ -113,21 +113,21 @@ func RunTest(
 		By("Update .kubernetes.version to " + kubernetesVersion + " for pool " + poolName)
 	}
 
-	var hasAutoInPlaceUpdate, hasManualInPlaceUpdate, hasInPlaceUpdate bool
+	var hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers, hasInPlaceUpdateWorkers bool
 
 	for _, worker := range f.Shoot.Spec.Provider.Workers {
 		switch ptr.Deref(worker.UpdateStrategy, "") {
 		case gardencorev1beta1.AutoInPlaceUpdate:
-			hasAutoInPlaceUpdate = true
+			hasAutoInPlaceUpdateWorkers = true
 		case gardencorev1beta1.ManualInPlaceUpdate:
-			hasManualInPlaceUpdate = true
+			hasManualInPlaceUpdateWorkers = true
 		}
 	}
 
-	hasInPlaceUpdate = hasAutoInPlaceUpdate || hasManualInPlaceUpdate
+	hasInPlaceUpdateWorkers = hasAutoInPlaceUpdateWorkers || hasManualInPlaceUpdateWorkers
 
 	var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
-	if hasInPlaceUpdate {
+	if hasInPlaceUpdateWorkers {
 		nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
 	}
 
@@ -145,9 +145,9 @@ func RunTest(
 		return nil
 	})).To(Succeed())
 
-	if hasInPlaceUpdate {
-		inplace.ItShouldVerifyInPlaceUpdateStart(f.GardenClient.Client(), f.Shoot, hasAutoInPlaceUpdate, hasManualInPlaceUpdate)
-		if hasManualInPlaceUpdate {
+	if hasInPlaceUpdateWorkers {
+		inplace.ItShouldVerifyInPlaceUpdateStart(f.GardenClient.Client(), f.Shoot, hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers)
+		if hasManualInPlaceUpdateWorkers {
 			inplace.LabelManualInPlaceNodesWithSelectedForUpdate(ctx, f.ShootClient.Client(), f.Shoot)
 		}
 	}
@@ -159,7 +159,7 @@ func RunTest(
 	shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 	Expect(err).NotTo(HaveOccurred())
 
-	if hasInPlaceUpdate {
+	if hasInPlaceUpdateWorkers {
 		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
 		Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 
