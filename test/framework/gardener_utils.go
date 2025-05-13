@@ -277,7 +277,7 @@ func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1
 	return nil
 }
 
-// UpdateShoot Updates a shoot from a shoot Object and waits for its reconciliation
+// UpdateShoot updates the spec of a given Shoot resource and waits for it to be reconciled successfully.
 func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, update func(shoot *gardencorev1beta1.Shoot) error) error {
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
@@ -293,7 +293,7 @@ func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1
 	return nil
 }
 
-// UpdateShootSpec updates a shoot from a shoot Object
+// UpdateShootSpec updates the spec of a given Shoot resource.
 func (f *GardenerFramework) UpdateShootSpec(ctx context.Context, shoot *gardencorev1beta1.Shoot, update func(shoot *gardencorev1beta1.Shoot) error) error {
 	log := f.Logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 

@@ -113,21 +113,21 @@ func RunTest(
 		By("Update .kubernetes.version to " + kubernetesVersion + " for pool " + poolName)
 	}
 
-	var hasAutoInplaceUpdate, hasManualInplaceUpdate, hasInplaceUpdate bool
+	var hasAutoInPlaceUpdate, hasManualInPlaceUpdate, hasInPlaceUpdate bool
 
 	for _, worker := range f.Shoot.Spec.Provider.Workers {
 		switch ptr.Deref(worker.UpdateStrategy, "") {
 		case gardencorev1beta1.AutoInPlaceUpdate:
-			hasAutoInplaceUpdate = true
+			hasAutoInPlaceUpdate = true
 		case gardencorev1beta1.ManualInPlaceUpdate:
-			hasManualInplaceUpdate = true
+			hasManualInPlaceUpdate = true
 		}
 	}
 
-	hasInplaceUpdate = hasAutoInplaceUpdate || hasManualInplaceUpdate
+	hasInPlaceUpdate = hasAutoInPlaceUpdate || hasManualInPlaceUpdate
 
 	var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
-	if hasInplaceUpdate {
+	if hasInPlaceUpdate {
 		nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
 	}
 
@@ -145,9 +145,9 @@ func RunTest(
 		return nil
 	})).To(Succeed())
 
-	if hasInplaceUpdate {
-		inplace.ItShouldVerifyInPlaceUpdateStart(f.GardenClient.Client(), f.Shoot, hasAutoInplaceUpdate, hasManualInplaceUpdate)
-		if hasManualInplaceUpdate {
+	if hasInPlaceUpdate {
+		inplace.ItShouldVerifyInPlaceUpdateStart(f.GardenClient.Client(), f.Shoot, hasAutoInPlaceUpdate, hasManualInPlaceUpdate)
+		if hasManualInPlaceUpdate {
 			inplace.LabelManualInPlaceNodesWithSelectedForUpdate(ctx, f.ShootClient.Client(), f.Shoot)
 		}
 	}
@@ -159,7 +159,7 @@ func RunTest(
 	shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 	Expect(err).NotTo(HaveOccurred())
 
-	if hasInplaceUpdate {
+	if hasInPlaceUpdate {
 		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
 		Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 
