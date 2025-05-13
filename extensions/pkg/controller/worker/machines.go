@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/Masterminds/semver/v3"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -153,8 +154,15 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 		}
 	}
 
-	if v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
-		data = append(data, "node-local-dns")
+	parsedVersion, err := semver.NewVersion(kubernetesVersion)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse Kubernetes version %q: %w", kubernetesVersion, err)
+	}
+
+	if parsedVersion.LessThan(semver.MustParse("1.34.0")) {
+		if v1beta1helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents) {
+			data = append(data, "node-local-dns")
+		}
 	}
 
 	var result string

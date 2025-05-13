@@ -14,18 +14,22 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/go-logr/logr"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -34,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/shoot"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -60,6 +65,8 @@ const (
 	serviceName       = "kube-dns-upstream"
 	livenessProbePort = 8099
 	configDataKey     = "Corefile"
+
+	configmapName = "node-local-dns-cleanup-script"
 )
 
 // Interface contains functions for a NodeLocalDNS deployer.
@@ -68,8 +75,9 @@ type Interface interface {
 	SetClusterDNS([]string)
 	SetDNSServers([]string)
 	SetIPFamilies([]gardencorev1beta1.IPFamily)
-	// SetWorkerPools sets the WorkerPools field in the Values.
 	SetWorkerPools([]WorkerPool)
+	SetShootClientSet(kubernetes.Interface)
+	SetLogger(logr.Logger)
 }
 
 // Values is a set of configuration values for the node-local-dns component.
@@ -88,9 +96,13 @@ type Values struct {
 	IPFamilies []gardencorev1beta1.IPFamily
 	// WorkerPools is a list of worker pools for which the node-local-dns DaemonSets should be deployed.
 	WorkerPools []WorkerPool
+	// ShootClientSet is the client set used to interact with the shoot cluster.
+	ShootClientSet kubernetes.Interface
+	// Log is the logger used for logging.
+	Log logr.Logger
 }
 
-// WorkerPool contains configuration for the kube-proxy deployment for this specific worker pool.
+// WorkerPool contains configuration for the node-local-dns daemonset for this specific worker pool.
 type WorkerPool struct {
 	// Name is the name of the worker pool.
 	Name string
@@ -200,6 +212,52 @@ func (n *nodeLocalDNS) Deploy(ctx context.Context) error {
 }
 
 func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
+	cluster, err := gardenerextensions.GetCluster(ctx, n.client, n.namespace)
+	if err != nil {
+		return err
+	}
+
+	err = n.createCleanupConfigMap(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Check for node-local-dns DaemonSet existence for each worker pool
+	for _, pool := range n.values.WorkerPools {
+		daemonSetName := "node-local-dns-" + pool.Name
+		n.values.Log.Info("Checking for DaemonSet", "daemonSetName", daemonSetName)
+		daemonSet := &appsv1.DaemonSet{}
+		err := n.values.ShootClientSet.Client().Get(ctx, types.NamespacedName{
+			Namespace: metav1.NamespaceSystem,
+			Name:      daemonSetName,
+		}, daemonSet)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("failed to check DaemonSet %s: %w", daemonSetName, err)
+			}
+			// DaemonSet does not exist, skip this worker pool
+			n.values.Log.Info("DaemonSet not found, skipping cleanup", "daemonSetName", daemonSetName)
+			continue
+		}
+
+		// If DaemonSet exists, add cleanup annotation to the cluster resource
+		if cluster.Shoot == nil {
+			return fmt.Errorf("shoot object is nil in cluster")
+		}
+		if cluster.Shoot.Annotations == nil {
+			cluster.Shoot.Annotations = make(map[string]string)
+		}
+		annotationKey := fmt.Sprintf("node-local-dns-cleanup-required-for-%s", pool.Name)
+		cluster.Shoot.Annotations[annotationKey] = "true"
+		n.values.Log.Info("Adding annotation to shoot", "annotation", annotationKey)
+	}
+
+	// Sync the updated cluster resource to the seed
+	if syncErr := gardenerextensions.SyncClusterResourceToSeed(ctx, n.client, cluster.ObjectMeta.Name, cluster.Shoot, cluster.CloudProfile, cluster.Seed); syncErr != nil {
+		return fmt.Errorf("cluster resource sync to seed failed: %w", syncErr)
+	}
+
+	// Delete resources
 	if err := kubernetesutils.DeleteObjects(ctx, n.client,
 		n.emptyScrapeConfig(""),
 		n.emptyScrapeConfig("-errors"),
@@ -207,7 +265,59 @@ func (n *nodeLocalDNS) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.DeleteForShoot(ctx, n.client, n.namespace, managedResourceName)
+	err = managedresources.DeleteForShoot(ctx, n.client, n.namespace, managedResourceName)
+	if err != nil {
+		return err
+	}
+
+	// Handle cleanup DaemonSet for each worker pool
+	for _, pool := range n.values.WorkerPools {
+		annotationKey := fmt.Sprintf("node-local-dns-cleanup-required-for-%s", pool.Name)
+		if cluster.Shoot.Annotations[annotationKey] == "true" {
+
+			// Create the cleanup DaemonSet
+			cleanupDaemonSet, err := n.createCleanupDaemonSetForWorkerPool(pool.Name)
+			if err != nil {
+				return err
+			}
+			if err := n.values.ShootClientSet.Client().Create(ctx, cleanupDaemonSet); err != nil {
+				return fmt.Errorf("failed to create cleanup DaemonSet for worker pool %s: %w", pool.Name, err)
+			}
+			n.values.Log.Info("Cleanup DaemonSet created", "workerPool", pool.Name)
+
+			// Wait for the DaemonSet to complete (optional)
+			if err := waitForDaemonSetCompletion(ctx, n.values.ShootClientSet.Client(), cleanupDaemonSet.Namespace, cleanupDaemonSet.Name); err != nil {
+				return fmt.Errorf("cleanup DaemonSet for worker pool %s failed: %w", pool.Name, err)
+			}
+			n.values.Log.Info("Cleanup DaemonSet completed", "workerPool", pool.Name)
+			time.Sleep(10 * time.Second) // Optional: wait a bit before deleting
+			// Delete the DaemonSet after completion
+			if err := n.values.ShootClientSet.Client().Delete(ctx, cleanupDaemonSet); err != nil {
+				return fmt.Errorf("failed to delete cleanup DaemonSet for worker pool %s: %w", pool.Name, err)
+			}
+			n.values.Log.Info("Cleanup DaemonSet deleted", "workerPool", pool.Name, "delete annotation", annotationKey)
+			// Remove the annotation after successful cleanup
+			delete(cluster.Shoot.Annotations, annotationKey)
+		}
+	}
+
+	// Delete the cleanup script ConfigMap after all cleanups are done
+	cleanupScriptCM := &corev1.ConfigMap{}
+	if err := n.values.ShootClientSet.Client().Get(ctx, types.NamespacedName{
+		Name:      configmapName,
+		Namespace: "kube-system",
+	}, cleanupScriptCM); err == nil {
+		if delErr := n.values.ShootClientSet.Client().Delete(ctx, cleanupScriptCM); delErr != nil {
+			return fmt.Errorf("failed to delete cleanup script ConfigMap: %w", delErr)
+		}
+	}
+
+	// Sync the updated cluster resource to the seed after cleanup
+	if syncErr := gardenerextensions.SyncClusterResourceToSeed(ctx, n.client, cluster.ObjectMeta.Name, cluster.Shoot, cluster.CloudProfile, cluster.Seed); syncErr != nil {
+		return fmt.Errorf("cluster resource sync to seed failed: %w", syncErr)
+	}
+
+	return nil
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -640,6 +750,14 @@ func (n *nodeLocalDNS) SetWorkerPools(pools []WorkerPool) {
 	n.values.WorkerPools = pools
 }
 
+func (n *nodeLocalDNS) SetShootClientSet(set kubernetes.Interface) {
+	n.values.ShootClientSet = set
+}
+
+func (n *nodeLocalDNS) SetLogger(log logr.Logger) {
+	n.values.Log = log
+}
+
 func (n *nodeLocalDNS) getIPVSAddress() (ipvsAddress string) {
 	return n.getAddress(false)
 }
@@ -656,4 +774,181 @@ func (n *nodeLocalDNS) getAddress(useIPv6Brackets bool) string {
 		return fmt.Sprintf("[%s]", nodelocaldnsconstants.IPVSIPv6Address)
 	}
 	return nodelocaldnsconstants.IPVSIPv6Address
+}
+
+// createCleanupConfigMap creates a ConfigMap containing the cleanup shell script for node-local-dns cleanup DaemonSet.
+func (n *nodeLocalDNS) createCleanupConfigMap(ctx context.Context) error {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configmapName,
+			Namespace: "kube-system",
+		},
+		Data: map[string]string{
+			"cleanup-nodelocaldns.sh": `#!/bin/sh
+# Check if the nodelocaldns interface exists
+if ip link show nodelocaldns > /dev/null 2>&1; then
+    ip link delete nodelocaldns
+    # Check if the operation was successful
+    if [ $? -eq 0 ]; then
+        echo "Nodelocaldns interface deleted successfully."
+    else
+        echo "An error occurred while deleting nodelocaldns interface."
+        exit 1
+    fi
+else
+    echo "Nodelocaldns interface does not exist. Skipping deletion."
+fi
+
+# Define the comment to search for
+COMMENT="NodeLocal DNS Cache:"
+
+# Check if there are any iptables rules with the specified comment
+if iptables-legacy-save | grep -- "--comment \"$COMMENT\"" > /dev/null 2>&1; then
+    # Find and delete all iptables rules with the specified comment
+    iptables-legacy-save | grep -- "--comment \"$COMMENT\"" | while read -r line; do
+        # Extract the rule specification
+        rule=$(echo "$line" | sed -e 's/^-A/-D/')
+        # Delete the rule
+        iptables $rule
+    done
+
+    # Check if the operation was successful
+    if [ $? -eq 0 ]; then
+        echo "All iptables rules with the comment \"$COMMENT\" have been deleted successfully."
+    else
+        echo "An error occurred while deleting iptables rules."
+        exit 1
+    fi
+else
+    echo "No iptables rules with the comment \"$COMMENT\" found for nodelocaldns. Skipping deletion."
+fi
+touch /tmp/healthy
+sleep infinity`,
+		},
+	}
+
+	// Try to create, or update if already exists
+	err := n.values.ShootClientSet.Client().Create(ctx, cm)
+	if apierrors.IsAlreadyExists(err) {
+		// Update the existing ConfigMap
+		existing := &corev1.ConfigMap{}
+		if getErr := n.values.ShootClientSet.Client().Get(ctx, types.NamespacedName{Name: cm.Name, Namespace: cm.Namespace}, existing); getErr != nil {
+			return getErr
+		}
+		existing.Data = cm.Data
+		return n.values.ShootClientSet.Client().Update(ctx, existing)
+	}
+	return err
+}
+
+func (n *nodeLocalDNS) createCleanupDaemonSetForWorkerPool(poolName string) (*appsv1.DaemonSet, error) {
+	imageAlpine, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameAlpineIptables)
+	if err != nil {
+		return nil, err
+	}
+	return &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("node-local-dns-cleanup-%s", poolName),
+			Namespace: "kube-system",
+			Labels: map[string]string{
+				"app":  "node-local-dns-cleanup",
+				"pool": poolName,
+			},
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app":  "node-local-dns-cleanup",
+					"pool": poolName,
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app":  "node-local-dns-cleanup",
+						"pool": poolName,
+					},
+				},
+				Spec: corev1.PodSpec{
+					HostNetwork:   true,
+					RestartPolicy: corev1.RestartPolicyAlways,
+					Tolerations: []corev1.Toleration{
+						{
+							Operator: corev1.TolerationOpExists,
+						},
+					},
+					NodeSelector: map[string]string{
+						"worker.gardener.cloud/pool": poolName,
+					},
+					Containers: []corev1.Container{
+						{
+							Name:  "cleanup",
+							Image: imageAlpine.String(),
+							Command: []string{
+								"/bin/sh",
+								"-c",
+								"/scripts/cleanup-nodelocaldns.sh",
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "cleanup-script",
+									MountPath: "/scripts",
+									ReadOnly:  true,
+								},
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									Exec: &corev1.ExecAction{
+										Command: []string{
+											"cat",
+											"/tmp/healthy",
+										},
+									},
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								Capabilities: &corev1.Capabilities{
+									Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"},
+								},
+								Privileged: ptr.To(false),
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "cleanup-script",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configmapName,
+									},
+									DefaultMode: ptr.To[int32](0775),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
+}
+
+func waitForDaemonSetCompletion(ctx context.Context, client client.Client, namespace, name string) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled or timed out while waiting for DaemonSet %s/%s to become ready", namespace, name)
+		default:
+			daemonSet := &appsv1.DaemonSet{}
+			if err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, daemonSet); err != nil {
+				return err
+			}
+
+			if daemonSet.Status.NumberUnavailable == 0 && daemonSet.Status.DesiredNumberScheduled == daemonSet.Status.NumberReady {
+				return nil // All pods are ready
+			}
+
+			time.Sleep(5 * time.Second) // Poll every 5 seconds
+		}
+	}
 }
