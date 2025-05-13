@@ -128,7 +128,7 @@ func RunTest(
 
 	var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
 	if hasInplaceUpdate {
-		nodesOfInPlaceWorkersBeforeTest = inplace.FindAllNodesOfInPlaceWorker(ctx, f.ShootClient.Client(), f.Shoot)
+		nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
 	}
 
 	Expect(f.UpdateShootSpec(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
@@ -152,7 +152,6 @@ func RunTest(
 		}
 	}
 
-	// wait for the shoot to be created
 	err = f.WaitForShootToBeReconciled(ctx, f.Shoot)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -161,7 +160,7 @@ func RunTest(
 	Expect(err).NotTo(HaveOccurred())
 
 	if hasInplaceUpdate {
-		nodesOfInPlaceWorkersAfterTest := inplace.FindAllNodesOfInPlaceWorker(ctx, f.ShootClient.Client(), f.Shoot)
+		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
 		Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 
 		inplace.ItShouldVerifyInPlaceUpdateCompletion(f.GardenClient.Client(), f.Shoot)

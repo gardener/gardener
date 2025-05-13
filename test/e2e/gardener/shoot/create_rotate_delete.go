@@ -130,7 +130,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}, SpecTimeout(5*time.Minute))
 	}
 
-	nodesOfInPlaceWorkersBeforeTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+	nodesOfInPlaceWorkersBeforeTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
 
 	ItShouldAnnotateShoot(s, map[string]string{
 		v1beta1constants.GardenerOperation: v1beta1constants.OperationRotateCredentialsStartWithoutWorkersRollout,
@@ -154,7 +154,7 @@ func testCredentialRotationWithoutWorkersRollout(s *ShootContext, shootVerifiers
 		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 
-	nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+	nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
 	Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 
 	It("Ensure all worker pools are marked as 'pending for roll out'", func() {
@@ -315,7 +315,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
 
 			if inPlaceUpdate {
-				nodesOfInPlaceWorkersBeforeTest = inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+				nodesOfInPlaceWorkersBeforeTest = inplace.ItShouldFindNodesOfInPlaceWorkers(s)
 				inplace.ItShouldLabelManualInPlaceNodesWithSelectedForUpdate(s)
 			}
 
@@ -332,7 +332,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
 
 				if inPlaceUpdate {
-					nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+					nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
 					Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 					inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
 				}

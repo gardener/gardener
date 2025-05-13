@@ -285,7 +285,6 @@ func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1
 		return err
 	}
 
-	// Then we wait for the shoot to be created
 	if err := f.WaitForShootToBeReconciled(ctx, shoot); err != nil {
 		return err
 	}

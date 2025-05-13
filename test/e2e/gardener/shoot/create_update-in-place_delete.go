@@ -64,7 +64,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			verifyNodeKubernetesVersions(s)
 
 			var (
-				nodesOfInPlaceWorkersBeforeTest = inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+				nodesOfInPlaceWorkersBeforeTest = inplace.ItShouldFindNodesOfInPlaceWorkers(s)
 				cloudProfile                    *gardencorev1beta1.CloudProfile
 				controlPlaneKubernetesVersion   string
 				poolNameToKubernetesVersion     map[string]string
@@ -123,7 +123,7 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 			verifyNodeKubernetesVersions(s)
 			inclusterclient.VerifyInClusterAccessToAPIServer(s)
 
-			nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+			nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindNodesOfInPlaceWorkers(s)
 			Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
 			inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
 
