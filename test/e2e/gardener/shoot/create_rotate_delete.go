@@ -330,12 +330,12 @@ var _ = Describe("Shoot Tests", Label("Shoot", "default"), func() {
 				// renew shoot clients after rotation
 				ItShouldInitializeShootClient(s)
 				inclusterclient.VerifyInClusterAccessToAPIServer(s)
-			}
 
-			if inPlaceUpdate {
-				nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
-				Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
-				inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
+				if inPlaceUpdate {
+					nodesOfInPlaceWorkersAfterTest := inplace.ItShouldFindAllNodesOfInPlaceWorker(s)
+					Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
+					inplace.ItShouldVerifyInPlaceUpdateCompletion(s.GardenClient, s.Shoot)
+				}
 			}
 
 			ItShouldDeleteShoot(s)

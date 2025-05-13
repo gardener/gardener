@@ -26,6 +26,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -115,13 +116,11 @@ func RunTest(
 	var hasAutoInplaceUpdate, hasManualInplaceUpdate, hasInplaceUpdate bool
 
 	for _, worker := range f.Shoot.Spec.Provider.Workers {
-		if strategy := worker.UpdateStrategy; strategy != nil {
-			switch *strategy {
-			case gardencorev1beta1.AutoInPlaceUpdate:
-				hasAutoInplaceUpdate = true
-			case gardencorev1beta1.ManualInPlaceUpdate:
-				hasManualInplaceUpdate = true
-			}
+		switch ptr.Deref(worker.UpdateStrategy, "") {
+		case gardencorev1beta1.AutoInPlaceUpdate:
+			hasAutoInplaceUpdate = true
+		case gardencorev1beta1.ManualInPlaceUpdate:
+			hasManualInplaceUpdate = true
 		}
 	}
 
