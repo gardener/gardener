@@ -248,9 +248,10 @@ func deployMachineDeployments(
 				metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
 			}
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
-				Replicas:        replicas,
-				MinReadySeconds: 500,
-				Strategy:        deployment.Strategy,
+				Replicas:             replicas,
+				RevisionHistoryLimit: ptr.To[int32](0),
+				MinReadySeconds:      500,
+				Strategy:             deployment.Strategy,
 				Selector: &metav1.LabelSelector{
 					MatchLabels: labels,
 				},
