@@ -16,5 +16,5 @@ import (
 func TestSecretBinding(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Core SecretBinding Suite")
+	RunSpecs(t, "APIServer Registry Core SecretBinding Suite")
 }

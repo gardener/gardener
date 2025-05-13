@@ -74,14 +74,27 @@ _(enabled by default)_
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `NamespacedCloudProfile`s, `Seed`s, `SecretBinding`s, `CredentialsBinding`s, `WorkloadIdentity`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow extension admission webhooks to filter out the resources they are responsible for and ignore all others. This label is of the form `<extension-type>.extensions.gardener.cloud/<extension-name> : "true"`. For example, an extension label for provider extension type `aws`, looks like `provider.extensions.gardener.cloud/aws : "true"`.
 
+## `FinalizerRemoval`
+
+_(enabled by default)_
+
+This admission controller reacts on `UPDATE` operations for `CredentialsBinding`s, `SecretBinding`s, `Shoot`s. 
+It ensures that the finalizers of these resources are not removed by users, as long as the affected resource is still in use.
+For `CredentialsBinding`s and `SecretBinding`s this means, that the `gardener` finalizer can only be removed if the binding is not referenced by any `Shoot`.
+In case of `Shoot`s, the `gardener` finalizer can only be removed if the last operation of the `Shoot` indicates a successful deletion. 
+
 ## `ProjectValidator`
 
 _(enabled by default)_
 
-This admission controller reacts on `CREATE` operations for `Project`s.
+This admission controller reacts on `CREATE` and `UPDATE` operations for `Project`s.
 It prevents creating `Project`s with a non-empty `.spec.namespace` if the value in `.spec.namespace` does not start with `garden-`.
 
-⚠️ This admission plugin will be removed in a future release and its business logic will be incorporated into the static validation of the `gardener-apiserver`.
+In addition, the project specification is initialized during creation:
+- `.spec.createdBy` is set to the user creating the project.
+- `.spec.owner` defaults to the value of `.spec.createdBy` if it is not specified.
+
+During subsequent updates, it ensures that the project owner is included in the `.spec.members` list.
 
 ## `ResourceQuota`
 
@@ -96,11 +109,9 @@ _(enabled by default)_
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `CloudProfile`s, `Project`s, `SecretBinding`s, `Seed`s, and `Shoot`s.
 Generally, it checks whether referred resources stated in the specifications of these objects exist in the system (e.g., if a referenced `Secret` exists).
-However, it also has some special behaviours for certain resources:
 
+However, it also has some special behaviours for certain resources:
 * `CloudProfile`s: It rejects removing Kubernetes or machine image versions if there is at least one `Shoot` that refers to them.
-* `Project`s: It sets the `.spec.createdBy` field for newly created `Project` resources, and defaults the `.spec.owner` field in case it is empty (to the same value of `.spec.createdBy`).
-* `Shoot`s: It sets the `gardener.cloud/created-by=<username>` annotation for newly created `Shoot` resources.
 
 ## `SeedValidator`
 
@@ -185,7 +196,7 @@ _(enabled by default)_
 This admission controller reacts on `CREATE`, `UPDATE` and `DELETE` operations for `Shoot`s.
 It validates certain configurations in the specification against the referred `CloudProfile` (e.g., machine images, machine types, used Kubernetes version, ...).
 Generally, it performs validations that cannot be handled by the static API validation due to their dynamic nature (e.g., when something needs to be checked against referred resources).
-Additionally, it takes over certain defaulting tasks (e.g., default machine image for worker pools, default Kubernetes version).
+Additionally, it takes over certain defaulting tasks (e.g., default machine image for worker pools, default Kubernetes version) and setting the `gardener.cloud/created-by=<username>` annotation for newly created `Shoot` resources.
 
 ## `ShootManagedSeed`
 

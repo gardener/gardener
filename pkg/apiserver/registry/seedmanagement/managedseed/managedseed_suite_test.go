@@ -13,5 +13,5 @@ import (
 
 func TestManagedSeed(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry SeedManagement ManagedSeed Suite")
+	RunSpecs(t, "APIServer Registry SeedManagement ManagedSeed Suite")
 }

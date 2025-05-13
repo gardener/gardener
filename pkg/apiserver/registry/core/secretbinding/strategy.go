@@ -28,7 +28,12 @@ func (secretBindingStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (secretBindingStrategy) PrepareForCreate(_ context.Context, _ runtime.Object) {
+func (s secretBindingStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
+	binding := obj.(*core.SecretBinding)
+
+	if binding.GetName() == "" {
+		binding.SetName(s.GenerateName(binding.GetGenerateName()))
+	}
 }
 
 func (secretBindingStrategy) Validate(_ context.Context, obj runtime.Object) field.ErrorList {

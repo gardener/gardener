@@ -13,5 +13,5 @@ import (
 
 func TestStorage(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Core Shoot Storage Suite")
+	RunSpecs(t, "APIServer Registry Core Shoot Storage Suite")
 }
