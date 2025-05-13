@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -123,7 +124,7 @@ func (f *FinalizerRemoval) Admit(_ context.Context, a admission.Attributes, _ ad
 				return ptr.Deref(shoot.Spec.SecretBindingName, "") == binding.Name
 			})
 			if err != nil {
-				return apierrors.NewInternalError(fmt.Errorf("error checking if credentials binding is in use: %w", err))
+				return apierrors.NewInternalError(fmt.Errorf("error checking if secret binding is in use: %w", err))
 			}
 			if inUse {
 				return admission.NewForbidden(a, fmt.Errorf("finalizer must not be removed - secret binding %s/%s is still in use by at least one shoot", binding.Namespace, binding.Name))
@@ -141,10 +142,10 @@ func (f *FinalizerRemoval) Admit(_ context.Context, a admission.Attributes, _ ad
 				return ptr.Deref(shoot.Spec.CredentialsBindingName, "") == binding.Name
 			})
 			if err != nil {
-				return apierrors.NewInternalError(fmt.Errorf("error checking if secret binding is in use: %w", err))
+				return apierrors.NewInternalError(fmt.Errorf("error checking if credentials binding is in use: %w", err))
 			}
 			if inUse {
-				return admission.NewForbidden(a, fmt.Errorf("finalizer must not be removed - secret binding %s/%s is still in use by at least one shoot", binding.Namespace, binding.Name))
+				return admission.NewForbidden(a, fmt.Errorf("finalizer must not be removed - credentials binding %s/%s is still in use by at least one shoot", binding.Namespace, binding.Name))
 			}
 		}
 	case core.Kind("Shoot"):
@@ -171,13 +172,7 @@ func (f *FinalizerRemoval) isUsedByShoot(namespace string, inUse func(*gardencor
 		return false, fmt.Errorf("error retrieving shoots: %w", err)
 	}
 
-	for _, shoot := range shoots {
-		if inUse(shoot) {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return slices.ContainsFunc(shoots, inUse), nil
 }
 
 func shootDeletionSucceeded(shoot *core.Shoot) bool {

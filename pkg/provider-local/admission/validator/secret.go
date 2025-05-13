@@ -15,15 +15,15 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 )
 
-type secret struct{}
+type secretValidator struct{}
 
 // NewSecretValidator returns a new instance of a secret validator.
 func NewSecretValidator() extensionswebhook.Validator {
-	return &secret{}
+	return &secretValidator{}
 }
 
 // Validate checks whether the data is empty.
-func (s *secret) Validate(_ context.Context, newObj, oldObj client.Object) error {
+func (s *secretValidator) Validate(_ context.Context, newObj, oldObj client.Object) error {
 	secret, ok := newObj.(*corev1.Secret)
 	if !ok {
 		return fmt.Errorf("wrong object type %T", newObj)

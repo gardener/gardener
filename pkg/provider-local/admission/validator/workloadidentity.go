@@ -15,16 +15,16 @@ import (
 	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 )
 
-type workloadIdentity struct {
+type workloadIdentityValidator struct {
 }
 
 // NewWorkloadIdentityValidator returns a new instance of a WorkloadIdentity validator.
 func NewWorkloadIdentityValidator() extensionswebhook.Validator {
-	return &workloadIdentity{}
+	return &workloadIdentityValidator{}
 }
 
 // Validate checks whether the provider config is empty.
-func (wi *workloadIdentity) Validate(_ context.Context, newObj, _ client.Object) error {
+func (wi *workloadIdentityValidator) Validate(_ context.Context, newObj, _ client.Object) error {
 	workloadIdentity, ok := newObj.(*securityv1alpha1.WorkloadIdentity)
 	if !ok {
 		return fmt.Errorf("wrong object type %T", newObj)
