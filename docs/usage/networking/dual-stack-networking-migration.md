@@ -20,6 +20,28 @@ Dual-stack networking allows clusters to operate with both IPv4 and IPv6 protoco
 - Adding a new protocol is only allowed as the second element in the array, ensuring the primary protocol remains unchanged.
 - Migration involves multiple reconciliation runs to ensure a smooth transition without disruptions.
 
+## Preconditions
+
+Gardener supports multiple different network configurations, including running with pod overlay network or native routing. Currently, there is only native routing as supported operating mode for dual-stack networking in Gardener. This means that the pod overlay network needs to be disabled before starting the dual-stack migration. Otherwise, pod-to-pod cross-node communication may not work as expected after the migration.
+
+At the moment, this only affects IPv4-only clusters, which should be migrated to dual-stack networking. IPv6-only clusters always use native routing.
+
+You can check whether your cluster uses overlay network or native routing by looking for `spec.networking.providerConfig.overlay.enabled` in your cluster's manifest. If it is set to `true` or not present, the cluster is using the pod overlay network. If it is set to `false`, the cluster is using native routing.
+
+Please note that there are infrastructure-specific limitations with regards to cluster size due to one route being added per node. Therefore, please consult the documentation of your infrastructure if your cluster should grow beyond 50 nodes and adapt the route limit quotas accordingly before switching to native routing.
+
+To disable the pod overlay network and thereby switch to native routing, adjust your cluster specification as follows:
+
+```yaml
+spec:
+  ...
+  networking:
+    providerConfig:
+      overlay:
+        enabled: false
+  ...
+```
+
 ## Migration Process
 
 ### Step 1: Update Networking Configuration
