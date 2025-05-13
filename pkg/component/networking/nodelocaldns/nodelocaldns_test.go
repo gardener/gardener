@@ -222,6 +222,7 @@ var _ = Describe("NodeLocalDNS", func() {
 	)
 
 	BeforeEach(func() {
+
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		values = Values{
 			Image:      image,
