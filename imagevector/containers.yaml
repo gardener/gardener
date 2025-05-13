@@ -70,7 +70,7 @@ images:
   - name: etcd
     sourceRepository: github.com/etcd-io/etcd
     repository: quay.io/coreos/etcd
-    tag: "v3.4.34"
+    tag: "v3.4.37"
   - name: dependency-watchdog
     sourceRepository: github.com/gardener/dependency-watchdog
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dependency-watchdog
