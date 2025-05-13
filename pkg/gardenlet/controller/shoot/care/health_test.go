@@ -244,7 +244,7 @@ var _ = Describe("health check", func() {
 			nodeName                   = "node1"
 			oscSecretMeta              = map[string]metav1.ObjectMeta{
 				workerPoolName1: {
-					Name:        operatingsystemconfig.KeyV1(workerPoolName1, kubernetesVersion, nil),
+					Name:        operatingsystemconfig.KeyV1(workerPoolName1, false, kubernetesVersion, nil),
 					Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
 					Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
 				},
@@ -393,7 +393,7 @@ var _ = Describe("health check", func() {
 				},
 				map[string]metav1.ObjectMeta{
 					workerPoolName1: {
-						Name:        operatingsystemconfig.KeyV1(workerPoolName1, kubernetesVersion, nil),
+						Name:        operatingsystemconfig.KeyV1(workerPoolName1, false, kubernetesVersion, nil),
 						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
 						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
 					},
@@ -413,7 +413,7 @@ var _ = Describe("health check", func() {
 				},
 				map[string]metav1.ObjectMeta{
 					workerPoolName1: {
-						Name:        operatingsystemconfig.KeyV1(workerPoolName1, kubernetesVersion, nil),
+						Name:        operatingsystemconfig.KeyV1(workerPoolName1, false, kubernetesVersion, nil),
 						Annotations: map[string]string{"checksum/data-script": cloudConfigSecretChecksum1},
 						Labels:      map[string]string{"worker.gardener.cloud/pool": workerPoolName1},
 					},
