@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"html/template"
 
+	machinecontroller "github.com/gardener/machine-controller-manager/pkg/util/provider/machinecontroller"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -70,12 +71,7 @@ WantedBy=multi-user.target`),
 				Permissions: ptr.To[uint32](0640),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
-						// The bootstrap token will be created by the machine-controller-manager when creating an actual
-						// machine, and it will replace this "magic" string with the actual token in the user data. See
-						// https://github.com/gardener/gardener/blob/master/docs/extensions/resources/operatingsystemconfig.md#bootstrap-tokens
-						// for more details.
-						// TODO(oliver-goetz): Replace string with constant when machine-controller-manager v0.55.0 is released.
-						Data: "<<BOOTSTRAP_TOKEN>>",
+						Data: machinecontroller.BootstrapTokenPlaceholder,
 					},
 					TransmitUnencoded: ptr.To(true),
 				},
@@ -100,11 +96,7 @@ WantedBy=multi-user.target`),
 				Permissions: ptr.To[uint32](0640),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
-						// The machine name will be created by the machine-controller-manager when creating an actual
-						// machine, and it will replace this "magic" string with the machine name in the user data.
-						// This works similar to the replacement of <<BOOTSTRAP_TOKEN>>.
-						// TODO(oliver-goetz): Replace string with constant when machine-controller-manager v0.55.0 is released.
-						Data: "<<MACHINE_NAME>>",
+						Data: machinecontroller.MachineNamePlaceholder,
 					},
 					TransmitUnencoded: ptr.To(true),
 				},
