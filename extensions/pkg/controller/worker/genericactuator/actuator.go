@@ -146,25 +146,6 @@ func (a *genericActuator) cleanupMachineClassSecrets(ctx context.Context, logger
 	return nil
 }
 
-// cleanupMachineSets deletes MachineSets having number of desired and actual replicas equaling 0
-func (a *genericActuator) cleanupMachineSets(ctx context.Context, logger logr.Logger, namespace string) error {
-	logger.Info("Cleaning up machine sets")
-	machineSetList := &machinev1alpha1.MachineSetList{}
-	if err := a.seedClient.List(ctx, machineSetList, client.InNamespace(namespace)); err != nil {
-		return err
-	}
-
-	for _, machineSet := range machineSetList.Items {
-		if machineSet.Spec.Replicas == 0 && machineSet.Status.Replicas == 0 {
-			logger.Info("Deleting MachineSet as the number of desired and actual replicas is 0", "machineSet", &machineSet)
-			if err := a.seedClient.Delete(ctx, machineSet.DeepCopy()); client.IgnoreNotFound(err) != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // IsMachineControllerStuck determines if the machine controller pod is stuck.
 func (a *genericActuator) IsMachineControllerStuck(ctx context.Context, worker *extensionsv1alpha1.Worker) (bool, *string, error) {
 	machineDeployments := &machinev1alpha1.MachineDeploymentList{}

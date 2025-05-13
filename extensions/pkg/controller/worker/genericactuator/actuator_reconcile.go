@@ -158,11 +158,6 @@ func (a *genericActuator) Reconcile(ctx context.Context, log logr.Logger, worker
 		}
 	}
 
-	// Delete MachineSets having number of desired and actual replicas equaling 0
-	if err := a.cleanupMachineSets(ctx, log, worker.Namespace); err != nil {
-		return fmt.Errorf("failed to cleanup the machine sets: %w", err)
-	}
-
 	// Scale down machine-controller-manager if shoot is hibernated.
 	if isHibernationEnabled {
 		if err := scaleMachineControllerManager(ctx, log, a.seedClient, worker, 0); err != nil {
@@ -253,9 +248,10 @@ func deployMachineDeployments(
 				metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
 			}
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
-				Replicas:        replicas,
-				MinReadySeconds: 500,
-				Strategy:        deployment.Strategy,
+				Replicas:             replicas,
+				RevisionHistoryLimit: ptr.To[int32](0),
+				MinReadySeconds:      500,
+				Strategy:             deployment.Strategy,
 				Selector: &metav1.LabelSelector{
 					MatchLabels: labels,
 				},
