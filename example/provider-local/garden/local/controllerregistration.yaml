@@ -26,9 +26,10 @@ spec:
       type: local
     - kind: Extension
       type: local-ext-seed
-      clusterCompatibility:
-      - shoot
-      - seed
+#     TODO(timuthy): Enable clusterCompatibility after Gardener v1.120 was released.
+#     clusterCompatibility:
+#     - shoot
+#     - seed
       lifecycle:
         reconcile: BeforeKubeAPIServer
         delete: AfterKubeAPIServer
