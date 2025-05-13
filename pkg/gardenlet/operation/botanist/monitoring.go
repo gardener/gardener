@@ -93,7 +93,7 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		RetentionSize:       "15GB",
 		RestrictToNamespace: true,
 		ResourceRequests: &corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("10m"),
+			corev1.ResourceCPU:    resource.MustParse("150m"),
 			corev1.ResourceMemory: resource.MustParse("400M"),
 		},
 		AdditionalPodLabels: map[string]string{
@@ -119,6 +119,10 @@ func (b *Botanist) DefaultPrometheus() (prometheus.Interface, error) {
 		TargetCluster: &prometheus.TargetClusterValues{
 			ServiceAccountName: shootprometheus.ServiceAccountName,
 			ScrapesMetrics:     true,
+		},
+		VPAMinAllowed: &corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("150m"),
+			corev1.ResourceMemory: resource.MustParse("100M"),
 		},
 	}
 
