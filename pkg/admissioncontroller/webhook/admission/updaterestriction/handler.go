@@ -29,6 +29,12 @@ func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Res
 		return admission.Allowed("generic-garbage-collector is allowed to delete system resources")
 	}
 
+	// Allow the gardener-internal service account to update resources.
+	// This service account is used by the gardener-operator to label all encrypted resources with the name of the current ETCD encryption key secret.
+	if req.UserInfo.Username == "system:serviceaccount:kube-system:gardener-internal" && req.Operation == admissionv1.Update {
+		return admission.Allowed("system:serviceaccount:kube-system:gardener-internal is allowed to update system resources")
+	}
+
 	if slices.Contains(req.UserInfo.Groups, v1beta1constants.SeedsGroup) {
 		return admission.Allowed("gardenlet is allowed to modify system resources")
 	}
