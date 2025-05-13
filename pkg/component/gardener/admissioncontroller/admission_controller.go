@@ -131,6 +131,7 @@ func (a *gardenerAdmissionController) Deploy(ctx context.Context) error {
 		a.clusterRole(),
 		a.clusterRoleBinding(virtualGardenAccessSecret.ServiceAccountName),
 		a.validatingWebhookConfiguration(caSecret),
+		a.mutatingWebhookConfiguration(caSecret),
 	)
 	if err != nil {
 		return err

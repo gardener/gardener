@@ -3,5 +3,33 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: gardener-admission-controller
-webhooks: []
+webhooks:
+- name: sync-provider-secret-labels.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
+  timeoutSeconds: 10
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
+  failurePolicy: Fail
+  namespaceSelector:
+    matchExpressions:
+    - {key: gardener.cloud/role, operator: In, values: [project]}
+  clientConfig:
+    {{- if .Values.global.deployment.virtualGarden.enabled }}
+    url: https://gardener-admission-controller.garden/webhooks/sync-provider-secret-labels
+    {{- else }}
+    service:
+      namespace: garden
+      name: gardener-admission-controller
+      path: /webhooks/sync-provider-secret-labels
+    {{- end }}
+    caBundle: {{ required ".Values.global.admission.config.server.webhooks.tls.caBundle is required" (b64enc .Values.global.admission.config.server.webhooks.tls.caBundle) }}
+  sideEffects: None
 {{- end }}

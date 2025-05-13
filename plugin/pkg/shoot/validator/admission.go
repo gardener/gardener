@@ -253,13 +253,17 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, _ adm
 		}
 	}
 
+	if a.GetOperation() == admission.Create {
+		addCreatedByAnnotation(shoot, a.GetUserInfo().GetName())
+
+		if len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
+			return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
+		}
+	}
+
 	cloudProfileSpec, err := admissionutils.GetCloudProfileSpec(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
-	}
-
-	if a.GetOperation() == admission.Create && len(ptr.Deref(shoot.Spec.CloudProfileName, "")) > 0 && shoot.Spec.CloudProfile != nil {
-		return fmt.Errorf("new shoot can only specify either cloudProfileName or cloudProfile reference")
 	}
 
 	if err := admissionutils.ValidateCloudProfileChanges(v.cloudProfileLister, v.namespacedCloudProfileLister, shoot, oldShoot); err != nil {
@@ -605,21 +609,6 @@ func (c *validationContext) validateDeletion(a admission.Attributes) error {
 	if a.GetOperation() == admission.Delete {
 		if isShootInMigrationOrRestorePhase(c.shoot) {
 			return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot for deletion during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
-		}
-	}
-
-	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
-	if len(c.shoot.Status.TechnicalID) > 0 && c.shoot.Status.LastOperation != nil {
-		oldFinalizers := sets.New(c.oldShoot.Finalizers...)
-		newFinalizers := sets.New(c.shoot.Finalizers...)
-
-		if oldFinalizers.Has(core.GardenerName) && !newFinalizers.Has(core.GardenerName) {
-			lastOperation := c.shoot.Status.LastOperation
-			deletionSucceeded := lastOperation.Type == core.LastOperationTypeDelete && lastOperation.State == core.LastOperationStateSucceeded && lastOperation.Progress == 100
-
-			if !deletionSucceeded {
-				return admission.NewForbidden(a, fmt.Errorf("finalizer %q cannot be removed because shoot deletion has not completed successfully yet", core.GardenerName))
-			}
 		}
 	}
 
@@ -2161,4 +2150,13 @@ func validateMaxNodesTotal(workers []core.Worker, maxNodesTotal int32) field.Err
 	}
 
 	return allErrs
+}
+
+func addCreatedByAnnotation(shoot *core.Shoot, userName string) {
+	annotations := shoot.Annotations
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations[v1beta1constants.GardenCreatedBy] = userName
+	shoot.Annotations = annotations
 }

@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+// SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package shoot_test
+package credentialsbinding_test
 
 import (
 	"testing"
@@ -13,8 +13,8 @@ import (
 	"github.com/gardener/gardener/pkg/apiserver/features"
 )
 
-func TestShoot(t *testing.T) {
+func TestCredentialsBinding(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "APIServer Registry Core Shoot Suite")
+	RunSpecs(t, "APIServer Registry Security CredentialsBinding Suite")
 }

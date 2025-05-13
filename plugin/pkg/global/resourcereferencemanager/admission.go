@@ -10,13 +10,13 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +32,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -287,8 +288,8 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	return nil
 }
 
-// Admit ensures that referenced resources do actually exist.
-func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
+// Validate ensures that referenced resources do actually exist.
+func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if r.readyFunc == nil {
 		r.AssignReadyFunc(func() bool {
@@ -350,14 +351,6 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 
 		switch a.GetOperation() {
 		case admission.Create:
-			// Add createdBy annotation to Shoot
-			annotations := shoot.Annotations
-			if annotations == nil {
-				annotations = map[string]string{}
-			}
-			annotations[v1beta1constants.GardenCreatedBy] = a.GetUserInfo().GetName()
-			shoot.Annotations = annotations
-
 			oldShoot = &core.Shoot{}
 		case admission.Update:
 			// skip verification if spec wasn't changed
@@ -408,31 +401,9 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 		if utils.SkipVerification(operation, project.ObjectMeta) {
 			return nil
 		}
-		// Set createdBy field in Project
+
 		switch a.GetOperation() {
 		case admission.Create:
-			project.Spec.CreatedBy = &rbacv1.Subject{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     rbacv1.UserKind,
-				Name:     a.GetUserInfo().GetName(),
-			}
-
-			if project.Spec.Owner == nil {
-				owner := project.Spec.CreatedBy
-
-			outer:
-				for _, member := range project.Spec.Members {
-					for _, role := range member.Roles {
-						if role == core.ProjectMemberOwner {
-							owner = member.Subject.DeepCopy()
-							break outer
-						}
-					}
-				}
-
-				project.Spec.Owner = owner
-			}
-
 			err = r.ensureProjectNamespace(project)
 		case admission.Update:
 			oldProject, ok := a.GetOldObject().(*core.Project)
@@ -441,24 +412,6 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 			}
 			if oldProject.Spec.Namespace == nil && project.Spec.Namespace != nil {
 				err = r.ensureProjectNamespace(project)
-			}
-		}
-
-		if project.Spec.Owner != nil {
-			ownerIsMember := false
-			for _, member := range project.Spec.Members {
-				if member.Subject == *project.Spec.Owner {
-					ownerIsMember = true
-				}
-			}
-			if !ownerIsMember {
-				project.Spec.Members = append(project.Spec.Members, core.ProjectMember{
-					Subject: *project.Spec.Owner,
-					Roles: []string{
-						core.ProjectMemberAdmin,
-						core.ProjectMemberOwner,
-					},
-				})
 			}
 		}
 
@@ -788,7 +741,10 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		credentialsNamespace  string
 		credentialsName       string
 		credentialsKind       string
+		providerTypes         []string
+		credentialsReferenced func(shoot *gardencorev1beta1.Shoot) bool
 	)
+
 	switch attributes.GetKind().GroupKind() {
 	case core.Kind("SecretBinding"):
 		b, ok := binding.(*core.SecretBinding)
@@ -802,6 +758,11 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		credentialsNamespace = b.SecretRef.Namespace
 		credentialsName = b.SecretRef.Name
 		credentialsKind = "Secret"
+		providerTypes = helper.GetSecretBindingTypes(b)
+		credentialsReferenced = func(shoot *gardencorev1beta1.Shoot) bool {
+			return ptr.Deref(shoot.Spec.SecretBindingName, "") == b.Name
+		}
+
 	case security.Kind("CredentialsBinding"):
 		b, ok := binding.(*security.CredentialsBinding)
 		if !ok {
@@ -823,9 +784,30 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		}
 		credentialsNamespace = b.CredentialsRef.Namespace
 		credentialsName = b.CredentialsRef.Name
+		providerTypes = []string{b.Provider.Type}
+		credentialsReferenced = func(shoot *gardencorev1beta1.Shoot) bool {
+			return ptr.Deref(shoot.Spec.CredentialsBindingName, "") == b.Name
+		}
+
 	default:
 		return fmt.Errorf("%s is neither of kind SecretBinding nor CredentialsBinding", attributes.GetKind().GroupKind())
 	}
+
+	shoots, err := r.shootLister.Shoots(attributes.GetNamespace()).List(labels.Everything())
+	if err != nil {
+		return fmt.Errorf("failed listing shoots: %w", err)
+	}
+
+	for _, shoot := range shoots {
+		if !credentialsReferenced(shoot) {
+			continue
+		}
+
+		if !slices.Contains(providerTypes, shoot.Spec.Provider.Type) {
+			return fmt.Errorf("%s is referenced by shoot %q, but provider types (%+v) do not match with the shoot provider type %q", attributes.GetKind().Kind, shoot.Name, providerTypes, shoot.Spec.Provider.Type)
+		}
+	}
+
 	readAttributes := authorizer.AttributesRecord{
 		User:            attributes.GetUserInfo(),
 		Verb:            "get",
@@ -847,10 +829,20 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 		if err := r.lookupSecret(ctx, credentialsNamespace, credentialsName); err != nil {
 			return err
 		}
-	case "WorkloadIdentity":
-		if err := r.lookupWorkloadIdentity(ctx, credentialsNamespace, credentialsName); err != nil {
+		if err := r.sanityCheckProviderSecret(ctx, credentialsNamespace, credentialsName, providerTypes); err != nil {
 			return err
 		}
+
+	case "WorkloadIdentity":
+		workloadIdentity, err := r.lookupWorkloadIdentity(ctx, credentialsNamespace, credentialsName)
+		if err != nil {
+			return err
+		}
+
+		if !slices.Contains(providerTypes, workloadIdentity.Spec.TargetSystem.Type) {
+			return fmt.Errorf("CredentialsBinding provider type (%+v) does not match with WorkloadIdentity provider type %s", providerTypes, workloadIdentity.Spec.TargetSystem.Type)
+		}
+
 	default:
 		return fmt.Errorf("unknown credentials kind: %s", credentialsKind)
 	}
@@ -1175,42 +1167,36 @@ func validateShootWorkersForRemovedMachineImageVersions(channel chan error, shoo
 
 type getFn func(context.Context, string, string) (runtime.Object, error)
 
-func lookupResource(ctx context.Context, namespace, name string, get getFn, fallbackGet getFn) error {
+func lookupResource(ctx context.Context, namespace, name string, get getFn, fallbackGet getFn) (runtime.Object, error) {
 	// First try to detect the resource in the cache.
-	var err error
-
-	_, err = get(ctx, namespace, name)
+	obj, err := get(ctx, namespace, name)
 	if err == nil {
-		return nil
+		return obj, nil
 	}
 	if !apierrors.IsNotFound(err) {
-		return err
+		return nil, err
 	}
 
 	// Second try to detect the resource in the cache after the first try failed.
 	// Give the cache time to observe the resource before rejecting a create.
 	// This helps when creating a resource and immediately creating a binding referencing it.
 	time.Sleep(MissingResourceWait)
-	_, err = get(ctx, namespace, name)
+	obj, err = get(ctx, namespace, name)
 
 	switch {
 	case apierrors.IsNotFound(err):
 		// no-op
 	case err != nil:
-		return err
+		return nil, err
 	default:
-		return nil
+		return obj, nil
 	}
 
 	// Third try to detect the secret, now by doing a live lookup instead of relying on the cache.
-	if _, err := fallbackGet(ctx, namespace, name); err != nil {
-		return err
-	}
-
-	return nil
+	return fallbackGet(ctx, namespace, name)
 }
 
-func (r *ReferenceManager) lookupWorkloadIdentity(ctx context.Context, namespace, name string) error {
+func (r *ReferenceManager) lookupWorkloadIdentity(ctx context.Context, namespace, name string) (*securityv1alpha1.WorkloadIdentity, error) {
 	workloadIdentityFromLister := func(_ context.Context, namespace, name string) (runtime.Object, error) {
 		return r.workloadIdentityLister.WorkloadIdentities(namespace).Get(name)
 	}
@@ -1219,7 +1205,11 @@ func (r *ReferenceManager) lookupWorkloadIdentity(ctx context.Context, namespace
 		return r.gardenSecurityClient.SecurityV1alpha1().WorkloadIdentities(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
 	}
 
-	return lookupResource(ctx, namespace, name, workloadIdentityFromLister, workloadIdentityFromClient)
+	obj, err := lookupResource(ctx, namespace, name, workloadIdentityFromLister, workloadIdentityFromClient)
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*securityv1alpha1.WorkloadIdentity), nil
 }
 
 func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name string) error {
@@ -1231,7 +1221,8 @@ func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name str
 		return r.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
 	}
 
-	return lookupResource(ctx, namespace, name, secretFromLister, secretFromClient)
+	_, err := lookupResource(ctx, namespace, name, secretFromLister, secretFromClient)
+	return err
 }
 
 func (r *ReferenceManager) lookupConfigMap(ctx context.Context, namespace, name string) error {
@@ -1243,7 +1234,8 @@ func (r *ReferenceManager) lookupConfigMap(ctx context.Context, namespace, name 
 		return r.kubeClient.CoreV1().ConfigMaps(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
 	}
 
-	return lookupResource(ctx, namespace, name, configMapFromLister, configMapFromClient)
+	_, err := lookupResource(ctx, namespace, name, configMapFromLister, configMapFromClient)
+	return err
 }
 
 func (r *ReferenceManager) lookupControllerDeployment(ctx context.Context, name string) error {
@@ -1255,7 +1247,8 @@ func (r *ReferenceManager) lookupControllerDeployment(ctx context.Context, name 
 		return r.gardenCoreClient.CoreV1beta1().ControllerDeployments().Get(ctx, name, kubernetesclient.DefaultGetOptions())
 	}
 
-	return lookupResource(ctx, "", name, deploymentFromLister, deploymentFromClient)
+	_, err := lookupResource(ctx, "", name, deploymentFromLister, deploymentFromClient)
+	return err
 }
 
 func (r *ReferenceManager) getAPIResource(groupVersion, kind string) (*metav1.APIResource, error) {
@@ -1348,5 +1341,31 @@ func (r *ReferenceManager) ensureResourceReferences(ctx context.Context, attribu
 			return fmt.Errorf("failed to resolve resource reference %q: %w", resource.Name, err)
 		}
 	}
+	return nil
+}
+
+func (r *ReferenceManager) sanityCheckProviderSecret(ctx context.Context, namespace, name string, providerTypes []string) error {
+	secret, err := r.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, kubernetesclient.DefaultGetOptions())
+	if err != nil {
+		return err
+	}
+
+	for _, providerType := range providerTypes {
+		dummySecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: name,
+				Namespace:    namespace,
+				Annotations:  secret.Annotations,
+				Labels:       gardenerutils.MergeStringMaps(secret.Labels, map[string]string{v1beta1constants.LabelShootProviderPrefix + providerType: "true"}),
+			},
+			Type: secret.Type,
+			Data: secret.Data,
+		}
+
+		if _, err := r.kubeClient.CoreV1().Secrets(dummySecret.Namespace).Create(ctx, dummySecret, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}}); err != nil {
+			return fmt.Errorf("%s provider secret sanity check failed: %w", providerType, err)
+		}
+	}
+
 	return nil
 }

@@ -13,5 +13,5 @@ import (
 
 func TestBackupBucket(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Core BackupBucket Suite")
+	RunSpecs(t, "APIServer Registry Core BackupBucket Suite")
 }

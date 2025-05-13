@@ -14,6 +14,7 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/extensionlabels"
 	"github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
+	"github.com/gardener/gardener/plugin/pkg/global/finalizerremoval"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	managedseedshoot "github.com/gardener/gardener/plugin/pkg/managedseed/shoot"
 	managedseedvalidator "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
@@ -39,6 +40,7 @@ import (
 func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	resourcereferencemanager.Register(plugins)
 	deletionconfirmation.Register(plugins)
+	finalizerremoval.Register(plugins)
 	extensionvalidation.Register(plugins)
 	extensionlabels.Register(plugins)
 	shoottolerationrestriction.Register(plugins)
