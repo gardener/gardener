@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: SAP SE or an SAP affiliate company and Gardener contributors
 //
 // SPDX-License-Identifier: Apache-2.0
+
 package logging
 
 import (
@@ -32,6 +33,7 @@ func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interfac
 	if _, err := getFluentBitDaemonSet(ctx, k8sSeedClient); err != nil {
 		return false, err
 	}
+
 	vali := &appsv1.StatefulSet{}
 	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: valiName}, vali); err != nil {
 		return false, err

@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	// LoggingUserName is the admin user name for the vali instance of a shoot
 	valiLogging = "vali"
 	valiPort    = 3100
 )

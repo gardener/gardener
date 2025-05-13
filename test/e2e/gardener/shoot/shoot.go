@@ -27,6 +27,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/test/e2e/gardener"
 	"github.com/gardener/gardener/test/utils/access"
@@ -42,11 +43,8 @@ import (
 // Ideally, all there are no raw Expect statements. Instead, all network-related operations like API calls are wrapped
 // in an Eventually statement to implement retries for making e2e less susceptible for intermittent failures.
 
-const (
-	templatesDir = "../../framework/resources/templates/"
-)
-
 var (
+	templatesDir      = filepath.Join("..", "..", "framework", "resources", "templates")
 	projectNamespace  string
 	existingShootName string
 )
@@ -257,24 +255,12 @@ func ItShouldInitializeSeedClient(s *ShootContext) {
 }
 
 // ItShouldComputeControlPlaneNamespace computes the control plane namespace for the shoot and stores it in ShootContext.ControlPlaneNamespace.
-// This is achiaved via `ComputeTechnicalID`. The namespace is constructed from the project name and the shoot name.
 // It's hard to determine what the namespace of the control-plane will be before shoot creation, thus to compute it we need to first create the Shoot.
 func ItShouldComputeControlPlaneNamespace(s *ShootContext) {
 	GinkgoHelper()
 
 	It("Compute Control Plane Namespace", func(ctx SpecContext) {
-		ns := &corev1.Namespace{}
-
-		err := s.GardenClient.Get(ctx, client.ObjectKey{Name: s.Shoot.Namespace}, ns)
-		Expect(err).NotTo(HaveOccurred(), "could not get namespace %q in Garden cluster: %w", s.Shoot.Namespace, err)
-		Expect(ns.Labels).NotTo(BeEmpty(), "namespace %q does not have any labels", ns.Name)
-
-		projectName, ok := ns.Labels[v1beta1constants.ProjectName]
-		Expect(ok).To(BeTrue(), "namespace %q did not contain a project label", ns.Name)
-
-		namespace := gardenerutils.ComputeTechnicalID(projectName, s.Shoot)
-
-		s.WithControlPlaneNamespace(namespace)
+		s.WithControlPlaneNamespace(s.Shoot.Status.TechnicalID)
 	}, SpecTimeout(time.Minute))
 }
 
@@ -343,27 +329,35 @@ func ItShouldCompareMachinePodNamesAfter(s *ShootContext, machinePodNamesBeforeT
 func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string, values any) {
 	GinkgoHelper()
 
-	// This function was copied from test/framework/template.go
 	It("Render and deploy template to shoot", func(ctx SpecContext) {
-		templatesDirAbs, err := filepath.Abs(templatesDir)
-		Expect(err).NotTo(HaveOccurred(), "could not get absolute path for templates dir %q: %w", templatesDir, err)
-		templateFilepath := filepath.Join(templatesDirAbs, templateName)
-		_, err = os.Stat(templateFilepath)
-		Expect(err).NotTo(HaveOccurred(), "could not find template in %q", templateFilepath)
+		Eventually(ctx, func(g Gomega) error {
+			templatesDirAbs, err := filepath.Abs(templatesDir)
+			if err != nil {
+				return err
+			}
 
-		tpl, err := template.
-			New(templateName).
-			Funcs(sprig.HtmlFuncMap()).
-			ParseFiles(templateFilepath)
-		Expect(err).NotTo(HaveOccurred(), "unable to parse template in %s: %w", templateFilepath, err)
+			templateFilepath := filepath.Join(templatesDirAbs, templateName)
+			_, err = os.Stat(templateFilepath)
+			if err != nil {
+				return err
+			}
 
-		var writer bytes.Buffer
-		err = tpl.Execute(&writer, values)
-		Expect(err).NotTo(HaveOccurred(), "unable to execute template %s: %w", templateFilepath, err)
+			tpl, err := template.
+				New(templateName).
+				Funcs(sprig.HtmlFuncMap()).
+				ParseFiles(templateFilepath)
+			if err != nil {
+				return err
+			}
 
-		manifestReader := kubernetes.NewManifestReader(writer.Bytes())
-		err = s.ShootClientSet.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
-		Expect(err).NotTo(HaveOccurred(), "unable to apply template %s: %w", templateFilepath, err)
+			var writer bytes.Buffer
+			if err = tpl.Execute(&writer, values); err != nil {
+				return err
+			}
+
+			manifestReader := kubernetes.NewManifestReader(writer.Bytes())
+			return s.ShootClientSet.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
+		}).Should(Succeed())
 	}, SpecTimeout(time.Minute))
 }
 
@@ -374,18 +368,17 @@ func ItShouldWaitForPodsInShootToBeReady(s *ShootContext, namespace string, podL
 	It("Wait for pods in Shoot to be ready", func(ctx SpecContext) {
 		Eventually(ctx, func() error {
 			podList := &corev1.PodList{}
-			err := s.ShootClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: podLabels})
-			if err != nil {
+			if err := s.ShootClient.List(ctx, podList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: podLabels}); err != nil {
 				return err
 			}
 
 			for _, pod := range podList.Items {
-				if pod.Status.Phase != corev1.PodRunning {
+				if health.IsPodReady(&pod) {
 					return fmt.Errorf("pod %s/%s is not running", pod.Namespace, pod.Name)
 				}
 			}
 
 			return nil
 		}).Should(Succeed())
-	}, SpecTimeout(time.Minute*5))
+	}, SpecTimeout(5*time.Minute))
 }
