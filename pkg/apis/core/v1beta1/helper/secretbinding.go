@@ -44,5 +44,8 @@ func AddTypeToSecretBinding(secretBinding *gardencorev1beta1.SecretBinding, prov
 
 // GetSecretBindingTypes returns the SecretBinding provider types.
 func GetSecretBindingTypes(secretBinding *gardencorev1beta1.SecretBinding) []string {
+	if secretBinding.Provider == nil {
+		return []string{}
+	}
 	return strings.Split(secretBinding.Provider.Type, ",")
 }

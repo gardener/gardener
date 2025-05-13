@@ -242,11 +242,9 @@ func addMetaDataLabelsSeed(seed *core.Seed) {
 }
 
 func addMetaDataLabelsSecretBinding(secretBinding *core.SecretBinding) {
-	if secretBinding.Provider != nil {
-		types := gardencorehelper.GetSecretBindingTypes(secretBinding)
-		for _, t := range types {
-			metav1.SetMetaDataLabel(&secretBinding.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+t, "true")
-		}
+	types := gardencorehelper.GetSecretBindingTypes(secretBinding)
+	for _, t := range types {
+		metav1.SetMetaDataLabel(&secretBinding.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+t, "true")
 	}
 }
 

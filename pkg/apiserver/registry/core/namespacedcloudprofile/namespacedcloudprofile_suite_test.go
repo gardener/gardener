@@ -13,5 +13,5 @@ import (
 
 func TestNamespacedCloudProfile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Core NamespacedCloudProfile Suite")
+	RunSpecs(t, "APIServer Registry Core NamespacedCloudProfile Suite")
 }

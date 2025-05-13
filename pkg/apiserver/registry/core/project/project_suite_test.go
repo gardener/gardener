@@ -13,5 +13,5 @@ import (
 
 func TestProject(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Registry Core Project Suite")
+	RunSpecs(t, "APIServer Registry Core Project Suite")
 }
