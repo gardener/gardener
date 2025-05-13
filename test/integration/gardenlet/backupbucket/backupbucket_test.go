@@ -136,9 +136,11 @@ var _ = Describe("BackupBucket controller tests", func() {
 					Region: "some-region",
 				},
 				ProviderConfig: &runtime.RawExtension{Raw: []byte(`{"dash":"baz"}`)},
-				SecretRef: corev1.SecretReference{
-					Name:      gardenSecret.Name,
-					Namespace: gardenSecret.Namespace,
+				CredentialsRef: &corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Namespace:  gardenSecret.Namespace,
+					Name:       gardenSecret.Name,
 				},
 				SeedName: &seed.Name,
 			},

@@ -463,6 +463,11 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, _ 
 		}
 
 	case core.Kind("BackupBucket"):
+		// Ignore updates to status or other subresources
+		if a.GetSubresource() != "" {
+			return nil
+		}
+
 		if operation == admission.Delete {
 			// The "delete endpoint" handler of the k8s.io/apiserver library calls the admission controllers
 			// handling DELETECOLLECTION requests with empty resource names:
@@ -1052,7 +1057,18 @@ func (r *ReferenceManager) ensureBackupBucketReferences(ctx context.Context, old
 		}
 	}
 
-	return r.lookupSecret(ctx, backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name)
+	creds := backupBucket.Spec.CredentialsRef
+	if creds == nil {
+		return errors.New("spec.credentialsRef must be set or defaulted")
+	}
+	if creds.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && creds.Kind == "WorkloadIdentity" {
+		return r.lookupWorkloadIdentity(ctx, creds.Namespace, creds.Name)
+	}
+	if creds.APIVersion == corev1.SchemeGroupVersion.String() && creds.Kind == "Secret" {
+		return r.lookupSecret(ctx, backupBucket.Spec.CredentialsRef.Namespace, backupBucket.Spec.CredentialsRef.Name)
+	}
+
+	return errors.New("unknown credentials ref: BackupBucket is referencing neither a Secret nor a WorkloadIdentity")
 }
 
 func (r *ReferenceManager) validateBackupBucketDeleteCollection(ctx context.Context, a admission.Attributes) error {

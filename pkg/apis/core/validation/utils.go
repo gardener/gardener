@@ -34,19 +34,6 @@ func ValidateName(name string, prefix bool) []string {
 	return apivalidation.NameIsDNSSubdomain(name, prefix)
 }
 
-func validateSecretReference(ref corev1.SecretReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(ref.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
-	}
-	if len(ref.Namespace) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
-	}
-
-	return allErrs
-}
-
 func validateCrossVersionObjectReference(ref autoscalingv1.CrossVersionObjectReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

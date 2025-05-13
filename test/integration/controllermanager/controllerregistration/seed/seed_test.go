@@ -125,9 +125,14 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					Labels:       map[string]string{testID: testRunID},
 				},
 				Spec: gardencorev1beta1.BackupBucketSpec{
-					Provider:  gardencorev1beta1.BackupBucketProvider{Type: providerType, Region: "region"},
-					SecretRef: corev1.SecretReference{Name: "some-secret", Namespace: "garden"},
-					SeedName:  &seed.Name,
+					Provider: gardencorev1beta1.BackupBucketProvider{Type: providerType, Region: "region"},
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  "garden",
+						Name:       "some-secret",
+					},
+					SeedName: &seed.Name,
 				},
 			}
 
@@ -195,9 +200,14 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					Labels:       map[string]string{testID: testRunID},
 				},
 				Spec: gardencorev1beta1.BackupBucketSpec{
-					Provider:  gardencorev1beta1.BackupBucketProvider{Type: providerType, Region: "region"},
-					SecretRef: corev1.SecretReference{Name: "some-secret", Namespace: "garden"},
-					SeedName:  &seed.Name,
+					Provider: gardencorev1beta1.BackupBucketProvider{Type: providerType, Region: "region"},
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  "garden",
+						Name:       "some-secret",
+					},
+					SeedName: &seed.Name,
 				},
 			}
 
@@ -291,9 +301,14 @@ var _ = Describe("ControllerRegistration controller test", func() {
 					Labels:       map[string]string{testID: testRunID},
 				},
 				Spec: gardencorev1beta1.BackupBucketSpec{
-					Provider:  gardencorev1beta1.BackupBucketProvider{Type: providerType, Region: "region"},
-					SecretRef: corev1.SecretReference{Name: "some-secret", Namespace: "garden"},
-					SeedName:  &seed.Name,
+					Provider: gardencorev1beta1.BackupBucketProvider{Type: providerType, Region: "region"},
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Namespace:  "garden",
+						Name:       "some-secret",
+					},
+					SeedName: &seed.Name,
 				},
 			}
 

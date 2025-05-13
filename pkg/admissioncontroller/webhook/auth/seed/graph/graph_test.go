@@ -95,9 +95,10 @@ var _ = Describe("graph", func() {
 		namespace1 *corev1.Namespace
 		project1   *gardencorev1beta1.Project
 
-		backupBucket1                   *gardencorev1beta1.BackupBucket
-		backupBucket1SecretRef          = corev1.SecretReference{Namespace: "baz", Name: "foo"}
-		backupBucket1GeneratedSecretRef = corev1.SecretReference{Namespace: "generated", Name: "secret"}
+		backupBucket1                               *gardencorev1beta1.BackupBucket
+		backupBucket1SecretCredentialsRef           = corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "baz", Name: "secret1"}
+		backupBucket1WorkloadIdentityCredentialsRef = corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Namespace: "baz", Name: "workloadidentity1"}
+		backupBucket1GeneratedSecretRef             = corev1.SecretReference{Namespace: "generated", Name: "secret"}
 
 		backupEntry1 *gardencorev1beta1.BackupEntry
 
@@ -261,8 +262,8 @@ var _ = Describe("graph", func() {
 		backupBucket1 = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{Name: "backupbucket1"},
 			Spec: gardencorev1beta1.BackupBucketSpec{
-				SecretRef: backupBucket1SecretRef,
-				SeedName:  &seed1.Name,
+				CredentialsRef: &backupBucket1SecretCredentialsRef,
+				SeedName:       &seed1.Name,
 			},
 			Status: gardencorev1beta1.BackupBucketStatus{
 				GeneratedSecretRef: &backupBucket1GeneratedSecretRef,
@@ -1146,7 +1147,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		fakeInformerBackupBucket.Add(backupBucket1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
-		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
 
@@ -1156,7 +1158,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
-		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
 
@@ -1166,19 +1169,33 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
-		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1Copy.Spec.SeedName)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
 
-		By("Update (secret ref)")
+		By("Update (credentials ref) to another secret")
 		backupBucket1Copy = backupBucket1.DeepCopy()
-		backupBucket1.Spec.SecretRef = corev1.SecretReference{Namespace: "newsecretrefnamespace", Name: "newsecretrefname"}
+		backupBucket1.Spec.CredentialsRef = &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Namespace: "newsecretrefnamespace", Name: "newsecretrefname"}
 		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
-		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
+
+		By("Update (credentials ref) to workload identity")
+		backupBucket1Copy = backupBucket1.DeepCopy()
+		backupBucket1.Spec.CredentialsRef = &backupBucket1WorkloadIdentityCredentialsRef
+		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1Copy.Spec.CredentialsRef.Namespace, backupBucket1Copy.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
 
@@ -1188,7 +1205,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
-		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Status.GeneratedSecretRef.Namespace, backupBucket1.Status.GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
@@ -1197,7 +1215,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		fakeInformerBackupBucket.Delete(backupBucket1)
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
 		Expect(graph.graph.Edges().Len()).To(BeZero())
-		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeWorkloadIdentity, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Status.GeneratedSecretRef.Namespace, backupBucket1.Status.GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeFalse())
 	})
@@ -1810,7 +1829,8 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			lock.Lock()
 			defer lock.Unlock()
 			nodes, edges = nodes+3, edges+3
-			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
 			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
 			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName, BeTrue()})
 		}()
@@ -1966,13 +1986,13 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		go func() {
 			defer wg.Done()
 			backupBucket1Copy := backupBucket1.DeepCopy()
-			backupBucket1.Spec.SecretRef = corev1.SecretReference{Namespace: "newsecretrefnamespace", Name: "newsecretrefname"}
+			backupBucket1.Spec.CredentialsRef = &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Namespace: "new-workloadidentity-refnamespace", Name: "new-workloadidentity-refname"}
 			fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 			lock.Lock()
 			defer lock.Unlock()
-			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1Copy.Spec.SecretRef.Namespace, backupBucket1Copy.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1Copy.Spec.CredentialsRef.Namespace, backupBucket1Copy.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
 			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
-			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeWorkloadIdentity, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
 			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName, BeTrue()})
 		}()
 		wg.Add(1)
@@ -2146,7 +2166,9 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 			lock.Lock()
 			defer lock.Unlock()
-			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeWorkloadIdentity, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
 			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
 			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1Copy.Spec.SeedName, BeFalse()})
 			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName, BeTrue()})
@@ -2304,7 +2326,9 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			fakeInformerBackupBucket.Delete(backupBucket1)
 			lock.Lock()
 			defer lock.Unlock()
-			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeWorkloadIdentity, backupBucket1.Spec.CredentialsRef.Namespace, backupBucket1.Spec.CredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeWorkloadIdentity, backupBucket1WorkloadIdentityCredentialsRef.Namespace, backupBucket1WorkloadIdentityCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1SecretCredentialsRef.Namespace, backupBucket1SecretCredentialsRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
 			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
 			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName, BeFalse()})
 		}()

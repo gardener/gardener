@@ -197,6 +197,7 @@ build:
             - pkg/utils/version
             - pkg/utils/workloadidentity
             - plugin/pkg
+            - plugin/pkg/backupbucket/validator
             - plugin/pkg/bastion/validator
             - plugin/pkg/controllerregistration/resources
             - plugin/pkg/global/customverbauthorizer

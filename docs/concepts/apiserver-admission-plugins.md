@@ -10,6 +10,13 @@ If you want to get an overview of the what and why of admission plugins then [th
 
 This document lists all existing admission plugins with a short explanation of what it is responsible for.
 
+## `BackupBucketValidator`
+
+_(enabled by default)_
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for `BackupBuckets`s.
+When the backup bucket is using `WorkloadIdentity` as backup credentials, the plugin ensures the backup bucket and the workload identity have the same provider type, i.e. `backupBucket.spec.provider.type` and `workloadIdentity.spec.targetSystem.type` have the same value.
+
 ## `ClusterOpenIDConnectPreset`, `OpenIDConnectPreset`
 
 _(both enabled by default)_
