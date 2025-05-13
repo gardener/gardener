@@ -102,6 +102,11 @@ const (
 	// owner: @roncossek
 	// alpha: v1.117.0
 	CloudProfileCapabilities featuregate.Feature = "CloudProfileCapabilities"
+
+	// Perses enables the deployment of the perses-operator (https://github.com/perses/perses-operator) and also Perses itself.
+	// owner: @rickardsjp
+	// alpha: v1.119.0
+	Perses featuregate.Feature = "Perses"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -141,6 +146,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	RemoveAPIServerProxyLegacyPort:           {Default: true, PreRelease: featuregate.Beta},
 	IstioTLSTermination:                      {Default: false, PreRelease: featuregate.Alpha},
 	CloudProfileCapabilities:                 {Default: false, PreRelease: featuregate.Alpha},
+	Perses:                                   {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

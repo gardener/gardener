@@ -51,6 +51,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/nginxingress"
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	operatorconfigv1alpha1 "github.com/gardener/gardener/pkg/operator/apis/config/v1alpha1"
 	gardencontroller "github.com/gardener/gardener/pkg/operator/controller/garden/garden"
@@ -386,6 +387,7 @@ spec:
 	})
 
 	It("should successfully reconcile and delete a Garden", func() {
+		DeferCleanup(test.WithFeatureGate(features.DefaultFeatureGate, features.Perses, true))
 		By("Wait for Garden to have finalizer")
 		Eventually(func(g Gomega) []string {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(garden), garden)).To(Succeed())
@@ -547,6 +549,11 @@ spec:
 		// in this test, so let's fake this here.
 		By("Patch etcd-druid ManagedResources to report healthiness")
 		Eventually(makeManagedResourceHealthy("etcd-druid", testNamespace.Name)).Should(Succeed())
+
+		// The garden controller waits for the perses-operator ManagedResources to be healthy, but it is not really running
+		// in this test, so let's fake this here.
+		By("Patch perses-operator ManagedResource to report healthiness")
+		Eventually(makeManagedResourceHealthy("perses-operator", testNamespace.Name)).Should(Succeed())
 
 		By("Verify that the virtual garden control plane components have been deployed")
 		Eventually(func(g Gomega) []string {
