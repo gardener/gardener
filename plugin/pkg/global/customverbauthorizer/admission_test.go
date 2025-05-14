@@ -353,6 +353,72 @@ var _ = Describe("customverbauthorizer", func() {
 					})
 				})
 			})
+
+			Context("owner configuration", func() {
+				Context("CREATE", func() {
+					It("should allow setting the owner", func() {
+						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+						attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+					})
+				})
+
+				Context("UPDATE", func() {
+					BeforeEach(func() {
+						authorizeAttributes.Verb = CustomVerbProjectManageMembers
+					})
+
+					It("should succeed without owner change", func() {
+						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+						oldProject := project.DeepCopy()
+
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+					})
+
+					It("should allow changing the owner for owner", func() {
+						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+						oldProject := project.DeepCopy()
+						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "new-owner"}
+
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+					})
+
+					It("should allow changing the owner for uam user", func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
+
+						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "old-owner"}
+						oldProject := project.DeepCopy()
+						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "new-owner"}
+
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(Succeed())
+					})
+
+					It("should deny changing the owner", func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
+
+						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "old-owner"}
+						oldProject := project.DeepCopy()
+						project.Spec.Owner.Name = "new-owner"
+
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("not allowed to manage owner")))
+					})
+
+					It("should deny unsetting the owner", func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
+
+						project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: "owner"}
+						oldProject := project.DeepCopy()
+						project.Spec.Owner = nil
+
+						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+						Expect(admissionHandler.Validate(ctx, attrs, nil)).To(MatchError(ContainSubstring("not allowed to manage owner")))
+					})
+				})
+			})
 		})
 
 		Context("NamespacedCloudProfiles", func() {

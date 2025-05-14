@@ -120,6 +120,10 @@ func (c *CustomVerbAuthorizer) admitProjects(ctx context.Context, a admission.At
 		return c.authorize(ctx, a, CustomVerbProjectManageMembers, "manage human users or groups in .spec.members")
 	}
 
+	if mustCheckProjectOwner(oldObj.Spec.Owner, obj.Spec.Owner, a.GetUserInfo()) {
+		return c.authorize(ctx, a, CustomVerbProjectManageMembers, "manage owner in .spec.owner")
+	}
+
 	return nil
 }
 
@@ -204,6 +208,20 @@ func mustCheckProjectTolerationsWhitelist(oldTolerations, tolerations *core.Proj
 		return !apiequality.Semantic.DeepEqual(oldTolerations.Whitelist, nil)
 	}
 	return !apiequality.Semantic.DeepEqual(oldTolerations.Whitelist, tolerations.Whitelist)
+}
+
+func mustCheckProjectOwner(oldOwner *rbacv1.Subject, owner *rbacv1.Subject, userInfo user.Info) bool {
+	// allow to set owner initially
+	if oldOwner == nil && owner != nil {
+		return false
+	}
+
+	// allow owner to change owner
+	if userIsOwner(userInfo, oldOwner) {
+		return false
+	}
+
+	return !apiequality.Semantic.DeepEqual(oldOwner, owner)
 }
 
 func mustCheckProjectMembers(oldMembers, members []core.ProjectMember, owner *rbacv1.Subject, userInfo user.Info) bool {
