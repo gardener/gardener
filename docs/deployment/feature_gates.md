@@ -75,7 +75,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | RotateSSHKeypairOnMaintenance (deprecated)   |         | `Removed`    | `1.51`  |         |
 | ShootForceDeletion                           | `false` | `Alpha`      | `1.81`  | `1.90`  |
 | ShootForceDeletion                           | `true`  | `Beta`       | `1.91`  | `1.110` |
-| ShootForceDeletion                           | `true`  | `GA`         | `1.111` |         |
+| ShootForceDeletion                           | `true`  | `GA`         | `1.111` | `1.119` |
 | ShootForceDeletion                           |         | `Removed`    | `1.120` |         |
 | ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`      | `1.43`  | `1.44`  |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`       | `1.45`  | `1.47`  |

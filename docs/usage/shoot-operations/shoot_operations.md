@@ -68,7 +68,7 @@ It will also be removed even if the restart of one or more services failed.
 
 ## Force Deletion
 
-When a Shoot fails to be deleted normally, users can force-delete the Shoot by meeting the following conditions:
+When a Shoot fails to be deleted normally, users can force-delete the Shoot if it meets the following conditions:
 
 - Shoot has a deletion timestamp.
 - Shoot status contains at least one of the following [ErrorCodes](../shoot/shoot_status.md#error-codes):
