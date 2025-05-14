@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -148,6 +149,7 @@ func NewAutonomousBotanistWithoutResources(log logr.Logger) (*AutonomousBotanist
 func newOperation(log logr.Logger, clientSet kubernetes.Interface) *operation.Operation {
 	return &operation.Operation{
 		Logger:         log,
+		Clock:          clock.RealClock{},
 		GardenClient:   newFakeGardenClient(),
 		SeedClientSet:  clientSet,
 		ShootClientSet: clientSet,
@@ -312,6 +314,7 @@ func newFakeGardenClient() client.Client {
 		NewClientBuilder().
 		WithScheme(kubernetes.GardenScheme).
 		WithStatusSubresource(
+			&gardencorev1beta1.BackupBucket{},
 			&gardencorev1beta1.ControllerInstallation{},
 			&gardencorev1beta1.Shoot{},
 		).

@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -165,7 +164,7 @@ func (b *AutonomousBotanist) ReconcileExtensionControllerInstallations(ctx conte
 		GardenClient:              b.GardenClient,
 		SeedClientSet:             b.SeedClientSet,
 		HelmRegistry:              oci.NewHelmRegistry(b.SeedClientSet.Client()),
-		Clock:                     clock.RealClock{},
+		Clock:                     b.Clock,
 		Identity:                  &b.Shoot.GetInfo().Status.Gardener,
 		GardenNamespace:           b.Shoot.ControlPlaneNamespace,
 		BootstrapControlPlaneNode: bootstrapMode,

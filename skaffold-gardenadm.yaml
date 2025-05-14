@@ -109,6 +109,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/varlibkubeletmount
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/extensions/worker
+            - pkg/component/garden/backupbucket
             - pkg/component/garden/backupentry
             - pkg/component/gardener/access
             - pkg/component/gardener/apiserver
@@ -253,6 +254,7 @@ build:
             - pkg/gardenadm/staticpod
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/apis/config/v1alpha1/helper
+            - pkg/gardenlet/controller/backupbucket
             - pkg/gardenlet/controller/controllerinstallation/controllerinstallation
             - pkg/gardenlet/controller/controllerinstallation/utils
             - pkg/gardenlet/features
