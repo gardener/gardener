@@ -7443,6 +7443,38 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(BeEmpty())
 			})
 		})
+
+		Describe("seriazlizeImagePulls, maxParallelImagePulls", func() {
+			It("should allow positive values", func() {
+				Expect(ValidateKubeletConfig(core.KubeletConfig{
+					MaxParallelImagePulls: ptr.To[int32](10),
+				}, "", nil)).To(BeEmpty())
+			})
+
+			It("should not allow negative values", func() {
+				Expect(ValidateKubeletConfig(core.KubeletConfig{
+					MaxParallelImagePulls: ptr.To[int32](-10),
+				}, "", nil)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("maxParallelImagePulls").String()),
+					})),
+				))
+			})
+
+			It("should not allow seriazlizeImagePulls when maxParallelImagePulls is set", func() {
+				Expect(ValidateKubeletConfig(core.KubeletConfig{
+					MaxParallelImagePulls: ptr.To[int32](10),
+					SerializeImagePulls:   ptr.To(true),
+				}, "", nil)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal(field.NewPath("maxParallelImagePulls").String()),
+						"Detail": Equal("configuring limit of image pulls is not available when kubelet's 'SerializeImagePulls' is set"),
+					})),
+				))
+			})
+		})
 	})
 
 	Describe("#ValidateHibernationSchedules", func() {
