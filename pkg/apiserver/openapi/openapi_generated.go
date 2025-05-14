@@ -4993,6 +4993,13 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MemorySwapConfiguration"),
 						},
 					},
+					"maxParallelImagePulls": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxParallelImagePulls describes the maximum number of image pulls in parallel. The value must be a positive number. When updating this field, the SerializeImagePulls (pull one image at a time) must be set to false. Setting it to nil means no limit. Default: nil",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},

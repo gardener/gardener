@@ -379,6 +379,14 @@ spec:
                               pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                               x-kubernetes-int-or-string: true
                           type: object
+                        maxParallelImagePulls:
+                          description: |-
+                            MaxParallelImagePulls describes the maximum number of image pulls in parallel. The value must be a positive number.
+                            When updating this field, the SerializeImagePulls (pull one image at a time) must be set to false.
+                            Setting it to nil means no limit.
+                            Default: nil
+                          format: int32
+                          type: integer
                         maxPods:
                           description: |-
                             MaxPods is the maximum number of Pods that are allowed by the Kubelet.
