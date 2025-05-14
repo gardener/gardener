@@ -50,6 +50,12 @@ var _ = Describe("Gardenlet controller test", func() {
 						Backup: &gardencorev1beta1.Backup{
 							Provider: "test",
 							Region:   ptr.To("bar"),
+							CredentialsRef: &corev1.ObjectReference{
+								Kind:       "Secret",
+								APIVersion: "v1",
+								Name:       "backup-secret",
+								Namespace:  "garden",
+							},
 						},
 					},
 				},

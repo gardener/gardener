@@ -62,7 +62,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Gardenlet.MergeWithParent).To(PointTo(Equal(true)))
 		})
 
-		It("should default gardenlet configuration, and backup secret reference if backup is specified", func() {
+		It("should not default backup secret reference if backup is specified", func() {
 			obj.Spec.Gardenlet = GardenletConfig{
 				Config: runtime.RawExtension{
 					Raw: encode(&gardenletconfigv1alpha1.GardenletConfiguration{
@@ -98,18 +98,7 @@ var _ = Describe("Defaults", func() {
 						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
-									Backup: &gardencorev1beta1.Backup{
-										SecretRef: corev1.SecretReference{
-											Name:      "backup-" + name,
-											Namespace: namespace,
-										},
-										CredentialsRef: &corev1.ObjectReference{
-											APIVersion: "v1",
-											Kind:       "Secret",
-											Name:       "backup-" + name,
-											Namespace:  namespace,
-										},
-									},
+									Backup: &gardencorev1beta1.Backup{},
 								},
 							},
 						},
