@@ -1985,6 +1985,20 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 		}
 	}
 
+	if v := kubeletConfig.MaxParallelImagePulls; v != nil {
+		path := fldPath.Child("maxParallelImagePulls")
+
+		if *v < 1 {
+			allErrs = append(allErrs, field.Invalid(path, *v, "value must be >= 1"))
+		}
+
+		if serializeImagePull := kubeletConfig.SerializeImagePulls; serializeImagePull != nil {
+			if *serializeImagePull && *v > 1 {
+				allErrs = append(allErrs, field.Forbidden(path, "configuring limit of image pulls is not available when kubelet's 'SerializeImagePulls' is set"))
+			}
+		}
+	}
+
 	return allErrs
 }
 
