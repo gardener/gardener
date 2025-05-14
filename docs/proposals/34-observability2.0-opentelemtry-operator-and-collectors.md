@@ -75,18 +75,25 @@ metadata:
 spec:
   mode: deployment
   config:
+    extensions:
+      bearertokenauth:
+        filename: {{ .pathAuthToken }}
+
     exporters:
       loki:
         endpoint: https://v-local--local.ingress.local.seed.local.gardener.cloud/vali/api/v1/push
-        headers:
-          # Authenticate against Vali using a Bearer Token
-          Authorization: "Bearer ${file:{{ .pathAuthToken }}}"
+        auth:
+          authenticator: bearertokenauth
+        tls:
+          ca_file: {{ .pathCACert }}
+
     receivers:
       otlp:
         protocols:
           http:
             endpoint: 0.0.0.0:4317
     service:
+      extensions: [bearertokenauth]
       pipelines:
         logs:
           exporters:
