@@ -3183,7 +3183,7 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					},
 					"globallyEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters. Deprecated: This field is deprecated and will be removed in Gardener version v.122. Please use AutoEnable instead.",
+							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters. Deprecated: This field is deprecated and will be removed in Gardener version v1.123. Please use AutoEnable instead.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

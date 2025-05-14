@@ -142,7 +142,7 @@ func ComputeRequiredExtensionsForSeed(seed *gardencorev1beta1.Seed, controllerRe
 
 	for _, controllerRegistration := range controllerRegistrationList.Items {
 		for _, resource := range controllerRegistration.Spec.Resources {
-			if extensionEnabledForMode(gardencorev1beta1.ClusterTypeSeed, resource, disabledExtensionTypes) {
+			if extensionEnabledForCluster(gardencorev1beta1.ClusterTypeSeed, resource, disabledExtensionTypes) {
 				wantedKindTypeCombinations.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type))
 			}
 		}

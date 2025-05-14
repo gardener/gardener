@@ -4729,7 +4729,7 @@ bool
 <td>
 <em>(Optional)</em>
 <p>GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
-Deprecated: This field is deprecated and will be removed in Gardener version v.122. Please use AutoEnable instead.</p>
+Deprecated: This field is deprecated and will be removed in Gardener version v1.123. Please use AutoEnable instead.</p>
 </td>
 </tr>
 <tr>
