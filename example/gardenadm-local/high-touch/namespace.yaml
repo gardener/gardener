@@ -3,6 +3,6 @@ kind: Namespace
 metadata:
   name: gardenadm-high-touch
   labels:
-    # Use shoot label so that machine pods are considered in the export_artifacts() helper function during test runs in Prow.
+    # Use label so that machine pods are considered in the export_artifacts() helper function during test runs in Prow.
     # This makes sure that the usual systemd and pod logs get exported for each machine pod in this namespace.
-    gardener.cloud/role: shoot
+    export-artifacts: "true"
