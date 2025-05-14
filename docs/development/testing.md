@@ -478,6 +478,7 @@ gsutil cp -r gs://gardener-prow/pr-logs/pull/gardener_gardener/6136/pull-gardene
   - At this point, we are pretty much working with a distributed system and failures can happen anytime.
   - Wrapping calls in `Eventually` makes tests more stable and more realistic (usually, you wouldn't call the system broken if a single API call fails because of a short connectivity issue).
   - Calculate patches before entering the `Eventually` block
+    - If the first try of `Eventually` fails, the patch could become empty as the targeted resource was already modified in the first run
 - Most of the points from [writing integration tests](#writing-integration-tests) are relevant for e2e tests as well (especially the points about asynchronous assertions).
 - In contrast to integration tests, in e2e tests, it might make sense to specify higher timeouts for `Eventually` calls, e.g., when waiting for a `Shoot` to be reconciled.
   - Generally, try to use the default settings for `Eventually` specified via the environment variables.
