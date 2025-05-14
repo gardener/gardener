@@ -461,9 +461,23 @@ gsutil cp -r gs://gardener-prow/pr-logs/pull/gardener_gardener/6136/pull-gardene
 
 ### Writing e2e Tests
 
-- Always wrap API calls and similar things in `Eventually` blocks: [example test](https://github.com/gardener/gardener/blob/a66b8ec47995561393bf1ad9a817463089a0255e/test/e2e/shoot/internal/rotation/observability.go#L46-L55)
+- Tests must always use the `Ordered` decorator
+- Separate individual steps from each other with `It` statements
+  - This makes debugging of the test and flake detection much easier
+  - Make sure to always utilize the `SpecContext` when dealing with contexts inside of `It` statements, [like here](https://github.com/gardener/gardener/blob/3206df77c64b3a7d4c899bce184b532a5bad6c96/test/e2e/gardener/shoot/create_delete_unprivileged.go#L52)
+- Use the `TestContext` to store the current state of the test ([Reference](https://github.com/gardener/gardener/blob/3206df77c64b3a7d4c899bce184b532a5bad6c96/test/e2e/gardener/context.go#L30))
+  -  Do not share test contexts between test cases
+- Whenever possible, use the type-specific test contexts like: `ShootContext`, `SeedContext`
+  - [Example Shoot](https://github.com/gardener/gardener/blob/3206df77c64b3a7d4c899bce184b532a5bad6c96/test/e2e/gardener/shoot/create_delete_unprivileged.go#L45)
+  - [Example Seed](https://github.com/gardener/gardener/blob/3206df77c64b3a7d4c899bce184b532a5bad6c96/test/e2e/gardener/seed/renew_garden_access_secrets.go#L61)
+- Common steps should be implemented in dedicated helper functions, which accept the `TestContext` or its type-specific derivatives
+  - [Example](https://github.com/gardener/gardener/blob/3206df77c64b3a7d4c899bce184b532a5bad6c96/test/e2e/gardener/shoot/shoot.go#L53)
+- Use `BeforeTestSetup` to initialize the `TestContext` or its type-specific derivatives
+  - [Example](https://github.com/gardener/gardener/blob/3206df77c64b3a7d4c899bce184b532a5bad6c96/test/e2e/gardener/shoot/create_force-delete.go#L25)
+- Always wrap API calls and similar things in `Eventually` blocks: [example test](https://github.com/gardener/gardener/blob/3206df77c64b3a7d4c899bce184b532a5bad6c96/test/e2e/gardener/shoot/create_delete_unprivileged.go#L76)
   - At this point, we are pretty much working with a distributed system and failures can happen anytime.
   - Wrapping calls in `Eventually` makes tests more stable and more realistic (usually, you wouldn't call the system broken if a single API call fails because of a short connectivity issue).
+  - Calculate patches before entering the `Eventually` block
 - Most of the points from [writing integration tests](#writing-integration-tests) are relevant for e2e tests as well (especially the points about asynchronous assertions).
 - In contrast to integration tests, in e2e tests, it might make sense to specify higher timeouts for `Eventually` calls, e.g., when waiting for a `Shoot` to be reconciled.
   - Generally, try to use the default settings for `Eventually` specified via the environment variables.
