@@ -36,8 +36,8 @@ export_artifacts() {
 
       # container logs
       kubectl cp "$namespace/$node":/var/log "$node_dir" || true
-    done < <(kubectl -n "$namespace" get po -l app=machine -oname | cut -d/ -f2)
-  done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2)
+    done < <(kubectl -n "$namespace" get po -l app=machine -oname | cut -d/ -f2; kubectl -n "$namespace" get po -l app=high-touch-machine -oname | cut -d/ -f2)
+  done < <(kubectl get ns -l gardener.cloud/role=shoot -oname | cut -d/ -f2; kubectl get ns -l export-artifacts=true -oname | cut -d/ -f2)
 
   echo "> Exporting /etc/hosts"
   cp /etc/hosts $ARTIFACTS/$cluster_name/hosts

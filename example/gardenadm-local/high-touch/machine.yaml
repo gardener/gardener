@@ -3,17 +3,17 @@ kind: StatefulSet
 metadata:
   name: machine
   labels:
-    app: machine
+    app: high-touch-machine
 spec:
   replicas: 2
   serviceName: "machine"
   selector:
     matchLabels:
-      app: machine
+      app: high-touch-machine
   template:
     metadata:
       labels:
-        app: machine
+        app: high-touch-machine
     spec:
       containers:
       - name: node
