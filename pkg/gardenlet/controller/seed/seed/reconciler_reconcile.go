@@ -203,7 +203,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := r.GardenClient.List(ctx, controllerRegistrationList); err != nil {
-		return err
+		return fmt.Errorf("failed retrieving controller registrations: %w", err)
 	}
 
 	var (

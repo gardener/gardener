@@ -63,7 +63,7 @@ type ControllerResource struct {
 	// Type is the resource type, for example "coreos" or "ubuntu".
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
-	// Deprecated: This field is deprecated and will be removed in Gardener version v.122. Please use AutoEnable instead.
+	// Deprecated: This field is deprecated and will be removed in Gardener version v1.123. Please use AutoEnable instead.
 	// +optional
 	GloballyEnabled *bool `json:"globallyEnabled,omitempty" protobuf:"varint,3,opt,name=globallyEnabled"`
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.

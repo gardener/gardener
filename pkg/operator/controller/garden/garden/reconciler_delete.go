@@ -67,7 +67,8 @@ func (r *Reconciler) delete(
 		kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()),
 		nil,
 		false,
-		extensionList)
+		extensionList,
+	)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

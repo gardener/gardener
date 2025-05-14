@@ -257,7 +257,7 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 	}
 
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{
-		Items: slices.Collect[gardencorev1beta1.ControllerRegistration](func(yield func(gardencorev1beta1.ControllerRegistration) bool) {
+		Items: slices.Collect(func(yield func(gardencorev1beta1.ControllerRegistration) bool) {
 			for _, registration := range controllerRegistrations {
 				if !yield(*registration) {
 					return
