@@ -6,6 +6,7 @@ package controllerregistration
 
 import (
 	"context"
+	"slices"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,6 +16,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 type controllerRegistrationStrategy struct {
@@ -41,6 +43,34 @@ func (controllerRegistrationStrategy) PrepareForUpdate(_ context.Context, obj, o
 
 	if mustIncreaseGeneration(oldControllerRegistration, newControllerRegistration) {
 		newControllerRegistration.Generation = oldControllerRegistration.Generation + 1
+	}
+
+	handleAutoEnabledResources(oldControllerRegistration, newControllerRegistration)
+}
+
+func handleAutoEnabledResources(oldControllerRegistration, newControllerRegistration *core.ControllerRegistration) {
+	resourceKindTypeToResource := map[string]core.ControllerResource{}
+	for _, resource := range oldControllerRegistration.Spec.Resources {
+		resourceKindTypeToResource[gardenerutils.ExtensionsID(resource.Kind, resource.Type)] = resource
+	}
+
+	for i, resource := range newControllerRegistration.Spec.Resources {
+		var (
+			oldResource core.ControllerResource
+			ok          bool
+		)
+
+		if oldResource, ok = resourceKindTypeToResource[gardenerutils.ExtensionsID(resource.Kind, resource.Type)]; !ok {
+			continue
+		}
+
+		// When globallyEnabled was set from true to false, the shoot type must be removed from the autoEnable list.
+		// Don't do anything if globallyEnabled was not set before, as this means a conflict and field AutoEnable should take precedence in this case.
+		if oldResource.GloballyEnabled != nil && *oldResource.GloballyEnabled && resource.GloballyEnabled != nil && !*resource.GloballyEnabled {
+			newControllerRegistration.Spec.Resources[i].AutoEnable = slices.DeleteFunc(resource.AutoEnable, func(clusterType core.ClusterType) bool {
+				return clusterType == core.ClusterTypeShoot
+			})
+		}
 	}
 }
 
