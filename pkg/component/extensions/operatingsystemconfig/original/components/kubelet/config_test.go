@@ -252,6 +252,7 @@ var _ = Describe("Config", func() {
 			ResolverConfig:                 ptr.To("/etc/resolv.conf"),
 			RuntimeRequestTimeout:          metav1.Duration{Duration: 2 * time.Minute},
 			SerializeImagePulls:            params.SerializeImagePulls,
+			MaxParallelImagePulls:          params.MaxParallelImagePulls,
 			SeccompDefault:                 params.SeccompDefault,
 			ServerTLSBootstrap:             true,
 			StaticPodPath:                  "/etc/kubernetes/manifests",
