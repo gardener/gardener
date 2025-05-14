@@ -227,6 +227,12 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       !allowBackup,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
+		reconcileBackupEntry = g.Add(flow.Task{
+			Name:         "Deploying BackupEntry for ETCD data",
+			Fn:           b.ReconcileBackupEntry,
+			SkipIf:       !allowBackup,
+			Dependencies: flow.NewTaskIDs(reconcileBackupBucket),
+		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",
 			Fn:           b.DeployControlPlane,
@@ -245,7 +251,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name:         "Deploying control plane components as Deployments/StatefulSets for static pod translation",
 			Fn:           b.DeployControlPlaneDeployments,
-			Dependencies: flow.NewTaskIDs(reconcileBackupBucket),
+			Dependencies: flow.NewTaskIDs(reconcileBackupEntry),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying OperatingSystemConfig and activating gardener-node-agent",

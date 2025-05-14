@@ -315,6 +315,7 @@ func newFakeGardenClient() client.Client {
 		WithScheme(kubernetes.GardenScheme).
 		WithStatusSubresource(
 			&gardencorev1beta1.BackupBucket{},
+			&gardencorev1beta1.BackupEntry{},
 			&gardencorev1beta1.ControllerInstallation{},
 			&gardencorev1beta1.Shoot{},
 		).

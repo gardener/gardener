@@ -26,6 +26,7 @@ import (
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
+	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -99,6 +100,38 @@ func (b *AutonomousBotanist) reconcileCoreBackupBucketResource(ctx context.Conte
 	}
 
 	return component.Get(ctx)
+}
+
+// ReconcileBackupEntry reconciles the core.gardener.cloud/v1beta1.BackupEntry resource for the shoot cluster.
+func (b *AutonomousBotanist) ReconcileBackupEntry(ctx context.Context) error {
+	backupEntry, err := b.reconcileCoreBackupEntryResource(ctx)
+	if err != nil {
+		return fmt.Errorf("failed reconciling core.gardener.cloud/v1beta1.BackupEntry resource: %w", err)
+	}
+
+	reconciler := &backupentrycontroller.Reconciler{
+		GardenClient:    b.GardenClient,
+		SeedClient:      b.SeedClientSet.Client(),
+		Clock:           b.Clock,
+		Recorder:        &record.FakeRecorder{},
+		GardenNamespace: b.Shoot.ControlPlaneNamespace,
+	}
+
+	return runReconcilerUntilCondition(ctx, b.Logger, backupentrycontroller.ControllerName, reconciler, backupEntry, func(ctx context.Context) error {
+		extensionsBackupEntry := &extensionsv1alpha1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: backupEntry.Name}}
+		if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKeyFromObject(extensionsBackupEntry), extensionsBackupEntry); err != nil {
+			return fmt.Errorf("failed getting extensions.gardener.cloud/v1beta1.BackupEntry resource: %w", err)
+		}
+		return health.CheckExtensionObject(extensionsBackupEntry)
+	})
+}
+
+func (b *AutonomousBotanist) reconcileCoreBackupEntryResource(ctx context.Context) (*gardencorev1beta1.BackupEntry, error) {
+	if err := b.Shoot.Components.BackupEntry.Deploy(ctx); err != nil {
+		return nil, fmt.Errorf("failed reconciling core.gardener.cloud/v1beta1.BackupEntry resource: %w", err)
+	}
+
+	return b.Shoot.Components.BackupEntry.Get(ctx)
 }
 
 // Some reconcilers do not wait for some conditions to be met. Instead, they stop their reconciliation flow and watch
