@@ -43,9 +43,3 @@ func ReconcileTopologyAwareRoutingSettings(service *corev1.Service, topologyAwar
 		metav1.SetMetaDataLabel(&service.ObjectMeta, resourcesv1alpha1.EndpointSliceHintsConsider, "true")
 	}
 }
-
-// ReconcileTopologyAwareRoutingMetadata adds or removes the required annotation, label and spec field to make a Service topology-aware.
-//
-// TODO(ialidzhikov): Remove this function after Gardener v1.119 has been released.
-// Deprecated: Use ReconcileTopologyAwareRoutingSettings instead.
-var ReconcileTopologyAwareRoutingMetadata = ReconcileTopologyAwareRoutingSettings
