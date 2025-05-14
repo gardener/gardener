@@ -34,8 +34,39 @@ etcd-backup-restore supports full snapshot and delta snapshots over full snapsho
 - Listing:
     - Gardener doesn't have any API to list out the backups.
     - To find the backups list, an admin can checkout the `BackupEntry` resource associated with the Shoot which holds the bucket and prefix details on the object store.
+ 
+## Manual Backup of etcd-encryption-keys
+Be sure to manually backup the contents of your kube-apiserver-etcd-encryption-key and gardener-apiserver-etcd-encryption-key secrets if your disaster recovery scenario includes restoration of the virtual-garden's etcd.
 
-## Restoration
+## Restoration of shoots
 The restoration process of etcd is automated through the etcd-backup-restore component from the latest snapshot. Gardener doesn't support Point-In-Time-Recovery (PITR) of etcd. In case of an etcd disaster, the etcd is recovered from the latest backup automatically. For further details, please refer the [Restoration](https://github.com/gardener/etcd-backup-restore/blob/master/docs/proposals/restoration.md) topic. Post restoration of etcd, the Shoot reconciliation loop brings the cluster back to its previous state.
 
 Again, the Shoot owner is responsible for maintaining the backup/restore of his workload. Gardener only takes care of the cluster's etcd.
+
+## Restoration of virtual-garden in a new cluster
+During installation of your disaster recovery cluster, hint the secrets-manager to reuse your old clusters etcd encryption keys for kube-apiserver and gardener-apiserver. The following can be understood as an example to help with this undertaking: 
+```
+---
+apiVersion: v1
+data: {"encoding":"bm9uZQ==","key":"<your_key_1>","secret":"<your_secret_1>"}
+kind: Secret
+metadata:
+  labels:
+    secrets-manager-use-data-for-name: kube-apiserver-etcd-encryption-key
+  name: kube-apiserver-etcd-encryption-key-initial
+  namespace: garden
+type: Opaque
+---
+apiVersion: v1
+data: {"encoding":"bm9uZQ==","key":"<your_key_2>","secret":"<your_secret_2>"}
+kind: Secret
+metadata:
+  labels:
+    secrets-manager-use-data-for-name: gardener-apiserver-etcd-encryption-key
+  name: gardener-apiserver-etcd-encryption-key-initial
+  namespace: garden
+type: Opaque
+```
+Be sure to adjust your gardens.operator.gardener.cloud beforehand to disable the `topologyAwareRouting` and `controlPlane.highAvailability` in case those settings were featured in your to-be-restored cluster. Feel free to reenable them once the restoration succeeded.
+
+<next steps to be determined, stay tuned while we figure this our together <3 >
