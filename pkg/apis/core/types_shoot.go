@@ -1044,6 +1044,11 @@ type KubeletConfig struct {
 	StreamingConnectionIdleTimeout *metav1.Duration
 	// MemorySwap configures swap memory available to container workloads.
 	MemorySwap *MemorySwapConfiguration
+	// MaxParallelImagePulls describes the maximum number of image pulls in parallel. The value must be a positive number.
+	// When updating this field, the SerializeImagePulls (pull one image at a time) must be set to false.
+	// Setting it to nil means no limit.
+	// Default: nil
+	MaxParallelImagePulls *int32
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

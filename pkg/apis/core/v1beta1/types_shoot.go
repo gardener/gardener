@@ -1370,6 +1370,12 @@ type KubeletConfig struct {
 	// MemorySwap configures swap memory available to container workloads.
 	// +optional
 	MemorySwap *MemorySwapConfiguration `json:"memorySwap,omitempty" protobuf:"bytes,26,opt,name=memorySwap"`
+	// MaxParallelImagePulls describes the maximum number of image pulls in parallel. The value must be a positive number.
+	// When updating this field, the SerializeImagePulls (pull one image at a time) must be set to false.
+	// Setting it to nil means no limit.
+	// +optional
+	// Default: nil
+	MaxParallelImagePulls *int32 `json:"maxParallelImagePulls,omitempty" protobuf:"varint,27,opt,name=maxParallelImagePulls"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
