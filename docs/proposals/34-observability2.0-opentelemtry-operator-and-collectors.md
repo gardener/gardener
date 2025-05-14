@@ -7,10 +7,13 @@ authors:
 - "@nickytd"
 - "@rrhubenov"
 reviewers:
--
+- "@Kostov6"
+- "@ScheererJ"
+- "@vpnachev"
+- "@rfranzke"
 ---
 
-# GEP-[34]: Introducing OpenTelemetry Operator and Collectors in Shoot Control Planes
+# GEP-34: Introducing OpenTelemetry Operator and Collectors in Shoot Control Planes
 
 ## Table of Contents
 
@@ -25,13 +28,13 @@ reviewers:
 
 ## Summary
 
-This proposal introduces the OpenTelemetry Operator and deploys OpenTelemetry Collectors within the shoot control plane namespaces of Gardener-managed clusters. Building on the foundation laid by [GEP-19](https://github.com/gardener/gardener/blob/master/docs/proposals/19-migrating-observability-stack-to-operators.md) (migration to Prometheus and Fluent-bit operators) and the [Observability 2.0](https://github.com/gardener/logging/blob/master/docs/observability-2.0/Observability%202.0.md) vision, this GEP advances Gardener's observability stack by adopting OpenTelemetry standards. The initiative aims to layout the foundation for building a more cohesive and interoperable observability framework. This GEP takes the first step by introducing OpenTelemetry for logging, aligning with the [Observability 2.0](https://github.com/gardener/logging/blob/master/docs/observability-2.0/Observability%202.0.md) vision, with future enhancements planned to include metrics and optionally traces.
+This proposal introduces the OpenTelemetry Operator and deploys OpenTelemetry Collectors within the shoot control plane namespaces of Gardener-managed clusters. Building on the foundation laid by [GEP-19](./19-migrating-observability-stack-to-operators.md) (migration to Prometheus and Fluent-bit operators) and the [Observability 2.0](https://github.com/gardener/logging/blob/master/docs/observability-2.0/Observability%202.0.md) vision, this GEP advances Gardener's observability stack by adopting OpenTelemetry standards. The initiative aims to layout the foundation for building a more cohesive and interoperable observability framework. This GEP takes the first step by introducing OpenTelemetry for logging, aligning with the [Observability 2.0](https://github.com/gardener/logging/blob/master/docs/observability-2.0/Observability%202.0.md) vision, with future enhancements planned to include metrics and optionally traces.
 
 ---
 
 ## Motivation
 
-Gardener's current observability stack, while improved by the operator-based approach in [GEP-19](https://github.com/gardener/gardener/blob/master/docs/proposals/19-migrating-observability-stack-to-operators.md), still relies on vendor specific format and protocols for collecting, processing and storing observability signals. This brings challenges in extending both components and scenarios used to process these signals and enforces lock-in integration scenarios with external consumers. By introducing the OpenTelemetry Operator and Collectors, this proposal addresses these challenges, aligning Gardener with industry trends and preparing it for future observability enhancements, such as unified visualization and tracing support.
+Gardener's current observability stack, while improved by the operator-based approach in [GEP-19](./19-migrating-observability-stack-to-operators.md), still relies on vendor specific format and protocols for collecting, processing and storing observability signals. This brings challenges in extending both components and scenarios used to process these signals and enforces lock-in integration scenarios with external consumers. By introducing the OpenTelemetry Operator and Collectors, this proposal addresses these challenges, aligning Gardener with industry trends and preparing it for future observability enhancements, such as unified visualization and tracing support.
 
 ### Goals
 
@@ -55,7 +58,7 @@ This section outlines the implementation plan to introduce the OpenTelemetry Ope
 ### 1. Deploy the OpenTelemetry Operator on Seed Clusters
 
 - **Objective:** Establish centralized management of OpenTelemetry Collectors across all shoot control planes.
-- **Details:** Deploy the OpenTelemetry Operator (e.g., from the [OpenTelemetry Operator for Kubernetes](https://github.com/open-telemetry/opentelemetry-operator)) in the `garden` namespace of each seed cluster using `ManagedResources`, similar to the Prometheus operator deployment in [*GEP-19*](https://github.com/gardener/gardener/blob/master/docs/proposals/19-migrating-observability-stack-to-operators.md).
+- **Details:** Deploy the OpenTelemetry Operator (e.g., from the [OpenTelemetry Operator for Kubernetes](https://github.com/open-telemetry/opentelemetry-operator)) in the `garden` namespace of each seed cluster using `ManagedResources`, similar to the Prometheus operator deployment in [*GEP-19*](./19-migrating-observability-stack-to-operators.md).
 - **Configuration:** The OpenTelemetry Operator will be deployed following the `botanist` workflow in the same way as the current `prometheus` and `fluent-bit` operators. This means that during the `Seed` reconciliation flow the OpenTelemetry Operator will be deployed into the `garden` namespace.
 
 ### 2. Create OpenTelemetry Collector Instances per Shoot
@@ -108,7 +111,7 @@ spec:
 
 - **Objective:** Ensure a smooth transition by interfacing with the current observability stack.
 - **Details:**
-  - **Fluent-bit Integration:** Configure Fluent-bit to forward logs to the collector’s `loki` receiver, maintaining compatibility with the Vali-based setup from [*GEP-19*](https://github.com/gardener/gardener/blob/master/docs/proposals/19-migrating-observability-stack-to-operators.md).
+  - **Fluent-bit Integration:** Configure Fluent-bit to forward logs to the collector’s `loki` receiver, maintaining compatibility with the Vali-based setup from [*GEP-19*](./19-migrating-observability-stack-to-operators.md).
   - **Vali Integration:** Use the `loki` exporter to output the shoot logs to the existing Vali backend.
   - **Valitail Replacement:** Replace the current `valitail` system service on shoot nodes with the OpenTelemetry Collector, ensuring it collects the same types of logs as before. This will be done by deploying a systemd service for the collector on each shoot node, in the same way as the current `valitail` service.
   - **Event Logger Replacement:** In a later stage the current `event logger` shall be replaced with the [`k8s-event` receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/k8seventsreceiver) in the Collector shoot instance.
@@ -153,8 +156,8 @@ A visualisation of the example config (Image generated with [otelbin](https://gi
 - **Description:** Deploy OpenTelemetry Collectors in each shoot reconcile directly without using an operator.
 - **Pros:** Simplifies initial setup, avoids operator overhead.
 - **Cons:** Lacks scalability and management features (e.g., automatic upgrades, CR-based configuration), which are critical in Gardener’s multi-tenant environment.
-- **Reason Rejected:** The operator aligns with [*GEP-19*](https://github.com/gardener/gardener/blob/master/docs/proposals/19-migrating-observability-stack-to-operators.md)’s precedent of using operators for observability components, ensuring consistency and scalability.
+- **Reason Rejected:** The operator aligns with [*GEP-19*](./19-migrating-observability-stack-to-operators.md)’s precedent of using operators for observability components, ensuring consistency and scalability.
 
 ---
 
-This GEP establishes a critical milestone in Gardener’s journey toward *Observability 2.0*. By deploying the OpenTelemetry Operator and OpenTelemetry Collectors, Gardener gains a standardized, extensible observability framework that integrates with its existing stack while paving the way for future enhancements like tracing and OpenTelemetry native backends.
+This GEP establishes a critical milestone in Gardener’s journey toward [*Observability 2.0*](https://github.com/gardener/logging/blob/master/docs/observability-2.0/Observability%202.0.md). By deploying the OpenTelemetry Operator and OpenTelemetry Collectors, Gardener gains a standardized, extensible observability framework that integrates with its existing stack while paving the way for future enhancements like tracing and OpenTelemetry native backends.
