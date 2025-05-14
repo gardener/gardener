@@ -80,7 +80,7 @@ func (h *Handler) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Obj
 
 	extensionList := &operatorv1alpha1.ExtensionList{}
 	if err := h.RuntimeClient.List(ctx, extensionList); err != nil {
-		return nil, apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("failed retrieving extensions: %w", err))
 	}
 
 	if errs := validation.ValidateGardenUpdate(oldGarden, newGarden, extensionList.Items); len(errs) > 0 {
