@@ -15,7 +15,7 @@ import (
 var _ = Describe("gardenadm medium-touch scenario tests", Label("gardenadm", "medium-touch"), func() {
 	BeforeEach(OncePerOrdered, func(SpecContext) {
 		PrepareBinary()
-	}, NodeTimeout(time.Minute))
+	}, NodeTimeout(5*time.Minute))
 
 	Describe("Prepare infrastructure and machines", Ordered, func() {
 		It("should bootstrap the machine pods", func(ctx SpecContext) {
