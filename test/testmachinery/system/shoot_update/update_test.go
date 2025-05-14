@@ -25,6 +25,8 @@ import (
 	. "github.com/onsi/gomega"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,6 +35,7 @@ import (
 	"github.com/gardener/gardener/test/utils/access"
 	shootupdatesuite "github.com/gardener/gardener/test/utils/shoots/update"
 	"github.com/gardener/gardener/test/utils/shoots/update/highavailability"
+	"github.com/gardener/gardener/test/utils/shoots/update/inplace"
 )
 
 var (
@@ -110,7 +113,25 @@ func RunTest(
 		By("Update .kubernetes.version to " + kubernetesVersion + " for pool " + poolName)
 	}
 
-	Expect(f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
+	var hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers, hasInPlaceUpdateWorkers bool
+
+	for _, worker := range f.Shoot.Spec.Provider.Workers {
+		switch ptr.Deref(worker.UpdateStrategy, "") {
+		case gardencorev1beta1.AutoInPlaceUpdate:
+			hasAutoInPlaceUpdateWorkers = true
+		case gardencorev1beta1.ManualInPlaceUpdate:
+			hasManualInPlaceUpdateWorkers = true
+		}
+	}
+
+	hasInPlaceUpdateWorkers = hasAutoInPlaceUpdateWorkers || hasManualInPlaceUpdateWorkers
+
+	var nodesOfInPlaceWorkersBeforeTest sets.Set[string]
+	if hasInPlaceUpdateWorkers {
+		nodesOfInPlaceWorkersBeforeTest = inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
+	}
+
+	Expect(f.UpdateShootSpec(ctx, f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
 		if controlPlaneVersion != "" {
 			shoot.Spec.Kubernetes.Version = controlPlaneVersion
 		}
@@ -124,9 +145,26 @@ func RunTest(
 		return nil
 	})).To(Succeed())
 
+	if hasInPlaceUpdateWorkers {
+		inplace.ItShouldVerifyInPlaceUpdateStart(f.GardenClient.Client(), f.Shoot, hasAutoInPlaceUpdateWorkers, hasManualInPlaceUpdateWorkers)
+		if hasManualInPlaceUpdateWorkers {
+			inplace.LabelManualInPlaceNodesWithSelectedForUpdate(ctx, f.ShootClient.Client(), f.Shoot)
+		}
+	}
+
+	err = f.WaitForShootToBeReconciled(ctx, f.Shoot)
+	Expect(err).NotTo(HaveOccurred())
+
 	By("Re-creating shoot client")
 	shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 	Expect(err).NotTo(HaveOccurred())
+
+	if hasInPlaceUpdateWorkers {
+		nodesOfInPlaceWorkersAfterTest := inplace.FindNodesOfInPlaceWorkers(ctx, f.ShootClient.Client(), f.Shoot)
+		Expect(nodesOfInPlaceWorkersBeforeTest.UnsortedList()).To(ConsistOf(nodesOfInPlaceWorkersAfterTest.UnsortedList()))
+
+		inplace.ItShouldVerifyInPlaceUpdateCompletion(f.GardenClient.Client(), f.Shoot)
+	}
 
 	By("Verify the Kubernetes version for all existing nodes matches with the versions defined in the Shoot spec [after update]")
 	Expect(shootupdatesuite.VerifyKubernetesVersions(ctx, shootClient, f.Shoot)).To(Succeed())
