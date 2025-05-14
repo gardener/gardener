@@ -288,6 +288,33 @@ var _ = Describe("Shoot defaulting", func() {
 
 				Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
 			})
+
+			It("should not overwrite already set values for maxParallelImagePulls field", func() {
+				var (
+					limitParallelImagePulls int32 = 5
+				)
+
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls = &limitParallelImagePulls
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls).To(PointTo(Equal(int32(5))))
+			})
+
+			It("should set serializeImagePulls to false when maxParallelImagePulls field is set", func() {
+				var (
+					limitParallelImagePulls int32 = 5
+				)
+
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls = &limitParallelImagePulls
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls).To(PointTo(Equal(int32(5))))
+				Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(Equal(false)))
+			})
 		})
 	})
 
