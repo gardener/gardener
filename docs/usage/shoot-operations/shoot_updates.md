@@ -86,7 +86,7 @@ The complete list of fields that trigger a rolling update:
 * `.spec.provider.workers[].machine.type`
 * `.spec.provider.workers[].volume.type`
 * `.spec.provider.workers[].volume.size`
-* `.spec.provider.workers[].providerConfig` (except if feature gate `NewWorkerPoolHash`)
+* `.spec.provider.workers[].providerConfig`
 * `.spec.provider.workers[].cri.name`
 * `.spec.provider.workers[].kubernetes.version` (except for patch version changes)
 * `.spec.systemComponents.nodeLocalDNS.enabled`
