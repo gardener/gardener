@@ -7348,6 +7348,48 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		DescribeTable("ImageMinimumGCAge",
+			func(imageMinimumGCAge metav1.Duration, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					ImageMinimumGCAge: &imageMinimumGCAge,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("should allow nil value", nil, BeEmpty()),
+			Entry("should allow positive duration", metav1.Duration{Duration: time.Minute}, BeEmpty()),
+			Entry("should not allow negative duration", metav1.Duration{Duration: -time.Minute}, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("imageMinimumGCAge").String()),
+				})),
+			)),
+		)
+
+		DescribeTable("ImageMaximumGCAge",
+			func(imageMaximumGCAge *metav1.Duration, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					ImageMaximumGCAge: imageMaximumGCAge,
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("should allow nil value", nil, BeEmpty()),
+			Entry("should allow positive duration", &metav1.Duration{Duration: time.Minute}, BeEmpty()),
+			Entry("should not allow negative duration", &metav1.Duration{Duration: -time.Minute}, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("imageMaximumGCAge").String()),
+				})),
+			)),
+		)
+
 		DescribeTable("EvictionMaxPodGracePeriod",
 			func(evictionMaxPodGracePeriod int32, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{

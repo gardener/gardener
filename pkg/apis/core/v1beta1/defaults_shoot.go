@@ -142,6 +142,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 				obj.Spec.Kubernetes.Kubelet.MemorySwap.SwapBehavior = &limitedSwap
 			}
 		}
+		if obj.Spec.Kubernetes.Kubelet.ImageMinimumGCAge == nil {
+			obj.Spec.Kubernetes.Kubelet.ImageMinimumGCAge = &metav1.Duration{Duration: 2 * time.Minute}
+		}
+		if obj.Spec.Kubernetes.Kubelet.ImageMaximumGCAge == nil {
+			obj.Spec.Kubernetes.Kubelet.ImageMaximumGCAge = &metav1.Duration{}
+		}
 		if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
 			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = ptr.To[int32](50)
 		}

@@ -88,6 +88,8 @@ spec:
     #       swapBehavior: LimitedSwap
     #     cpuManagerPolicy: none
     #     podPidsLimit: 10
+    #     imageMinimumGCAge: 2m0s
+    #     imageMaximumGCAge: 0s
     #     imageGCHighThresholdPercent: 50
     #     imageGCLowThresholdPercent: 40
     #     protectKernelDefaults: true
