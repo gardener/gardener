@@ -332,6 +332,16 @@ spec:
                           description: FeatureGates contains information about enabled
                             feature gates.
                           type: object
+                        imageMinimumGCAge:
+                          description: |-
+                            ImageMinimumGCAge is the minimum age of an image before it is eligible for garbage collection.
+                            Default: 2m0s
+                          type: string
+                        imageMaximumGCAge:
+                          description: |-
+                            ImageMaximumGCAge is the maximum age of an image before it is eligible for garbage collection.
+                            Default: 0s
+                          type: string
                         imageGCHighThresholdPercent:
                           description: |-
                             ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
