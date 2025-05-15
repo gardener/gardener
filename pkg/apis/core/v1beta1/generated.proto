@@ -1557,6 +1557,16 @@ message KubeletConfig {
   // MemorySwap configures swap memory available to container workloads.
   // +optional
   optional MemorySwapConfiguration memorySwap = 26;
+
+  // ImageMinimumGCAge is the minimum age of an image before it can be garbage collected.
+  // +optional
+  // Default: 2m0s
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration imageMinimumGCAge = 27;
+
+  // ImageMaximumGCAge is the maximum age of an image before it can be garbage collected.
+  // +optional
+  // Default: 0s
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration imageMaximumGCAge = 28;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
