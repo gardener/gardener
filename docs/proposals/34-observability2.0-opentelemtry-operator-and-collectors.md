@@ -138,7 +138,6 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname | tr [:upper:] [:lower:])"
 ExecStart=/opt/bin/opentelemetry-collector --config=/var/lib/opentelemetry-collector/config/config
 ```
 
