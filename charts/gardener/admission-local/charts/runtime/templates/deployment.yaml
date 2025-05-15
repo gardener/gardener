@@ -32,8 +32,10 @@ spec:
         imagePullPolicy: {{ .Values.imagePullPolicy }}
         args:
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
-        - --webhook-config-mode=url
+        - --webhook-config-mode={{ .Values.webhookConfig.mode }}
+{{- if eq .Values.webhookConfig.mode "url" }}
         - --webhook-config-url={{ printf "%s.%s" (include "name" .) (.Release.Namespace) }}
+{{- end }}
         - --webhook-config-namespace={{ .Release.Namespace }}
 {{- if .Values.gardener.virtualCluster.namespace }}
         - --webhook-config-owner-namespace={{ .Values.gardener.virtualCluster.namespace }}
