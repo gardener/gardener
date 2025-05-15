@@ -1992,10 +1992,8 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fld
 			allErrs = append(allErrs, field.Invalid(path, *v, "value must be >= 1"))
 		}
 
-		if serializeImagePull := kubeletConfig.SerializeImagePulls; serializeImagePull != nil {
-			if *serializeImagePull && *v > 1 {
-				allErrs = append(allErrs, field.Forbidden(path, "configuring limit of image pulls is not available when kubelet's 'SerializeImagePulls' is set to true"))
-			}
+		if ptr.Deref(kubeletConfig.SerializeImagePulls, false) && *v > 1 {
+			allErrs = append(allErrs, field.Forbidden(path, "maxParallelImagePulls cannot be larger than 1 when serializeImagePulls is set to true"))
 		}
 	}
 

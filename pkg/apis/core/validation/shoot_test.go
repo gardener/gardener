@@ -7444,7 +7444,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		Describe("seriazlizeImagePulls, maxParallelImagePulls", func() {
+		Describe("maxParallelImagePulls", func() {
 			It("should allow positive values", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
 					MaxParallelImagePulls: ptr.To[int32](10),
@@ -7462,7 +7462,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 
-			It("should not allow seriazlizeImagePulls when maxParallelImagePulls is set", func() {
+			It("should not allow seriazlizeImagePulls to be true when maxParallelImagePulls is set", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
 					MaxParallelImagePulls: ptr.To[int32](10),
 					SerializeImagePulls:   ptr.To(true),
@@ -7470,7 +7470,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal(field.NewPath("maxParallelImagePulls").String()),
-						"Detail": Equal("configuring limit of image pulls is not available when kubelet's 'SerializeImagePulls' is set to true"),
+						"Detail": Equal("maxParallelImagePulls cannot be larger than 1 when serializeImagePulls is set to true"),
 					})),
 				))
 			})

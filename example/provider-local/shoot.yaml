@@ -30,7 +30,6 @@ spec:
     kubelet:
       seccompDefault: true
       serializeImagePulls: false
-      maxParallelImagePulls: 5
       registryPullQPS: 10
       registryBurst: 20
       protectKernelDefaults: true
