@@ -155,7 +155,6 @@ global:
       log:
         path: ""
     featureGates:
-      ShootForceDeletion: true
       CredentialsRotationWithoutWorkersRollout: true
       CloudProfileCapabilities: true
       InPlaceNodeUpdates: true
