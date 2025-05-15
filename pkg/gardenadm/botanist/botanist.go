@@ -177,6 +177,10 @@ func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context) 
 		return fmt.Errorf("failed creating Seed %s: %w", b.Seed.GetInfo().Name, err)
 	}
 
+	if err := b.GardenClient.Create(ctx, b.Shoot.GetInfo().DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+		return fmt.Errorf("failed creating Shoot %s: %w", client.ObjectKeyFromObject(b.Shoot.GetInfo()), err)
+	}
+
 	for _, extension := range b.Extensions {
 		if err := b.GardenClient.Create(ctx, extension.ControllerRegistration.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
 			return fmt.Errorf("failed creating ControllerRegistration %s: %w", extension.ControllerRegistration.Name, err)
@@ -269,7 +273,10 @@ func newFakeGardenClient() client.Client {
 	return fakeclient.
 		NewClientBuilder().
 		WithScheme(kubernetes.GardenScheme).
-		WithStatusSubresource(&gardencorev1beta1.ControllerInstallation{}).
+		WithStatusSubresource(
+			&gardencorev1beta1.ControllerInstallation{},
+			&gardencorev1beta1.Shoot{},
+		).
 		Build()
 }
 
