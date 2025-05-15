@@ -69,6 +69,7 @@ func (b *Botanist) DeployMachineControllerManager(ctx context.Context) error {
 	}
 
 	b.Shoot.Components.ControlPlane.MachineControllerManager.SetReplicas(replicas)
+	b.Shoot.Components.ControlPlane.MachineControllerManager.SetNamespaceUID(b.SeedNamespaceObject.UID)
 
 	return b.Shoot.Components.ControlPlane.MachineControllerManager.Deploy(ctx)
 }
