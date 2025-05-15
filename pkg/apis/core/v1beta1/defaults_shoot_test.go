@@ -290,9 +290,7 @@ var _ = Describe("Shoot defaulting", func() {
 			})
 
 			It("should not overwrite already set values for maxParallelImagePulls field", func() {
-				var (
-					limitParallelImagePulls int32 = 5
-				)
+				var limitParallelImagePulls int32 = 5
 
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 				obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls = &limitParallelImagePulls
@@ -303,9 +301,7 @@ var _ = Describe("Shoot defaulting", func() {
 			})
 
 			It("should default serializeImagePulls to false when maxParallelImagePulls field is set", func() {
-				var (
-					limitParallelImagePulls int32 = 5
-				)
+				var limitParallelImagePulls int32 = 5
 
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 				obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls = &limitParallelImagePulls

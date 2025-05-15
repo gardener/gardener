@@ -62,10 +62,9 @@ func DefaultShoot(name string) *gardencorev1beta1.Shoot {
 
 	shoot.Spec.SecretBindingName = ptr.To("local")
 	shoot.Spec.Kubernetes.Kubelet = &gardencorev1beta1.KubeletConfig{
-		SerializeImagePulls:   ptr.To(false),
-		MaxParallelImagePulls: ptr.To[int32](5),
-		RegistryPullQPS:       ptr.To[int32](10),
-		RegistryBurst:         ptr.To[int32](20),
+		SerializeImagePulls: ptr.To(false),
+		RegistryPullQPS:     ptr.To[int32](10),
+		RegistryBurst:       ptr.To[int32](20),
 	}
 	shoot.Spec.Networking = &gardencorev1beta1.Networking{
 		Type:  ptr.To("calico"),
