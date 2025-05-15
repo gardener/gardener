@@ -396,7 +396,7 @@ var _ = Describe("VpnSeedServer", func() {
 								"all",
 							},
 						},
-						RunAsUser:    ptr.To(int64(v1beta1constants.EnvoyNonRootUserId)),
+						RunAsGroup:   ptr.To(int64(v1beta1constants.EnvoyVPNGroupId)),
 						RunAsNonRoot: ptr.To(true),
 					},
 					VolumeMounts: []corev1.VolumeMount{
