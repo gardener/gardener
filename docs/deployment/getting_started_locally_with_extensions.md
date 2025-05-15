@@ -120,10 +120,10 @@ DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true make gardener-extensions-up
 > When working with multiple seed clusters you need to only pass `DEV_SETUP_WITH_WORKLOAD_IDENTITY_SUPPORT=true` for the one seed cluster that will be used to expose the workload identity documents.
 > A single Garden cluster needs only one Gardener Discovery Server.
 
-To setup workload identity with your provider please refer to the provider specific docs:
-- [AWS](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#aws-workload-identity-federation)
-- [Azure](https://github.com/gardener/gardener-extension-provider-azure/blob/master/docs/usage/usage.md#azure-workload-identity-federation)
-- [GCP](https://github.com/gardener/gardener-extension-provider-gcp/blob/master/docs/usage/usage.md#gcp-workload-identity-federation)
+To setup workload identity with your provider please refer to the provider extension specific docs:
+- [provider-aws](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage/usage.md#aws-workload-identity-federation)
+- [provider-azure](https://github.com/gardener/gardener-extension-provider-azure/blob/master/docs/usage/usage.md#azure-workload-identity-federation)
+- [provider-gcp](https://github.com/gardener/gardener-extension-provider-gcp/blob/master/docs/usage/usage.md#gcp-workload-identity-federation)
 
 ### Adding Additional Seeds
 
