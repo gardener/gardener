@@ -16,6 +16,7 @@ vpa:
   updatePolicy:
     updateMode: "Auto"
 webhookConfig:
+  mode: url
   serverPort: 10250
 service:
   topologyAwareRouting:

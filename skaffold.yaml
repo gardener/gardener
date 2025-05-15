@@ -1829,6 +1829,7 @@ deploy:
         namespace: garden
         setValueTemplates:
           gardener.runtimeCluster.priorityClassName: gardener-system-400
+          webhookConfig.mode: service
         createNamespace: true
         wait: true
 profiles:
