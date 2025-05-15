@@ -37,8 +37,8 @@ for version in "${versions[@]}"; do
   wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/${versions_dir}/versioned_feature_list.yaml" > "${out_dir}/versioned_featuregates_${version}.yaml"
   wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/${versions_dir}/unversioned_feature_list.yaml" > "${out_dir}/unversioned_featuregates_${version}.yaml"
 
-  yq eval '.[] | .name' "${out_dir}/versioned_featuregates_${version}.yaml" > "${out_dir}/featuregates_list_${version}.yaml"
-  yq eval '.[] | .name' "${out_dir}/unversioned_featuregates_${version}.yaml" >> "${out_dir}/featuregates_list_${version}.yaml"
+  yq '.[] | .name' "${out_dir}/versioned_featuregates_${version}.yaml" > "${out_dir}/featuregates_list_${version}.yaml"
+  yq '.[] | .name' "${out_dir}/unversioned_featuregates_${version}.yaml" >> "${out_dir}/featuregates_list_${version}.yaml"
 
 done
 
@@ -49,9 +49,9 @@ echo "Feature gates removed in $2 compared to $1:"
 diff "${out_dir}/featuregates_list_${1}.yaml" "${out_dir}/featuregates_list_${2}.yaml" | grep '<' | awk '{print $2}'
 echo
 echo "Feature gates locked to default true:"
-yq eval '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == true)) | .name' "${out_dir}/versioned_featuregates_${version}.yaml"
-yq eval '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == true)) | .name' "${out_dir}/unversioned_featuregates_${version}.yaml"
+yq '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == true)) | .name' "${out_dir}/versioned_featuregates_${version}.yaml"
+yq '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == true)) | .name' "${out_dir}/unversioned_featuregates_${version}.yaml"
 echo
 echo "Feature gates locked to default false:"
-yq eval '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == false)) | .name' "${out_dir}/versioned_featuregates_${version}.yaml"
-yq eval '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == false)) | .name' "${out_dir}/unversioned_featuregates_${version}.yaml"
+yq '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == false)) | .name' "${out_dir}/versioned_featuregates_${version}.yaml"
+yq '.[] | select(.versionedSpecs[] | select(.version == "'$2'" and .lockToDefault == true and .default == false)) | .name' "${out_dir}/unversioned_featuregates_${version}.yaml"
