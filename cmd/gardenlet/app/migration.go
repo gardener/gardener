@@ -11,20 +11,13 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/component/autoscaling/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClient client.Client) error {
@@ -37,16 +30,6 @@ func (g *garden) runMigrations(ctx context.Context, log logr.Logger, gardenClien
 		if err := verifyRemoveAPIServerProxyLegacyPortFeatureGate(ctx, gardenClient, g.config.SeedConfig.Name); err != nil {
 			return err
 		}
-	}
-
-	log.Info("Migrating RBAC resources for machine-controller-manager")
-	if err := migrateMCMRBAC(ctx, g.mgr.GetClient()); err != nil {
-		return err
-	}
-
-	log.Info("Migrating RBAC resources for cluster-autoscaler")
-	if err := migrateAutoscalerRBAC(ctx, g.mgr.GetClient()); err != nil {
-		return err
 	}
 
 	return nil
@@ -181,80 +164,4 @@ func syncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.SeedBackup) 
 	// - both fields are unset -> we have nothing to sync
 	// - both fields are set -> let the validation check if they are correct
 	// - credentialsRef refer to WorkloadIdentity -> secretRef should stay unset
-}
-
-// TODO(@aaronfern): Remove this after v1.120 is released
-func migrateMCMRBAC(ctx context.Context, seedClient client.Client) error {
-	namespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
-		return err
-	}
-
-	var tasks []flow.TaskFn
-
-	for _, namespace := range namespaceList.Items {
-		if namespace.DeletionTimestamp != nil || namespace.Status.Phase == corev1.NamespaceTerminating {
-			continue
-		}
-		tasks = append(tasks, func(ctx context.Context) error {
-			clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-			if err := seedClient.Get(ctx, client.ObjectKey{Name: "machine-controller-manager-" + namespace.Name}, clusterRoleBinding); err != nil {
-				//If MCM clusterRoleBinding does not exist, nothing to do
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
-			}
-
-			return machinecontrollermanager.New(seedClient, namespace.Name, nil, machinecontrollermanager.Values{}).DeployMigrate(ctx)
-		})
-	}
-
-	if err := flow.Parallel(tasks...)(ctx); err != nil {
-		return err
-	}
-	if err := managedresources.DeleteForSeed(ctx, seedClient, "garden", "machine-controller-manager"); err != nil {
-		if !meta.IsNoMatchError(err) {
-			return err
-		}
-	}
-	return nil
-}
-
-// TODO(@aaronfern): Remove this after v1.120 is released
-func migrateAutoscalerRBAC(ctx context.Context, seedClient client.Client) error {
-	namespaceList := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, namespaceList, client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot})); err != nil {
-		return err
-	}
-
-	var tasks []flow.TaskFn
-
-	for _, namespace := range namespaceList.Items {
-		if namespace.DeletionTimestamp != nil || namespace.Status.Phase == corev1.NamespaceTerminating {
-			continue
-		}
-		tasks = append(tasks, func(ctx context.Context) error {
-			clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-			if err := seedClient.Get(ctx, client.ObjectKey{Name: "cluster-autoscaler-" + namespace.Name}, clusterRoleBinding); err != nil {
-				//If autoscaler clusterRoleBinding does not exist, nothing to do
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
-			}
-
-			return clusterautoscaler.New(seedClient, namespace.Name, nil, "", 0, nil, []gardencorev1beta1.Worker{}, nil).DeployMigrate(ctx)
-		})
-	}
-
-	if err := flow.Parallel(tasks...)(ctx); err != nil {
-		return err
-	}
-	if err := managedresources.DeleteForSeed(ctx, seedClient, "garden", "cluster-autoscaler"); err != nil {
-		if !meta.IsNoMatchError(err) {
-			return err
-		}
-	}
-	return nil
 }

@@ -107,6 +107,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				botanist.Shoot.WantsClusterAutoscaler = true
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 
+				clusterAutoscaler.EXPECT().SetNamespaceUID(namespaceUID)
 				worker.EXPECT().MachineDeployments().Return(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMachineDeployments(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMaxNodesTotal(int64(0))
