@@ -22,14 +22,6 @@ const (
 	// alpha: v1.54.0
 	DefaultSeccompProfile featuregate.Feature = "DefaultSeccompProfile"
 
-	// ShootForceDeletion allows force deletion of Shoots.
-	// See https://github.com/gardener/gardener/blob/master/docs/usage/shoot-operations/shoot_operations.md#shoot-force-deletion for more details.
-	// owner: @acumino @ary1992 @shafeeqes
-	// alpha: v1.81.0
-	// beta: v1.91.0
-	// GA: v1.111.0
-	ShootForceDeletion featuregate.Feature = "ShootForceDeletion"
-
 	// UseNamespacedCloudProfile enables the usage of the NamespacedCloudProfile API object
 	// nodes.
 	// owner: @timuthy @benedictweis @LucaBernstein
@@ -130,7 +122,6 @@ var DefaultFeatureGate = utilfeature.DefaultMutableFeatureGate
 // AllFeatureGates is the list of all feature gates.
 var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DefaultSeccompProfile:                    {Default: false, PreRelease: featuregate.Alpha},
-	ShootForceDeletion:                       {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	UseNamespacedCloudProfile:                {Default: true, PreRelease: featuregate.Beta},
 	ShootCredentialsBinding:                  {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:                        {Default: false, PreRelease: featuregate.Alpha},

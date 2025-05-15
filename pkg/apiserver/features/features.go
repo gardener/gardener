@@ -13,7 +13,6 @@ import (
 // RegisterFeatureGates registers the feature gates of gardener-apiserver.
 func RegisterFeatureGates() {
 	utilruntime.Must(features.DefaultFeatureGate.Add(features.GetFeatures(
-		features.ShootForceDeletion,
 		features.UseNamespacedCloudProfile,
 		features.ShootCredentialsBinding,
 		features.CredentialsRotationWithoutWorkersRollout,
