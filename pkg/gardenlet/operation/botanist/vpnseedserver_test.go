@@ -15,6 +15,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -115,6 +116,8 @@ var _ = Describe("VPNSeedServer", func() {
 
 			ctx     = context.TODO()
 			fakeErr = errors.New("fake err")
+
+			namespaceUID = types.UID("1234")
 		)
 
 		BeforeEach(func() {
@@ -153,6 +156,7 @@ var _ = Describe("VPNSeedServer", func() {
 			vpnSeedServer.EXPECT().SetNodeNetworkCIDRs(botanist.Shoot.Networks.Nodes)
 			vpnSeedServer.EXPECT().SetServiceNetworkCIDRs(botanist.Shoot.Networks.Services)
 			vpnSeedServer.EXPECT().SetPodNetworkCIDRs(botanist.Shoot.Networks.Pods)
+			vpnSeedServer.EXPECT().SetSeedNamespaceObjectUID(namespaceUID)
 		})
 
 		It("should set the secrets and SNI config and deploy", func() {

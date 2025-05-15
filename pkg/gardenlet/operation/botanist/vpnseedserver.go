@@ -64,6 +64,7 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetNodeNetworkCIDRs(b.Shoot.Networks.Nodes)
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetServiceNetworkCIDRs(b.Shoot.Networks.Services)
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetPodNetworkCIDRs(b.Shoot.Networks.Pods)
+	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSeedNamespaceObjectUID(b.SeedNamespaceObject.UID)
 
 	return b.Shoot.Components.ControlPlane.VPNSeedServer.Deploy(ctx)
 }

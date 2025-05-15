@@ -15,6 +15,7 @@ import (
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
+	types "k8s.io/apimachinery/pkg/types"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -55,20 +56,6 @@ func (mr *MockInterfaceMockRecorder) Deploy(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockInterface)(nil).Deploy), ctx)
 }
 
-// DeployMigrate mocks base method.
-func (m *MockInterface) DeployMigrate(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployMigrate", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeployMigrate indicates an expected call of DeployMigrate.
-func (mr *MockInterfaceMockRecorder) DeployMigrate(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployMigrate", reflect.TypeOf((*MockInterface)(nil).DeployMigrate), ctx)
-}
-
 // Destroy mocks base method.
 func (m *MockInterface) Destroy(ctx context.Context) error {
 	m.ctrl.T.Helper()
@@ -105,6 +92,18 @@ func (m *MockInterface) SetMaxNodesTotal(arg0 int64) {
 func (mr *MockInterfaceMockRecorder) SetMaxNodesTotal(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMaxNodesTotal", reflect.TypeOf((*MockInterface)(nil).SetMaxNodesTotal), arg0)
+}
+
+// SetNamespaceUID mocks base method.
+func (m *MockInterface) SetNamespaceUID(arg0 types.UID) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetNamespaceUID", arg0)
+}
+
+// SetNamespaceUID indicates an expected call of SetNamespaceUID.
+func (mr *MockInterfaceMockRecorder) SetNamespaceUID(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNamespaceUID", reflect.TypeOf((*MockInterface)(nil).SetNamespaceUID), arg0)
 }
 
 // Wait mocks base method.

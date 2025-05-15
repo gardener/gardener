@@ -9,11 +9,9 @@ import (
 	"fmt"
 	"time"
 
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -21,6 +19,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
@@ -57,11 +56,10 @@ const (
 // Interface contains functions for a machine-controller-manager deployer.
 type Interface interface {
 	component.DeployWaiter
+	// SetNamespaceUID sets the UID of the namespace into which the machine-controller-manager shall be deployed.
+	SetNamespaceUID(types.UID)
 	// SetReplicas sets the replicas.
 	SetReplicas(int32)
-	//TODO(@aaronfern): Remove this after v1.120 is released.
-	// DeployMigrate migrates RBAC permissions from clusterrole/clusterrolebinding to role/rolebinding
-	DeployMigrate(ctx context.Context) error
 }
 
 // New creates a new instance of DeployWaiter for the machine-controller-manager.
@@ -92,79 +90,15 @@ type Values struct {
 	Image string
 	// Replicas is the number of replicas for the deployment.
 	Replicas int32
-}
 
-// TODO(@aaronfern): Remove this after v1.120 is released.
-func (m *machineControllerManager) DeployMigrate(ctx context.Context) error {
-	var (
-		roleBinding    = m.emptyRoleBindingRuntime()
-		role           = m.emptyRole()
-		serviceAccount = m.emptyServiceAccount()
-	)
-
-	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, role, func() error {
-		role.Rules = []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{machinev1alpha1.GroupName},
-				Resources: []string{
-					"machineclasses",
-					"machineclasses/status",
-					"machinedeployments",
-					"machinedeployments/status",
-					"machines",
-					"machines/status",
-					"machinesets",
-					"machinesets/status",
-				},
-				Verbs: []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
-			},
-			{
-				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
-				Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
-			},
-			{
-				APIGroups: []string{coordinationv1.GroupName},
-				Resources: []string{"leases"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups:     []string{coordinationv1.GroupName},
-				Resources:     []string{"leases"},
-				Verbs:         []string{"get", "watch", "update"},
-				ResourceNames: []string{"machine-controller", "machine-controller-manager"},
-			},
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, roleBinding, func() error {
-		roleBinding.RoleRef = rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     role.Name,
-		}
-		roleBinding.Subjects = []rbacv1.Subject{{
-			Kind:      rbacv1.ServiceAccountKind,
-			Name:      serviceAccount.Name,
-			Namespace: m.namespace,
-		}}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	return kubernetesutils.DeleteObjects(ctx, m.client, m.emptyClusterRoleBindingRuntime())
+	namespaceUID types.UID
 }
 
 func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	var (
 		shootAccessSecret   = m.newShootAccessSecret()
 		serviceAccount      = m.emptyServiceAccount()
-		roleBinding         = m.emptyRoleBindingRuntime()
-		role                = m.emptyRole()
+		clusterRoleBinding  = m.emptyClusterRoleBindingRuntime()
 		service             = m.emptyService()
 		deployment          = m.emptyDeployment()
 		podDisruptionBudget = m.emptyPodDisruptionBudget()
@@ -185,51 +119,21 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, role, func() error {
-		role.Rules = []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{machinev1alpha1.GroupName},
-				Resources: []string{
-					"machineclasses",
-					"machineclasses/status",
-					"machinedeployments",
-					"machinedeployments/status",
-					"machines",
-					"machines/status",
-					"machinesets",
-					"machinesets/status",
-				},
-				Verbs: []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
-			},
-			{
-				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"configmaps", "secrets", "endpoints", "events", "pods"},
-				Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
-			},
-			{
-				APIGroups: []string{coordinationv1.GroupName},
-				Resources: []string{"leases"},
-				Verbs:     []string{"create"},
-			},
-			{
-				APIGroups:     []string{coordinationv1.GroupName},
-				Resources:     []string{"leases"},
-				Verbs:         []string{"get", "watch", "update"},
-				ResourceNames: []string{"machine-controller", "machine-controller-manager"},
-			},
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, roleBinding, func() error {
-		roleBinding.RoleRef = rbacv1.RoleRef{
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, m.client, clusterRoleBinding, func() error {
+		clusterRoleBinding.OwnerReferences = []metav1.OwnerReference{{
+			APIVersion:         "v1",
+			Kind:               "Namespace",
+			Name:               m.namespace,
+			UID:                m.values.namespaceUID,
+			Controller:         ptr.To(true),
+			BlockOwnerDeletion: ptr.To(true),
+		}}
+		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     role.Name,
+			Kind:     "ClusterRole",
+			Name:     clusterRoleName,
 		}
-		roleBinding.Subjects = []rbacv1.Subject{{
+		clusterRoleBinding.Subjects = []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      serviceAccount.Name,
 			Namespace: m.namespace,
@@ -547,8 +451,6 @@ func (m *machineControllerManager) Destroy(ctx context.Context) error {
 		m.newShootAccessSecret().Secret,
 		m.emptyService(),
 		m.emptyClusterRoleBindingRuntime(),
-		m.emptyRoleBindingRuntime(),
-		m.emptyRole(),
 		m.emptyServiceAccount(),
 	)
 }
@@ -587,7 +489,8 @@ func (m *machineControllerManager) WaitCleanup(ctx context.Context) error {
 	})
 }
 
-func (m *machineControllerManager) SetReplicas(replicas int32) { m.values.Replicas = replicas }
+func (m *machineControllerManager) SetNamespaceUID(uid types.UID) { m.values.namespaceUID = uid }
+func (m *machineControllerManager) SetReplicas(replicas int32)    { m.values.Replicas = replicas }
 
 func (m *machineControllerManager) computeShootResourcesData(serviceAccountName string) (map[string][]byte, error) {
 	var (
@@ -692,15 +595,6 @@ func (m *machineControllerManager) emptyServiceAccount() *corev1.ServiceAccount 
 	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
 }
 
-func (m *machineControllerManager) emptyRole() *rbacv1.Role {
-	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
-}
-
-func (m *machineControllerManager) emptyRoleBindingRuntime() *rbacv1.RoleBinding {
-	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager", Namespace: m.namespace}}
-}
-
-// TODO(@aaronfern): Remove this after v1.120 is released.
 func (m *machineControllerManager) emptyClusterRoleBindingRuntime() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "machine-controller-manager-" + m.namespace}}
 }
