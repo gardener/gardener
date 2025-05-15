@@ -261,7 +261,7 @@ type PendingWorkerUpdates struct {
 	// AutoInPlaceUpdate contains the names of the pending worker pools with strategy AutoInPlaceUpdate.
 	// +optional
 	AutoInPlaceUpdate []string `json:"autoInPlaceUpdate,omitempty" protobuf:"bytes,1,rep,name=autoInPlaceUpdate"`
-	// ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate..
+	// ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate.
 	// +optional
 	ManualInPlaceUpdate []string `json:"manualInPlaceUpdate,omitempty" protobuf:"bytes,2,rep,name=manualInPlaceUpdate"`
 }

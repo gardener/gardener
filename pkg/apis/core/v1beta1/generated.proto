@@ -2269,7 +2269,7 @@ message PendingWorkerUpdates {
   // +optional
   repeated string autoInPlaceUpdate = 1;
 
-  // ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate..
+  // ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate.
   // +optional
   repeated string manualInPlaceUpdate = 2;
 }
