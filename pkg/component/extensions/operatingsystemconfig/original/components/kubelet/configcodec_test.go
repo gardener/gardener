@@ -78,7 +78,8 @@ var _ = Describe("ConfigCodec", func() {
 			MaxOpenFiles:                1000000,
 			KubeAPIQPS:                  ptr.To[int32](50),
 			KubeAPIBurst:                50,
-			SerializeImagePulls:         ptr.To(true),
+			SerializeImagePulls:         ptr.To(false),
+			MaxParallelImagePulls:       ptr.To[int32](5),
 			EvictionHard: map[string]string{
 				"imagefs.available":  "5%",
 				"imagefs.inodesFree": "5%",
@@ -189,6 +190,7 @@ logging:
       infoBufferSize: "0"
   verbosity: 0
 maxOpenFiles: 1000000
+maxParallelImagePulls: 5
 maxPods: 110
 memorySwap: {}
 nodeStatusReportFrequency: 0s
@@ -198,7 +200,7 @@ registryPullQPS: 5
 resolvConf: /etc/resolv.conf
 rotateCertificates: true
 runtimeRequestTimeout: 2m0s
-serializeImagePulls: true
+serializeImagePulls: false
 shutdownGracePeriod: 0s
 shutdownGracePeriodCriticalPods: 0s
 streamingConnectionIdleTimeout: 0s
