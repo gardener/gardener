@@ -7470,7 +7470,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal(field.NewPath("maxParallelImagePulls").String()),
-						"Detail": Equal("configuring limit of image pulls is not available when kubelet's 'SerializeImagePulls' is set"),
+						"Detail": Equal("configuring limit of image pulls is not available when kubelet's 'SerializeImagePulls' is set to true"),
 					})),
 				))
 			})
