@@ -61,6 +61,7 @@ var (
 		"PodNodeSelector":                      {},
 		"PodSecurity":                          {Required: true},
 		"PodTolerationRestriction":             {},
+		"PodTopologyLabels":                    {VersionRange: versionutils.VersionRange{AddedInVersion: "1.33"}},
 		"Priority":                             {Required: true},
 		"ResourceQuota":                        {},
 		"RuntimeClass":                         {},
