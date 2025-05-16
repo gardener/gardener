@@ -442,6 +442,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Labels: map[string]string{
 						"persist": "true",
 					},
+					Finalizers: []string{"gardener.cloud/gardener"},
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{

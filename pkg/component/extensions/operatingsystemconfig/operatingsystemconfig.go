@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/gardener/gardener/imagevector"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -401,6 +402,7 @@ func (o *operatingSystemConfig) updateHashVersioningSecret(ctx context.Context) 
 		}
 		metav1.SetMetaDataLabel(&secret.ObjectMeta, secretsmanager.LabelKeyPersist, "true")
 		secret.Type = corev1.SecretTypeOpaque
+		secret.Finalizers = []string{gardencorev1beta1.ExternalGardenerName}
 		return nil
 	}); err != nil {
 		return err
@@ -508,6 +510,19 @@ func (o *operatingSystemConfig) Destroy(ctx context.Context) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: o.values.Namespace, Name: WorkerPoolHashesSecretName},
 	}
+
+	if err := o.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+
+	// Remove the finalizer if present before deleting the secret.
+	if controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+		o.log.Info("Removing finalizer from WorkerPoolHashesSecret", "secret", secret.Name)
+		if err := controllerutils.RemoveFinalizers(ctx, o.client, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+			return fmt.Errorf("failed to remove finalizer from secret %q: %w", secret.Name, err)
+		}
+	}
+
 	return client.IgnoreNotFound(o.client.Delete(ctx, secret))
 }
 
