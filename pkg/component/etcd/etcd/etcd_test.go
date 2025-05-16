@@ -137,10 +137,20 @@ var _ = Describe("Etcd", func() {
 
 			resourcesContainerEtcd := &corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("300m"),
-					corev1.ResourceMemory: resource.MustParse("1G"),
+					corev1.ResourceCPU:    resource.MustParse("30m"),
+					corev1.ResourceMemory: resource.MustParse("150M"),
 				},
 			}
+
+			if class == ClassImportant {
+				resourcesContainerEtcd = &corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("150m"),
+						corev1.ResourceMemory: resource.MustParse("500M"),
+					},
+				}
+			}
+
 			if existingResourcesContainerEtcd != nil {
 				resourcesContainerEtcd = existingResourcesContainerEtcd
 			}
@@ -366,7 +376,9 @@ var _ = Describe("Etcd", func() {
 		expectedVPAFor = func(class Class, evictionRequirement string, minAllowed corev1.ResourceList) *vpaautoscalingv1.VerticalPodAutoscaler {
 			minAllowedConfig := minAllowed
 			if minAllowedConfig == nil {
-				minAllowedConfig = corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("60M")}
+				minAllowedConfig = corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("60M"),
+				}
 			}
 
 			vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
@@ -1765,7 +1777,7 @@ var _ = Describe("Etcd", func() {
 							"",
 							&corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("300m"),
+									corev1.ResourceCPU:    resource.MustParse("250m"),
 									corev1.ResourceMemory: resource.MustParse("1.5Gi"),
 								},
 							},
