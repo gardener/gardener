@@ -7,6 +7,7 @@ package reference
 import (
 	"reflect"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,7 +129,7 @@ func authenticationWebhookSecretChanged(oldKubeAPIServer, newKubeAPIServer *oper
 }
 
 func sniSecretChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
-	var oldSecret, newSecret string
+	var oldSecret, newSecret *string
 
 	if oldKubeAPIServer != nil && oldKubeAPIServer.SNI != nil {
 		oldSecret = oldKubeAPIServer.SNI.SecretName
@@ -138,7 +139,7 @@ func sniSecretChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeA
 		newSecret = newKubeAPIServer.SNI.SecretName
 	}
 
-	return oldSecret != newSecret
+	return apiequality.Semantic.DeepEqual(oldSecret, newSecret)
 }
 
 func kubeAPIServerAuditWebhookSecretChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
@@ -290,8 +291,8 @@ func getReferencedSecretNames(obj client.Object) []string {
 			out = append(out, virtualCluster.Kubernetes.KubeAPIServer.Authentication.Webhook.KubeconfigSecretName)
 		}
 
-		if virtualCluster.Kubernetes.KubeAPIServer.SNI != nil {
-			out = append(out, virtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName)
+		if virtualCluster.Kubernetes.KubeAPIServer.SNI != nil && virtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName != nil {
+			out = append(out, *virtualCluster.Kubernetes.KubeAPIServer.SNI.SecretName)
 		}
 
 		if virtualCluster.Kubernetes.KubeAPIServer.AuditWebhook != nil {

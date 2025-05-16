@@ -841,11 +841,11 @@ func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden
 		sni := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI
 		sniDomains := GetAPIServerSNIDomains(domains, *sni)
 
-		if len(sniDomains) > 0 {
+		if len(sniDomains) > 0 && sni.SecretName != nil {
 			var tlsSecret corev1.Secret
 
-			if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: sni.SecretName, Namespace: r.GardenNamespace}, &tlsSecret); err != nil {
-				return nil, fmt.Errorf("failed to get SNI TLS secret %q: %w", sni.SecretName, err)
+			if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: *sni.SecretName, Namespace: r.GardenNamespace}, &tlsSecret); err != nil {
+				return nil, fmt.Errorf("failed to get SNI TLS secret %q: %w", *sni.SecretName, err)
 			}
 
 			wildcardConfiguration = &kubeapiserverexposure.WildcardConfiguration{

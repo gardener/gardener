@@ -775,9 +775,9 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 				serviceAccountConfig = apiServer.ServiceAccountConfig
 			}
 
-			if apiServer.SNI != nil {
+			if apiServer.SNI != nil && apiServer.SNI.SecretName != nil {
 				sniConfig.TLS = append(sniConfig.TLS, kubeapiserver.TLSSNIConfig{
-					SecretName:     &apiServer.SNI.SecretName,
+					SecretName:     apiServer.SNI.SecretName,
 					DomainPatterns: apiServer.SNI.DomainPatterns,
 				})
 			}

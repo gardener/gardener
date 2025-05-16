@@ -3099,7 +3099,9 @@ string
 </em>
 </td>
 <td>
-<p>SecretName is the name of a secret containing the TLS certificate and private key.</p>
+<em>(Optional)</em>
+<p>SecretName is the name of a secret containing the TLS certificate and private key.
+If not configured, Gardener falls back to a secret labelled with &lsquo;gardener.cloud/role=garden-cert&rsquo;.</p>
 </td>
 </tr>
 <tr>
