@@ -21,6 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -828,6 +829,13 @@ units: {}
 		oscSecret.Data["osc.yaml"] = oscRaw
 		Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
+		By("Wait for the manager cache to observe the updated secret")
+		Eventually(func(g Gomega) []byte {
+			updatedSecret := &corev1.Secret{}
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(oscSecret), updatedSecret)).To(Succeed())
+			return updatedSecret.Data["osc.yaml"]
+		}).Should(Equal(oscSecret.Data["osc.yaml"]))
+
 		By("Wait for last-applied OSC file to be updated")
 		Eventually(func(g Gomega) []byte {
 			content, err := fakeFS.ReadFile("/var/lib/gardener-node-agent/last-applied-osc.yaml")
@@ -996,6 +1004,7 @@ kind: NodeAgentConfiguration
 
 			fakeDBus.Actions = nil // reset actions on dbus to not repeat assertions from above for update scenario
 
+			By("Update node with in-place ReadyForUpdate condition")
 			patch := client.MergeFrom(node.DeepCopy())
 			node.Status.Conditions = []corev1.NodeCondition{
 				{
@@ -1005,6 +1014,17 @@ kind: NodeAgentConfiguration
 				},
 			}
 			Expect(testClient.Status().Patch(ctx, node, patch)).To(Succeed())
+
+			By("Wait for the manager cache to observe the node condition")
+			Eventually(func() []corev1.NodeCondition {
+				updatedNode := &corev1.Node{}
+				Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(node), updatedNode)).To(Succeed())
+				return updatedNode.Status.Conditions
+			}).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(machinev1alpha1.NodeInPlaceUpdate),
+				"Status": Equal(corev1.ConditionTrue),
+				"Reason": Equal(machinev1alpha1.ReadyForUpdate),
+			})))
 		})
 
 		It("should successfully update the OS", func() {
@@ -1147,9 +1167,10 @@ kubeReserved:
 		})
 
 		It("should successfully complete CA rotation", func() {
+			lastInitiationTime := &metav1.Time{Time: time.Now().Add(-time.Hour)}
 			operatingSystemConfig.Spec.InPlaceUpdates.CredentialsRotation = &extensionsv1alpha1.CredentialsRotation{
 				CertificateAuthorities: &extensionsv1alpha1.CARotation{
-					LastInitiationTime: &metav1.Time{Time: time.Now().Add(-time.Hour)},
+					LastInitiationTime: lastInitiationTime,
 				},
 			}
 
@@ -1184,8 +1205,8 @@ preferences: {}
 			oscSecret.Data["osc.yaml"] = oscRaw
 			Expect(testClient.Patch(ctx, oscSecret, patch)).To(Succeed())
 
-			By("Wait for the manager to observe the updated secret")
-			EventuallyWithOffset(1, func(g Gomega) []byte {
+			By("Wait for the manager cache to observe the updated secret")
+			Eventually(func(g Gomega) []byte {
 				updatedSecret := &corev1.Secret{}
 				g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(oscSecret), updatedSecret)).To(Succeed())
 				return updatedSecret.Data["osc.yaml"]
@@ -1228,6 +1249,16 @@ users:
 				))
 			}).Should(Succeed())
 
+			By("Wait for the last-applied-osc file to be updated")
+			Eventually(func(g Gomega) {
+				lastAppliedOSC, err := fakeFS.ReadFile(nodeagentconfigv1alpha1.BaseDir + "/last-applied-osc.yaml")
+				g.Expect(err).NotTo(HaveOccurred())
+
+				g.Expect(string(lastAppliedOSC)).To(ContainSubstring(`
+      certificateAuthorities:
+        lastInitiationTime: %q`, lastInitiationTime.UTC().Format(time.RFC3339)))
+			}).Should(Succeed())
+
 			Eventually(cancelFunc.called).Should(BeTrue())
 		})
 	})
@@ -1242,7 +1273,7 @@ func (c *cancelFuncEnsurer) cancel() {
 }
 
 func waitForUpdatedNodeAnnotationCloudConfig(node *corev1.Node, oscSecret *corev1.Secret, value string) {
-	By("Wait for the manager to observe the updated secret")
+	By("Wait for the manager cache to observe the updated secret")
 	EventuallyWithOffset(1, func(g Gomega) []byte {
 		updatedSecret := &corev1.Secret{}
 		g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(oscSecret), updatedSecret)).To(Succeed())
