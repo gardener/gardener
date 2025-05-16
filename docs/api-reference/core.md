@@ -3934,7 +3934,9 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).</p>
+<p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+Deprecated: This cluster-autoscaler field is deprecated upstream, use &ndash;max-scale-down-parallelism instead.
+This field will be removed in gardener v1.122.</p>
 </td>
 </tr>
 <tr>
@@ -3985,6 +3987,30 @@ Cluster Autoscaler treats nodes tainted with startup taints as unready, but take
 <em>(Optional)</em>
 <p>StatusTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
 Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxScaleDownParallelism</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxScaleDownParallelism specifies the maximum number of nodes (both empty and needing drain) that can be deleted in parallel (default: 10).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxDrainParallelism</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxDrainParallelism specifies the maximum number of nodes needing drain, that can be drained and deleted in parallel (default: 1).</p>
 </td>
 </tr>
 </tbody>
