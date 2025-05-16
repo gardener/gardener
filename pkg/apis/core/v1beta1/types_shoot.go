@@ -682,6 +682,8 @@ type ClusterAutoscaler struct {
 	// +optional
 	NewPodScaleUpDelay *metav1.Duration `json:"newPodScaleUpDelay,omitempty" protobuf:"bytes,11,opt,name=newPodScaleUpDelay"`
 	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+	// Deprecated: This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.
+	// This field will be removed in gardener v1.122.
 	// +optional
 	MaxEmptyBulkDelete *int32 `json:"maxEmptyBulkDelete,omitempty" protobuf:"varint,12,opt,name=maxEmptyBulkDelete"`
 	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).
@@ -698,6 +700,13 @@ type ClusterAutoscaler struct {
 	// Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
 	// +optional
 	StatusTaints []string `json:"statusTaints,omitempty" protobuf:"bytes,16,opt,name=statusTaints"`
+
+	// MaxScaleDownParallelism specifies the maximum number of nodes (both empty and needing drain) that can be deleted in parallel (default: 10).
+	// +optional
+	MaxScaleDownParallelism *int32 `json:"maxScaleDownParallelism,omitempty" protobuf:"varint,17,opt,name=maxScaleDownParallelism"`
+	// MaxDrainParallelism specifies the maximum number of nodes needing drain, that can be drained and deleted in parallel (default: 1).
+	// +optional
+	MaxDrainParallelism *int32 `json:"maxDrainParallelism,omitempty" protobuf:"varint,18,opt,name=maxDrainParallelism"`
 }
 
 // ExpanderMode is type used for Expander values

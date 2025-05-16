@@ -3055,6 +3055,31 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("invalid with negative maxEmptyBulkDelete", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete: &negativeInteger,
 				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("maxEmptyBulkDelete"), negativeInteger, "can not be negative"))),
+				Entry("valid with maxScaleDownParallelism", core.ClusterAutoscaler{
+					MaxScaleDownParallelism: &positiveInteger,
+				}, version_1_32, BeEmpty()),
+				Entry("invalid with negative maxScaleDownParallelism", core.ClusterAutoscaler{
+					MaxScaleDownParallelism: &negativeInteger,
+				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("maxScaleDownParallelism"), negativeInteger, "can not be negative"))),
+				Entry("valid with maxDrainParallelism", core.ClusterAutoscaler{
+					MaxDrainParallelism: &positiveInteger,
+				}, version_1_32, BeEmpty()),
+				Entry("valid with maxScaleDownParallelism and maxEmptyBulkDelete set to same value", core.ClusterAutoscaler{
+					MaxScaleDownParallelism: &positiveInteger,
+					MaxEmptyBulkDelete:      &positiveInteger,
+				}, version_1_32, BeEmpty()),
+				Entry("invalid with negative maxDrainParallelism", core.ClusterAutoscaler{
+					MaxDrainParallelism: &negativeInteger,
+				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("maxDrainParallelism"), negativeInteger, "can not be negative"))),
+				Entry("invalid with both maxEmptyBulkDelete and maxScaleDownParallelism set to different values", core.ClusterAutoscaler{
+					MaxEmptyBulkDelete:      ptr.To(int32(positiveInteger + 10)),
+					MaxScaleDownParallelism: &positiveInteger,
+				}, version_1_32, ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":     Equal(field.ErrorTypeInvalid),
+						"BadValue": Equal(int32(positiveInteger + 10)),
+						"Detail":   ContainSubstring(fmt.Sprintf("must equal maxScaleDownParallelism %d", positiveInteger)),
+					})))),
 			)
 
 			Describe("taint validation", func() {
