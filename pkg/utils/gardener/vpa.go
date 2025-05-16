@@ -6,7 +6,9 @@ package gardener
 
 import (
 	"context"
+	"fmt"
 
+	druidcorev1alpha1 "github.com/gardener/etcd-druid/api/core/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -16,6 +18,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -52,4 +55,52 @@ func DeleteVPAForGardenerComponent(ctx context.Context, c client.Client, name, n
 
 func emptyVPA(name, namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
 	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: name + "-vpa", Namespace: namespace}}
+}
+
+// UpdateAllEtcdVPATargetRefs updates the target references of all VPAs for etcd components across all namespaces.
+func UpdateAllEtcdVPATargetRefs(ctx context.Context, c client.Client) error {
+	roles := []string{
+		v1beta1constants.ETCDRoleMain,
+		v1beta1constants.ETCDRoleEvents,
+	}
+
+	for _, role := range roles {
+		if err := updateEtcdVPATargetRefs(ctx, c, role); err != nil {
+			return fmt.Errorf("failed to update VPA target ref for role %s: %w", role, err)
+		}
+	}
+	return nil
+}
+
+// updateEtcdVPATargetRefs updates the target references of all VPAs for the specified etcd role.
+func updateEtcdVPATargetRefs(ctx context.Context, c client.Client, role string) error {
+	labelSelector := client.MatchingLabels{
+		v1beta1constants.LabelRole: "etcd-vpa-" + role,
+	}
+
+	vpaList := &vpaautoscalingv1.VerticalPodAutoscalerList{}
+	if err := c.List(ctx, vpaList, labelSelector); err != nil {
+		return fmt.Errorf("failed to list VPAs: %w", err)
+	}
+
+	for _, vpa := range vpaList.Items {
+		if vpa.Spec.TargetRef == nil ||
+			(vpa.Spec.TargetRef.APIVersion == druidcorev1alpha1.SchemeGroupVersion.String() && vpa.Spec.TargetRef.Kind == "Etcd") {
+			continue
+		}
+
+		original := vpa.DeepCopy()
+		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
+			APIVersion: druidcorev1alpha1.SchemeGroupVersion.String(),
+			Kind:       "Etcd",
+			Name:       vpa.Spec.TargetRef.Name,
+		}
+
+		patch := client.MergeFrom(original)
+		if err := c.Patch(ctx, &vpa, patch); err != nil {
+			return fmt.Errorf("failed to patch VPA %s: %w", vpa.Name, err)
+		}
+	}
+
+	return nil
 }

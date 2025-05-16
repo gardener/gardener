@@ -236,6 +236,13 @@ func (r *Reconciler) runReconcileSeedFlow(
 		)
 
 		_ = g.Add(flow.Task{
+			Name: "Updating etcd VPA target references",
+			Fn: func(ctx context.Context) error {
+				return gardenerutils.UpdateAllEtcdVPATargetRefs(ctx, r.SeedClientSet.Client())
+			},
+			Dependencies: flow.NewTaskIDs(syncPointCRDs),
+		})
+		_ = g.Add(flow.Task{
 			Name: "Deploying VPA for gardenlet",
 			Fn: func(ctx context.Context) error {
 				return gardenerutils.ReconcileVPAForGardenerComponent(ctx, r.SeedClientSet.Client(), v1beta1constants.DeploymentNameGardenlet, r.GardenNamespace)
