@@ -43,6 +43,7 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 // DeployClusterAutoscaler deploys the Kubernetes cluster-autoscaler.
 func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 	if b.Shoot.WantsClusterAutoscaler {
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.Components.Extensions.Worker.MachineDeployments())
 
 		maxNodesTotal, err := b.CalculateMaxNodesTotal(b.Shoot.GetInfo())
