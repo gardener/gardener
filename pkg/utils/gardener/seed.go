@@ -101,16 +101,7 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 // GetGardenWildcardCertificate gets the wildcard TLS certificate for the Garden runtime ingress domain.
 // Nil is returned if no wildcard certificate is configured.
 func GetGardenWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secret, error) {
-	secret, error := getWildcardCertificate(ctx, c, v1beta1constants.GardenRoleGardenWildcardCert)
-	if error != nil {
-		return nil, error
-	}
-	if secret == nil {
-		// TODO(MartinWeindel): Remove this fallback after the next release (v1.111.0)
-		// try to look up secret with old role name
-		secret, error = getWildcardCertificate(ctx, c, v1beta1constants.GardenRoleControlPlaneWildcardCert)
-	}
-	return secret, error
+	return getWildcardCertificate(ctx, c, v1beta1constants.GardenRoleGardenWildcardCert)
 }
 
 // getWildcardCertificate gets the wildcard TLS certificate for the ingress domain for the given role.
