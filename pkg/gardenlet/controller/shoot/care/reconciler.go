@@ -91,6 +91,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req Request) (reconcile.Resu
 	if err != nil {
 		return result, err
 	}
+	// Do not requeue the shoot to avoid reconcile amplifications.
 	// Reconciles triggered due to a changed managed resource are one time checks.
 	// Periodic checks are already performed based on the existing shoot objects.
 	return reconcile.Result{}, nil
