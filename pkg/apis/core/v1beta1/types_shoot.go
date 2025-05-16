@@ -681,9 +681,9 @@ type ClusterAutoscaler struct {
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up (default: 0s).
 	// +optional
 	NewPodScaleUpDelay *metav1.Duration `json:"newPodScaleUpDelay,omitempty" protobuf:"bytes,11,opt,name=newPodScaleUpDelay"`
-	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
-	// Deprecated: This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.
-	// This field will be removed in gardener v1.122.
+	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10 or MaxScaleDownParallelism when that is set).
+	// Deprecated: This field is deprecated and will be removed in gardener v1.122.
+	// This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.
 	// +optional
 	MaxEmptyBulkDelete *int32 `json:"maxEmptyBulkDelete,omitempty" protobuf:"varint,12,opt,name=maxEmptyBulkDelete"`
 	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down (default: false).
@@ -701,10 +701,12 @@ type ClusterAutoscaler struct {
 	// +optional
 	StatusTaints []string `json:"statusTaints,omitempty" protobuf:"bytes,16,opt,name=statusTaints"`
 
-	// MaxScaleDownParallelism specifies the maximum number of nodes (both empty and needing drain) that can be deleted in parallel (default: 10).
+	// MaxScaleDownParallelism specifies the maximum number of nodes (both empty and needing drain) that can be deleted in parallel.
+	// Default: 10 or MaxEmptyBulkDelete when that is set
 	// +optional
 	MaxScaleDownParallelism *int32 `json:"maxScaleDownParallelism,omitempty" protobuf:"varint,17,opt,name=maxScaleDownParallelism"`
-	// MaxDrainParallelism specifies the maximum number of nodes needing drain, that can be drained and deleted in parallel (default: 1).
+	// MaxDrainParallelism specifies the maximum number of nodes needing drain, that can be drained and deleted in parallel.
+	// Default: 1
 	// +optional
 	MaxDrainParallelism *int32 `json:"maxDrainParallelism,omitempty" protobuf:"varint,18,opt,name=maxDrainParallelism"`
 }

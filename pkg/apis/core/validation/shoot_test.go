@@ -3072,12 +3072,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxDrainParallelism: &negativeInteger,
 				}, version_1_32, ConsistOf(field.Invalid(field.NewPath("maxDrainParallelism"), negativeInteger, "can not be negative"))),
 				Entry("invalid with both maxEmptyBulkDelete and maxScaleDownParallelism set to different values", core.ClusterAutoscaler{
-					MaxEmptyBulkDelete:      ptr.To(int32(positiveInteger + 10)),
+					MaxEmptyBulkDelete:      ptr.To(positiveInteger + 10),
 					MaxScaleDownParallelism: &positiveInteger,
 				}, version_1_32, ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":     Equal(field.ErrorTypeInvalid),
-						"BadValue": Equal(int32(positiveInteger + 10)),
+						"BadValue": Equal(positiveInteger + 10),
 						"Detail":   ContainSubstring(fmt.Sprintf("must equal maxScaleDownParallelism %d", positiveInteger)),
 					})))),
 			)
