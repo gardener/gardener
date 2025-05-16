@@ -543,7 +543,9 @@ message ClusterAutoscaler {
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleUpDelay = 11;
 
-  // MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+  // MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10 or MaxScaleDownParallelism when that is set).
+  // Deprecated: This field is deprecated and will be removed in gardener v1.122.
+  // This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.
   // +optional
   optional int32 maxEmptyBulkDelete = 12;
 
@@ -564,6 +566,16 @@ message ClusterAutoscaler {
   // Cluster Autoscaler internally treats nodes tainted with status taints as ready, but filtered out during scale up logic.
   // +optional
   repeated string statusTaints = 16;
+
+  // MaxScaleDownParallelism specifies the maximum number of nodes (both empty and needing drain) that can be deleted in parallel.
+  // Default: 10 or MaxEmptyBulkDelete when that is set
+  // +optional
+  optional int32 maxScaleDownParallelism = 17;
+
+  // MaxDrainParallelism specifies the maximum number of nodes needing drain, that can be drained and deleted in parallel.
+  // Default: 1
+  // +optional
+  optional int32 maxDrainParallelism = 18;
 }
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
