@@ -46,7 +46,8 @@ type Values struct {
 	Clock clock.Clock
 }
 
-// New creates a new instance of DeployWaiter for a BackupBucket.
+// New creates a new instance of DeployWaiter for a BackupBucket. It takes a garden client and returns a deployer for a
+// core.gardener.cloud/v1beta1.BackupBucket resource in the garden cluster.
 func New(
 	log logr.Logger,
 	client client.Client,
@@ -107,7 +108,7 @@ func (b *backupBucket) Deploy(ctx context.Context) error {
 		if b.values.Seed != nil {
 			ownerRef := metav1.NewControllerRef(b.values.Seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
 			b.backupBucket.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-			b.backupBucket.Spec.SeedName = &b.values.Seed.Name // In future this will be moved to gardener-scheduler.
+			b.backupBucket.Spec.SeedName = &b.values.Seed.Name
 		}
 
 		return nil
