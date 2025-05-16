@@ -95,23 +95,23 @@ func hasExactUsages(usages, requiredUsages []certificatesv1.KeyUsage) bool {
 // GetWildcardCertificate gets the wildcard TLS certificate for the seed ingress domain.
 // Nil is returned if no wildcard certificate is configured.
 func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secret, error) {
-	return getWildcardCertificate(ctx, c, v1beta1constants.GardenRoleControlPlaneWildcardCert)
+	return getWildcardCertificate(ctx, c, v1beta1constants.GardenNamespace, v1beta1constants.GardenRoleControlPlaneWildcardCert)
 }
 
 // GetGardenWildcardCertificate gets the wildcard TLS certificate for the Garden runtime ingress domain.
 // Nil is returned if no wildcard certificate is configured.
-func GetGardenWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secret, error) {
-	return getWildcardCertificate(ctx, c, v1beta1constants.GardenRoleGardenWildcardCert)
+func GetGardenWildcardCertificate(ctx context.Context, c client.Client, namespace string) (*corev1.Secret, error) {
+	return getWildcardCertificate(ctx, c, namespace, v1beta1constants.GardenRoleGardenWildcardCert)
 }
 
 // getWildcardCertificate gets the wildcard TLS certificate for the ingress domain for the given role.
 // Nil is returned if no wildcard certificate is configured.
-func getWildcardCertificate(ctx context.Context, c client.Client, role string) (*corev1.Secret, error) {
+func getWildcardCertificate(ctx context.Context, c client.Client, namespace, role string) (*corev1.Secret, error) {
 	wildcardCerts := &corev1.SecretList{}
 	if err := c.List(
 		ctx,
 		wildcardCerts,
-		client.InNamespace(v1beta1constants.GardenNamespace),
+		client.InNamespace(namespace),
 		client.MatchingLabels{v1beta1constants.GardenRole: role},
 	); err != nil {
 		return nil, err

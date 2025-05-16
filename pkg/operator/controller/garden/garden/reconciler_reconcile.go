@@ -119,7 +119,7 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	wildcardCert, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client())
+	wildcardCert, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -778,7 +778,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			if apiServer.SNI != nil {
 				tlsSecretName := apiServer.SNI.SecretName
 				if tlsSecretName == nil {
-					tlsSecret, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client())
+					tlsSecret, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
 					if err != nil {
 						return fmt.Errorf("failed to get garden wildcard certificate secret: %w", err)
 					}
