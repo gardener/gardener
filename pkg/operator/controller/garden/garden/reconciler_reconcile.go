@@ -771,13 +771,25 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 		)
 
 		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
-			if apiServer.ServiceAccountConfig != nil {
+			if apiServer.KubeAPIServerConfig != nil && apiServer.ServiceAccountConfig != nil {
 				serviceAccountConfig = apiServer.ServiceAccountConfig
 			}
 
-			if apiServer.SNI != nil && apiServer.SNI.SecretName != nil {
+			if apiServer.SNI != nil {
+				tlsSecretName := apiServer.SNI.SecretName
+				if tlsSecretName == nil {
+					tlsSecret, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client())
+					if err != nil {
+						return fmt.Errorf("failed to get garden wildcard certificate secret: %w", err)
+					}
+					if tlsSecret == nil {
+						return fmt.Errorf("no garden wildcard certificate secret found")
+					}
+					tlsSecretName = &tlsSecret.Name
+				}
+
 				sniConfig.TLS = append(sniConfig.TLS, kubeapiserver.TLSSNIConfig{
-					SecretName:     apiServer.SNI.SecretName,
+					SecretName:     tlsSecretName,
 					DomainPatterns: apiServer.SNI.DomainPatterns,
 				})
 			}

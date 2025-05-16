@@ -12,7 +12,7 @@ Unlike with a self-contained Kubeconfig file, common internet browsers or operat
 Therefore, Gardener operators can predefine a trusted wildcard certificate under which the mentioned endpoints will be served instead.
 
 ## Register a trusted wildcard certificate
-Since Garden Runtime Cluster components are published under the ingress domain (`operator.gardener.cloud/v1alpha1.Garden.spec.runtimeCluster.ingress.domain`) a wildcard certificate is required.
+Since Garden Runtime Cluster components are published under the ingress domain (`operator.gardener.cloud/v1alpha1.Garden.spec.runtimeCluster.ingress.domains`) a wildcard certificate is required.
 
 For example:
 - Garden Runtime cluster ingress domain: `dev.my-garden.example.com`
@@ -36,6 +36,8 @@ metadata:
   namespace: garden
 type: Opaque
 ```
+
+In addition to the configured ingress domains, this wildcard certificate is considered for SNI domains (`operator.gardener.cloud/v1alpha1.Garden.spec.virtualCluster.kubernetes.kubeAPIServer.sni.domainPatterns`) if `secretName` is unspecified.
 
 ## Best Practice
 

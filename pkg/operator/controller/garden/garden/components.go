@@ -682,7 +682,8 @@ func kubeAPIServerAutoscalingConfig(garden *operatorv1alpha1.Garden) kubeapiserv
 	}
 
 	var minAllowed corev1.ResourceList
-	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil && kubeAPIServer.Autoscaling != nil {
+
+	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil && kubeAPIServer.KubeAPIServerConfig != nil && kubeAPIServer.Autoscaling != nil {
 		minAllowed = kubeAPIServer.Autoscaling.MinAllowed
 	}
 
@@ -841,11 +842,22 @@ func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden
 		sni := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.SNI
 		sniDomains := GetAPIServerSNIDomains(domains, *sni)
 
-		if len(sniDomains) > 0 && sni.SecretName != nil {
+		if len(sniDomains) > 0 {
 			var tlsSecret corev1.Secret
 
-			if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: *sni.SecretName, Namespace: r.GardenNamespace}, &tlsSecret); err != nil {
-				return nil, fmt.Errorf("failed to get SNI TLS secret %q: %w", *sni.SecretName, err)
+			if sni.SecretName != nil {
+				if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: *sni.SecretName, Namespace: r.GardenNamespace}, &tlsSecret); err != nil {
+					return nil, fmt.Errorf("failed to get SNI TLS secret %q: %w", *sni.SecretName, err)
+				}
+			} else {
+				wildCardSecret, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client())
+				if err != nil {
+					return nil, fmt.Errorf("failed to get garden wildcard certificate secret %q: %w", *sni.SecretName, err)
+				}
+				if wildCardSecret == nil {
+					return nil, fmt.Errorf("no garden wildcard certificate secret found")
+				}
+				tlsSecret = *wildCardSecret
 			}
 
 			wildcardConfiguration = &kubeapiserverexposure.WildcardConfiguration{

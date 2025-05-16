@@ -139,7 +139,7 @@ func sniSecretChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeA
 		newSecret = newKubeAPIServer.SNI.SecretName
 	}
 
-	return apiequality.Semantic.DeepEqual(oldSecret, newSecret)
+	return !apiequality.Semantic.DeepEqual(oldSecret, newSecret)
 }
 
 func kubeAPIServerAuditWebhookSecretChanged(oldKubeAPIServer, newKubeAPIServer *operatorv1alpha1.KubeAPIServerConfig) bool {
