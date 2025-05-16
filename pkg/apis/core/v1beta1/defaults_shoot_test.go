@@ -890,6 +890,8 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(2))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 0})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(10))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(10))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(1))))
 		})
 
 		It("should not overwrite the already set values for ClusterAutoscaler field", func() {
@@ -907,6 +909,8 @@ var _ = Describe("Shoot defaulting", func() {
 				Verbosity:                     ptr.To[int32](4),
 				NewPodScaleUpDelay:            &metav1.Duration{Duration: 1},
 				MaxEmptyBulkDelete:            ptr.To[int32](20),
+				MaxScaleDownParallelism:       ptr.To[int32](15),
+				MaxDrainParallelism:           ptr.To[int32](5),
 			}
 
 			SetObjectDefaults_Shoot(obj)
@@ -924,6 +928,8 @@ var _ = Describe("Shoot defaulting", func() {
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.Verbosity).To(PointTo(Equal(int32(4))))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.NewPodScaleUpDelay).To(PointTo(Equal(metav1.Duration{Duration: 1})))
 			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete).To(PointTo(Equal(int32(20))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxScaleDownParallelism).To(PointTo(Equal(int32(15))))
+			Expect(obj.Spec.Kubernetes.ClusterAutoscaler.MaxDrainParallelism).To(PointTo(Equal(int32(5))))
 		})
 	})
 
