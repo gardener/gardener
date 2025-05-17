@@ -548,7 +548,15 @@ type ClusterAutoscaler struct {
 	// NewPodScaleUpDelay specifies how long CA should ignore newly created pods before they have to be considered for scale-up.
 	NewPodScaleUpDelay *metav1.Duration
 	// MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10).
+	// Deprecated: This field is deprecated and will be removed in a future release.
+	// This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.
 	MaxEmptyBulkDelete *int32
+	// MaxScaleDownParallelism specifies the maximum number of nodes (both empty and needing drain) that can be deleted in parallel.
+	// Default: 10
+	MaxScaleDownParallelism *int32
+	// MaxDrainParallelism specifies the maximum number of nodes needing drain, that can be drained and deleted in parallel.
+	// Default: 1
+	MaxDrainParallelism *int32
 	// IgnoreDaemonsetsUtilization allows CA to ignore DaemonSet pods when calculating resource utilization for scaling down.
 	IgnoreDaemonsetsUtilization *bool
 	// Verbosity allows CA to modify its log level.
