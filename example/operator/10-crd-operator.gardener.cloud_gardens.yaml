@@ -1689,12 +1689,11 @@ spec:
                                   type: string
                                 type: array
                               secretName:
-                                description: SecretName is the name of a secret containing
-                                  the TLS certificate and private key.
+                                description: |-
+                                  SecretName is the name of a secret containing the TLS certificate and private key.
+                                  If not configured, Gardener falls back to a secret labelled with 'gardener.cloud/role=garden-cert'.
                                 minLength: 1
                                 type: string
-                            required:
-                            - secretName
                             type: object
                           structuredAuthentication:
                             description: |-

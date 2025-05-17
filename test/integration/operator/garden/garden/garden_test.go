@@ -208,6 +208,11 @@ var _ = Describe("Garden controller tests", func() {
 						},
 					},
 					Kubernetes: operatorv1alpha1.Kubernetes{
+						KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
+							SNI: &operatorv1alpha1.SNI{
+								DomainPatterns: []string{"api.garden.local-test.gardener.cloud"},
+							},
+						},
 						Version: "1.31.1",
 					},
 					Maintenance: operatorv1alpha1.Maintenance{
@@ -321,6 +326,21 @@ var _ = Describe("Garden controller tests", func() {
 				return mgrClient.Get(ctx, client.ObjectKeyFromObject(extension), extension)
 			}).Should(BeNotFoundError())
 		})
+
+		By("Create wildcard certificate secret")
+		Expect(testClient.Create(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "dummy-garden-wildcard-cert",
+				Namespace: testNamespace.Name,
+				Labels: map[string]string{
+					"gardener.cloud/role": "garden-cert",
+				},
+			},
+			StringData: map[string]string{
+				"tls.crt": "dummy-cert",
+				"tls.key": "dummy-key",
+			},
+		})).To(Succeed())
 
 		By("Create Garden")
 		Expect(testClient.Create(ctx, garden)).To(Succeed())
