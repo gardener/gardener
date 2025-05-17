@@ -442,6 +442,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Labels: map[string]string{
 						"persist": "true",
 					},
+					Finalizers: []string{"gardener.cloud/gardener"},
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -747,6 +748,45 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 						Expect(actual).To(Equal(obj))
 					}
+				})
+
+				It("should not upgrade the hash versions in the worker-pools-operatingsystemconfig-hashes secret", func() {
+					DeferCleanup(test.WithVars(
+						&OriginalConfigFn, originalConfigFn,
+						&LatestHashVersion, func() int { return 2 },
+						&CalculateKeyForVersion, calculateKeyForVersionFn,
+					))
+
+					poolHashesSecret.Data["pools"] = []byte(`pools:
+    - name: worker1-in-place
+      currentVersion: 1
+      hashVersionToOSCKey:
+        1: worker1-in-place-version1
+    - name: worker2-in-place
+      currentVersion: 1
+      hashVersionToOSCKey:
+        1: worker2-in-place-version1
+`)
+
+					Expect(c.Create(ctx, poolHashesSecret)).To(Succeed())
+					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+					secret := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKey{Name: "worker-pools-operatingsystemconfig-hashes", Namespace: namespace}, secret)).To(Succeed())
+					Expect(secret.Labels).To(Equal(map[string]string{
+						"persist": "true",
+					}))
+					pools := secret.Data["pools"]
+					Expect(string(pools)).To(Equal(`pools:
+    - name: worker1-in-place
+      currentVersion: 1
+      hashVersionToOSCKey:
+        1: worker1-in-place-version1
+    - name: worker2-in-place
+      currentVersion: 1
+      hashVersionToOSCKey:
+        1: worker2-in-place-version1
+`))
 				})
 			})
 
