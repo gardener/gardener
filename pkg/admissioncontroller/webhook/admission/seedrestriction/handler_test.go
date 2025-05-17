@@ -1854,7 +1854,7 @@ var _ = Describe("handler", func() {
 
 							request.Namespace = secretNamespace
 							request.Name = secretName
-							seedConfig1.Spec.Backup = &gardencorev1beta1.SeedBackup{
+							seedConfig1.Spec.Backup = &gardencorev1beta1.Backup{
 								CredentialsRef: &corev1.ObjectReference{
 									APIVersion: "v1",
 									Kind:       "Secret",
@@ -1895,7 +1895,7 @@ var _ = Describe("handler", func() {
 
 							request.Namespace = secretNamespace
 							request.Name = secretName
-							seedConfig2.Spec.Backup = &gardencorev1beta1.SeedBackup{
+							seedConfig2.Spec.Backup = &gardencorev1beta1.Backup{
 								CredentialsRef: &corev1.ObjectReference{
 									APIVersion: "v1",
 									Kind:       "Secret",

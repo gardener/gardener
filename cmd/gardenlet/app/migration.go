@@ -130,7 +130,7 @@ func verifyRemoveAPIServerProxyLegacyPortFeatureGate(ctx context.Context, garden
 
 // syncBackupSecretRefAndCredentialsRef syncs the seed backup credentials when possible.
 // TODO(vpnachev): Remove this function after v1.121.0 has been released.
-func syncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.SeedBackup) {
+func syncBackupSecretRefAndCredentialsRef(backup *gardencorev1beta1.Backup) {
 	if backup == nil {
 		return
 	}

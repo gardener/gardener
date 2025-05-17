@@ -31,6 +31,8 @@ spec:
         - name: modules
           mountPath: /lib/modules
           readOnly: true
+        - name: etcd-backup
+          mountPath: /etc/gardener/local-backupbuckets
         - name: gardenadm
           mountPath: /gardenadm
       # we don't want components of the autonomous shoot cluster to communicate with the kind API server
@@ -48,7 +50,9 @@ spec:
       - name: modules
         hostPath:
           path: /lib/modules
-          type: ""
+      - name: etcd-backup
+        hostPath:
+          path: /etc/gardener/local-backupbuckets
   volumeClaimTemplates:
   - metadata:
       name: gardenadm

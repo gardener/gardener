@@ -7,11 +7,15 @@ package botanist_test
 import (
 	"context"
 	"io/fs"
+	"path/filepath"
 	"testing/fstest"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/afero"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -32,11 +36,14 @@ var _ = Describe("AutonomousBotanist", func() {
 			fsys = fstest.MapFS{}
 			createManifests(fsys, configDir)
 
-			DeferCleanup(test.WithVar(&DirFS, func(dir string) fs.FS {
-				sub, err := fs.Sub(fsys, dir)
-				Expect(err).ToNot(HaveOccurred())
-				return sub
-			}))
+			DeferCleanup(test.WithVars(
+				&DirFS, func(dir string) fs.FS {
+					sub, err := fs.Sub(fsys, dir)
+					Expect(err).ToNot(HaveOccurred())
+					return sub
+				},
+				&NewFs, afero.NewMemMapFs,
+			))
 		})
 
 		It("should fail if the directory does not exist", func() {
@@ -82,6 +89,41 @@ var _ = Describe("AutonomousBotanist", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("shoot--gardenadm--gardenadm"))
 			})
+		})
+
+		It("should create the secrets with the fake garden client", func() {
+			b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret1"}, &corev1.Secret{})).To(Succeed())
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret2"}, &corev1.Secret{})).To(Succeed())
+		})
+
+		It("should generate a UID for the shoot and write it to the host", func() {
+			fs := afero.NewMemMapFs()
+			DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
+
+			By("Generate new shoot UID and write it to the host")
+			b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+			Expect(err).NotTo(HaveOccurred())
+
+			uid := b.Shoot.GetInfo().Status.UID
+			Expect(uid).NotTo(BeEmpty())
+
+			path := filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
+			content, err := b.FS.ReadFile(path)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(content)).To(Equal(string(uid)))
+
+			By("Do not regenerate shoot UID when file is present on host")
+			b, err = NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(b.Shoot.GetInfo().Status.UID).To(Equal(uid))
+			content, err = b.FS.ReadFile(path)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(Equal(string(uid)))
 		})
 	})
 })
@@ -173,5 +215,17 @@ apiVersion: core.gardener.cloud/v1
 kind: ControllerDeployment
 metadata:
   name: unused
+`)}
+
+	fsys[dir+"/secrets.yaml"] = &fstest.MapFile{Data: []byte(`---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret2
 `)}
 }

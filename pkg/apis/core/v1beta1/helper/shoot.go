@@ -689,3 +689,15 @@ func IsShootIstioTLSTerminationEnabled(shoot *gardencorev1beta1.Shoot) bool {
 	noTLSTermination, _ := strconv.ParseBool(value)
 	return !noTLSTermination
 }
+
+// GetBackupConfigForShoot returns the backup config from the Seed resource in case the shoot is a regular shoot.
+// For autonomous shoots, it is returned from the Shoot resource.
+func GetBackupConfigForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed) *gardencorev1beta1.Backup {
+	if !IsShootAutonomous(shoot) {
+		if seed == nil {
+			return nil
+		}
+		return seed.Spec.Backup
+	}
+	return ControlPlaneWorkerPoolForShoot(shoot).ControlPlane.Backup
+}

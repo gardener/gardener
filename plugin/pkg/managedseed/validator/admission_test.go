@@ -154,7 +154,7 @@ var _ = Describe("ManagedSeed", func() {
 
 			seed = &core.Seed{
 				Spec: core.SeedSpec{
-					Backup: &core.SeedBackup{
+					Backup: &core.Backup{
 						Provider: provider,
 					},
 					DNS: core.SeedDNS{
@@ -358,7 +358,7 @@ var _ = Describe("ManagedSeed", func() {
 						SeedConfig: &gardenletconfigv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
-									Backup: &gardencorev1beta1.SeedBackup{},
+									Backup: &gardencorev1beta1.Backup{},
 								},
 							},
 						},

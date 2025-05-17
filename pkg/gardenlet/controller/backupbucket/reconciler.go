@@ -227,6 +227,7 @@ func (r *Reconciler) reconcileBackupBucket(
 		if _, err := controllerutils.GetAndCreateOrMergePatch(seedCtx, r.SeedClient, extensionBackupBucket, func() error {
 			metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 			metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, r.Clock.Now().UTC().Format(time.RFC3339Nano))
+			metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.AnnotationBackupBucketGeneratedSecretNamespace, r.GardenNamespace)
 
 			extensionBackupBucket.Spec = extensionBackupBucketSpec
 			return nil

@@ -177,7 +177,7 @@ var _ = Describe("Interface", func() {
 				},
 			},
 			Spec: gardencorev1beta1.SeedSpec{
-				Backup: &gardencorev1beta1.SeedBackup{
+				Backup: &gardencorev1beta1.Backup{
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",

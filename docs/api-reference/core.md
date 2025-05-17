@@ -1630,8 +1630,8 @@ SeedSpec
 <td>
 <code>backup</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.SeedBackup">
-SeedBackup
+<a href="#core.gardener.cloud/v1beta1.Backup">
+Backup
 </a>
 </em>
 </td>
@@ -2819,6 +2819,97 @@ string
 <td>
 <em>(Optional)</em>
 <p>UnavailableVolumeTypes is a list of volume type names that are not availability in this zone.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.Backup">Backup
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.WorkerControlPlane">WorkerControlPlane</a>)
+</p>
+<p>
+<p>Backup contains the object store configuration for backups for shoot (currently only etcd).</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Provider is a provider name. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to BackupBucket resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Region is a region name. This field is immutable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a Secret object containing the cloud provider credentials for
+the object store where backups should be stored. It should have enough privileges to manipulate
+the objects as well as buckets.
+Deprecated: This field will be removed after v1.121.0 has been released. Use <code>CredentialsRef</code> instead.
+Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRef is reference to a resource holding the credentials used for
+authentication with the object store service where the backups are stored.
+Supported referenced resources are v1.Secrets and
+security.gardener.cloud/v1alpha1.WorkloadIdentity</p>
 </td>
 </tr>
 </tbody>
@@ -10531,96 +10622,6 @@ However the usage of single SecretBinding (hence Secret) for different cloud pro
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.SeedBackup">SeedBackup
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
-</p>
-<p>
-<p>SeedBackup contains the object store configuration for backups for shoot (currently only etcd).</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>provider</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Provider is a provider name. This field is immutable.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
-k8s.io/apimachinery/pkg/runtime.RawExtension
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the configuration passed to BackupBucket resource.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>region</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Region is a region name. This field is immutable.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<p>SecretRef is a reference to a Secret object containing the cloud provider credentials for
-the object store where backups should be stored. It should have enough privileges to manipulate
-the objects as well as buckets.
-Deprecated: This field will be removed after v1.121.0 has been released. Use <code>CredentialsRef</code> instead.
-Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>credentialsRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectreference-v1-core">
-Kubernetes core/v1.ObjectReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>CredentialsRef is reference to a resource holding the credentials used for
-authentication with the object store service where the backups are stored.
-Supported referenced resources are v1.Secrets and
-security.gardener.cloud/v1alpha1.WorkloadIdentity</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedDNS">SeedDNS
 </h3>
 <p>
@@ -11498,8 +11499,8 @@ See <a href="https://github.com/gardener/gardener/blob/master/docs/operations/to
 <td>
 <code>backup</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.SeedBackup">
-SeedBackup
+<a href="#core.gardener.cloud/v1beta1.Backup">
+Backup
 </a>
 </em>
 </td>
@@ -11881,8 +11882,8 @@ SeedSpec
 <td>
 <code>backup</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.SeedBackup">
-SeedBackup
+<a href="#core.gardener.cloud/v1beta1.Backup">
+Backup
 </a>
 </em>
 </td>
@@ -14754,6 +14755,31 @@ This is only relevant for autonomous shoot clusters.</p>
 <p>
 <p>WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.</p>
 </p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>backup</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Backup">
+Backup
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Backup holds the object store configuration for the backups of shoot (currently only etcd).
+If it is not specified, then there won&rsquo;t be any backups taken.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.WorkerKubernetes">WorkerKubernetes
 </h3>
 <p>

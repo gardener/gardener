@@ -206,7 +206,7 @@ var _ = Describe("migration", func() {
 					UID:       "new-seed",
 				},
 				Spec: gardencorev1beta1.SeedSpec{
-					Backup: &gardencorev1beta1.SeedBackup{
+					Backup: &gardencorev1beta1.Backup{
 						Provider: "gcp",
 					},
 				},

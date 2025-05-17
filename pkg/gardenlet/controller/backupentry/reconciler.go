@@ -626,10 +626,6 @@ func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBuc
 		return fmt.Errorf("observed generation outdated (%d/%d)", backupBucket.Status.ObservedGeneration, backupBucket.Generation)
 	}
 
-	if op, ok := backupBucket.Annotations[v1beta1constants.GardenerOperation]; ok {
-		return fmt.Errorf("gardener operation %q is not yet picked up by controller", op)
-	}
-
 	if backupBucket.Status.LastOperation == nil {
 		return fmt.Errorf("associated BackupBucket did not record a last operation yet")
 	}

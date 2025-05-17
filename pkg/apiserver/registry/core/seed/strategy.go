@@ -156,7 +156,7 @@ func (StatusStrategy) ValidateUpdate(_ context.Context, obj, old runtime.Object)
 // SyncBackupSecretRefAndCredentialsRef ensures the backup fields
 // credentialsRef and secretRef are synced.
 // TODO(vpnachev): Remove once the backup.secretRef field is removed.
-func SyncBackupSecretRefAndCredentialsRef(backup *core.SeedBackup) {
+func SyncBackupSecretRefAndCredentialsRef(backup *core.Backup) {
 	if backup == nil {
 		return
 	}

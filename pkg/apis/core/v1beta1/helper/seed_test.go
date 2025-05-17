@@ -177,27 +177,27 @@ var _ = Describe("Helper", func() {
 	)
 
 	DescribeTable("#SeedBackupCredentialsRefEqual",
-		func(oldBackup, newBackup *gardencorev1beta1.SeedBackup, matcher gomegatypes.GomegaMatcher) {
+		func(oldBackup, newBackup *gardencorev1beta1.Backup, matcher gomegatypes.GomegaMatcher) {
 			Expect(SeedBackupCredentialsRefEqual(oldBackup, newBackup)).To(matcher)
 		},
 
 		Entry("both nil", nil, nil, BeTrue()),
-		Entry("old nil, new empty", nil, &gardencorev1beta1.SeedBackup{}, BeTrue()),
-		Entry("old empty, new nil", &gardencorev1beta1.SeedBackup{}, nil, BeTrue()),
-		Entry("both empty", &gardencorev1beta1.SeedBackup{}, &gardencorev1beta1.SeedBackup{}, BeTrue()),
+		Entry("old nil, new empty", nil, &gardencorev1beta1.Backup{}, BeTrue()),
+		Entry("old empty, new nil", &gardencorev1beta1.Backup{}, nil, BeTrue()),
+		Entry("both empty", &gardencorev1beta1.Backup{}, &gardencorev1beta1.Backup{}, BeTrue()),
 		Entry("difference",
-			&gardencorev1beta1.SeedBackup{CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
-			&gardencorev1beta1.SeedBackup{CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "foo"}},
+			&gardencorev1beta1.Backup{CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+			&gardencorev1beta1.Backup{CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar", Namespace: "foo"}},
 			BeFalse(),
 		),
 		Entry("difference",
-			&gardencorev1beta1.SeedBackup{CredentialsRef: &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"}},
-			&gardencorev1beta1.SeedBackup{CredentialsRef: &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "bar", Namespace: "foo"}},
+			&gardencorev1beta1.Backup{CredentialsRef: &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "foo", Namespace: "bar"}},
+			&gardencorev1beta1.Backup{CredentialsRef: &corev1.ObjectReference{APIVersion: "security.gardener.cloud/v1alpha1", Kind: "WorkloadIdentity", Name: "bar", Namespace: "foo"}},
 			BeFalse(),
 		),
 		Entry("equality",
-			&gardencorev1beta1.SeedBackup{CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
-			&gardencorev1beta1.SeedBackup{CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+			&gardencorev1beta1.Backup{CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
+			&gardencorev1beta1.Backup{CredentialsRef: &corev1.ObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo", Namespace: "bar"}},
 			BeTrue(),
 		),
 	)

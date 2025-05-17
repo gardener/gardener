@@ -66,6 +66,7 @@ build:
             - pkg/component/etcd/copybackupstask
             - pkg/component/etcd/etcd
             - pkg/component/etcd/etcd/constants
+            - pkg/component/extensions/backupentry
             - pkg/component/extensions/containerruntime
             - pkg/component/extensions/controlplane
             - pkg/component/extensions/crds
@@ -109,6 +110,7 @@ build:
             - pkg/component/extensions/operatingsystemconfig/original/components/varlibkubeletmount
             - pkg/component/extensions/operatingsystemconfig/utils
             - pkg/component/extensions/worker
+            - pkg/component/garden/backupbucket
             - pkg/component/garden/backupentry
             - pkg/component/gardener/access
             - pkg/component/gardener/apiserver
@@ -231,6 +233,7 @@ build:
             - pkg/controller/networkpolicy/helper
             - pkg/controller/networkpolicy/hostnameresolver
             - pkg/controllerutils
+            - pkg/controllerutils/mapper
             - pkg/controllerutils/predicate
             - pkg/extensions
             - pkg/features
@@ -253,6 +256,8 @@ build:
             - pkg/gardenadm/staticpod
             - pkg/gardenlet/apis/config/v1alpha1
             - pkg/gardenlet/apis/config/v1alpha1/helper
+            - pkg/gardenlet/controller/backupbucket
+            - pkg/gardenlet/controller/backupentry
             - pkg/gardenlet/controller/controllerinstallation/controllerinstallation
             - pkg/gardenlet/controller/controllerinstallation/utils
             - pkg/gardenlet/features

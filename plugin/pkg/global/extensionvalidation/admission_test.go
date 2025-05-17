@@ -183,7 +183,7 @@ var _ = Describe("ExtensionValidator", func() {
 					Provider: core.SeedProvider{
 						Type: "foo",
 					},
-					Backup: &core.SeedBackup{
+					Backup: &core.Backup{
 						Provider: "bar",
 					},
 					Ingress: &core.Ingress{},

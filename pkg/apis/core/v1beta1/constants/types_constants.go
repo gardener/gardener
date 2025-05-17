@@ -834,6 +834,10 @@ const (
 	DataKeyBackupBucketName string = "bucketName"
 	// BackupSourcePrefix is the prefix for names of resources related to source backupentries when copying backups.
 	BackupSourcePrefix = "source"
+	// AnnotationBackupBucketGeneratedSecretNamespace is a constant for an annotation on an
+	// `extension.gardener.cloud/v1alpha1.BackupBucket` resource which indicates the namespace in which the generated
+	// secret should be created. If not specified, 'garden' should be used.
+	AnnotationBackupBucketGeneratedSecretNamespace = "backupbucket.extensions.gardener.cloud/generated-secret-namespace"
 
 	// GardenerAudience is the identifier for Gardener controllers when interacting with the API Server
 	GardenerAudience = "gardener"

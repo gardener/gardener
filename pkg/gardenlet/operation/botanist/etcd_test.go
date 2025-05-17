@@ -348,7 +348,7 @@ var _ = Describe("Etcd", func() {
 			)
 
 			BeforeEach(func() {
-				botanist.Seed.GetInfo().Spec.Backup = &gardencorev1beta1.SeedBackup{
+				botanist.Seed.GetInfo().Spec.Backup = &gardencorev1beta1.Backup{
 					Provider: backupProvider,
 				}
 				botanist.Config = &gardenletconfigv1alpha1.GardenletConfiguration{

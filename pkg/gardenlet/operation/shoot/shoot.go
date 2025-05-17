@@ -294,7 +294,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 		shoot.TopologyAwareRoutingEnabled = v1beta1helper.IsTopologyAwareRoutingForShootControlPlaneEnabled(b.seed, shootObject)
 	}
 
-	backupEntryName, err := gardenerutils.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.Status.UID, shootObject.UID)
+	backupEntryName, err := gardenerutils.GenerateBackupEntryName(shoot.ControlPlaneNamespace, shootObject.Status.UID, shootObject.UID)
 	if err != nil {
 		return nil, err
 	}

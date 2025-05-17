@@ -22,6 +22,11 @@ func (b *Botanist) DefaultCoreBackupEntry() corebackupentry.Interface {
 	ownerRef := metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
 	ownerRef.BlockOwnerDeletion = ptr.To(false)
 
+	bucketName := b.Seed.GetInfo().UID
+	if b.Shoot.RunsControlPlane() {
+		bucketName = b.Shoot.GetInfo().Status.UID
+	}
+
 	return corebackupentry.New(
 		b.Logger,
 		b.GardenClient,
@@ -31,7 +36,7 @@ func (b *Botanist) DefaultCoreBackupEntry() corebackupentry.Interface {
 			ShootPurpose:   b.Shoot.GetInfo().Spec.Purpose,
 			OwnerReference: ownerRef,
 			SeedName:       b.Shoot.GetInfo().Spec.SeedName,
-			BucketName:     string(b.Seed.GetInfo().UID),
+			BucketName:     string(bucketName),
 		},
 		corebackupentry.DefaultInterval,
 		corebackupentry.DefaultTimeout,

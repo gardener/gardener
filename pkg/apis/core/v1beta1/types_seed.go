@@ -55,7 +55,7 @@ type SeedSpec struct {
 	// If backup field is present in seed, then backups of the etcd from shoot control plane will be stored
 	// under the configured object store.
 	// +optional
-	Backup *SeedBackup `json:"backup,omitempty" protobuf:"bytes,1,opt,name=backup"`
+	Backup *Backup `json:"backup,omitempty" protobuf:"bytes,1,opt,name=backup"`
 	// DNS contains DNS-relevant information about this seed cluster.
 	DNS SeedDNS `json:"dns" protobuf:"bytes,2,opt,name=dns"`
 	// Networks defines the pod, service and worker network of the Seed cluster.
@@ -124,8 +124,8 @@ type SeedStatus struct {
 	LastOperation *LastOperation `json:"lastOperation,omitempty" protobuf:"bytes,9,opt,name=lastOperation"`
 }
 
-// SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
-type SeedBackup struct {
+// Backup contains the object store configuration for backups for shoot (currently only etcd).
+type Backup struct {
 	// Provider is a provider name. This field is immutable.
 	Provider string `json:"provider" protobuf:"bytes,1,opt,name=provider"`
 	// ProviderConfig is the configuration passed to BackupBucket resource.

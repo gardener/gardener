@@ -34,6 +34,7 @@ import (
 	extensioncrds "github.com/gardener/gardener/pkg/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
+	corebackupbucket "github.com/gardener/gardener/pkg/component/garden/backupbucket"
 	"github.com/gardener/gardener/pkg/component/gardener/resourcemanager"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
@@ -83,6 +84,7 @@ type components struct {
 	fluentCRD     component.DeployWaiter
 	prometheusCRD component.DeployWaiter
 
+	backupBucket             component.DeployWaiter
 	clusterIdentity          component.DeployWaiter
 	gardenerResourceManager  component.DeployWaiter
 	system                   component.DeployWaiter
@@ -160,6 +162,7 @@ func (r *Reconciler) instantiateComponents(
 	}
 
 	// seed system components
+	c.backupBucket = r.newBackupBucket(log, seed.GetInfo())
 	c.clusterIdentity = r.newClusterIdentity(seed.GetInfo())
 	c.gardenerResourceManager, err = r.newGardenerResourceManager(seed.GetInfo(), secretsManager)
 	if err != nil {
@@ -771,6 +774,22 @@ func (r *Reconciler) newMachineControllerManager() component.DeployWaiter {
 
 func (r *Reconciler) newClusterIdentity(seed *gardencorev1beta1.Seed) component.DeployWaiter {
 	return clusteridentity.NewForSeed(r.SeedClientSet.Client(), r.GardenNamespace, *seed.Status.ClusterIdentity)
+}
+
+func (r *Reconciler) newBackupBucket(log logr.Logger, seed *gardencorev1beta1.Seed) component.DeployWaiter {
+	return corebackupbucket.New(
+		log,
+		r.GardenClient,
+		&corebackupbucket.Values{
+			Name:          string(seed.UID),
+			Config:        seed.Spec.Backup,
+			DefaultRegion: seed.Spec.Provider.Region,
+			Seed:          seed,
+			Clock:         r.Clock,
+		},
+		corebackupbucket.DefaultInterval,
+		corebackupbucket.DefaultTimeout,
+	)
 }
 
 func (r *Reconciler) newNginxIngressController(seed *seedpkg.Seed, istioDefaultLabels map[string]string) (component.DeployWaiter, error) {

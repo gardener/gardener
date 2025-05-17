@@ -109,7 +109,7 @@ var _ = Describe("validator", func() {
 			Context("Backup provider with WorkloadIdentity credentials", func() {
 				BeforeEach(func() {
 					oldSeed = seedBase.DeepCopy()
-					oldSeed.Spec.Backup = &core.SeedBackup{
+					oldSeed.Spec.Backup = &core.Backup{
 						Provider: providerType,
 						CredentialsRef: &corev1.ObjectReference{
 							APIVersion: "security.gardener.cloud/v1alpha1",
@@ -206,7 +206,7 @@ var _ = Describe("validator", func() {
 
 			BeforeEach(func() {
 				seed = seedBase.DeepCopy()
-				seed.Spec.Backup = &core.SeedBackup{
+				seed.Spec.Backup = &core.Backup{
 					Provider: providerType,
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "security.gardener.cloud/v1alpha1",

@@ -79,7 +79,7 @@ func SeedSettingTopologyAwareRoutingEnabled(settings *gardencorev1beta1.SeedSett
 }
 
 // SeedBackupCredentialsRefEqual returns true when the credentials reference of the backup configuration is the same.
-func SeedBackupCredentialsRefEqual(oldBackup, newBackup *gardencorev1beta1.SeedBackup) bool {
+func SeedBackupCredentialsRefEqual(oldBackup, newBackup *gardencorev1beta1.Backup) bool {
 	var (
 		oldCredentialsRef *corev1.ObjectReference
 		newCredentialsRef *corev1.ObjectReference

@@ -42,7 +42,10 @@ spec:
 
 The `.spec.secretRef` contains a reference to the provider secret pointing to the account that shall be used to create the needed resources. This provider secret will be configured by the Gardener operator in the `Seed` resource and propagated over there by the seed controller.
 
-After your controller has created the required bucket, if required, it generates the secret to access the objects in the bucket and put a reference to it in `status`. This secret is supposed to be used by Gardener, or eventually a `BackupEntry` resource and etcd-backup-restore component, to backup the etcd.
+After your controller has created the required bucket, if required, it generates the secret to access the objects in the bucket and put a reference to it in `status.generatedSecretRef`.
+The secret should be created in the namespace specified in the `backupbucket.extensions.gardener.cloud/generated-secret-namespace` annotation.
+In case the annotation is not present, the `garden` namespace should be used.
+This secret is supposed to be used by Gardener, or eventually a `BackupEntry` resource and etcd-backup-restore component, for backing up the etcd.
 
 In order to support a new infrastructure provider, you need to write a controller that watches all `BackupBucket`s with `.spec.type=<my-provider-name>`. You can take a look at the below referenced example implementation for the Azure provider.
 

@@ -204,7 +204,7 @@ var _ = Describe("validator", func() {
 					Name: seedName,
 				},
 				Spec: gardencorev1beta1.SeedSpec{
-					Backup: &gardencorev1beta1.SeedBackup{},
+					Backup: &gardencorev1beta1.Backup{},
 					Networks: gardencorev1beta1.SeedNetworks{
 						Pods:       seedPodsCIDR,
 						Services:   seedServicesCIDR,

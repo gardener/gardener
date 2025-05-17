@@ -17,9 +17,10 @@ import (
 
 var backupEntryDelimiter = "--"
 
-// GenerateBackupEntryName returns BackupEntry resource name created from provided <seedNamespace> and <shootUID>.
-func GenerateBackupEntryName(shootTechnicalID string, shootStatusUID, shootUID types.UID) (string, error) {
-	if shootTechnicalID == "" {
+// GenerateBackupEntryName returns BackupEntry resource name created from provided <controlPlaneNamespace> and
+// <shootUID>.
+func GenerateBackupEntryName(controlPlaneNamespace string, shootStatusUID, shootUID types.UID) (string, error) {
+	if controlPlaneNamespace == "" {
 		return "", errors.New("can't generate backup entry name with an empty shoot technical ID")
 	}
 
@@ -31,17 +32,18 @@ func GenerateBackupEntryName(shootTechnicalID string, shootStatusUID, shootUID t
 		return "", errors.New("can't generate backup entry name with an empty shoot UID")
 	}
 
-	return shootTechnicalID + backupEntryDelimiter + string(uid), nil
+	return controlPlaneNamespace + backupEntryDelimiter + string(uid), nil
 }
 
-// ExtractShootDetailsFromBackupEntryName returns Shoot resource technicalID its UID from provided <backupEntryName>.
-func ExtractShootDetailsFromBackupEntryName(backupEntryName string) (shootTechnicalID string, shootUID types.UID) {
+// ExtractShootDetailsFromBackupEntryName returns the control plane namespace of the Shoot and its UID from the provided
+// <backupEntryName>.
+func ExtractShootDetailsFromBackupEntryName(backupEntryName string) (controlPlaneNamespace string, shootUID types.UID) {
 	tokens := strings.Split(backupEntryName, backupEntryDelimiter)
 	uid := tokens[len(tokens)-1]
 
-	shootTechnicalID = strings.TrimPrefix(backupEntryName, v1beta1constants.BackupSourcePrefix+"-")
-	shootTechnicalID = strings.TrimSuffix(shootTechnicalID, uid)
-	shootTechnicalID = strings.TrimSuffix(shootTechnicalID, backupEntryDelimiter)
+	controlPlaneNamespace = strings.TrimPrefix(backupEntryName, v1beta1constants.BackupSourcePrefix+"-")
+	controlPlaneNamespace = strings.TrimSuffix(controlPlaneNamespace, uid)
+	controlPlaneNamespace = strings.TrimSuffix(controlPlaneNamespace, backupEntryDelimiter)
 	shootUID = types.UID(uid)
 	return
 }

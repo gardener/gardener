@@ -142,7 +142,7 @@ var _ = Describe("Reconciler", func() {
 				Provider: gardencorev1beta1.SeedProvider{
 					Type: type11,
 				},
-				Backup: &gardencorev1beta1.SeedBackup{
+				Backup: &gardencorev1beta1.Backup{
 					Provider: type8,
 				},
 			},

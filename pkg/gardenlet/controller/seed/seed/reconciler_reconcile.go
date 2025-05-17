@@ -68,19 +68,7 @@ func (r *Reconciler) reconcile(
 		return err
 	}
 
-	if err := r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, seedIsShoot); err != nil {
-		return err
-	}
-
-	if seed.Spec.Backup != nil {
-		// This should be post updating the seed is available. Since, scheduler will then mostly use
-		// same seed for deploying the backupBucket extension.
-		if err := deployBackupBucketInGarden(ctx, r.GardenClient, seed); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return r.runReconcileSeedFlow(ctx, log, seedObj, seedIsGarden, seedIsShoot)
 }
 
 func (r *Reconciler) checkMinimumK8SVersion(version string) error {
@@ -484,13 +472,19 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		deleteStaleExtensionResources = g.Add(flow.Task{
 			Name:         "Deleting stale extension resources",
-			Fn:           flow.TaskFn(c.extension.DeleteStaleResources),
+			Fn:           c.extension.DeleteStaleResources,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until stale extension resources are deleted",
 			Fn:           c.extension.WaitCleanupStaleResources,
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying BackupBucket for seed",
+			Fn:           c.backupBucket.Deploy,
+			SkipIf:       seed.GetInfo().Spec.Backup == nil,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
 		})
 	)
 
@@ -502,42 +496,6 @@ func (r *Reconciler) runReconcileSeedFlow(
 	}
 
 	return secretsManager.Cleanup(ctx)
-}
-
-func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Client, seed *gardencorev1beta1.Seed) error {
-	// By default, we assume the seed.Spec.Backup.Provider matches the seed.Spec.Provider.Type as per the validation logic.
-	// However, if the backup region is specified we take it.
-	region := seed.Spec.Provider.Region
-	if seed.Spec.Backup.Region != nil {
-		region = *seed.Spec.Backup.Region
-	}
-
-	backupBucket := &gardencorev1beta1.BackupBucket{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: string(seed.UID),
-		},
-	}
-
-	ownerRef := metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
-
-	_, err := controllerutils.CreateOrGetAndMergePatch(ctx, k8sGardenClient, backupBucket, func() error {
-		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		backupBucket.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-		backupBucket.Spec = gardencorev1beta1.BackupBucketSpec{
-			Provider: gardencorev1beta1.BackupBucketProvider{
-				Type:   seed.Spec.Backup.Provider,
-				Region: region,
-			},
-			ProviderConfig: seed.Spec.Backup.ProviderConfig,
-			SecretRef: corev1.SecretReference{ // TODO(vpnachev): Add support for WorkloadIdentity
-				Name:      seed.Spec.Backup.CredentialsRef.Name,
-				Namespace: seed.Spec.Backup.CredentialsRef.Namespace,
-			},
-			SeedName: &seed.Name, // In future this will be moved to gardener-scheduler.
-		}
-		return nil
-	})
-	return err
 }
 
 func cleanupOrphanExposureClassHandlerResources(
