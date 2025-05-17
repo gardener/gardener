@@ -182,7 +182,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 		Expect(testClient.Create(ctx, shoot)).To(Succeed())
 		log.Info("Created Shoot for test", "namespaceName", shoot.Name)
 
-		By("Wait until manager has observed shoot")
+		By("Wait until the manager cache has observed the shoot")
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), &gardencorev1beta1.Shoot{})
 		}).Should(Succeed())
@@ -233,7 +233,7 @@ var _ = Describe("Shoot Status controller tests", func() {
 		Expect(testClient.Create(ctx, cluster)).To(Succeed())
 		log.Info("Created cluster for test", "cluster", client.ObjectKeyFromObject(cluster))
 
-		By("Ensure manager cache observes cluster creation")
+		By("Ensure manager cache has observed the cluster creation")
 		Eventually(func() error {
 			return mgrClient.Get(ctx, client.ObjectKeyFromObject(cluster), &extensionsv1alpha1.Cluster{})
 		}).Should(Succeed())
@@ -303,28 +303,18 @@ var _ = Describe("Shoot Status controller tests", func() {
 			},
 		}
 		Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+
+		waitForManagerToObserveUpdatedShootStatus(shoot)
 	})
 
 	It("should not remove the manual in-place update workers from Shoot status if the pool is not present in the worker status or the hash doesn't match", func() {
-		patch := client.MergeFrom(worker.DeepCopy())
 		workerPoolHashMap := map[string]string{
 			"worker1": "ef492a9674e2778a",
 			"worker2": "ecb9f30b6995e60d",
 			"worker3": "different-hash",
 		}
-		worker.Status = extensionsv1alpha1.WorkerStatus{
-			InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
-				WorkerPoolToHashMap: workerPoolHashMap,
-			},
-		}
-		Expect(testClient.Status().Patch(ctx, worker, patch)).To(Succeed())
 
-		By("Waiting until the worker status is observed by the manager")
-		Eventually(func(g Gomega) map[string]string {
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
-			g.Expect(worker.Status.InPlaceUpdates).NotTo(BeNil())
-			return worker.Status.InPlaceUpdates.WorkerPoolToHashMap
-		}).Should(Equal(workerPoolHashMap))
+		patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker, workerPoolHashMap)
 
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -342,31 +332,15 @@ var _ = Describe("Shoot Status controller tests", func() {
 		shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate = nil
 		Expect(testClient.Status().Update(ctx, shoot)).To(Succeed())
 
-		By("Waiting until the shoot status is observed by the manager")
-		Eventually(func(g Gomega) {
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-			g.Expect(shoot.Status.InPlaceUpdates.PendingWorkerUpdates.AutoInPlaceUpdate).To(BeNil())
-		}).Should(Succeed())
+		waitForManagerToObserveUpdatedShootStatus(shoot)
 
-		patch := client.MergeFrom(worker.DeepCopy())
 		workerPoolHashMap := map[string]string{
 			"worker1": "ef492a9674e2778a",
 			"worker3": "981b8e740cbbf058",
 			"worker5": "2c12ce1fbb06b184",
 		}
-		worker.Status = extensionsv1alpha1.WorkerStatus{
-			InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
-				WorkerPoolToHashMap: workerPoolHashMap,
-			},
-		}
-		Expect(testClient.Status().Patch(ctx, worker, patch)).To(Succeed())
 
-		By("Waiting until the worker status is observed by the manager")
-		Eventually(func(g Gomega) map[string]string {
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
-			g.Expect(worker.Status.InPlaceUpdates).NotTo(BeNil())
-			return worker.Status.InPlaceUpdates.WorkerPoolToHashMap
-		}).Should(Equal(workerPoolHashMap))
+		patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker, workerPoolHashMap)
 
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -376,25 +350,13 @@ var _ = Describe("Shoot Status controller tests", func() {
 	})
 
 	It("should not remove the force-update annotation if auto-inplace update workers are present", func() {
-		patch := client.MergeFrom(worker.DeepCopy())
 		workerPoolHashMap := map[string]string{
 			"worker1": "ef492a9674e2778a",
 			"worker3": "981b8e740cbbf058",
 			"worker5": "2c12ce1fbb06b184",
 		}
-		worker.Status = extensionsv1alpha1.WorkerStatus{
-			InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
-				WorkerPoolToHashMap: workerPoolHashMap,
-			},
-		}
-		Expect(testClient.Status().Patch(ctx, worker, patch)).To(Succeed())
 
-		By("Waiting until the worker status is observed by the manager")
-		Eventually(func(g Gomega) map[string]string {
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
-			g.Expect(worker.Status.InPlaceUpdates).NotTo(BeNil())
-			return worker.Status.InPlaceUpdates.WorkerPoolToHashMap
-		}).Should(Equal(workerPoolHashMap))
+		patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker, workerPoolHashMap)
 
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -419,32 +381,15 @@ var _ = Describe("Shoot Status controller tests", func() {
 		}
 		Expect(testClient.Status().Update(ctx, shoot)).To(Succeed())
 
-		By("Waiting until the shoot status is observed by the manager")
-		Eventually(func(g Gomega) *gardencorev1beta1.ShootCredentials {
-			observedShoot := &gardencorev1beta1.Shoot{}
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), observedShoot)).To(Succeed())
-			return observedShoot.Status.Credentials
-		}).Should(Equal(shoot.Status.Credentials))
+		waitForManagerToObserveUpdatedShootStatus(shoot)
 
-		patch := client.MergeFrom(worker.DeepCopy())
 		workerPoolHashMap := map[string]string{
 			"worker1": "ef492a9674e2778a",
 			"worker3": "981b8e740cbbf058",
 			"worker5": "2c12ce1fbb06b184",
 		}
-		worker.Status = extensionsv1alpha1.WorkerStatus{
-			InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
-				WorkerPoolToHashMap: workerPoolHashMap,
-			},
-		}
-		Expect(testClient.Status().Patch(ctx, worker, patch)).To(Succeed())
 
-		By("Waiting until the worker status is observed by the manager")
-		Eventually(func(g Gomega) map[string]string {
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
-			g.Expect(worker.Status.InPlaceUpdates).NotTo(BeNil())
-			return worker.Status.InPlaceUpdates.WorkerPoolToHashMap
-		}).Should(Equal(workerPoolHashMap))
+		patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker, workerPoolHashMap)
 
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -474,33 +419,21 @@ var _ = Describe("Shoot Status controller tests", func() {
 		}
 		Expect(testClient.Status().Update(ctx, shoot)).To(Succeed())
 
-		By("Waiting until the shoot is observed by the manager")
+		By("Wait until the manager cache has observed the shoot")
 		Eventually(func(g Gomega) *gardencorev1beta1.ShootCredentials {
-			observedShoot := &gardencorev1beta1.Shoot{}
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), observedShoot)).To(Succeed())
-			g.Expect(observedShoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
-			return observedShoot.Status.Credentials
+			updatedShoot := &gardencorev1beta1.Shoot{}
+			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
+			g.Expect(updatedShoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+			return updatedShoot.Status.Credentials
 		}).Should(Equal(shoot.Status.Credentials))
 
-		patch := client.MergeFrom(worker.DeepCopy())
 		workerPoolHashMap := map[string]string{
 			"worker1": "ef492a9674e2778a",
 			"worker3": "981b8e740cbbf058",
 			"worker5": "different-hash",
 		}
-		worker.Status = extensionsv1alpha1.WorkerStatus{
-			InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
-				WorkerPoolToHashMap: workerPoolHashMap,
-			},
-		}
-		Expect(testClient.Status().Patch(ctx, worker, patch)).To(Succeed())
 
-		By("Waiting until the worker status is observed by the manager")
-		Eventually(func(g Gomega) map[string]string {
-			g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)).To(Succeed())
-			g.Expect(worker.Status.InPlaceUpdates).NotTo(BeNil())
-			return worker.Status.InPlaceUpdates.WorkerPoolToHashMap
-		}).Should(Equal(workerPoolHashMap))
+		patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker, workerPoolHashMap)
 
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -513,3 +446,30 @@ var _ = Describe("Shoot Status controller tests", func() {
 		}).Should(Succeed())
 	})
 })
+
+func waitForManagerToObserveUpdatedShootStatus(shoot *gardencorev1beta1.Shoot) {
+	By("Wait until the manager cache has observed the Shoot status")
+	EventuallyWithOffset(1, func(g Gomega) gardencorev1beta1.ShootStatus {
+		updatedShoot := &gardencorev1beta1.Shoot{}
+		g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
+		return updatedShoot.Status
+	}).Should(Equal(shoot.Status))
+}
+
+func patchAndWaitForManagerToObserveUpdatedWorkerStatus(worker *extensionsv1alpha1.Worker, workerPoolHashMap map[string]string) {
+	patch := client.MergeFrom(worker.DeepCopy())
+	worker.Status = extensionsv1alpha1.WorkerStatus{
+		InPlaceUpdates: &extensionsv1alpha1.InPlaceUpdatesWorkerStatus{
+			WorkerPoolToHashMap: workerPoolHashMap,
+		},
+	}
+	Expect(testClient.Status().Patch(ctx, worker, patch)).To(Succeed())
+
+	By("Wait until the manager cache has observed the worker status")
+	EventuallyWithOffset(1, func(g Gomega) map[string]string {
+		updatedWorker := &extensionsv1alpha1.Worker{}
+		g.Expect(mgrClient.Get(ctx, client.ObjectKeyFromObject(worker), updatedWorker)).To(Succeed())
+		g.Expect(updatedWorker.Status.InPlaceUpdates).NotTo(BeNil())
+		return updatedWorker.Status.InPlaceUpdates.WorkerPoolToHashMap
+	}).Should(Equal(workerPoolHashMap))
+}
