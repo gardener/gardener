@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
@@ -74,14 +73,6 @@ func run(ctx context.Context, opts *Options) error {
 	b, err := botanist.NewAutonomousBotanistFromManifests(ctx, opts.Log, clientSet, opts.ConfigDir, false)
 	if err != nil {
 		return err
-	}
-
-	// Overwrite the OSC component to initialize the control plane machines with a static dummy user data secret.
-	// TODO(timebertt): replace this with a proper OperatingSystemConfig component implementation
-	b.Shoot.Components.Extensions.OperatingSystemConfig = &botanist.FakeOSC{
-		Client:                 b.SeedClientSet.Client(),
-		ControlPlaneWorkerPool: v1beta1helper.ControlPlaneWorkerPoolForShoot(b.Shoot.GetInfo()).Name,
-		ControlPlaneNamespace:  b.Shoot.ControlPlaneNamespace,
 	}
 
 	var (
@@ -179,6 +170,21 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
 		})
+		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
+			Name:         "Waiting until OperatingSystemConfig for control plane machines has been reconciled",
+			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.Wait,
+			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
+		})
+		deleteStaleOperatingSystemConfigResources = g.Add(flow.Task{
+			Name:         "Delete stale OperatingSystemConfig resources",
+			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources,
+			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until stale OperatingSystemConfig resources are deleted",
+			Fn:           b.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources,
+			Dependencies: flow.NewTaskIDs(deleteStaleOperatingSystemConfigResources),
+		})
 
 		deployMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deploying machine-controller-manager",
@@ -189,7 +195,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployWorker = g.Add(flow.Task{
 			Name:         "Deploying control plane machines",
 			Fn:           b.DeployWorker,
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, deployOperatingSystemConfig, deployMachineControllerManager),
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, waitUntilOperatingSystemConfigReady, deployMachineControllerManager),
 		})
 		// The Machine objects won't get ready yet because there will not be any Node objects.
 		// TODO(timebertt): add b.Shoot.Components.Extensions.Worker.Wait when

@@ -68,11 +68,21 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(extensionsv1alpha1.Exposure)
 		o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure()
 		o.Shoot.Components.Extensions.Network = b.DefaultNetwork()
-		o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig()
-		if err != nil {
-			return nil, err
-		}
 		o.Shoot.Components.Extensions.Worker = b.DefaultWorker()
+
+		if o.Shoot.IsAutonomous() && !o.Shoot.RunsControlPlane() {
+			// For `gardenadm bootstrap`, we don't initialize the control plane machines with a "full OSC".
+			// Instead, we provide a small alternative OSC, that only fetches the `gardenadm` binary from the registry.
+			o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.ControlPlaneBootstrapOperatingSystemConfig()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig()
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// control plane components
