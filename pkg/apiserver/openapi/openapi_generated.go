@@ -6743,7 +6743,7 @@ func schema_pkg_apis_core_v1beta1_PendingWorkerUpdates(ref common.ReferenceCallb
 					},
 					"manualInPlaceUpdate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate..",
+							Description: "ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

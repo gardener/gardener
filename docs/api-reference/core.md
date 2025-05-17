@@ -9733,7 +9733,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate..</p>
+<p>ManualInPlaceUpdate contains the names of the pending worker pools with strategy ManualInPlaceUpdate.</p>
 </td>
 </tr>
 </tbody>
