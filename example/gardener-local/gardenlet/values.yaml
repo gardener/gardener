@@ -79,8 +79,9 @@ config:
           secretRef:
             name: internal-domain-internal-local-gardener-cloud
             namespace: garden
-      extensions:
-      - type: local-ext-seed
+#      TODO(timuthy): Enable extension after Gardener v1.120 was released.
+#      extensions:
+#      - type: local-ext-seed
       ingress:
         domain: ingress.local.seed.local.gardener.cloud
         controller:

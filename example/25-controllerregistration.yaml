@@ -10,7 +10,12 @@ spec:
   - kind: OperatingSystemConfig
     type: gardenlinux
   # primary: true|false
-  # globallyEnabled: true|false # only valid if kind=Extension
+  # autoEnable: # only valid if kind=Extension
+  # - shoot
+  # - seed
+  # clusterCompatibility: # only valid if kind=Extension
+  # - shoot
+  # - seed
   # reconcileTimeout: 30s # only valid if kind=Extension
   # workerlessSupported: true|false # only valid if kind=Extension
   deployment:

@@ -53,7 +53,22 @@ func (r *Reconciler) delete(
 	error,
 ) {
 	log.Info("Instantiating component destroyers")
-	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), nil, false)
+	extensionList := &operatorv1alpha1.ExtensionList{}
+	if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	c, err := r.instantiateComponents(
+		ctx,
+		log,
+		garden,
+		secretsManager,
+		targetVersion,
+		kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()),
+		nil,
+		false,
+		extensionList,
+	)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

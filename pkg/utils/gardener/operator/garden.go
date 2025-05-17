@@ -7,6 +7,7 @@ package operator
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -54,7 +55,7 @@ func IsServedByKubeAPIServer(resource string) bool {
 
 // ComputeRequiredExtensionsForGarden computes the extension kind/type combinations that are required for the
 // garden reconciliation flow.
-func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden) sets.Set[string] {
+func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden, extensionList *operatorv1alpha1.ExtensionList) sets.Set[string] {
 	requiredExtensions := sets.New[string]()
 
 	if operatorv1alpha1helper.GetETCDMainBackup(garden) != nil {
@@ -67,6 +68,14 @@ func ComputeRequiredExtensionsForGarden(garden *operatorv1alpha1.Garden) sets.Se
 
 	for _, extension := range garden.Spec.Extensions {
 		requiredExtensions.Insert(gardener.ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type))
+	}
+
+	for _, extension := range extensionList.Items {
+		for _, resource := range extension.Spec.Resources {
+			if resource.Kind == extensionsv1alpha1.ExtensionResource && slices.Contains(resource.AutoEnable, operatorv1alpha1.ClusterTypeGarden) {
+				requiredExtensions.Insert(gardener.ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type))
+			}
+		}
 	}
 
 	return requiredExtensions

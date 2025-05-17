@@ -9,24 +9,24 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/security"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
 )
 
@@ -176,7 +176,9 @@ func (e *ExtensionLabels) Admit(_ context.Context, a admission.Attributes, _ adm
 		}
 
 		removeLabels(&shoot.ObjectMeta)
-		addMetaDataLabelsShoot(shoot, controllerRegistrations)
+		if err := addMetaDataLabelsShoot(shoot, controllerRegistrations); err != nil {
+			return fmt.Errorf("failed to add metadata labels to shoot: %w", err)
+		}
 
 	case core.Kind("CloudProfile"):
 		cloudProfile, ok := a.GetObject().(*core.CloudProfile)
@@ -248,10 +250,26 @@ func addMetaDataLabelsSecretBinding(secretBinding *core.SecretBinding) {
 	}
 }
 
-func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) {
-	for extensionType := range getEnabledExtensionsForShoot(shoot, controllerRegistrations) {
+func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) error {
+	v1beta1Shoot := &gardencorev1beta1.Shoot{}
+	if err := kubernetes.GardenScheme.Convert(shoot, v1beta1Shoot, nil); err != nil {
+		return fmt.Errorf("could not convert Shoot to v1beta1.Shoot: %v", err)
+	}
+
+	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{
+		Items: slices.Collect(func(yield func(gardencorev1beta1.ControllerRegistration) bool) {
+			for _, registration := range controllerRegistrations {
+				if !yield(*registration) {
+					return
+				}
+			}
+		}),
+	}
+
+	for extensionType := range gardenerutils.ComputeEnabledTypesForKindExtension(v1beta1Shoot, controllerRegistrationList) {
 		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionExtensionTypePrefix+extensionType, "true")
 	}
+
 	for _, pool := range shoot.Spec.Provider.Workers {
 		if pool.CRI != nil {
 			for _, cr := range pool.CRI.ContainerRuntimes {
@@ -277,35 +295,8 @@ func addMetaDataLabelsShoot(shoot *core.Shoot, controllerRegistrations []*garden
 	if shoot.Spec.Networking != nil && shoot.Spec.Networking.Type != nil {
 		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionNetworkingTypePrefix+*shoot.Spec.Networking.Type, "true")
 	}
-}
 
-func getEnabledExtensionsForShoot(shoot *core.Shoot, controllerRegistrations []*gardencorev1beta1.ControllerRegistration) sets.Set[string] {
-	enabledExtensions := sets.New[string]()
-
-	// add globally enabled extensions
-	for _, reg := range controllerRegistrations {
-		for _, resource := range reg.Spec.Resources {
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) {
-				if gardencorehelper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
-					continue
-				}
-				enabledExtensions.Insert(resource.Type)
-			}
-		}
-	}
-
-	for _, extension := range shoot.Spec.Extensions {
-		if ptr.Deref(extension.Disabled, false) {
-			// remove explicitly disabled extensions
-			enabledExtensions.Delete(extension.Type)
-			continue
-		}
-
-		// add labels for explicitly enabled extensions
-		enabledExtensions.Insert(extension.Type)
-	}
-
-	return enabledExtensions
+	return nil
 }
 
 func addMetaDataLabelsCloudProfile(cloudProfile *core.CloudProfile) {

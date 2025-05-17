@@ -5,10 +5,9 @@
 package extension
 
 import (
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 )
 
 const (
@@ -20,9 +19,10 @@ const (
 
 // AddToManager adds Handler to the given manager.
 func (h *Handler) AddToManager(mgr manager.Manager) error {
-	webhook := admission.
-		WithCustomDefaulter(mgr.GetScheme(), &operatorv1alpha1.Extension{}, h).
-		WithRecoverPanic(true)
+	webhook := &admission.Webhook{
+		Handler:      h,
+		RecoverPanic: ptr.To(true),
+	}
 
 	mgr.GetWebhookServer().Register(WebhookPath, webhook)
 	return nil

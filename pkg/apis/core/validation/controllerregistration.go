@@ -6,6 +6,7 @@ package validation
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-test/deep"
@@ -21,18 +22,18 @@ import (
 )
 
 var availablePolicies = sets.New(
-	string(core.ControllerDeploymentPolicyOnDemand),
-	string(core.ControllerDeploymentPolicyAlways),
-	string(core.ControllerDeploymentPolicyAlwaysExceptNoShoots),
+	core.ControllerDeploymentPolicyOnDemand,
+	core.ControllerDeploymentPolicyAlways,
+	core.ControllerDeploymentPolicyAlwaysExceptNoShoots,
 )
 
 var availableExtensionStrategies = sets.New(
-	string(core.BeforeKubeAPIServer),
-	string(core.AfterKubeAPIServer),
+	core.BeforeKubeAPIServer,
+	core.AfterKubeAPIServer,
 )
 
 var availableExtensionStrategiesForReconcile = availableExtensionStrategies.Clone().Insert(
-	string(core.AfterWorker),
+	core.AfterWorker,
 )
 
 // ValidateControllerRegistration validates a ControllerRegistration object.
@@ -49,68 +50,20 @@ func ValidateControllerRegistration(controllerRegistration *core.ControllerRegis
 func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	var (
-		resourcesPath  = fldPath.Child("resources")
-		deploymentPath = fldPath.Child("deployment")
-
-		resources                  = make(map[string]string, len(spec.Resources))
-		controlsResourcesPrimarily = false
-	)
-
-	for i, resource := range spec.Resources {
-		idxPath := resourcesPath.Index(i)
-
-		if len(resource.Kind) == 0 {
-			allErrs = append(allErrs, field.Required(idxPath.Child("kind"), "field is required"))
-		}
-
-		if !extensionsv1alpha1.AllExtensionKinds.Has(resource.Kind) {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("kind"), resource.Kind, extensionsv1alpha1.AllExtensionKinds.UnsortedList()))
-		}
-
-		if len(resource.Type) == 0 {
-			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "field is required"))
-		}
-		if t, ok := resources[resource.Kind]; ok && t == resource.Type {
-			allErrs = append(allErrs, field.Duplicate(idxPath, gardenerutils.ExtensionsID(resource.Kind, resource.Type)))
-		}
-		if resource.Kind != extensionsv1alpha1.ExtensionResource {
-			if resource.GloballyEnabled != nil {
-				allErrs = append(allErrs, field.Forbidden(idxPath.Child("globallyEnabled"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
-			}
-			if resource.ReconcileTimeout != nil {
-				allErrs = append(allErrs, field.Forbidden(idxPath.Child("reconcileTimeout"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
-			}
-			if resource.Lifecycle != nil {
-				allErrs = append(allErrs, field.Forbidden(idxPath.Child("lifecycle"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
-			}
-		}
-
-		if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.Lifecycle != nil {
-			lifecyclePath := idxPath.Child("lifecycle")
-			if resource.Lifecycle.Reconcile != nil && !availableExtensionStrategiesForReconcile.Has(string(*resource.Lifecycle.Reconcile)) {
-				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("reconcile"), *resource.Lifecycle.Reconcile, sets.List(availableExtensionStrategiesForReconcile)))
-			}
-			if resource.Lifecycle.Delete != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Delete)) {
-				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("delete"), *resource.Lifecycle.Delete, sets.List(availableExtensionStrategies)))
-			}
-			if resource.Lifecycle.Migrate != nil && !availableExtensionStrategies.Has(string(*resource.Lifecycle.Migrate)) {
-				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("migrate"), *resource.Lifecycle.Migrate, sets.List(availableExtensionStrategies)))
-			}
-		}
-
-		resources[resource.Kind] = resource.Type
-		if resource.Primary == nil || *resource.Primary {
-			controlsResourcesPrimarily = true
-		}
-	}
+	allErrs = append(allErrs, ValidateControllerResources(spec.Resources, []core.ClusterType{core.ClusterTypeShoot, core.ClusterTypeSeed}, fldPath.Child("resources"))...)
 
 	if deployment := spec.Deployment; deployment != nil {
-		if policy := deployment.Policy; policy != nil && !availablePolicies.Has(string(*policy)) {
+		deploymentPath := fldPath.Child("deployment")
+
+		if policy := deployment.Policy; policy != nil && !availablePolicies.Has(*policy) {
 			allErrs = append(allErrs, field.NotSupported(deploymentPath.Child("policy"), *policy, sets.List(availablePolicies)))
 		}
 
 		if deployment.SeedSelector != nil {
+			controlsResourcesPrimarily := slices.ContainsFunc(spec.Resources, func(resource core.ControllerResource) bool {
+				return resource.Primary == nil || *resource.Primary
+			})
+
 			if controlsResourcesPrimarily {
 				allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("seedSelector"), "specifying a seed selector is not allowed when controlling resources primarily"))
 			}
@@ -127,6 +80,106 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			fld := deploymentPath.Child("deploymentRefs").Index(i)
 			if deploymentRef.Name == "" {
 				allErrs = append(allErrs, field.Required(fld.Child("name"), "must not be empty"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateControllerResources validates the provided list of ControllerResource objects.
+func ValidateControllerResources(resources []core.ControllerResource, clusterTypes []core.ClusterType, resourcesPath *field.Path) field.ErrorList {
+	var (
+		allErrs            = field.ErrorList{}
+		resourceKindToType = make(map[string]string)
+	)
+
+	for i, resource := range resources {
+		idxPath := resourcesPath.Index(i)
+
+		if len(resource.Kind) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("kind"), "field is required"))
+		}
+
+		if !extensionsv1alpha1.AllExtensionKinds.Has(resource.Kind) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("kind"), resource.Kind, extensionsv1alpha1.AllExtensionKinds.UnsortedList()))
+		}
+
+		if len(resource.Type) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "field is required"))
+		}
+
+		if t, ok := resourceKindToType[resource.Kind]; ok && t == resource.Type {
+			allErrs = append(allErrs, field.Duplicate(idxPath, gardenerutils.ExtensionsID(resource.Kind, resource.Type)))
+		}
+		resourceKindToType[resource.Kind] = resource.Type
+
+		if resource.Kind != extensionsv1alpha1.ExtensionResource {
+			if resource.GloballyEnabled != nil {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("globallyEnabled"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
+			if len(resource.AutoEnable) > 0 {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("autoEnable"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
+			if len(resource.ClusterCompatibility) > 0 {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("clusterCompatibility"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
+			if resource.ReconcileTimeout != nil {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("reconcileTimeout"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
+			if resource.Lifecycle != nil {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("lifecycle"), fmt.Sprintf("field must not be set when kind != %s", extensionsv1alpha1.ExtensionResource)))
+			}
+
+			continue
+		}
+
+		var (
+			validClusterTypes      = sets.New(clusterTypes...)
+			compatibleClusterTypes = sets.New[core.ClusterType]()
+		)
+
+		for j, clusterType := range resource.ClusterCompatibility {
+			autoEnablePath := idxPath.Child("clusterCompatibility").Index(j)
+
+			if !validClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.NotSupported(autoEnablePath, clusterType, sets.List(validClusterTypes)))
+			}
+
+			if compatibleClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.Duplicate(autoEnablePath, clusterType))
+			}
+			compatibleClusterTypes.Insert(clusterType)
+		}
+
+		autoEnabledClusterTypes := sets.New[core.ClusterType]()
+		for j, clusterType := range resource.AutoEnable {
+			autoEnablePath := idxPath.Child("autoEnable").Index(j)
+
+			if !validClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.NotSupported(autoEnablePath, clusterType, sets.List(validClusterTypes)))
+			}
+
+			if !compatibleClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.Forbidden(autoEnablePath, fmt.Sprintf("autoEnable is not allowed for cluster type %q when clusterCompatibility is set to %+v", clusterType, compatibleClusterTypes.UnsortedList())))
+			}
+
+			if autoEnabledClusterTypes.Has(clusterType) {
+				allErrs = append(allErrs, field.Duplicate(autoEnablePath, clusterType))
+			}
+			autoEnabledClusterTypes.Insert(clusterType)
+		}
+
+		if resource.Lifecycle != nil {
+			lifecyclePath := idxPath.Child("lifecycle")
+			if resource.Lifecycle.Reconcile != nil && !availableExtensionStrategiesForReconcile.Has(*resource.Lifecycle.Reconcile) {
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("reconcile"), *resource.Lifecycle.Reconcile, sets.List(availableExtensionStrategiesForReconcile)))
+			}
+			if resource.Lifecycle.Delete != nil && !availableExtensionStrategies.Has(*resource.Lifecycle.Delete) {
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("delete"), *resource.Lifecycle.Delete, sets.List(availableExtensionStrategies)))
+			}
+			if resource.Lifecycle.Migrate != nil && !availableExtensionStrategies.Has(*resource.Lifecycle.Migrate) {
+				allErrs = append(allErrs, field.NotSupported(lifecyclePath.Child("migrate"), *resource.Lifecycle.Migrate, sets.List(availableExtensionStrategies)))
 			}
 		}
 	}
@@ -156,13 +209,13 @@ func ValidateControllerRegistrationSpecUpdate(new, old *core.ControllerRegistrat
 		return apivalidation.ValidateImmutableField(new, old, fldPath)
 	}
 
-	allErrs = append(allErrs, ValidateControllerResourceUpdate(new.Resources, old.Resources, fldPath.Child("resources"))...)
+	allErrs = append(allErrs, ValidateControllerResourcesUpdate(new.Resources, old.Resources, fldPath.Child("resources"))...)
 
 	return allErrs
 }
 
-// ValidateControllerResourceUpdate validates the update of ControllerResource objects.
-func ValidateControllerResourceUpdate(new, old []core.ControllerResource, fldPath *field.Path) field.ErrorList {
+// ValidateControllerResourcesUpdate validates the update of ControllerResource objects.
+func ValidateControllerResourcesUpdate(new, old []core.ControllerResource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	kindTypeToPrimary := make(map[string]*bool, len(old))

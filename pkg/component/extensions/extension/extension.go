@@ -477,7 +477,7 @@ func (e *extension) waitCleanup(ctx context.Context, filterFn filter) error {
 }
 
 // getWantedExtensionTypes returns the types of all extension resources, that are currently needed based
-// on the configured shoot settings and globally enabled extensions.
+// on the configured shoot settings and automatically enabled extensions.
 func (e *extension) getWantedExtensionTypes() sets.Set[string] {
 	wantedExtensionTypes := sets.New[string]()
 	for _, ext := range e.values.Extensions {

@@ -30,6 +30,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
@@ -53,12 +54,12 @@ func init() {
 
 // ValidateGarden contains functionality for performing extended validation of a Garden object which is not possible
 // with standard CRD validation, see https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules.
-func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
+func ValidateGarden(garden *operatorv1alpha1.Garden, extensions []operatorv1alpha1.Extension) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateOperation(garden.Annotations[v1beta1constants.GardenerOperation], garden, field.NewPath("metadata", "annotations"))...)
 	allErrs = append(allErrs, validateDNS(garden.Spec.DNS, field.NewPath("spec", "dns"))...)
-	allErrs = append(allErrs, validateExtensions(garden.Spec.Extensions, field.NewPath("spec", "extensions"))...)
+	allErrs = append(allErrs, validateExtensions(garden.Spec.Extensions, extensions, field.NewPath("spec", "extensions"))...)
 	allErrs = append(allErrs, validateRuntimeCluster(garden.Spec.DNS, garden.Spec.RuntimeCluster, field.NewPath("spec", "runtimeCluster"))...)
 	allErrs = append(allErrs, validateVirtualCluster(garden.Spec.DNS, garden.Spec.VirtualCluster, garden.Spec.RuntimeCluster, field.NewPath("spec", "virtualCluster"))...)
 
@@ -76,12 +77,12 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 
 // ValidateGardenUpdate contains functionality for performing extended validation of a Garden object under update which
 // is not possible with standard CRD validation, see https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#validation-rules.
-func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
+func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden, extensions []operatorv1alpha1.Extension) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateRuntimeClusterUpdate(oldGarden, newGarden)...)
 	allErrs = append(allErrs, validateVirtualClusterUpdate(oldGarden, newGarden)...)
-	allErrs = append(allErrs, ValidateGarden(newGarden)...)
+	allErrs = append(allErrs, ValidateGarden(newGarden, extensions)...)
 
 	return allErrs
 }
@@ -751,13 +752,28 @@ func hasProvider(dns *operatorv1alpha1.DNSManagement, provider string) bool {
 	})
 }
 
-func validateExtensions(extensions []operatorv1alpha1.GardenExtension, fldPath *field.Path) field.ErrorList {
+func validateExtensions(extensions []operatorv1alpha1.GardenExtension, registeredExtensions []operatorv1alpha1.Extension, fldPath *field.Path) field.ErrorList {
 	var (
-		allErrs = field.ErrorList{}
-		types   = sets.Set[string]{}
+		allErrs                  = field.ErrorList{}
+		types                    = sets.Set[string]{}
+		registeredExtensionTypes = sets.Set[string]{}
 	)
 
+	for _, extension := range registeredExtensions {
+		for _, resource := range extension.Spec.Resources {
+			if resource.Kind != extensionsv1alpha1.ExtensionResource {
+				continue
+			}
+			if slices.Contains(resource.ClusterCompatibility, operatorv1alpha1.ClusterTypeGarden) {
+				registeredExtensionTypes.Insert(resource.Type)
+			}
+		}
+	}
+
 	for i, extension := range extensions {
+		if !registeredExtensionTypes.Has(extension.Type) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Index(i).Child("type"), extension.Type, sets.List(registeredExtensionTypes)))
+		}
 		if types.Has(extension.Type) {
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), extension.Type))
 		} else {

@@ -294,10 +294,27 @@ spec:
                     ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this
                     kind (aws-route53, gcp, auditlog, ...).
                   properties:
+                    autoEnable:
+                      description: |-
+                        AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
+                        This field can only be set for resources of kind "Extension".
+                      items:
+                        description: ClusterType defines the type of cluster.
+                        type: string
+                      type: array
+                    clusterCompatibility:
+                      description: |-
+                        ClusterCompatibility defines the compatibility of this resource with different cluster types.
+                        If compatibility is not specified, it will be defaulted to 'shoot'.
+                        This field can only be set for resources of kind "Extension".
+                      items:
+                        description: ClusterType defines the type of cluster.
+                        type: string
+                      type: array
                     globallyEnabled:
                       description: |-
                         GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
-                        This field is defaulted to false when kind is "Extension".
+                        Deprecated: This field is deprecated and will be removed in Gardener version v1.123. Please use AutoEnable instead.
                       type: boolean
                     kind:
                       description: Kind is the resource kind, for example "OperatingSystemConfig".

@@ -130,18 +130,27 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	c, err := r.instantiateComponents(ctx, log, garden, secretsManager, targetVersion, kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()), wildcardCert, enableSeedAuthorizer)
+	extensionList := &operatorv1alpha1.ExtensionList{}
+	if err := r.RuntimeClientSet.Client().List(ctx, extensionList); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	c, err := r.instantiateComponents(
+		ctx,
+		log,
+		garden,
+		secretsManager,
+		targetVersion,
+		kubernetes.NewApplier(r.RuntimeClientSet.Client(), r.RuntimeClientSet.Client().RESTMapper()),
+		wildcardCert,
+		enableSeedAuthorizer,
+		extensionList,
+	)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// TODO (martinweindel) Temporary flag. Remove it again, when all provider extensions supporting BackupBucket are deployable on Garden runtime cluster.
-	hasExtensionForBackupBucket, err := r.hasExtensionForBackupBucket(ctx, garden)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if err := r.runRuntimeSetupFlow(ctx, log, garden, c); err != nil {
+	if err := r.runRuntimeSetupFlow(ctx, log, garden, c, extensionList); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -156,6 +165,9 @@ func (r *Reconciler) reconcile(
 	)
 
 	var (
+		// TODO (martinweindel) Temporary flag. Remove it again, when all provider extensions supporting BackupBucket are deployable on Garden runtime cluster.
+		hasExtensionForBackupBucket = r.hasExtensionForBackupBucket(garden, extensionList)
+
 		backupConfigured        = helper.GetETCDMainBackup(garden) != nil
 		virtualClusterClientSet kubernetes.Interface
 		virtualClusterClient    client.Client
@@ -604,7 +616,7 @@ func (r *Reconciler) reconcile(
 }
 
 // runRuntimeSetupFlow deploys the most basic components and resources in the garden runtime cluster, which are later required by the reconciliation flow.
-func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, c components) error {
+func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, c components, extensionList *operatorv1alpha1.ExtensionList) error {
 	var (
 		g = flow.NewGraph("Garden runtime setup")
 
@@ -645,7 +657,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		_ = g.Add(flow.Task{
 			Name: "Waiting for Extensions to get ready",
 			Fn: func(ctx context.Context) error {
-				return r.waitUntilRequiredExtensionsReady(ctx, log, garden)
+				return r.waitUntilRequiredExtensionsReady(ctx, log, garden, extensionList)
 			},
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
@@ -1092,24 +1104,20 @@ func (r *Reconciler) listManagedDNSRecords(ctx context.Context, dnsRecordList *e
 	return nil
 }
 
-func (r *Reconciler) hasExtensionForBackupBucket(ctx context.Context, garden *operatorv1alpha1.Garden) (bool, error) {
+func (r *Reconciler) hasExtensionForBackupBucket(garden *operatorv1alpha1.Garden, extensionList *operatorv1alpha1.ExtensionList) bool {
 	backup := helper.GetETCDMainBackup(garden)
 	if backup == nil {
-		return false, nil
+		return false
 	}
 
-	list := &operatorv1alpha1.ExtensionList{}
-	if err := r.RuntimeClientSet.Client().List(ctx, list); err != nil {
-		return false, fmt.Errorf("failed listing extensions: %w", err)
-	}
-	for _, ext := range list.Items {
+	for _, ext := range extensionList.Items {
 		for _, res := range ext.Spec.Resources {
 			if res.Kind == extensionsv1alpha1.BackupBucketResource && res.Type == backup.Provider {
-				return true, nil
+				return true
 			}
 		}
 	}
-	return false, nil
+	return false
 }
 
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {
@@ -1234,8 +1242,8 @@ func getGardenerAPIServerVersion(log logr.Logger, secretsManager secretsmanager.
 var IntervalWaitUntilExtensionReady = 5 * time.Second
 
 // waitUntilRequiredExtensionsReady waits until all the extensions required for a garden reconciliation are ready.
-func (r *Reconciler) waitUntilRequiredExtensionsReady(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden) error {
-	requiredExtensions := operator.ComputeRequiredExtensionsForGarden(garden)
+func (r *Reconciler) waitUntilRequiredExtensionsReady(ctx context.Context, log logr.Logger, garden *operatorv1alpha1.Garden, extensionList *operatorv1alpha1.ExtensionList) error {
+	requiredExtensions := operator.ComputeRequiredExtensionsForGarden(garden, extensionList)
 
 	return retry.UntilTimeout(ctx, IntervalWaitUntilExtensionReady, time.Minute, func(ctx context.Context) (done bool, err error) {
 		extensionList := &operatorv1alpha1.ExtensionList{}
