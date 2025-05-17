@@ -2711,6 +2711,16 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(MemorySwapConfiguration)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ImageMinimumGCAge != nil {
+		in, out := &in.ImageMinimumGCAge, &out.ImageMinimumGCAge
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ImageMaximumGCAge != nil {
+		in, out := &in.ImageMaximumGCAge, &out.ImageMaximumGCAge
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 

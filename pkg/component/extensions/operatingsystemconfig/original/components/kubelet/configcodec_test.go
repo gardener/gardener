@@ -62,6 +62,7 @@ var _ = Describe("ConfigCodec", func() {
 			},
 			NodeStatusUpdateFrequency:   metav1.Duration{Duration: 10 * time.Second},
 			ImageMinimumGCAge:           metav1.Duration{Duration: 2 * time.Minute},
+			ImageMaximumGCAge:           metav1.Duration{Duration: 0 * time.Second},
 			ImageGCHighThresholdPercent: ptr.To[int32](50),
 			ImageGCLowThresholdPercent:  ptr.To[int32](40),
 			VolumeStatsAggPeriod:        metav1.Duration{Duration: 1 * time.Minute},

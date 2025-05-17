@@ -1020,6 +1020,10 @@ type KubeletConfig struct {
 	// Please merge existing resource reservations into the kubeReserved field.
 	// TODO(MichaelEischer): Drop this field after support for Kubernetes 1.30 is dropped.
 	SystemReserved *KubeletConfigReserved
+	// ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
+	ImageMinimumGCAge *metav1.Duration
+	// ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected.
+	ImageMaximumGCAge *metav1.Duration
 	// ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
 	ImageGCHighThresholdPercent *int32
 	// ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.

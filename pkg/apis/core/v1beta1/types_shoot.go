@@ -1370,6 +1370,14 @@ type KubeletConfig struct {
 	// MemorySwap configures swap memory available to container workloads.
 	// +optional
 	MemorySwap *MemorySwapConfiguration `json:"memorySwap,omitempty" protobuf:"bytes,26,opt,name=memorySwap"`
+	// ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
+	// Default: 2m0s
+	// +optional
+	ImageMinimumGCAge *metav1.Duration `json:"imageMinimumGCAge,omitempty" protobuf:"bytes,27,opt,name=imageMinimumGCAge"`
+	// ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected.
+	// Default: 0s
+	// +optional
+	ImageMaximumGCAge *metav1.Duration `json:"imageMaximumGCAge,omitempty" protobuf:"bytes,28,opt,name=imageMaximumGCAge"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
