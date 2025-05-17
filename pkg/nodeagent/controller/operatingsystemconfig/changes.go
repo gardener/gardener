@@ -122,7 +122,18 @@ func computeOperatingSystemConfigChanges(log logr.Logger, fs afero.Afero, newOSC
 
 		changes.Containerd.ConfigFileChanged = true
 		if extensionsv1alpha1helper.HasContainerdConfiguration(newOSC.Spec.CRIConfig) {
-			changes.Containerd.Registries.Desired = newOSC.Spec.CRIConfig.Containerd.Registries
+			newRegistries := newOSC.Spec.CRIConfig.Containerd.Registries
+			upstreamsToProbe := make([]string, 0, len(newRegistries))
+			for _, registryConfig := range newRegistries {
+				if ptr.Deref(registryConfig.ReadinessProbe, false) {
+					upstreamsToProbe = append(upstreamsToProbe, registryConfig.Upstream)
+				}
+			}
+
+			changes.Containerd.Registries = containerdRegistries{
+				Desired:          newRegistries,
+				UpstreamsToProbe: upstreamsToProbe,
+			}
 		}
 		changes.lock.Lock()
 		defer changes.lock.Unlock()
@@ -473,6 +484,7 @@ func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1a
 		Desired: newRegistries,
 	}
 
+	// Compute deleted upstreams
 	upstreamsInUse := sets.New[string]()
 	for _, registryConfig := range r.Desired {
 		upstreamsInUse.Insert(registryConfig.Upstream)
@@ -481,6 +493,29 @@ func computeContainerdRegistryDiffs(newRegistries, oldRegistries []extensionsv1a
 	r.Deleted = slices.DeleteFunc(oldRegistries, func(config extensionsv1alpha1.RegistryConfig) bool {
 		return upstreamsInUse.Has(config.Upstream)
 	})
+
+	// Compute upstreams to probe
+	for _, newRegistry := range newRegistries {
+		// Exit early if the registry endpoints should not be probed.
+		if !ptr.Deref(newRegistry.ReadinessProbe, false) {
+			continue
+		}
+
+		oldRegistryIndex := slices.IndexFunc(oldRegistries, func(oldRegistry extensionsv1alpha1.RegistryConfig) bool {
+			return oldRegistry.Upstream == newRegistry.Upstream
+		})
+
+		if oldRegistryIndex == -1 {
+			// A new registry config with enabled readiness probe is added. It has to be probed.
+			r.UpstreamsToProbe = append(r.UpstreamsToProbe, newRegistry.Upstream)
+		} else {
+			oldRegistry := oldRegistries[oldRegistryIndex]
+			if !apiequality.Semantic.DeepEqual(oldRegistry, newRegistry) {
+				// There is a change in the registry config. It has to be probed again.
+				r.UpstreamsToProbe = append(r.UpstreamsToProbe, newRegistry.Upstream)
+			}
+		}
+	}
 
 	return r
 }
