@@ -49,6 +49,7 @@ type ConfigurableKubeletConfigParameters struct {
 	ProtectKernelDefaults            *bool
 	SystemReserved                   map[string]string
 	WithStaticPodPath                bool
+	MaxParallelImagePulls            *int32
 }
 
 const (
@@ -83,6 +84,7 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.ImageGCLowThresholdPercent = kubeletConfig.ImageGCLowThresholdPercent
 		out.SeccompDefault = kubeletConfig.SeccompDefault
 		out.SerializeImagePulls = kubeletConfig.SerializeImagePulls
+		out.MaxParallelImagePulls = kubeletConfig.MaxParallelImagePulls
 		out.RegistryPullQPS = kubeletConfig.RegistryPullQPS
 		out.RegistryBurst = kubeletConfig.RegistryBurst
 		out.FeatureGates = kubeletConfig.FeatureGates

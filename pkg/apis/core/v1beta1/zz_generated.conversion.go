@@ -4253,6 +4253,7 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	out.ProtectKernelDefaults = (*bool)(unsafe.Pointer(in.ProtectKernelDefaults))
 	out.StreamingConnectionIdleTimeout = (*metav1.Duration)(unsafe.Pointer(in.StreamingConnectionIdleTimeout))
 	out.MemorySwap = (*core.MemorySwapConfiguration)(unsafe.Pointer(in.MemorySwap))
+	out.MaxParallelImagePulls = (*int32)(unsafe.Pointer(in.MaxParallelImagePulls))
 	return nil
 }
 
@@ -4289,6 +4290,7 @@ func autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletCon
 	out.ProtectKernelDefaults = (*bool)(unsafe.Pointer(in.ProtectKernelDefaults))
 	out.StreamingConnectionIdleTimeout = (*metav1.Duration)(unsafe.Pointer(in.StreamingConnectionIdleTimeout))
 	out.MemorySwap = (*MemorySwapConfiguration)(unsafe.Pointer(in.MemorySwap))
+	out.MaxParallelImagePulls = (*int32)(unsafe.Pointer(in.MaxParallelImagePulls))
 	return nil
 }
 
