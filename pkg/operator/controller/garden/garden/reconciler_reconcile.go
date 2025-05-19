@@ -847,6 +847,7 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			nil,
 			services,
 			nil,
+			"",
 			shared.NormalizeResources(getKubernetesResourcesForEncryption(garden)),
 			utils.FilterEntriesByFilterFn(shared.NormalizeResources(garden.Status.EncryptedResources), operator.IsServedByKubeAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
