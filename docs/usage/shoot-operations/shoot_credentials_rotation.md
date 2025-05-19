@@ -147,7 +147,7 @@ Now you can just complete the rotation as usual (see above).
 In case of manual in-place update, shoot CA rotation phase will be at `Preparing` until all the worker pools are successfully in-place updated and there are no pending worker pools with strategy ManualInPlaceUpdate.
 
 You can check which worker pools still need to be updated by reading `.status.inPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate`.
-Once this list is empty, the `phase` transitions to `Prepared`.After this rotation will be completed as usual (see above).
+Once this list is empty, the `phase` transitions to `Prepared`. After this rotation will be completed as usual (see above).
 
 ### Observability Password(s) For Plutono and Prometheus
 
@@ -282,7 +282,7 @@ It works the same way for the `ServiceAccount` token signing key (using `rotate-
 #### Worker Node with ManualInPlaceUpdate Update Strategy
 
 Similar to the rotation of the certificate authorities, in case of manual in-place update, `ServiceAccount` token signing key rotation phase will be at `Preparing` until all the worker pools are successfully in-place updated and there are no pending worker pools with strategy ManualInPlaceUpdate.
-Please read [this section](#worker-node-with-manualinplaceupdate-update-strategy) to get more information.
+Please read [this section](#worker-node-with-manualinplaceupdate-update-strategy) for more information.
 
 ### OpenVPN TLS Auth Keys
 
