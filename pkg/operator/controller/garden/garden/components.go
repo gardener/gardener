@@ -850,12 +850,9 @@ func (r *Reconciler) newSNI(ctx context.Context, garden *operatorv1alpha1.Garden
 					return nil, fmt.Errorf("failed to get SNI TLS secret %q: %w", *sni.SecretName, err)
 				}
 			} else {
-				wildCardSecret, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
+				wildCardSecret, err := gardenerutils.GetRequiredGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
 				if err != nil {
-					return nil, fmt.Errorf("failed to get garden wildcard certificate secret %q: %w", *sni.SecretName, err)
-				}
-				if wildCardSecret == nil {
-					return nil, fmt.Errorf("no garden wildcard certificate secret found")
+					return nil, fmt.Errorf("failed setting up SNI: %w", err)
 				}
 				tlsSecret = *wildCardSecret
 			}

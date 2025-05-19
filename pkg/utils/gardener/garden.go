@@ -338,3 +338,23 @@ func DefaultGardenerResourcesForEncryption() sets.Set[string] {
 		gardencorev1beta1.Resource("shootstates").String(),
 	)
 }
+
+// GetGardenWildcardCertificate gets the wildcard TLS certificate for the Garden runtime ingress and SNI domains.
+// Nil is returned if no wildcard certificate is configured.
+func GetGardenWildcardCertificate(ctx context.Context, c client.Client, namespace string) (*corev1.Secret, error) {
+	return getWildcardCertificate(ctx, c, namespace, v1beta1constants.GardenRoleGardenWildcardCert)
+}
+
+// GetRequiredGardenWildcardCertificate gets the wildcard TLS certificate for the Garden runtime ingress and SNI domains.
+// An error is returned if no wildcard certificate is found.
+func GetRequiredGardenWildcardCertificate(ctx context.Context, c client.Client, namespace string) (*corev1.Secret, error) {
+	tlsSecret, err := GetGardenWildcardCertificate(ctx, c, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get garden wildcard certificate secret: %w", err)
+	}
+	if tlsSecret == nil {
+		return nil, fmt.Errorf("no garden wildcard certificate secret found")
+	}
+
+	return tlsSecret, nil
+}

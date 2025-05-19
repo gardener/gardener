@@ -778,12 +778,9 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			if apiServer.SNI != nil {
 				tlsSecretName := apiServer.SNI.SecretName
 				if tlsSecretName == nil {
-					tlsSecret, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
+					tlsSecret, err := gardenerutils.GetRequiredGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
 					if err != nil {
-						return fmt.Errorf("failed to get garden wildcard certificate secret: %w", err)
-					}
-					if tlsSecret == nil {
-						return fmt.Errorf("no garden wildcard certificate secret found")
+						return fmt.Errorf("failed setting up SNI for API server: %w", err)
 					}
 					tlsSecretName = &tlsSecret.Name
 				}

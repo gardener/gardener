@@ -98,12 +98,6 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 	return getWildcardCertificate(ctx, c, v1beta1constants.GardenNamespace, v1beta1constants.GardenRoleControlPlaneWildcardCert)
 }
 
-// GetGardenWildcardCertificate gets the wildcard TLS certificate for the Garden runtime ingress domain.
-// Nil is returned if no wildcard certificate is configured.
-func GetGardenWildcardCertificate(ctx context.Context, c client.Client, namespace string) (*corev1.Secret, error) {
-	return getWildcardCertificate(ctx, c, namespace, v1beta1constants.GardenRoleGardenWildcardCert)
-}
-
 // getWildcardCertificate gets the wildcard TLS certificate for the ingress domain for the given role.
 // Nil is returned if no wildcard certificate is configured.
 func getWildcardCertificate(ctx context.Context, c client.Client, namespace, role string) (*corev1.Secret, error) {
