@@ -71,7 +71,7 @@ var _ = Describe("Extension validation tests", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
-				"Detail": Equal("DefaultSpec.ProviderConfig: <nil pointer> != runtime.RawExtension"),
+				"Detail": Equal("cannot update shoot spec if deletion timestamp is set. Requested changes: DefaultSpec.ProviderConfig: <nil pointer> != runtime.RawExtension"),
 			}))))
 		})
 

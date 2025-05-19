@@ -399,7 +399,7 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
-				"Detail": Equal("Resources.slice[0].Type: another-os != my-os"),
+				"Detail": Equal("cannot update shoot spec if deletion timestamp is set. Requested changes: Resources.slice[0].Type: another-os != my-os"),
 			}))))
 		})
 
