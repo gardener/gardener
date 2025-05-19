@@ -1045,7 +1045,7 @@ type KubeletConfig struct {
 	// MemorySwap configures swap memory available to container workloads.
 	MemorySwap *MemorySwapConfiguration
 	// MaxParallelImagePulls describes the maximum number of image pulls in parallel. The value must be a positive number.
-	// When updating this field, the SerializeImagePulls (pull one image at a time) must be set to false.
+	// This field cannot be set if SerializeImagePulls (pull one image at a time) is set to true.
 	// Setting it to nil means no limit.
 	// Default: nil
 	MaxParallelImagePulls *int32

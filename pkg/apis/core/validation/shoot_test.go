@@ -7462,7 +7462,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				))
 			})
 
-			It("should not allow seriazlizeImagePulls to be true when maxParallelImagePulls is set", func() {
+			It("should not allow maxParallelImagePulls > 1 when serializeImagePulls is set to true", func() {
 				Expect(ValidateKubeletConfig(core.KubeletConfig{
 					MaxParallelImagePulls: ptr.To[int32](10),
 					SerializeImagePulls:   ptr.To(true),
