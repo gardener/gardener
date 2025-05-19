@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"text/template"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/etcd/etcd"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
 	kubeapiserverconstants "github.com/gardener/gardener/pkg/component/kubernetes/apiserver/constants"
+	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -49,12 +49,11 @@ const (
 	ContainerNameKubeAPIServer     = "kube-apiserver"
 	containerNameVPNPathController = "vpn-path-controller"
 	containerNameVPNSeedClient     = "vpn-client"
-	containerNameVPNEnvoyProxy     = "envoy-proxy"
 
 	// EnvoyPortHAVPN is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
-	EnvoyPortHAVPN        = 9443
-	EnvoyHostHAVPN        = "kube-apiserver-http-proxy"
-	EnvoyMetricsPortHAVPN = 15000
+	EnvoyPortHAVPN = 9443
+	// EnvoyHostHAVPN is the hostname of the envoy proxy when running in HA-VPN mode.
+	EnvoyHostHAVPN = "kube-apiserver-http-proxy"
 
 	volumeNameAuthenticationWebhookKubeconfig = "authentication-webhook-kubeconfig"
 	volumeNameCA                              = "ca"
@@ -95,27 +94,10 @@ const (
 	volumeMountPathVPNSeedClient                   = "/srv/secrets/vpn-client"
 	volumeMountPathAPIServerAccess                 = "/var/run/secrets/kubernetes.io/serviceaccount"
 	volumeMountPathVPNSeedTLSAuth                  = "/srv/secrets/tlsauth"
-	volumeMountPathCerts                           = "/srv/secrets/vpn-server"
 	volumeMountPathDevNetTun                       = "/dev/net/tun"
-	volumeMountPathEnvoyConfig                     = "/etc/envoy"
 
 	fileNameCABundle = "ca.crt"
 )
-
-var (
-	tplNameEnvoy = "envoy.yaml.tpl"
-	//go:embed templates/envoy.yaml.tpl
-	tplContentEnvoy string
-	tplEnvoy        *template.Template
-)
-
-func init() {
-	var err error
-	tplEnvoy, err = template.
-		New(tplNameEnvoy).
-		Parse(tplContentEnvoy)
-	utilruntime.Must(err)
-}
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: k.values.NamePrefix + v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
@@ -867,27 +849,6 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	return nil
 }
 
-func (k *kubeAPIServer) getEnvoyConfig() (string, error) {
-	values := map[string]any{
-		"listenAddress":   "0.0.0.0",
-		"listenAddressV6": "::",
-		"dnsLookupFamily": "ALL",
-		"envoyPort":       EnvoyPortHAVPN,
-		"certChain":       volumeMountPathCerts + `/` + secrets.DataKeyCertificate,
-		"privateKey":      volumeMountPathCerts + `/` + secrets.DataKeyPrivateKey,
-		"caCert":          volumeMountPathCerts + `/` + fileNameCABundle,
-		"metricsPort":     EnvoyMetricsPortHAVPN,
-	}
-
-	var envoyConfig strings.Builder
-	err := tplEnvoy.Execute(&envoyConfig, values)
-	if err != nil {
-		return "", err
-	}
-
-	return envoyConfig.String(), nil
-}
-
 func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 	container := k.vpnSeedClientContainer(0)
 	container.Name = "vpn-client-init"
@@ -1069,61 +1030,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 }
 
 func (k *kubeAPIServer) vpnSeedEnvoyProxyContainer() *corev1.Container {
-	return &corev1.Container{
-		Name:            containerNameVPNEnvoyProxy,
-		Image:           k.values.Images.EnvoyProxy,
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command: []string{
-			"envoy",
-			"--concurrency",
-			"2",
-			"-c",
-			fmt.Sprintf("%s/%s", volumeMountPathEnvoyConfig, configMapEnvoyConfigDataKey),
-		},
-		ReadinessProbe: &corev1.Probe{
-			ProbeHandler: corev1.ProbeHandler{
-				TCPSocket: &corev1.TCPSocketAction{
-					Port: intstr.FromInt32(EnvoyPortHAVPN),
-				},
-			},
-		},
-		LivenessProbe: &corev1.Probe{
-			ProbeHandler: corev1.ProbeHandler{
-				TCPSocket: &corev1.TCPSocketAction{
-					Port: intstr.FromInt32(EnvoyPortHAVPN),
-				},
-			},
-		},
-		Resources: corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("20m"),
-				corev1.ResourceMemory: resource.MustParse("100Mi"),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("850M"),
-			},
-		},
-		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
-			Capabilities: &corev1.Capabilities{
-				Drop: []corev1.Capability{
-					"all",
-				},
-			},
-			RunAsGroup:   ptr.To(int64(v1beta1constants.EnvoyVPNGroupId)),
-			RunAsNonRoot: ptr.To(true),
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      volumeNameCerts,
-				MountPath: volumeMountPathCerts,
-			},
-			{
-				Name:      volumeNameEnvoyConfig,
-				MountPath: volumeMountPathEnvoyConfig,
-			},
-		},
-	}
+	return envoy.GetEnvoyProxyContainer(k.values.Images.EnvoyProxy)
 }
 
 func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv1.Deployment) {
