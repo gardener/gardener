@@ -8,14 +8,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/afero"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 	"k8s.io/component-base/version"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -55,9 +58,14 @@ type Extension struct {
 	ControllerInstallation *gardencorev1beta1.ControllerInstallation
 }
 
-// DirFS returns an fs.FS for the files in the given directory.
-// Exposed for testing.
-var DirFS = os.DirFS
+var (
+	// DirFS returns a fs.FS for the files in the given directory.
+	// Exposed for testing.
+	DirFS = os.DirFS
+	// NewFs returns an afero.Fs.
+	// Exposed for testing.
+	NewFs = afero.NewOsFs
+)
 
 // NewAutonomousBotanistFromManifests reads the manifests from dir and initializes a new AutonomousBotanist with them.
 func NewAutonomousBotanistFromManifests(
@@ -66,8 +74,11 @@ func NewAutonomousBotanistFromManifests(
 	clientSet kubernetes.Interface,
 	dir string,
 	runsControlPlane bool,
-) (*AutonomousBotanist, error) {
-	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, err := gardenadm.ReadManifests(log, DirFS(dir))
+) (
+	*AutonomousBotanist,
+	error,
+) {
+	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, secrets, err := gardenadm.ReadManifests(log, DirFS(dir))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
 	}
@@ -77,7 +88,7 @@ func NewAutonomousBotanistFromManifests(
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
 	}
 
-	b, err := NewAutonomousBotanist(ctx, log, clientSet, project, cloudProfile, shoot, extensions, runsControlPlane)
+	b, err := NewAutonomousBotanist(ctx, log, clientSet, project, cloudProfile, shoot, extensions, secrets, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed constructing botanist: %w", err)
 	}
@@ -94,9 +105,68 @@ func NewAutonomousBotanist(
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
 	extensions []Extension,
+	secrets []*corev1.Secret,
 	runsControlPlane bool,
 ) (
 	*AutonomousBotanist,
+	error,
+) {
+	autonomousBotanist, err := NewAutonomousBotanistWithoutResources(log)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
+	}
+
+	autonomousBotanist.Botanist, err = newBotanist(ctx, log, clientSet, autonomousBotanist.FS, project, cloudProfile, shoot, runsControlPlane)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating botanist: %w", err)
+	}
+
+	autonomousBotanist.Extensions = extensions
+
+	if err := autonomousBotanist.initializeFakeGardenResources(ctx, secrets); err != nil {
+		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
+	}
+
+	return autonomousBotanist, nil
+}
+
+// NewAutonomousBotanistWithoutResources creates a new AutonomousBotanist without instantiating a Botanist struct.
+func NewAutonomousBotanistWithoutResources(log logr.Logger) (*AutonomousBotanist, error) {
+	hostName, err := nodeagent.GetHostName()
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching hostname: %w", err)
+	}
+
+	return &AutonomousBotanist{
+		Botanist: &botanistpkg.Botanist{Operation: newOperation(log, newFakeSeedClientSet(""))},
+
+		HostName: hostName,
+		DBus:     dbus.New(log),
+		FS:       afero.Afero{Fs: NewFs()},
+	}, nil
+}
+
+func newOperation(log logr.Logger, clientSet kubernetes.Interface) *operation.Operation {
+	return &operation.Operation{
+		Logger:         log,
+		Clock:          clock.RealClock{},
+		GardenClient:   newFakeGardenClient(),
+		SeedClientSet:  clientSet,
+		ShootClientSet: clientSet,
+	}
+}
+
+func newBotanist(
+	ctx context.Context,
+	log logr.Logger,
+	clientSet kubernetes.Interface,
+	fs afero.Afero,
+	project *gardencorev1beta1.Project,
+	cloudProfile *gardencorev1beta1.CloudProfile,
+	shoot *gardencorev1beta1.Shoot,
+	runsControlPlane bool,
+) (
+	*botanistpkg.Botanist,
 	error,
 ) {
 	gardenObj, err := newGardenObject(ctx, project)
@@ -104,7 +174,7 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed creating garden object: %w", err)
 	}
 
-	shootObj, err := newShootObject(ctx, project.Name, cloudProfile, shoot, runsControlPlane)
+	shootObj, err := newShootObject(ctx, fs, project.Name, cloudProfile, shoot, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating shoot object: %w", err)
 	}
@@ -127,52 +197,10 @@ func NewAutonomousBotanist(
 	o.Seed = seedObj
 	o.Shoot = shootObj
 
-	b, err := botanistpkg.New(ctx, o)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating botanist: %w", err)
-	}
-
-	autonomousBotanist, err := NewAutonomousBotanistWithoutResources(log)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
-	}
-
-	autonomousBotanist.Botanist = b
-	autonomousBotanist.Extensions = extensions
-
-	if err := autonomousBotanist.initializeFakeGardenResources(ctx); err != nil {
-		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
-	}
-
-	return autonomousBotanist, nil
+	return botanistpkg.New(ctx, o)
 }
 
-// NewAutonomousBotanistWithoutResources creates a new AutonomousBotanist without instantiating a Botanist struct.
-func NewAutonomousBotanistWithoutResources(log logr.Logger) (*AutonomousBotanist, error) {
-	hostName, err := nodeagent.GetHostName()
-	if err != nil {
-		return nil, fmt.Errorf("failed fetching hostname: %w", err)
-	}
-
-	return &AutonomousBotanist{
-		Botanist: &botanistpkg.Botanist{Operation: newOperation(log, newFakeSeedClientSet(""))},
-
-		HostName: hostName,
-		DBus:     dbus.New(log),
-		FS:       afero.Afero{Fs: afero.NewOsFs()},
-	}, nil
-}
-
-func newOperation(log logr.Logger, clientSet kubernetes.Interface) *operation.Operation {
-	return &operation.Operation{
-		Logger:         log,
-		GardenClient:   newFakeGardenClient(),
-		SeedClientSet:  clientSet,
-		ShootClientSet: clientSet,
-	}
-}
-
-func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context) error {
+func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context, secrets []*corev1.Secret) error {
 	if err := b.GardenClient.Create(ctx, b.Seed.GetInfo().DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
 		return fmt.Errorf("failed creating Seed %s: %w", b.Seed.GetInfo().Name, err)
 	}
@@ -192,6 +220,12 @@ func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context) 
 
 		if err := b.GardenClient.Create(ctx, extension.ControllerInstallation.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
 			return fmt.Errorf("failed creating ControllerInstallation %s: %w", extension.ControllerInstallation.Name, err)
+		}
+	}
+
+	for _, secret := range secrets {
+		if err := b.GardenClient.Create(ctx, secret.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating Secret %s: %w", secret.Name, err)
 		}
 	}
 
@@ -229,17 +263,23 @@ func newSeedObject(ctx context.Context, shootObj *shootpkg.Shoot) (*seedpkg.Seed
 
 func newShootObject(
 	ctx context.Context,
+	fs afero.Afero,
 	projectName string,
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
 	runsControlPlane bool,
-) (*shootpkg.Shoot, error) {
+) (
+	*shootpkg.Shoot,
+	error,
+) {
 	shoot.Status.TechnicalID = gardenerutils.ComputeTechnicalID(projectName, shoot)
 	shoot.Status.Gardener = gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion}
-	// TODO(rfranzke): This UID is used to compute the name of the BackupEntry object. Consider persisting this random
-	//  UID on the machine in case `gardenadm init` is retried/executed multiple times (otherwise, we'd always generate
-	//  a new one).
-	shoot.Status.UID = uuid.NewUUID()
+
+	uid, err := shootUID(fs)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching shoot UID: %w", err)
+	}
+	shoot.Status.UID = uid
 
 	obj, err := shootpkg.
 		NewBuilder().
@@ -274,6 +314,8 @@ func newFakeGardenClient() client.Client {
 		NewClientBuilder().
 		WithScheme(kubernetes.GardenScheme).
 		WithStatusSubresource(
+			&gardencorev1beta1.BackupBucket{},
+			&gardencorev1beta1.BackupEntry{},
 			&gardencorev1beta1.ControllerInstallation{},
 			&gardencorev1beta1.Shoot{},
 		).
@@ -291,4 +333,29 @@ func newFakeSeedClientSet(kubernetesVersion string) kubernetes.Interface {
 		WithRESTConfig(&rest.Config{}).
 		WithVersion(kubernetesVersion).
 		Build()
+}
+
+func shootUID(fs afero.Afero) (types.UID, error) {
+	var (
+		path                    = filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
+		permissions os.FileMode = 0600
+	)
+
+	content, err := fs.ReadFile(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("failed reading file %q: %w", path, err)
+		}
+
+		if err := fs.MkdirAll(filepath.Dir(path), permissions); err != nil {
+			return "", fmt.Errorf("failed creating directory %q: %w", filepath.Dir(path), err)
+		}
+
+		content = []byte(uuid.NewUUID())
+		if err := fs.WriteFile(path, content, permissions); err != nil {
+			return "", fmt.Errorf("failed writing file %q: %w", path, err)
+		}
+	}
+
+	return types.UID(content), nil
 }

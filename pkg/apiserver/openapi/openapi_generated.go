@@ -43,6 +43,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditPolicy":                                schema_pkg_apis_core_v1beta1_AuditPolicy(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AuthorizerKubeconfigReference":              schema_pkg_apis_core_v1beta1_AuthorizerKubeconfigReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone":                           schema_pkg_apis_core_v1beta1_AvailabilityZone(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup":                                     schema_pkg_apis_core_v1beta1_Backup(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucket":                               schema_pkg_apis_core_v1beta1_BackupBucket(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketList":                           schema_pkg_apis_core_v1beta1_BackupBucketList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider":                       schema_pkg_apis_core_v1beta1_BackupBucketProvider(ref),
@@ -176,7 +177,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingList":                          schema_pkg_apis_core_v1beta1_SecretBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingProvider":                      schema_pkg_apis_core_v1beta1_SecretBindingProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Seed":                                       schema_pkg_apis_core_v1beta1_Seed(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup":                                 schema_pkg_apis_core_v1beta1_SeedBackup(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS":                                    schema_pkg_apis_core_v1beta1_SeedDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider":                            schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedList":                                   schema_pkg_apis_core_v1beta1_SeedList(ref),
@@ -1391,6 +1391,56 @@ func schema_pkg_apis_core_v1beta1_AvailabilityZone(ref common.ReferenceCallback)
 				Required: []string{"name"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_Backup(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Backup contains the object store configuration for backups for shoot (currently only etcd).",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"provider": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Provider is a provider name. This field is immutable.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+					"region": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Region is a region name. This field is immutable.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"secretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where backups should be stored. It should have enough privileges to manipulate the objects as well as buckets. Deprecated: This field will be removed after v1.121.0 has been released. Use `CredentialsRef` instead. Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
+					"credentialsRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CredentialsRef is reference to a resource holding the credentials used for authentication with the object store service where the backups are stored. Supported referenced resources are v1.Secrets and security.gardener.cloud/v1alpha1.WorkloadIdentity",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+				},
+				Required: []string{"provider", "secretRef"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -7709,56 +7759,6 @@ func schema_pkg_apis_core_v1beta1_Seed(ref common.ReferenceCallback) common.Open
 	}
 }
 
-func schema_pkg_apis_core_v1beta1_SeedBackup(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SeedBackup contains the object store configuration for backups for shoot (currently only etcd).",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"provider": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Provider is a provider name. This field is immutable.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"providerConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig is the configuration passed to BackupBucket resource.",
-							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
-						},
-					},
-					"region": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Region is a region name. This field is immutable.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"secretRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a Secret object containing the cloud provider credentials for the object store where backups should be stored. It should have enough privileges to manipulate the objects as well as buckets. Deprecated: This field will be removed after v1.121.0 has been released. Use `CredentialsRef` instead. Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
-						},
-					},
-					"credentialsRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CredentialsRef is reference to a resource holding the credentials used for authentication with the object store service where the backups are stored. Supported referenced resources are v1.Secrets and security.gardener.cloud/v1alpha1.WorkloadIdentity",
-							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
-						},
-					},
-				},
-				Required: []string{"provider", "secretRef"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
-	}
-}
-
 func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -8462,7 +8462,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 					"backup": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Backup holds the object store configuration for the backups of shoot (currently only etcd). If it is not specified, then there won't be any backups taken for shoots associated with this seed. If backup field is present in seed, then backups of the etcd from shoot control plane will be stored under the configured object store.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup"),
 						},
 					},
 					"dns": {
@@ -8565,7 +8565,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AccessRestriction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume"},
 	}
 }
 
@@ -10442,8 +10442,18 @@ func schema_pkg_apis_core_v1beta1_WorkerControlPlane(ref common.ReferenceCallbac
 			SchemaProps: spec.SchemaProps{
 				Description: "WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"backup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Backup holds the object store configuration for the backups of shoot (currently only etcd). If it is not specified, then there won't be any backups taken.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup"),
+						},
+					},
+				},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Backup"},
 	}
 }
 

@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -73,13 +72,7 @@ func (a *actuator) Delete(ctx context.Context, log logr.Logger, bb *extensionsv1
 }
 
 func (a *actuator) createBackupBucketGeneratedSecret(ctx context.Context, backupBucket *extensionsv1alpha1.BackupBucket) error {
-	generatedSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1beta1constants.SecretPrefixGeneratedBackupBucket + backupBucket.Name,
-			Namespace: v1beta1constants.GardenNamespace,
-		},
-	}
-
+	generatedSecret := &corev1.Secret{ObjectMeta: backupbucket.GeneratedSecretObjectMeta(backupBucket)}
 	if _, err := controllerutil.CreateOrUpdate(ctx, a.client, generatedSecret, func() error {
 		return nil
 	}); err != nil {

@@ -1669,7 +1669,12 @@ type Worker struct {
 }
 
 // WorkerControlPlane specifies that the shoot cluster control plane components should be running in this worker pool.
-type WorkerControlPlane struct{}
+type WorkerControlPlane struct {
+	// Backup holds the object store configuration for the backups of shoot (currently only etcd).
+	// If it is not specified, then there won't be any backups taken.
+	// +optional
+	Backup *Backup `json:"backup,omitempty" protobuf:"bytes,1,opt,name=backup"`
+}
 
 // MachineUpdateStrategy specifies the machine update strategy for the worker pool.
 type MachineUpdateStrategy string

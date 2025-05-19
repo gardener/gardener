@@ -51,7 +51,7 @@ type SeedSpec struct {
 	// If it is not specified, then there won't be any backups taken for shoots associated with this seed.
 	// If backup field is present in seed, then backups of the etcd from shoot control plane will be stored
 	// under the configured object store.
-	Backup *SeedBackup
+	Backup *Backup
 	// DNS contains DNS-relevant information about this seed cluster.
 	DNS SeedDNS
 	// Networks defines the pod, service and worker network of the Seed cluster.
@@ -98,8 +98,8 @@ type SeedStatus struct {
 	LastOperation *LastOperation
 }
 
-// SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
-type SeedBackup struct {
+// Backup contains the object store configuration for backups for shoot (currently only etcd).
+type Backup struct {
 	// Provider is a provider name. This field is immutable.
 	Provider string
 	// ProviderConfig is the configuration passed to BackupBucket resource.

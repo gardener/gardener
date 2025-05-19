@@ -114,7 +114,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should bump generation when backup.secretRef is synced with backup.credentialsRef", func() {
-				newSeed.Spec.Backup = &core.SeedBackup{
+				newSeed.Spec.Backup = &core.Backup{
 					SecretRef: corev1.SecretReference{
 						Namespace: "namespace",
 						Name:      "name",
@@ -127,7 +127,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should not bump generation when backup.secretRef is already synced with backup.credentialsRef", func() {
-				oldSeed.Spec.Backup = &core.SeedBackup{
+				oldSeed.Spec.Backup = &core.Backup{
 					SecretRef: corev1.SecretReference{
 						Namespace: "namespace",
 						Name:      "name",
@@ -139,7 +139,7 @@ var _ = Describe("Strategy", func() {
 						Name:       "name",
 					},
 				}
-				newSeed.Spec.Backup = &core.SeedBackup{
+				newSeed.Spec.Backup = &core.Backup{
 					SecretRef: corev1.SecretReference{
 						Namespace: "namespace",
 						Name:      "name",
@@ -151,7 +151,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should bump generation when backup.credentialsRef is synced with backup.secretRef", func() {
-				newSeed.Spec.Backup = &core.SeedBackup{
+				newSeed.Spec.Backup = &core.Backup{
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -166,7 +166,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should not bump generation when backup.credentialsRef is already synced with backup.secretRef", func() {
-				oldSeed.Spec.Backup = &core.SeedBackup{
+				oldSeed.Spec.Backup = &core.Backup{
 					SecretRef: corev1.SecretReference{
 						Namespace: "namespace",
 						Name:      "name",
@@ -178,7 +178,7 @@ var _ = Describe("Strategy", func() {
 						Name:       "name",
 					},
 				}
-				newSeed.Spec.Backup = &core.SeedBackup{
+				newSeed.Spec.Backup = &core.Backup{
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -194,7 +194,7 @@ var _ = Describe("Strategy", func() {
 
 		Describe("#syncBackupSecretRefAndCredentialsRef", func() {
 			It("should sync backup.secretRef with backup.credentialsRef", func() {
-				newSeed.Spec.Backup = &core.SeedBackup{
+				newSeed.Spec.Backup = &core.Backup{
 					SecretRef: corev1.SecretReference{
 						Namespace: "namespace",
 						Name:      "name",
@@ -213,7 +213,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should sync backup.credentialsRef referring secret with backup.secretRef", func() {
-				newSeed.Spec.Backup = &core.SeedBackup{
+				newSeed.Spec.Backup = &core.Backup{
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "v1",
 						Kind:       "Secret",
@@ -232,7 +232,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should not sync backup.credentialsRef referring workloadidentity with backup.secretRef", func() {
-				newSeed.Spec.Backup = &core.SeedBackup{
+				newSeed.Spec.Backup = &core.Backup{
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "security.gardener.cloud/v1alpha1",
 						Kind:       "WorkloadIdentity",
@@ -251,7 +251,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should not sync empty backup.credentialsRef with backup.secretRef", func() {
-				newSeed.Spec.Backup = &core.SeedBackup{
+				newSeed.Spec.Backup = &core.Backup{
 					CredentialsRef: nil,
 					SecretRef:      corev1.SecretReference{},
 				}
@@ -264,7 +264,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			It("should not sync backup.credentialsRef with backup.secretRef when they refer different resources", func() {
-				newSeed.Spec.Backup = &core.SeedBackup{
+				newSeed.Spec.Backup = &core.Backup{
 					CredentialsRef: &corev1.ObjectReference{
 						APIVersion: "security.gardener.cloud/v1alpha1",
 						Kind:       "WorkloadIdentity",

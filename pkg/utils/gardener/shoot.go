@@ -656,9 +656,9 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *Domain) sets.Set[string] {
 	requiredExtensions := sets.New[string]()
 
-	if seed != nil && seed.Spec.Backup != nil {
-		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
-		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider))
+	if backupConfig := v1beta1helper.GetBackupConfigForShoot(shoot, seed); backupConfig != nil {
+		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.BackupBucketResource, backupConfig.Provider))
+		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.BackupEntryResource, backupConfig.Provider))
 	}
 
 	if seed != nil {

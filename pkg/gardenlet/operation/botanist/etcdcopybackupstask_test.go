@@ -73,7 +73,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 				Name: seedName,
 			},
 			Spec: gardencorev1beta1.SeedSpec{
-				Backup: &gardencorev1beta1.SeedBackup{
+				Backup: &gardencorev1beta1.Backup{
 					Provider: "gcp",
 				},
 			},

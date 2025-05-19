@@ -60,7 +60,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 							Type: dnsProviderType,
 						},
 					},
-					Backup: &core.SeedBackup{
+					Backup: &core.Backup{
 						Provider: providerType1,
 					},
 				},
@@ -83,7 +83,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 
 		It("should add all the correct labels on update", func() {
 			newSeed := seed.DeepCopy()
-			newSeed.Spec.Backup = &core.SeedBackup{
+			newSeed.Spec.Backup = &core.Backup{
 				Provider: providerType2,
 			}
 

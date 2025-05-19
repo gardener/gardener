@@ -176,7 +176,7 @@ var _ = Describe("graph", func() {
 		seed1 = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{Name: "seed1"},
 			Spec: gardencorev1beta1.SeedSpec{
-				Backup: &gardencorev1beta1.SeedBackup{
+				Backup: &gardencorev1beta1.Backup{
 					CredentialsRef: &seed1BackupSecretCredentialsRef,
 				},
 				DNS: gardencorev1beta1.SeedDNS{
@@ -314,7 +314,7 @@ var _ = Describe("graph", func() {
 		seedConfig1 = &gardenletconfigv1alpha1.SeedConfig{
 			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				Spec: gardencorev1beta1.SeedSpec{
-					Backup: &gardencorev1beta1.SeedBackup{
+					Backup: &gardencorev1beta1.Backup{
 						CredentialsRef: &backupSecretCredentialsRef,
 					},
 				},
@@ -324,7 +324,7 @@ var _ = Describe("graph", func() {
 		seedConfig2 = &gardenletconfigv1alpha1.SeedConfig{
 			SeedTemplate: gardencorev1beta1.SeedTemplate{
 				Spec: gardencorev1beta1.SeedSpec{
-					Backup: &gardencorev1beta1.SeedBackup{
+					Backup: &gardencorev1beta1.Backup{
 						CredentialsRef: &backupSecretCredentialsRef,
 					},
 				},
@@ -472,7 +472,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("Update (all secret refs)")
 		seed1Copy = seed1.DeepCopy()
-		seed1.Spec.Backup = &gardencorev1beta1.SeedBackup{CredentialsRef: &seed1BackupSecretCredentialsRef}
+		seed1.Spec.Backup = &gardencorev1beta1.Backup{CredentialsRef: &seed1BackupSecretCredentialsRef}
 		seed1.Spec.DNS.Provider = &gardencorev1beta1.SeedDNSProvider{SecretRef: seed1DNSProviderSecretRef}
 		fakeInformerSeed.Update(seed1Copy, seed1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(7))

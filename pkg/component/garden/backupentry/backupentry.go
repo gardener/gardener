@@ -51,7 +51,8 @@ type Values struct {
 	BucketName string
 }
 
-// New creates a new instance of DeployWaiter for a BackupEntry.
+// New creates a new instance of DeployWaiter for a BackupEntry. It takes a garden client and returns a deployer for a
+// // core.gardener.cloud/v1beta1.BackupEntry resource in the garden cluster.
 func New(
 	log logr.Logger,
 	client client.Client,
@@ -203,7 +204,7 @@ func (b *backupEntry) GetActualBucketName() string {
 	return b.backupEntry.Spec.BucketName
 }
 
-// SetBackupBucket sets the name of the BackupBucket for this BackupEntry.
+// SetBucketName sets the name of the BackupBucket for this BackupEntry.
 func (b *backupEntry) SetBucketName(name string) {
 	b.values.BucketName = name
 }

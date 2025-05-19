@@ -896,9 +896,9 @@ var _ = Describe("Scheduler_Control", func() {
 
 var _ = DescribeTable("condition is false",
 	func(conditionType gardencorev1beta1.ConditionType, deleteCondition, backup bool, expected gomegatypes.GomegaMatcher) {
-		var seedBackup *gardencorev1beta1.SeedBackup
+		var seedBackup *gardencorev1beta1.Backup
 		if backup {
-			seedBackup = &gardencorev1beta1.SeedBackup{}
+			seedBackup = &gardencorev1beta1.Backup{}
 		}
 
 		seed := &gardencorev1beta1.Seed{

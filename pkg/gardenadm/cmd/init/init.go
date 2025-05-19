@@ -67,6 +67,7 @@ func run(ctx context.Context, opts *Options) error {
 
 	var (
 		g                = flow.NewGraph("init")
+		allowBackup      = v1beta1helper.GetBackupConfigForShoot(b.Shoot.GetInfo(), nil) != nil
 		kubeProxyEnabled = v1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
 		deployNamespace = g.Add(flow.Task{
@@ -220,6 +221,18 @@ func run(ctx context.Context, opts *Options) error {
 			waitUntilExtensionControllersInPodNetworkReady,
 		)
 
+		reconcileBackupBucket = g.Add(flow.Task{
+			Name:         "Deploying BackupBucket for ETCD data",
+			Fn:           b.ReconcileBackupBucket,
+			SkipIf:       !allowBackup,
+			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+		})
+		reconcileBackupEntry = g.Add(flow.Task{
+			Name:         "Deploying BackupEntry for ETCD data",
+			Fn:           b.ReconcileBackupEntry,
+			SkipIf:       !allowBackup,
+			Dependencies: flow.NewTaskIDs(reconcileBackupBucket),
+		})
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane components",
 			Fn:           b.DeployControlPlane,
@@ -238,7 +251,7 @@ func run(ctx context.Context, opts *Options) error {
 		deployControlPlaneDeployments = g.Add(flow.Task{
 			Name:         "Deploying control plane components as Deployments/StatefulSets for static pod translation",
 			Fn:           b.DeployControlPlaneDeployments,
-			Dependencies: flow.NewTaskIDs(syncPointBootstrapped),
+			Dependencies: flow.NewTaskIDs(reconcileBackupEntry),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying OperatingSystemConfig and activating gardener-node-agent",

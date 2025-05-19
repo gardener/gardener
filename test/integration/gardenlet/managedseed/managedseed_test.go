@@ -112,7 +112,7 @@ var _ = Describe("ManagedSeed controller test", func() {
 						},
 					},
 					Spec: gardencorev1beta1.SeedSpec{
-						Backup: &gardencorev1beta1.SeedBackup{
+						Backup: &gardencorev1beta1.Backup{
 							Provider: "test",
 							Region:   ptr.To("bar"),
 							CredentialsRef: &corev1.ObjectReference{
