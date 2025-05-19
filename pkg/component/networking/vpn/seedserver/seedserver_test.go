@@ -9,8 +9,6 @@ import (
 	_ "embed"
 	"fmt"
 	"net"
-	"strings"
-	"text/template"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,31 +35,16 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	. "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	monitoringutils "github.com/gardener/gardener/pkg/component/observability/monitoring/utils"
 	comptest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
-
-var (
-	tplNameEnvoy = "envoy.yaml.tpl"
-	//go:embed templates/envoy.yaml.tpl
-	tplContentEnvoy string
-	tplEnvoy        *template.Template
-)
-
-func init() {
-	var err error
-	tplEnvoy, err = template.
-		New(tplNameEnvoy).
-		Parse(tplContentEnvoy)
-	utilruntime.Must(err)
-}
 
 var _ = Describe("VpnSeedServer", func() {
 	var (
@@ -82,13 +64,6 @@ var _ = Describe("VpnSeedServer", func() {
 		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
 
 		secretNameTLSAuth = "vpn-seed-server-tlsauth-a1d0aa00"
-
-		listenAddress        = "0.0.0.0"
-		listenAddressV6      = "::"
-		dnsLookUpFamily      = "ALL"
-		volumeMountPathCerts = "/srv/secrets/vpn-server"
-		fileNameCABundle     = "ca.crt"
-		metricsPort          = 15000
 
 		expectedConfigMap *corev1.ConfigMap
 	)
@@ -358,58 +333,7 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 				})
 			} else {
-				template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
-					Name:            "envoy-proxy",
-					Image:           apiServerProxyImage,
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command: []string{
-						"envoy",
-						"--concurrency",
-						"2",
-						"-c",
-						"/etc/envoy/envoy.yaml",
-					},
-					ReadinessProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt32(9443),
-							},
-						},
-					},
-					LivenessProbe: &corev1.Probe{
-						ProbeHandler: corev1.ProbeHandler{
-							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt32(9443),
-							},
-						},
-					},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("10m"),
-							corev1.ResourceMemory: resource.MustParse("25M"),
-						},
-					},
-					SecurityContext: &corev1.SecurityContext{
-						AllowPrivilegeEscalation: ptr.To(false),
-						Capabilities: &corev1.Capabilities{
-							Drop: []corev1.Capability{
-								"all",
-							},
-						},
-						RunAsGroup:   ptr.To(int64(v1beta1constants.EnvoyVPNGroupId)),
-						RunAsNonRoot: ptr.To(true),
-					},
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "certs",
-							MountPath: "/srv/secrets/vpn-server",
-						},
-						{
-							Name:      "envoy-config",
-							MountPath: "/etc/envoy",
-						},
-					},
-				})
+				template.Spec.Containers = append(template.Spec.Containers, *envoy.GetEnvoyProxyContainer(apiServerProxyImage))
 				template.Spec.Volumes = append(template.Spec.Volumes, corev1.Volume{
 					Name: "envoy-config",
 					VolumeSource: corev1.VolumeSource{
@@ -801,7 +725,7 @@ var _ = Describe("VpnSeedServer", func() {
 			HighAvailabilityNumberOfShootClients: 1,
 		}
 
-		expectedConfigMap = seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, volumeMountPathCerts, fileNameCABundle, namespace, metricsPort)
+		expectedConfigMap = seedConfigMap(namespace)
 	})
 
 	JustBeforeEach(func() {
@@ -903,9 +827,6 @@ var _ = Describe("VpnSeedServer", func() {
 
 				Context("IPv6", func() {
 					BeforeEach(func() {
-						listenAddress = "0.0.0.0"
-						listenAddressV6 = "::"
-						dnsLookUpFamily = "ALL"
 						networkConfig := NetworkValues{
 							PodCIDRs:     []net.IPNet{{IP: net.ParseIP("2001:db8:1::"), Mask: net.CIDRMask(48, 128)}},
 							ServiceCIDRs: []net.IPNet{{IP: net.ParseIP("2001:db8:3::"), Mask: net.CIDRMask(48, 128)}},
@@ -1108,21 +1029,9 @@ var _ = Describe("VpnSeedServer", func() {
 	})
 })
 
-func seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, volumeMountPathCerts, fileNameCABundle, namespace string, metricsPort int) *corev1.ConfigMap {
-	values := map[string]any{
-		"listenAddress":   listenAddress,
-		"listenAddressV6": listenAddressV6,
-		"dnsLookupFamily": dnsLookUpFamily,
-		"envoyPort":       EnvoyPort,
-		"certChain":       volumeMountPathCerts + `/` + secretsutils.DataKeyCertificate,
-		"privateKey":      volumeMountPathCerts + `/` + secretsutils.DataKeyPrivateKey,
-		"caCert":          volumeMountPathCerts + `/` + fileNameCABundle,
-		"metricsPort":     metricsPort,
-	}
-
-	var envoyConfig strings.Builder
-	err := tplEnvoy.Execute(&envoyConfig, values)
-	Expect(err).ToNot(HaveOccurred())
+func seedConfigMap(namespace string) *corev1.ConfigMap {
+	envoyConfig, err := envoy.GetEnvoyConfig()
+	Expect(err).NotTo(HaveOccurred())
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1131,7 +1040,7 @@ func seedConfigMap(listenAddress, listenAddressV6, dnsLookUpFamily, volumeMountP
 			ResourceVersion: "1",
 		},
 		Data: map[string]string{
-			"envoy.yaml": envoyConfig.String(),
+			"envoy.yaml": envoyConfig,
 		},
 	}
 	Expect(kubernetesutils.MakeUnique(configMap)).To(Succeed())

@@ -15,6 +15,7 @@ import (
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -94,7 +95,7 @@ func (k *kubeAPIServer) reconcileConfigMapEnvoyConfig(ctx context.Context, confi
 		return nil
 	}
 
-	envoyConfig, err := k.getEnvoyConfig()
+	envoyConfig, err := envoy.GetEnvoyConfig()
 	if err != nil {
 		return err
 	}
