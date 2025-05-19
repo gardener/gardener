@@ -282,7 +282,6 @@ func (i *istiod) Deploy(ctx context.Context) error {
 						"istio_request_bytes_bucket",
 						"istio_request_bytes_sum",
 						"istio_request_duration_milliseconds_bucket",
-						"istio_request_duration_seconds_bucket",
 						"istio_requests_total",
 						"istio_response_bytes_bucket",
 						"istio_response_bytes_sum",
