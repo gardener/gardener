@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/utils"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -152,6 +153,7 @@ var _ = Describe("Config", func() {
 			ServerTLSBootstrap:             true,
 			StreamingConnectionIdleTimeout: metav1.Duration{Duration: time.Hour * 4},
 			SyncFrequency:                  metav1.Duration{Duration: time.Minute},
+			TLSCipherSuites:                kubernetesutils.TLSCipherSuites,
 			VolumeStatsAggPeriod:           metav1.Duration{Duration: time.Minute},
 		}
 
@@ -256,6 +258,7 @@ var _ = Describe("Config", func() {
 			SyncFrequency:                  metav1.Duration{Duration: time.Minute},
 			SystemReserved:                 params.SystemReserved,
 			StreamingConnectionIdleTimeout: metav1.Duration{Duration: time.Minute * 12},
+			TLSCipherSuites:                kubernetesutils.TLSCipherSuites,
 			VolumeStatsAggPeriod:           metav1.Duration{Duration: time.Minute},
 		}
 	)

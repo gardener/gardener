@@ -16,6 +16,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -102,6 +103,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 		RegistryBurst:                    ptr.Deref(params.RegistryBurst, 0),
 		SyncFrequency:                    metav1.Duration{Duration: time.Minute},
 		SystemReserved:                   params.SystemReserved,
+		TLSCipherSuites:                  kubernetesutils.TLSCipherSuites,
 		VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},
 		VolumePluginDir:                  pathVolumePluginDirectory,
 	}
