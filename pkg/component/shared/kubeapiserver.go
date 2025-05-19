@@ -66,6 +66,14 @@ func init() {
 	codec = serializer.NewCodecFactory(runtimeScheme).CodecForVersions(ser, ser, versions, versions)
 }
 
+// Option is the type for additional optional settings.
+type Option string
+
+const (
+	// OptionFastDeployment is an option to enable fast non-productive deployment.
+	OptionFastDeployment Option = "fast-deployment"
+)
+
 // NewKubeAPIServer returns a deployer for the kube-apiserver.
 func NewKubeAPIServer(
 	ctx context.Context,
@@ -87,6 +95,7 @@ func NewKubeAPIServer(
 	authenticationWebhookConfig *kubeapiserver.AuthenticationWebhook,
 	authorizationWebhookConfigs []kubeapiserver.AuthorizationWebhook,
 	resourcesToStoreInETCDEvents []schema.GroupResource,
+	options ...Option,
 ) (
 	kubeapiserver.Interface,
 	error,
@@ -189,6 +198,7 @@ func NewKubeAPIServer(
 			DefaultNotReadyTolerationSeconds:    defaultNotReadyTolerationSeconds,
 			DefaultUnreachableTolerationSeconds: defaultUnreachableTolerationSeconds,
 			EventTTL:                            eventTTL,
+			FastDeployment:                      slices.Contains(options, OptionFastDeployment),
 			Images:                              images,
 			IsWorkerless:                        isWorkerless,
 			NamePrefix:                          namePrefix,

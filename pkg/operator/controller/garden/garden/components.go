@@ -635,6 +635,11 @@ func (r *Reconciler) newKubeAPIServer(
 		})
 	}
 
+	var options []sharedcomponent.Option
+	if garden.Annotations[annotationKeyFastDeployment] == "true" {
+		options = append(options, sharedcomponent.OptionFastDeployment)
+	}
+
 	return sharedcomponent.NewKubeAPIServer(
 		ctx,
 		r.RuntimeClientSet,
@@ -655,6 +660,7 @@ func (r *Reconciler) newKubeAPIServer(
 		authenticationWebhookConfig,
 		authorizationWebhookConfigs,
 		resourcesToStoreInETCDEvents,
+		options...,
 	)
 }
 
@@ -1073,6 +1079,11 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		goAwayChance = apiServer.GoAwayChance
 	}
 
+	var options []sharedcomponent.Option
+	if garden.Annotations[annotationKeyFastDeployment] == "true" {
+		options = append(options, sharedcomponent.OptionFastDeployment)
+	}
+
 	return sharedcomponent.NewGardenerAPIServer(
 		ctx,
 		r.RuntimeClientSet.Client(),
@@ -1087,6 +1098,7 @@ func (r *Reconciler) newGardenerAPIServer(ctx context.Context, garden *operatorv
 		garden.Spec.VirtualCluster.Gardener.ClusterIdentity,
 		workloadIdentityTokenIssuer,
 		goAwayChance,
+		options...,
 	)
 }
 

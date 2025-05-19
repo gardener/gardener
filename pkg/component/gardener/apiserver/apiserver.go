@@ -59,6 +59,8 @@ type Values struct {
 	Autoscaling AutoscalingConfig
 	// ClusterIdentity is the identity of the garden cluster.
 	ClusterIdentity string
+	// FastDeployment reduces min ready and termination grace periods for faster non-productive deployments.
+	FastDeployment bool
 	// Image is the container image used for the gardener-apiserver pods.
 	Image string
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].

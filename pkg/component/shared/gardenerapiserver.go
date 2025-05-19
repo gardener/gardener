@@ -6,6 +6,7 @@ package shared
 
 import (
 	"context"
+	"slices"
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +40,7 @@ func NewGardenerAPIServer(
 	clusterIdentity,
 	workloadIdentityTokenIssuer string,
 	goAwayChance *float64,
+	options ...Option,
 ) (
 	gardenerapiserver.Interface,
 	error,
@@ -105,6 +107,7 @@ func NewGardenerAPIServer(
 			Image:                             image.String(),
 			LogLevel:                          logLevel,
 			LogFormat:                         logger.FormatJSON,
+			FastDeployment:                    slices.Contains(options, OptionFastDeployment),
 			GoAwayChance:                      goAwayChance,
 			ShootAdminKubeconfigMaxExpiration: shootAdminKubeconfigMaxExpiration,
 			TopologyAwareRoutingEnabled:       topologyAwareRoutingEnabled,
