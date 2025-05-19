@@ -1,0 +1,9 @@
+apiVersion: operator.gardener.cloud/v1alpha1
+kind: Garden
+metadata:
+  name: local
+spec:
+  runtimeCluster:
+    provider:
+      zones:
+        - "0"

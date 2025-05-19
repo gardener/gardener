@@ -1687,7 +1687,7 @@ profiles:
     manifests:
       kustomize:
         paths:
-          - example/gardener-local/gardenlet/operator
+          - example/gardener-local/gardenlet/{{.SKAFFOLD_OPERATOR_DIR}}
     deploy:
       kubectl:
         hooks:

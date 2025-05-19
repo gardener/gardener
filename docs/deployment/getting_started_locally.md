@@ -408,6 +408,13 @@ make operator-seed-up
 You find the kubeconfig for the KinD cluster at `./example/gardener-local/kind/operator/kubeconfig`.
 The one for the virtual garden is accessible at `./example/operator/virtual-garden/kubeconfig`.
 
+[!NOTE]
+To create a local dev landscape using gardener-operator and with a single node only, you can use the following command:
+
+```shell
+make kind-operator-single-up operator-up operator-seed-single-up
+```
+
 > [!IMPORTANT]
 > When you create non-HA shoot clusters (i.e., `Shoot`s with `.spec.controlPlane.highAvailability.failureTolerance != zone`), then they are not exposed via `172.18.255.1` ([ref](#accessing-the-shoot-cluster)).
 > Instead, you need to find out under which Istio instance they got exposed, and put the corresponding IP address into your `/etc/hosts` file:

@@ -3,8 +3,9 @@ kind: Config
 metadata:
   name: garden
 manifests:
-  rawYaml:
-    - example/operator/20-garden.yaml
+  kustomize:
+    paths:
+      - example/operator
 deploy:
   kubectl:
     hooks:
@@ -30,6 +31,12 @@ deploy:
               - -ec
               - kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > $VIRTUAL_GARDEN_KUBECONFIG
   statusCheck: false # enabled status check would watch all deployments in the garden namespace
+profiles:
+  - name: single
+    patches:
+      - op: replace
+        path: /manifests/kustomize/paths/0
+        value: example/operator-single
 ---
 apiVersion: skaffold/v4beta12
 kind: Config
