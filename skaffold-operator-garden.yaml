@@ -13,7 +13,9 @@ deploy:
             command:
               - bash
               - -ec
-              - TIMEOUT=900 hack/usage/wait-for.sh garden local VirtualGardenAPIServerAvailable RuntimeComponentsHealthy VirtualComponentsHealthy
+              # We deliberately only wait for the last operation to be 'Reconcile Succeeded' in order to be able to
+              # faster deploy the gardenlet.
+              - TIMEOUT=900 hack/usage/wait-for.sh garden local
         - host:
             command:
               - bash

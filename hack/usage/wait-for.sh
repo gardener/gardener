@@ -9,7 +9,7 @@
 # It takes the resource type, object name, and a list of conditions as arguments
 set -euo pipefail
 
-if [ "$#" -lt 3 ]; then
+if [ "$#" -lt 2 ]; then
   echo "Usage: $0 <resource_type> <object_name> <condition_1> <condition_2> ... <condition_n>
 Note: Namespace/Timeout will be used from the 'NAMESPACE'/'TIMEOUT' environment variable if set, otherwise it is optional.
       TIMEOUT: The operation will be retried until the timeout[default 600 seconds] is reached, with a 5 second sleep interval between each retry.
