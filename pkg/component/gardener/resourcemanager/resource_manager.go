@@ -592,6 +592,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 			NodeAgentAuthorizer: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
 				Enabled:                r.values.NodeAgentAuthorizerEnabled,
 				AuthorizeWithSelectors: r.values.NodeAgentAuthorizerAuthorizeWithSelectors,
+				MachineNamespace:       r.values.WatchedNamespace,
 			},
 			SeccompProfile: resourcemanagerconfigv1alpha1.SeccompProfileWebhookConfig{
 				Enabled: r.values.DefaultSeccompProfileEnabled,
@@ -601,9 +602,6 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 
 	if r.values.WatchedNamespace != nil {
 		config.SourceClientConnection.Namespaces = []string{*r.values.WatchedNamespace}
-		if r.values.NodeAgentAuthorizerEnabled {
-			config.Webhooks.NodeAgentAuthorizer.MachineNamespace = *r.values.WatchedNamespace
-		}
 	}
 
 	if r.values.ResponsibilityMode == ForTarget {
