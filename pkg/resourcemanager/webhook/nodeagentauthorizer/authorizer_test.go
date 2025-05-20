@@ -58,7 +58,7 @@ var _ = Describe("Authorizer", func() {
 		sourceClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		targetClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 		machineNamespace = "shoot--foo"
-		authorizer = NewAuthorizer(log, sourceClient, targetClient, machineNamespace, true)
+		authorizer = NewAuthorizer(log, sourceClient, targetClient, &machineNamespace, true)
 
 		machineName = "foo-machine"
 		machineSecretName = "foo-machine-secret"
@@ -349,7 +349,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("expecting \"node\" label on machine %q", newMachineName)))
+				Expect(reason).To(Equal(fmt.Sprintf("no node for %q found", newMachineName)))
 			},
 				Entry("create", "create"),
 				Entry("get", "get"),
@@ -500,7 +500,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("node %q does not belong to machine %q", anotherNodeName, machineName)))
+				Expect(reason).To(Equal(fmt.Sprintf("this gardener-node-agent can only access node %q", nodeName)))
 			},
 				Entry("get", "get"),
 				Entry("patch", "patch"),
@@ -616,7 +616,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [%s gardener-valitail] in \"kube-system\" namespace", machineSecretName)))
+				Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail %s] in \"kube-system\" namespace", machineSecretName)))
 			},
 				Entry("get", "get"),
 				Entry("list", "list"),
@@ -641,7 +641,7 @@ var _ = Describe("Authorizer", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionDeny))
-					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [%s gardener-valitail] in \"kube-system\" namespace", machineSecretName)))
+					Expect(reason).To(Equal(fmt.Sprintf("gardener-node-agent can only access secrets [gardener-valitail %s] in \"kube-system\" namespace", machineSecretName)))
 				}
 			},
 				Entry("get", "get"),
@@ -724,7 +724,7 @@ var _ = Describe("Authorizer", func() {
 			DescribeTable("should allow accessing the pods because authorizeWithSelectors is false", func(verb string) {
 				attrs.Name = ""
 				attrs.Verb = verb
-				authorizer = NewAuthorizer(log, sourceClient, targetClient, machineNamespace, false)
+				authorizer = NewAuthorizer(log, sourceClient, targetClient, &machineNamespace, false)
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 
 				Expect(err).NotTo(HaveOccurred())
@@ -861,7 +861,7 @@ var _ = Describe("Authorizer", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionDeny))
-				Expect(reason).To(ContainSubstring(fmt.Sprintf(`expecting "node" label on machine %q`, machineName)))
+				Expect(reason).To(ContainSubstring(fmt.Sprintf("no node for %q found", machineName)))
 			},
 				Entry("get", "get"),
 				Entry("list", "list"),
