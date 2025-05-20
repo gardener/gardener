@@ -18,6 +18,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardensecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -140,6 +142,15 @@ var _ = Describe("AutonomousBotanist", func() {
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret1"}, &corev1.Secret{})).To(Succeed())
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret2"}, &corev1.Secret{})).To(Succeed())
 		})
+
+		It("should create the secret binding and credentials binding", func() {
+			b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &corev1.Secret{})).To(Succeed())
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &gardencorev1beta1.SecretBinding{})).To(Succeed())
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &gardensecurityv1alpha1.CredentialsBinding{})).To(Succeed())
+		})
 	})
 })
 
@@ -242,5 +253,36 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: secret2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: provider-account
+`)}
+
+	fsys[dir+"/secretbinding.yaml"] = &fstest.MapFile{Data: []byte(`---
+apiVersion: core.gardener.cloud/v1beta1
+kind: SecretBinding
+metadata:
+  name: provider-account
+provider:
+  type: local
+secretRef:
+  name: provider-account
+quotas: []
+`)}
+
+	fsys[dir+"/credentialsbinding.yaml"] = &fstest.MapFile{Data: []byte(`---
+apiVersion: security.gardener.cloud/v1alpha1
+kind: CredentialsBinding
+metadata:
+  name: provider-account
+provider:
+  type: local
+credentialsRef:
+  apiVersion: v1
+  kind: Secret
+  name: provider-account
+quotas: []
 `)}
 }

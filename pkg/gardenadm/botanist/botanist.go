@@ -119,7 +119,7 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
 	}
 
-	autonomousBotanist.Botanist, err = newBotanist(ctx, log, clientSet, autonomousBotanist.FS, project, cloudProfile, shoot, runsControlPlane)
+	autonomousBotanist.Botanist, err = newBotanist(ctx, log, clientSet, autonomousBotanist.FS, project, cloudProfile, shoot, runsControlPlane, secrets, secretBinding, credentialBinding)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating botanist: %w", err)
 	}
@@ -141,7 +141,7 @@ func NewAutonomousBotanistWithoutResources(log logr.Logger) (*AutonomousBotanist
 	}
 
 	return &AutonomousBotanist{
-		Botanist: &botanistpkg.Botanist{Operation: newOperation(log, newFakeSeedClientSet(""))},
+		Botanist: &botanistpkg.Botanist{Operation: newOperation(log, newFakeGardenClient(), newFakeSeedClientSet(""))},
 
 		HostName: hostName,
 		DBus:     dbus.New(log),
@@ -149,11 +149,11 @@ func NewAutonomousBotanistWithoutResources(log logr.Logger) (*AutonomousBotanist
 	}, nil
 }
 
-func newOperation(log logr.Logger, clientSet kubernetes.Interface) *operation.Operation {
+func newOperation(log logr.Logger, gardenClient client.Client, clientSet kubernetes.Interface) *operation.Operation {
 	return &operation.Operation{
 		Logger:         log,
 		Clock:          clock.RealClock{},
-		GardenClient:   newFakeGardenClient(),
+		GardenClient:   gardenClient,
 		SeedClientSet:  clientSet,
 		ShootClientSet: clientSet,
 	}
@@ -168,6 +168,9 @@ func newBotanist(
 	cloudProfile *gardencorev1beta1.CloudProfile,
 	shoot *gardencorev1beta1.Shoot,
 	runsControlPlane bool,
+	secrets []*corev1.Secret,
+	secretBinding *gardencorev1beta1.SecretBinding,
+	credentialsBinding *gardensecurityv1alpha1.CredentialsBinding,
 ) (
 	*botanistpkg.Botanist,
 	error,
@@ -177,7 +180,12 @@ func newBotanist(
 		return nil, fmt.Errorf("failed creating garden object: %w", err)
 	}
 
-	shootObj, err := newShootObject(ctx, fs, project.Name, cloudProfile, shoot, runsControlPlane)
+	gardenClient := newFakeGardenClient()
+	if err := initializeFakeGardenSecrets(ctx, gardenClient, secrets, secretBinding, credentialsBinding); err != nil {
+		return nil, fmt.Errorf("failed creating secrets in garden: %w", err)
+	}
+
+	shootObj, err := newShootObject(ctx, gardenClient, fs, project.Name, cloudProfile, shoot, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating shoot object: %w", err)
 	}
@@ -195,7 +203,7 @@ func newBotanist(
 		log.Info("Initializing autonomous botanist with control plane client set", keysAndValues...) //nolint:logcheck
 	}
 
-	o := newOperation(log, clientSet)
+	o := newOperation(log, gardenClient, clientSet)
 	o.Garden = gardenObj
 	o.Seed = seedObj
 	o.Shoot = shootObj
@@ -293,6 +301,7 @@ func newSeedObject(ctx context.Context, shootObj *shootpkg.Shoot) (*seedpkg.Seed
 
 func newShootObject(
 	ctx context.Context,
+	gardenClient client.Client,
 	fs afero.Afero,
 	projectName string,
 	cloudProfile *gardencorev1beta1.CloudProfile,
@@ -319,13 +328,20 @@ func newShootObject(
 		shoot.Status.UID = uuid.NewUUID()
 	}
 
-	obj, err := shootpkg.
+	builder := shootpkg.
 		NewBuilder().
 		WithProjectName(projectName).
 		WithCloudProfileObject(cloudProfile).
 		WithShootObject(shoot).
-		WithInternalDomain(&gardenerutils.Domain{Domain: "gardenadm.local"}).
-		Build(ctx, nil)
+		WithInternalDomain(&gardenerutils.Domain{Domain: "gardenadm.local"})
+
+	if shoot.Spec.SecretBindingName != nil || shoot.Spec.CredentialsBindingName != nil {
+		builder = builder.WithShootCredentialsFrom(gardenClient)
+	} else {
+		builder = builder.WithoutShootCredentials()
+	}
+
+	obj, err := builder.Build(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed building shoot object: %w", err)
 	}
