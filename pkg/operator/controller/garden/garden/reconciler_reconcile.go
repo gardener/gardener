@@ -135,12 +135,6 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	// TODO (martinweindel) Temporary flag. Remove it again, when all provider extensions supporting BackupBucket are deployable on Garden runtime cluster.
-	hasExtensionForBackupBucket, err := r.hasExtensionForBackupBucket(ctx, garden)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	if err := r.runRuntimeSetupFlow(ctx, log, garden, c); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -240,7 +234,7 @@ func (r *Reconciler) reconcile(
 					nil,
 				)
 			},
-			SkipIf: !backupConfigured || !hasExtensionForBackupBucket,
+			SkipIf: !backupConfigured,
 		})
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
@@ -1090,26 +1084,6 @@ func (r *Reconciler) listManagedDNSRecords(ctx context.Context, dnsRecordList *e
 		return fmt.Errorf("failed listing DNS records: %w", err)
 	}
 	return nil
-}
-
-func (r *Reconciler) hasExtensionForBackupBucket(ctx context.Context, garden *operatorv1alpha1.Garden) (bool, error) {
-	backup := helper.GetETCDMainBackup(garden)
-	if backup == nil {
-		return false, nil
-	}
-
-	list := &operatorv1alpha1.ExtensionList{}
-	if err := r.RuntimeClientSet.Client().List(ctx, list); err != nil {
-		return false, fmt.Errorf("failed listing extensions: %w", err)
-	}
-	for _, ext := range list.Items {
-		for _, res := range ext.Spec.Resources {
-			if res.Kind == extensionsv1alpha1.BackupBucketResource && res.Type == backup.Provider {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
 }
 
 func getKubernetesResourcesForEncryption(garden *operatorv1alpha1.Garden) []string {
