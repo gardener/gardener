@@ -33,11 +33,6 @@ func (t *terminal) clusterRole() *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"secrets"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
-			{
-				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"serviceaccounts"},
 				Verbs:     []string{"get", "list", "watch", "patch", "update"},
 			},

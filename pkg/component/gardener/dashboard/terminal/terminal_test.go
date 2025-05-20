@@ -484,11 +484,6 @@ server:
 				},
 				{
 					APIGroups: []string{""},
-					Resources: []string{"secrets"},
-					Verbs:     []string{"get", "list", "watch"},
-				},
-				{
-					APIGroups: []string{""},
 					Resources: []string{"serviceaccounts"},
 					Verbs:     []string{"get", "list", "watch", "patch", "update"},
 				},
