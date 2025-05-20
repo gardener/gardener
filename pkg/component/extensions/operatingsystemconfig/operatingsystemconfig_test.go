@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -251,6 +252,18 @@ var _ = Describe("OperatingSystemConfig", func() {
 					}
 				}
 
+				var ctxCABuldle *string
+				if caBundle != nil {
+					ctxCABuldle = ptr.To(*caBundle)
+				}
+				if worker.CABundle != nil {
+					if ctxCABuldle == nil {
+						ctxCABuldle = ptr.To(*worker.CABundle)
+					} else {
+						ctxCABuldle = ptr.To(fmt.Sprintf("%s\n%s", *ctxCABuldle, *worker.CABundle))
+					}
+				}
+
 				key := KeyV1(worker.Name, v1beta1helper.IsUpdateStrategyInPlace(worker.UpdateStrategy), k8sVersion, worker.CRI)
 
 				imagesCopy := make(map[string]*imagevector.Image, len(images))
@@ -269,7 +282,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				)
 				componentsContext := components.Context{
 					Key:                 key,
-					CABundle:            caBundle,
+					CABundle:            ctxCABuldle,
 					ClusterDNSAddresses: clusterDNSAddresses,
 					ClusterDomain:       clusterDomain,
 					CRIName:             criName,
@@ -781,6 +794,107 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					Expect(actual).To(Equal(obj))
 				}
+			})
+
+			Context("CABundle generation", func() {
+				var getROOTcertsFileContent = func(osc *extensionsv1alpha1.OperatingSystemConfig) *string {
+					for _, f := range osc.Spec.Files {
+						if f.Path == "/var/lib/ca-certificates-local/ROOTcerts.crt" {
+							content, err := utils.DecodeBase64(f.Content.Inline.Data)
+							ExpectWithOffset(1, err).ToNot(HaveOccurred())
+							return ptr.To(string(content))
+						}
+					}
+					return nil
+				}
+
+				BeforeEach(func() {
+					values.OriginalValues.CABundle = ptr.To("foo")
+					values.Workers[0].CABundle = ptr.To("bar")
+					values.Workers[1].CABundle = ptr.To("baz")
+				})
+				JustBeforeEach(func() {
+					Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+				})
+
+				It("should successfully generate caBundle when Worker.CABundle is provided", func() {
+					for _, e := range expected {
+						if e.Spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+							continue
+						}
+						actual := &extensionsv1alpha1.OperatingSystemConfig{}
+						Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+						worker := actual.Labels["worker.gardener.cloud/pool"]
+						content := getROOTcertsFileContent(actual)
+						Expect(content).NotTo(BeNil())
+						if worker == "worker1" {
+							Expect(*content).To(Equal("foo\nbar"))
+						} else {
+							Expect(*content).To(Equal("foo\nbaz"))
+						}
+					}
+				})
+
+				When("original values CABundle is not set", func() {
+					BeforeEach(func() {
+						values.OriginalValues.CABundle = nil
+					})
+					It("should use only provided Worker.CABundle", func() {
+						for _, e := range expected {
+							if e.Spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+								continue
+							}
+							actual := &extensionsv1alpha1.OperatingSystemConfig{}
+							Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+							worker := actual.Labels["worker.gardener.cloud/pool"]
+							content := getROOTcertsFileContent(actual)
+							Expect(content).NotTo(BeNil())
+							if worker == "worker1" {
+								Expect(*content).To(Equal("bar"))
+							} else {
+								Expect(*content).To(Equal("baz"))
+							}
+						}
+					})
+				})
+
+				When("only original values CABundle is set", func() {
+					BeforeEach(func() {
+						values.Workers[0].CABundle = nil
+						values.Workers[1].CABundle = nil
+					})
+					It("should use only original values CABundle", func() {
+						for _, e := range expected {
+							if e.Spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+								continue
+							}
+							actual := &extensionsv1alpha1.OperatingSystemConfig{}
+							Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+							content := getROOTcertsFileContent(actual)
+							Expect(content).NotTo(BeNil())
+							Expect(*content).To(Equal("foo"))
+						}
+					})
+				})
+
+				When("no CABundle is set", func() {
+					BeforeEach(func() {
+						values.OriginalValues.CABundle = nil
+						values.Workers[0].CABundle = nil
+						values.Workers[1].CABundle = nil
+					})
+					It("should not add ROOTcerts.crt file", func() {
+						for _, e := range expected {
+							if e.Spec.Purpose != extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
+								continue
+							}
+							actual := &extensionsv1alpha1.OperatingSystemConfig{}
+							Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+							content := getROOTcertsFileContent(actual)
+							Expect(content).To(BeNil())
+						}
+					})
+				})
 			})
 		})
 

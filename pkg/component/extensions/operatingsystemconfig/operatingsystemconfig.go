@@ -671,12 +671,15 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
 	}
 
-	caBundle := o.values.CABundle
+	var caBundle *string
+	if o.values.CABundle != nil {
+		caBundle = ptr.To(*o.values.CABundle)
+	}
 	if worker.CABundle != nil {
 		if caBundle == nil {
-			caBundle = worker.CABundle
+			caBundle = ptr.To(*worker.CABundle)
 		} else {
-			*caBundle = fmt.Sprintf("%s\n%s", *caBundle, *worker.CABundle)
+			caBundle = ptr.To(fmt.Sprintf("%s\n%s", *caBundle, *worker.CABundle))
 		}
 	}
 
