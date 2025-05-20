@@ -13,18 +13,12 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardenadm/app"
 	"github.com/gardener/gardener/cmd/utils"
-	featuregates "github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenadm/features"
 )
 
 func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
-
-	// TODO(rfranzke): Revisit this once autonomous shoot clusters progress.
-	if err := featuregates.DefaultFeatureGate.Set("NodeAgentAuthorizer=false"); err != nil {
-		panic(err)
-	}
 
 	if err := app.NewCommand().ExecuteContext(signals.SetupSignalHandler()); err != nil {
 		os.Exit(1)
