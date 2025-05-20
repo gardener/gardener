@@ -26,6 +26,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardensecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenadm"
@@ -78,7 +79,7 @@ func NewAutonomousBotanistFromManifests(
 	*AutonomousBotanist,
 	error,
 ) {
-	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, secrets, err := gardenadm.ReadManifests(log, DirFS(dir))
+	cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, secrets, secretBinding, credentialBinding, err := gardenadm.ReadManifests(log, DirFS(dir))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory %s: %w", dir, err)
 	}
@@ -88,7 +89,7 @@ func NewAutonomousBotanistFromManifests(
 		return nil, fmt.Errorf("failed computing extensions: %w", err)
 	}
 
-	b, err := NewAutonomousBotanist(ctx, log, clientSet, project, cloudProfile, shoot, extensions, secrets, runsControlPlane)
+	b, err := NewAutonomousBotanist(ctx, log, clientSet, project, cloudProfile, shoot, extensions, secrets, secretBinding, credentialBinding, runsControlPlane)
 	if err != nil {
 		return nil, fmt.Errorf("failed constructing botanist: %w", err)
 	}
@@ -106,6 +107,8 @@ func NewAutonomousBotanist(
 	shoot *gardencorev1beta1.Shoot,
 	extensions []Extension,
 	secrets []*corev1.Secret,
+	secretBinding *gardencorev1beta1.SecretBinding,
+	credentialBinding *gardensecurityv1alpha1.CredentialsBinding,
 	runsControlPlane bool,
 ) (
 	*AutonomousBotanist,
@@ -123,7 +126,7 @@ func NewAutonomousBotanist(
 
 	autonomousBotanist.Extensions = extensions
 
-	if err := autonomousBotanist.initializeFakeGardenResources(ctx, secrets); err != nil {
+	if err := autonomousBotanist.initializeFakeGardenResources(ctx, secrets, secretBinding, credentialBinding); err != nil {
 		return nil, fmt.Errorf("failed initializing resources in fake garden client: %w", err)
 	}
 
@@ -200,7 +203,12 @@ func newBotanist(
 	return botanistpkg.New(ctx, o)
 }
 
-func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context, secrets []*corev1.Secret) error {
+func (b *AutonomousBotanist) initializeFakeGardenResources(
+	ctx context.Context,
+	secrets []*corev1.Secret,
+	secretBinding *gardencorev1beta1.SecretBinding,
+	credentialsBinding *gardensecurityv1alpha1.CredentialsBinding,
+) error {
 	if err := b.GardenClient.Create(ctx, b.Seed.GetInfo().DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
 		return fmt.Errorf("failed creating Seed %s: %w", b.Seed.GetInfo().Name, err)
 	}
@@ -223,9 +231,31 @@ func (b *AutonomousBotanist) initializeFakeGardenResources(ctx context.Context, 
 		}
 	}
 
+	return initializeFakeGardenSecrets(ctx, b.GardenClient, secrets, secretBinding, credentialsBinding)
+}
+
+func initializeFakeGardenSecrets(
+	ctx context.Context,
+	gardenClient client.Client,
+	secrets []*corev1.Secret,
+	secretBinding *gardencorev1beta1.SecretBinding,
+	credentialsBinding *gardensecurityv1alpha1.CredentialsBinding,
+) error {
 	for _, secret := range secrets {
-		if err := b.GardenClient.Create(ctx, secret.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+		if err := gardenClient.Create(ctx, secret.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
 			return fmt.Errorf("failed creating Secret %s: %w", secret.Name, err)
+		}
+	}
+
+	if secretBinding != nil {
+		if err := gardenClient.Create(ctx, secretBinding.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating SecretBinding %s: %w", secretBinding.Name, err)
+		}
+	}
+
+	if credentialsBinding != nil {
+		if err := gardenClient.Create(ctx, credentialsBinding.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating CredentialsBinding %s: %w", credentialsBinding.Name, err)
 		}
 	}
 
