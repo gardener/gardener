@@ -7,6 +7,7 @@ package botanist_test
 import (
 	"context"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"testing/fstest"
 
@@ -69,6 +70,33 @@ var _ = Describe("AutonomousBotanist", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("kube-system"))
 			})
+
+			It("should generate a UID for the shoot and write it to the host", func() {
+				fs := afero.NewMemMapFs()
+				DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
+
+				By("Generate new shoot UID and write it to the host")
+				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+				Expect(err).NotTo(HaveOccurred())
+
+				uid := b.Shoot.GetInfo().Status.UID
+				Expect(uid).NotTo(BeEmpty())
+
+				path := filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
+				content, err := b.FS.ReadFile(path)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(string(content)).To(Equal(string(uid)))
+
+				By("Do not regenerate shoot UID when file is present on host")
+				b, err = NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, true)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(b.Shoot.GetInfo().Status.UID).To(Equal(uid))
+				content, err = b.FS.ReadFile(path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(content)).To(Equal(string(uid)))
+			})
 		})
 
 		When("not running the control plane (acting on the bootstrap cluster)", func() {
@@ -89,6 +117,20 @@ var _ = Describe("AutonomousBotanist", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(b.Shoot.ControlPlaneNamespace).To(Equal("shoot--gardenadm--gardenadm"))
 			})
+
+			It("should generate a UID for the shoot but not write it to the host", func() {
+				fs := afero.NewMemMapFs()
+				DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
+
+				b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
+				Expect(err).NotTo(HaveOccurred())
+
+				uid := b.Shoot.GetInfo().Status.UID
+				Expect(uid).NotTo(BeEmpty())
+
+				path := filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
+				Expect(b.FS.ReadFile(path)).Error().To(MatchError(os.IsNotExist, "IsNotExist"))
+			})
 		})
 
 		It("should create the secrets with the fake garden client", func() {
@@ -97,33 +139,6 @@ var _ = Describe("AutonomousBotanist", func() {
 
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret1"}, &corev1.Secret{})).To(Succeed())
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "secret2"}, &corev1.Secret{})).To(Succeed())
-		})
-
-		It("should generate a UID for the shoot and write it to the host", func() {
-			fs := afero.NewMemMapFs()
-			DeferCleanup(test.WithVar(&NewFs, func() afero.Fs { return fs }))
-
-			By("Generate new shoot UID and write it to the host")
-			b, err := NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
-			Expect(err).NotTo(HaveOccurred())
-
-			uid := b.Shoot.GetInfo().Status.UID
-			Expect(uid).NotTo(BeEmpty())
-
-			path := filepath.Join(string(filepath.Separator), "var", "lib", "gardenadm", "shoot-uid")
-			content, err := b.FS.ReadFile(path)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(string(content)).To(Equal(string(uid)))
-
-			By("Do not regenerate shoot UID when file is present on host")
-			b, err = NewAutonomousBotanistFromManifests(ctx, log, nil, configDir, false)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(b.Shoot.GetInfo().Status.UID).To(Equal(uid))
-			content, err = b.FS.ReadFile(path)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(content)).To(Equal(string(uid)))
 		})
 	})
 })

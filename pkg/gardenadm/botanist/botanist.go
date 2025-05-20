@@ -275,11 +275,19 @@ func newShootObject(
 	shoot.Status.TechnicalID = gardenerutils.ComputeTechnicalID(projectName, shoot)
 	shoot.Status.Gardener = gardencorev1beta1.Gardener{Name: "gardenadm", Version: version.Get().GitVersion}
 
-	uid, err := shootUID(fs)
-	if err != nil {
-		return nil, fmt.Errorf("failed fetching shoot UID: %w", err)
+	if runsControlPlane {
+		// This UID is used to compute the name of the BackupEntry object. Persist the generated UID on the machine in case
+		// `gardenadm init` is retried/executed multiple times (otherwise, we'd always generate a new one).
+		uid, err := shootUID(fs)
+		if err != nil {
+			return nil, fmt.Errorf("failed fetching shoot UID: %w", err)
+		}
+		shoot.Status.UID = uid
+	} else {
+		// For `gardenadm bootstrap`, we don't need a stable UID. We generate a random one instead, because we might not be
+		// able to persist the generated UID in /var/lib/gardenadm (e.g., when running `gardenadm bootstrap` on macOS).
+		shoot.Status.UID = uuid.NewUUID()
 	}
-	shoot.Status.UID = uid
 
 	obj, err := shootpkg.
 		NewBuilder().
