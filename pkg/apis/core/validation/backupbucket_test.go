@@ -112,7 +112,7 @@ var _ = Describe("validation", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeRequired),
 					"Field":  Equal("spec.credentialsRef"),
-					"Detail": Equal(`must be set to refer a Secret or WorkloadIdentity`),
+					"Detail": Equal(`must be set and refer a Secret or WorkloadIdentity`),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -149,7 +149,7 @@ var _ = Describe("validation", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeRequired),
 						"Field":  Equal("spec.credentialsRef"),
-						"Detail": Equal("must be set to refer a Secret or WorkloadIdentity"),
+						"Detail": Equal("must be set and refer a Secret or WorkloadIdentity"),
 					})),
 				))
 			})
@@ -162,7 +162,7 @@ var _ = Describe("validation", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.credentialsRef"),
-						"Detail": Equal("support for workload identity as backup credentials is not yet fully implemented"),
+						"Detail": Equal("support for WorkloadIdentity as backup credentials is not yet fully implemented"),
 					})),
 				))
 			})
@@ -277,7 +277,7 @@ var _ = Describe("validation", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.credentialsRef"),
-						"Detail": Equal("support for workload identity as backup credentials is not yet fully implemented"),
+						"Detail": Equal("support for WorkloadIdentity as backup credentials is not yet fully implemented"),
 					})),
 				))
 			})

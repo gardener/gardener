@@ -92,7 +92,7 @@ func (g *gardenerDiscoveryServer) Deploy(ctx context.Context) error {
 
 	secretWorkloadIdentityDiscoveryDocuments, err := g.workloadIdentitySecret()
 	if err != nil {
-		return fmt.Errorf("failed to get the secret with the workload identity discovery documents: %w", err)
+		return fmt.Errorf("failed to get the secret with the WorkloadIdentity discovery documents: %w", err)
 	}
 
 	tlsSecretName := ptr.Deref(g.values.TLSSecretName, "")

@@ -1187,7 +1187,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1GeneratedSecretRef.Namespace, backupBucket1GeneratedSecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
 
-		By("Update (credentials ref) to workload identity")
+		By("Update (credentials ref) to WorkloadIdentity")
 		backupBucket1Copy = backupBucket1.DeepCopy()
 		backupBucket1.Spec.CredentialsRef = &backupBucket1WorkloadIdentityCredentialsRef
 		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)

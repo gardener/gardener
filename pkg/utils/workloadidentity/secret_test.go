@@ -40,9 +40,9 @@ var _ = Describe("#Secret", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(secret).To(BeNil())
 		Expect(err.Error()).To(And(
-			ContainSubstring("workload identity name is not set"),
-			ContainSubstring("workload identity namespace is not set"),
-			ContainSubstring("workload identity provider type is not set"),
+			ContainSubstring("WorkloadIdentity name is not set"),
+			ContainSubstring("WorkloadIdentity namespace is not set"),
+			ContainSubstring("WorkloadIdentity provider type is not set"),
 		))
 	})
 

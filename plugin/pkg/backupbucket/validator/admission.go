@@ -65,7 +65,7 @@ func (v *ValidateBackupBucket) SetSecurityInformerFactory(f gardensecurityinform
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateBackupBucket) ValidateInitialization() error {
 	if v.workloadIdentityLister == nil {
-		return errors.New("missing workloadidentity lister")
+		return errors.New("missing WorkloadIdentity lister")
 	}
 	return nil
 }

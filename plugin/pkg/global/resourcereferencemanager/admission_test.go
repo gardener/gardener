@@ -937,7 +937,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(MatchError(ContainSubstring("does not match with WorkloadIdentity provider type")))
 			})
 
-			It("should reject because the referenced workload identity does not exist", func() {
+			It("should reject because the referenced WorkloadIdentity does not exist", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, errors.New("nope, out of luck")
@@ -951,7 +951,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject because the user is not allowed to read the referenced workload identity", func() {
+			It("should reject because the user is not allowed to read the referenced WorkloadIdentity", func() {
 				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
@@ -1516,10 +1516,10 @@ var _ = Describe("resourcereferencemanager", func() {
 		Context("tests for BackupBucket objects", func() {
 			It("should accept if the request is for subresource ", func() {
 				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "status", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 
 				attrs = admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "status", admission.Update, &metav1.CreateOptions{}, false, defaultUserInfo)
-				Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should reject if the referred Seed is not found", func() {
@@ -1561,7 +1561,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject if the referred WorkloadIdentity is not found", func() {
 				gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
-					return true, nil, fmt.Errorf("workloadidentity not found")
+					return true, nil, fmt.Errorf("WorkloadIdentity not found")
 				})
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 
@@ -1578,7 +1578,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
-				Expect(err).To(MatchError(ContainSubstring("workloadidentity not found")))
+				Expect(err).To(MatchError(ContainSubstring("WorkloadIdentity not found")))
 			})
 
 			It("should reject if the credentialsRef refer to unsupported resource", func() {
@@ -1629,7 +1629,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should accept (direct workload identity lookup)", func() {
+			It("should accept (direct WorkloadIdentity lookup)", func() {
 				gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, &securityv1alpha1.WorkloadIdentity{
 						ObjectMeta: metav1.ObjectMeta{
@@ -1645,7 +1645,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
-			It("should accept (workload identity found in cache)", func() {
+			It("should accept (WorkloadIdentity found in cache)", func() {
 				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 

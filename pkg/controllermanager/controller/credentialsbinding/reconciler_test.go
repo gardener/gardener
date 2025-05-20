@@ -200,7 +200,7 @@ var _ = Describe("CredentialsBindingControl", func() {
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: credentialsBindingNamespace, Name: credentialsBindingName}}
 		})
 
-		It("should add the credentialsbinding referred label to the workload identity referred by the credentialsbinding", func() {
+		It("should add the credentialsbinding referred label to the WorkloadIdentity referred by the CredentialsBinding", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -211,7 +211,7 @@ var _ = Describe("CredentialsBindingControl", func() {
 			))
 		})
 
-		It("should remove both the labels from the workloadIdentity when there are no other credentialsbindings referring it", func() {
+		It("should remove both the labels from the WorkloadIdentity when there are no other CredentialsBindings referring it", func() {
 			_, err := reconciler.Reconcile(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -224,7 +224,7 @@ var _ = Describe("CredentialsBindingControl", func() {
 			Expect(workloadIdentity.ObjectMeta.Labels).To(BeEmpty())
 		})
 
-		It("should not remove any of the label from the workload identity when there are other credentialsbindings referring it", func() {
+		It("should not remove any of the label from the WorkloadIdentity when there are other CredentialsBindings referring it", func() {
 			credentialsBinding2 := &securityv1alpha1.CredentialsBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "credentialsbinding-2",

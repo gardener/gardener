@@ -276,7 +276,7 @@ func validateSeedBackup(seedBackup *core.Backup, seedProviderType string, fldPat
 		// TODO(vpnachev): Allow WorkloadIdentities once the support in the controllers and components is fully implemented.
 		if seedBackup.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
 			seedBackup.CredentialsRef.Kind == "WorkloadIdentity" {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsRef"), "support for workload identity as backup credentials is not yet fully implemented"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsRef"), "support for WorkloadIdentity as backup credentials is not yet fully implemented"))
 		}
 	}
 

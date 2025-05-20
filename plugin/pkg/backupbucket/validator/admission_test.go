@@ -175,7 +175,7 @@ var _ = Describe("validator", func() {
 			err := dr.ValidateInitialization()
 
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("missing workloadidentity lister"))
+			Expect(err).To(MatchError("missing WorkloadIdentity lister"))
 		})
 
 		It("should not return error if WorkloadIdentityLister is set", func() {

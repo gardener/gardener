@@ -89,7 +89,7 @@ func (v *ValidateSeed) ValidateInitialization() error {
 		return errors.New("missing shoot lister")
 	}
 	if v.workloadIdentityLister == nil {
-		return errors.New("missing workloadidentity lister")
+		return errors.New("missing WorkloadIdentity lister")
 	}
 	return nil
 }
