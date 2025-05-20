@@ -20,6 +20,14 @@ deploy:
             command:
               - bash
               - -ec
+              # Check that the admission component of provider-local extension is healthy - it may run webhooks for the
+              # resources that we are about to create in below 'garden-config' Skaffold config. This will fail in case
+              # the webhook server is down or not yet available.
+              - TIMEOUT=60 SKIP_LAST_OPERATION_CHECK=true ./hack/usage/wait-for.sh extop provider-local AdmissionHealthy
+        - host:
+            command:
+              - bash
+              - -ec
               - kubectl -n garden get secret gardener -o jsonpath={.data.kubeconfig} | base64 -d > $VIRTUAL_GARDEN_KUBECONFIG
   statusCheck: false # enabled status check would watch all deployments in the garden namespace
 ---

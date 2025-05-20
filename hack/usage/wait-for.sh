@@ -22,6 +22,7 @@ OBJECT_NAME=$2
 shift 2
 CONDITIONS=("$@")
 NAMESPACE=${NAMESPACE:-}
+SKIP_LAST_OPERATION_CHECK=${SKIP_LAST_OPERATION_CHECK:-false}
 
 # The number of retries before failing
 TIMEOUT=${TIMEOUT:-600}
@@ -48,7 +49,7 @@ while [ "${retries}" -lt "${TIMEOUT}" ]; do
   fi
 
   # Check last operation state
-  if [ "$LAST_OPERATION_STATE" != "Succeeded" ]; then
+  if [ "$SKIP_LAST_OPERATION_CHECK" != "true" ] && [ "$LAST_OPERATION_STATE" != "Succeeded" ]; then
     LAST_OPERATION_SUCCEEDED=false
   fi
 
