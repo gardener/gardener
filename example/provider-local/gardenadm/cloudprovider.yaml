@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: provider-account
+  namespace: garden
+type: Opaque
+data: {}
+---
+apiVersion: core.gardener.cloud/v1beta1
+kind: SecretBinding
+metadata:
+  name: provider-account
+  namespace: garden
+provider:
+  type: local
+secretRef:
+  name: provider-account
+quotas: []
