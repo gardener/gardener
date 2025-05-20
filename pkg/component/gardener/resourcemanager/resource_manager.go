@@ -635,9 +635,7 @@ func (r *resourceManager) ensureConfigMap(ctx context.Context, configMap *corev1
 	if v := r.values.MaxConcurrentCSRApproverWorkers; v != nil {
 		config.Controllers.CSRApprover.Enabled = true
 		config.Controllers.CSRApprover.ConcurrentSyncs = v
-		if r.values.WatchedNamespace != nil {
-			config.Controllers.CSRApprover.MachineNamespace = *r.values.WatchedNamespace
-		}
+		config.Controllers.CSRApprover.MachineNamespace = r.values.WatchedNamespace
 	}
 
 	if v := r.values.MaxConcurrentTokenRequestorWorkers; v != nil {

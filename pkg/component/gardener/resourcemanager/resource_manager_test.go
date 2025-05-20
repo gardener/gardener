@@ -395,8 +395,9 @@ var _ = Describe("ResourceManager", func() {
 						SyncPeriod:      &healthSyncPeriod,
 					},
 					CSRApprover: resourcemanagerconfigv1alpha1.CSRApproverControllerConfig{
-						Enabled:         !isWorkerless,
-						ConcurrentSyncs: &maxConcurrentCSRApproverWorkers,
+						Enabled:          !isWorkerless,
+						ConcurrentSyncs:  &maxConcurrentCSRApproverWorkers,
+						MachineNamespace: watchedNamespace,
 					},
 					ManagedResource: resourcemanagerconfigv1alpha1.ManagedResourceControllerConfig{
 						ConcurrentSyncs: &concurrentSyncs,
@@ -443,7 +444,6 @@ var _ = Describe("ResourceManager", func() {
 
 			if watchedNamespace != nil {
 				config.SourceClientConnection.Namespaces = []string{*watchedNamespace}
-				config.Controllers.CSRApprover.MachineNamespace = *watchedNamespace
 			}
 
 			if responsibilityMode == ForTarget {
