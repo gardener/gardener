@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.17.2
   name: opentelemetrycollectors.opentelemetry.io
 spec:
   group: opentelemetry.io
@@ -39,10 +39,7 @@ spec:
       jsonPath: .spec.managementState
       name: Management
       type: string
-    deprecated: true
-    deprecationWarning: OpenTelemetryCollector v1alpha1 is deprecated. Migrate to
-      v1beta1.
-    name: v1alpha1
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: OpenTelemetryCollector is the Schema for the opentelemetrycollectors
@@ -70,12 +67,10 @@ spec:
             properties:
               additionalContainers:
                 description: |-
-                  AdditionalContainers allows injecting additional containers into the Collector's pod definition.
+                  AdditionalContainers allows injecting additional containers into the generated pod definition.
                   These sidecar containers can be used for authentication proxies, log shipping sidecars, agents for shipping
-                  metrics to their cloud, or in general sidecars that do not support automatic injection. This option only
-                  applies to Deployment, DaemonSet, and StatefulSet deployment modes of the collector. It does not apply to the sidecar
-                  deployment mode. More info about sidecars:
-                  https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
+                  metrics to their cloud, or in general sidecars that do not support automatic injection.
+                  This only works with the following OpenTelemetryCollector mode's: daemonset, statefulset, and deployment.
 
                   Container names managed by the operator:
                   * `otc-container`
@@ -321,7 +316,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -336,7 +332,8 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -385,8 +382,8 @@ spec:
                               - port
                               type: object
                             sleep:
-                              description: Sleep represents the duration that the
-                                container should sleep before being terminated.
+                              description: Sleep represents a duration that the container
+                                should sleep.
                               properties:
                                 seconds:
                                   description: Seconds is the number of seconds to
@@ -399,8 +396,8 @@ spec:
                             tcpSocket:
                               description: |-
                                 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                for the backward compatibility. There are no validation of this field and
-                                lifecycle hooks will fail in runtime when tcp handler is specified.
+                                for backward compatibility. There is no validation of this field and
+                                lifecycle hooks will fail at runtime when it is specified.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -432,7 +429,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -447,7 +445,8 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -496,8 +495,8 @@ spec:
                               - port
                               type: object
                             sleep:
-                              description: Sleep represents the duration that the
-                                container should sleep before being terminated.
+                              description: Sleep represents a duration that the container
+                                should sleep.
                               properties:
                                 seconds:
                                   description: Seconds is the number of seconds to
@@ -510,8 +509,8 @@ spec:
                             tcpSocket:
                               description: |-
                                 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                for the backward compatibility. There are no validation of this field and
-                                lifecycle hooks will fail in runtime when tcp handler is specified.
+                                for backward compatibility. There is no validation of this field and
+                                lifecycle hooks will fail at runtime when it is specified.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -539,7 +538,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -560,7 +560,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -579,7 +579,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -646,8 +646,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -751,7 +750,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -772,7 +772,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -791,7 +791,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -858,8 +858,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -1207,7 +1206,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -1228,7 +1228,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -1247,7 +1247,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -1314,8 +1314,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -2422,13 +2421,13 @@ spec:
               args:
                 additionalProperties:
                   type: string
-                description: Args is the set of arguments to pass to the OpenTelemetry
-                  Collector binary
+                description: Args is the set of arguments to pass to the main container's
+                  binary.
                 type: object
               autoscaler:
                 description: |-
                   Autoscaler specifies the pod autoscaling configuration to use
-                  for the OpenTelemetryCollector workload.
+                  for the workload.
                 properties:
                   behavior:
                     description: |-
@@ -2694,10 +2693,79 @@ spec:
                     type: integer
                 type: object
               config:
-                description: Config is the raw YAML to be used as the collector's
-                  configuration. Refer to the OpenTelemetry Collector documentation
-                  for details.
-                type: string
+                description: |-
+                  Config is the raw JSON to be used as the collector's configuration. Refer to the OpenTelemetry Collector documentation for details.
+                  The empty objects e.g. batch: should be written as batch: {} otherwise they won't work with kustomize or kubectl edit.
+                properties:
+                  connectors:
+                    description: AnyConfig represent parts of the config.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  exporters:
+                    description: AnyConfig represent parts of the config.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  extensions:
+                    description: AnyConfig represent parts of the config.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  processors:
+                    description: AnyConfig represent parts of the config.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  receivers:
+                    description: AnyConfig represent parts of the config.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  service:
+                    properties:
+                      extensions:
+                        items:
+                          type: string
+                        type: array
+                      pipelines:
+                        additionalProperties:
+                          description: Pipeline is a struct of component type to a
+                            list of component IDs.
+                          properties:
+                            exporters:
+                              items:
+                                type: string
+                              type: array
+                            processors:
+                              items:
+                                type: string
+                              type: array
+                            receivers:
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - exporters
+                          - receivers
+                          type: object
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      telemetry:
+                        description: AnyConfig represent parts of the config.
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                    required:
+                    - pipelines
+                    type: object
+                required:
+                - exporters
+                - receivers
+                - service
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              configVersions:
+                default: 3
+                description: |-
+                  ConfigVersions defines the number versions to keep for the collector config. Each config version is stored in a separate ConfigMap.
+                  Defaults to 3. The minimum value is 1.
+                minimum: 1
+                type: integer
               configmaps:
                 description: |-
                   ConfigMaps is a list of ConfigMaps in the same namespace as the OpenTelemetryCollector
@@ -2716,6 +2784,66 @@ spec:
                   - name
                   type: object
                 type: array
+              daemonSetUpdateStrategy:
+                description: |-
+                  UpdateStrategy represents the strategy the operator will take replacing existing DaemonSet pods with new pods
+                  https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/daemon-set-v1/#DaemonSetSpec
+                  This is only applicable to Daemonset mode.
+                properties:
+                  rollingUpdate:
+                    description: Rolling update config params. Present only if type
+                      = "RollingUpdate".
+                    properties:
+                      maxSurge:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: |-
+                          The maximum number of nodes with an existing available DaemonSet pod that
+                          can have an updated DaemonSet pod during during an update.
+                          Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).
+                          This can not be 0 if MaxUnavailable is 0.
+                          Absolute number is calculated from percentage by rounding up to a minimum of 1.
+                          Default value is 0.
+                          Example: when this is set to 30%, at most 30% of the total number of nodes
+                          that should be running the daemon pod (i.e. status.desiredNumberScheduled)
+                          can have their a new pod created before the old pod is marked as deleted.
+                          The update starts by launching new pods on 30% of nodes. Once an updated
+                          pod is available (Ready for at least minReadySeconds) the old DaemonSet pod
+                          on that node is marked deleted. If the old pod becomes unavailable for any
+                          reason (Ready transitions to false, is evicted, or is drained) an updated
+                          pod is immediatedly created on that node without considering surge limits.
+                          Allowing surge implies the possibility that the resources consumed by the
+                          daemonset on any given node can double if the readiness check fails, and
+                          so resource intensive daemonsets should take into account that they may
+                          cause evictions during disruption.
+                        x-kubernetes-int-or-string: true
+                      maxUnavailable:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: |-
+                          The maximum number of DaemonSet pods that can be unavailable during the
+                          update. Value can be an absolute number (ex: 5) or a percentage of total
+                          number of DaemonSet pods at the start of the update (ex: 10%). Absolute
+                          number is calculated from percentage by rounding up.
+                          This cannot be 0 if MaxSurge is 0
+                          Default value is 1.
+                          Example: when this is set to 30%, at most 30% of the total number of nodes
+                          that should be running the daemon pod (i.e. status.desiredNumberScheduled)
+                          can have their pods stopped for an update at any given time. The update
+                          starts by stopping at most 30% of those DaemonSet pods and then brings
+                          up new DaemonSet pods in their place. Once the new pods are available,
+                          it then proceeds onto other DaemonSet pods, thus ensuring that at least
+                          70% of original number of DaemonSet pods are available at all times during
+                          the update.
+                        x-kubernetes-int-or-string: true
+                    type: object
+                  type:
+                    description: Type of daemon set update. Can be "RollingUpdate"
+                      or "OnDelete". Default is RollingUpdate.
+                    type: string
+                type: object
               deploymentUpdateStrategy:
                 description: |-
                   UpdateStrategy represents the strategy the operator will take replacing existing Deployment pods with new pods
@@ -2767,9 +2895,7 @@ spec:
                     type: string
                 type: object
               env:
-                description: |-
-                  ENV vars to set on the OpenTelemetry Collector's Pods. These can then in certain cases be
-                  consumed in the config file for the Collector.
+                description: Environment variables to set on the generated pods.
                 items:
                   description: EnvVar represents an environment variable present in
                     a Container.
@@ -2887,9 +3013,8 @@ spec:
                   type: object
                 type: array
               envFrom:
-                description: |-
-                  List of sources to populate environment variables on the OpenTelemetry Collector's Pods.
-                  These can then in certain cases be consumed in the config file for the Collector.
+                description: List of sources to populate environment variables on
+                  the generated pods.
                 items:
                   description: EnvFromSource represents the source of a set of ConfigMaps
                   properties:
@@ -2938,12 +3063,12 @@ spec:
                   networking namespace.
                 type: boolean
               image:
-                description: Image indicates the container image to use for the OpenTelemetry
-                  Collector.
+                description: Image indicates the container image to use for the generated
+                  pods.
                 type: string
               imagePullPolicy:
                 description: ImagePullPolicy indicates the pull policy to be used
-                  for retrieving the container image (Always, Never, IfNotPresent)
+                  for retrieving the container image.
                 type: string
               ingress:
                 description: |-
@@ -3029,7 +3154,7 @@ spec:
                 type: object
               initContainers:
                 description: |-
-                  InitContainers allows injecting initContainers to the Collector's pod definition.
+                  InitContainers allows injecting initContainers to the generated pod definition.
                   These init containers can be used to fetch secrets for injection into the
                   configuration from external sources, run added checks, etc. Any errors during the execution of
                   an initContainer will lead to a restart of the Pod. More info:
@@ -3273,7 +3398,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -3288,7 +3414,8 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -3337,8 +3464,8 @@ spec:
                               - port
                               type: object
                             sleep:
-                              description: Sleep represents the duration that the
-                                container should sleep before being terminated.
+                              description: Sleep represents a duration that the container
+                                should sleep.
                               properties:
                                 seconds:
                                   description: Seconds is the number of seconds to
@@ -3351,8 +3478,8 @@ spec:
                             tcpSocket:
                               description: |-
                                 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                for the backward compatibility. There are no validation of this field and
-                                lifecycle hooks will fail in runtime when tcp handler is specified.
+                                for backward compatibility. There is no validation of this field and
+                                lifecycle hooks will fail at runtime when it is specified.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -3384,7 +3511,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -3399,7 +3527,8 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -3448,8 +3577,8 @@ spec:
                               - port
                               type: object
                             sleep:
-                              description: Sleep represents the duration that the
-                                container should sleep before being terminated.
+                              description: Sleep represents a duration that the container
+                                should sleep.
                               properties:
                                 seconds:
                                   description: Seconds is the number of seconds to
@@ -3462,8 +3591,8 @@ spec:
                             tcpSocket:
                               description: |-
                                 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                for the backward compatibility. There are no validation of this field and
-                                lifecycle hooks will fail in runtime when tcp handler is specified.
+                                for backward compatibility. There is no validation of this field and
+                                lifecycle hooks will fail at runtime when it is specified.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -3491,7 +3620,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -3512,7 +3642,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -3531,7 +3661,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -3598,8 +3728,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -3703,7 +3832,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -3724,7 +3854,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -3743,7 +3873,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -3810,8 +3940,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -4159,7 +4288,8 @@ spec:
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                       properties:
                         exec:
-                          description: Exec specifies the action to take.
+                          description: Exec specifies a command to execute in the
+                            container.
                           properties:
                             command:
                               description: |-
@@ -4180,7 +4310,7 @@ spec:
                           format: int32
                           type: integer
                         grpc:
-                          description: GRPC specifies an action involving a GRPC port.
+                          description: GRPC specifies a GRPC HealthCheckRequest.
                           properties:
                             port:
                               description: Port number of the gRPC service. Number
@@ -4199,7 +4329,7 @@ spec:
                           - port
                           type: object
                         httpGet:
-                          description: HTTPGet specifies the http request to perform.
+                          description: HTTPGet specifies an HTTP GET request to perform.
                           properties:
                             host:
                               description: |-
@@ -4266,8 +4396,7 @@ spec:
                           format: int32
                           type: integer
                         tcpSocket:
-                          description: TCPSocket specifies an action involving a TCP
-                            port.
+                          description: TCPSocket specifies a connection to a TCP port.
                           properties:
                             host:
                               description: 'Optional: Host name to connect to, defaults
@@ -4451,6 +4580,21 @@ spec:
                   - name
                   type: object
                 type: array
+              ipFamilies:
+                description: |-
+                  IPFamily represents the IP Family (IPv4 or IPv6). This type is used
+                  to express the family of an IP expressed by a type (e.g. service.spec.ipFamilies).
+                items:
+                  description: |-
+                    IPFamily represents the IP Family (IPv4 or IPv6). This type is used
+                    to express the family of an IP expressed by a type (e.g. service.spec.ipFamilies).
+                  type: string
+                type: array
+              ipFamilyPolicy:
+                default: SingleStack
+                description: IPFamilyPolicy represents the dual-stack-ness requested
+                  or required by a Service
+                type: string
               lifecycle:
                 description: Actions that the management system should take in response
                   to container lifecycle events. Cannot be updated.
@@ -4463,7 +4607,7 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                     properties:
                       exec:
-                        description: Exec specifies the action to take.
+                        description: Exec specifies a command to execute in the container.
                         properties:
                           command:
                             description: |-
@@ -4478,7 +4622,7 @@ spec:
                             x-kubernetes-list-type: atomic
                         type: object
                       httpGet:
-                        description: HTTPGet specifies the http request to perform.
+                        description: HTTPGet specifies an HTTP GET request to perform.
                         properties:
                           host:
                             description: |-
@@ -4527,8 +4671,8 @@ spec:
                         - port
                         type: object
                       sleep:
-                        description: Sleep represents the duration that the container
-                          should sleep before being terminated.
+                        description: Sleep represents a duration that the container
+                          should sleep.
                         properties:
                           seconds:
                             description: Seconds is the number of seconds to sleep.
@@ -4540,8 +4684,8 @@ spec:
                       tcpSocket:
                         description: |-
                           Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                          for the backward compatibility. There are no validation of this field and
-                          lifecycle hooks will fail in runtime when tcp handler is specified.
+                          for backward compatibility. There is no validation of this field and
+                          lifecycle hooks will fail at runtime when it is specified.
                         properties:
                           host:
                             description: 'Optional: Host name to connect to, defaults
@@ -4573,7 +4717,7 @@ spec:
                       More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                     properties:
                       exec:
-                        description: Exec specifies the action to take.
+                        description: Exec specifies a command to execute in the container.
                         properties:
                           command:
                             description: |-
@@ -4588,7 +4732,7 @@ spec:
                             x-kubernetes-list-type: atomic
                         type: object
                       httpGet:
-                        description: HTTPGet specifies the http request to perform.
+                        description: HTTPGet specifies an HTTP GET request to perform.
                         properties:
                           host:
                             description: |-
@@ -4637,8 +4781,8 @@ spec:
                         - port
                         type: object
                       sleep:
-                        description: Sleep represents the duration that the container
-                          should sleep before being terminated.
+                        description: Sleep represents a duration that the container
+                          should sleep.
                         properties:
                           seconds:
                             description: Seconds is the number of seconds to sleep.
@@ -4650,8 +4794,8 @@ spec:
                       tcpSocket:
                         description: |-
                           Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                          for the backward compatibility. There are no validation of this field and
-                          lifecycle hooks will fail in runtime when tcp handler is specified.
+                          for backward compatibility. There is no validation of this field and
+                          lifecycle hooks will fail at runtime when it is specified.
                         properties:
                           host:
                             description: 'Optional: Host name to connect to, defaults
@@ -4732,18 +4876,6 @@ spec:
                 - managed
                 - unmanaged
                 type: string
-              maxReplicas:
-                description: |-
-                  MaxReplicas sets an upper bound to the autoscaling feature. If MaxReplicas is set autoscaling is enabled.
-                  Deprecated: use "OpenTelemetryCollector.Spec.Autoscaler.MaxReplicas" instead.
-                format: int32
-                type: integer
-              minReplicas:
-                description: |-
-                  MinReplicas sets a lower bound to the autoscaling feature.  Set this if you are using autoscaling. It must be at least 1
-                  Deprecated: use "OpenTelemetryCollector.Spec.Autoscaler.MinReplicas" instead.
-                format: int32
-                type: integer
               mode:
                 description: Mode represents how the collector should be deployed
                   (deployment, daemonset, statefulset or sidecar)
@@ -4757,8 +4889,8 @@ spec:
                 additionalProperties:
                   type: string
                 description: |-
-                  NodeSelector to schedule OpenTelemetry Collector pods.
-                  This is only relevant to daemonset, statefulset, and deployment mode
+                  NodeSelector to schedule generated pods.
+                  This only works with the following OpenTelemetryCollector mode's: daemonset, statefulset, and deployment.
                 type: object
               observability:
                 description: ObservabilitySpec defines how telemetry data gets handled.
@@ -4766,7 +4898,7 @@ spec:
                   metrics:
                     description: Metrics defines the metrics configuration for operands.
                     properties:
-                      DisablePrometheusAnnotations:
+                      disablePrometheusAnnotations:
                         description: |-
                           DisablePrometheusAnnotations controls the automatic addition of default Prometheus annotations
                           ('prometheus.io/scrape', 'prometheus.io/port', and 'prometheus.io/path')
@@ -4778,17 +4910,39 @@ spec:
                         type: boolean
                     type: object
                 type: object
+              persistentVolumeClaimRetentionPolicy:
+                description: |-
+                  PersistentVolumeClaimRetentionPolicy describes the lifecycle of persistent volume claims
+                  created from volumeClaimTemplates.
+                  This only works with the following OpenTelemetryCollector modes: statefulset.
+                properties:
+                  whenDeleted:
+                    description: |-
+                      WhenDeleted specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is deleted. The default policy
+                      of `Retain` causes PVCs to not be affected by StatefulSet deletion. The
+                      `Delete` policy causes those PVCs to be deleted.
+                    type: string
+                  whenScaled:
+                    description: |-
+                      WhenScaled specifies what happens to PVCs created from StatefulSet
+                      VolumeClaimTemplates when the StatefulSet is scaled down. The default
+                      policy of `Retain` causes PVCs to not be affected by a scaledown. The
+                      `Delete` policy causes the associated PVCs for any excess pods above
+                      the replica count to be deleted.
+                    type: string
+                type: object
               podAnnotations:
                 additionalProperties:
                   type: string
                 description: |-
                   PodAnnotations is the set of annotations that will be attached to
-                  Collector and Target Allocator pods.
+                  the generated pods.
                 type: object
               podDisruptionBudget:
                 description: |-
                   PodDisruptionBudget specifies the pod disruption budget configuration to use
-                  for the OpenTelemetryCollector workload.
+                  for the generated workload. By default, a PDB with a MaxUnavailable of one is set.
                 properties:
                   maxUnavailable:
                     anyOf:
@@ -4811,10 +4965,54 @@ spec:
                       evictions by specifying "100%".
                     x-kubernetes-int-or-string: true
                 type: object
+              podDnsConfig:
+                description: PodDNSConfig defines the DNS parameters of a pod in addition
+                  to those generated from DNSPolicy.
+                properties:
+                  nameservers:
+                    description: |-
+                      A list of DNS name server IP addresses.
+                      This will be appended to the base nameservers generated from DNSPolicy.
+                      Duplicated nameservers will be removed.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  options:
+                    description: |-
+                      A list of DNS resolver options.
+                      This will be merged with the base options generated from DNSPolicy.
+                      Duplicated entries will be removed. Resolution options given in Options
+                      will override those that appear in the base DNSPolicy.
+                    items:
+                      description: PodDNSConfigOption defines DNS resolver options
+                        of a pod.
+                      properties:
+                        name:
+                          description: |-
+                            Name is this DNS resolver option's name.
+                            Required.
+                          type: string
+                        value:
+                          description: Value is this DNS resolver option's value.
+                          type: string
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  searches:
+                    description: |-
+                      A list of DNS search domains for host-name lookup.
+                      This will be appended to the base search paths generated from DNSPolicy.
+                      Duplicated search paths will be removed.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: atomic
+                type: object
               podSecurityContext:
                 description: |-
                   PodSecurityContext configures the pod security context for the
-                  opentelemetry-collector pod, when running as a deployment, daemonset,
+                  generated pod, when running as a deployment, daemonset,
                   or statefulset.
 
                   In sidecar mode, the opentelemetry-operator will ignore this setting.
@@ -4895,6 +5093,32 @@ spec:
                       Note that this field cannot be set when spec.os.name is windows.
                     format: int64
                     type: integer
+                  seLinuxChangePolicy:
+                    description: |-
+                      seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.
+                      It has no effect on nodes that do not support SELinux or to volumes does not support SELinux.
+                      Valid values are "MountOption" and "Recursive".
+
+                      "Recursive" means relabeling of all files on all Pod volumes by the container runtime.
+                      This may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.
+
+                      "MountOption" mounts all eligible Pod volumes with `-o context` mount option.
+                      This requires all Pods that share the same volume to use the same SELinux label.
+                      It is not possible to share the same volume among privileged and unprivileged Pods.
+                      Eligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes
+                      whose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their
+                      CSIDriver instance. Other volumes are always re-labelled recursively.
+                      "MountOption" value is allowed only when SELinuxMount feature gate is enabled.
+
+                      If not specified and SELinuxMount feature gate is enabled, "MountOption" is used.
+                      If not specified and SELinuxMount feature gate is disabled, "MountOption" is used for ReadWriteOncePod volumes
+                      and "Recursive" for all other volumes.
+
+                      This field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.
+
+                      All Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state.
+                      Note that this field cannot be set when spec.os.name is windows.
+                    type: string
                   seLinuxOptions:
                     description: |-
                       The SELinux context to be applied to all containers.
@@ -5024,7 +5248,7 @@ spec:
                 type: object
               ports:
                 description: |-
-                  Ports allows a set of ports to be exposed by the underlying v1.Service. By default, the operator
+                  Ports allows a set of ports to be exposed by the underlying v1.Service & v1.ContainerPort. By default, the operator
                   will attempt to infer the required ports by parsing the .Spec.Config property but this property can be
                   used to open additional ports that can't be inferred by the operator, like for custom receivers.
                 items:
@@ -5110,13 +5334,65 @@ spec:
                   If not specified, the pod priority will be default or zero if there is no
                   default.
                 type: string
+              readinessProbe:
+                description: |-
+                  Readiness config for the OpenTelemetry Collector except the probe handler which is auto generated from the health extension of the collector.
+                  It is only effective when healthcheckextension is configured in the OpenTelemetry Collector pipeline.
+                properties:
+                  failureThreshold:
+                    description: |-
+                      Minimum consecutive failures for the probe to be considered failed after having succeeded.
+                      Defaults to 3. Minimum value is 1.
+                    format: int32
+                    type: integer
+                  initialDelaySeconds:
+                    description: |-
+                      Number of seconds after the container has started before liveness probes are initiated.
+                      Defaults to 0 seconds. Minimum value is 0.
+                      More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+                    format: int32
+                    type: integer
+                  periodSeconds:
+                    description: |-
+                      How often (in seconds) to perform the probe.
+                      Default to 10 seconds. Minimum value is 1.
+                    format: int32
+                    type: integer
+                  successThreshold:
+                    description: |-
+                      Minimum consecutive successes for the probe to be considered successful after having failed.
+                      Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                    format: int32
+                    type: integer
+                  terminationGracePeriodSeconds:
+                    description: |-
+                      Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
+                      The grace period is the duration in seconds after the processes running in the pod are sent
+                      a termination signal and the time when the processes are forcibly halted with a kill signal.
+                      Set this value longer than the expected cleanup time for your process.
+                      If this value is nil, the pod's terminationGracePeriodSeconds will be used. Otherwise, this
+                      value overrides the value provided by the pod spec.
+                      Value must be non-negative integer. The value zero indicates stop immediately via
+                      the kill signal (no opportunity to shut down).
+                      This is a beta field and requires enabling ProbeTerminationGracePeriod feature gate.
+                      Minimum value is 1. spec.terminationGracePeriodSeconds is used if unset.
+                    format: int64
+                    type: integer
+                  timeoutSeconds:
+                    description: |-
+                      Number of seconds after which the probe times out.
+                      Defaults to 1 second. Minimum value is 1.
+                      More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+                    format: int32
+                    type: integer
+                type: object
               replicas:
                 description: Replicas is the number of pod instances for the underlying
-                  OpenTelemetry Collector. Set this if your are not using autoscaling
+                  replicaset. Set this if you are not using autoscaling.
                 format: int32
                 type: integer
               resources:
-                description: Resources to set on the OpenTelemetry Collector pods.
+                description: Resources to set on generated pods.
                 properties:
                   claims:
                     description: |-
@@ -5177,7 +5453,7 @@ spec:
               securityContext:
                 description: |-
                   SecurityContext configures the container security context for
-                  the opentelemetry-collector container.
+                  the generated main container.
 
                   In deployment, daemonset, or statefulset mode, this controls
                   the security context settings for the primary application
@@ -5376,7 +5652,7 @@ spec:
               serviceAccount:
                 description: |-
                   ServiceAccount indicates the name of an existing service account to use with this instance. When set,
-                  the operator will not automatically create a ServiceAccount for the collector.
+                  the operator will not automatically create a ServiceAccount.
                 type: string
               shareProcessNamespace:
                 description: ShareProcessNamespace indicates if the pod's containers
@@ -6457,6 +6733,9 @@ spec:
                       FilterStrategy determines how to filter targets before allocating them among the collectors.
                       The only current option is relabel-config (drops targets based on prom relabel_config).
                       The default is relabel-config.
+                    enum:
+                    - ""
+                    - relabel-config
                     type: string
                   image:
                     description: Image indicates the container image to use for the
@@ -6476,7 +6755,7 @@ spec:
                         description: Metrics defines the metrics configuration for
                           operands.
                         properties:
-                          DisablePrometheusAnnotations:
+                          disablePrometheusAnnotations:
                             description: |-
                               DisablePrometheusAnnotations controls the automatic addition of default Prometheus annotations
                               ('prometheus.io/scrape', 'prometheus.io/port', and 'prometheus.io/path')
@@ -6491,7 +6770,8 @@ spec:
                   podDisruptionBudget:
                     description: |-
                       PodDisruptionBudget specifies the pod disruption budget configuration to use
-                      for the target allocator workload.
+                      for the target allocator workload. By default, a PDB with a MaxUnavailable of one is set for a valid
+                      allocation strategy.
                     properties:
                       maxUnavailable:
                         anyOf:
@@ -6595,6 +6875,32 @@ spec:
                           Note that this field cannot be set when spec.os.name is windows.
                         format: int64
                         type: integer
+                      seLinuxChangePolicy:
+                        description: |-
+                          seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.
+                          It has no effect on nodes that do not support SELinux or to volumes does not support SELinux.
+                          Valid values are "MountOption" and "Recursive".
+
+                          "Recursive" means relabeling of all files on all Pod volumes by the container runtime.
+                          This may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.
+
+                          "MountOption" mounts all eligible Pod volumes with `-o context` mount option.
+                          This requires all Pods that share the same volume to use the same SELinux label.
+                          It is not possible to share the same volume among privileged and unprivileged Pods.
+                          Eligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes
+                          whose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their
+                          CSIDriver instance. Other volumes are always re-labelled recursively.
+                          "MountOption" value is allowed only when SELinuxMount feature gate is enabled.
+
+                          If not specified and SELinuxMount feature gate is enabled, "MountOption" is used.
+                          If not specified and SELinuxMount feature gate is disabled, "MountOption" is used for ReadWriteOncePod volumes
+                          and "Recursive" for all other volumes.
+
+                          This field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.
+
+                          All Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state.
+                          Note that this field cannot be set when spec.os.name is windows.
+                        type: string
                       seLinuxOptions:
                         description: |-
                           The SELinux context to be applied to all containers.
@@ -6732,31 +7038,214 @@ spec:
                           custom resources as targets or not.
                         type: boolean
                       podMonitorSelector:
-                        additionalProperties:
-                          type: string
                         description: |-
                           PodMonitors to be selected for target discovery.
-                          This is a map of {key,value} pairs. Each {key,value} in the map is going to exactly match a label in a
-                          PodMonitor's meta labels. The requirements are ANDed.
-                          Empty or nil map matches all pod monitors.
+                          A label selector is a label query over a set of resources. The result of matchLabels and
+                          matchExpressions are ANDed. An empty label selector matches all objects. A null
+                          label selector matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
                         type: object
+                        x-kubernetes-map-type: atomic
+                      probeSelector:
+                        description: |-
+                          Probes to be selected for target discovery.
+                          A label selector is a label query over a set of resources. The result of matchLabels and
+                          matchExpressions are ANDed. An empty label selector matches all objects. A null
+                          label selector matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      scrapeConfigSelector:
+                        description: |-
+                          ScrapeConfigs to be selected for target discovery.
+                          A label selector is a label query over a set of resources. The result of matchLabels and
+                          matchExpressions are ANDed. An empty label selector matches all objects. A null
+                          label selector matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
                       scrapeInterval:
                         default: 30s
                         description: |-
-                          Interval between consecutive scrapes. Equivalent to the same setting on the Prometheus CRD.
+                          Default interval between consecutive scrapes. Intervals set in ServiceMonitors and PodMonitors override it.
+                          Equivalent to the same setting on the Prometheus CR.
 
                           Default: "30s"
                         format: duration
                         type: string
                       serviceMonitorSelector:
-                        additionalProperties:
-                          type: string
                         description: |-
                           ServiceMonitors to be selected for target discovery.
-                          This is a map of {key,value} pairs. Each {key,value} in the map is going to exactly match a label in a
-                          ServiceMonitor's meta labels. The requirements are ANDed.
-                          Empty or nil map matches all service monitors.
+                          A label selector is a label query over a set of resources. The result of matchLabels and
+                          matchExpressions are ANDed. An empty label selector matches all objects. A null
+                          label selector matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
                         type: object
+                        x-kubernetes-map-type: atomic
                     type: object
                   replicas:
                     description: |-
@@ -7253,8 +7742,8 @@ spec:
                 type: integer
               tolerations:
                 description: |-
-                  Toleration to schedule OpenTelemetry Collector pods.
-                  This is only relevant to daemonset, statefulset, and deployment mode
+                  Toleration to schedule the generated pods.
+                  This only works with the following OpenTelemetryCollector mode's: daemonset, statefulset, and deployment.
                 items:
                   description: |-
                     The pod this Toleration is attached to tolerates any taint that matches
@@ -7298,7 +7787,7 @@ spec:
                   controls how pods are spread across your cluster among failure-domains
                   such as regions, zones, nodes, and other user-defined topology domains
                   https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
-                  This is only relevant to statefulset, and deployment mode
+                  This only works with the following OpenTelemetryCollector mode's: statefulset, and deployment.
                 items:
                   description: TopologySpreadConstraint specifies how to spread matching
                     pods among the given topology.
@@ -7473,66 +7962,6 @@ spec:
                   - whenUnsatisfiable
                   type: object
                 type: array
-              updateStrategy:
-                description: |-
-                  UpdateStrategy represents the strategy the operator will take replacing existing DaemonSet pods with new pods
-                  https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/daemon-set-v1/#DaemonSetSpec
-                  This is only applicable to Daemonset mode.
-                properties:
-                  rollingUpdate:
-                    description: Rolling update config params. Present only if type
-                      = "RollingUpdate".
-                    properties:
-                      maxSurge:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: |-
-                          The maximum number of nodes with an existing available DaemonSet pod that
-                          can have an updated DaemonSet pod during during an update.
-                          Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%).
-                          This can not be 0 if MaxUnavailable is 0.
-                          Absolute number is calculated from percentage by rounding up to a minimum of 1.
-                          Default value is 0.
-                          Example: when this is set to 30%, at most 30% of the total number of nodes
-                          that should be running the daemon pod (i.e. status.desiredNumberScheduled)
-                          can have their a new pod created before the old pod is marked as deleted.
-                          The update starts by launching new pods on 30% of nodes. Once an updated
-                          pod is available (Ready for at least minReadySeconds) the old DaemonSet pod
-                          on that node is marked deleted. If the old pod becomes unavailable for any
-                          reason (Ready transitions to false, is evicted, or is drained) an updated
-                          pod is immediatedly created on that node without considering surge limits.
-                          Allowing surge implies the possibility that the resources consumed by the
-                          daemonset on any given node can double if the readiness check fails, and
-                          so resource intensive daemonsets should take into account that they may
-                          cause evictions during disruption.
-                        x-kubernetes-int-or-string: true
-                      maxUnavailable:
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: |-
-                          The maximum number of DaemonSet pods that can be unavailable during the
-                          update. Value can be an absolute number (ex: 5) or a percentage of total
-                          number of DaemonSet pods at the start of the update (ex: 10%). Absolute
-                          number is calculated from percentage by rounding up.
-                          This cannot be 0 if MaxSurge is 0
-                          Default value is 1.
-                          Example: when this is set to 30%, at most 30% of the total number of nodes
-                          that should be running the daemon pod (i.e. status.desiredNumberScheduled)
-                          can have their pods stopped for an update at any given time. The update
-                          starts by stopping at most 30% of those DaemonSet pods and then brings
-                          up new DaemonSet pods in their place. Once the new pods are available,
-                          it then proceeds onto other DaemonSet pods, thus ensuring that at least
-                          70% of original number of DaemonSet pods are available at all times during
-                          the update.
-                        x-kubernetes-int-or-string: true
-                    type: object
-                  type:
-                    description: Type of daemon set update. Can be "RollingUpdate"
-                      or "OnDelete". Default is RollingUpdate.
-                    type: string
-                type: object
               upgradeStrategy:
                 description: UpgradeStrategy represents how the operator will handle
                   upgrades to the CR when a newer version of the operator is deployed
@@ -7541,8 +7970,9 @@ spec:
                 - none
                 type: string
               volumeClaimTemplates:
-                description: VolumeClaimTemplates will provide stable storage using
-                  PersistentVolumes. Only available when the mode=statefulset.
+                description: |-
+                  VolumeClaimTemplates will provide stable storage using PersistentVolumes.
+                  This only works with the following OpenTelemetryCollector mode's: statefulset.
                 items:
                   description: PersistentVolumeClaim is a user's request for and claim
                     to a persistent volume
@@ -7895,18 +8325,15 @@ spec:
                                   persistent volume is being resized.
                                 type: string
                               status:
+                                description: |-
+                                  Status is the status of the condition.
+                                  Can be True, False, Unknown.
+                                  More info: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#:~:text=state%20of%20pvc-,conditions.status,-(string)%2C%20required
                                 type: string
                               type:
                                 description: |-
-                                  PersistentVolumeClaimConditionType defines the condition of PV claim.
-                                  Valid values are:
-                                    - "Resizing", "FileSystemResizePending"
-
-                                  If RecoverVolumeExpansionFailure feature gate is enabled, then following additional values can be expected:
-                                    - "ControllerResizeError", "NodeResizeError"
-
-                                  If VolumeAttributesClass feature gate is enabled, then following additional values can be expected:
-                                    - "ModifyVolumeError", "ModifyingVolume"
+                                  Type is the type of the condition.
+                                  More info: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#:~:text=set%20to%20%27ResizeStarted%27.-,PersistentVolumeClaimCondition,-contains%20details%20about
                                 type: string
                             required:
                             - status
@@ -7959,7 +8386,7 @@ spec:
                 x-kubernetes-list-type: atomic
               volumeMounts:
                 description: VolumeMounts represents the mount points to use in the
-                  underlying collector deployment(s)
+                  underlying deployment(s).
                 items:
                   description: VolumeMount describes a mounting of a Volume within
                     a container.
@@ -8025,7 +8452,7 @@ spec:
                 x-kubernetes-list-type: atomic
               volumes:
                 description: Volumes represents which volumes to use in the underlying
-                  collector deployment(s).
+                  deployment(s).
                 items:
                   description: Volume represents a named volume in a pod that may
                     be accessed by any container in the pod.
@@ -8034,6 +8461,8 @@ spec:
                       description: |-
                         awsElasticBlockStore represents an AWS Disk resource that is attached to a
                         kubelet's host machine and then exposed to the pod.
+                        Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+                        awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
                         More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
                       properties:
                         fsType:
@@ -8065,8 +8494,10 @@ spec:
                       - volumeID
                       type: object
                     azureDisk:
-                      description: azureDisk represents an Azure Data Disk mount on
-                        the host and bind mount to the pod.
+                      description: |-
+                        azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+                        Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+                        are redirected to the disk.csi.azure.com CSI driver.
                       properties:
                         cachingMode:
                           description: 'cachingMode is the Host Caching mode: None,
@@ -8104,8 +8535,10 @@ spec:
                       - diskURI
                       type: object
                     azureFile:
-                      description: azureFile represents an Azure File Service mount
-                        on the host and bind mount to the pod.
+                      description: |-
+                        azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+                        Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+                        are redirected to the file.csi.azure.com CSI driver.
                       properties:
                         readOnly:
                           description: |-
@@ -8124,8 +8557,9 @@ spec:
                       - shareName
                       type: object
                     cephfs:
-                      description: cephFS represents a Ceph FS mount on the host that
-                        shares a pod's lifetime
+                      description: |-
+                        cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+                        Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
                       properties:
                         monitors:
                           description: |-
@@ -8177,6 +8611,8 @@ spec:
                     cinder:
                       description: |-
                         cinder represents a cinder volume attached and mounted on kubelets host machine.
+                        Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+                        are redirected to the cinder.csi.openstack.org CSI driver.
                         More info: https://examples.k8s.io/mysql-cinder-pd/README.md
                       properties:
                         fsType:
@@ -8286,8 +8722,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     csi:
                       description: csi (Container Storage Interface) represents ephemeral
-                        storage that is handled by certain external CSI drivers (Beta
-                        feature).
+                        storage that is handled by certain external CSI drivers.
                       properties:
                         driver:
                           description: |-
@@ -8753,6 +9188,7 @@ spec:
                       description: |-
                         flexVolume represents a generic volume resource that is
                         provisioned/attached using an exec based plugin.
+                        Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
                       properties:
                         driver:
                           description: driver is the name of the driver to use for
@@ -8798,9 +9234,9 @@ spec:
                       - driver
                       type: object
                     flocker:
-                      description: flocker represents a Flocker volume attached to
-                        a kubelet's host machine. This depends on the Flocker control
-                        service being running
+                      description: |-
+                        flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+                        Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
                       properties:
                         datasetName:
                           description: |-
@@ -8816,6 +9252,8 @@ spec:
                       description: |-
                         gcePersistentDisk represents a GCE Disk resource that is attached to a
                         kubelet's host machine and then exposed to the pod.
+                        Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+                        gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
                         More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
                       properties:
                         fsType:
@@ -8851,7 +9289,7 @@ spec:
                     gitRepo:
                       description: |-
                         gitRepo represents a git repository at a particular revision.
-                        DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+                        Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
                         EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
                         into the Pod's container.
                       properties:
@@ -8875,6 +9313,7 @@ spec:
                     glusterfs:
                       description: |-
                         glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+                        Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
                         More info: https://examples.k8s.io/volumes/glusterfs/README.md
                       properties:
                         endpoints:
@@ -9084,8 +9523,9 @@ spec:
                       - claimName
                       type: object
                     photonPersistentDisk:
-                      description: photonPersistentDisk represents a PhotonController
-                        persistent disk attached and mounted on kubelets host machine
+                      description: |-
+                        photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+                        Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
                       properties:
                         fsType:
                           description: |-
@@ -9101,8 +9541,11 @@ spec:
                       - pdID
                       type: object
                     portworxVolume:
-                      description: portworxVolume represents a portworx volume attached
-                        and mounted on kubelets host machine
+                      description: |-
+                        portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+                        Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+                        are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+                        is on.
                       properties:
                         fsType:
                           description: |-
@@ -9467,8 +9910,9 @@ spec:
                           x-kubernetes-list-type: atomic
                       type: object
                     quobyte:
-                      description: quobyte represents a Quobyte mount on the host
-                        that shares a pod's lifetime
+                      description: |-
+                        quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+                        Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
                       properties:
                         group:
                           description: |-
@@ -9507,6 +9951,7 @@ spec:
                     rbd:
                       description: |-
                         rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+                        Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
                         More info: https://examples.k8s.io/volumes/rbd/README.md
                       properties:
                         fsType:
@@ -9579,8 +10024,9 @@ spec:
                       - monitors
                       type: object
                     scaleIO:
-                      description: scaleIO represents a ScaleIO persistent volume
-                        attached and mounted on Kubernetes nodes.
+                      description: |-
+                        scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+                        Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
                       properties:
                         fsType:
                           default: xfs
@@ -9712,8 +10158,9 @@ spec:
                           type: string
                       type: object
                     storageos:
-                      description: storageOS represents a StorageOS volume attached
-                        and mounted on Kubernetes nodes.
+                      description: |-
+                        storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+                        Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
                       properties:
                         fsType:
                           description: |-
@@ -9758,8 +10205,10 @@ spec:
                           type: string
                       type: object
                     vsphereVolume:
-                      description: vsphereVolume represents a vSphere volume attached
-                        and mounted on kubelets host machine
+                      description: |-
+                        vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+                        Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+                        are redirected to the csi.vsphere.vmware.com CSI driver.
                       properties:
                         fsType:
                           description: |-
@@ -9799,20 +10248,6 @@ spec:
                 description: Image indicates the container image to use for the OpenTelemetry
                   Collector.
                 type: string
-              messages:
-                description: |-
-                  Messages about actions performed by the operator on this resource.
-                  Deprecated: use Kubernetes events instead.
-                items:
-                  type: string
-                type: array
-                x-kubernetes-list-type: atomic
-              replicas:
-                description: |-
-                  Replicas is currently not being set and might be removed in the next version.
-                  Deprecated: use "OpenTelemetryCollector.Status.Scale.Replicas" instead.
-                format: int32
-                type: integer
               scale:
                 description: Scale is the OpenTelemetryCollector's scale subresource
                   status.

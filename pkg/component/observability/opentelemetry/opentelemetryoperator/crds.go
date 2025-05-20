@@ -23,7 +23,7 @@ var (
 	//go:embed assets/crd-opentelemetry.io_opampbridges.yaml
 	openTelemetryOpenTelemetryCollectorBridgeCRD string
 	//go:embed assets/crd-opentelemetry.io_targetallocators.yaml
-	openTelemetryTargetAllocatorCRD string
+	openTelemetryOpenTelemetryTargetAllocatorCRD string
 
 	resources []string
 )
@@ -33,7 +33,7 @@ func init() {
 		openTelemetryOpenTelemetryCollectorCRD,
 		openTelemetryInstrumentationCRD,
 		openTelemetryOpenTelemetryCollectorBridgeCRD,
-		openTelemetryTargetAllocatorCRD,
+		openTelemetryOpenTelemetryTargetAllocatorCRD,
 	)
 }
 

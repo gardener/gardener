@@ -193,7 +193,7 @@ images:
 - name: opentelemetry-operator
   sourceRepository: github.com/open-telemetry/opentelemetry-operator
   repository: ghcr.io/open-telemetry/opentelemetry-operator/opentelemetry-operator
-  tag: "0.118.0"
+  tag: "0.119.0"
   labels:
   - name: 'gardener.cloud/cve-categorisation'
     value:
