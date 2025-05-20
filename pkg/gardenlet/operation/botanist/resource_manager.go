@@ -58,7 +58,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	)
 
 	if b.Shoot.IsAutonomous() {
-		values.NodeAgentAuthorizerEnabled = false // TODO(rfranzke): Revisit this once autonomous shoot clusters progress.
 		values.KubernetesServiceHost = nil
 
 		if b.Shoot.RunsControlPlane() {

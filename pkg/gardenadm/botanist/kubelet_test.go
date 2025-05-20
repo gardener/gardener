@@ -29,14 +29,16 @@ import (
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Kubelet", func() {
 	var (
-		ctx       context.Context
-		namespace = "kube-system"
-		hostName  = "test"
+		ctx context.Context
+
+		namespace string
+		hostName  string
 
 		fakeSeedClient    client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -47,6 +49,8 @@ var _ = Describe("Kubelet", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		namespace = "kube-system"
+		hostName = "test"
 
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeSeedClient, namespace)
@@ -114,6 +118,10 @@ var _ = Describe("Kubelet", func() {
 	})
 
 	Describe("#BootstrapKubelet", func() {
+		BeforeEach(func() {
+			DeferCleanup(test.WithVar(&RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, _ afero.Afero, _ *rest.Config, _ string) error { return nil }))
+		})
+
 		It("should do nothing when the node was already found", func() {
 			Expect(fakeSeedClient.Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "foo", Labels: map[string]string{"kubernetes.io/hostname": hostName}}})).To(Succeed())
 

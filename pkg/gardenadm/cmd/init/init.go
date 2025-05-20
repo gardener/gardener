@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -104,6 +105,12 @@ func run(ctx context.Context, opts *Options) error {
 		bootstrapKubelet = g.Add(flow.Task{
 			Name:         "Creating real bootstrap token for kubelet and restart unit",
 			Fn:           b.BootstrapKubelet,
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Approving gardener-node-agent client certificate signing request if necessary",
+			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		_ = g.Add(flow.Task{
@@ -205,6 +212,12 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManagerIntoPodNetwork),
 		})
+		getGardenerResourceManagerServiceIP = g.Add(flow.Task{
+			Name:         "Get gardener-resource-manager service IP",
+			Fn:           b.GetAddGardenerResourceManagerServiceIP,
+			SkipIf:       podNetworkAvailable,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
+		})
 		deployExtensionControllersIntoPodNetwork = g.Add(flow.Task{
 			Name: "Redeploying extension controllers into pod network",
 			Fn: func(ctx context.Context) error {
@@ -221,6 +234,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		syncPointBootstrapped = flow.NewTaskIDs(
 			deployNetworkPolicies,
+			getGardenerResourceManagerServiceIP,
 			waitUntilGardenerResourceManagerReady,
 			waitUntilGardenerResourceManagerInPodNetworkReady,
 			waitUntilExtensionControllersReady,

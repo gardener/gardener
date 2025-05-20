@@ -27,7 +27,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstrapetcd "github.com/gardener/gardener/pkg/component/etcd/bootstrap"
 	etcdconstants "github.com/gardener/gardener/pkg/component/etcd/etcd/constants"
+	resourcemanagerconstants "github.com/gardener/gardener/pkg/component/gardener/resourcemanager/constants"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenadm/staticpod"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -61,7 +63,7 @@ func (b *AutonomousBotanist) deployETCD(role string) func(context.Context) error
 func (b *AutonomousBotanist) deployKubeAPIServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](0))
-	return b.DeployKubeAPIServer(ctx, false)
+	return b.DeployKubeAPIServer(ctx, features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
 }
 
 type staticControlPlaneComponent struct {
@@ -72,13 +74,37 @@ type staticControlPlaneComponent struct {
 }
 
 func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlaneComponent {
+	var mutateAPIServerPodFn func(*corev1.Pod)
+
+	if b.gardenerResourceManagerServiceIP != nil {
+		mutateAPIServerPodFn = func(pod *corev1.Pod) {
+			pod.Spec.HostAliases = append(pod.Spec.HostAliases, corev1.HostAlias{
+				IP:        *b.gardenerResourceManagerServiceIP,
+				Hostnames: []string{resourcemanagerconstants.ServiceName},
+			})
+		}
+	}
+
 	return []staticControlPlaneComponent{
 		{b.deployETCD(v1beta1constants.ETCDRoleMain), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
 		{b.deployETCD(v1beta1constants.ETCDRoleEvents), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
-		{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}, nil},
+		{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}, mutateAPIServerPodFn},
 		{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}, nil},
 		{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}, nil},
 	}
+}
+
+// GetAddGardenerResourceManagerServiceIP retrieves the IP address of the gardener-resource-manager service.
+func (b *AutonomousBotanist) GetAddGardenerResourceManagerServiceIP(ctx context.Context) error {
+	gardenerResourceManagerService := &corev1.Service{}
+
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: resourcemanagerconstants.ServiceName, Namespace: b.Shoot.ControlPlaneNamespace}, gardenerResourceManagerService); err != nil {
+		return fmt.Errorf("failed getting service %q: %w", resourcemanagerconstants.ServiceName, err)
+	}
+
+	b.gardenerResourceManagerServiceIP = &gardenerResourceManagerService.Spec.ClusterIP
+
+	return nil
 }
 
 // DeployControlPlaneDeployments deploys the deployments for the static control plane components.
