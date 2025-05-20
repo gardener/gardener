@@ -264,7 +264,6 @@ func (otel *opentelemetryOperator) Deploy(ctx context.Context) error {
 									"--enable-leader-election",
 									"--zap-log-level=info",
 									"--zap-time-encoding=rfc3339nano",
-									"--enable-nginx-instrumentation=true",
 								},
 								Env: []corev1.EnvVar{
 									{

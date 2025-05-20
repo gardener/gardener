@@ -80,8 +80,11 @@ get_group_package () {
   "dashboard.gardener.cloud")
     echo "github.com/gardener/terminal-controller-manager/api/v1alpha1"
     ;;
-  "opentelemetry.io")
+  "opentelemetry.io_v1alpha1")
     echo "github.com/open-telemetry/opentelemetry-operator/apis/v1alpha1"
+    ;;
+  "opentelemetry.io_v1beta1")
+    echo "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
     ;;
   *)
     >&2 echo "unknown group $1"
