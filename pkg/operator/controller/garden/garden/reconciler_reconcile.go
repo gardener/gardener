@@ -125,7 +125,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	log.Info("Instantiating component deployers")
-	enableSeedAuthorizer, err := r.enableSeedAuthorizer(ctx)
+	enableSeedAuthorizer, err := r.enableSeedAuthorizer(ctx, targetVersion)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

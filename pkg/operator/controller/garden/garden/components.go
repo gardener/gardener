@@ -85,6 +85,7 @@ import (
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 type components struct {
@@ -331,7 +332,7 @@ func (r *Reconciler) instantiateComponents(
 	return c, nil
 }
 
-func (r *Reconciler) enableSeedAuthorizer(ctx context.Context) (bool, error) {
+func (r *Reconciler) enableSeedAuthorizer(ctx context.Context, version *semver.Version) (bool, error) {
 	// The reconcile flow deploys the kube-apiserver of the virtual garden cluster before the gardener-apiserver and
 	// gardener-admission-controller (it has to be this way, otherwise the Gardener components cannot start). However,
 	// GAC serves an authorization webhook for the SeedAuthorizer feature. We can only configure kube-apiserver to
@@ -342,6 +343,10 @@ func (r *Reconciler) enableSeedAuthorizer(ctx context.Context) (bool, error) {
 	// TODO(rfranzke): Consider removing this two-step deployment once we only support Kubernetes 1.32+ (in this
 	//  version, the structured authorization feature has been promoted to GA). We already use structured authz for
 	//  1.30+ clusters. See https://github.com/gardener/gardener/pull/10682#discussion_r1816324389 for more information.
+	if versionutils.ConstraintK8sGreaterEqual132.Check(version) {
+		return true, nil
+	}
+
 	if err := r.RuntimeClientSet.Client().Get(ctx, client.ObjectKey{Name: gardenerapiserver.DeploymentName, Namespace: r.GardenNamespace}, &appsv1.Deployment{}); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, err
