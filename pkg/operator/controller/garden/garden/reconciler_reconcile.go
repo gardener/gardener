@@ -609,10 +609,6 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		g = flow.NewGraph("Garden runtime setup")
 
 		_ = g.Add(flow.Task{
-			Name: "Deploying runtime system resources",
-			Fn:   c.runtimeSystem.Deploy,
-		})
-		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for fluent-operator",
 			Fn:   component.OpWait(c.fluentCRD).Deploy,
 		})
@@ -638,16 +634,26 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 			Fn:   component.OpWait(c.istioCRD).Deploy,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
+			Name:         "Deploying gardener-resource-manager",
 			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
 			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, deployIstioCRD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for gardener-resource-manager to be healthy",
+			Fn:           c.gardenerResourceManager.Wait,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		deploySystemResources = g.Add(flow.Task{
+			Name:         "Deploying runtime system resources",
+			Fn:           c.runtimeSystem.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Waiting for Extensions to get ready",
 			Fn: func(ctx context.Context) error {
 				return r.waitUntilRequiredExtensionsReady(ctx, log, garden)
 			},
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deploySystemResources),
 		})
 	)
 
