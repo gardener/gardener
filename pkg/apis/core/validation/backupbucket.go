@@ -67,7 +67,7 @@ func validateCredentials(spec *core.BackupBucketSpec, fldPath *field.Path) field
 	// - secretRef can be unset only when workloadIdentity is used, which we respect here
 
 	if spec.CredentialsRef == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("credentialsRef"), "must be set to refer a Secret or WorkloadIdentity"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("credentialsRef"), "must be set and refer a Secret or WorkloadIdentity"))
 	} else {
 		allErrs = append(allErrs, ValidateCredentialsRef(*spec.CredentialsRef, fldPath.Child("credentialsRef"))...)
 
@@ -75,17 +75,14 @@ func validateCredentials(spec *core.BackupBucketSpec, fldPath *field.Path) field
 			if spec.SecretRef.Namespace != spec.CredentialsRef.Namespace || spec.SecretRef.Name != spec.CredentialsRef.Name {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretRef"), "must refer to the same secret as `spec.credentialsRef`"))
 			}
-		} else {
-			emptySecretRef := corev1.SecretReference{}
-			if spec.SecretRef != emptySecretRef {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretRef"), "must not be set when `spec.credentialsRef` refer to resource other than secret"))
-			}
+		} else if (spec.SecretRef != corev1.SecretReference{}) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("secretRef"), "must not be set when `spec.credentialsRef` refer to resource other than secret"))
 		}
 
 		// TODO(vpnachev): Allow WorkloadIdentities once the support in the controllers and components is fully implemented.
 		if spec.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() &&
 			spec.CredentialsRef.Kind == "WorkloadIdentity" {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsRef"), "support for workload identity as backup credentials is not yet fully implemented"))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("credentialsRef"), "support for WorkloadIdentity as backup credentials is not yet fully implemented"))
 		}
 	}
 
