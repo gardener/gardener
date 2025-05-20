@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,20 +25,14 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	controllerconfig "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
 	"github.com/gardener/gardener/pkg/logger"
-	resourcemanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/resourcemanager/apis/config/v1alpha1"
 	resourcemanagerclient "github.com/gardener/gardener/pkg/resourcemanager/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/nodeagentauthorizer"
 	"github.com/gardener/gardener/pkg/utils"
@@ -54,23 +47,26 @@ func TestNodeAgentAuthorizer(t *testing.T) {
 	RunSpecs(t, "Test Integration ResourceManager NodeAgentAuthorizer Suite")
 }
 
-const testID = "nodeagentauthorizer-webhook-test"
+const (
+	testID      = "nodeagentauthorizer-webhook-test"
+	nodeName    = "foo-node"
+	machineName = "foo-machine"
+)
 
 var (
 	ctx = context.Background()
 	log logr.Logger
 
-	testRestConfig          *rest.Config
-	testRestConfigNodeAgent *rest.Config
-	testEnv                 *envtest.Environment
-	testClient              client.Client
-	testClientNodeAgent     client.Client
+	testRestConfig                 *rest.Config
+	testRestConfigNodeAgentMachine *rest.Config
+	testRestConfigNodeAgentNode    *rest.Config
+	testEnv                        *envtest.Environment
+	testClient                     client.Client
+	testClientNodeAgentMachine     client.Client
+	testClientNodeAgentNode        client.Client
 
 	testRunID     string
 	testNamespace *corev1.Namespace
-
-	machineName       string
-	userNameNodeAgent string
 )
 
 var _ = BeforeSuite(func() {
@@ -139,17 +135,26 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(testRestConfig, client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	machineName = "machine-" + testRunID
-	userNameNodeAgent = "gardener.cloud:node-agent:machine:" + machineName
-
-	user, err := testEnv.AddUser(
-		envtest.User{Name: userNameNodeAgent, Groups: []string{v1beta1constants.NodeAgentsGroup}},
+	userNameNodeAgentMachine := "gardener.cloud:node-agent:machine:" + machineName
+	userMachine, err := testEnv.AddUser(
+		envtest.User{Name: userNameNodeAgentMachine, Groups: []string{v1beta1constants.NodeAgentsGroup}},
 		&rest.Config{QPS: 1000.0, Burst: 2000.0},
 	)
 	Expect(err).NotTo(HaveOccurred())
-	testRestConfigNodeAgent = user.Config()
+	testRestConfigNodeAgentMachine = userMachine.Config()
 
-	testClientNodeAgent, err = client.New(user.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
+	testClientNodeAgentMachine, err = client.New(userMachine.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
+	Expect(err).NotTo(HaveOccurred())
+
+	userNameNodeAgentNode := "gardener.cloud:node-agent:machine:" + nodeName
+	userNode, err := testEnv.AddUser(
+		envtest.User{Name: userNameNodeAgentNode, Groups: []string{v1beta1constants.NodeAgentsGroup}},
+		&rest.Config{QPS: 1000.0, Burst: 2000.0},
+	)
+	Expect(err).NotTo(HaveOccurred())
+	testRestConfigNodeAgentNode = userNode.Config()
+
+	testClientNodeAgentNode, err = client.New(userNode.Config(), client.Options{Scheme: resourcemanagerclient.CombinedScheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Create test Namespace")
@@ -165,51 +170,6 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(func() {
 		By("Delete test Namespace from test cluster")
 		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	By("Setup manager")
-	mgr, err := manager.New(testRestConfig, manager.Options{
-		WebhookServer: webhook.NewServer(webhook.Options{
-			Port:    testEnv.WebhookInstallOptions.LocalServingPort,
-			Host:    testEnv.WebhookInstallOptions.LocalServingHost,
-			CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
-		}),
-		Metrics: metricsserver.Options{BindAddress: "0"},
-		Cache: cache.Options{
-			DefaultNamespaces: map[string]cache.Config{testNamespace.Name: {}},
-		},
-		Controller: controllerconfig.Controller{
-			SkipNameValidation: ptr.To(true),
-		},
-	})
-	Expect(err).NotTo(HaveOccurred())
-
-	By("Register webhook")
-	Expect((&nodeagentauthorizer.Webhook{
-		Logger: log,
-		Config: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
-			Enabled:          true,
-			MachineNamespace: testNamespaceName,
-		},
-	}).AddToManager(mgr, testClient, testClient)).To(Succeed())
-
-	By("Start manager")
-	mgrContext, mgrCancel := context.WithCancel(ctx)
-
-	go func() {
-		defer GinkgoRecover()
-		Expect(mgr.Start(mgrContext)).To(Succeed())
-	}()
-
-	// Wait for the webhook server to start
-	Eventually(func() error {
-		checker := mgr.GetWebhookServer().StartedChecker()
-		return checker(&http.Request{})
-	}).Should(Succeed())
-
-	DeferCleanup(func() {
-		By("Stop manager")
-		mgrCancel()
 	})
 })
 

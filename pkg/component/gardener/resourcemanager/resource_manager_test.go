@@ -436,6 +436,7 @@ var _ = Describe("ResourceManager", func() {
 					NodeAgentAuthorizer: resourcemanagerconfigv1alpha1.NodeAgentAuthorizerWebhookConfig{
 						Enabled:                true,
 						AuthorizeWithSelectors: ptr.To(true),
+						MachineNamespace:       watchedNamespace,
 					},
 				},
 			}
@@ -443,7 +444,6 @@ var _ = Describe("ResourceManager", func() {
 			if watchedNamespace != nil {
 				config.SourceClientConnection.Namespaces = []string{*watchedNamespace}
 				config.Controllers.CSRApprover.MachineNamespace = *watchedNamespace
-				config.Webhooks.NodeAgentAuthorizer.MachineNamespace = *watchedNamespace
 			}
 
 			if responsibilityMode == ForTarget {
