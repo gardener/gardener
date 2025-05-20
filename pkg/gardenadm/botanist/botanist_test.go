@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardensecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -149,7 +149,7 @@ var _ = Describe("AutonomousBotanist", func() {
 
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &corev1.Secret{})).To(Succeed())
 			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &gardencorev1beta1.SecretBinding{})).To(Succeed())
-			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &gardensecurityv1alpha1.CredentialsBinding{})).To(Succeed())
+			Expect(b.GardenClient.Get(ctx, client.ObjectKey{Name: "provider-account"}, &securityv1alpha1.CredentialsBinding{})).To(Succeed())
 		})
 	})
 })

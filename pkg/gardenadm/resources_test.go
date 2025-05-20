@@ -127,7 +127,7 @@ var _ = Describe("Resources", func() {
 				createCredentialsBinding(fsys, "credentialsBinding2")
 
 				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
-				Expect(err).To(MatchError(ContainSubstring("found more than one *gardensecurityv1alpha1.CredentialsBinding resource")))
+				Expect(err).To(MatchError(ContainSubstring("found more than one *securityv1alpha1.CredentialsBinding resource")))
 			})
 		})
 	})

@@ -20,7 +20,7 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardensecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
@@ -38,13 +38,13 @@ func ReadManifests(
 	controllerDeployments []*gardencorev1.ControllerDeployment,
 	secrets []*corev1.Secret,
 	secretBinding *gardencorev1beta1.SecretBinding,
-	credentialsBinding *gardensecurityv1alpha1.CredentialsBinding,
+	credentialsBinding *securityv1alpha1.CredentialsBinding,
 	err error,
 ) {
 	decoder := serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(
 		gardencorev1.SchemeGroupVersion,
 		gardencorev1beta1.SchemeGroupVersion,
-		gardensecurityv1alpha1.SchemeGroupVersion,
+		securityv1alpha1.SchemeGroupVersion,
 		corev1.SchemeGroupVersion,
 	)
 
@@ -120,9 +120,9 @@ func ReadManifests(
 				}
 				secretBinding = typedObj
 
-			case *gardensecurityv1alpha1.CredentialsBinding:
+			case *securityv1alpha1.CredentialsBinding:
 				if credentialsBinding != nil {
-					return fmt.Errorf("found more than one *gardensecurityv1alpha1.CredentialsBinding resource, but only one is allowed")
+					return fmt.Errorf("found more than one *securityv1alpha1.CredentialsBinding resource, but only one is allowed")
 				}
 				credentialsBinding = typedObj
 			}

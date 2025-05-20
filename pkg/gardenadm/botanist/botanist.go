@@ -26,7 +26,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardensecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenadm"
@@ -108,7 +108,7 @@ func NewAutonomousBotanist(
 	extensions []Extension,
 	secrets []*corev1.Secret,
 	secretBinding *gardencorev1beta1.SecretBinding,
-	credentialBinding *gardensecurityv1alpha1.CredentialsBinding,
+	credentialBinding *securityv1alpha1.CredentialsBinding,
 	runsControlPlane bool,
 ) (
 	*AutonomousBotanist,
@@ -170,7 +170,7 @@ func newBotanist(
 	runsControlPlane bool,
 	secrets []*corev1.Secret,
 	secretBinding *gardencorev1beta1.SecretBinding,
-	credentialsBinding *gardensecurityv1alpha1.CredentialsBinding,
+	credentialsBinding *securityv1alpha1.CredentialsBinding,
 ) (
 	*botanistpkg.Botanist,
 	error,
@@ -215,7 +215,7 @@ func (b *AutonomousBotanist) initializeFakeGardenResources(
 	ctx context.Context,
 	secrets []*corev1.Secret,
 	secretBinding *gardencorev1beta1.SecretBinding,
-	credentialsBinding *gardensecurityv1alpha1.CredentialsBinding,
+	credentialsBinding *securityv1alpha1.CredentialsBinding,
 ) error {
 	if err := b.GardenClient.Create(ctx, b.Seed.GetInfo().DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
 		return fmt.Errorf("failed creating Seed %s: %w", b.Seed.GetInfo().Name, err)
@@ -247,7 +247,7 @@ func initializeFakeGardenSecrets(
 	gardenClient client.Client,
 	secrets []*corev1.Secret,
 	secretBinding *gardencorev1beta1.SecretBinding,
-	credentialsBinding *gardensecurityv1alpha1.CredentialsBinding,
+	credentialsBinding *securityv1alpha1.CredentialsBinding,
 ) error {
 	for _, secret := range secrets {
 		if err := gardenClient.Create(ctx, secret.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
