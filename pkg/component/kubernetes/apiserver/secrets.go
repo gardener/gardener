@@ -196,6 +196,7 @@ func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*cor
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAFrontProxy), secretsmanager.Rotate(secretsmanager.InPlace))
 }
 
+// client cert used by KubeAPIServer when connecting to Envoy locally (HA VPN) or to Envoy inside VPN-Seed-Server (Non-HA VPN)
 func (k *kubeAPIServer) reconcileSecretHTTPProxyClient(ctx context.Context) (*corev1.Secret, error) {
 	if !k.values.VPN.Enabled {
 		return nil, nil
@@ -209,6 +210,7 @@ func (k *kubeAPIServer) reconcileSecretHTTPProxyClient(ctx context.Context) (*co
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
 }
 
+// server cert presented to KubeAPIServer by Envoy (HA VPN)
 func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.Secret, error) {
 	if !k.values.VPN.Enabled || !k.values.VPN.HighAvailabilityEnabled {
 		return nil, nil

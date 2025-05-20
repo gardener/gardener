@@ -46,6 +46,7 @@ import (
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	. "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/component/networking/vpn/envoy"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	componenttest "github.com/gardener/gardener/pkg/component/test"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -96,6 +97,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameCAVPN                   = "ca-vpn"
 		secretNameEtcd                    = "etcd-client"
 		secretNameHTTPProxy               = "kube-apiserver-http-proxy"
+		secretNameHTTPProxyClient         = "kube-apiserver-http-proxy-client"
 		secretNameKubeAggregator          = "kube-aggregator"
 		secretNameKubeAPIServerToKubelet  = "kube-apiserver-kubelet"
 		secretNameServer                  = "kube-apiserver"
@@ -109,6 +111,8 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-b2b49c90"
 		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
 		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
+		configMapEnvoyConfig           = "kube-apiserver-envoy-config-a60282c1"
+		configMapEgressSelectorConfig  = "kube-apiserver-egress-selector-config-02bc784a"
 
 		deployment                     *appsv1.Deployment
 		horizontalPodAutoscaler        *autoscalingv2.HorizontalPodAutoscaler
@@ -2819,7 +2823,7 @@ kind: AuthorizationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
-						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-7ae9678a":    secretNameHTTPProxyClient,
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
 					})))
@@ -2838,10 +2842,14 @@ kind: AuthorizationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-7ae9678a":    secretNameHTTPProxyClient,
+						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
 						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
 						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
+						"reference.resources.gardener.cloud/configmap-9d9fd1bf": configMapEnvoyConfig,
+						"reference.resources.gardener.cloud/configmap-a90d2cd3": configMapEgressSelectorConfig,
 					})))
 				})
 			})
@@ -3008,7 +3016,7 @@ kind: AuthorizationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
-						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+						"reference.resources.gardener.cloud/secret-7ae9678a":    secretNameHTTPProxyClient,
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
 					})))
@@ -3027,10 +3035,14 @@ kind: AuthorizationConfiguration
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(utils.MergeStringMaps(defaultAnnotations, map[string]string{
+						"reference.resources.gardener.cloud/secret-7ae9678a":    secretNameHTTPProxyClient,
+						"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
 						"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
 						"reference.resources.gardener.cloud/secret-a41fe9a3":    secretNameVPNSeedClient,
 						"reference.resources.gardener.cloud/secret-facfe649":    secretNameVPNSeedServerTLSAuth,
 						"reference.resources.gardener.cloud/configmap-a9a818ab": "kube-root-ca.crt",
+						"reference.resources.gardener.cloud/configmap-9d9fd1bf": configMapEnvoyConfig,
+						"reference.resources.gardener.cloud/configmap-a90d2cd3": configMapEgressSelectorConfig,
 					})))
 				})
 			})
@@ -3085,6 +3097,10 @@ kind: AuthorizationConfiguration
 						{
 							Name:  "SHOOT_NODE_NETWORKS",
 							Value: netutils.JoinByComma(values.VPN.NodeNetworkCIDRs),
+						},
+						{
+							Name:  "SEED_POD_NETWORK",
+							Value: values.VPN.SeedPodNetwork,
 						},
 						{
 							Name:  "VPN_SERVER_INDEX",
@@ -3182,7 +3198,7 @@ kind: AuthorizationConfiguration
 					Values: apiserver.Values{
 						RuntimeVersion: runtimeVersion,
 					},
-					Images:              Images{VPNClient: "vpn-client-image:really-latest"},
+					Images:              Images{VPNClient: "vpn-client-image:really-latest", EnvoyProxy: "envoy-distroless:v1.34.1"},
 					ServiceNetworkCIDRs: []net.IPNet{{IP: net.ParseIP("4.5.6.0"), Mask: net.CIDRMask(24, 32)}},
 					VPN: VPNConfig{
 						Enabled:                              true,
@@ -3191,6 +3207,7 @@ kind: AuthorizationConfiguration
 						HighAvailabilityNumberOfShootClients: 3,
 						PodNetworkCIDRs:                      []net.IPNet{{IP: net.ParseIP("1.2.3.0"), Mask: net.CIDRMask(24, 32)}},
 						NodeNetworkCIDRs:                     []net.IPNet{{IP: net.ParseIP("7.8.9.0"), Mask: net.CIDRMask(24, 32)}},
+						SeedPodNetwork:                       "100.64.0.0/12",
 						IPFamilies:                           []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 					},
 					Version: version,
@@ -3200,7 +3217,7 @@ kind: AuthorizationConfiguration
 
 				initContainer := haVPNInitClientContainer()
 				Expect(deployment.Spec.Template.Spec.InitContainers).To(DeepEqual([]corev1.Container{initContainer}))
-				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 2))
+				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(values.VPN.HighAvailabilityNumberOfSeedServers + 3))
 				for i := 0; i < values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 					labelKey := fmt.Sprintf("networking.resources.gardener.cloud/to-vpn-seed-server-%d-tcp-1194", i)
 					Expect(deployment.Spec.Template.Labels).To(HaveKeyWithValue(labelKey, "allowed"))
@@ -3255,11 +3272,13 @@ kind: AuthorizationConfiguration
 					TerminationMessagePath:   "/dev/termination-log",
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 				}
-				Expect(deployment.Spec.Template.Spec.Containers[values.VPN.HighAvailabilityNumberOfSeedServers+1]).To(DeepEqual(pathControllerContainer))
+				envoyProxyContainer := *envoy.GetEnvoyProxyContainer("envoy-distroless:v1.34.1")
 
-				Expect(deployment.Spec.Template.Spec.Containers[0].Args).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
-				Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
-				Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+				Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(pathControllerContainer))
+				Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(envoyProxyContainer))
+				Expect(deployment.Spec.Template.Spec.Containers[0].Args).To(ContainElement(ContainSubstring("--egress-selector-config-file=")))
+				Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
+				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("http-proxy")})))
 
 				hostPathCharDev := corev1.HostPathCharDev
 				Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
@@ -3322,7 +3341,7 @@ kind: AuthorizationConfiguration
 				))
 			}
 
-			It("should have one init container and three vpn-seed-client sidecar containers when VPN high availability are enabled", func() {
+			It("should have one init container, one kube-apiserver, one envoy proxy, two vpn-seed-clients and one path controller (total: 5) when VPN high availability are enabled", func() {
 				testHAVPN()
 			})
 
@@ -4344,7 +4363,7 @@ kind: AuthenticationConfiguration
 							Name: "http-proxy",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName:  secretNameHTTPProxy,
+									SecretName:  secretNameHTTPProxyClient,
 									DefaultMode: ptr.To[int32](0640),
 								},
 							},
