@@ -187,13 +187,15 @@ func (r *Reconciler) mustApproveKubeletServing(ctx context.Context, csr *certifi
 		return "", false, fmt.Errorf("error getting node object with name %q: %w", nodeName, err)
 	}
 
-	machineList := &machinev1alpha1.MachineList{}
-	if err := r.SourceClient.List(ctx, machineList, client.InNamespace(r.Config.MachineNamespace), client.MatchingLabels{"node": node.Name}); err != nil {
-		return "", false, fmt.Errorf("failed to list machine objects: %w", err)
-	}
+	if r.Config.MachineNamespace != nil {
+		machineList := &machinev1alpha1.MachineList{}
+		if err := r.SourceClient.List(ctx, machineList, client.InNamespace(*r.Config.MachineNamespace), client.MatchingLabels{"node": node.Name}); err != nil {
+			return "", false, fmt.Errorf("failed to list machine objects: %w", err)
+		}
 
-	if length := len(machineList.Items); length != 1 {
-		return fmt.Sprintf("Expected exactly one machine in namespace %q for node %q but found %d", r.Config.MachineNamespace, node.Name, length), false, nil
+		if length := len(machineList.Items); length != 1 {
+			return fmt.Sprintf("Expected exactly one machine in namespace %q for node %q but found %d", *r.Config.MachineNamespace, node.Name, length), false, nil
+		}
 	}
 
 	var (
@@ -239,17 +241,22 @@ func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *ce
 	}
 
 	machineName := strings.TrimPrefix(x509cr.Subject.CommonName, v1beta1constants.NodeAgentUserNamePrefix)
-	machine := &machinev1alpha1.Machine{}
-	if err := r.SourceClient.Get(ctx, client.ObjectKey{Namespace: r.Config.MachineNamespace, Name: machineName}, machine); err != nil {
-		if apierrors.IsNotFound(err) {
-			return fmt.Sprintf("machine %q does not exist", machineName), csrDenied, nil
+
+	nodeName := machineName
+	if r.Config.MachineNamespace != nil {
+		machine := &machinev1alpha1.Machine{}
+		if err := r.SourceClient.Get(ctx, client.ObjectKey{Namespace: *r.Config.MachineNamespace, Name: machineName}, machine); err != nil {
+			if apierrors.IsNotFound(err) {
+				return fmt.Sprintf("machine %q does not exist", machineName), csrDenied, nil
+			}
+			return "", csrNoOpinion, fmt.Errorf("error getting machine object with name %q: %w", machineName, err)
 		}
-		return "", csrNoOpinion, fmt.Errorf("error getting machine object with name %q: %w", machineName, err)
+		nodeName = machine.Labels[machinev1alpha1.NodeLabelKey]
 	}
 
 	switch {
 	case strings.HasPrefix(csr.Spec.Username, "system:bootstrap:"):
-		if nodeName, found := machine.Labels[machinev1alpha1.NodeLabelKey]; found {
+		if nodeName != "" {
 			if err := r.TargetClient.Get(ctx, client.ObjectKey{Name: nodeName}, &corev1.Node{}); err == nil {
 				return fmt.Sprintf("Cannot use bootstrap token since gardener-node-agent for machine %q is already bootstrapped", machineName), csrDenied, nil
 			} else if !apierrors.IsNotFound(err) {
@@ -262,7 +269,7 @@ func (r *Reconciler) mustApproveKubeAPIServerClient(ctx context.Context, csr *ce
 		}
 	// TODO(oliver-goetz): remove this case when NodeAgentAuthorizer feature gate is removed. It is used for migrating existing gardener-node-agents
 	case csr.Spec.Username == "system:serviceaccount:kube-system:gardener-node-agent":
-		if _, found := machine.Labels[machinev1alpha1.NodeLabelKey]; !found {
+		if nodeName == "" {
 			return "gardener-node-agent service account is allowed to create CSRs for machines with existing nodes only", csrDenied, nil
 		}
 	default:
