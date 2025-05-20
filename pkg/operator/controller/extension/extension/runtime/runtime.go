@@ -12,10 +12,13 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
@@ -29,12 +32,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils/oci"
 )
 
+const priorityClassName = v1beta1constants.PriorityClassNameGardenSystem200
+
 // Interface contains functions for the extension deployer in the garden runtime cluster.
 type Interface interface {
 	// Reconcile creates or updates the extension deployment in the garden runtime cluster.
-	Reconcile(context.Context, logr.Logger, *operatorv1alpha1.Extension) error
+	Reconcile(context.Context, logr.Logger, *operatorv1alpha1.Extension) (reconcile.Result, error)
 	// Delete deletes the extension deployment in the garden runtime cluster.
-	Delete(context.Context, logr.Logger, *operatorv1alpha1.Extension) error
+	Delete(context.Context, logr.Logger, *operatorv1alpha1.Extension) (reconcile.Result, error)
 }
 
 type deployer struct {
@@ -46,27 +51,37 @@ type deployer struct {
 }
 
 // Reconcile creates or updates the extension deployment in the garden runtime cluster.
-func (d *deployer) Reconcile(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
+func (d *deployer) Reconcile(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) (reconcile.Result, error) {
 	if !extensionDeploymentSpecified(extension) {
 		return d.Delete(ctx, log, extension)
 	}
 
+	if err := d.runtimeClientSet.Client().Get(ctx, client.ObjectKey{Name: priorityClassName}, &schedulingv1.PriorityClass{}); err != nil {
+		// Prevent exponential backoff of the controller in case the Garden controller is slow in creating the needed
+		// PriorityClass when creating a fresh Garden.
+		if apierrors.IsNotFound(err) {
+			log.Info("PriorityClass not found yet, requeuing", "priorityClassName", priorityClassName)
+			return reconcile.Result{RequeueAfter: 2 * time.Second}, fmt.Errorf("priority class %q not found yet", priorityClassName)
+		}
+		return reconcile.Result{}, fmt.Errorf("failed checking if priority class %q exists: %w", priorityClassName, err)
+	}
+
 	if err := d.createOrUpdateResources(ctx, extension); err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 	d.recorder.Event(extension, corev1.EventTypeNormal, "Reconciliation", "Extension applied successfully in runtime cluster")
-	return nil
+	return reconcile.Result{}, nil
 }
 
 // Delete deletes the extension deployment in the garden runtime cluster.
-func (d *deployer) Delete(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) error {
+func (d *deployer) Delete(ctx context.Context, log logr.Logger, extension *operatorv1alpha1.Extension) (reconcile.Result, error) {
 	log.Info("Deleting extension resources in garden runtime cluster")
 	if err := d.deleteResources(ctx, log, extension); err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	d.recorder.Event(extension, corev1.EventTypeNormal, "Deletion", "Extension deployment deleted successfully in runtime cluster")
-	return nil
+	return reconcile.Result{}, nil
 }
 
 func (d *deployer) createOrUpdateResources(ctx context.Context, extension *operatorv1alpha1.Extension) error {
@@ -79,7 +94,7 @@ func (d *deployer) createOrUpdateResources(ctx context.Context, extension *opera
 		"gardener": map[string]any{
 			"runtimeCluster": map[string]any{
 				"enabled":           "true",
-				"priorityClassName": v1beta1constants.PriorityClassNameGardenSystem200,
+				"priorityClassName": priorityClassName,
 			},
 		},
 	}

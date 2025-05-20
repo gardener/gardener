@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
@@ -101,6 +102,9 @@ var _ = Describe("Deployment", func() {
 				},
 			},
 		}
+
+		priorityClass := &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardener-garden-system-200"}}
+		Expect(runtimeClient.Create(ctx, priorityClass)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -110,7 +114,8 @@ var _ = Describe("Deployment", func() {
 
 	Describe("#Reconcile", func() {
 		It("should fail when OCI artifact is not found", func() {
-			Expect(runtime.Reconcile(ctx, log, extension)).To(MatchError(`failed pulling Helm chart from OCI repository "local-extension-runtime:v1.2.3": not found`))
+			_, err := runtime.Reconcile(ctx, log, extension)
+			Expect(err).To(MatchError(`failed pulling Helm chart from OCI repository "local-extension-runtime:v1.2.3": not found`))
 		})
 
 		It("should succeed reconciling the extension resources", func() {
@@ -136,7 +141,8 @@ var _ = Describe("Deployment", func() {
 				return nil
 			})()
 
-			Expect(runtime.Reconcile(ctx, log, extension)).To(Succeed())
+			_, err := runtime.Reconcile(ctx, log, extension)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}, &resourcesv1alpha1.ManagedResource{})).To(Succeed())
 			namespace := &corev1.Namespace{}
 			Expect(runtimeClient.Get(ctx, client.ObjectKey{Name: "runtime-extension-test-extension"}, namespace)).To(Succeed())
@@ -150,7 +156,8 @@ var _ = Describe("Deployment", func() {
 		It("should succeed if extension deployment is not defined", func() {
 			extension.Spec.Deployment.ExtensionDeployment = nil
 
-			Expect(runtime.Reconcile(ctx, log, extension)).To(Succeed())
+			_, err := runtime.Reconcile(ctx, log, extension)
+			Expect(err).NotTo(HaveOccurred())
 
 			mrList := &resourcesv1alpha1.ManagedResourceList{}
 			Expect(runtimeClient.List(ctx, mrList)).To(Succeed())
@@ -160,7 +167,8 @@ var _ = Describe("Deployment", func() {
 
 	Describe("#Delete", func() {
 		It("should succeed if extension was not deployed before", func() {
-			Expect(runtime.Delete(ctx, log, extension)).To(Succeed())
+			_, err := runtime.Delete(ctx, log, extension)
+			Expect(err).NotTo(HaveOccurred())
 
 			mrList := &resourcesv1alpha1.ManagedResourceList{}
 			Expect(runtimeClient.List(ctx, mrList)).To(Succeed())
@@ -174,7 +182,8 @@ var _ = Describe("Deployment", func() {
 			Expect(runtimeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}})).To(Succeed())
 			Expect(runtimeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("extension-%s-garden", extensionName), Namespace: "garden"}, Spec: resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: fmt.Sprintf("extension-%s-garden", extensionName)}}}})).To(Succeed())
 
-			Expect(runtime.Delete(ctx, log, extension)).To(Succeed())
+			_, err := runtime.Delete(ctx, log, extension)
+			Expect(err).NotTo(HaveOccurred())
 
 			mrList := &resourcesv1alpha1.ManagedResourceList{}
 			Expect(runtimeClient.List(ctx, mrList)).To(Succeed())

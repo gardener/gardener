@@ -7,6 +7,8 @@ package extension
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -31,7 +33,8 @@ func (r *Reconciler) delete(
 	defer cancel()
 
 	var (
-		g = flow.NewGraph("Extension deletion")
+		reconcileResult reconcile.Result
+		g               = flow.NewGraph("Extension deletion")
 
 		_ = g.Add(flow.Task{
 			Name: "Deleting ControllerRegistration and ControllerDeployment",
@@ -50,7 +53,9 @@ func (r *Reconciler) delete(
 		_ = g.Add(flow.Task{
 			Name: "Handling Extension in runtime cluster",
 			Fn: func(ctx context.Context) error {
-				return r.deployExtensionInRuntime(ctx, log, extension)
+				var err error
+				reconcileResult, err = r.deployExtensionInRuntime(ctx, log, extension)
+				return err
 			},
 		})
 	)
@@ -61,7 +66,13 @@ func (r *Reconciler) delete(
 		Log: log,
 	}); err != nil {
 		conditions.installed = v1beta1helper.UpdatedConditionWithClock(r.Clock, conditions.installed, gardencorev1beta1.ConditionFalse, ReasonDeleteFailed, err.Error())
-		return reconcile.Result{}, errors.Join(err, r.updateExtensionStatus(ctx, log, extension, conditions))
+		if updateErr := r.updateExtensionStatus(ctx, log, extension, conditions); updateErr != nil {
+			return reconcile.Result{}, errors.Join(err, fmt.Errorf("failed to update extension status: %w", updateErr))
+		}
+		if !reflect.DeepEqual(reconcileResult, reconcile.Result{}) {
+			return reconcileResult, nil
+		}
+		return reconcile.Result{}, err
 	}
 
 	if operator.IsExtensionInRuntimeRequired(extension) {

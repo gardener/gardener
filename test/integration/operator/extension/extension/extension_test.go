@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -193,6 +194,12 @@ var _ = Describe("Extension controller tests", func() {
 				Namespace: testNamespace.Name,
 			},
 		}
+
+		priorityClass := &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardener-garden-system-200"}}
+		Expect(testClient.Create(ctx, priorityClass)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(testClient.Delete(ctx, priorityClass)).To(Succeed())
+		})
 	})
 
 	It("should reconcile all required cluster resources in the virtual and runtime garden cluster", func() {
