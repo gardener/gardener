@@ -198,17 +198,11 @@ func (r *Reconciler) reconcile(
 		})
 		deployEtcdDruid = g.Add(flow.Task{
 			Name: "Deploying ETCD Druid",
-			Fn:   component.OpWait(c.etcdDruid).Deploy,
+			Fn:   c.etcdDruid.Deploy,
 		})
 		deployIstio = g.Add(flow.Task{
 			Name: "Deploying Istio",
-			Fn:   component.OpWait(c.istio).Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
-			Fn:           func(ctx context.Context) error { return r.reconcileDNSRecords(ctx, log, garden) },
-			SkipIf:       garden.Spec.DNS == nil,
-			Dependencies: flow.NewTaskIDs(deployIstio),
+			Fn:   c.istio.Deploy,
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
@@ -218,6 +212,23 @@ func (r *Reconciler) reconcile(
 			deployIstio,
 			deployNginxIngressController,
 		)
+
+		waitUntilEtcdDruidReady = g.Add(flow.Task{
+			Name:         "Waiting for ETCD Druid to be ready",
+			Fn:           c.istio.Wait,
+			Dependencies: flow.NewTaskIDs(deployEtcdDruid),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for Istio to be ready",
+			Fn:           c.istio.Wait,
+			Dependencies: flow.NewTaskIDs(deployIstio),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
+			Fn:           func(ctx context.Context) error { return r.reconcileDNSRecords(ctx, log, garden) },
+			SkipIf:       garden.Spec.DNS == nil,
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+		})
 
 		backupBucket = etcdMainBackupBucket(garden)
 
@@ -245,7 +256,7 @@ func (r *Reconciler) reconcile(
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
 			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents, backupBucket),
-			Dependencies: flow.NewTaskIDs(syncPointSystemComponents, deployEtcdBackupBucket),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdDruidReady, deployEtcdBackupBucket),
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs report readiness",
