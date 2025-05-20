@@ -12,6 +12,7 @@ build:
             - cmd/gardenadm/app
             - cmd/utils
             - extensions/pkg/apis/config/v1alpha1
+            - extensions/pkg/controller
             - extensions/pkg/util
             - extensions/pkg/webhook
             - imagevector
