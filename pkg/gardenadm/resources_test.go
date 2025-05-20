@@ -35,10 +35,12 @@ var _ = Describe("Resources", func() {
 			createControllerDeployment(fsys, "ext2")
 			createSecret(fsys, "secret1")
 			createSecret(fsys, "secret2")
+			createSecretBinding(fsys, "secretBinding")
+			createCredentialsBinding(fsys, "credentialsBinding")
 		})
 
 		It("should read the Kubernetes resources successfully", func() {
-			cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, secrets, err := gardenadm.ReadManifests(log, fsys)
+			cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, secrets, secretBinding, credentialsBinding, err := gardenadm.ReadManifests(log, fsys)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(cloudProfile.Name).To(Equal("cpfl"))
@@ -53,6 +55,8 @@ var _ = Describe("Resources", func() {
 			Expect(secrets).To(HaveLen(2))
 			Expect(secrets[0].Name).To(Equal("secret1"))
 			Expect(secrets[1].Name).To(Equal("secret2"))
+			Expect(secretBinding.Name).To(Equal("secretBinding"))
+			Expect(credentialsBinding.Name).To(Equal("credentialsBinding"))
 		})
 	})
 
@@ -60,7 +64,7 @@ var _ = Describe("Resources", func() {
 		It("should return an error", func() {
 			fsys["cloudprofile-foo.yaml"] = &fstest.MapFile{Data: []byte(`{`)}
 
-			_, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+			_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 			Expect(err).To(MatchError(ContainSubstring("failed decoding resource at index")))
 		})
 	})
@@ -71,7 +75,7 @@ var _ = Describe("Resources", func() {
 			fsys["project-foo.json"] = &fstest.MapFile{Data: []byte(`{"apiVersion":"core.gardener.cloud/v1beta1","kind":"Project"}`)}
 			fsys["shoot-foo.json"] = &fstest.MapFile{Data: []byte(`{"apiVersion":"core.gardener.cloud/v1beta1","kind":"Shoot"}`)}
 
-			_, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+			_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 			Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")))
 		})
 	})
@@ -82,7 +86,7 @@ var _ = Describe("Resources", func() {
 				createCloudProfile(fsys, "obj1")
 				createCloudProfile(fsys, "obj2")
 
-				_, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.CloudProfile resource")))
 			})
 		})
@@ -92,7 +96,7 @@ var _ = Describe("Resources", func() {
 				createProject(fsys, "obj1")
 				createProject(fsys, "obj2")
 
-				_, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.Project resource")))
 			})
 		})
@@ -102,8 +106,28 @@ var _ = Describe("Resources", func() {
 				createShoot(fsys, "obj1")
 				createShoot(fsys, "obj2")
 
-				_, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.Shoot resource")))
+			})
+		})
+
+		Describe("SecretBinding", func() {
+			It("should return an error", func() {
+				createSecretBinding(fsys, "secretBinding1")
+				createSecretBinding(fsys, "secretBinding2")
+
+				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.SecretBinding resource")))
+			})
+		})
+
+		Describe("CredentialsBinding", func() {
+			It("should return an error", func() {
+				createCredentialsBinding(fsys, "credentialsBinding1")
+				createCredentialsBinding(fsys, "credentialsBinding2")
+
+				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				Expect(err).To(MatchError(ContainSubstring("found more than one *gardensecurityv1alpha1.CredentialsBinding resource")))
 			})
 		})
 	})
@@ -114,7 +138,7 @@ var _ = Describe("Resources", func() {
 				createShoot(fsys, "shoot")
 				createProject(fsys, "project")
 
-				_, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")))
 			})
 		})
@@ -124,7 +148,7 @@ var _ = Describe("Resources", func() {
 				createCloudProfile(fsys, "cpfl")
 				createShoot(fsys, "shoot")
 
-				_, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Project resource, but did not find any")))
 			})
 		})
@@ -134,7 +158,7 @@ var _ = Describe("Resources", func() {
 				createCloudProfile(fsys, "cpfl")
 				createProject(fsys, "project")
 
-				_, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Shoot resource, but did not find any")))
 			})
 		})
@@ -184,6 +208,22 @@ metadata:
 func createSecret(fsys fstest.MapFS, name string) {
 	fsys["secret-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: v1
 kind: Secret
+metadata:
+  name: ` + name + `
+`)}
+}
+
+func createSecretBinding(fsys fstest.MapFS, name string) {
+	fsys["secretbinding-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: core.gardener.cloud/v1beta1
+kind: SecretBinding
+metadata:
+  name: ` + name + `
+`)}
+}
+
+func createCredentialsBinding(fsys fstest.MapFS, name string) {
+	fsys["credentialsbinding-"+name+".yaml"] = &fstest.MapFile{Data: []byte(`apiVersion: security.gardener.cloud/v1alpha1
+kind: CredentialsBinding
 metadata:
   name: ` + name + `
 `)}

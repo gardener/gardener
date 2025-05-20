@@ -20,6 +20,7 @@ import (
 
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardensecurityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
@@ -36,9 +37,16 @@ func ReadManifests(
 	controllerRegistrations []*gardencorev1beta1.ControllerRegistration,
 	controllerDeployments []*gardencorev1.ControllerDeployment,
 	secrets []*corev1.Secret,
+	secretBinding *gardencorev1beta1.SecretBinding,
+	credentialsBinding *gardensecurityv1alpha1.CredentialsBinding,
 	err error,
 ) {
-	decoder := serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(gardencorev1.SchemeGroupVersion, gardencorev1beta1.SchemeGroupVersion, corev1.SchemeGroupVersion)
+	decoder := serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(
+		gardencorev1.SchemeGroupVersion,
+		gardencorev1beta1.SchemeGroupVersion,
+		gardensecurityv1alpha1.SchemeGroupVersion,
+		corev1.SchemeGroupVersion,
+	)
 
 	if err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -105,22 +113,34 @@ func ReadManifests(
 
 			case *corev1.Secret:
 				secrets = append(secrets, typedObj)
+
+			case *gardencorev1beta1.SecretBinding:
+				if secretBinding != nil {
+					return fmt.Errorf("found more than one *gardencorev1beta1.SecretBinding resource, but only one is allowed")
+				}
+				secretBinding = typedObj
+
+			case *gardensecurityv1alpha1.CredentialsBinding:
+				if credentialsBinding != nil {
+					return fmt.Errorf("found more than one *gardensecurityv1alpha1.CredentialsBinding resource, but only one is allowed")
+				}
+				credentialsBinding = typedObj
 			}
 		}
 
 		return nil
 	}); err != nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
+		return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
 	}
 
 	if cloudProfile == nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
+		return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
 	}
 	if project == nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
+		return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
 	}
 	if shoot == nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
+		return nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
 	}
 
 	return
