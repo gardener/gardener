@@ -346,7 +346,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("5m"),
+								corev1.ResourceCPU:    resource.MustParse("10m"),
 								corev1.ResourceMemory: resource.MustParse("30M"),
 							},
 						},
