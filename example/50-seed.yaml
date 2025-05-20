@@ -16,8 +16,16 @@ spec:
 # If you don't want to have backups then don't specify the `.spec.backup` key.
   backup:
     provider: <provider-name> # e.g., aws, azure, gcp, ...
-  # providerConfig:
-  #   <some-provider-specific-config-for-the-backup-buckets>
+    # providerConfig:
+    #   apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
+    #   kind: BackupBucketConfig
+    #   metadata:
+    #     name: example-immutable-backup
+    #   immutability:
+    #     retentionPeriod: 96h        # Backups are immutable for 4 days
+    #     retentionType: bucket       # Bucket-level immutability
+    #     locked: false               # Set to true to lock the policy, applicable only to provider: gcp, azure
+    #     mode: compliance/governance     # applicable only to provider: aws
     region: europe-1
     credentialsRef:
       apiVersion: v1
