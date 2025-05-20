@@ -248,6 +248,22 @@ var _ = Describe("Warnings", func() {
 			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.kubeControllerManager.podEvictionTimeout field. The field does not have effect since Kubernetes 1.13. Instead, use the spec.kubernetes.kubeAPIServer.(defaultNotReadyTolerationSeconds/defaultUnreachableTolerationSeconds) fields.")))
 		})
 
+		It("should return a warning when maxEmptyBulkDelete is set for shoots using k8s v1.33", func() {
+			shoot.Spec.Kubernetes.Version = "1.33"
+			shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{
+				MaxEmptyBulkDelete: ptr.To(int32(5)),
+			}
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated since Kubernetes 1.33. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")))
+		})
+
+		It("should not warn when maxEmptyBulkDelete is set for shoots using k8s < v1.33", func() {
+			shoot.Spec.Kubernetes.Version = "1.32.4"
+			shoot.Spec.Kubernetes.ClusterAutoscaler = &core.ClusterAutoscaler{
+				MaxEmptyBulkDelete: ptr.To(int32(5)),
+			}
+			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(BeNil())
+		})
+
 		It("should return a warning when enableStaticTokenKubeconfig is set", func() {
 			shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 			Expect(GetWarnings(ctx, shoot, nil, credentialsRotationInterval)).To(ContainElement(Equal("you are setting the spec.kubernetes.enableStaticTokenKubeconfig field. The field is deprecated and will be removed in Gardener v1.120. Please adapt your machinery to no longer set this field")))
