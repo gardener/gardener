@@ -11,6 +11,10 @@ metadata:
 {{ include "labels" . | indent 4 }}
     high-availability-config.resources.gardener.cloud/type: server
 spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 100%
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: 2
   selector:
@@ -69,13 +73,11 @@ spec:
         - --heartbeat-namespace={{ .Release.Namespace }}
         - --heartbeat-renew-interval-seconds={{ .Values.controllers.heartbeat.renewIntervalSeconds }}
         {{- if .Values.gardener.runtimeCluster.enabled }}
-        - --disable-webhooks="*"
+        - --disable-webhooks=controlplane,dnsconfig,networkpolicy,prometheus,shoot
         - --controllers=backupbucket,dnsrecord,local-ext-shoot
         - --extension-class=garden
         {{- else }}
-        - --webhook-config-namespace={{ .Release.Namespace }}
-        - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
-        - --webhook-config-server-port={{ tpl .Values.webhookConfig.serverPort . }}
+        - --disable-webhooks="rollout-speedup"
         {{- range .Values.webhooks.prometheus.remoteWriteURLs }}
         - --prometheus-remote-write-url={{ . }}
         {{- end }}
@@ -85,6 +87,9 @@ spec:
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --disable-webhooks={{ .Values.disableWebhooks | join "," }}
         {{- end }}
+        - --webhook-config-namespace={{ .Release.Namespace }}
+        - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
+        - --webhook-config-server-port={{ tpl .Values.webhookConfig.serverPort . }}
         - --metrics-bind-address=:{{ tpl .Values.metricsPort . }}
         - --health-bind-address=:{{ tpl .Values.healthPort . }}
         {{- if .Values.gardener.version }}
@@ -109,13 +114,15 @@ spec:
             path: /healthz
             port: {{ tpl .Values.healthPort . }}
             scheme: HTTP
-          initialDelaySeconds: 10
+          initialDelaySeconds: 3
+          periodSeconds: 5
         readinessProbe:
           httpGet:
             path: /readyz
             port: {{ tpl .Values.healthPort . }}
             scheme: HTTP
-          initialDelaySeconds: 5
+          initialDelaySeconds: 3
+          periodSeconds: 5
         ports:
         - name: webhook-server
           containerPort: {{ tpl .Values.webhookConfig.serverPort . }}

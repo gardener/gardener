@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "name" . }}
+  name: gardener-extension-provider-local
   namespace: {{ .Release.Namespace }}
   annotations:
     networking.resources.gardener.cloud/from-world-to-ports: '[{"protocol":"TCP","port":{{ tpl .Values.webhookConfig.serverPort . }}}]'
