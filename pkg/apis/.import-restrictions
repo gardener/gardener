@@ -6,6 +6,7 @@ rules:
   - k8s.io/klog
   - k8s.io/utils/clock
   - k8s.io/utils/ptr
+  - k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1 # Allow import of `apiextensionv1.JSON`. It should not be used for anything else. See also: https://github.com/gardener/gardener/pull/12026#issuecomment-2865604722
 - selectorRegexp: github[.]com/gardener
   allowedPrefixes:
   - github.com/gardener/gardener/pkg/apis
