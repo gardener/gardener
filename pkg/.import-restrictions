@@ -4,6 +4,11 @@ rules:
   - ''
   forbiddenPrefixes:
   - github.com/gardener/gardener/cmd # envtest overrides this
-  - github.com/gardener/gardener/extensions # provider-local, OSC controller, apiserver/registry/core/namespacedcloudprofile, extension controller, ctrlinst controller, OSC node init override this
+  # extensions/ can import pkg/ but not the other way around as it can lead to cyclic dependencies.
+  # The extensions library might import more dependencies than the gardener core library needs or should have.
+  # See also: https://github.com/gardener/gardener/pull/12026#issuecomment-2865621229
+  # The extensions/ restriction is overridden in the following places:
+  # provider-local, OSC controller, NSCPFL in apiserver, extension controller, ctrlinst controller, OSC node init
+  - github.com/gardener/gardener/extensions
   - github.com/gardener/gardener/plugin # apiserver, envtest and NSCPFL override this
   - github.com/gardener/gardener/test
