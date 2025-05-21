@@ -67,6 +67,8 @@ type ControlPlaneSpec struct {
 	DefaultSpec `json:",inline"`
 	// Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
 	// This field is immutable.
+	// Deprecated: This field will be removed in a future release.
+	// The value "exposure" is no longer used since the enablement of SNI, and the value "normal" is redundant.
 	// +optional
 	Purpose *Purpose `json:"purpose,omitempty"`
 	// InfrastructureProviderStatus contains the provider status that has
@@ -92,7 +94,9 @@ type Purpose string
 
 const (
 	// Normal triggers the ControlPlane controllers for the shoot provider.
+	// Deprecated: This value is no longer necessary and will be removed in a future release.
 	Normal Purpose = "normal"
 	// Exposure triggers the ControlPlane controllers for the exposure settings.
+	// Deprecated: ControlPlane with purpose "exposure" is not deployed since the enablement of SNI.
 	Exposure Purpose = "exposure"
 )

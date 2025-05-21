@@ -2,6 +2,8 @@
 title: ControlPlane Exposure
 ---
 
+> **⚠️ Disclaimer:** The `ControlPlane` resource with purpose `exposure` is deprecated and will be removed in a future Gardener release. Since the enablement of SNI, the `exposure` purpose is no longer used.
+
 # Contract: `ControlPlane` Resource with Purpose `exposure`
 
 Some Kubernetes clusters require an additional deployments required by the seed cloud provider in order to work properly, e.g. AWS Load Balancer Readvertiser.
