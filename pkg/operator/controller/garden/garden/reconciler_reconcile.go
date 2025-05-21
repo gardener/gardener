@@ -549,10 +549,13 @@ func (r *Reconciler) reconcile(
 			Name: "Deploying Vali",
 			Fn:   c.vali.Deploy,
 		})
-
 		_ = g.Add(flow.Task{
 			Name: "Deploying prometheus-operator",
 			Fn:   c.prometheusOperator.Deploy,
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying OpenTelemetry Operator",
+			Fn:   c.openTelemetryOperator.Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Deploying Alertmanager",
@@ -662,10 +665,14 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 			Name: "Deploying custom resource definitions for Istio",
 			Fn:   component.OpWait(c.istioCRD).Deploy,
 		})
+		deployOpenTelemetryCRD = g.Add(flow.Task{
+			Name: "Deploying custom resource definitions for OpenTelemetry",
+			Fn:   component.OpWait(c.openTelemetryCRD).Deploy,
+		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
 			Fn:           c.gardenerResourceManager.Deploy,
-			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, deployIstioCRD),
+			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, deployIstioCRD, deployOpenTelemetryCRD),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting for gardener-resource-manager to be healthy",
