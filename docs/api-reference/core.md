@@ -137,7 +137,7 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <p>SecretRef is a reference to a secret that contains the credentials to access object store.
-Deprecated: This field will be removed after v1.122.0 has been released. Use <code>CredentialsRef</code> instead.
+Deprecated: This field will be removed after v1.123.0 has been released. Use <code>CredentialsRef</code> instead.
 Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
 </td>
 </tr>
@@ -3029,7 +3029,7 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <p>SecretRef is a reference to a secret that contains the credentials to access object store.
-Deprecated: This field will be removed after v1.122.0 has been released. Use <code>CredentialsRef</code> instead.
+Deprecated: This field will be removed after v1.123.0 has been released. Use <code>CredentialsRef</code> instead.
 Until removed, this field is synced with the <code>CredentialsRef</code> field when it refers to a secret.</p>
 </td>
 </tr>

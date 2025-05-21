@@ -1598,7 +1598,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a secret that contains the credentials to access object store. Deprecated: This field will be removed after v1.122.0 has been released. Use `CredentialsRef` instead. Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.",
+							Description: "SecretRef is a reference to a secret that contains the credentials to access object store. Deprecated: This field will be removed after v1.123.0 has been released. Use `CredentialsRef` instead. Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 						},

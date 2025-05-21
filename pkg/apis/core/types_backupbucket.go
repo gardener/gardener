@@ -43,7 +43,7 @@ type BackupBucketSpec struct {
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	ProviderConfig *runtime.RawExtension
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
-	// Deprecated: This field will be removed after v1.122.0 has been released. Use `CredentialsRef` instead.
+	// Deprecated: This field will be removed after v1.123.0 has been released. Use `CredentialsRef` instead.
 	// Until removed, this field is synced with the `CredentialsRef` field when it refers to a secret.
 	SecretRef corev1.SecretReference
 	// SeedName holds the name of the seed allocated to BackupBucket for running controller.
