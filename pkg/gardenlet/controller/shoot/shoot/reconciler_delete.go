@@ -140,7 +140,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 	var (
 		hasNodesCIDR            = o.Shoot.GetInfo().Spec.Networking != nil && o.Shoot.GetInfo().Spec.Networking.Nodes != nil
-		useDNS                  = botanist.ShootUsesDNS()
 		nonTerminatingNamespace = botanist.SeedNamespaceObject.UID != "" && botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound && (infrastructure != nil || o.Shoot.IsWorkerless)
 	)
@@ -328,25 +327,11 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			SkipIf:       !cleanupShootResources,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, waitUntilGardenerResourceManagerReady, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
 		})
-		deployControlPlaneExposure = g.Add(flow.Task{
-			Name:         "Deploying shoot control plane exposure components",
-			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			SkipIf:       botanist.Shoot.IsWorkerless || useDNS || !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerIsReady, waitUntilKubeAPIServerWithNodeAgentAuthorizerIsReady),
-		})
-		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
-			Name: "Waiting until Shoot control plane exposure has been reconciled",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Wait(ctx)
-			}),
-			SkipIf:       botanist.Shoot.IsWorkerless || useDNS || !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(deployControlPlaneExposure),
-		})
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			SkipIf:       !cleanupShootResources,
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord, waitUntilControlPlaneExposureReady, deployGardenerAccess),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
 
 		// Redeploy kube-controller-manager to make sure all components that depend on the
@@ -640,23 +625,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 
-		destroyControlPlaneExposure = g.Add(flow.Task{
-			Name: "Destroying shoot control plane exposure",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.Destroy(ctx)
-			}),
-			SkipIf:       botanist.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
-		})
-		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
-			Name: "Waiting until shoot control plane exposure has been destroyed",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return botanist.Shoot.Components.Extensions.ControlPlaneExposure.WaitCleanup(ctx)
-			}),
-			SkipIf:       botanist.Shoot.IsWorkerless,
-			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
-		})
-
 		destroyIngressDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying nginx ingress DNS record",
 			Fn:           botanist.DestroyIngressDNSRecord,
@@ -704,7 +672,6 @@ func (r *Reconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			destroySeedLogging,
 			waitUntilKubeAPIServerDeleted,
 			waitUntilControlPlaneDeleted,
-			waitUntilControlPlaneExposureDeleted,
 			waitUntilExtensionResourcesAfterKubeAPIServerDeleted,
 			waitUntilExtensionResourcesDeleted,
 			destroyIngressDomainDNSRecord,

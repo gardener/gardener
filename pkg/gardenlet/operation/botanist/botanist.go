@@ -64,8 +64,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 	if !o.Shoot.IsWorkerless {
 		o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime()
-		o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(extensionsv1alpha1.Normal)
-		o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(extensionsv1alpha1.Exposure)
+		o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane()
 		o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure()
 		o.Shoot.Components.Extensions.Network = b.DefaultNetwork()
 		o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig()

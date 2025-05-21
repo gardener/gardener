@@ -26,12 +26,11 @@ var _ = Describe("controlplane", func() {
 	var (
 		ctrl *gomock.Controller
 
-		infrastructure       *mockinfrastructure.MockInterface
-		controlPlane         *mockcontrolplane.MockInterface
-		controlPlaneExposure *mockcontrolplane.MockInterface
-		externalDNSRecord    *mockdnsrecord.MockInterface
-		internalDNSRecord    *mockdnsrecord.MockInterface
-		botanist             *Botanist
+		infrastructure    *mockinfrastructure.MockInterface
+		controlPlane      *mockcontrolplane.MockInterface
+		externalDNSRecord *mockdnsrecord.MockInterface
+		internalDNSRecord *mockdnsrecord.MockInterface
+		botanist          *Botanist
 
 		ctx     = context.TODO()
 		fakeErr = errors.New("fake err")
@@ -42,7 +41,6 @@ var _ = Describe("controlplane", func() {
 
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		controlPlane = mockcontrolplane.NewMockInterface(ctrl)
-		controlPlaneExposure = mockcontrolplane.NewMockInterface(ctrl)
 		externalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 		internalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 
@@ -51,11 +49,10 @@ var _ = Describe("controlplane", func() {
 				Shoot: &shoot.Shoot{
 					Components: &shoot.Components{
 						Extensions: &shoot.Extensions{
-							ControlPlane:         controlPlane,
-							ControlPlaneExposure: controlPlaneExposure,
-							ExternalDNSRecord:    externalDNSRecord,
-							InternalDNSRecord:    internalDNSRecord,
-							Infrastructure:       infrastructure,
+							ControlPlane:      controlPlane,
+							ExternalDNSRecord: externalDNSRecord,
+							InternalDNSRecord: internalDNSRecord,
+							Infrastructure:    infrastructure,
 						},
 					},
 				},
@@ -110,45 +107,6 @@ var _ = Describe("controlplane", func() {
 			It("should return the error during restoration", func() {
 				controlPlane.EXPECT().Restore(ctx, shootState).Return(fakeErr)
 				Expect(botanist.DeployControlPlane(ctx)).To(MatchError(fakeErr))
-			})
-		})
-	})
-
-	Describe("#DeployControlPlaneExposure()", func() {
-		Context("deploy", func() {
-			It("should deploy successfully", func() {
-				controlPlaneExposure.EXPECT().Deploy(ctx)
-				Expect(botanist.DeployControlPlaneExposure(ctx)).To(Succeed())
-			})
-
-			It("should return the error during deployment", func() {
-				controlPlaneExposure.EXPECT().Deploy(ctx).Return(fakeErr)
-				Expect(botanist.DeployControlPlaneExposure(ctx)).To(MatchError(fakeErr))
-			})
-		})
-
-		Context("restore", func() {
-			var shootState = &gardencorev1beta1.ShootState{}
-
-			BeforeEach(func() {
-				botanist.Shoot.SetShootState(shootState)
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Status: gardencorev1beta1.ShootStatus{
-						LastOperation: &gardencorev1beta1.LastOperation{
-							Type: gardencorev1beta1.LastOperationTypeRestore,
-						},
-					},
-				})
-			})
-
-			It("should restore successfully", func() {
-				controlPlaneExposure.EXPECT().Restore(ctx, shootState)
-				Expect(botanist.DeployControlPlaneExposure(ctx)).To(Succeed())
-			})
-
-			It("should return the error during restoration", func() {
-				controlPlaneExposure.EXPECT().Restore(ctx, shootState).Return(fakeErr)
-				Expect(botanist.DeployControlPlaneExposure(ctx)).To(MatchError(fakeErr))
 			})
 		})
 	})
