@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
@@ -99,10 +98,7 @@ func (b *backupBucket) Deploy(ctx context.Context) error {
 				Region: ptr.Deref(b.values.Config.Region, b.values.DefaultRegion),
 			},
 			ProviderConfig: b.values.Config.ProviderConfig,
-			SecretRef: corev1.SecretReference{ // TODO(vpnachev): Add support for WorkloadIdentity
-				Name:      b.values.Config.CredentialsRef.Name,
-				Namespace: b.values.Config.CredentialsRef.Namespace,
-			},
+			CredentialsRef: b.values.Config.CredentialsRef,
 		}
 
 		if b.values.Seed != nil {
