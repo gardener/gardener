@@ -35,6 +35,9 @@ spec:
           mountPath: /etc/gardener/local-backupbuckets
         - name: gardenadm
           mountPath: /gardenadm
+        - name: bashrc
+          mountPath: /root/.bashrc
+          subPath: bashrc
       # we don't want components of the autonomous shoot cluster to communicate with the kind API server
       automountServiceAccountToken: false
       hostAliases:
@@ -53,6 +56,9 @@ spec:
       - name: etcd-backup
         hostPath:
           path: /etc/gardener/local-backupbuckets
+      - name: bashrc
+        configMap:
+          name: machine-bashrc
   volumeClaimTemplates:
   - metadata:
       name: gardenadm
@@ -61,3 +67,14 @@ spec:
       resources:
         requests:
           storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: machine-bashrc
+  labels:
+    app: high-touch-machine
+data:
+  bashrc: |
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+    alias k=kubectl
