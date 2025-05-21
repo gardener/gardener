@@ -18,21 +18,9 @@ spec:
       - controller-manager
       - scheduler
   ingress:
-  - from:
-    - namespaceSelector: {}
-      podSelector: {}
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - ipBlock:
-        cidr: ::/0
+  - {}
   egress:
-  - to:
-    - namespaceSelector: {}
-      podSelector: {}
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - ipBlock:
-        cidr: ::/0
+  - {}
   policyTypes:
   - Egress
   - Ingress

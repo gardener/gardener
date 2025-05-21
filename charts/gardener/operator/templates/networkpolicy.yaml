@@ -16,21 +16,9 @@ spec:
       role: operator
       release: {{ .Release.Name }}
   ingress:
-  - from:
-    - namespaceSelector: {}
-      podSelector: {}
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - ipBlock:
-        cidr: ::/0
+  - {}
   egress:
-  - to:
-    - namespaceSelector: {}
-      podSelector: {}
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - ipBlock:
-        cidr: ::/0
+  - {}
   policyTypes:
   - Ingress
   - Egress
