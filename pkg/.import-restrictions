@@ -4,6 +4,6 @@ rules:
   - ''
   forbiddenPrefixes:
   - github.com/gardener/gardener/cmd # envtest overrides this
-  - github.com/gardener/gardener/extensions # provider-local, OSC controller, apiserver/registry/core/namespacedcloudprofile, and extension controller override this
+  - github.com/gardener/gardener/extensions # provider-local, OSC controller, apiserver/registry/core/namespacedcloudprofile, extension controller, and ctrlinst controller override this
   - github.com/gardener/gardener/plugin # apiserver, envtest and NSCPFL override this
   - github.com/gardener/gardener/test
