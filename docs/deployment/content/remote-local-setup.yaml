@@ -92,9 +92,9 @@ spec:
           bash -c "
             echo {{p,g}-seed,{gu,p,v}-local--local}.ingress.local.seed.local.gardener.cloud \
                  api.{e2e-managedseed.garden,local.local}.{internal,external}.local.gardener.cloud \
-                 api.e2e-{hib,upg-hib,wake-up,wake-up-ncp,migrate,rotate,default,upd-node,upgrade}{,-wl}.local.{internal,external}.local.gardener.cloud \
-                 api.e2e-{unpriv,mgr-hib,force-delete,fd-hib,e2e-auth-{one,two},layer4-lb}.local.{internal,external}.local.gardener.cloud \
-                 gu-local--e2e-rotate{,-wl}.ingress.local.seed.local.gardener.cloud
+                 api.e2e-{hib,upg-hib,wake-up,wake-up-ncp,migrate,rotate,default,upd-node,upgrade,upg-ha}{,-wl}.local.{internal,external}.local.gardener.cloud \
+                 api.e2e-{unpriv,mgr-hib,force-delete,fd-hib,auth-{one,two},layer4-lb,default-ip,rot-{ip,noroll}}.local.{internal,external}.local.gardener.cloud \
+                 gu-local--e2e-{rotate{,-wl},rot-{ip,noroll}}.ingress.local.seed.local.gardener.cloud
             " | sed 's/ /\n/g' | sed 's/^/172.18.255.1 /' | sort      >> /etc/hosts
           echo "172.18.255.3 api.virtual-garden.local.gardener.cloud" >> /etc/hosts
           echo "127.0.0.1 garden.local.gardener.cloud"                >> /etc/hosts
