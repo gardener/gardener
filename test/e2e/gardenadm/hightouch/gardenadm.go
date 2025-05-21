@@ -65,7 +65,7 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 		})
 
 		It("should initialize as control plane node", func(ctx SpecContext) {
-			stdOut, _, err := execute(ctx, 0, "gardenadm", "init", "-d", "/gardenadm/resources")
+			stdOut, _, err := execute(ctx, 0, "gardenadm", "--log-level=debug", "init", "-d", "/gardenadm/resources")
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your Shoot cluster control-plane has initialized successfully!"))
@@ -188,8 +188,9 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 		It("should generate a bootstrap token and join the worker node", func(ctx SpecContext) {
 			stdOut, _, err := execute(ctx, 0, "gardenadm", "token", "create", "--print-join-command")
 			Expect(err).NotTo(HaveOccurred())
+			joinCommand := strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")
 
-			stdOut, _, err = execute(ctx, 1, strings.Split(strings.ReplaceAll(string(stdOut.Contents()), `"`, ``), " ")...)
+			stdOut, _, err = execute(ctx, 1, append(joinCommand, "--log-level=debug")...)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(ctx, stdOut).Should(gbytes.Say("Your node has successfully been instructed to join the cluster as a worker!"))
