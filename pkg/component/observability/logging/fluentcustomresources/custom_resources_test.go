@@ -55,19 +55,6 @@ var _ = Describe("Custom Resources", func() {
 						},
 					},
 				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "journald-kubelet-monitor",
-						Labels: map[string]string{v1beta1constants.LabelKeyCustomLoggingResource: v1beta1constants.LabelValueCustomLoggingResource},
-					},
-					Spec: fluentbitv1alpha2.InputSpec{
-						Systemd: &fluentbitv1alpha2input.Systemd{
-							Tag:           "journald.kubelet-monitor",
-							ReadFromTail:  "on",
-							SystemdFilter: []string{"_SYSTEMD_UNIT=kubelet-monitor.service"},
-						},
-					},
-				},
 			},
 			Filters: []*fluentbitv1alpha2.ClusterFilter{
 				{
@@ -200,7 +187,6 @@ var _ = Describe("Custom Resources", func() {
 			manifests, err := test.ExtractManifestsFromManagedResourceData(customResourcesManagedResourceSecret.Data)
 			Expect(err).NotTo(HaveOccurred())
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet", "")
-			test.ExpectKindWithNameAndNamespace(manifests, "ClusterInput", "journald-kubelet-monitor", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterFilter", "gardener-extension", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterParser", "extensions-parser", "")
 			test.ExpectKindWithNameAndNamespace(manifests, "ClusterOutput", "journald2", "")
