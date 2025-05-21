@@ -646,7 +646,7 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
-			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
+			Fn:           c.gardenerResourceManager.Deploy,
 			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, deployIstioCRD),
 		})
 		_ = g.Add(flow.Task{

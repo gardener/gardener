@@ -18,7 +18,8 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/local"
 )
 
-// WebhookName is the name of the DNS config webhook.
+// WebhookName is the name of the rollout-speedup webhook. It modifies the API server deployments (kube-apiserver and
+// garden-apiserver) to make sure that a rolling update happens faster.
 const WebhookName = "rollout-speedup"
 
 var (
