@@ -24,10 +24,10 @@ import (
 
 // Translate translates the given object into a list of files containing static pod manifests as well as ConfigMaps and
 // Secrets that can be injected into an OperatingSystemConfig.
-func Translate(ctx context.Context, c client.Client, o client.Object) ([]extensionsv1alpha1.File, error) {
+func Translate(ctx context.Context, c client.Client, o client.Object, mutate func(*corev1.Pod)) ([]extensionsv1alpha1.File, error) {
 	switch obj := o.(type) {
 	case *appsv1.Deployment:
-		return translatePodTemplate(ctx, c, obj.ObjectMeta, obj.Spec.Template)
+		return translatePodTemplate(ctx, c, obj.ObjectMeta, obj.Spec.Template, mutate)
 	case *appsv1.StatefulSet:
 		for _, volumeClaimTemplate := range obj.Spec.VolumeClaimTemplates {
 			obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
@@ -39,15 +39,15 @@ func Translate(ctx context.Context, c client.Client, o client.Object) ([]extensi
 				},
 			})
 		}
-		return translatePodTemplate(ctx, c, obj.ObjectMeta, obj.Spec.Template)
+		return translatePodTemplate(ctx, c, obj.ObjectMeta, obj.Spec.Template, mutate)
 	case *corev1.Pod:
-		return translatePodTemplate(ctx, c, obj.ObjectMeta, corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: obj.Labels, Annotations: obj.Annotations}, Spec: obj.Spec})
+		return translatePodTemplate(ctx, c, obj.ObjectMeta, corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: obj.Labels, Annotations: obj.Annotations}, Spec: obj.Spec}, mutate)
 	default:
 		return nil, fmt.Errorf("unsupported object type %T", o)
 	}
 }
 
-func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav1.ObjectMeta, podTemplate corev1.PodTemplateSpec) ([]extensionsv1alpha1.File, error) {
+func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav1.ObjectMeta, podTemplate corev1.PodTemplateSpec, mutate func(*corev1.Pod)) ([]extensionsv1alpha1.File, error) {
 	pod := &corev1.Pod{ObjectMeta: podTemplate.ObjectMeta, Spec: podTemplate.Spec}
 	pod.Name = objectMeta.Name
 	pod.Namespace = metav1.NamespaceSystem
@@ -58,6 +58,10 @@ func translatePodTemplate(ctx context.Context, c client.Client, objectMeta metav
 	filesFromVolumes, err := translateVolumes(ctx, c, pod, objectMeta.Namespace)
 	if err != nil {
 		return nil, fmt.Errorf("failed translating volumes for static pod %s: %w", client.ObjectKeyFromObject(pod), err)
+	}
+
+	if mutate != nil {
+		mutate(pod)
 	}
 
 	staticPodYAML, err := kubernetesutils.Serialize(pod, c.Scheme())

@@ -68,15 +68,16 @@ type staticControlPlaneComponent struct {
 	deploy       func(context.Context) error
 	name         string
 	targetObject client.Object
+	mutate       func(*corev1.Pod)
 }
 
 func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlaneComponent {
 	return []staticControlPlaneComponent{
-		{b.deployETCD(v1beta1constants.ETCDRoleMain), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}},
-		{b.deployETCD(v1beta1constants.ETCDRoleEvents), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}},
-		{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}},
-		{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}},
-		{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}},
+		{b.deployETCD(v1beta1constants.ETCDRoleMain), bootstrapetcd.Name(v1beta1constants.ETCDRoleMain), &appsv1.StatefulSet{}, nil},
+		{b.deployETCD(v1beta1constants.ETCDRoleEvents), bootstrapetcd.Name(v1beta1constants.ETCDRoleEvents), &appsv1.StatefulSet{}, nil},
+		{b.deployKubeAPIServer, v1beta1constants.DeploymentNameKubeAPIServer, &appsv1.Deployment{}, nil},
+		{b.DeployKubeControllerManager, v1beta1constants.DeploymentNameKubeControllerManager, &appsv1.Deployment{}, nil},
+		{b.Shoot.Components.ControlPlane.KubeScheduler.Deploy, v1beta1constants.DeploymentNameKubeScheduler, &appsv1.Deployment{}, nil},
 	}
 }
 
@@ -145,7 +146,7 @@ func (b *AutonomousBotanist) filesForStaticControlPlanePods(ctx context.Context)
 			return nil, fmt.Errorf("failed reading object for %q: %w", component.name, err)
 		}
 
-		f, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject)
+		f, err := staticpod.Translate(ctx, b.SeedClientSet.Client(), component.targetObject, component.mutate)
 		if err != nil {
 			return nil, fmt.Errorf("failed translating object of type %T for %q: %w", component.targetObject, component.name, err)
 		}
