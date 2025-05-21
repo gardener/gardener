@@ -202,6 +202,11 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Fn:     component.OpDestroyAndWait(c.prometheusOperator).Destroy,
 			SkipIf: seedIsGarden,
 		})
+		destroyOpenTelemetryOperator = g.Add(flow.Task{
+			Name:   "Destroy OpenTelemetry Operator",
+			Fn:     component.OpDestroyAndWait(c.openTelemetryOperator).Destroy,
+			SkipIf: seedIsGarden,
+		})
 		destroyFluentBit = g.Add(flow.Task{
 			Name:   "Destroy Fluent Bit",
 			Fn:     component.OpDestroyAndWait(c.fluentBit).Destroy,
@@ -256,6 +261,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyIstio,
 			destroyFluentOperatorResources,
 			destroyPrometheusOperator,
+			destroyOpenTelemetryOperator,
 			destroyPlutono,
 			destroyKubeStateMetrics,
 			destroyEtcdDruid,
@@ -298,6 +304,12 @@ func (r *Reconciler) runDeleteSeedFlow(
 			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
 			SkipIf:       seedIsGarden,
 		})
+		destroyOpenTelemetryCRDs = g.Add(flow.Task{
+			Name:         "Destroy OpenTelemetry CRDs",
+			Fn:           component.OpDestroyAndWait(c.openTelemetryCRD).Destroy,
+			Dependencies: flow.NewTaskIDs(ensureNoControllerInstallationsExist),
+			SkipIf:       seedIsGarden,
+		})
 		destroyFluentOperatorCRDs = g.Add(flow.Task{
 			Name:         "Destroy Fluent Operator CRDs",
 			Fn:           component.OpDestroyAndWait(c.fluentCRD).Destroy,
@@ -317,6 +329,7 @@ func (r *Reconciler) runDeleteSeedFlow(
 			destroyEtcdCRD,
 			destroyFluentOperatorCRDs,
 			destroyPersesCRDs,
+			destroyOpenTelemetryCRDs,
 		)
 
 		destroySystemResources = g.Add(flow.Task{
