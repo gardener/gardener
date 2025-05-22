@@ -117,9 +117,7 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed initializing shoot resource: %w", err)
 	}
 
-	if err := initializeSeedResource(resources.Seed, resources.Shoot.Name); err != nil {
-		return nil, fmt.Errorf("failed initializing seed resource: %w", err)
-	}
+	initializeSeedResource(resources.Seed, resources.Shoot.Name)
 
 	gardenClient := newFakeGardenClient()
 	if err := initializeFakeGardenResources(ctx, gardenClient, resources, extensions); err != nil {
@@ -345,15 +343,13 @@ func initializeShootResource(shoot *gardencorev1beta1.Shoot, fs afero.Afero, pro
 	return nil
 }
 
-func initializeSeedResource(seed *gardencorev1beta1.Seed, shootName string) error {
+func initializeSeedResource(seed *gardencorev1beta1.Seed, shootName string) {
 	seed.ObjectMeta = metav1.ObjectMeta{
 		Name:   shootName,
 		Labels: map[string]string{v1beta1constants.LabelAutonomousShootCluster: "true"},
 	}
 	seed.Status = gardencorev1beta1.SeedStatus{ClusterIdentity: ptr.To(shootName)}
 	kubernetes.GardenScheme.Default(seed)
-
-	return nil
 }
 
 func shootUID(fs afero.Afero) (types.UID, error) {
