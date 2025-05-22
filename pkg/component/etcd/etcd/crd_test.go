@@ -57,7 +57,7 @@ var _ = Describe("CRD", func() {
 
 		DescribeTable("should re-create CRD if it is deleted",
 			func(crdName string) {
-				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}})).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 				Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 				verifyDeployedCRD(ctx, crdName, c)
@@ -74,7 +74,7 @@ var _ = Describe("CRD", func() {
 
 			DescribeTable("CRD is deleted",
 				func(crdName string) {
-					Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
+					Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}})).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 				},
 

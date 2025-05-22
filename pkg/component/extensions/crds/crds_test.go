@@ -78,7 +78,7 @@ var _ = Describe("#CRDs", func() {
 
 		DescribeTable("should re-create CRD if it is deleted",
 			func(crdName string) {
-				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}})).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 				Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
@@ -126,7 +126,7 @@ var _ = Describe("#CRDs", func() {
 
 		DescribeTable("should re-create CRD if it is deleted",
 			func(crdName string, matcher gomegatypes.GomegaMatcher) {
-				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Or(Succeed(), BeNotFoundError()))
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}})).To(Or(Succeed(), BeNotFoundError()))
 				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 				Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(matcher)
@@ -174,7 +174,7 @@ var _ = Describe("#CRDs", func() {
 
 		DescribeTable("should re-create CRD if it is deleted",
 			func(crdName string, matcher gomegatypes.GomegaMatcher) {
-				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Or(Succeed(), BeNotFoundError()))
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}})).To(Or(Succeed(), BeNotFoundError()))
 				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
 				Expect(crdDeployer.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(matcher)
