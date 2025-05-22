@@ -62,7 +62,7 @@ func (c *crds) Deploy(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-// Destroy deletes the CRDs for the Fluent Operator.
+// Destroy deletes the CRDs for the OpenTelemetry Operator.
 func (c *crds) Destroy(ctx context.Context) error {
 	var fns []flow.TaskFn
 
