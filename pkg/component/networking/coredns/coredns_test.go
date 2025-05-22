@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -790,7 +789,7 @@ status: {}
 				configMapYAML(commonSuffixes),
 				configMapCustomYAML,
 				pdbYAML,
-				serviceYAML(ipFamilyPolicy(values.IPFamilies)),
+				serviceYAML(string(GetIPFamilyPolicy(values.IPFamilies, values.ClusterIPs))),
 				networkPolicyYAML,
 			))
 
@@ -917,7 +916,7 @@ status: {}
 
 			Context("w/o apiserver host, w/o pod annotations", func() {
 				It("should successfully deploy all resources", func() {
-					Expect(manifests).To(ContainElement(serviceYAML(ipFamilyPolicy(values.IPFamilies))))
+					Expect(manifests).To(ContainElement(serviceYAML(string(GetIPFamilyPolicy(values.IPFamilies, values.ClusterIPs)))))
 				})
 			})
 		})
@@ -1033,13 +1032,19 @@ status: {}
 				Expect(component.WaitCleanup(ctx)).To(Succeed())
 			})
 		})
+
+		var _ = Describe("ipFamilyPolicy", func() {
+			It("should return SingleStack if only IPv4 ClusterIP and both IP families requested", func() {
+				ipFamilies := []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}
+				clusterIPs := []net.IP{net.ParseIP("10.0.0.10")}
+				Expect(GetIPFamilyPolicy(ipFamilies, clusterIPs)).To(Equal(corev1.IPFamilyPolicySingleStack))
+			})
+
+			It("should return PreferDualStack if both IPv4 and IPv6 ClusterIPs and both IP families requested", func() {
+				ipFamilies := []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4, gardencorev1beta1.IPFamilyIPv6}
+				clusterIPs := []net.IP{net.ParseIP("10.0.0.10"), net.ParseIP("2001:db8::1")}
+				Expect(GetIPFamilyPolicy(ipFamilies, clusterIPs)).To(Equal(corev1.IPFamilyPolicyPreferDualStack))
+			})
+		})
 	})
 })
-
-func ipFamilyPolicy(ipfamilies []gardencorev1beta1.IPFamily) string {
-	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](ipfamilies...)
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
-		return string(corev1.IPFamilyPolicyPreferDualStack)
-	}
-	return string(corev1.IPFamilyPolicySingleStack)
-}
