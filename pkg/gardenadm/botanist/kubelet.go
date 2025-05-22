@@ -8,13 +8,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"slices"
 	"time"
 
 	"github.com/spf13/afero"
-	certificatesv1 "k8s.io/api/certificates/v1"
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
@@ -131,41 +127,4 @@ func (b *AutonomousBotanist) BootstrapKubelet(ctx context.Context) error {
 	}
 
 	return b.DBus.Restart(ctx, nil, nil, kubelet.UnitName)
-}
-
-// ApproveKubeletServerCertificateSigningRequest approves the kubelet server certificate signing request.
-func (b *AutonomousBotanist) ApproveKubeletServerCertificateSigningRequest(ctx context.Context) error {
-	serverCertificateExists, err := b.FS.Exists(filepath.Join(kubelet.PathKubeletDirectory, "pki", "kubelet-server-current.pem"))
-	if err != nil {
-		return fmt.Errorf("failed checking if kubelet server certificate exists: %w", err)
-	}
-	if serverCertificateExists {
-		return nil
-	}
-
-	csrList := &certificatesv1.CertificateSigningRequestList{}
-	if err := b.SeedClientSet.Client().List(ctx, csrList); err != nil {
-		return fmt.Errorf("failed listing certificate signing requests: %w", err)
-	}
-
-	for _, csr := range csrList.Items {
-		if csr.Spec.Username == "system:node:"+b.HostName {
-			if !slices.ContainsFunc(csr.Status.Conditions, func(condition certificatesv1.CertificateSigningRequestCondition) bool {
-				return condition.Type == certificatesv1.CertificateApproved && condition.Status == corev1.ConditionTrue
-			}) {
-				b.Logger.Info("Approving kubelet server certificate signing request", "csrName", csr.Name, "hostName", b.HostName)
-				csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
-					Type:    certificatesv1.CertificateApproved,
-					Status:  corev1.ConditionTrue,
-					Reason:  "RequestApproved",
-					Message: "Approving kubelet server certificate signing request via gardenadm",
-				})
-				return b.SeedClientSet.Client().SubResource("approval").Update(ctx, &csr)
-			}
-
-			return nil
-		}
-	}
-
-	return fmt.Errorf("no certificate signing request found for node %q", b.HostName)
 }
