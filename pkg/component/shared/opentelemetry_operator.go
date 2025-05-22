@@ -22,7 +22,7 @@ func NewOpenTelemetryOperator(
 	deployer component.DeployWaiter,
 	err error,
 ) {
-	operatorImage, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameOpentelemetryOperator)
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameOpentelemetryOperator)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func NewOpenTelemetryOperator(
 		c,
 		gardenNamespaceName,
 		opentelemetryoperator.Values{
-			Image:             operatorImage.String(),
+			Image:             image.String(),
 			PriorityClassName: priorityClassName,
 		},
 	)
