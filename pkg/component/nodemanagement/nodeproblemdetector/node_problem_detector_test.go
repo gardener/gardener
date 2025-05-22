@@ -194,7 +194,7 @@ spec:
       - command:
         - /bin/sh
         - -c
-        - exec /node-problem-detector --logtostderr --config.system-log-monitor=/config/kernel-monitor.json,/config/docker-monitor.json,/config/systemd-monitor.json
+        - exec /node-problem-detector --logtostderr --config.system-log-monitor=/config/kernel-monitor.json,/config/docker-monitor.json,/config/systemd-monitor.json,/config/readonly-monitor.json
           .. --config.custom-plugin-monitor=/config/kernel-monitor-counter.json,/config/systemd-monitor-counter.json
           .. --config.system-stats-monitor=/config/system-stats-monitor.json --prometheus-port=` + strconv.Itoa(daemonSetPrometheusPort) + `
         env:
