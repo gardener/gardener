@@ -738,14 +738,7 @@ metadata:
   namespace: a
 spec:
   ingress:
-  - from:
-    - namespaceSelector: {}
-      podSelector: {}
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    - ipBlock:
-        cidr: ::/0
-    ports:
+  - ports:
     - port: 10250
       protocol: TCP
   podSelector:
