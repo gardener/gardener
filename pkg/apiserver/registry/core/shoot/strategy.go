@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 type shootStrategy struct {
@@ -57,7 +56,7 @@ func (shootStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 	newShoot.Generation = 1
 	newShoot.Status = core.ShootStatus{}
 
-	utils.SyncCloudProfileFields(nil, newShoot)
+	gardenerutils.SyncCloudProfileFields(nil, newShoot)
 
 	if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil
@@ -75,7 +74,7 @@ func (shootStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 
-	utils.SyncCloudProfileFields(oldShoot, newShoot)
+	gardenerutils.SyncCloudProfileFields(oldShoot, newShoot)
 
 	if oldShoot.Spec.CredentialsBindingName == nil && !utilfeature.DefaultFeatureGate.Enabled(features.ShootCredentialsBinding) {
 		newShoot.Spec.CredentialsBindingName = nil

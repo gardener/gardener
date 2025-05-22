@@ -125,7 +125,7 @@ func (g *graph) handleShootCreateOrUpdate(ctx context.Context, shoot *gardencore
 
 	g.addEdge(namespaceVertex, shootVertex)
 
-	cloudProfileReference := gardenerutils.BuildCloudProfileReference(shoot)
+	cloudProfileReference := gardenerutils.BuildCloudProfileReference_v1beta1(shoot)
 	if cloudProfileReference != nil {
 		var cloudProfileVertex *vertex
 		switch cloudProfileReference.Kind {

@@ -15,7 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
-	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 type cloudProfileStrategy struct {
@@ -44,7 +44,7 @@ func (cloudProfileStrategy) Validate(_ context.Context, obj runtime.Object) fiel
 func (cloudProfileStrategy) Canonicalize(obj runtime.Object) {
 	cloudProfile := obj.(*core.CloudProfile)
 
-	admissionutils.SyncArchitectureCapabilityFields(cloudProfile.Spec, core.CloudProfileSpec{})
+	gardenerutils.SyncArchitectureCapabilityFields(cloudProfile.Spec, core.CloudProfileSpec{})
 }
 
 func (cloudProfileStrategy) AllowCreateOnUpdate() bool {
@@ -55,7 +55,7 @@ func (cloudProfileStrategy) PrepareForUpdate(_ context.Context, newObj, oldObj r
 	oldCloudProfile := oldObj.(*core.CloudProfile)
 	newCloudProfile := newObj.(*core.CloudProfile)
 
-	admissionutils.SyncArchitectureCapabilityFields(newCloudProfile.Spec, oldCloudProfile.Spec)
+	gardenerutils.SyncArchitectureCapabilityFields(newCloudProfile.Spec, oldCloudProfile.Spec)
 }
 
 func (cloudProfileStrategy) AllowUnconditionalUpdate() bool {
