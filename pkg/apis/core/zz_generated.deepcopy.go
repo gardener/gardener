@@ -1036,6 +1036,16 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.MaxScaleDownParallelism != nil {
+		in, out := &in.MaxScaleDownParallelism, &out.MaxScaleDownParallelism
+		*out = new(int32)
+		**out = **in
+	}
+	if in.MaxDrainParallelism != nil {
+		in, out := &in.MaxDrainParallelism, &out.MaxDrainParallelism
+		*out = new(int32)
+		**out = **in
+	}
 	if in.IgnoreDaemonsetsUtilization != nil {
 		in, out := &in.IgnoreDaemonsetsUtilization, &out.IgnoreDaemonsetsUtilization
 		*out = new(bool)

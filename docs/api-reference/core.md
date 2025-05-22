@@ -4063,8 +4063,8 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10 or MaxScaleDownParallelism when that is set).
-Deprecated: This field is deprecated and will be removed in gardener v1.122.
+<p>MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: MaxScaleDownParallelism when that is set).
+Deprecated: This field is deprecated and will be removed once gardener drops support for Kubernetes v1.32.
 This cluster-autoscaler field is deprecated upstream, use &ndash;max-scale-down-parallelism instead.</p>
 </td>
 </tr>

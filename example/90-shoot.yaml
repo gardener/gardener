@@ -334,7 +334,7 @@ spec:
   #   statusTaints:
   #     - "reservedForTenant"
   #   newPodScaleUpDelay: 0s
-  #   maxEmptyBulkDelete: 10 # Deprecated, will be removed once gardener drops support for Kubernetes v1.33. Use maxScaleDownParallelism instead.
+  #   maxEmptyBulkDelete: 10 # Deprecated, will be removed once gardener drops support for Kubernetes v1.32. Use maxScaleDownParallelism instead.
   #   maxScaleDownParallelism: 10
   #   maxDrainParallelism: 1
   #   ignoreDaemonsetsUtilization: false

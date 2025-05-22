@@ -543,8 +543,8 @@ message ClusterAutoscaler {
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration newPodScaleUpDelay = 11;
 
-  // MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: 10 or MaxScaleDownParallelism when that is set).
-  // Deprecated: This field is deprecated and will be removed in gardener v1.122.
+  // MaxEmptyBulkDelete specifies the maximum number of empty nodes that can be deleted at the same time (default: MaxScaleDownParallelism when that is set).
+  // Deprecated: This field is deprecated and will be removed once gardener drops support for Kubernetes v1.32.
   // This cluster-autoscaler field is deprecated upstream, use --max-scale-down-parallelism instead.
   // +optional
   optional int32 maxEmptyBulkDelete = 12;
