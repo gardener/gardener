@@ -334,6 +334,9 @@ kind-operator-down: $(KIND)
 
 # speed-up skaffold deployments by building all images concurrently
 export SKAFFOLD_BUILD_CONCURRENCY = 0
+# build the images for the platform matching the nodes of the active kubernetes cluster,
+# even in `skaffold build`, which doesn't enable this by default
+export SKAFFOLD_CHECK_CLUSTER_NODE_PLATFORMS = true
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev gardenadm%up: export SKAFFOLD_DEFAULT_REPO = garden.local.gardener.cloud:5001
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev gardenadm%up: export SKAFFOLD_PUSH = true
 gardener%up gardener%dev gardener%debug gardenlet%up gardenlet%dev gardenlet%debug operator%up operator-dev operator-debug operator-seed-dev gardenadm%up: export SOURCE_DATE_EPOCH = $(shell date -d $(BUILD_DATE) +%s)
