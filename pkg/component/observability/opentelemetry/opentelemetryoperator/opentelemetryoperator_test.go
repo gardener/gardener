@@ -34,11 +34,10 @@ import (
 	. "github.com/gardener/gardener/pkg/component/observability/opentelemetry/opentelemetryoperator"
 )
 
-var _ = Describe("Fluent Operator", func() {
+var _ = Describe("OpenTelemetry Operator", func() {
 	var (
 		ctx = context.Background()
 
-		// name              = "opentelemetry-operator"
 		namespace         = "some-namespace"
 		image             = "some-image:some-tag"
 		priorityClassName = "some-priority-class"

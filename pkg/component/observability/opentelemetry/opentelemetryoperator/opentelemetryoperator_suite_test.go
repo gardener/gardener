@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestFluentOperator(t *testing.T) {
+func TestOpenTelemetryOperator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Component Observability OpenTelemetry operator Suite")
+	RunSpecs(t, "Component Observability OpenTelemetry Operator Suite")
 }
