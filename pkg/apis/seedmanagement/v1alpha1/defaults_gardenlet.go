@@ -7,5 +7,5 @@ package v1alpha1
 // SetDefaults_Gardenlet sets default values for Gardenlet objects.
 func SetDefaults_Gardenlet(obj *Gardenlet) {
 	SetDefaults_GardenletDeployment(&obj.Spec.Deployment.GardenletDeployment)
-	setDefaultsGardenletConfig(&obj.Spec.Config, obj.Name, obj.Namespace)
+	setDefaultsGardenletConfig(&obj.Spec.Config)
 }

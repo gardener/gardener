@@ -18,7 +18,7 @@ import (
 
 // SetDefaults_ManagedSeed sets default values for ManagedSeed objects.
 func SetDefaults_ManagedSeed(obj *ManagedSeed) {
-	setDefaultsGardenlet(&obj.Spec.Gardenlet, obj.Name, obj.Namespace)
+	setDefaultsGardenlet(&obj.Spec.Gardenlet)
 }
 
 // SetDefaults_GardenletDeployment sets default values for GardenletDeployment objects.
@@ -54,13 +54,13 @@ func SetDefaults_Image(obj *Image) {
 	}
 }
 
-func setDefaultsGardenlet(obj *GardenletConfig, name, namespace string) {
+func setDefaultsGardenlet(obj *GardenletConfig) {
 	// Set deployment defaults
 	if obj.Deployment == nil {
 		obj.Deployment = &GardenletDeployment{}
 	}
 
-	setDefaultsGardenletConfig(&obj.Config, name, namespace)
+	setDefaultsGardenletConfig(&obj.Config)
 
 	// Set default garden connection bootstrap
 	if obj.Bootstrap == nil {
@@ -74,7 +74,7 @@ func setDefaultsGardenlet(obj *GardenletConfig, name, namespace string) {
 	}
 }
 
-func setDefaultsGardenletConfig(config *runtime.RawExtension, name, namespace string) {
+func setDefaultsGardenletConfig(config *runtime.RawExtension) {
 	if config == nil {
 		return
 	}
@@ -98,14 +98,14 @@ func setDefaultsGardenletConfig(config *runtime.RawExtension, name, namespace st
 	}
 
 	// Set gardenlet config defaults
-	setDefaultsGardenletConfiguration(gardenletConfig, name, namespace)
+	setDefaultsGardenletConfiguration(gardenletConfig)
 
 	// Set gardenlet config back to obj.Config
 	// Encoding back to bytes is not needed, it will be done by the custom conversion code
 	*config = runtime.RawExtension{Object: gardenletConfig}
 }
 
-func setDefaultsGardenletConfiguration(obj *gardenletconfigv1alpha1.GardenletConfiguration, name, namespace string) {
+func setDefaultsGardenletConfiguration(obj *gardenletconfigv1alpha1.GardenletConfiguration) {
 	// Initialize resources
 	if obj.Resources == nil {
 		obj.Resources = &gardenletconfigv1alpha1.ResourcesConfiguration{}
@@ -118,9 +118,6 @@ func setDefaultsGardenletConfiguration(obj *gardenletconfigv1alpha1.GardenletCon
 	if obj.SeedConfig == nil {
 		obj.SeedConfig = &gardenletconfigv1alpha1.SeedConfig{}
 	}
-
-	// Set seed spec defaults
-	setDefaultsSeedSpec(&obj.SeedConfig.Spec, name, namespace)
 }
 
 func setDefaultsResources(obj *gardenletconfigv1alpha1.ResourcesConfiguration) {
@@ -129,20 +126,5 @@ func setDefaultsResources(obj *gardenletconfigv1alpha1.ResourcesConfiguration) {
 			obj.Capacity = make(corev1.ResourceList)
 		}
 		obj.Capacity[gardencorev1beta1.ResourceShoots] = resource.MustParse("250")
-	}
-}
-
-func setDefaultsSeedSpec(spec *gardencorev1beta1.SeedSpec, name, namespace string) {
-	if spec.Backup != nil && spec.Backup.SecretRef == (corev1.SecretReference{}) && spec.Backup.CredentialsRef == nil {
-		spec.Backup.SecretRef = corev1.SecretReference{
-			Name:      "backup-" + name,
-			Namespace: namespace,
-		}
-		spec.Backup.CredentialsRef = &corev1.ObjectReference{
-			APIVersion: "v1",
-			Kind:       "Secret",
-			Name:       "backup-" + name,
-			Namespace:  namespace,
-		}
 	}
 }
