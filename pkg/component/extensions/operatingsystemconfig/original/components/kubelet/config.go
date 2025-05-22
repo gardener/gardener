@@ -96,6 +96,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
 		SeccompDefault:                   params.SeccompDefault,
 		SerializeImagePulls:              params.SerializeImagePulls,
+		MaxParallelImagePulls:            params.MaxParallelImagePulls,
 		ServerTLSBootstrap:               true,
 		StreamingConnectionIdleTimeout:   *params.StreamingConnectionIdleTimeout,
 		RegisterWithTaints:               nodeTaints,

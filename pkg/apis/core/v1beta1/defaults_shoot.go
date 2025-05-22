@@ -149,7 +149,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = ptr.To[int32](40)
 		}
 		if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
-			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(true)
+			// SerializeImagePulls defaults to true when MaxParallelImagePulls is not set
+			if obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls == nil || *obj.Spec.Kubernetes.Kubelet.MaxParallelImagePulls < 2 {
+				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(true)
+			} else {
+				obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = ptr.To(false)
+			}
 		}
 
 		if obj.Spec.Maintenance.AutoUpdate.MachineImageVersion == nil {

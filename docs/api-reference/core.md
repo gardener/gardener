@@ -7298,6 +7298,21 @@ MemorySwapConfiguration
 <p>MemorySwap configures swap memory available to container workloads.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>maxParallelImagePulls</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxParallelImagePulls describes the maximum number of image pulls in parallel. The value must be a positive number.
+This field cannot be set if SerializeImagePulls (pull one image at a time) is set to true.
+Setting it to nil means no limit.
+Default: nil</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction

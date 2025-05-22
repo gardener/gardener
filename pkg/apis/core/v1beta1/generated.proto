@@ -1594,6 +1594,13 @@ message KubeletConfig {
   // MemorySwap configures swap memory available to container workloads.
   // +optional
   optional MemorySwapConfiguration memorySwap = 26;
+
+  // MaxParallelImagePulls describes the maximum number of image pulls in parallel. The value must be a positive number.
+  // This field cannot be set if SerializeImagePulls (pull one image at a time) is set to true.
+  // Setting it to nil means no limit.
+  // Default: nil
+  // +optional
+  optional int32 maxParallelImagePulls = 27;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
