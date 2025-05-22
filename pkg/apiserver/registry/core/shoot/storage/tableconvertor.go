@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var swaggerMetadataDescriptions = metav1.ObjectMeta{}.SwaggerDoc()
@@ -78,7 +78,7 @@ func (c *convertor) ConvertToTable(_ context.Context, obj runtime.Object, _ runt
 
 		cells = append(cells, shoot.Name)
 
-		cloudProfileReference := admissionutils.BuildCloudProfileReference(shoot)
+		cloudProfileReference := gardenerutils.BuildCloudProfileReference_core(shoot)
 		switch cloudProfileReference.Kind {
 		case v1beta1constants.CloudProfileReferenceKindCloudProfile:
 			cells = append(cells, cloudProfileReference.Name)

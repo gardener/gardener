@@ -10,5 +10,5 @@ rules:
   # The extensions/ restriction is overridden in the following places:
   # provider-local, NSCPFL in apiserver, extension controller, ctrlinst controller, OSC node init
   - github.com/gardener/gardener/extensions
-  - github.com/gardener/gardener/plugin # apiserver, envtest and NSCPFL override this
+  - github.com/gardener/gardener/plugin # apiserver and envtest override this
   - github.com/gardener/gardener/test
