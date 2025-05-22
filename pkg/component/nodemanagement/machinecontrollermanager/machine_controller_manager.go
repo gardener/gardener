@@ -220,7 +220,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						fmt.Sprintf("--port=%d", portMetrics),
 						"--safety-up=2",
 						"--safety-down=1",
-						"--target-kubeconfig=" + TargetKubeconfig(m.values.AutonomousShoot, m.namespace),
+						"--target-kubeconfig=" + targetKubeconfig(m.values.AutonomousShoot, m.namespace),
 						"--concurrent-syncs=30",
 						"--kube-api-qps=150",
 						"--kube-api-burst=200",
@@ -454,8 +454,8 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 	return managedresources.CreateForShoot(ctx, m.client, m.namespace, managedResourceTargetName, managedresources.LabelValueGardener, false, data)
 }
 
-// TargetKubeconfig returns the path to the target kubeconfig file depending on the shoot configuration.
-func TargetKubeconfig(autonomousShoot bool, controlPlaneNamespace string) string {
+// targetKubeconfig returns the path to the target kubeconfig file depending on the shoot configuration.
+func targetKubeconfig(autonomousShoot bool, controlPlaneNamespace string) string {
 	if !autonomousShoot {
 		return gardenerutils.PathGenericKubeconfig
 	}

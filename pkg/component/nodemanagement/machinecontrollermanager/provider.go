@@ -43,7 +43,7 @@ func ProviderSidecarContainer(cluster *extensionscontroller.Cluster, providerNam
 			"--machine-safety-orphan-vms-period=30m",
 			"--namespace=" + cluster.ObjectMeta.Name,
 			"--port=" + strconv.Itoa(portProviderMetrics),
-			"--target-kubeconfig=" + TargetKubeconfig(autonomousShoot, cluster.ObjectMeta.Name),
+			"--target-kubeconfig=" + targetKubeconfig(autonomousShoot, cluster.ObjectMeta.Name),
 			"--v=3",
 		},
 		LivenessProbe: &corev1.Probe{
