@@ -43,7 +43,7 @@ type Values struct {
 	PriorityClassName string
 }
 
-type opentelemetryOperator struct {
+type openTelemetryOperator struct {
 	client    client.Client
 	namespace string
 	values    Values
@@ -55,14 +55,14 @@ func NewOpenTelemetryOperator(
 	namespace string,
 	values Values,
 ) component.DeployWaiter {
-	return &opentelemetryOperator{
+	return &openTelemetryOperator{
 		client:    client,
 		namespace: namespace,
 		values:    values,
 	}
 }
 
-func (otel *opentelemetryOperator) Deploy(ctx context.Context) error {
+func (otel *openTelemetryOperator) Deploy(ctx context.Context) error {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -93,20 +93,20 @@ func (otel *opentelemetryOperator) Deploy(ctx context.Context) error {
 	return managedresources.CreateForSeed(ctx, otel.client, otel.namespace, OperatorManagedResourceName, false, serializedResources)
 }
 
-func (otel *opentelemetryOperator) Destroy(ctx context.Context) error {
+func (otel *openTelemetryOperator) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, otel.client, otel.namespace, OperatorManagedResourceName)
 }
 
 var timeoutWaitForManagedResources = 2 * time.Minute
 
-func (otel *opentelemetryOperator) Wait(ctx context.Context) error {
+func (otel *openTelemetryOperator) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
 	return managedresources.WaitUntilHealthy(timeoutCtx, otel.client, otel.namespace, OperatorManagedResourceName)
 }
 
-func (otel *opentelemetryOperator) WaitCleanup(ctx context.Context) error {
+func (otel *openTelemetryOperator) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutWaitForManagedResources)
 	defer cancel()
 
