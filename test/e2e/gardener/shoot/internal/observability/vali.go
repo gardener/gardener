@@ -27,7 +27,7 @@ func ItShouldWaitForLogsCountWithLabelToBeInVali(s *ShootContext, valiLabels map
 			}
 
 			if logCount := logging.GetLogCountFromSearchResponse(searchResponse); logCount != expectedLogCount {
-				return fmt.Errorf("expected %d logs in Vali for %s=%s, but got %d", count, key, value, logCount)
+				return fmt.Errorf("expected %d logs in Vali for %s=%s, but got %d", expectedLogCount, key, value, logCount)
 			}
 
 			return nil
