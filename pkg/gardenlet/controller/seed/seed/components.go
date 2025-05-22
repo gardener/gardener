@@ -162,7 +162,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.prometheusCRD, err = prometheusoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
-	c.openTelemetryCRD = opentelemetryoperator.NewCRDs(r.SeedClientSet.Applier())
+	if err != nil {
+		return
+	}
+	c.openTelemetryCRD, err = opentelemetryoperator.NewCRDs(r.SeedClientSet.Client(), r.SeedClientSet.Applier())
 	if err != nil {
 		return
 	}

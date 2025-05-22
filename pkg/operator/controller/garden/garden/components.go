@@ -185,7 +185,10 @@ func (r *Reconciler) instantiateComponents(
 	if err != nil {
 		return
 	}
-	c.openTelemetryCRD = opentelemetryoperator.NewCRDs(applier)
+	c.openTelemetryCRD, err = opentelemetryoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
+	if err != nil {
+		return
+	}
 	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
 	if err != nil {
 		return
