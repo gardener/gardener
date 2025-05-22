@@ -12,6 +12,7 @@ import (
 	"time"
 
 	systemddbus "github.com/coreos/go-systemd/v22/dbus"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,6 +37,7 @@ import (
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -94,6 +96,25 @@ func (b *AutonomousBotanist) ActivateGardenerNodeAgent(ctx context.Context) erro
 	}
 
 	return b.DBus.Start(ctx, nil, nil, nodeagentconfigv1alpha1.UnitName)
+}
+
+// WaitUntilGardenerNodeAgentReady waits until the gardener-node-agent is ready. It checks for the existence of its lease.
+func (b *AutonomousBotanist) WaitUntilGardenerNodeAgentReady(ctx context.Context) error {
+	node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
+	if err != nil {
+		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)
+	}
+
+	if node == nil {
+		return fmt.Errorf("node for host %q was not created yet", b.HostName)
+	}
+
+	leaseName := gardenerutils.NodeAgentLeaseName(node.GetName())
+	if err := b.SeedClientSet.Client().Get(ctx, types.NamespacedName{Name: leaseName, Namespace: metav1.NamespaceSystem}, &coordinationv1.Lease{}); err != nil {
+		return fmt.Errorf("failed fetching lease %q: %w", leaseName, err)
+	}
+
+	return nil
 }
 
 func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
