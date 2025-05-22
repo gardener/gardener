@@ -91,7 +91,7 @@ func (c completedConfig) New() (*GardenerServer, error) {
 			int64(c.ExtraConfig.WorkloadIdentityTokenMaxExpiration.Seconds()),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create workload identity token issuer: %w", err)
+			return nil, fmt.Errorf("failed to create WorkloadIdentity token issuer: %w", err)
 		}
 	}
 
@@ -216,7 +216,7 @@ func (o *ExtraOptions) ApplyTo(c *Config) error {
 	if len(o.WorkloadIdentitySigningKeyFile) != 0 {
 		signingKey, err := keyutil.PrivateKeyFromFile(o.WorkloadIdentitySigningKeyFile)
 		if err != nil {
-			return fmt.Errorf("failed to get workload identity signing key from file %q: %w", o.WorkloadIdentitySigningKeyFile, err)
+			return fmt.Errorf("failed to get WorkloadIdentity signing key from file %q: %w", o.WorkloadIdentitySigningKeyFile, err)
 		}
 		c.ExtraConfig.WorkloadIdentitySigningKey = signingKey
 	}

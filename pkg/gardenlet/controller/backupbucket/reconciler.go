@@ -105,10 +105,10 @@ func (r *Reconciler) reconcileBackupBucket(
 		return fmt.Errorf("could not update status after reconciliation start: %w", updateErr)
 	}
 
-	gardenSecret, err := kubernetesutils.GetSecretByReference(gardenCtx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	gardenSecret, err := kubernetesutils.GetSecretByObjectReference(gardenCtx, r.GardenClient, backupBucket.Spec.CredentialsRef) // TODO(vpnachev): Add support for WorkloadIdentity
 	if err != nil {
-		log.Error(err, "Failed to get backup secret", "secret", client.ObjectKey{Namespace: backupBucket.Spec.SecretRef.Namespace, Name: backupBucket.Spec.SecretRef.Name})
-		r.Recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "Failed to get backup secret %s/%s: %w", backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name, err)
+		log.Error(err, "Failed to get backup secret", "credentialsRef", backupBucket.Spec.CredentialsRef)
+		r.Recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "Failed to get backup secret from credentials reference %v: %w", backupBucket.Spec.CredentialsRef, err)
 		return err
 	}
 
@@ -270,7 +270,7 @@ func (r *Reconciler) deleteBackupBucket(
 		return reconcile.Result{}, err
 	}
 
-	gardenSecret, err := kubernetesutils.GetSecretByReference(gardenCtx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	gardenSecret, err := kubernetesutils.GetSecretByObjectReference(gardenCtx, r.GardenClient, backupBucket.Spec.CredentialsRef) // TODO(vpnachev): Add support for WorkloadIdentity
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -311,9 +311,9 @@ func (r *Reconciler) deleteBackupBucket(
 
 	log.Info("Successfully deleted")
 
-	secret, err := kubernetesutils.GetSecretByReference(gardenCtx, r.GardenClient, &backupBucket.Spec.SecretRef)
+	secret, err := kubernetesutils.GetSecretByObjectReference(gardenCtx, r.GardenClient, backupBucket.Spec.CredentialsRef)
 	if err != nil {
-		log.Error(err, "Failed to get backup secret", "secret", client.ObjectKey{Namespace: backupBucket.Spec.SecretRef.Namespace, Name: backupBucket.Spec.SecretRef.Name})
+		log.Error(err, "Failed to get backup secret", "credentialsRef", backupBucket.Spec.CredentialsRef)
 		return reconcile.Result{}, err
 	}
 

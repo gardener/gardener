@@ -630,7 +630,7 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 				externalDomain.SecretData = creds.Data
 			case *securityv1alpha1.WorkloadIdentity:
 				// TODO(dimityrmirchev): This code should eventually handle shoot credentials being of type WorkloadIdentity
-				return nil, fmt.Errorf("shoot credentials of type workload identity cannot be used as domain secret")
+				return nil, fmt.Errorf("shoot credentials of type WorkloadIdentity cannot be used as domain secret")
 			default:
 				return nil, fmt.Errorf("unexpected shoot credentials type")
 			}

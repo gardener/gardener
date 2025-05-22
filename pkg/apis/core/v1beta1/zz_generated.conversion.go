@@ -2399,6 +2399,7 @@ func autoConvert_v1beta1_BackupBucketSpec_To_core_BackupBucketSpec(in *BackupBuc
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.SecretRef = in.SecretRef
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
+	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
 
@@ -2414,6 +2415,7 @@ func autoConvert_core_BackupBucketSpec_To_v1beta1_BackupBucketSpec(in *core.Back
 	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.SecretRef = in.SecretRef
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
+	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
 

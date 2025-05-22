@@ -1200,7 +1200,7 @@ var _ = Describe("validator", func() {
 				Expect(err.Error()).To(ContainSubstring("it is not allowed to change the referenced Secret when migrating from SecretBindingName to CredentialsBindingName"))
 			})
 
-			It("should reject migration to credentials binding because a workload identity is referenced", func() {
+			It("should reject migration to CredentialsBinding because a WorkloadIdentity is referenced", func() {
 				oldShoot := shoot.DeepCopy()
 				shoot.Spec.SecretBindingName = nil
 				oldShoot.Spec.CredentialsBindingName = nil

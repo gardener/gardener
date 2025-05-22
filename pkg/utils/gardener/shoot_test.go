@@ -1045,7 +1045,7 @@ var _ = Describe("Shoot", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("returns error because workload identity credential is not supported", func() {
+		It("returns error because WorkloadIdentity credential is not supported", func() {
 			var (
 				ctx = context.TODO()
 
@@ -1066,7 +1066,7 @@ var _ = Describe("Shoot", func() {
 			)
 
 			_, err := ConstructExternalDomain(ctx, fakeClient, shoot, workloadIdentity, nil)
-			Expect(err).To(MatchError(Equal("shoot credentials of type workload identity cannot be used as domain secret")))
+			Expect(err).To(MatchError(Equal("shoot credentials of type WorkloadIdentity cannot be used as domain secret")))
 		})
 
 		It("returns error because shoot credential type is not supported", func() {

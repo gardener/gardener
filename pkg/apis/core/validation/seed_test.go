@@ -350,7 +350,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.backup.credentialsRef"),
-						"Detail": Equal("support for workload identity as backup credentials is not yet fully implemented"),
+						"Detail": Equal("support for WorkloadIdentity as backup credentials is not yet fully implemented"),
 					})),
 				))
 			})
@@ -465,7 +465,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("spec.backup.credentialsRef"),
-						"Detail": Equal("support for workload identity as backup credentials is not yet fully implemented"),
+						"Detail": Equal("support for WorkloadIdentity as backup credentials is not yet fully implemented"),
 					})),
 				))
 			})

@@ -55,13 +55,13 @@ func (r *TokenRequestREST) Destroy() {
 }
 
 // Create returns a TokenRequest with workload identity token based on
-// - spec of the workload identity
+// - spec of the WorkloadIdentity
 // - spec of the token request
 // - referenced context object
 // - gardener installation
 func (r *TokenRequestREST) Create(ctx context.Context, name string, obj runtime.Object, createValidation rest.ValidateObjectFunc, _ *metav1.CreateOptions) (runtime.Object, error) {
 	if r.tokenIssuer == nil {
-		return nil, errors.New("TokenIssuer is not set, workload identity tokens cannot be issued")
+		return nil, errors.New("TokenIssuer is not set, WorkloadIdentity tokens cannot be issued")
 	}
 
 	user, ok := genericapirequest.UserFrom(ctx)

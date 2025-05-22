@@ -16,7 +16,7 @@ import (
 	"github.com/gardener/gardener/pkg/apiserver/registry/security/workloadidentity"
 )
 
-var _ = Describe("Workload Identity Strategy Test", func() {
+var _ = Describe("WorkloadIdentity Strategy Test", func() {
 
 	var (
 		wi  *security.WorkloadIdentity

@@ -63,15 +63,15 @@ func NewSecret(name, namespace string, opts ...SecretOption) (*Secret, error) {
 	}
 
 	if len(workloadIdentitySecret.workloadIdentityName) == 0 {
-		err = errors.Join(err, errors.New("workload identity name is not set"))
+		err = errors.Join(err, errors.New("WorkloadIdentity name is not set"))
 	}
 
 	if len(workloadIdentitySecret.workloadIdentityNamespace) == 0 {
-		err = errors.Join(err, errors.New("workload identity namespace is not set"))
+		err = errors.Join(err, errors.New("WorkloadIdentity namespace is not set"))
 	}
 
 	if len(workloadIdentitySecret.workloadIdentityProviderType) == 0 {
-		err = errors.Join(err, errors.New("workload identity provider type is not set"))
+		err = errors.Join(err, errors.New("WorkloadIdentity provider type is not set"))
 	}
 
 	if err != nil {

@@ -69,9 +69,7 @@ func (v *ValidateSeed) SetCoreInformerFactory(f gardencoreinformers.SharedInform
 	shootInformer := f.Core().V1beta1().Shoots()
 	v.shootLister = shootInformer.Lister()
 
-	backupBucketInformer := f.Core().V1beta1().BackupBuckets()
-
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, backupBucketInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced)
 }
 
 // SetSecurityInformerFactory gets Lister from SharedInformerFactory.
@@ -91,14 +89,14 @@ func (v *ValidateSeed) ValidateInitialization() error {
 		return errors.New("missing shoot lister")
 	}
 	if v.workloadIdentityLister == nil {
-		return errors.New("missing workloadidentity lister")
+		return errors.New("missing WorkloadIdentity lister")
 	}
 	return nil
 }
 
 var _ admission.ValidationInterface = &ValidateSeed{}
 
-// Validate validates the Seed details against existing Shoots and BackupBuckets
+// Validate validates the Seed details against existing Shoots
 func (v *ValidateSeed) Validate(_ context.Context, a admission.Attributes, _ admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {

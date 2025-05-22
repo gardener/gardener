@@ -327,9 +327,11 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 				Spec: core.BackupBucketSpec{
 					SeedName: &seedName,
-					SecretRef: corev1.SecretReference{
-						Name:      secretName,
-						Namespace: namespace,
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       secretName,
+						Namespace:  namespace,
 					},
 				},
 			}
@@ -339,9 +341,11 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 				Spec: gardencorev1beta1.BackupBucketSpec{
 					SeedName: &seedName,
-					SecretRef: corev1.SecretReference{
-						Name:      secretName,
-						Namespace: namespace,
+					CredentialsRef: &corev1.ObjectReference{
+						APIVersion: "v1",
+						Kind:       "Secret",
+						Name:       secretName,
+						Namespace:  namespace,
 					},
 				},
 			}
@@ -468,16 +472,10 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		It("should return nil because the resource is not BackupBucket and operation is delete", func() {
 			attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
-
-			err := admissionHandler.Validate(context.TODO(), attrs, nil)
-
-			Expect(err).NotTo(HaveOccurred())
+			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 
 			attrs = admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), "", controllerRegistration.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
-
-			err = admissionHandler.Validate(context.TODO(), attrs, nil)
-
-			Expect(err).NotTo(HaveOccurred())
+			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 		})
 
 		Context("tests for ControllerRegistration objects", func() {
@@ -939,7 +937,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(MatchError(ContainSubstring("does not match with WorkloadIdentity provider type")))
 			})
 
-			It("should reject because the referenced workload identity does not exist", func() {
+			It("should reject because the referenced WorkloadIdentity does not exist", func() {
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 				gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
 					return true, nil, errors.New("nope, out of luck")
@@ -953,7 +951,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject because the user is not allowed to read the referenced workload identity", func() {
+			It("should reject because the user is not allowed to read the referenced WorkloadIdentity", func() {
 				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(&quota)).To(Succeed())
 
@@ -1516,6 +1514,14 @@ var _ = Describe("resourcereferencemanager", func() {
 		})
 
 		Context("tests for BackupBucket objects", func() {
+			It("should accept if the request is for subresource ", func() {
+				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "status", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+
+				attrs = admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "status", admission.Update, &metav1.CreateOptions{}, false, defaultUserInfo)
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
 			It("should reject if the referred Seed is not found", func() {
 				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
@@ -1523,6 +1529,20 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("backupBuckets.core.gardener.cloud %q is forbidden: seed.core.gardener.cloud %q not found", coreBackupBucket.Name, seed.Name)))
+			})
+
+			It("should reject if the credentialsRef is unset", func() {
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				bucket := coreBackupBucket.DeepCopy()
+				bucket.Spec.CredentialsRef = nil
+
+				attrs := admission.NewAttributesRecord(bucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", bucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("spec.credentialsRef must be set or defaulted")))
 			})
 
 			It("should reject if the referred Secret is not found", func() {
@@ -1537,6 +1557,47 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).To(BeForbiddenError())
 				Expect(err).To(MatchError(ContainSubstring("secret not found")))
+			})
+
+			It("should reject if the referred WorkloadIdentity is not found", func() {
+				gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf("WorkloadIdentity not found")
+				})
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				bucket := coreBackupBucket.DeepCopy()
+				bucket.Spec.CredentialsRef = &corev1.ObjectReference{
+					APIVersion: "security.gardener.cloud/v1alpha1",
+					Kind:       "WorkloadIdentity",
+					Namespace:  "namespace",
+					Name:       "name",
+				}
+
+				attrs := admission.NewAttributesRecord(bucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", bucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("WorkloadIdentity not found")))
+			})
+
+			It("should reject if the credentialsRef refer to unsupported resource", func() {
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				bucket := coreBackupBucket.DeepCopy()
+				bucket.Spec.CredentialsRef = &corev1.ObjectReference{
+					APIVersion: "foo/v1",
+					Kind:       "Bar",
+					Namespace:  "namespace",
+					Name:       "Name",
+				}
+
+				attrs := admission.NewAttributesRecord(bucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", bucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err).To(MatchError(ContainSubstring("unknown credentials ref: BackupBucket is referencing neither a Secret nor a WorkloadIdentity")))
 			})
 
 			It("should accept (direct secret lookup)", func() {
@@ -1566,6 +1627,31 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept (direct WorkloadIdentity lookup)", func() {
+				gardenSecurityClient.AddReactor("get", "workloadidentities", func(_ testing.Action) (bool, runtime.Object, error) {
+					return true, &securityv1alpha1.WorkloadIdentity{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: workloadIdentity.Namespace,
+							Name:      workloadIdentity.Name,
+						},
+					}, nil
+				})
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+			})
+
+			It("should accept (WorkloadIdentity found in cache)", func() {
+				Expect(gardenSecurityInformerFactory.Security().V1alpha1().WorkloadIdentities().Informer().GetStore().Add(&workloadIdentity)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&coreBackupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), "", coreBackupBucket.Name, core.Resource("backupBuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
+
+				Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 			})
 
 			It("should accept deletion if no backupEntries are referencing it", func() {

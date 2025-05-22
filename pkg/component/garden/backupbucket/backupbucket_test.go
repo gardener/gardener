@@ -55,8 +55,10 @@ var _ = Describe("BackupBucket", func() {
 			Provider:       providerType,
 			ProviderConfig: providerConfig,
 			CredentialsRef: &corev1.ObjectReference{
-				Name:      secretName,
-				Namespace: secretNamespace,
+				APIVersion: "v1",
+				Kind:       "Secret",
+				Name:       secretName,
+				Namespace:  secretNamespace,
 			},
 		}
 
@@ -76,9 +78,11 @@ var _ = Describe("BackupBucket", func() {
 					Region: defaultRegion,
 				},
 				ProviderConfig: providerConfig,
-				SecretRef: corev1.SecretReference{
-					Name:      secretName,
-					Namespace: secretNamespace,
+				CredentialsRef: &corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "Secret",
+					Namespace:  secretNamespace,
+					Name:       secretName,
 				},
 			},
 		}

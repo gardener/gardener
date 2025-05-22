@@ -29,6 +29,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	securityv1alpha1 "github.com/gardener/gardener/pkg/apis/security/v1alpha1"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -638,7 +639,11 @@ func (r *Reconciler) checkIfBackupBucketIsHealthy(ctx context.Context, backupBuc
 }
 
 func (r *Reconciler) getGardenSecret(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) (*corev1.Secret, error) {
-	gardenSecretRef := &backupBucket.Spec.SecretRef
+	if backupBucket.Spec.CredentialsRef.APIVersion == securityv1alpha1.SchemeGroupVersion.String() && backupBucket.Spec.CredentialsRef.Kind == "WorkloadIdentity" {
+		return nil, errors.New("WorkloadIdentity is not yet supported for backup credentials") // TODO(vpnachev): Add support for Workload Identity.
+	}
+
+	gardenSecretRef := &corev1.SecretReference{Namespace: backupBucket.Spec.CredentialsRef.Namespace, Name: backupBucket.Spec.CredentialsRef.Name}
 	if backupBucket.Status.GeneratedSecretRef != nil {
 		gardenSecretRef = backupBucket.Status.GeneratedSecretRef
 	}
