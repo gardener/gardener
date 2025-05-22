@@ -47,8 +47,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 		clientSet = fakekubernetes.NewClientSetBuilder().WithClient(fakeClient).Build()
 
 		b = &AutonomousBotanist{
-			FS:   fs,
-			DBus: fakeDBus,
+			FS:       fs,
+			DBus:     fakeDBus,
+			HostName: "foo-host",
 			Botanist: &botanistpkg.Botanist{
 				Operation: &operation.Operation{
 					SeedClientSet: clientSet,
@@ -92,7 +93,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 					}),
 				}),
 				MatchFields(IgnoreExtras, Fields{"Path": Equal("/var/lib/gardener-node-agent/init.sh")}),
-				MatchFields(IgnoreExtras, Fields{"Path": Equal("/var/lib/gardener-node-agent/machine-name")}),
+				MatchFields(IgnoreExtras, Fields{
+					"Path": Equal("/var/lib/gardener-node-agent/machine-name"),
+					"Content": MatchFields(IgnoreExtras, Fields{
+						"Inline": PointTo(MatchFields(IgnoreExtras, Fields{
+							"Data": Equal("foo-host"),
+						})),
+					}),
+				}),
 				MatchFields(IgnoreExtras, Fields{"Path": Equal("/var/lib/gardener-node-agent/config.yaml")}),
 			))
 		})

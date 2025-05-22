@@ -191,13 +191,14 @@ func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) err
 			SecretName:        b.operatingSystemConfigSecret.Name,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 		},
-		CancelContext: cancelFunc,
-		Recorder:      &record.FakeRecorder{},
-		Extractor:     registry.NewExtractor(),
-		HostName:      b.HostName,
-		NodeName:      ptr.Deref(node, corev1.Node{}).Name,
-		DBus:          b.DBus,
-		FS:            b.FS,
+		CancelContext:                     cancelFunc,
+		Recorder:                          &record.FakeRecorder{},
+		Extractor:                         registry.NewExtractor(),
+		HostName:                          b.HostName,
+		NodeName:                          ptr.Deref(node, corev1.Node{}).Name,
+		DBus:                              b.DBus,
+		FS:                                b.FS,
+		SkipWriteLastAppliedConfiguration: b.isInitOperatingSystemConfig,
 	}).Reconcile(reconcilerCtx, reconcile.Request{NamespacedName: types.NamespacedName{Name: b.operatingSystemConfigSecret.Name, Namespace: b.operatingSystemConfigSecret.Namespace}})
 	return err
 }
@@ -219,6 +220,8 @@ func (b *AutonomousBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Co
 	if err != nil {
 		return fmt.Errorf("failed computing units and files for gardener-node-init: %w", err)
 	}
+
+	b.isInitOperatingSystemConfig = true
 
 	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, osc, secretName, "")
 }
@@ -242,7 +245,9 @@ func (b *AutonomousBotanist) generateGardenerNodeInitOperatingSystemConfig(secre
 	for i, file := range files {
 		if file.Path == nodeagentconfigv1alpha1.BootstrapTokenFilePath {
 			files[i].Content.Inline.Data = bootstrapToken
-			break
+		}
+		if file.Path == nodeagentconfigv1alpha1.MachineNameFilePath {
+			files[i].Content.Inline.Data = b.HostName
 		}
 	}
 
