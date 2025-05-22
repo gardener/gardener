@@ -112,8 +112,7 @@ func (b *AutonomousBotanist) ApproveNodeAgentCertificateSigningRequest(ctx conte
 					Reason:  "RequestApproved",
 					Message: "Approving gardener-node-agent client certificate signing request via gardenadm",
 				})
-				err := b.SeedClientSet.Client().SubResource("approval").Update(ctx, &csr)
-				if err != nil {
+				if err := b.SeedClientSet.Client().SubResource("approval").Update(ctx, &csr); err != nil {
 					return fmt.Errorf("failed approving certificate signing request: %w", err)
 				}
 			}

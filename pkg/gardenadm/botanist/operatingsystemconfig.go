@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -100,21 +101,23 @@ func (b *AutonomousBotanist) ActivateGardenerNodeAgent(ctx context.Context) erro
 
 // WaitUntilGardenerNodeAgentReady waits until the gardener-node-agent is ready. It checks for the existence of its lease.
 func (b *AutonomousBotanist) WaitUntilGardenerNodeAgentReady(ctx context.Context) error {
-	node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
-	if err != nil {
-		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)
-	}
+	return retry.Until(ctx, time.Second*2, func(ctx context.Context) (bool, error) {
+		node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
+		if err != nil {
+			return retry.MinorError(fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err))
+		}
 
-	if node == nil {
-		return fmt.Errorf("node for host %q was not created yet", b.HostName)
-	}
+		if node == nil {
+			return retry.MinorError(fmt.Errorf("node for host %q was not created yet", b.HostName))
+		}
 
-	leaseName := gardenerutils.NodeAgentLeaseName(node.GetName())
-	if err := b.SeedClientSet.Client().Get(ctx, types.NamespacedName{Name: leaseName, Namespace: metav1.NamespaceSystem}, &coordinationv1.Lease{}); err != nil {
-		return fmt.Errorf("failed fetching lease %q: %w", leaseName, err)
-	}
+		leaseName := gardenerutils.NodeAgentLeaseName(node.GetName())
+		if err := b.SeedClientSet.Client().Get(ctx, types.NamespacedName{Name: leaseName, Namespace: metav1.NamespaceSystem}, &coordinationv1.Lease{}); err != nil {
+			return retry.MinorError(fmt.Errorf("failed fetching lease %q: %w", leaseName, err))
+		}
 
-	return nil
+		return retry.Ok()
+	})
 }
 
 func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {

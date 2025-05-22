@@ -55,7 +55,7 @@ type authorizer struct {
 	sourceClient client.Client
 	targetClient client.Client
 	logger       logr.Logger
-	// machineNamespace is the namespace where the machine object is located. If nil, the node name is used for
+	// machineNamespace is the namespace where the Machine object is located. If nil, the node name is used for
 	// authorization instead of the machine name. This scenario is used for gardenadm scenario.
 	machineNamespace       *string
 	authorizeWithSelectors bool
@@ -148,26 +148,9 @@ func (a *authorizer) authorizeLease(ctx context.Context, log logr.Logger, machin
 		return auth.DecisionDeny, reason, nil
 	}
 
-	var nodeName string
-	if a.machineNamespace != nil {
-		machine := &machinev1alpha1.Machine{}
-		if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: *a.machineNamespace}, machine); err != nil {
-			return auth.DecisionDeny, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
-		}
-
-		nodeName = machine.Labels[machinev1alpha1.NodeLabelKey]
-	} else {
-		node := &corev1.Node{}
-		if err := a.targetClient.Get(ctx, client.ObjectKey{Name: machineName}, node); client.IgnoreNotFound(err) != nil {
-			return auth.DecisionDeny, "", fmt.Errorf("error getting node %q: %w", machineName, err)
-		}
-
-		nodeName = node.Name
-	}
-
-	if nodeName == "" {
-		log.Info("Denying request because no node for the user was found", "machineName", machineName)
-		return auth.DecisionDeny, fmt.Sprintf("no node for %q found", machineName), nil
+	nodeName, reason, err := a.getNodeName(ctx, log, machineName)
+	if err != nil || reason != "" {
+		return auth.DecisionDeny, reason, err
 	}
 
 	allowedLease := "gardener-node-agent-" + nodeName
@@ -195,26 +178,9 @@ func (a *authorizer) authorizeNode(ctx context.Context, log logr.Logger, machine
 		return auth.DecisionAllow, "", nil
 	}
 
-	var nodeName string
-	if a.machineNamespace != nil {
-		machine := &machinev1alpha1.Machine{}
-		if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: *a.machineNamespace}, machine); err != nil {
-			return auth.DecisionDeny, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
-		}
-
-		nodeName = machine.Labels[machinev1alpha1.NodeLabelKey]
-	} else {
-		node := &corev1.Node{}
-		if err := a.targetClient.Get(ctx, client.ObjectKey{Name: machineName}, node); client.IgnoreNotFound(err) != nil {
-			return auth.DecisionDeny, "", fmt.Errorf("error getting node %q: %w", machineName, err)
-		}
-
-		nodeName = node.Name
-	}
-
-	if nodeName == "" {
-		log.Info("Denying request because no node for the user was found", "machineName", machineName)
-		return auth.DecisionDeny, fmt.Sprintf("no node for user %q found", machineName), nil
+	nodeName, reason, err := a.getNodeName(ctx, log, machineName)
+	if err != nil || reason != "" {
+		return auth.DecisionDeny, reason, err
 	}
 
 	if attrs.GetName() != nodeName {
@@ -235,18 +201,9 @@ func (a *authorizer) authorizePod(ctx context.Context, log logr.Logger, machineN
 		return auth.DecisionDeny, reason, nil
 	}
 
-	nodeName := machineName
-	if a.machineNamespace != nil {
-		machine := &machinev1alpha1.Machine{}
-		if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: *a.machineNamespace}, machine); err != nil {
-			return auth.DecisionDeny, "", fmt.Errorf("error getting machine %q: %w", machineName, err)
-		}
-		nodeName = machine.Labels[machinev1alpha1.NodeLabelKey]
-	}
-
-	if nodeName == "" {
-		log.Info("Denying request because no valid node was found", "machineName", machineName)
-		return auth.DecisionDeny, fmt.Sprintf("no node for %q found", machineName), nil
+	nodeName, reason, err := a.getNodeName(ctx, log, machineName)
+	if err != nil || reason != "" {
+		return auth.DecisionDeny, reason, err
 	}
 
 	switch attrs.GetVerb() {
@@ -373,4 +330,28 @@ func (a *authorizer) checkSubresource(log logr.Logger, attrs auth.Attributes, al
 	}
 
 	return true, ""
+}
+
+func (a *authorizer) getNodeName(ctx context.Context, log logr.Logger, machineName string) (string, string, error) {
+	var nodeName string
+	if a.machineNamespace != nil {
+		machine := &machinev1alpha1.Machine{}
+		if err := a.sourceClient.Get(ctx, client.ObjectKey{Name: machineName, Namespace: *a.machineNamespace}, machine); err != nil {
+			return "", "", fmt.Errorf("error getting machine %q: %w", machineName, err)
+		}
+		nodeName = machine.Labels[machinev1alpha1.NodeLabelKey]
+	} else {
+		node := &corev1.Node{}
+		if err := a.targetClient.Get(ctx, client.ObjectKey{Name: machineName}, node); client.IgnoreNotFound(err) != nil {
+			return "", "", fmt.Errorf("error getting node %q: %w", machineName, err)
+		}
+		nodeName = node.Name
+	}
+
+	if nodeName == "" {
+		log.Info("Denying request because no node was found", "machineName", machineName)
+		return "", fmt.Sprintf("no node for %q found", machineName), nil
+	}
+
+	return nodeName, "", nil
 }

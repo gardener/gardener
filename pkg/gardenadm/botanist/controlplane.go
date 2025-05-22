@@ -94,14 +94,12 @@ func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlane
 	}
 }
 
-// GetAddGardenerResourceManagerServiceIP retrieves the IP address of the gardener-resource-manager service.
-func (b *AutonomousBotanist) GetAddGardenerResourceManagerServiceIP(ctx context.Context) error {
+// FetchGardenerResourceManagerServiceIP retrieves the IP address of the gardener-resource-manager service.
+func (b *AutonomousBotanist) FetchGardenerResourceManagerServiceIP(ctx context.Context) error {
 	gardenerResourceManagerService := &corev1.Service{}
-
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: resourcemanagerconstants.ServiceName, Namespace: b.Shoot.ControlPlaneNamespace}, gardenerResourceManagerService); err != nil {
 		return fmt.Errorf("failed getting service %q: %w", resourcemanagerconstants.ServiceName, err)
 	}
-
 	b.gardenerResourceManagerServiceIP = &gardenerResourceManagerService.Spec.ClusterIP
 
 	return nil
