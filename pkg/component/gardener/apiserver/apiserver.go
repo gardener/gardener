@@ -10,6 +10,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,6 +44,16 @@ const (
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy or
 // deleted.
 var TimeoutWaitForManagedResource = 5 * time.Minute
+
+// exposed for testing
+var (
+	// IntervalWaitServiceGardenerApiserver is the interval when waiting for
+	// gardener-apiserver service to get created by gardener-resource-manager
+	IntervalWaitServiceGardenerApiserver = 5 * time.Second
+	// TimeoutWaitServiceGardenerApiserver is the timeout when waiting for
+	// gardener-apiserver service to get created by gardener-resource-manager
+	TimeoutWaitServiceGardenerApiserver = 30 * time.Second
+)
 
 // Interface contains functions for a gardener-apiserver deployer.
 type Interface interface {
@@ -187,9 +198,12 @@ func (g *gardenerAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	serviceRuntime := &corev1.Service{}
-	if err := retry.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (bool, error) {
+	if err := retry.UntilTimeout(ctx, IntervalWaitServiceGardenerApiserver, TimeoutWaitServiceGardenerApiserver, func(ctx context.Context) (bool, error) {
 		if err := g.client.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: g.namespace}, serviceRuntime); err != nil {
-			return retry.MinorError(fmt.Errorf("service gardener-apiserver was not yet created"))
+			if apierrors.IsNotFound(err) {
+				return retry.MinorError(fmt.Errorf("service gardener-apiserver was not yet created"))
+			}
+			return retry.SevereError(fmt.Errorf("unexpected error while retrieving gardener-apiserver service: %w", err))
 		}
 		return retry.Ok()
 	}); err != nil {

@@ -1275,6 +1275,11 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 
 			Context("ManagedResource reconciliation delay", func() {
 				It("should fail if gardener-apiserver service does not get created from ManagedResource", func() {
+					DeferCleanup(test.WithVars(
+						&IntervalWaitServiceGardenerApiserver, time.Millisecond,
+						&TimeoutWaitServiceGardenerApiserver, 5*time.Millisecond,
+					))
+
 					Expect(fakeClient.Delete(ctx, serviceRuntime)).To(Succeed())
 					Eventually(ctx, func(g Gomega) {
 						g.Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serviceRuntime), &corev1.Service{})).To(BeNotFoundError())
@@ -1315,7 +1320,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					}
 					Expect(managedResourceVirtual).To(Equal(expectedVirtualMr))
 				})
-
 			})
 
 			Context("resources generation", func() {
