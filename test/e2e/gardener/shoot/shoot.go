@@ -259,7 +259,7 @@ func ItShouldInitializeSeedClient(s *ShootContext) {
 func ItShouldComputeControlPlaneNamespace(s *ShootContext) {
 	GinkgoHelper()
 
-	It("Compute Control Plane Namespace", func(ctx SpecContext) {
+	It("Compute Control Plane Namespace", func(_ SpecContext) {
 		s.WithControlPlaneNamespace(s.Shoot.Status.TechnicalID)
 	}, SpecTimeout(time.Minute))
 }
@@ -330,15 +330,14 @@ func ItShouldRenderAndDeployTemplateToShoot(s *ShootContext, templateName string
 	GinkgoHelper()
 
 	It("Render and deploy template to shoot", func(ctx SpecContext) {
-		Eventually(ctx, func(g Gomega) error {
+		Eventually(ctx, func() error {
 			templatesDirAbs, err := filepath.Abs(templatesDir)
 			if err != nil {
 				return err
 			}
 
 			templateFilepath := filepath.Join(templatesDirAbs, templateName)
-			_, err = os.Stat(templateFilepath)
-			if err != nil {
+			if _, err := os.Stat(templateFilepath); err != nil {
 				return err
 			}
 
