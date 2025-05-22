@@ -36,7 +36,7 @@ var _ = Describe("Valitail", func() {
 		testConfig := func() {
 			It("should return the expected units and files when shoot logging is enabled", func() {
 				ctx := components.Context{
-					CABundle:      &cABundle,
+					CABundle:      cABundle,
 					ClusterDomain: clusterDomain,
 					Images: map[string]*imagevector.Image{
 						"valitail": valitailImage,
@@ -264,7 +264,7 @@ scrape_configs:
 
 			It("should return the expected units and files when shoot logging is not enabled", func() {
 				ctx := components.Context{
-					CABundle:      &cABundle,
+					CABundle:      cABundle,
 					ClusterDomain: clusterDomain,
 					Images: map[string]*imagevector.Image{
 						"valitail": valitailImage,
@@ -282,7 +282,7 @@ scrape_configs:
 
 			It("should return error when vali ingress is not specified", func() {
 				ctx := components.Context{
-					CABundle:      &cABundle,
+					CABundle:      cABundle,
 					ClusterDomain: clusterDomain,
 					Images: map[string]*imagevector.Image{
 						"valitail": valitailImage,

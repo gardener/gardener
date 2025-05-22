@@ -146,13 +146,11 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 }
 
 func (b *Botanist) getOperatingSystemConfigCABundle(clusterCABundle []byte) string {
-	var caBundle string
+	caBundle := string(clusterCABundle)
 
 	if cloudProfileCaBundle := b.Shoot.CloudProfile.Spec.CABundle; cloudProfileCaBundle != nil {
-		caBundle = *cloudProfileCaBundle
+		caBundle = fmt.Sprintf("%s\n%s", *cloudProfileCaBundle, caBundle)
 	}
-
-	caBundle = fmt.Sprintf("%s\n%s", caBundle, clusterCABundle)
 
 	return caBundle
 }

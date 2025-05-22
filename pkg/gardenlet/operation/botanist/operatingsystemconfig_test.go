@@ -60,6 +60,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		apiServerAddress  = "1.2.3.4"
 		caCloudProfile    = "ca-cloud-profile"
+		caBundle          = "ca-bundle"
 		shootDomain       = "shoot.domain.com"
 		kubernetesVersion = "1.2.3"
 		ingressDomain     = "seed-test.ingress.domain.com"
@@ -74,7 +75,7 @@ var _ = Describe("operatingsystemconfig", func() {
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 
 		By("Create secrets managed outside of this function for which secretsmanager.Get() will be called")
-		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}, Data: map[string][]byte{"bundle.crt": []byte(caBundle)}})).To(Succeed())
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair", Namespace: namespace}})).To(Succeed())
 
 		botanist = &Botanist{
@@ -136,7 +137,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			It("should deploy successfully (only CloudProfile CA)", func() {
 				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
-				operatingSystemConfig.EXPECT().SetCABundle(&caCloudProfile)
+				operatingSystemConfig.EXPECT().SetCABundle(fmt.Sprintf("%s\n%s", caCloudProfile, caBundle))
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
@@ -152,7 +153,7 @@ var _ = Describe("operatingsystemconfig", func() {
 						},
 					},
 				}
-				operatingSystemConfig.EXPECT().SetCABundle(nil)
+				operatingSystemConfig.EXPECT().SetCABundle(caBundle)
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
@@ -176,14 +177,14 @@ var _ = Describe("operatingsystemconfig", func() {
 					},
 				})
 				botanist.Shoot.Purpose = "development"
-				operatingSystemConfig.EXPECT().SetCABundle(nil)
+				operatingSystemConfig.EXPECT().SetCABundle(caBundle)
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
 			})
 
 			It("should return the error during deployment", func() {
-				operatingSystemConfig.EXPECT().SetCABundle(nil)
+				operatingSystemConfig.EXPECT().SetCABundle(caBundle)
 
 				operatingSystemConfig.EXPECT().Deploy(ctx).Return(fakeErr)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(MatchError(fakeErr))
@@ -204,7 +205,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				}
 				botanist.Shoot.SetInfo(shoot)
 
-				operatingSystemConfig.EXPECT().SetCABundle(nil)
+				operatingSystemConfig.EXPECT().SetCABundle(caBundle)
 			})
 
 			It("should restore successfully", func() {
