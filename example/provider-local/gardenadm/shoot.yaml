@@ -5,7 +5,6 @@ metadata:
   namespace: garden
 spec:
   region: local
-  secretBindingName: provider-account
   provider:
     type: local
     workers:

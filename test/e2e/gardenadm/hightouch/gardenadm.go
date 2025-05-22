@@ -185,14 +185,6 @@ var _ = Describe("gardenadm high-touch scenario tests", Label("gardenadm", "high
 			}).Should(HaveKeyWithValue("injected-by", "provider-local"))
 		}, SpecTimeout(time.Minute))
 
-		It("should find the cloud provider secret", func(ctx SpecContext) {
-			Eventually(ctx, func(g Gomega) {
-				cloudProviderSecret := &corev1.Secret{}
-				g.Expect(shootClientSet.Client().Get(ctx, client.ObjectKey{Namespace: "kube-system", Name: "cloudprovider"}, cloudProviderSecret)).To(Succeed())
-				g.Expect(cloudProviderSecret.Labels["gardener.cloud/purpose"]).To(Equal("cloudprovider"))
-			}).Should(Succeed())
-		}, SpecTimeout(time.Minute))
-
 		It("should generate a bootstrap token and join the worker node", func(ctx SpecContext) {
 			stdOut, _, err := execute(ctx, 0, "gardenadm", "token", "create", "--print-join-command")
 			Expect(err).NotTo(HaveOccurred())
