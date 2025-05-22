@@ -32,6 +32,7 @@ var _ = Describe("CRDs", func() {
 	)
 
 	BeforeEach(func() {
+		var err error
 		ctx = context.TODO()
 
 		s := runtime.NewScheme()
@@ -44,7 +45,8 @@ var _ = Describe("CRDs", func() {
 
 		applier := kubernetes.NewApplier(c, mapper)
 
-		crdDeployer = opentelemetryoperator.NewCRDs(applier)
+		crdDeployer, err = opentelemetryoperator.NewCRDs(c, applier)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	JustBeforeEach(func() {
