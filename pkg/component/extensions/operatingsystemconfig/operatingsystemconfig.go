@@ -84,7 +84,7 @@ type Interface interface {
 	// SetAPIServerURL sets the APIServerURL value.
 	SetAPIServerURL(string)
 	// SetCABundle sets the CABundle value.
-	SetCABundle(*string)
+	SetCABundle(string)
 	// SetCredentialsRotationStatus sets the credentials rotation status
 	SetCredentialsRotationStatus(*gardencorev1beta1.ShootCredentialsRotation)
 	// SetSSHPublicKeys sets the SSHPublicKeys value.
@@ -123,7 +123,7 @@ type InitValues struct {
 // OriginalValues are configuration values required for the 'reconcile' OperatingSystemConfigPurpose.
 type OriginalValues struct {
 	// CABundle is the bundle of certificate authorities that will be added as root certificates.
-	CABundle *string
+	CABundle string
 	// ClusterDNSAddresses are the addresses for in-cluster DNS.
 	ClusterDNSAddresses []string
 	// ClusterDomain is the Kubernetes cluster domain.
@@ -642,7 +642,7 @@ func (o *operatingSystemConfig) SetAPIServerURL(apiServerURL string) {
 }
 
 // SetCABundle sets the CABundle value.
-func (o *operatingSystemConfig) SetCABundle(val *string) {
+func (o *operatingSystemConfig) SetCABundle(val string) {
 	o.values.CABundle = val
 }
 
@@ -671,16 +671,9 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
 	}
 
-	var caBundle *string
-	if o.values.CABundle != nil {
-		caBundle = ptr.To(*o.values.CABundle)
-	}
+	caBundle := o.values.CABundle
 	if worker.CABundle != nil {
-		if caBundle == nil {
-			caBundle = ptr.To(*worker.CABundle)
-		} else {
-			caBundle = ptr.To(fmt.Sprintf("%s\n%s", *caBundle, *worker.CABundle))
-		}
+		caBundle = fmt.Sprintf("%s\n%s", caBundle, *worker.CABundle)
 	}
 
 	clusterCASecret, found := o.secretsManager.Get(v1beta1constants.SecretNameCACluster)
@@ -819,7 +812,7 @@ type deployer struct {
 	apiServerURL string
 
 	// original values
-	caBundle                                    *string
+	caBundle                                    string
 	clusterCASecretName                         string
 	clusterCABundle                             []byte
 	clusterDNSAddresses                         []string
