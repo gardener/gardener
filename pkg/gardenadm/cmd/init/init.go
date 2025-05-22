@@ -102,7 +102,7 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.InitializeSecretsManagement,
 			Dependencies: flow.NewTaskIDs(reconcileClusterResource),
 		})
-		bootstrapKubelet = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Creating real bootstrap token for kubelet and restart unit",
 			Fn:           b.BootstrapKubelet,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
@@ -112,11 +112,6 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
 			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Approving kubelet server certificate signing request if necessary",
-			Fn:           flow.TaskFn(b.ApproveKubeletServerCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
-			Dependencies: flow.NewTaskIDs(bootstrapKubelet),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",
