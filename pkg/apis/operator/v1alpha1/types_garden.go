@@ -400,8 +400,10 @@ type GroupResource struct {
 // SNI contains configuration options for the TLS SNI settings.
 type SNI struct {
 	// SecretName is the name of a secret containing the TLS certificate and private key.
+	// If not configured, Gardener falls back to a secret labelled with 'gardener.cloud/role=garden-cert'.
 	// +kubebuilder:validation:MinLength=1
-	SecretName string `json:"secretName"`
+	// +optional
+	SecretName *string `json:"secretName,omitempty"`
 	// DomainPatterns is a list of fully qualified domain names, possibly with prefixed wildcard segments. The domain
 	// patterns also allow IP addresses, but IPs should only be used if the apiserver has visibility to the IP address
 	// requested by a client. If no domain patterns are provided, the names of the certificate are extracted.

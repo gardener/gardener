@@ -5,6 +5,7 @@
 package gardener_test
 
 import (
+	"context"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,8 +15,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
@@ -332,6 +336,98 @@ var _ = Describe("Garden", func() {
 				"internalsecrets.core.gardener.cloud",
 				"shootstates.core.gardener.cloud",
 			))
+		})
+	})
+
+	Describe("#GetGardenWildcardCertificate", func() {
+		var (
+			ctx          = context.Background()
+			fakeClient   client.Client
+			namespace    string
+			gardenSecret *corev1.Secret
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+
+			namespace = "garden"
+			gardenSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "secret-",
+					Namespace:    namespace,
+					Labels:       map[string]string{"gardener.cloud/role": "garden-cert"},
+				},
+			}
+		})
+
+		It("should return an error because there are more than one Garden wildcard certificates", func() {
+			secret2 := gardenSecret.DeepCopy()
+			Expect(fakeClient.Create(ctx, gardenSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
+
+			result, err := GetGardenWildcardCertificate(ctx, fakeClient, "garden")
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("misconfigured cluster: not possible to provide more than one secret with label")))
+		})
+
+		It("should return no certificate", func() {
+			result, err := GetGardenWildcardCertificate(ctx, fakeClient, "garden")
+			Expect(result).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the expected wildcard certificate", func() {
+			Expect(fakeClient.Create(ctx, gardenSecret)).To(Succeed())
+
+			result, err := GetGardenWildcardCertificate(ctx, fakeClient, "garden")
+			Expect(result).To(Equal(gardenSecret))
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("#GetRequiredGardenWildcardCertificate", func() {
+		var (
+			ctx          = context.Background()
+			fakeClient   client.Client
+			namespace    string
+			gardenSecret *corev1.Secret
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+
+			namespace = "garden"
+			gardenSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "secret-",
+					Namespace:    namespace,
+					Labels:       map[string]string{"gardener.cloud/role": "garden-cert"},
+				},
+			}
+		})
+
+		It("should return an error because there are more than one Garden wildcard certificates", func() {
+			secret2 := gardenSecret.DeepCopy()
+			Expect(fakeClient.Create(ctx, gardenSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, secret2)).To(Succeed())
+
+			result, err := GetRequiredGardenWildcardCertificate(ctx, fakeClient, "garden")
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("misconfigured cluster: not possible to provide more than one secret with label")))
+		})
+
+		It("should return an error because certificate is not found", func() {
+			result, err := GetRequiredGardenWildcardCertificate(ctx, fakeClient, "garden")
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError("no garden wildcard certificate secret found"))
+		})
+
+		It("should return the expected wildcard certificate", func() {
+			Expect(fakeClient.Create(ctx, gardenSecret)).To(Succeed())
+
+			result, err := GetRequiredGardenWildcardCertificate(ctx, fakeClient, "garden")
+			Expect(result).To(Equal(gardenSecret))
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

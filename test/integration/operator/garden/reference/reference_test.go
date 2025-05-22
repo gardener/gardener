@@ -133,7 +133,7 @@ var _ = Describe("Garden Reference controller tests", func() {
 								KubeconfigSecretName: secret4.Name,
 							},
 							SNI: &operatorv1alpha1.SNI{
-								SecretName: secret5.Name,
+								SecretName: &secret5.Name,
 							},
 						},
 					},

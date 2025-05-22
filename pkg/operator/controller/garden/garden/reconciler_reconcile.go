@@ -119,7 +119,7 @@ func (r *Reconciler) reconcile(
 		}
 	}
 
-	wildcardCert, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client())
+	wildcardCert, err := gardenerutils.GetGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -771,13 +771,22 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 		)
 
 		if apiServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; apiServer != nil {
-			if apiServer.ServiceAccountConfig != nil {
+			if apiServer.KubeAPIServerConfig != nil && apiServer.ServiceAccountConfig != nil {
 				serviceAccountConfig = apiServer.ServiceAccountConfig
 			}
 
 			if apiServer.SNI != nil {
+				tlsSecretName := apiServer.SNI.SecretName
+				if tlsSecretName == nil {
+					tlsSecret, err := gardenerutils.GetRequiredGardenWildcardCertificate(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace)
+					if err != nil {
+						return fmt.Errorf("failed setting up SNI for API server: %w", err)
+					}
+					tlsSecretName = &tlsSecret.Name
+				}
+
 				sniConfig.TLS = append(sniConfig.TLS, kubeapiserver.TLSSNIConfig{
-					SecretName:     &apiServer.SNI.SecretName,
+					SecretName:     tlsSecretName,
 					DomainPatterns: apiServer.SNI.DomainPatterns,
 				})
 			}
