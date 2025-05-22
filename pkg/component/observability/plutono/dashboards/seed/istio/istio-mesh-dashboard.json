@@ -1392,7 +1392,7 @@
               "unit": "ops"
             },
             {
-              "alias": "P50 Latency",
+              "alias": "Average Latency",
               "align": "auto",
               "colorMode": null,
               "colors": [
@@ -1408,38 +1408,6 @@
               "unit": "s"
             },
             {
-              "alias": "P90 Latency",
-              "align": "auto",
-              "colorMode": null,
-              "colors": [
-                "rgba(245, 54, 54, 0.9)",
-                "rgba(237, 129, 40, 0.89)",
-                "rgba(50, 172, 45, 0.97)"
-              ],
-              "dateFormat": "YYYY-MM-DD HH:mm:ss",
-              "decimals": 2,
-              "pattern": "Value #C",
-              "thresholds": [],
-              "type": "number",
-              "unit": "s"
-            },
-            {
-              "alias": "P99 Latency",
-              "align": "auto",
-              "colorMode": null,
-              "colors": [
-                "rgba(245, 54, 54, 0.9)",
-                "rgba(237, 129, 40, 0.89)",
-                "rgba(50, 172, 45, 0.97)"
-              ],
-              "dateFormat": "YYYY-MM-DD HH:mm:ss",
-              "decimals": 2,
-              "pattern": "Value #D",
-              "thresholds": [],
-              "type": "number",
-              "unit": "s"
-            },
-            {
               "alias": "Success Rate",
               "align": "auto",
               "colorMode": "cell",
@@ -1450,7 +1418,7 @@
               ],
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "decimals": 2,
-              "pattern": "Value #E",
+              "pattern": "Value #C",
               "thresholds": [
                 ".95",
                 " 1.00"
@@ -1524,31 +1492,13 @@
               "refId": "A"
             },
             {
-              "expr": "label_join((histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.50, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+              "expr": "label_join(sum(rate(istio_request_duration_milliseconds_sum{reporter=\"source\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / sum(rate(istio_request_duration_milliseconds_count{reporter=\"source\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / 1000, \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
               "format": "table",
               "hide": false,
               "instant": true,
               "intervalFactor": 1,
               "legendFormat": "{{ destination_workload}}.{{ destination_workload_namespace }}",
               "refId": "B"
-            },
-            {
-              "expr": "label_join((histogram_quantile(0.90, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.90, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
-              "format": "table",
-              "hide": false,
-              "instant": true,
-              "intervalFactor": 1,
-              "legendFormat": "{{ destination_workload }}.{{ destination_workload_namespace }}",
-              "refId": "C"
-            },
-            {
-              "expr": "label_join((histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.99, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
-              "format": "table",
-              "hide": false,
-              "instant": true,
-              "intervalFactor": 1,
-              "legendFormat": "{{ destination_workload }}.{{ destination_workload_namespace }}",
-              "refId": "D"
             },
             {
               "expr": "label_join((sum(rate(istio_requests_total{reporter=\"source\", response_code!~\"5.*\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / sum(rate(istio_requests_total{reporter=\"source\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
@@ -1558,7 +1508,7 @@
               "interval": "",
               "intervalFactor": 1,
               "legendFormat": "{{ destination_workload }}.{{ destination_workload_namespace }}",
-              "refId": "E"
+              "refId": "C"
             }
           ],
           "timeFrom": null,
