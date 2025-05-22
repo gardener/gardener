@@ -463,7 +463,6 @@ func (c *clusterAutoscaler) computeCommand(workersHavePriorityConfigured bool) [
 	if c.config == nil {
 		c.config = &gardencorev1beta1.ClusterAutoscaler{}
 	}
-
 	gardencorev1beta1.SetDefaults_ClusterAutoscaler(c.config)
 
 	expanderMode := *c.config.Expander
