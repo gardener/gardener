@@ -189,24 +189,24 @@ images:
     sourceRepository: github.com/gardener/vpn2
     repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-server
     tag: "0.38.0"
-# OpenTelemetry
-- name: opentelemetry-operator
-  sourceRepository: github.com/open-telemetry/opentelemetry-operator
-  repository: ghcr.io/open-telemetry/opentelemetry-operator/opentelemetry-operator
-  tag: "0.119.0"
-  labels:
-  - name: 'gardener.cloud/cve-categorisation'
-    value:
-      network_exposure: 'private'
-      authentication_enforced: false
-      user_interaction: 'gardener-operator'
-      confidentiality_requirement: 'low'
-      integrity_requirement: 'low'
-      availability_requirement: 'low'
-  - name: 'cloud.gardener.cnudie/responsibles'
-    value:
-    - type: 'githubTeam'
-      teamname: 'gardener/logging-maintainers'
+  # OpenTelemetry
+  - name: opentelemetry-operator
+    sourceRepository: github.com/open-telemetry/opentelemetry-operator
+    repository: ghcr.io/open-telemetry/opentelemetry-operator/opentelemetry-operator
+    tag: "0.119.0"
+    labels:
+    - name: 'gardener.cloud/cve-categorisation'
+      value:
+        network_exposure: 'private'
+        authentication_enforced: false
+        user_interaction: 'gardener-operator'
+        confidentiality_requirement: 'low'
+        integrity_requirement: 'low'
+        availability_requirement: 'low'
+    - name: 'cloud.gardener.cnudie/responsibles'
+      value:
+      - type: 'githubTeam'
+        teamname: 'gardener/logging-maintainers'
   # Monitoring
   - name: prometheus-operator
     sourceRepository: github.com/prometheus-operator/prometheus-operator

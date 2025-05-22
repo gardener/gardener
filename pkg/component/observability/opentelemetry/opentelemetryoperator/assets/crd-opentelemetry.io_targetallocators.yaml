@@ -61,7 +61,7 @@ spec:
                   * `otc-container`
 
                   Overriding containers managed by the operator is outside the scope of what the maintainers will support and by
-                  doing so, you wil accept the risk of it breaking things.
+                  doing so, you will accept the risk of it breaking things.
                 items:
                   description: A single application container that you want to run
                     within a pod.

@@ -372,7 +372,6 @@ func deployment(namespace, imageName, priorityClassName string) *appsv1.Deployme
 			},
 		},
 	}
-
 }
 
 func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
@@ -403,5 +402,4 @@ func vpa(namespace string) *vpaautoscalingv1.VerticalPodAutoscaler {
 			},
 		},
 	}
-
 }
