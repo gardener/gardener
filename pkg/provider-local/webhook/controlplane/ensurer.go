@@ -50,7 +50,7 @@ func (e *ensurer) EnsureMachineControllerManagerDeployment(ctx context.Context, 
 
 	newObj.Spec.Template.Spec.Containers = webhook.EnsureContainerWithName(
 		newObj.Spec.Template.Spec.Containers,
-		machinecontrollermanager.ProviderSidecarContainer(cluster, local.Name, image.String()),
+		machinecontrollermanager.ProviderSidecarContainer(cluster.Shoot, newObj.GetNamespace(), local.Name, image.String()),
 	)
 	return nil
 }

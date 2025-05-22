@@ -13,7 +13,7 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -26,8 +26,9 @@ const (
 // ProviderSidecarContainer returns a corev1.Container object which can be injected into the machine-controller-manager
 // deployment managed by the gardenlet. This function can be used in provider-specific control plane webhook
 // implementations when the standard sidecar container is required.
-func ProviderSidecarContainer(cluster *extensionscontroller.Cluster, providerName, image string) corev1.Container {
-	autonomousShoot := v1beta1helper.IsShootAutonomous(cluster.Shoot)
+// The shoot object can be read from the `Cluster` object, e.g., using the GardenContext.GetCluster method in webhooks.
+func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamespace, providerName, image string) corev1.Container {
+	autonomousShoot := v1beta1helper.IsShootAutonomous(shoot)
 
 	c := corev1.Container{
 		Name:            providerSidecarContainerName(providerName),
@@ -41,9 +42,9 @@ func ProviderSidecarContainer(cluster *extensionscontroller.Cluster, providerNam
 			"--machine-safety-apiserver-statuscheck-timeout=30s",
 			"--machine-safety-apiserver-statuscheck-period=1m",
 			"--machine-safety-orphan-vms-period=30m",
-			"--namespace=" + cluster.ObjectMeta.Name,
+			"--namespace=" + controlPlaneNamespace,
 			"--port=" + strconv.Itoa(portProviderMetrics),
-			"--target-kubeconfig=" + targetKubeconfig(autonomousShoot, cluster.ObjectMeta.Name),
+			"--target-kubeconfig=" + targetKubeconfig(autonomousShoot, controlPlaneNamespace),
 			"--v=3",
 		},
 		LivenessProbe: &corev1.Probe{

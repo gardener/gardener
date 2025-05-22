@@ -11,12 +11,10 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -30,19 +28,14 @@ var _ = Describe("Provider", func() {
 
 	var (
 		namespace string
-		cluster   *extensionscontroller.Cluster
+		shoot     *gardencorev1beta1.Shoot
 
 		container corev1.Container
 	)
 
 	BeforeEach(func() {
 		namespace = "test-namespace"
-		cluster = &extensionscontroller.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-			},
-			Shoot: &gardencorev1beta1.Shoot{},
-		}
+		shoot = &gardencorev1beta1.Shoot{}
 	})
 
 	JustBeforeEach(func() {
@@ -104,13 +97,13 @@ var _ = Describe("Provider", func() {
 		})
 
 		It("should return the provider sidecar container", func() {
-			Expect(ProviderSidecarContainer(cluster, provider, image)).To(DeepEqual(container))
+			Expect(ProviderSidecarContainer(shoot, namespace, provider, image)).To(DeepEqual(container))
 		})
 	})
 
 	When("the shoot is autonomous", func() {
 		BeforeEach(func() {
-			cluster.Shoot.Spec.Provider.Workers = append(cluster.Shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{
 				ControlPlane: &gardencorev1beta1.WorkerControlPlane{},
 			})
 		})
@@ -126,17 +119,16 @@ var _ = Describe("Provider", func() {
 		When("running the control plane (gardenadm init)", func() {
 			BeforeEach(func() {
 				namespace = "kube-system"
-				cluster.ObjectMeta.Name = namespace
 			})
 
 			It("should return the provider sidecar container", func() {
-				Expect(ProviderSidecarContainer(cluster, provider, image)).To(DeepEqual(container))
+				Expect(ProviderSidecarContainer(shoot, namespace, provider, image)).To(DeepEqual(container))
 			})
 		})
 
 		When("not running the control plane (gardenadm bootstrap)", func() {
 			It("should return the provider sidecar container", func() {
-				Expect(ProviderSidecarContainer(cluster, provider, image)).To(DeepEqual(container))
+				Expect(ProviderSidecarContainer(shoot, namespace, provider, image)).To(DeepEqual(container))
 			})
 		})
 	})
