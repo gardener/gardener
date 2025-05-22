@@ -329,7 +329,7 @@ import custom/*.server
 			},
 		}
 
-		ipFamilyPolicy = getIPFamilyPolicy(c.values.IPFamilies)
+		ipFamilyPolicy = GetIPFamilyPolicy(c.values.IPFamilies, c.values.ClusterIPs)
 
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -855,10 +855,24 @@ func getSearchPathRewrites(clusterDomain string, commonSuffixes []string) string
   }` + suffixRewrites
 }
 
-func getIPFamilyPolicy(ipFamilies []gardencorev1beta1.IPFamily) corev1.IPFamilyPolicy {
+// GetIPFamilyPolicy returns the IPFamilyPolicy for the CoreDNS service based on the provided IP families and cluster IPs.
+func GetIPFamilyPolicy(ipFamilies []gardencorev1beta1.IPFamily, clusterIPs []net.IP) corev1.IPFamilyPolicy {
 	ipFamiliesSet := sets.New[gardencorev1beta1.IPFamily](ipFamilies...)
-	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) {
+	if ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv4) && ipFamiliesSet.Has(gardencorev1beta1.IPFamilyIPv6) && hasIPv4andIPv6Address(clusterIPs) {
 		return corev1.IPFamilyPolicyPreferDualStack
 	}
 	return corev1.IPFamilyPolicySingleStack
+}
+
+func hasIPv4andIPv6Address(clusterIPs []net.IP) bool {
+	hasV4 := false
+	hasV6 := false
+	for _, ip := range clusterIPs {
+		if ip.To4() != nil {
+			hasV4 = true
+		} else if ip.To16() != nil {
+			hasV6 = true
+		}
+	}
+	return hasV4 && hasV6
 }
