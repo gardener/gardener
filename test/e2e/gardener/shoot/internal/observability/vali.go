@@ -16,7 +16,7 @@ import (
 )
 
 // ItShouldWaitForLogsCountWithLabelToBeInVali waits for a specific number of logs with a given label to be present in Vali.
-func ItShouldWaitForLogsCountWithLabelToBeInVali(s *ShootContext, valiLabels map[string]string, key, value string, count int) {
+func ItShouldWaitForLogsCountWithLabelToBeInVali(s *ShootContext, valiLabels map[string]string, key, value string, expectedLogCount int) {
 	GinkgoHelper()
 
 	It("Wait for logs with label to appear in Vali", func(ctx SpecContext) {
@@ -26,9 +26,7 @@ func ItShouldWaitForLogsCountWithLabelToBeInVali(s *ShootContext, valiLabels map
 				return err
 			}
 
-			logCount := logging.GetLogCountFromSearchResponse(searchResponse)
-
-			if logCount != count {
+			if logCount := logging.GetLogCountFromSearchResponse(searchResponse); logCount != expectedLogCount {
 				return fmt.Errorf("expected %d logs in Vali for %s=%s, but got %d", count, key, value, logCount)
 			}
 
@@ -48,9 +46,7 @@ func ItShouldWaitForLogsWithLabelToBeInVali(s *ShootContext, valiLabels map[stri
 				return err
 			}
 
-			logCount := logging.GetLogCountFromSearchResponse(searchResponse)
-
-			if logCount == 0 {
+			if logging.GetLogCountFromSearchResponse(searchResponse) == 0 {
 				return fmt.Errorf("no logs in Vali for %s=%s", key, value)
 			}
 
@@ -70,9 +66,7 @@ func ItShouldWaitForLogsWithLabelToNotBeInVali(s *ShootContext, valiLabels map[s
 				return err
 			}
 
-			logCount := logging.GetLogCountFromSearchResponse(searchResponse)
-
-			if logCount > 0 {
+			if logging.GetLogCountFromSearchResponse(searchResponse) > 0 {
 				return fmt.Errorf("found logs in Vali for %s=%s when they were unexpected", key, value)
 			}
 
