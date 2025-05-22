@@ -103,6 +103,9 @@ type Reconciler struct {
 	HostName      string
 	NodeName      string
 	MachineName   string
+	// SkipWriteLastAppliedConfiguration is used by gardenadm that it does not confuse gardener-node-agent's change
+	// detection when applying other OSCs than the original one.
+	SkipWriteLastAppliedConfiguration bool
 
 	// Channel and TokenSecretSyncConfigs are used by the reconciler to trigger events for the token reconciler during an in-place service-account-key rotation.
 	Channel                chan event.TypedGenericEvent[*corev1.Secret]
@@ -253,14 +256,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	log.Info("Successfully applied operating system config")
 
-	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
-	oscRaw, err := runtime.Encode(codec, osc)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
-	}
+	if !r.SkipWriteLastAppliedConfiguration {
+		log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
+		oscRaw, err := runtime.Encode(codec, osc)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("unable to encode OSC: %w", err)
+		}
 
-	if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
-		return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
+		if err := r.FS.WriteFile(lastAppliedOperatingSystemConfigFilePath, oscRaw, 0600); err != nil {
+			return reconcile.Result{}, fmt.Errorf("unable to write current OSC to file path %q: %w", lastAppliedOperatingSystemConfigFilePath, err)
+		}
 	}
 
 	if oscChanges.MustRestartNodeAgent {

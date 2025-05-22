@@ -49,6 +49,7 @@ type AutonomousBotanist struct {
 	Extensions []Extension
 
 	operatingSystemConfigSecret      *corev1.Secret
+	isInitOperatingSystemConfig      bool
 	gardenerResourceManagerServiceIP *string
 }
 
