@@ -4284,6 +4284,8 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	out.StreamingConnectionIdleTimeout = (*metav1.Duration)(unsafe.Pointer(in.StreamingConnectionIdleTimeout))
 	out.MemorySwap = (*core.MemorySwapConfiguration)(unsafe.Pointer(in.MemorySwap))
 	out.MaxParallelImagePulls = (*int32)(unsafe.Pointer(in.MaxParallelImagePulls))
+	out.ImageMinimumGCAge = (*metav1.Duration)(unsafe.Pointer(in.ImageMinimumGCAge))
+	out.ImageMaximumGCAge = (*metav1.Duration)(unsafe.Pointer(in.ImageMaximumGCAge))
 	return nil
 }
 
@@ -4311,6 +4313,8 @@ func autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletCon
 	out.FailSwapOn = (*bool)(unsafe.Pointer(in.FailSwapOn))
 	out.KubeReserved = (*KubeletConfigReserved)(unsafe.Pointer(in.KubeReserved))
 	out.SystemReserved = (*KubeletConfigReserved)(unsafe.Pointer(in.SystemReserved))
+	out.ImageMinimumGCAge = (*metav1.Duration)(unsafe.Pointer(in.ImageMinimumGCAge))
+	out.ImageMaximumGCAge = (*metav1.Duration)(unsafe.Pointer(in.ImageMaximumGCAge))
 	out.ImageGCHighThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCHighThresholdPercent))
 	out.ImageGCLowThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCLowThresholdPercent))
 	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))

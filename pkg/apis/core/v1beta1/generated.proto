@@ -1601,6 +1601,16 @@ message KubeletConfig {
   // Default: nil
   // +optional
   optional int32 maxParallelImagePulls = 27;
+
+  // ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
+  // Default: 2m0s
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration imageMinimumGCAge = 28;
+
+  // ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected.
+  // Default: 0s
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration imageMaximumGCAge = 29;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
