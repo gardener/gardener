@@ -125,7 +125,7 @@ func (r *Reconciler) reconcile(
 	}
 
 	log.Info("Instantiating component deployers")
-	enableSeedAuthorizer, err := r.enableSeedAuthorizer(ctx)
+	enableSeedAuthorizer, err := r.enableSeedAuthorizer(ctx, targetVersion)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -192,17 +192,11 @@ func (r *Reconciler) reconcile(
 		})
 		deployEtcdDruid = g.Add(flow.Task{
 			Name: "Deploying ETCD Druid",
-			Fn:   component.OpWait(c.etcdDruid).Deploy,
+			Fn:   c.etcdDruid.Deploy,
 		})
 		deployIstio = g.Add(flow.Task{
 			Name: "Deploying Istio",
-			Fn:   component.OpWait(c.istio).Deploy,
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
-			Fn:           func(ctx context.Context) error { return r.reconcileDNSRecords(ctx, log, garden) },
-			SkipIf:       garden.Spec.DNS == nil,
-			Dependencies: flow.NewTaskIDs(deployIstio),
+			Fn:   c.istio.Deploy,
 		})
 		syncPointSystemComponents = flow.NewTaskIDs(
 			generateGenericTokenKubeconfig,
@@ -212,6 +206,23 @@ func (r *Reconciler) reconcile(
 			deployIstio,
 			deployNginxIngressController,
 		)
+
+		waitUntilEtcdDruidReady = g.Add(flow.Task{
+			Name:         "Waiting for ETCD Druid to be ready",
+			Fn:           c.istio.Wait,
+			Dependencies: flow.NewTaskIDs(deployEtcdDruid),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for Istio to be ready",
+			Fn:           c.istio.Wait,
+			Dependencies: flow.NewTaskIDs(deployIstio),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Reconciling DNSRecords for virtual garden cluster and ingress controller",
+			Fn:           func(ctx context.Context) error { return r.reconcileDNSRecords(ctx, log, garden) },
+			SkipIf:       garden.Spec.DNS == nil,
+			Dependencies: flow.NewTaskIDs(syncPointSystemComponents),
+		})
 
 		backupBucket = etcdMainBackupBucket(garden)
 
@@ -239,7 +250,7 @@ func (r *Reconciler) reconcile(
 		deployEtcds = g.Add(flow.Task{
 			Name:         "Deploying main and events ETCDs of virtual garden",
 			Fn:           r.deployEtcdsFunc(garden, c.etcdMain, c.etcdEvents, backupBucket),
-			Dependencies: flow.NewTaskIDs(syncPointSystemComponents, deployEtcdBackupBucket),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdDruidReady, deployEtcdBackupBucket),
 		})
 		waitUntilEtcdsReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event ETCDs report readiness",
@@ -603,10 +614,6 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 		g = flow.NewGraph("Garden runtime setup")
 
 		_ = g.Add(flow.Task{
-			Name: "Deploying runtime system resources",
-			Fn:   c.runtimeSystem.Deploy,
-		})
-		_ = g.Add(flow.Task{
 			Name: "Deploying custom resource definitions for fluent-operator",
 			Fn:   component.OpWait(c.fluentCRD).Deploy,
 		})
@@ -632,16 +639,26 @@ func (r *Reconciler) runRuntimeSetupFlow(ctx context.Context, log logr.Logger, g
 			Fn:   component.OpWait(c.istioCRD).Deploy,
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Deploying and waiting for gardener-resource-manager to be healthy",
-			Fn:           component.OpWait(c.gardenerResourceManager).Deploy,
+			Name:         "Deploying gardener-resource-manager",
+			Fn:           c.gardenerResourceManager.Deploy,
 			Dependencies: flow.NewTaskIDs(deployEtcdCRD, deployVPACRD, deployIstioCRD),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting for gardener-resource-manager to be healthy",
+			Fn:           c.gardenerResourceManager.Wait,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		deploySystemResources = g.Add(flow.Task{
+			Name:         "Deploying runtime system resources",
+			Fn:           c.runtimeSystem.Deploy,
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Waiting for Extensions to get ready",
 			Fn: func(ctx context.Context) error {
 				return r.waitUntilRequiredExtensionsReady(ctx, log, garden)
 			},
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deploySystemResources),
 		})
 	)
 

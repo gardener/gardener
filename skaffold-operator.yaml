@@ -1140,6 +1140,7 @@ build:
             - pkg/provider-local/webhook/networkpolicy
             - pkg/provider-local/webhook/node
             - pkg/provider-local/webhook/prometheus
+            - pkg/provider-local/webhook/rolloutspeedup
             - pkg/provider-local/webhook/shoot
             - pkg/resourcemanager/controller/garbagecollector/references
             - pkg/utils
