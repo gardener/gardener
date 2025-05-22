@@ -145,7 +145,8 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 	)
 
 	for _, registryConfig := range changes.Containerd.Registries.Desired {
-		if ptr.Deref(registryConfig.ReadinessProbe, false) {
+		shouldProbe := slices.Contains(changes.Containerd.Registries.UpstreamsToProbe, registryConfig.Upstream)
+		if shouldProbe {
 			registriesWithReadiness = append(registriesWithReadiness, registryConfig)
 		} else {
 			registriesWithoutReadiness = append(registriesWithoutReadiness, registryConfig)
@@ -155,7 +156,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 	// Registries without readiness probes can directly and synchronously be added here
 	// since there is no longer blocking operation involved.
 	for _, registryConfig := range registriesWithoutReadiness {
-		if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS); err != nil {
+		if err := addRegistryToContainerdFunc(ctx, log, registryConfig, false, r.FS); err != nil {
 			errChan <- err
 			return errChan
 		}
@@ -168,7 +169,7 @@ func (r *Reconciler) ensureContainerdRegistries(ctx context.Context, log logr.Lo
 	fns := make([]flow.TaskFn, 0, len(registriesWithReadiness))
 	for _, registryConfig := range registriesWithReadiness {
 		fns = append(fns, func(ctx context.Context) error {
-			if err := addRegistryToContainerdFunc(ctx, log, registryConfig, r.FS); err != nil {
+			if err := addRegistryToContainerdFunc(ctx, log, registryConfig, true, r.FS); err != nil {
 				return err
 			}
 			return changes.completedContainerdRegistriesDesired(registryConfig.Upstream)
@@ -195,7 +196,7 @@ func init() {
 		Parse(tplContentContainerdHosts))
 }
 
-func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryConfig extensionsv1alpha1.RegistryConfig, fs afero.Afero) error {
+func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryConfig extensionsv1alpha1.RegistryConfig, shouldProbe bool, fs afero.Afero) error {
 	httpClient := http.Client{Timeout: 1 * time.Second}
 
 	baseDir := path.Join(certsDir, registryConfig.Upstream)
@@ -203,16 +204,10 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		return fmt.Errorf("unable to ensure registry config base directory: %w", err)
 	}
 
-	hostsTomlFilePath := path.Join(baseDir, "hosts.toml")
-	exists, err := fs.Exists(hostsTomlFilePath)
-	if err != nil {
-		return fmt.Errorf("unable to check if registry config file exists: %w", err)
-	}
-
-	// Check if registry endpoints are reachable if the config is new.
+	// Check if registry endpoints are reachable if the registry config is new or updated.
 	// This is especially required when registries run within the cluster and during bootstrap,
 	// the Kubernetes deployments are not ready yet.
-	if !exists && ptr.Deref(registryConfig.ReadinessProbe, false) {
+	if shouldProbe {
 		log.Info("Probing endpoints for image registry", "upstream", registryConfig.Upstream)
 		if err := retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 			for _, registryHost := range registryConfig.Hosts {
@@ -254,6 +249,7 @@ func addRegistryToContainerdFunc(ctx context.Context, log logr.Logger, registryC
 		log.Info("Probing endpoints for image registry succeeded", "upstream", registryConfig.Upstream)
 	}
 
+	hostsTomlFilePath := path.Join(baseDir, "hosts.toml")
 	f, err := fs.OpenFile(hostsTomlFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("unable to open hosts.toml: %w", err)
