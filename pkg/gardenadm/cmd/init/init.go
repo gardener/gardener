@@ -102,7 +102,7 @@ func run(ctx context.Context, opts *Options) error {
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Approving gardener-node-agent client certificate signing request if necessary",
+			Name:         "Approving gardener-node-agent client certificate signing request",
 			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
 			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
@@ -203,7 +203,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		getGardenerResourceManagerServiceIP = g.Add(flow.Task{
 			Name:         "Get gardener-resource-manager service IP",
-			Fn:           b.GetAddGardenerResourceManagerServiceIP,
+			Fn:           b.FetchGardenerResourceManagerServiceIP,
 			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
 		})
@@ -269,7 +269,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Wait until gardener-node-agent is ready",
-			Fn:           flow.TaskFn(b.WaitUntilGardenerNodeAgentReady).RetryUntilTimeout(2*time.Second, 2*time.Minute),
+			Fn:           b.WaitUntilGardenerNodeAgentReady,
 			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
 	)
