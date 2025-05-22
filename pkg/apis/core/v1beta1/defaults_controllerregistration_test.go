@@ -132,15 +132,6 @@ var _ = Describe("ControllerRegistration defaulting", func() {
 				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(false)))
 			})
 
-			It("should default the globallyEnabled field is it was set before and autoEnable contains shoot", func() {
-				obj.Spec.Resources[1].GloballyEnabled = ptr.To(false)
-				obj.Spec.Resources[1].AutoEnable = []ClusterType{"shoot"}
-
-				SetObjectDefaults_ControllerRegistration(obj)
-
-				Expect(obj.Spec.Resources[1].GloballyEnabled).To(Equal(ptr.To(true)))
-			})
-
 			It("should default the autoEnable field to shoot if globallyEnabled is true", func() {
 				obj.Spec.Resources[1].GloballyEnabled = ptr.To(true)
 				SetObjectDefaults_ControllerRegistration(obj)

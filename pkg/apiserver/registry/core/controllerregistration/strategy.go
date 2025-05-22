@@ -12,10 +12,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -41,16 +43,20 @@ func (controllerRegistrationStrategy) PrepareForUpdate(_ context.Context, obj, o
 	newControllerRegistration := obj.(*core.ControllerRegistration)
 	oldControllerRegistration := old.(*core.ControllerRegistration)
 
+	handleAutoEnabledResources(oldControllerRegistration, newControllerRegistration)
+
 	if mustIncreaseGeneration(oldControllerRegistration, newControllerRegistration) {
 		newControllerRegistration.Generation = oldControllerRegistration.Generation + 1
 	}
-
-	handleAutoEnabledResources(oldControllerRegistration, newControllerRegistration)
 }
 
 func handleAutoEnabledResources(oldControllerRegistration, newControllerRegistration *core.ControllerRegistration) {
 	resourceKindTypeToResource := map[string]core.ControllerResource{}
 	for _, resource := range oldControllerRegistration.Spec.Resources {
+		if resource.Kind != extensionsv1alpha1.ExtensionResource {
+			continue
+		}
+
 		resourceKindTypeToResource[gardenerutils.ExtensionsID(resource.Kind, resource.Type)] = resource
 	}
 
@@ -65,11 +71,15 @@ func handleAutoEnabledResources(oldControllerRegistration, newControllerRegistra
 		}
 
 		// When globallyEnabled was set from true to false, the shoot type must be removed from the autoEnable list.
-		// Don't do anything if globallyEnabled was not set before, as this means a conflict and field AutoEnable should take precedence in this case.
 		if oldResource.GloballyEnabled != nil && *oldResource.GloballyEnabled && resource.GloballyEnabled != nil && !*resource.GloballyEnabled {
 			newControllerRegistration.Spec.Resources[i].AutoEnable = slices.DeleteFunc(resource.AutoEnable, func(clusterType core.ClusterType) bool {
 				return clusterType == core.ClusterTypeShoot
 			})
+		}
+
+		// Maintain GloballyEnabled if it was set before.
+		if resource.GloballyEnabled != nil {
+			newControllerRegistration.Spec.Resources[i].GloballyEnabled = ptr.To(slices.Contains(newControllerRegistration.Spec.Resources[i].AutoEnable, core.ClusterTypeShoot))
 		}
 	}
 }

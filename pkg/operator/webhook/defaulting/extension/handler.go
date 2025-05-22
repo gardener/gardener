@@ -58,12 +58,12 @@ func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Res
 				extension.Spec.Resources[i].AutoEnable = append(extension.Spec.Resources[i].AutoEnable, gardencorev1beta1.ClusterTypeShoot)
 			}
 
-			// only set GloballyEnabled to true if it was not set before
-			if resource.GloballyEnabled != nil && !*resource.GloballyEnabled && slices.Contains(resource.AutoEnable, gardencorev1beta1.ClusterTypeShoot) {
-				extension.Spec.Resources[i].GloballyEnabled = ptr.To(true)
+			// only maintain GloballyEnabled if it was not set before
+			if resource.GloballyEnabled != nil {
+				extension.Spec.Resources[i].GloballyEnabled = ptr.To(slices.Contains(extension.Spec.Resources[i].AutoEnable, gardencorev1beta1.ClusterTypeShoot))
 			}
 
-			if len(resource.ClusterCompatibility) == 0 && slices.Contains(resource.AutoEnable, gardencorev1beta1.ClusterTypeShoot) {
+			if len(resource.ClusterCompatibility) == 0 && slices.Contains(extension.Spec.Resources[i].AutoEnable, gardencorev1beta1.ClusterTypeShoot) {
 				extension.Spec.Resources[i].ClusterCompatibility = []gardencorev1beta1.ClusterType{gardencorev1beta1.ClusterTypeShoot}
 			}
 		}
@@ -80,6 +80,10 @@ func (h *Handler) Handle(_ context.Context, req admission.Request) admission.Res
 func handleAutoEnabledResources(oldExtension, extension *operatorv1alpha1.Extension) {
 	resourceKindTypeToResource := map[string]gardencorev1beta1.ControllerResource{}
 	for _, resource := range oldExtension.Spec.Resources {
+		if resource.Kind != extensionsv1alpha1.ExtensionResource {
+			continue
+		}
+
 		resourceKindTypeToResource[gardenerutils.ExtensionsID(resource.Kind, resource.Type)] = resource
 	}
 

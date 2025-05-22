@@ -19,13 +19,8 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 	}
 
 	if obj.Kind == "Extension" {
-		if !slices.Contains(obj.AutoEnable, ClusterTypeShoot) && ptr.Deref(obj.GloballyEnabled, false) {
+		if ptr.Deref(obj.GloballyEnabled, false) && !slices.Contains(obj.AutoEnable, ClusterTypeShoot) {
 			obj.AutoEnable = append(obj.AutoEnable, ClusterTypeShoot)
-		}
-
-		// only set GloballyEnabled to true if it was not set before
-		if slices.Contains(obj.AutoEnable, ClusterTypeShoot) && obj.GloballyEnabled != nil && !*obj.GloballyEnabled {
-			obj.GloballyEnabled = ptr.To(true)
 		}
 
 		if len(obj.ClusterCompatibility) == 0 {

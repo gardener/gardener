@@ -183,6 +183,11 @@ var _ = Describe("Handler", func() {
 								Path:      "/spec/resources/0/autoEnable",
 								Value:     []interface{}{"shoot"},
 							},
+							{
+								Operation: "add",
+								Path:      "/spec/resources/0/clusterCompatibility",
+								Value:     []interface{}{"shoot"},
+							},
 						},
 						AdmissionResponse: admissionv1.AdmissionResponse{
 							Allowed:   true,
@@ -201,6 +206,11 @@ var _ = Describe("Handler", func() {
 								Operation: "add",
 								Path:      "/spec/resources/0/autoEnable/1",
 								Value:     "shoot",
+							},
+							{
+								Operation: "add",
+								Path:      "/spec/resources/0/clusterCompatibility",
+								Value:     []interface{}{"shoot"},
 							},
 						},
 						AdmissionResponse: admissionv1.AdmissionResponse{

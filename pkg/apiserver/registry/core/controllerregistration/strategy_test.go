@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -60,6 +61,37 @@ var _ = Describe("ControllerRegistration Strategy", func() {
 				Strategy.PrepareForUpdate(ctx, newControllerRegistration, oldControllerRegistration)
 
 				Expect(newControllerRegistration.Spec.Resources[0].AutoEnable).To(ConsistOf(core.ClusterType("shoot")))
+			})
+
+			It("should set globallyEnabled to false when shoot was removed from autoEnable", func() {
+				newControllerRegistration.Spec.Resources[0].AutoEnable = []core.ClusterType{"seed"}
+				newControllerRegistration.Spec.Resources[0].GloballyEnabled = ptr.To(true)
+				oldControllerRegistration.Spec.Resources[0].AutoEnable = []core.ClusterType{"shoot"}
+				oldControllerRegistration.Spec.Resources[0].GloballyEnabled = ptr.To(true)
+
+				Strategy.PrepareForUpdate(ctx, newControllerRegistration, oldControllerRegistration)
+
+				Expect(newControllerRegistration.Spec.Resources[0].GloballyEnabled).To(PointTo(BeFalse()))
+			})
+
+			It("should set globallyEnabled to true when shoot was added to autoEnable", func() {
+				newControllerRegistration.Spec.Resources[0].AutoEnable = []core.ClusterType{"shoot"}
+				newControllerRegistration.Spec.Resources[0].GloballyEnabled = ptr.To(false)
+				oldControllerRegistration.Spec.Resources[0].AutoEnable = []core.ClusterType{"seed"}
+				oldControllerRegistration.Spec.Resources[0].GloballyEnabled = ptr.To(false)
+
+				Strategy.PrepareForUpdate(ctx, newControllerRegistration, oldControllerRegistration)
+
+				Expect(newControllerRegistration.Spec.Resources[0].GloballyEnabled).To(PointTo(BeTrue()))
+			})
+
+			It("should ignore globallyEnabled when it is not set", func() {
+				newControllerRegistration.Spec.Resources[0].AutoEnable = []core.ClusterType{"shoot"}
+				oldControllerRegistration.Spec.Resources[0].AutoEnable = []core.ClusterType{"seed"}
+
+				Strategy.PrepareForUpdate(ctx, newControllerRegistration, oldControllerRegistration)
+
+				Expect(newControllerRegistration.Spec.Resources[0].GloballyEnabled).To(BeNil())
 			})
 		})
 	})
