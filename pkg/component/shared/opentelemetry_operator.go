@@ -12,7 +12,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/observability/opentelemetry/opentelemetryoperator"
 )
 
-// NewFluentOperator instantiates a new `Fluent Operator` component.
+// NewOpenTelemetryOperator instantiates a new `OpenTelemetryOperator` component.
 func NewOpenTelemetryOperator(
 	c client.Client,
 	gardenNamespaceName string,
