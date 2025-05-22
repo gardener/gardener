@@ -15,7 +15,9 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // NewAuthorizer returns a new authorizer for requests from gardener-node-agents. It never has an opinion on the request.
@@ -318,11 +321,32 @@ func (a *authorizer) authorizeSecret(ctx context.Context, log logr.Logger, machi
 		}
 		validSecrets = append(validSecrets, machine.Spec.NodeTemplateSpec.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName])
 	} else {
+		var nodeNotFound bool
+
 		node := &corev1.Node{}
-		if err := a.targetClient.Get(ctx, client.ObjectKey{Name: machineName}, node); err != nil {
+		if err := a.targetClient.Get(ctx, client.ObjectKey{Name: machineName}, node); errors.IsNotFound(err) {
+			nodeNotFound = true
+		} else if err != nil {
 			return auth.DecisionDeny, "", fmt.Errorf("error getting node %q: %w", machineName, err)
 		}
-		validSecrets = append(validSecrets, node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName])
+
+		if nodeNotFound {
+			// When the node is not existing, gardener-node-agent is bootstrapping. It needs access to the secret
+			// which includes its operating system config. Since node-agent-authorizer does not know which worker pool
+			// gardener-node-agent uses, it needs access to all operating system config secrets.
+			oscSecretList := &corev1.SecretList{}
+			if err := a.targetClient.List(ctx, oscSecretList, &client.ListOptions{
+				LabelSelector: labels.NewSelector().Add(utils.MustNewRequirement(v1beta1constants.LabelWorkerPool, selection.Exists)),
+			}); err != nil {
+				return auth.DecisionDeny, "", fmt.Errorf("error listing operating system config secrets: %w", err)
+			}
+
+			for _, oscSecret := range oscSecretList.Items {
+				validSecrets = append(validSecrets, oscSecret.Name)
+			}
+		} else {
+			validSecrets = append(validSecrets, node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName])
+		}
 	}
 
 	if !slices.Contains(validSecrets, attrs.GetName()) || attrs.GetNamespace() != metav1.NamespaceSystem {
