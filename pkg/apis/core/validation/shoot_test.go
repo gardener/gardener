@@ -2928,6 +2928,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			version_1_28                        = "1.28.4"
 			version_1_30                        = "1.30.1"
 			version_1_32                        = "1.32.0"
+			version_1_33                        = "1.33.0"
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -3055,6 +3056,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("invalid with negative maxEmptyBulkDelete", core.ClusterAutoscaler{
 					MaxEmptyBulkDelete: &negativeInteger,
 				}, version_1_28, ConsistOf(field.Invalid(field.NewPath("maxEmptyBulkDelete"), negativeInteger, "can not be negative"))),
+				Entry("invalid with maxEmptyBulkDelete set for kubernetes version 1.33 and above", core.ClusterAutoscaler{
+					MaxEmptyBulkDelete: &positiveInteger,
+				}, version_1_33,
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("maxEmptyBulkDelete"),
+						"Detail": Equal("is not supported for kubernetes v1.33 and above, use maxScaleDownParallelism instead"),
+					}))),
+				),
 				Entry("valid with maxScaleDownParallelism", core.ClusterAutoscaler{
 					MaxScaleDownParallelism: &positiveInteger,
 				}, version_1_32, BeEmpty()),
