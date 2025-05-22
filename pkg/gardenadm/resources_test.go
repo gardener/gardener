@@ -40,23 +40,23 @@ var _ = Describe("Resources", func() {
 		})
 
 		It("should read the Kubernetes resources successfully", func() {
-			cloudProfile, project, shoot, controllerRegistrations, controllerDeployments, secrets, secretBinding, credentialsBinding, err := gardenadm.ReadManifests(log, fsys)
+			resources, err := gardenadm.ReadManifests(log, fsys)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(cloudProfile.Name).To(Equal("cpfl"))
-			Expect(project.Name).To(Equal("project"))
-			Expect(shoot.Name).To(Equal("shoot"))
-			Expect(controllerRegistrations).To(HaveLen(2))
-			Expect(controllerRegistrations[0].Name).To(Equal("ext1"))
-			Expect(controllerRegistrations[1].Name).To(Equal("ext2"))
-			Expect(controllerDeployments).To(HaveLen(2))
-			Expect(controllerDeployments[0].Name).To(Equal("ext1"))
-			Expect(controllerDeployments[1].Name).To(Equal("ext2"))
-			Expect(secrets).To(HaveLen(2))
-			Expect(secrets[0].Name).To(Equal("secret1"))
-			Expect(secrets[1].Name).To(Equal("secret2"))
-			Expect(secretBinding.Name).To(Equal("secretBinding"))
-			Expect(credentialsBinding.Name).To(Equal("credentialsBinding"))
+			Expect(resources.CloudProfile.Name).To(Equal("cpfl"))
+			Expect(resources.Project.Name).To(Equal("project"))
+			Expect(resources.Shoot.Name).To(Equal("shoot"))
+			Expect(resources.ControllerRegistrations).To(HaveLen(2))
+			Expect(resources.ControllerRegistrations[0].Name).To(Equal("ext1"))
+			Expect(resources.ControllerRegistrations[1].Name).To(Equal("ext2"))
+			Expect(resources.ControllerDeployments).To(HaveLen(2))
+			Expect(resources.ControllerDeployments[0].Name).To(Equal("ext1"))
+			Expect(resources.ControllerDeployments[1].Name).To(Equal("ext2"))
+			Expect(resources.Secrets).To(HaveLen(2))
+			Expect(resources.Secrets[0].Name).To(Equal("secret1"))
+			Expect(resources.Secrets[1].Name).To(Equal("secret2"))
+			Expect(resources.SecretBinding.Name).To(Equal("secretBinding"))
+			Expect(resources.CredentialsBinding.Name).To(Equal("credentialsBinding"))
 		})
 	})
 
@@ -64,7 +64,7 @@ var _ = Describe("Resources", func() {
 		It("should return an error", func() {
 			fsys["cloudprofile-foo.yaml"] = &fstest.MapFile{Data: []byte(`{`)}
 
-			_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+			_, err := gardenadm.ReadManifests(log, fsys)
 			Expect(err).To(MatchError(ContainSubstring("failed decoding resource at index")))
 		})
 	})
@@ -75,7 +75,7 @@ var _ = Describe("Resources", func() {
 			fsys["project-foo.json"] = &fstest.MapFile{Data: []byte(`{"apiVersion":"core.gardener.cloud/v1beta1","kind":"Project"}`)}
 			fsys["shoot-foo.json"] = &fstest.MapFile{Data: []byte(`{"apiVersion":"core.gardener.cloud/v1beta1","kind":"Shoot"}`)}
 
-			_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+			_, err := gardenadm.ReadManifests(log, fsys)
 			Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")))
 		})
 	})
@@ -86,7 +86,7 @@ var _ = Describe("Resources", func() {
 				createCloudProfile(fsys, "obj1")
 				createCloudProfile(fsys, "obj2")
 
-				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.CloudProfile resource")))
 			})
 		})
@@ -96,7 +96,7 @@ var _ = Describe("Resources", func() {
 				createProject(fsys, "obj1")
 				createProject(fsys, "obj2")
 
-				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.Project resource")))
 			})
 		})
@@ -106,7 +106,7 @@ var _ = Describe("Resources", func() {
 				createShoot(fsys, "obj1")
 				createShoot(fsys, "obj2")
 
-				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.Shoot resource")))
 			})
 		})
@@ -116,7 +116,7 @@ var _ = Describe("Resources", func() {
 				createSecretBinding(fsys, "secretBinding1")
 				createSecretBinding(fsys, "secretBinding2")
 
-				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *gardencorev1beta1.SecretBinding resource")))
 			})
 		})
@@ -126,7 +126,7 @@ var _ = Describe("Resources", func() {
 				createCredentialsBinding(fsys, "credentialsBinding1")
 				createCredentialsBinding(fsys, "credentialsBinding2")
 
-				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("found more than one *securityv1alpha1.CredentialsBinding resource")))
 			})
 		})
@@ -138,7 +138,7 @@ var _ = Describe("Resources", func() {
 				createShoot(fsys, "shoot")
 				createProject(fsys, "project")
 
-				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")))
 			})
 		})
@@ -148,7 +148,7 @@ var _ = Describe("Resources", func() {
 				createCloudProfile(fsys, "cpfl")
 				createShoot(fsys, "shoot")
 
-				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Project resource, but did not find any")))
 			})
 		})
@@ -158,7 +158,7 @@ var _ = Describe("Resources", func() {
 				createCloudProfile(fsys, "cpfl")
 				createProject(fsys, "project")
 
-				_, _, _, _, _, _, _, _, err := gardenadm.ReadManifests(log, fsys)
+				_, err := gardenadm.ReadManifests(log, fsys)
 				Expect(err).To(MatchError(ContainSubstring("must provide a *gardencorev1beta1.Shoot resource, but did not find any")))
 			})
 		})

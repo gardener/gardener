@@ -31,7 +31,7 @@ import (
 
 // ComputeExtensions takes a list of ControllerRegistrations and ControllerDeployments and computes a corresponding list
 // of Extensions.
-func ComputeExtensions(resources *gardenadm.Resources, runsControlPlane bool) ([]Extension, error) {
+func ComputeExtensions(resources gardenadm.Resources, runsControlPlane bool) ([]Extension, error) {
 	var extensions []Extension
 
 	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(

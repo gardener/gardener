@@ -40,8 +40,8 @@ type Resources struct {
 // ReadManifests reads Kubernetes and Gardener manifests in YAML or JSON format.
 // It returns among others a CloudProfile, Project, and Shoot resource if found, or an error if any issues occur during
 // reading or decoding.
-func ReadManifests(log logr.Logger, fsys fs.FS) (*Resources, error) {
-	var resources = &Resources{}
+func ReadManifests(log logr.Logger, fsys fs.FS) (Resources, error) {
+	resources := Resources{Seed: &gardencorev1beta1.Seed{}}
 	decoder := serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder(
 		gardencorev1.SchemeGroupVersion,
 		gardencorev1beta1.SchemeGroupVersion,
@@ -131,17 +131,17 @@ func ReadManifests(log logr.Logger, fsys fs.FS) (*Resources, error) {
 
 		return nil
 	}); err != nil {
-		return nil, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
+		return Resources{}, fmt.Errorf("failed reading Kubernetes resources from config directory: %w", err)
 	}
 
 	if resources.CloudProfile == nil {
-		return nil, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
+		return Resources{}, fmt.Errorf("must provide a *gardencorev1beta1.CloudProfile resource, but did not find any")
 	}
 	if resources.Project == nil {
-		return nil, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
+		return Resources{}, fmt.Errorf("must provide a *gardencorev1beta1.Project resource, but did not find any")
 	}
 	if resources.Shoot == nil {
-		return nil, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
+		return Resources{}, fmt.Errorf("must provide a *gardencorev1beta1.Shoot resource, but did not find any")
 	}
 
 	return resources, nil

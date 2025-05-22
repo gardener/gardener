@@ -101,7 +101,7 @@ func NewAutonomousBotanist(
 	ctx context.Context,
 	log logr.Logger,
 	clientSet kubernetes.Interface,
-	resources *gardenadm.Resources,
+	resources gardenadm.Resources,
 	extensions []Extension,
 	runsControlPlane bool,
 ) (
@@ -113,12 +113,11 @@ func NewAutonomousBotanist(
 		return nil, fmt.Errorf("failed creating autonomous botanist: %w", err)
 	}
 
-	if initializeShootResource(resources.Shoot, autonomousBotanist.FS, resources.Project.Name, runsControlPlane) != nil {
+	if err := initializeShootResource(resources.Shoot, autonomousBotanist.FS, resources.Project.Name, runsControlPlane); err != nil {
 		return nil, fmt.Errorf("failed initializing shoot resource: %w", err)
 	}
 
-	resources.Seed = &gardencorev1beta1.Seed{}
-	if initializeSeedResource(resources.Seed, resources.Shoot.Name) != nil {
+	if err := initializeSeedResource(resources.Seed, resources.Shoot.Name); err != nil {
 		return nil, fmt.Errorf("failed initializing seed resource: %w", err)
 	}
 
@@ -168,7 +167,7 @@ func newBotanist(
 	log logr.Logger,
 	clientSet kubernetes.Interface,
 	gardenClient client.Client,
-	resources *gardenadm.Resources,
+	resources gardenadm.Resources,
 	runsControlPlane bool,
 ) (
 	*botanistpkg.Botanist,
@@ -208,46 +207,34 @@ func newBotanist(
 func initializeFakeGardenResources(
 	ctx context.Context,
 	gardenClient client.Client,
-	resources *gardenadm.Resources,
+	resources gardenadm.Resources,
 	extensions []Extension,
 ) error {
-	if err := gardenClient.Create(ctx, resources.Seed.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
-		return fmt.Errorf("failed creating Seed %s: %w", resources.Seed.Name, err)
-	}
-
-	if err := gardenClient.Create(ctx, resources.Shoot.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
-		return fmt.Errorf("failed creating Shoot %s: %w", client.ObjectKeyFromObject(resources.Shoot), err)
-	}
+	objects := []client.Object{resources.Seed.DeepCopy(), resources.Shoot.DeepCopy()}
 
 	for _, extension := range extensions {
-		if err := gardenClient.Create(ctx, extension.ControllerRegistration.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
-			return fmt.Errorf("failed creating ControllerRegistration %s: %w", extension.ControllerRegistration.Name, err)
-		}
-
-		if err := gardenClient.Create(ctx, extension.ControllerDeployment.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
-			return fmt.Errorf("failed creating ControllerDeployment %s: %w", extension.ControllerDeployment.Name, err)
-		}
-
-		if err := gardenClient.Create(ctx, extension.ControllerInstallation.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
-			return fmt.Errorf("failed creating ControllerInstallation %s: %w", extension.ControllerInstallation.Name, err)
-		}
+		objects = append(
+			objects,
+			extension.ControllerRegistration.DeepCopy(),
+			extension.ControllerDeployment.DeepCopy(),
+			extension.ControllerInstallation.DeepCopy(),
+		)
 	}
 
 	for _, secret := range resources.Secrets {
-		if err := gardenClient.Create(ctx, secret.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
-			return fmt.Errorf("failed creating Secret %s: %w", secret.Name, err)
-		}
+		objects = append(objects, secret.DeepCopy())
 	}
 
 	if resources.SecretBinding != nil {
-		if err := gardenClient.Create(ctx, resources.SecretBinding.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
-			return fmt.Errorf("failed creating SecretBinding %s: %w", resources.SecretBinding.Name, err)
-		}
+		objects = append(objects, resources.SecretBinding.DeepCopy())
+	}
+	if resources.CredentialsBinding != nil {
+		objects = append(objects, resources.CredentialsBinding.DeepCopy())
 	}
 
-	if resources.CredentialsBinding != nil {
-		if err := gardenClient.Create(ctx, resources.CredentialsBinding.DeepCopy()); client.IgnoreAlreadyExists(err) != nil {
-			return fmt.Errorf("failed creating CredentialsBinding %s: %w", resources.CredentialsBinding.Name, err)
+	for _, obj := range objects {
+		if err := gardenClient.Create(ctx, obj); client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf("failed creating %T %s: %w", obj, obj.GetName(), err)
 		}
 	}
 
@@ -277,7 +264,7 @@ func newSeedObject(ctx context.Context, seed *gardencorev1beta1.Seed, shootObj *
 func newShootObject(
 	ctx context.Context,
 	gardenClient client.Client,
-	resources *gardenadm.Resources,
+	resources gardenadm.Resources,
 	runsControlPlane bool,
 ) (
 	*shootpkg.Shoot,
