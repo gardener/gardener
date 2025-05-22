@@ -268,10 +268,15 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployControlPlaneDeployments,
 			Dependencies: flow.NewTaskIDs(reconcileBackupEntry),
 		})
-		_ = g.Add(flow.Task{
+		activateGardenerNodeAgent = g.Add(flow.Task{
 			Name:         "Deploying OperatingSystemConfig and activating gardener-node-agent",
 			Fn:           b.ActivateGardenerNodeAgent,
 			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Wait until gardener-node-agent is ready",
+			Fn:           flow.TaskFn(b.WaitUntilGardenerNodeAgentReady).RetryUntilTimeout(2*time.Second, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
 	)
 
