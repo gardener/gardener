@@ -277,6 +277,29 @@ var _ = Describe("Shoot defaulting", func() {
 			It("should default serializeImagePulls to true when maxParallelImagePulls is unset or set to less than 2", func() {
 				SetObjectDefaults_Shoot(obj)
 
+				Expect(obj.Spec.Kubernetes.Kubelet.ImageMinimumGCAge).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))
+				Expect(obj.Spec.Kubernetes.Kubelet.ImageMaximumGCAge).To(PointTo(Equal(metav1.Duration{})))
+			})
+
+			It("should not overwrite already set values for imageGC age fields", func() {
+				var (
+					minAge = metav1.Duration{Duration: 5 * time.Minute}
+					maxAge = metav1.Duration{Duration: 10 * time.Minute}
+				)
+
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+				obj.Spec.Kubernetes.Kubelet.ImageMinimumGCAge = &minAge
+				obj.Spec.Kubernetes.Kubelet.ImageMaximumGCAge = &maxAge
+
+				SetObjectDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.ImageMinimumGCAge).To(PointTo(Equal(minAge)))
+				Expect(obj.Spec.Kubernetes.Kubelet.ImageMaximumGCAge).To(PointTo(Equal(maxAge)))
+			})
+
+			It("should default the serializeImagePulls field", func() {
+				SetObjectDefaults_Shoot(obj)
+
 				Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeTrue()))
 			})
 

@@ -344,6 +344,16 @@ spec:
                             Default: 40
                           format: int32
                           type: integer
+                        imageMaximumGCAge:
+                          description: |-
+                            ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected.
+                            Default: 0s
+                          type: string
+                        imageMinimumGCAge:
+                          description: |-
+                            ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
+                            Default: 2m0s
+                          type: string
                         kubeReserved:
                           description: |-
                             KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).

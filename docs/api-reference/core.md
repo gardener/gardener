@@ -7313,6 +7313,36 @@ Setting it to nil means no limit.
 Default: nil</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>imageMinimumGCAge</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
+Default: 2m0s</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>imageMaximumGCAge</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected.
+Default: 0s</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction

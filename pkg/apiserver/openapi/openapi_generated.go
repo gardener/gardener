@@ -5000,6 +5000,18 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Format:      "int32",
 						},
 					},
+					"imageMinimumGCAge": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected. Default: 2m0s",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"imageMaximumGCAge": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected. Default: 0s",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},

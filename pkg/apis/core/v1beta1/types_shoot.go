@@ -1376,6 +1376,14 @@ type KubeletConfig struct {
 	// Default: nil
 	// +optional
 	MaxParallelImagePulls *int32 `json:"maxParallelImagePulls,omitempty" protobuf:"varint,27,opt,name=maxParallelImagePulls"`
+	// ImageMinimumGCAge is the minimum age of an unused image before it can be garbage collected.
+	// Default: 2m0s
+	// +optional
+	ImageMinimumGCAge *metav1.Duration `json:"imageMinimumGCAge,omitempty" protobuf:"bytes,28,opt,name=imageMinimumGCAge"`
+	// ImageMaximumGCAge is the maximum age of an unused image before it can be garbage collected.
+	// Default: 0s
+	// +optional
+	ImageMaximumGCAge *metav1.Duration `json:"imageMaximumGCAge,omitempty" protobuf:"bytes,29,opt,name=imageMaximumGCAge"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

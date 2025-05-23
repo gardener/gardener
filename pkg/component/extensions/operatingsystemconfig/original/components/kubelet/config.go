@@ -82,6 +82,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddresses []string, clu
 		ImageGCHighThresholdPercent:      params.ImageGCHighThresholdPercent,
 		ImageGCLowThresholdPercent:       params.ImageGCLowThresholdPercent,
 		ImageMinimumGCAge:                metav1.Duration{Duration: 2 * time.Minute},
+		ImageMaximumGCAge:                metav1.Duration{Duration: 0 * time.Second},
 		KubeAPIBurst:                     50,
 		KubeAPIQPS:                       ptr.To[int32](50),
 		KubeReserved:                     params.KubeReserved,
