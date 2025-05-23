@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
-	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,14 +28,16 @@ import (
 	fakedbus "github.com/gardener/gardener/pkg/nodeagent/dbus/fake"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Kubelet", func() {
 	var (
-		ctx       context.Context
-		namespace = "kube-system"
-		hostName  = "test"
+		ctx context.Context
+
+		namespace string
+		hostName  string
 
 		fakeSeedClient    client.Client
 		fakeSecretManager secretsmanager.Interface
@@ -47,6 +48,8 @@ var _ = Describe("Kubelet", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		namespace = "kube-system"
+		hostName = "test"
 
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeSeedClient, namespace)
@@ -114,6 +117,10 @@ var _ = Describe("Kubelet", func() {
 	})
 
 	Describe("#BootstrapKubelet", func() {
+		BeforeEach(func() {
+			DeferCleanup(test.WithVar(&RequestAndStoreKubeconfig, func(_ context.Context, _ logr.Logger, _ afero.Afero, _ *rest.Config, _ string) error { return nil }))
+		})
+
 		It("should do nothing when the node was already found", func() {
 			Expect(fakeSeedClient.Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "foo", Labels: map[string]string{"kubernetes.io/hostname": hostName}}})).To(Succeed())
 
@@ -135,38 +142,6 @@ var _ = Describe("Kubelet", func() {
 
 			Expect(b.FS.Exists("/var/lib/gardener-node-agent/credentials/bootstrap-token")).To(BeTrue())
 			Expect(fakeDBus.Actions).To(HaveExactElements(fakedbus.SystemdAction{Action: fakedbus.ActionRestart, UnitNames: []string{"kubelet.service"}}))
-		})
-	})
-
-	Describe("#ApproveKubeletServerCertificateSigningRequest", func() {
-		It("should do nothing because the server certificate file already exists", func() {
-			file, err := b.FS.Create("/var/lib/kubelet/pki/kubelet-server-current.pem")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(file).NotTo(BeNil())
-
-			Expect(b.ApproveKubeletServerCertificateSigningRequest(ctx)).To(Succeed())
-		})
-
-		It("should return an error when no CSR was found for the node", func() {
-			Expect(b.ApproveKubeletServerCertificateSigningRequest(ctx)).To(MatchError(ContainSubstring("no certificate signing request found for node")))
-		})
-
-		It("should approve the CSR when not already approved", func() {
-			csr := &certificatesv1.CertificateSigningRequest{
-				ObjectMeta: metav1.ObjectMeta{Name: "csr"},
-				Spec:       certificatesv1.CertificateSigningRequestSpec{Username: "system:node:" + hostName},
-			}
-			Expect(fakeSeedClient.Create(ctx, csr)).To(Succeed())
-
-			Expect(b.ApproveKubeletServerCertificateSigningRequest(ctx)).To(Succeed())
-
-			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(csr), csr)).To(Succeed())
-			Expect(csr.Status.Conditions).To(HaveExactElements(certificatesv1.CertificateSigningRequestCondition{
-				Type:    certificatesv1.CertificateApproved,
-				Status:  corev1.ConditionTrue,
-				Reason:  "RequestApproved",
-				Message: "Approving kubelet server certificate signing request via gardenadm",
-			}))
 		})
 	})
 })

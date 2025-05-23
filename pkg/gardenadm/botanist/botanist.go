@@ -49,6 +49,10 @@ type AutonomousBotanist struct {
 	Extensions []Extension
 
 	operatingSystemConfigSecret *corev1.Secret
+	isInitOperatingSystemConfig bool
+
+	enableNodeAgentAuthorizer         bool
+	gardenerResourceManagerServiceIPs []string
 }
 
 // Extension contains the resources needed for an extension registration.

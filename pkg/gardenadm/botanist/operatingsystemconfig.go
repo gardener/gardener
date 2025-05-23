@@ -12,6 +12,8 @@ import (
 	"time"
 
 	systemddbus "github.com/coreos/go-systemd/v22/dbus"
+	coordinationv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -29,10 +31,15 @@ import (
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/nodeinit"
 	nodeagentcomponent "github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components/nodeagent"
 	kubeapiserver "github.com/gardener/gardener/pkg/component/kubernetes/apiserver"
+	"github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
+	"github.com/gardener/gardener/pkg/nodeagent"
 	nodeagentconfigv1alpha1 "github.com/gardener/gardener/pkg/nodeagent/apis/config/v1alpha1"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/nodeagent/controller/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -65,7 +72,8 @@ func (b *AutonomousBotanist) createOperatingSystemConfigSecretForNodeAgent(ctx c
 // ActivateGardenerNodeAgent deploys the OperatingSystemConfig and the corresponding ManagedResource containing the
 // Secret for gardener-node-agent. Then it activates the gardener-node-agent unit.
 func (b *AutonomousBotanist) ActivateGardenerNodeAgent(ctx context.Context) error {
-	if _, _, err := b.deployOperatingSystemConfig(ctx); err != nil {
+	oscData, _, err := b.deployOperatingSystemConfig(ctx)
+	if err != nil {
 		return fmt.Errorf("failed deploying OperatingSystemConfig: %w", err)
 	}
 
@@ -73,7 +81,43 @@ func (b *AutonomousBotanist) ActivateGardenerNodeAgent(ctx context.Context) erro
 		return fmt.Errorf("failed deploying ManagedResource containing Secret with OperatingSystemConfig for gardener-node-agent: %w", err)
 	}
 
+	// When the OSC was updated we have to apply the OperatingSystemConfig before gardener-node-agent to deploy the
+	// kube-apiserver with the host alias for gardener-resource-manager.
+	if err := managedresources.WaitUntilHealthyAndNotProgressing(ctx, b.SeedClientSet.Client(), b.Shoot.ControlPlaneNamespace, botanist.GardenerNodeAgentManagedResourceName); err != nil {
+		return fmt.Errorf("failed waiting for %q ManagedResource to be healthy: %w", botanist.GardenerNodeAgentManagedResourceName, err)
+	}
+
+	b.operatingSystemConfigSecret = &corev1.Secret{}
+	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: oscData.GardenerNodeAgentSecretName, Namespace: b.Shoot.ControlPlaneNamespace}, b.operatingSystemConfigSecret); err != nil {
+		return fmt.Errorf("failed fetching OperatingSystemConfig secret %q: %w", oscData.GardenerNodeAgentSecretName, err)
+	}
+
+	if err := b.ApplyOperatingSystemConfig(ctx); err != nil {
+		return fmt.Errorf("failed applying OperatingSystemConfig: %w", err)
+	}
+
 	return b.DBus.Start(ctx, nil, nil, nodeagentconfigv1alpha1.UnitName)
+}
+
+// WaitUntilGardenerNodeAgentReady waits until the gardener-node-agent is ready. It checks for the existence of its lease.
+func (b *AutonomousBotanist) WaitUntilGardenerNodeAgentReady(ctx context.Context) error {
+	return retry.Until(ctx, time.Second*2, func(ctx context.Context) (bool, error) {
+		node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
+		if err != nil {
+			return retry.MinorError(fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err))
+		}
+
+		if node == nil {
+			return retry.MinorError(fmt.Errorf("node for host %q was not created yet", b.HostName))
+		}
+
+		leaseName := gardenerutils.NodeAgentLeaseName(node.GetName())
+		if err := b.SeedClientSet.Client().Get(ctx, types.NamespacedName{Name: leaseName, Namespace: metav1.NamespaceSystem}, &coordinationv1.Lease{}); err != nil {
+			return retry.MinorError(fmt.Errorf("failed fetching lease %q: %w", leaseName, err))
+		}
+
+		return retry.Ok()
+	})
 }
 
 func (b *AutonomousBotanist) appendAdminKubeconfigToFiles(files []extensionsv1alpha1.File) ([]extensionsv1alpha1.File, error) {
@@ -135,22 +179,29 @@ func (b *AutonomousBotanist) ApplyOperatingSystemConfig(ctx context.Context) err
 		return fmt.Errorf("failed ensuring gardener-node-agent directories exist: %w", err)
 	}
 
+	node, err := nodeagent.FetchNodeByHostName(ctx, b.SeedClientSet.Client(), b.HostName)
+	if err != nil {
+		return fmt.Errorf("failed fetching node object by hostname %q: %w", b.HostName, err)
+	}
+
 	reconcilerCtx, cancelFunc := context.WithCancel(ctx)
 	reconcilerCtx = log.IntoContext(reconcilerCtx, b.Logger.WithName("operatingsystemconfig-reconciler").WithValues("secret", client.ObjectKeyFromObject(b.operatingSystemConfigSecret)))
 
-	_, err := (&operatingsystemconfigcontroller.Reconciler{
+	_, err = (&operatingsystemconfigcontroller.Reconciler{
 		Client: b.SeedClientSet.Client(),
 		Config: nodeagentconfigv1alpha1.OperatingSystemConfigControllerConfig{
 			SyncPeriod:        &metav1.Duration{Duration: time.Minute},
 			SecretName:        b.operatingSystemConfigSecret.Name,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 		},
-		CancelContext: cancelFunc,
-		Recorder:      &record.FakeRecorder{},
-		Extractor:     registry.NewExtractor(),
-		HostName:      b.HostName,
-		DBus:          b.DBus,
-		FS:            b.FS,
+		CancelContext:                     cancelFunc,
+		Recorder:                          &record.FakeRecorder{},
+		Extractor:                         registry.NewExtractor(),
+		HostName:                          b.HostName,
+		NodeName:                          ptr.Deref(node, corev1.Node{}).Name,
+		DBus:                              b.DBus,
+		FS:                                b.FS,
+		SkipWriteLastAppliedConfiguration: b.isInitOperatingSystemConfig,
 	}).Reconcile(reconcilerCtx, reconcile.Request{NamespacedName: types.NamespacedName{Name: b.operatingSystemConfigSecret.Name, Namespace: b.operatingSystemConfigSecret.Namespace}})
 	return err
 }
@@ -172,6 +223,8 @@ func (b *AutonomousBotanist) PrepareGardenerNodeInitConfiguration(ctx context.Co
 	if err != nil {
 		return fmt.Errorf("failed computing units and files for gardener-node-init: %w", err)
 	}
+
+	b.isInitOperatingSystemConfig = true
 
 	return b.createOperatingSystemConfigSecretForNodeAgent(ctx, osc, secretName, "")
 }
@@ -195,7 +248,9 @@ func (b *AutonomousBotanist) generateGardenerNodeInitOperatingSystemConfig(secre
 	for i, file := range files {
 		if file.Path == nodeagentconfigv1alpha1.BootstrapTokenFilePath {
 			files[i].Content.Inline.Data = bootstrapToken
-			break
+		}
+		if file.Path == nodeagentconfigv1alpha1.MachineNameFilePath {
+			files[i].Content.Inline.Data = b.HostName
 		}
 	}
 

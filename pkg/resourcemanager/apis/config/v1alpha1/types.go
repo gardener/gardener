@@ -121,7 +121,8 @@ type CSRApproverControllerConfig struct {
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
-	MachineNamespace string `json:"machineNamespace"`
+	// +optional
+	MachineNamespace *string `json:"machineNamespace,omitempty"`
 }
 
 // GarbageCollectorControllerConfig is the configuration for the garbage-collector controller.
@@ -331,7 +332,8 @@ type NodeAgentAuthorizerWebhookConfig struct {
 	// Enabled defines whether this webhook is enabled.
 	Enabled bool `json:"enabled"`
 	// MachineNamespace is the namespace in the source cluster in which the Machine objects are stored.
-	MachineNamespace string `json:"machineNamespace"`
+	// +optional
+	MachineNamespace *string `json:"machineNamespace,omitempty"`
 	// AuthorizeWithSelectors defines whether authorization is allowed to use field selectors.
 	// +optional
 	AuthorizeWithSelectors *bool `json:"authorizeWithSelectors,omitempty"`

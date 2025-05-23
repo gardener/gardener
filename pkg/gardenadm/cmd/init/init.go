@@ -15,6 +15,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedsystem "github.com/gardener/gardener/pkg/component/seed/system"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenadm/cmd"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -95,15 +96,16 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.InitializeSecretsManagement,
 			Dependencies: flow.NewTaskIDs(reconcileClusterResource),
 		})
-		bootstrapKubelet = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Creating real bootstrap token for kubelet and restart unit",
 			Fn:           b.BootstrapKubelet,
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Approving kubelet server certificate signing request if necessary",
-			Fn:           flow.TaskFn(b.ApproveKubeletServerCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
-			Dependencies: flow.NewTaskIDs(bootstrapKubelet),
+			Name:         "Approving gardener-node-agent client certificate signing request",
+			Fn:           flow.TaskFn(b.ApproveNodeAgentCertificateSigningRequest).RetryUntilTimeout(2*time.Second, time.Minute),
+			SkipIf:       !features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",
@@ -199,6 +201,11 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManagerIntoPodNetwork),
 		})
+		enableNodeAgentAuthorizer = g.Add(flow.Task{
+			Name:         "Enable node-agent-authorizer",
+			Fn:           b.EnableNodeAgentAuthorizer,
+			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
+		})
 		deployExtensionControllersIntoPodNetwork = g.Add(flow.Task{
 			Name: "Redeploying extension controllers into pod network",
 			Fn: func(ctx context.Context) error {
@@ -215,6 +222,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		syncPointBootstrapped = flow.NewTaskIDs(
 			deployNetworkPolicies,
+			enableNodeAgentAuthorizer,
 			waitUntilGardenerResourceManagerReady,
 			waitUntilGardenerResourceManagerInPodNetworkReady,
 			waitUntilExtensionControllersReady,
@@ -253,10 +261,15 @@ func run(ctx context.Context, opts *Options) error {
 			Fn:           b.DeployControlPlaneDeployments,
 			Dependencies: flow.NewTaskIDs(reconcileBackupEntry),
 		})
-		_ = g.Add(flow.Task{
+		activateGardenerNodeAgent = g.Add(flow.Task{
 			Name:         "Deploying OperatingSystemConfig and activating gardener-node-agent",
 			Fn:           b.ActivateGardenerNodeAgent,
 			Dependencies: flow.NewTaskIDs(deployControlPlaneDeployments),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Wait until gardener-node-agent is ready",
+			Fn:           b.WaitUntilGardenerNodeAgentReady,
+			Dependencies: flow.NewTaskIDs(activateGardenerNodeAgent),
 		})
 	)
 
