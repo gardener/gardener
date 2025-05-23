@@ -52,7 +52,7 @@ var _ = Describe("Component", func() {
 				Key:               key,
 				KubernetesVersion: kubernetesVersion,
 				APIServerURL:      apiServerURL,
-				CABundle:          ptr.To(string(caBundle)),
+				CABundle:          string(caBundle),
 				Images:            map[string]*imagevectorutils.Image{"gardener-node-agent": {Repository: ptr.To("gardener-node-agent"), Tag: ptr.To("v1")}},
 			})
 

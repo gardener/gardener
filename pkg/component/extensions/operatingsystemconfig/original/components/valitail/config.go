@@ -69,10 +69,7 @@ func getValitailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 }
 
 func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
-	var cABundle []byte
-	if ctx.CABundle != nil {
-		cABundle = []byte(*ctx.CABundle)
-	}
+	caBundleBase64 := utils.EncodeBase64([]byte(ctx.CABundle))
 
 	return extensionsv1alpha1.File{
 		Path:        PathCACert,
@@ -80,7 +77,7 @@ func getValitailCAFile(ctx components.Context) extensionsv1alpha1.File {
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
-				Data:     utils.EncodeBase64(cABundle),
+				Data:     caBundleBase64,
 			},
 		},
 	}

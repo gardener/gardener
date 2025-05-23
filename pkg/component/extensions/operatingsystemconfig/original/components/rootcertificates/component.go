@@ -56,17 +56,13 @@ func (component) Name() string {
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	if ctx.CABundle == nil {
-		return nil, nil, nil
-	}
-
 	updateLocalCaCertificatesScriptFile, err := updateLocalCACertificatesScriptFile()
 	if err != nil {
 		return nil, nil, err
 	}
 
 	const pathEtcSSLCerts = "/etc/ssl/certs"
-	var caBundleBase64 = utils.EncodeBase64([]byte(*ctx.CABundle))
+	var caBundleBase64 = utils.EncodeBase64([]byte(ctx.CABundle))
 
 	updateCACertsFiles := []extensionsv1alpha1.File{
 		updateLocalCaCertificatesScriptFile,

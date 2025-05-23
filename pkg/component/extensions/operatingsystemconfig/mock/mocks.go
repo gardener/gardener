@@ -125,7 +125,7 @@ func (mr *MockInterfaceMockRecorder) SetAPIServerURL(arg0 any) *gomock.Call {
 }
 
 // SetCABundle mocks base method.
-func (m *MockInterface) SetCABundle(arg0 *string) {
+func (m *MockInterface) SetCABundle(arg0 string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetCABundle", arg0)
 }
