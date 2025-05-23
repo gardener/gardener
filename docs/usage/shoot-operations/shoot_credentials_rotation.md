@@ -146,8 +146,9 @@ Now you can just complete the rotation as usual (see above).
 
 In case of manual in-place update, shoot CA rotation phase will be at `Preparing` until all the worker pools are successfully in-place updated and there are no pending worker pools with strategy ManualInPlaceUpdate.
 
-You can check which worker pools still need to be updated by reading `.status.inPlaceUpdates.PendingWorkerUpdates.ManualInPlaceUpdate`.
-Once this list is empty, the `phase` transitions to `Prepared`. After this rotation will be completed as usual (see above).
+You can check which worker pools still need to be updated by reading `.status.inPlaceUpdates.pendingWorkerUpdates.manualInPlaceUpdate`.
+Once this list is empty, the `phase` transitions to `Prepared`.
+After this rotation will be completed as usual (see above).
 
 ### Observability Password(s) For Plutono and Prometheus
 
