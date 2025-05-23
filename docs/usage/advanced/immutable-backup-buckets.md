@@ -13,7 +13,7 @@ Immutable backup buckets ensure that etcd backups cannot be modified or deleted 
 
 ## Core Concepts
 
-Gardener supports immutable backup buckets for `AWS`, `GCP`, and `Azure` via their respective provider extensions. When enabled, the extension will:
+Gardener provider extensions support immutable backup buckets for some hyperscalers, e.g., `AWS`, `GCP`, and `Azure`. When enabled, the extension will:
 
 - **Create** buckets with the specified immutability policy if they do not exist.
 - **Reconcile** existing buckets to enforce the desired immutability policy.
@@ -86,7 +86,7 @@ immutability:
 
 > [!NOTE]
 > `Azure` uses container immutability policies with delayed deletion. Once `locked: true` is set, the policy cannot be changed or removed.  
-> See [`Azure` Extension Usage – BackupBucket](https://github.com/gardener/gardener-extension-provider-azure/blob/master/docs/usage/usage.md#backupbucket)
+> See [`Azure` Extension Usage – BackupBucket](https://github.com/gardener/gardener-extension-provider-azure/blob/master/docs/usage/usage.md#backupbucketconfig)
 
 ## Advanced: Ignoring Snapshots During Restoration
 
