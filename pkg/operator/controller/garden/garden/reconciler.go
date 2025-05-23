@@ -38,8 +38,9 @@ import (
 )
 
 const (
-	labelKeyOrigin     = "origin"
-	labelValueOperator = "gardener-operator"
+	labelKeyOrigin              = "origin"
+	labelValueOperator          = "gardener-operator"
+	annotationKeyFastDeployment = "gardener.cloud/fast-deployment"
 )
 
 // Reconciler reconciles Gardens.

@@ -110,6 +110,8 @@ type Values struct {
 	ExternalHostname string
 	// ExternalServer is the external server which should be used when generating the user kubeconfig.
 	ExternalServer string
+	// FastDeployment reduces min ready and termination grace periods for faster non-productive deployments.
+	FastDeployment bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
 	// IsWorkerless specifies whether the cluster managed by this API server has worker nodes.

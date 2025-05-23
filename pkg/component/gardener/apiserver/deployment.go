@@ -44,6 +44,15 @@ func (g *gardenerAPIServer) deployment(
 	configMapAuditPolicy *corev1.ConfigMap,
 	configMapAdmissionConfigs *corev1.ConfigMap,
 ) *appsv1.Deployment {
+	var (
+		minReadySeconds               int32 = 30
+		terminationGracePeriodSeconds *int64
+	)
+	if g.values.FastDeployment {
+		minReadySeconds = 10
+		terminationGracePeriodSeconds = ptr.To[int64](0)
+	}
+
 	args := []string{
 		"--authorization-always-allow-paths=/healthz",
 		"--cluster-identity=" + g.values.ClusterIdentity,
@@ -70,7 +79,7 @@ func (g *gardenerAPIServer) deployment(
 			Labels:    GetLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			MinReadySeconds:      30,
+			MinReadySeconds:      minReadySeconds,
 			RevisionHistoryLimit: ptr.To[int32](2),
 			Replicas:             g.values.Autoscaling.Replicas,
 			Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
@@ -103,6 +112,7 @@ func (g *gardenerAPIServer) deployment(
 						RunAsGroup:   ptr.To[int64](65532),
 						FSGroup:      ptr.To[int64](65532),
 					},
+					TerminationGracePeriodSeconds: terminationGracePeriodSeconds,
 					Containers: []corev1.Container{{
 						Name:            containerName,
 						Image:           g.values.Image,

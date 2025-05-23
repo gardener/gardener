@@ -117,9 +117,15 @@ func (k *kubeAPIServer) reconcileDeployment(
 	tlsSNISecrets []tlsSNISecret,
 ) error {
 	var (
-		maxSurge       = intstr.FromString("100%")
-		maxUnavailable = intstr.FromInt32(0)
+		maxSurge                            = intstr.FromString("100%")
+		maxUnavailable                      = intstr.FromInt32(0)
+		minReadySeconds               int32 = 30
+		terminationGracePeriodSeconds int64 = 30
 	)
+	if k.values.FastDeployment {
+		minReadySeconds = 10
+		terminationGracePeriodSeconds = 0
+	}
 
 	var healthCheckToken string
 	if secretStaticToken != nil {
@@ -176,7 +182,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 			v1beta1constants.LabelExtensionProviderMutatedByControlplaneWebhook: "true",
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
-			MinReadySeconds:      30,
+			MinReadySeconds:      minReadySeconds,
 			RevisionHistoryLimit: ptr.To[int32](2),
 			Replicas:             k.values.Autoscaling.Replicas,
 			Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
@@ -205,7 +211,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 corev1.DefaultSchedulerName,
-					TerminationGracePeriodSeconds: ptr.To[int64](30),
+					TerminationGracePeriodSeconds: ptr.To[int64](terminationGracePeriodSeconds),
 					SecurityContext: &corev1.PodSecurityContext{
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
