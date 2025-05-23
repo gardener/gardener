@@ -11,8 +11,10 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/ptr"
@@ -25,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -38,6 +41,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 	var (
 		ctx = context.Background()
 
+		name              = "opentelemetry-operator"
 		namespace         = "some-namespace"
 		image             = "some-image:some-tag"
 		priorityClassName = "some-priority-class"
@@ -50,7 +54,6 @@ var _ = Describe("OpenTelemetry Operator", func() {
 		component component.DeployWaiter
 		consistOf func(...client.Object) types.GomegaMatcher
 
-		operatorManagedResourceName   = "opentelemetry-operator"
 		operatorManagedResource       *resourcesv1alpha1.ManagedResource
 		operatorManagedResourceSecret *corev1.Secret
 
@@ -68,13 +71,269 @@ var _ = Describe("OpenTelemetry Operator", func() {
 		component = NewOpenTelemetryOperator(c, namespace, values)
 		consistOf = NewManagedResourceConsistOfObjectsMatcher(c)
 
-		serviceAccount = ServiceAccount(namespace)
-		clusterRole = ClusterRole()
-		clusterRoleBinding = ClusterRoleBinding(clusterRole.Name, serviceAccount.Name, serviceAccount.Namespace)
-		role = Role(namespace)
-		roleBinding = RoleBinding(role.Name, namespace)
-		deployment = Deployment(namespace, image, priorityClassName)
-		vpa = Vpa(namespace)
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    getLabels(),
+			},
+			AutomountServiceAccountToken: ptr.To(false),
+		}
+
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener.cloud:opentelemetry:opentelemetry-operator",
+				Labels: getLabels(),
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps", "pods", "serviceaccounts", "services"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "patch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"namespaces", "secrets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"daemonsets", "deployments", "statefulsets"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"replicasets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"autoscaling"},
+					Resources: []string{"horizontalpodautoscalers"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"batch"},
+					Resources: []string{"jobs"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"config.openshift.io"},
+					Resources: []string{"infrastructures", "infrastructures/status"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"coordination.k8s.io"},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create", "get", "list", "update"},
+				},
+				{
+					APIGroups: []string{"monitoring.coreos.com"},
+					Resources: []string{"podmonitors", "servicemonitors"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"networking.k8s.io"},
+					Resources: []string{"ingresses"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"opentelemetry.io"},
+					Resources: []string{"instrumentations", "opentelemetrycollectors"},
+					Verbs:     []string{"get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"opentelemetry.io"},
+					Resources: []string{"opampbridges", "targetallocators"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"opentelemetry.io"},
+					Resources: []string{"opampbridges/finalizers"},
+					Verbs:     []string{"update"},
+				},
+				{
+					APIGroups: []string{"opentelemetry.io"},
+					Resources: []string{"opampbridges/status", "opentelemetrycollectors/finalizers", "opentelemetrycollectors/status", "targetallocators/status"},
+					Verbs:     []string{"get", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"policy"},
+					Resources: []string{"poddisruptionbudgets"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"route.openshift.io"},
+					Resources: []string{"routes", "routes/custom-host"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: getLabels(),
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			}},
+		}
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:opentelemetry:opentelemetry-operator",
+				Namespace: namespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"list", "patch", "create", "get", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps/status"},
+					Verbs:     []string{"get", "update", "patch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "patch"},
+				},
+			},
+		}
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:opentelemetry:opentelemetry-operator",
+				Namespace: namespace,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      serviceAccount.Name,
+					Namespace: namespace,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     role.Name,
+			},
+		}
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.DeploymentNameOpenTelemetryOperator,
+				Namespace: namespace,
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					resourcesv1alpha1.HighAvailabilityConfigType: resourcesv1alpha1.HighAvailabilityConfigTypeController,
+				}),
+			},
+			Spec: appsv1.DeploymentSpec{
+				RevisionHistoryLimit: ptr.To[int32](2),
+				Replicas:             ptr.To[int32](1),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: getLabels(),
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToRuntimeAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+						}),
+					},
+					Spec: corev1.PodSpec{
+						ServiceAccountName: name,
+						PriorityClassName:  priorityClassName,
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: ptr.To(true),
+							RunAsUser:    ptr.To[int64](65532),
+							RunAsGroup:   ptr.To[int64](65532),
+							FSGroup:      ptr.To[int64](65532),
+						},
+						Containers: []corev1.Container{
+							{
+								Name:            name,
+								Image:           image,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Args: []string{
+									"--metrics-addr=127.0.0.1:8080",
+									"--enable-leader-election",
+									"--zap-log-level=info",
+									"--zap-time-encoding=rfc3339nano",
+								},
+								Env: []corev1.EnvVar{
+									{
+										Name:  "ENABLE_WEBHOOKS",
+										Value: "false",
+									},
+									{
+										Name: "NAMESPACE",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.namespace",
+											},
+										},
+									},
+									{
+										Name: "SERVICE_ACCOUNT_NAME",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "spec.serviceAccountName",
+											},
+										},
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("100m"),
+										corev1.ResourceMemory: resource.MustParse("64Mi"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       v1beta1constants.DeploymentNameOpenTelemetryOperator,
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("128Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -167,7 +426,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:       operatorManagedResourceName,
+						Name:       OperatorManagedResourceName,
 						Namespace:  namespace,
 						Generation: 1,
 					},
@@ -194,7 +453,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:       operatorManagedResourceName,
+						Name:       OperatorManagedResourceName,
 						Namespace:  namespace,
 						Generation: 1,
 					},
@@ -223,7 +482,7 @@ var _ = Describe("OpenTelemetry Operator", func() {
 
 				operatorManagedResource := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      operatorManagedResourceName,
+						Name:      OperatorManagedResourceName,
 						Namespace: namespace,
 					},
 				}
@@ -238,3 +497,11 @@ var _ = Describe("OpenTelemetry Operator", func() {
 		})
 	})
 })
+
+func getLabels() map[string]string {
+	return map[string]string{
+		"app":                 "opentelemetry-operator",
+		"role":                "logging",
+		"gardener.cloud/role": "logging",
+	}
+}
