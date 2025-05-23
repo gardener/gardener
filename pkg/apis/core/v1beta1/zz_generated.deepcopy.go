@@ -1046,6 +1046,16 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.MaxScaleDownParallelism != nil {
+		in, out := &in.MaxScaleDownParallelism, &out.MaxScaleDownParallelism
+		*out = new(int32)
+		**out = **in
+	}
+	if in.MaxDrainParallelism != nil {
+		in, out := &in.MaxDrainParallelism, &out.MaxDrainParallelism
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

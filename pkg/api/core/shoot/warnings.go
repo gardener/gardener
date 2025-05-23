@@ -13,6 +13,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // GetWarnings returns warnings for the provided shoot.
@@ -34,6 +35,10 @@ func GetWarnings(_ context.Context, shoot, oldShoot *core.Shoot, credentialsRota
 
 	if shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig != nil {
 		warnings = append(warnings, "you are setting the spec.kubernetes.enableStaticTokenKubeconfig field. The field is deprecated and will be removed in Gardener v1.120. Please adapt your machinery to no longer set this field")
+	}
+
+	if supportedVersion, _ := versionutils.CompareVersions(shoot.Spec.Kubernetes.Version, "<", "1.33"); supportedVersion && shoot.Spec.Kubernetes.ClusterAutoscaler != nil && shoot.Spec.Kubernetes.ClusterAutoscaler.MaxEmptyBulkDelete != nil {
+		warnings = append(warnings, "you are setting the spec.kubernetes.clusterAutoscaler.maxEmptyBulkDelete field. The field has been deprecated and will not be supported by gardener from Kubernetes 1.33. Instead, use the spec.kubernetes.clusterAutoscaler.maxScaleDownParallelism field.")
 	}
 
 	if helper.IsLegacyAnonymousAuthenticationEnabled(shoot.Spec.Kubernetes.KubeAPIServer) {
