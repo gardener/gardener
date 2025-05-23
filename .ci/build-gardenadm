@@ -17,12 +17,17 @@ ld_flags="$(hack/get-build-ld-flags.sh)"
 for os in linux darwin windows; do
   for arch in amd64 arm64; do
     out_file="${BINARY_PATH}/gardenadm-${os}-${arch}"
+    compress_command=(tar cvzf "${out_file}.tar.gz" -C $(dirname "${out_file}") $(basename "${out_file}"))
     if [[ "${os}" == "windows" ]]; then
+      compress_command=(zip -j "${out_file}.zip" "${out_file}.exe")
       out_file="${out_file}.exe"
     fi
 
     echo "Building gardenadm for ${os}-${arch} and writing output to ${out_file}..."
     GOOS="${os}" GOARCH="${arch}" LD_FLAGS="${ld_flags}" BUILD_OUTPUT_FILE="${out_file}" BUILD_PACKAGES="./cmd/gardenadm" make build
+
+    echo "Compressing ${out_file} to \"${compress_command[2]}\"..."
+    "${compress_command[@]}"
   done
 done
 
