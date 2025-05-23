@@ -114,7 +114,7 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":   Equal(field.ErrorTypeForbidden),
 				"Field":  Equal("spec"),
-				"Detail": Equal("RegistrationRef.APIVersion: another-api-version != "),
+				"Detail": Equal("cannot update shoot spec if deletion timestamp is set. Requested changes: RegistrationRef.APIVersion: another-api-version != "),
 			}))))
 		})
 
