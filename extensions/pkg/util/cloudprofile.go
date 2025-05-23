@@ -78,8 +78,14 @@ func NewV1beta1ImagesContext(parentImages []gardencorev1beta1.MachineImage) *Ima
 // located in a cloud profile at spec.capabilities.
 // It checks if the capabilities are supported by the cloud profile and if the architecture is defined correctly.
 // It returns a list of field errors if any validation fails.
-func ValidateCapabilities(capabilities core.Capabilities, capabilitiesDefinition core.Capabilities, fldPath *field.Path) field.ErrorList {
+func ValidateCapabilities(capabilities core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	// create map from capabilitiesDefinitions
+	capabilitiesDefinition := make(map[string][]string)
+	for _, capabilityDefinition := range capabilitiesDefinitions {
+		capabilitiesDefinition[capabilityDefinition.Name] = capabilityDefinition.Values
+	}
 	supportedCapabilityKeys := slices.Collect(maps.Keys(capabilitiesDefinition))
 
 	// Check if all capabilities are supported by the cloud profile
@@ -108,13 +114,25 @@ func ValidateCapabilities(capabilities core.Capabilities, capabilitiesDefinition
 }
 
 // GetVersionCapabilitySets returns the CapabilitySets for a given machine image version or adds the default capabilitySet if non is defined.
-func GetVersionCapabilitySets(version core.MachineImageVersion, capabilitiesDefinition core.Capabilities) []core.CapabilitySet {
+func GetVersionCapabilitySets(version core.MachineImageVersion, capabilitiesDefinitions []core.CapabilityDefinition) []core.CapabilitySet {
 	versionCapabilitySets := version.CapabilitySets
 	if len(version.CapabilitySets) == 0 {
+
+		// find architecture Capability in capabilitiesDefinitions
+		// the architecture capability must exist in every cloud profile
+		var supportedArchitectures []string
+		for _, capabilityDefinition := range capabilitiesDefinitions {
+			if capabilityDefinition.Name == v1beta1constants.ArchitectureName {
+				supportedArchitectures = capabilityDefinition.Values
+				break
+			}
+		}
+
 		// It is allowed not to define capabilitySets in the machine image version if there is only one architecture
-		// if so the capabilityDefinition is used as default
-		if len(capabilitiesDefinition[v1beta1constants.ArchitectureName]) == 1 {
-			versionCapabilitySets = []core.CapabilitySet{{Capabilities: capabilitiesDefinition}}
+		// if so the capabilityDefinitions are used as default
+		if len(supportedArchitectures) == 1 {
+			capabilities := make(core.Capabilities)
+			versionCapabilitySets = []core.CapabilitySet{{Capabilities: ApplyDefaultCapabilities(capabilities, capabilitiesDefinitions)}}
 		}
 	}
 	return versionCapabilitySets
@@ -122,11 +140,13 @@ func GetVersionCapabilitySets(version core.MachineImageVersion, capabilitiesDefi
 
 // AreCapabilitiesEqual checks if two capabilities are semantically equal.
 // It compares the keys and values of the capabilities maps.
-func AreCapabilitiesEqual(a, b, capabilitiesDefinition core.Capabilities) bool {
-	a = SetDefaultCapabilities(a, capabilitiesDefinition)
-	b = SetDefaultCapabilities(b, capabilitiesDefinition)
-	for key, valuesA := range a {
-		valuesB, exists := b[key]
+func AreCapabilitiesEqual(a, b core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition) bool {
+	defaultedA := ApplyDefaultCapabilities(a, capabilitiesDefinitions)
+	defaultedB := ApplyDefaultCapabilities(b, capabilitiesDefinitions)
+
+	// Check if all keys and values in `a` exist in `b`
+	for key, valuesA := range defaultedA {
+		valuesB, exists := defaultedB[key]
 		if !exists || len(valuesA) != len(valuesB) {
 			return false
 		}
@@ -136,18 +156,32 @@ func AreCapabilitiesEqual(a, b, capabilitiesDefinition core.Capabilities) bool {
 			}
 		}
 	}
+
+	// Check if all keys and values in `b` exist in `a`
+	for key, valuesB := range defaultedB {
+		valuesA, exists := defaultedA[key]
+		if !exists || len(valuesA) != len(valuesB) {
+			return false
+		}
+		for _, value := range valuesB {
+			if !slices.Contains(valuesA, value) {
+				return false
+			}
+		}
+	}
+
 	return true
 }
 
-// SetDefaultCapabilities sets the default capabilities based on a capabilitiesDefinition for a machine type or machine image.
-func SetDefaultCapabilities(capabilities, capabilitiesDefinition core.Capabilities) core.Capabilities {
+// ApplyDefaultCapabilities sets the default capabilities based on a capabilitiesDefinition for a machine type or machine image.
+func ApplyDefaultCapabilities(capabilities core.Capabilities, capabilitiesDefinitions []core.CapabilityDefinition) core.Capabilities {
 	if len(capabilities) == 0 {
 		capabilities = make(core.Capabilities)
 	}
 
-	for key, values := range capabilitiesDefinition {
-		if _, exists := capabilities[key]; !exists {
-			capabilities[key] = values
+	for _, def := range capabilitiesDefinitions {
+		if _, exists := capabilities[def.Name]; !exists {
+			capabilities[def.Name] = def.Values
 		}
 	}
 

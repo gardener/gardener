@@ -117,9 +117,9 @@ var _ = Describe("Capabilities Functions", func() {
 				"architecture": {"amd64"},
 				"feature":      {"enabled"},
 			}
-			capabilitiesDefinition := core.Capabilities{
-				"architecture": {"amd64", "arm64"},
-				"feature":      {"enabled", "disabled"},
+			capabilitiesDefinition := []core.CapabilityDefinition{
+				{Name: "architecture", Values: []string{"amd64", "arm64"}},
+				{Name: "feature", Values: []string{"enabled", "disabled"}},
 			}
 
 			allErrs := util.ValidateCapabilities(capabilities, capabilitiesDefinition, fieldPath)
@@ -130,9 +130,9 @@ var _ = Describe("Capabilities Functions", func() {
 			capabilities := core.Capabilities{
 				"unsupportedKey": {"value"},
 			}
-			capabilitiesDefinition := core.Capabilities{
-				"architecture": {"amd64"},
-				"supportedKey": {"value"},
+			capabilitiesDefinition := []core.CapabilityDefinition{
+				{Name: "architecture", Values: []string{"amd64"}},
+				{Name: "supportedKey", Values: []string{"value"}},
 			}
 
 			allErrs := util.ValidateCapabilities(capabilities, capabilitiesDefinition, fieldPath)
@@ -149,8 +149,8 @@ var _ = Describe("Capabilities Functions", func() {
 			capabilities := core.Capabilities{
 				"architecture": {"unsupportedValue"},
 			}
-			capabilitiesDefinition := core.Capabilities{
-				"architecture": {"amd64", "arm64"},
+			capabilitiesDefinition := []core.CapabilityDefinition{
+				{Name: "architecture", Values: []string{"amd64", "arm64"}},
 			}
 
 			allErrs := util.ValidateCapabilities(capabilities, capabilitiesDefinition, field.NewPath("spec", "capabilities"))
@@ -166,8 +166,8 @@ var _ = Describe("Capabilities Functions", func() {
 
 			It("should return an error when multiple architectures are supported but none is defined", func() {
 				capabilities := core.Capabilities{}
-				capabilitiesDefinition := core.Capabilities{
-					"architecture": {"amd64", "arm64"},
+				capabilitiesDefinition := []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"amd64", "arm64"}},
 				}
 
 				allErrs := util.ValidateCapabilities(capabilities, capabilitiesDefinition, field.NewPath("spec", "capabilities"))
@@ -183,8 +183,8 @@ var _ = Describe("Capabilities Functions", func() {
 				capabilities := core.Capabilities{
 					"architecture": {"amd64", "arm64"},
 				}
-				capabilitiesDefinition := core.Capabilities{
-					"architecture": {"amd64", "arm64"},
+				capabilitiesDefinition := []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"amd64", "arm64"}},
 				}
 
 				allErrs := util.ValidateCapabilities(capabilities, capabilitiesDefinition, field.NewPath("spec", "capabilities"))
@@ -197,8 +197,8 @@ var _ = Describe("Capabilities Functions", func() {
 
 			It("should return no errors when only one architecture is supported and none is defined", func() {
 				capabilities := core.Capabilities{}
-				capabilitiesDefinition := core.Capabilities{
-					"architecture": {"amd64"},
+				capabilitiesDefinition := []core.CapabilityDefinition{
+					{Name: "architecture", Values: []string{"amd64"}},
 				}
 
 				allErrs := util.ValidateCapabilities(capabilities, capabilitiesDefinition, field.NewPath("spec", "capabilities"))
@@ -215,7 +215,9 @@ var _ = Describe("Capabilities Functions", func() {
 					{Capabilities: core.Capabilities{"key1": {"value1"}}},
 				},
 			}
-			capabilitiesDefinition := core.Capabilities{"key1": {"value1"}}
+			capabilitiesDefinition := []core.CapabilityDefinition{
+				{Name: "key1", Values: []string{"value1"}},
+			}
 
 			result := util.GetVersionCapabilitySets(version, capabilitiesDefinition)
 			Expect(result).To(Equal(version.CapabilitySets))
@@ -223,15 +225,19 @@ var _ = Describe("Capabilities Functions", func() {
 
 		It("should return a default capability set if none are defined and only one architecture is supported", func() {
 			version := core.MachineImageVersion{}
-			capabilitiesDefinition := core.Capabilities{"architecture": {"amd64"}}
+			capabilitiesDefinition := []core.CapabilityDefinition{
+				{Name: "architecture", Values: []string{"amd64"}},
+			}
 
 			result := util.GetVersionCapabilitySets(version, capabilitiesDefinition)
-			Expect(result).To(Equal([]core.CapabilitySet{{Capabilities: capabilitiesDefinition}}))
+			Expect(result).To(Equal([]core.CapabilitySet{{Capabilities: core.Capabilities{"architecture": {"amd64"}}}}))
 		})
 
 		It("should return an empty slice if no capability sets are defined and multiple architectures are supported", func() {
 			version := core.MachineImageVersion{}
-			capabilitiesDefinition := core.Capabilities{"architecture": {"amd64", "arm64"}}
+			capabilitiesDefinition := []core.CapabilityDefinition{
+				{Name: "architecture", Values: []string{"amd64", "arm64"}},
+			}
 
 			result := util.GetVersionCapabilitySets(version, capabilitiesDefinition)
 			Expect(result).To(BeEmpty())
@@ -239,7 +245,11 @@ var _ = Describe("Capabilities Functions", func() {
 	})
 
 	Describe("#AreCapabilitiesEqual", func() {
-		capabilitiesDefinition := core.Capabilities{"key1": {"value1", "value2"}, "key2": {"valueA", "valueB"}, "architecture": {"amd64"}}
+		capabilitiesDefinition := []core.CapabilityDefinition{
+			{Name: "key1", Values: []string{"value1", "value2"}},
+			{Name: "key2", Values: []string{"valueA", "valueB"}},
+			{Name: "architecture", Values: []string{"amd64"}},
+		}
 
 		It("should return true for equal capabilities", func() {
 			a := core.Capabilities{"key1": {"value1"}}
@@ -274,25 +284,33 @@ var _ = Describe("Capabilities Functions", func() {
 		})
 	})
 
-	Describe("#SetDefaultCapabilities", func() {
-		var capabilitiesDefinition core.Capabilities
+	Describe("#ApplyDefaultCapabilities", func() {
+		var capabilitiesDefinition []core.CapabilityDefinition
 		BeforeEach(func() {
-			capabilitiesDefinition = core.Capabilities{"key1": {"value1", "value2"}, "key2": {"valueA", "valueB"}, "architecture": {"amd64"}}
+			capabilitiesDefinition = []core.CapabilityDefinition{
+				{Name: "key1", Values: []string{"value1", "value2"}},
+				{Name: "key2", Values: []string{"valueA", "valueB"}},
+				{Name: "architecture", Values: []string{"amd64"}},
+			}
 		})
 		It("should set default capabilities if none are defined", func() {
 			capabilities := core.Capabilities{}
 
-			result := util.SetDefaultCapabilities(capabilities, capabilitiesDefinition)
-			Expect(result).To(Equal(capabilitiesDefinition))
+			result := util.ApplyDefaultCapabilities(capabilities, capabilitiesDefinition)
+			Expect(result).To(Equal(core.Capabilities{
+				"key1":         {"value1", "value2"},
+				"key2":         {"valueA", "valueB"},
+				"architecture": {"amd64"},
+			}))
 		})
 
 		It("should not overwrite existing capabilities and add missing capabilities from the definition", func() {
 			capabilities := core.Capabilities{"key1": {"value1"}}
 
-			result := util.SetDefaultCapabilities(capabilities, capabilitiesDefinition)
+			result := util.ApplyDefaultCapabilities(capabilities, capabilitiesDefinition)
 			Expect(result["key1"]).To(Equal(capabilities["key1"]))
-			Expect(result["key2"]).To(Equal(capabilities["key2"]))
-			Expect(result["architecture"]).To(Equal(capabilitiesDefinition["architecture"]))
+			Expect([]string(result["key2"])).To(Equal([]string{"valueA", "valueB"})) // Convert to []string
+			Expect([]string(result["architecture"])).To(Equal([]string{"amd64"}))    // Convert to []string
 		})
 	})
 })
