@@ -195,18 +195,18 @@ images:
     repository: ghcr.io/open-telemetry/opentelemetry-operator/opentelemetry-operator
     tag: "0.119.0"
     labels:
-    - name: 'gardener.cloud/cve-categorisation'
-      value:
-        network_exposure: 'private'
-        authentication_enforced: false
-        user_interaction: 'gardener-operator'
-        confidentiality_requirement: 'low'
-        integrity_requirement: 'low'
-        availability_requirement: 'low'
-    - name: 'cloud.gardener.cnudie/responsibles'
-      value:
-      - type: 'githubTeam'
-        teamname: 'gardener/logging-maintainers'
+      - name: 'gardener.cloud/cve-categorisation'
+        value:
+          network_exposure: 'private'
+          authentication_enforced: false
+          user_interaction: 'gardener-operator'
+          confidentiality_requirement: 'low'
+          integrity_requirement: 'low'
+          availability_requirement: 'low'
+      - name: 'cloud.gardener.cnudie/responsibles'
+        value:
+          - type: 'githubTeam'
+            teamname: 'gardener/logging-maintainers'
   # Monitoring
   - name: prometheus-operator
     sourceRepository: github.com/prometheus-operator/prometheus-operator
