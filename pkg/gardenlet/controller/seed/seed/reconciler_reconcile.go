@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istio"
 	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	seedpkg "github.com/gardener/gardener/pkg/gardenlet/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
@@ -226,9 +227,14 @@ func (r *Reconciler) runReconcileSeedFlow(
 			SkipIf: seedIsGarden,
 		})
 		deployPrometheusCRD = g.Add(flow.Task{
-			Name:   "Deploying monitoring-related custom resource definitions",
+			Name:   "Deploying Prometheus-related custom resource definitions",
 			Fn:     component.OpWait(c.prometheusCRD).Deploy,
 			SkipIf: seedIsGarden,
+		})
+		deployPersesCRD = g.Add(flow.Task{
+			Name:   "Deploying Perses-related custom resource definitions",
+			Fn:     component.OpWait(c.persesCRD).Deploy,
+			SkipIf: seedIsGarden || !features.DefaultFeatureGate.Enabled(features.Perses),
 		})
 		syncPointCRDs = flow.NewTaskIDs(
 			deployMachineCRD,
@@ -238,6 +244,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			deployVPACRD,
 			deployFluentCRD,
 			deployPrometheusCRD,
+			deployPersesCRD,
 		)
 
 		_ = g.Add(flow.Task{
@@ -474,6 +481,12 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name:         "Deploying Alertmanager",
 			Fn:           c.alertManager.Deploy,
 			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Perses Operator",
+			Fn:           c.persesOperator.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+			SkipIf:       seedIsGarden || !features.DefaultFeatureGate.Enabled(features.Perses),
 		})
 		deleteStaleExtensionResources = g.Add(flow.Task{
 			Name:         "Deleting stale extension resources",

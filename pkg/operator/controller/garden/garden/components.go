@@ -70,6 +70,7 @@ import (
 	gardenblackboxexporter "github.com/gardener/gardener/pkg/component/observability/monitoring/blackboxexporter/garden"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/gardenermetricsexporter"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/kubestatemetrics"
+	"github.com/gardener/gardener/pkg/component/observability/monitoring/persesoperator"
 	"github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus"
 	gardenprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/garden"
 	longtermprometheus "github.com/gardener/gardener/pkg/component/observability/monitoring/prometheus/longterm"
@@ -95,6 +96,7 @@ type components struct {
 	fluentCRD     component.DeployWaiter
 	extensionCRD  component.DeployWaiter
 	prometheusCRD component.DeployWaiter
+	persesCRD     component.DeployWaiter
 
 	gardenerResourceManager component.DeployWaiter
 	runtimeSystem           component.DeployWaiter
@@ -137,6 +139,7 @@ type components struct {
 	prometheusGarden              prometheus.Interface
 	prometheusLongTerm            prometheus.Interface
 	blackboxExporter              component.DeployWaiter
+	persesOperator                component.DeployWaiter
 }
 
 func (r *Reconciler) instantiateComponents(
@@ -180,6 +183,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.extensionCRD, err = extensioncrds.NewCRD(r.RuntimeClientSet.Client(), applier, true, false)
+	if err != nil {
+		return
+	}
+	c.persesCRD, err = persesoperator.NewCRDs(r.RuntimeClientSet.Client(), applier)
 	if err != nil {
 		return
 	}
@@ -323,6 +330,10 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 	c.blackboxExporter, err = r.newBlackboxExporter(garden, secretsManager, wildcardCertSecretName)
+	if err != nil {
+		return
+	}
+	c.persesOperator, err = r.newPersesOperator()
 	if err != nil {
 		return
 	}
@@ -1459,6 +1470,14 @@ func (r *Reconciler) newBlackboxExporter(garden *operatorv1alpha1.Garden, secret
 			ScrapeConfigs:     gardenblackboxexporter.ScrapeConfig(r.GardenNamespace, kubeAPIServerTargets, gardenerDashboardTarget),
 			Replicas:          1,
 		},
+	)
+}
+
+func (r *Reconciler) newPersesOperator() (component.DeployWaiter, error) {
+	return sharedcomponent.NewPersesOperator(
+		r.RuntimeClientSet.Client(),
+		r.GardenNamespace,
+		v1beta1constants.PriorityClassNameGardenSystem100,
 	)
 }
 
