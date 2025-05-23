@@ -74,12 +74,10 @@ type staticControlPlaneComponent struct {
 }
 
 func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlaneComponent {
-	var mutateAPIServerPodFn func(*corev1.Pod)
-
-	if b.gardenerResourceManagerServiceIP != nil {
-		mutateAPIServerPodFn = func(pod *corev1.Pod) {
+	mutateAPIServerPodFn := func(pod *corev1.Pod) {
+		for _, ip := range b.gardenerResourceManagerServiceIPs {
 			pod.Spec.HostAliases = append(pod.Spec.HostAliases, corev1.HostAlias{
-				IP:        *b.gardenerResourceManagerServiceIP,
+				IP:        ip,
 				Hostnames: []string{resourcemanagerconstants.ServiceName},
 			})
 		}
@@ -104,7 +102,7 @@ func (b *AutonomousBotanist) EnableNodeAgentAuthorizer(ctx context.Context) erro
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: resourcemanagerconstants.ServiceName, Namespace: b.Shoot.ControlPlaneNamespace}, gardenerResourceManagerService); err != nil {
 		return fmt.Errorf("failed getting service %q: %w", resourcemanagerconstants.ServiceName, err)
 	}
-	b.gardenerResourceManagerServiceIP = &gardenerResourceManagerService.Spec.ClusterIP
+	b.gardenerResourceManagerServiceIPs = gardenerResourceManagerService.Spec.ClusterIPs
 
 	return nil
 }

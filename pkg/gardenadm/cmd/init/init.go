@@ -210,7 +210,6 @@ func run(ctx context.Context, opts *Options) error {
 		enableNodeAgentAuthorizer = g.Add(flow.Task{
 			Name:         "Enable node-agent-authorizer",
 			Fn:           b.EnableNodeAgentAuthorizer,
-			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
 		})
 		deployExtensionControllersIntoPodNetwork = g.Add(flow.Task{
