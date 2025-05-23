@@ -227,7 +227,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 		deployOpenTelemetryCRD = g.Add(flow.Task{
 			Name:   "Deploy OpenTelemetry-related custom resource definitions",
-			Fn:     c.openTelemetryCRD.Deploy,
+			Fn:     component.OpWait(c.openTelemetryCRD).Deploy,
 			SkipIf: seedIsGarden,
 		})
 		syncPointCRDs = flow.NewTaskIDs(
