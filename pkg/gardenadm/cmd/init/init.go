@@ -201,9 +201,9 @@ func run(ctx context.Context, opts *Options) error {
 			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManagerIntoPodNetwork),
 		})
-		getGardenerResourceManagerServiceIP = g.Add(flow.Task{
-			Name:         "Get gardener-resource-manager service IP",
-			Fn:           b.FetchGardenerResourceManagerServiceIP,
+		enableNodeAgentAuthorizer = g.Add(flow.Task{
+			Name:         "Enable node-agent-authorizer",
+			Fn:           b.EnableNodeAgentAuthorizer,
 			SkipIf:       podNetworkAvailable,
 			Dependencies: flow.NewTaskIDs(waitUntilGardenerResourceManagerInPodNetworkReady),
 		})
@@ -223,7 +223,7 @@ func run(ctx context.Context, opts *Options) error {
 		})
 		syncPointBootstrapped = flow.NewTaskIDs(
 			deployNetworkPolicies,
-			getGardenerResourceManagerServiceIP,
+			enableNodeAgentAuthorizer,
 			waitUntilGardenerResourceManagerReady,
 			waitUntilGardenerResourceManagerInPodNetworkReady,
 			waitUntilExtensionControllersReady,

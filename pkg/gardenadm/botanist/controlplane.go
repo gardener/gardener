@@ -63,7 +63,7 @@ func (b *AutonomousBotanist) deployETCD(role string) func(context.Context) error
 func (b *AutonomousBotanist) deployKubeAPIServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeAPIServer.EnableStaticTokenKubeconfig()
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(ptr.To[int32](0))
-	return b.DeployKubeAPIServer(ctx, features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer))
+	return b.DeployKubeAPIServer(ctx, b.enableNodeAgentAuthorizer)
 }
 
 type staticControlPlaneComponent struct {
@@ -94,8 +94,12 @@ func (b *AutonomousBotanist) staticControlPlaneComponents() []staticControlPlane
 	}
 }
 
-// FetchGardenerResourceManagerServiceIP retrieves the IP address of the gardener-resource-manager service.
-func (b *AutonomousBotanist) FetchGardenerResourceManagerServiceIP(ctx context.Context) error {
+// EnableNodeAgentAuthorizer enables node-agent-authorizer for the botanist.
+func (b *AutonomousBotanist) EnableNodeAgentAuthorizer(ctx context.Context) error {
+	b.enableNodeAgentAuthorizer = features.DefaultFeatureGate.Enabled(features.NodeAgentAuthorizer)
+
+	// Kube-apiserver must be able to resolve the gardener-resource-manager service IP to access the node-agent-authorizer webhook.
+	// Thus, we fetch the service IP. It is used to create a host alias in the kube-apiserver pod spec later.
 	gardenerResourceManagerService := &corev1.Service{}
 	if err := b.SeedClientSet.Client().Get(ctx, client.ObjectKey{Name: resourcemanagerconstants.ServiceName, Namespace: b.Shoot.ControlPlaneNamespace}, gardenerResourceManagerService); err != nil {
 		return fmt.Errorf("failed getting service %q: %w", resourcemanagerconstants.ServiceName, err)
