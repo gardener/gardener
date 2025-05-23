@@ -176,48 +176,49 @@ var _ = Describe("Handler", func() {
 				It("should default the autoEnable field to shoot", func() {
 					extension.Spec.Resources[0].GloballyEnabled = ptr.To(true)
 
-					Expect(handler.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: mustEncodeObject(encoder, extension)}}})).To(Equal(admission.Response{
-						Patches: []jsonpatch.JsonPatchOperation{
-							{
-								Operation: "add",
-								Path:      "/spec/resources/0/autoEnable",
-								Value:     []interface{}{"shoot"},
-							},
-							{
-								Operation: "add",
-								Path:      "/spec/resources/0/clusterCompatibility",
-								Value:     []interface{}{"shoot"},
-							},
-						},
-						AdmissionResponse: admissionv1.AdmissionResponse{
-							Allowed:   true,
-							PatchType: ptr.To(admissionv1.PatchTypeJSONPatch),
-						},
+					result := handler.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: mustEncodeObject(encoder, extension)}}})
+
+					Expect(result.AdmissionResponse).To(Equal(admissionv1.AdmissionResponse{
+						Allowed:   true,
+						PatchType: ptr.To(admissionv1.PatchTypeJSONPatch),
 					}))
+					Expect(result.Patches).To(ConsistOf(
+						jsonpatch.JsonPatchOperation{
+							Operation: "add",
+							Path:      "/spec/resources/0/autoEnable",
+							Value:     []interface{}{"shoot"},
+						},
+						jsonpatch.JsonPatchOperation{
+							Operation: "add",
+							Path:      "/spec/resources/0/clusterCompatibility",
+							Value:     []interface{}{"shoot"},
+						},
+					))
 				})
 
 				It("should add shoot to autoEnable field if globallyEnabled is set to true", func() {
 					extension.Spec.Resources[0].GloballyEnabled = ptr.To(true)
 					extension.Spec.Resources[0].AutoEnable = []gardencorev1beta1.ClusterType{"seed"}
 
-					Expect(handler.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: mustEncodeObject(encoder, extension)}}})).To(Equal(admission.Response{
-						Patches: []jsonpatch.JsonPatchOperation{
-							{
-								Operation: "add",
-								Path:      "/spec/resources/0/autoEnable/1",
-								Value:     "shoot",
-							},
-							{
-								Operation: "add",
-								Path:      "/spec/resources/0/clusterCompatibility",
-								Value:     []interface{}{"shoot"},
-							},
-						},
-						AdmissionResponse: admissionv1.AdmissionResponse{
-							Allowed:   true,
-							PatchType: ptr.To(admissionv1.PatchTypeJSONPatch),
-						},
+					result := handler.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Object: runtime.RawExtension{Raw: mustEncodeObject(encoder, extension)}}})
+
+					Expect(result.AdmissionResponse).To(Equal(admissionv1.AdmissionResponse{
+						Allowed:   true,
+						PatchType: ptr.To(admissionv1.PatchTypeJSONPatch),
 					}))
+
+					Expect(result.Patches).To(ConsistOf(
+						jsonpatch.JsonPatchOperation{
+							Operation: "add",
+							Path:      "/spec/resources/0/autoEnable/1",
+							Value:     "shoot",
+						},
+						jsonpatch.JsonPatchOperation{
+							Operation: "add",
+							Path:      "/spec/resources/0/clusterCompatibility",
+							Value:     []interface{}{"shoot"},
+						},
+					))
 				})
 
 				It("should remove shoot from autoEnable field if globallyEnabled is updated to false", func() {
