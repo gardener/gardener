@@ -135,7 +135,7 @@ func (otel *openTelemetryOperator) serviceAccount() *corev1.ServiceAccount {
 	}
 }
 
-func (_ *openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
+func (*openTelemetryOperator) clusterRole() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   roleName,
