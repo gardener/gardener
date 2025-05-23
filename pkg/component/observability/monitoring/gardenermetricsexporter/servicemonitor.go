@@ -46,7 +46,6 @@ func (g *gardenerMetricsExporter) serviceMonitor() *monitoringv1.ServiceMonitor 
 					"garden_shoots_custom_kcm_nodecidrmasksize_total",
 					"garden_shoots_custom_kubelet_podpidlimit_total",
 					"garden_shoots_custom_network_customdomain_total",
-					"garden_shoots_custom_privileged_containers_total",
 					"garden_shoots_custom_proxy_mode_total",
 					"garden_shoots_custom_worker_annotations_total",
 					"garden_shoots_custom_worker_multiplepools_total",
