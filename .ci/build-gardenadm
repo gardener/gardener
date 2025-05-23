@@ -28,6 +28,9 @@ for os in linux darwin windows; do
 
     echo "Compressing ${out_file} to \"${compress_command[2]}\"..."
     "${compress_command[@]}"
+
+    echo "Removing ${out_file}..."
+    rm "${out_file}"
   done
 done
 
