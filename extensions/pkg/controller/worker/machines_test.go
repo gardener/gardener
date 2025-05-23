@@ -81,6 +81,7 @@ var _ = Describe("Machines", func() {
 			lastSAKeyRotationInitiation = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
 			additionalDataV1            []string
 			additionalDataV2            []string
+			additionalDataInPlace       []string
 		)
 
 		BeforeEach(func() {
@@ -123,15 +124,16 @@ var _ = Describe("Machines", func() {
 			}
 			additionalDataV1 = []string{"sample"}
 			additionalDataV2 = []string{"sample"}
+			additionalDataInPlace = []string{"sample"}
 
 			var err error
-			hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
+			hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("hash value should not change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
+				actual, err := WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(hash))
 			})
@@ -196,6 +198,10 @@ var _ = Describe("Machines", func() {
 				additionalDataV2 = []string{"test"}
 			})
 
+			It("when changing additional data for in-place", func() {
+				additionalDataInPlace = []string{"test"}
+			})
+
 			It("when a shoot CA rotation is triggered but worker pool rollout is pending", func() {
 				newRotationTime := metav1.Time{Time: lastCARotationInitiation.Add(time.Hour)}
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime = &newRotationTime
@@ -217,7 +223,7 @@ var _ = Describe("Machines", func() {
 
 		Context("hash value should change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
+				actual, err := WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).NotTo(Equal(hash))
 			})
@@ -273,7 +279,7 @@ var _ = Describe("Machines", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.DeepCopy()
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = nil
-				hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
+				hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
 				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = credentialStatusWithInitiatedRotation
@@ -288,7 +294,7 @@ var _ = Describe("Machines", func() {
 				var err error
 				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.ServiceAccountKey.DeepCopy()
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = nil
-				hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2)
+				hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
 				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
@@ -302,10 +308,11 @@ var _ = Describe("Machines", func() {
 
 	Describe("#WorkerPoolHashV2", func() {
 		var (
-			p                extensionsv1alpha1.WorkerPool
-			hash             string
-			additionalDataV1 []string
-			additionalDataV2 []string
+			p                     extensionsv1alpha1.WorkerPool
+			hash                  string
+			additionalDataV1      []string
+			additionalDataV2      []string
+			additionalDataInPlace []string
 		)
 
 		BeforeEach(func() {
@@ -315,15 +322,16 @@ var _ = Describe("Machines", func() {
 			}
 			additionalDataV1 = []string{"sample"}
 			additionalDataV2 = []string{"sample"}
+			additionalDataInPlace = []string{"sample"}
 
 			var err error
-			hash, err = WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2)
+			hash, err = WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2, additionalDataInPlace)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("hash value should not change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2)
+				actual, err := WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2, additionalDataInPlace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(hash))
 			})
@@ -360,6 +368,10 @@ var _ = Describe("Machines", func() {
 				additionalDataV1 = []string{"test"}
 			})
 
+			It("when changing additional data for in-place", func() {
+				additionalDataInPlace = []string{"test"}
+			})
+
 			It("when changing machine type", func() {
 				p.MachineType = "small"
 			})
@@ -371,7 +383,7 @@ var _ = Describe("Machines", func() {
 
 		Context("hash value should change", func() {
 			AfterEach(func() {
-				actual, err := WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2)
+				actual, err := WorkerPoolHash(p, nil, additionalDataV1, additionalDataV2, additionalDataInPlace)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).NotTo(Equal(hash))
 			})
@@ -382,6 +394,170 @@ var _ = Describe("Machines", func() {
 
 			It("when changing nodeAgentSecretName", func() {
 				p.NodeAgentSecretName = ptr.To("different")
+			})
+		})
+	})
+
+	Describe("#WorkerPoolHashInPlace", func() {
+		var (
+			c                           *extensionscontroller.Cluster
+			p                           extensionsv1alpha1.WorkerPool
+			hash                        string
+			lastCARotationInitiation    = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+			lastSAKeyRotationInitiation = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
+			additionalDataV1            []string
+			additionalDataV2            []string
+			additionalDataInPlace       []string
+		)
+
+		BeforeEach(func() {
+			nodeAgentSecretName := "sample-hash"
+
+			c = &extensionscontroller.Cluster{
+				Shoot: &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Kubernetes: gardencorev1beta1.Kubernetes{
+							Version: "1.2.3",
+						},
+					},
+					Status: gardencorev1beta1.ShootStatus{
+						Credentials: &gardencorev1beta1.ShootCredentials{
+							Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+								CertificateAuthorities: &gardencorev1beta1.CARotation{
+									LastInitiationTime: &lastCARotationInitiation,
+								},
+								ServiceAccountKey: &gardencorev1beta1.ServiceAccountKeyRotation{
+									LastInitiationTime: &lastSAKeyRotationInitiation,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			p = extensionsv1alpha1.WorkerPool{
+				Name:        "test-worker",
+				MachineType: "foo",
+				MachineImage: extensionsv1alpha1.MachineImage{
+					Name:    "bar",
+					Version: "baz",
+				},
+				ProviderConfig: &runtime.RawExtension{
+					Raw: []byte("foo"),
+				},
+				KubernetesVersion:   ptr.To("1.2.3"),
+				KubeletConfig:       &gardencorev1beta1.KubeletConfig{},
+				NodeAgentSecretName: &nodeAgentSecretName,
+				UpdateStrategy:      ptr.To(gardencorev1beta1.AutoInPlaceUpdate),
+			}
+			additionalDataV1 = []string{"sample"}
+			additionalDataV2 = []string{"sample"}
+			additionalDataInPlace = []string{"sample"}
+
+			var err error
+			hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Context("hash value should not change", func() {
+			AfterEach(func() {
+				actual, err := WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).To(Equal(hash))
+			})
+
+			It("when changing priority", func() {
+				p.Priority = ptr.To(int32(1337))
+			})
+
+			It("when changing annotations", func() {
+				p.Annotations = map[string]string{"foo": "bar"}
+			})
+
+			It("when changing labels", func() {
+				p.Labels = map[string]string{"foo": "bar"}
+			})
+
+			It("when changing taints", func() {
+				p.Taints = []corev1.Taint{{Key: "foo"}}
+			})
+
+			It("when changing name", func() {
+				p.Name = "different-name"
+			})
+
+			It("when changing zones", func() {
+				p.Zones = []string{"1"}
+			})
+
+			It("when changing the kubernetes patch version of the worker pool version", func() {
+				p.KubernetesVersion = ptr.To("1.2.4")
+			})
+
+			It("when changing additional data for V1", func() {
+				additionalDataV1 = []string{"test"}
+			})
+
+			It("when changing additional data for V2", func() {
+				additionalDataV2 = []string{"test"}
+			})
+
+			It("when changing machine type", func() {
+				p.MachineType = "small"
+			})
+		})
+
+		Context("hash value should change", func() {
+			AfterEach(func() {
+				actual, err := WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).NotTo(Equal(hash))
+			})
+
+			It("when changing additional data", func() {
+				additionalDataInPlace = []string{"test"}
+			})
+
+			It("when changing nodeAgentSecretName", func() {
+				p.NodeAgentSecretName = ptr.To("different")
+			})
+
+			It("when changing machine image version", func() {
+				p.MachineImage.Version = "new-version"
+			})
+
+			It("when changing the kubernetes major/minor version of the worker pool version", func() {
+				p.KubernetesVersion = ptr.To("1.3.3")
+			})
+
+			It("when a shoot CA rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastCARotationInitiation.Add(time.Hour)}
+				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot CA rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.DeepCopy()
+				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = nil
+				hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
+				Expect(err).ToNot(HaveOccurred())
+
+				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = credentialStatusWithInitiatedRotation
+			})
+
+			It("when a shoot service account key rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastSAKeyRotationInitiation.Add(time.Hour)}
+				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot service account key rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.ServiceAccountKey.DeepCopy()
+				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = nil
+				hash, err = WorkerPoolHash(p, c, additionalDataV1, additionalDataV2, additionalDataInPlace)
+				Expect(err).ToNot(HaveOccurred())
+
+				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
 			})
 		})
 	})
