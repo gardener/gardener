@@ -727,7 +727,9 @@ Purpose
 <td>
 <em>(Optional)</em>
 <p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
-This field is immutable.</p>
+This field is immutable.
+Deprecated: This field will be removed in a future release.
+The value &ldquo;exposure&rdquo; is no longer used since the enablement of SNI, and the value &ldquo;normal&rdquo; is redundant.</p>
 </td>
 </tr>
 <tr>
@@ -2548,7 +2550,9 @@ Purpose
 <td>
 <em>(Optional)</em>
 <p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
-This field is immutable.</p>
+This field is immutable.
+Deprecated: This field will be removed in a future release.
+The value &ldquo;exposure&rdquo; is no longer used since the enablement of SNI, and the value &ldquo;normal&rdquo; is redundant.</p>
 </td>
 </tr>
 <tr>
