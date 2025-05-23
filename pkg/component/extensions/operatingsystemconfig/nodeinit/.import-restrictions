@@ -1,0 +1,5 @@
+rules:
+  # override pkg/controller/operatingsystemconfig/ import restriction on extensions/ for OSC node init
+  - selectorRegexp: github[.]com/gardener/gardener/extensions
+    allowedPrefixes:
+      - github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig

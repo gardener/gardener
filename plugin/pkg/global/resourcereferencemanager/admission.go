@@ -52,10 +52,10 @@ import (
 	securityv1alpha1listers "github.com/gardener/gardener/pkg/client/security/listers/security/v1alpha1"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	seedmanagementv1alpha1listers "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
-	gardenerutils "github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	plugin "github.com/gardener/gardener/plugin/pkg"
-	"github.com/gardener/gardener/plugin/pkg/utils"
+	pluginutils "github.com/gardener/gardener/plugin/pkg/utils"
 )
 
 // Register registers a plugin.
@@ -320,7 +320,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into SecretBinding object")
 		}
-		if utils.SkipVerification(operation, binding.ObjectMeta) {
+		if pluginutils.SkipVerification(operation, binding.ObjectMeta) {
 			return nil
 		}
 		err = r.ensureBindingReferences(ctx, a, binding)
@@ -330,7 +330,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into CredentialsBinding object")
 		}
-		if utils.SkipVerification(operation, binding.ObjectMeta) {
+		if pluginutils.SkipVerification(operation, binding.ObjectMeta) {
 			return nil
 		}
 		err = r.ensureBindingReferences(ctx, a, binding)
@@ -345,7 +345,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
-		if utils.SkipVerification(operation, shoot.ObjectMeta) {
+		if pluginutils.SkipVerification(operation, shoot.ObjectMeta) {
 			return nil
 		}
 
@@ -375,7 +375,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Seed object")
 		}
-		if utils.SkipVerification(operation, seed.ObjectMeta) {
+		if pluginutils.SkipVerification(operation, seed.ObjectMeta) {
 			return nil
 		}
 
@@ -398,7 +398,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Project object")
 		}
-		if utils.SkipVerification(operation, project.ObjectMeta) {
+		if pluginutils.SkipVerification(operation, project.ObjectMeta) {
 			return nil
 		}
 
@@ -469,7 +469,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into CloudProfile object")
 		}
-		if utils.SkipVerification(operation, cloudProfile.ObjectMeta) {
+		if pluginutils.SkipVerification(operation, cloudProfile.ObjectMeta) {
 			return nil
 		}
 		if a.GetOperation() == admission.Update {
@@ -596,7 +596,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into NamespacedCloudProfile object")
 		}
-		if utils.SkipVerification(operation, namespacedCloudProfile.ObjectMeta) {
+		if pluginutils.SkipVerification(operation, namespacedCloudProfile.ObjectMeta) {
 			return nil
 		}
 		if a.GetOperation() == admission.Update {
@@ -621,10 +621,10 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 					return apierrors.NewInternalError(fmt.Errorf("could not get parent CloudProfile: %v", err1))
 				}
 
-				parentCloudProfileKubernetesVersions := gardenerutils.CreateMapFromSlice(parentCloudProfile.Spec.Kubernetes.Versions, func(v gardencorev1beta1.ExpirableVersion) string { return v.Version })
+				parentCloudProfileKubernetesVersions := utils.CreateMapFromSlice(parentCloudProfile.Spec.Kubernetes.Versions, func(v gardencorev1beta1.ExpirableVersion) string { return v.Version })
 				parentCloudProfileMachineImageVersions := make(map[string]map[string]gardencorev1beta1.MachineImageVersion)
 				for _, image := range parentCloudProfile.Spec.MachineImages {
-					parentCloudProfileMachineImageVersions[image.Name] = gardenerutils.CreateMapFromSlice(image.Versions, func(v gardencorev1beta1.MachineImageVersion) string { return v.Version })
+					parentCloudProfileMachineImageVersions[image.Name] = utils.CreateMapFromSlice(image.Versions, func(v gardencorev1beta1.MachineImageVersion) string { return v.Version })
 				}
 
 				var (
@@ -677,7 +677,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Gardenlet object")
 		}
-		if utils.SkipVerification(operation, gardenlet.ObjectMeta) {
+		if pluginutils.SkipVerification(operation, gardenlet.ObjectMeta) {
 			return nil
 		}
 		if _, err := r.managedSeedLister.ManagedSeeds(gardenlet.Namespace).Get(gardenlet.Name); err != nil && !apierrors.IsNotFound(err) {
@@ -691,7 +691,7 @@ func (r *ReferenceManager) Validate(ctx context.Context, a admission.Attributes,
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into ManagedSeed object")
 		}
-		if utils.SkipVerification(operation, managedSeed.ObjectMeta) {
+		if pluginutils.SkipVerification(operation, managedSeed.ObjectMeta) {
 			return nil
 		}
 		if _, err := r.gardenletLister.Gardenlets(managedSeed.Namespace).Get(managedSeed.Name); err != nil && !apierrors.IsNotFound(err) {
@@ -901,8 +901,8 @@ func (r *ReferenceManager) ensureBindingReferences(ctx context.Context, attribut
 }
 
 func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, oldShoot, shoot *core.Shoot) error {
-	if utils.BuildCloudProfileReference(shoot) != utils.BuildCloudProfileReference(oldShoot) {
-		if _, err := utils.GetCloudProfileSpec(r.cloudProfileLister, r.namespacedCloudProfileLister, shoot); err != nil {
+	if gardenerutils.BuildCloudProfileReference_core(shoot) != gardenerutils.BuildCloudProfileReference_core(oldShoot) {
+		if _, err := gardenerutils.GetCloudProfileSpec(r.cloudProfileLister, r.namespacedCloudProfileLister, shoot); err != nil {
 			return fmt.Errorf("could not find cloudProfileSpec from the shoot cloudProfile reference: %s", err.Error())
 		}
 	}
@@ -1071,7 +1071,7 @@ func (r *ReferenceManager) validateBackupBucketDeleteCollection(ctx context.Cont
 	}
 
 	for _, backupBucket := range backupBucketList.Items {
-		if err := r.validateBackupBucketDeletion(ctx, utils.NewAttributesWithName(a, backupBucket.Name)); err != nil {
+		if err := r.validateBackupBucketDeletion(ctx, pluginutils.NewAttributesWithName(a, backupBucket.Name)); err != nil {
 			return err
 		}
 	}
@@ -1100,7 +1100,7 @@ func (r *ReferenceManager) validateBackupBucketDeletion(ctx context.Context, a a
 }
 
 func isShootRelatedToCloudProfile(shoot *gardencorev1beta1.Shoot, cloudProfile *core.CloudProfile, relevantNamespacedCloudProfiles map[string]*gardencorev1beta1.NamespacedCloudProfile) bool {
-	shootCloudProfile := gardener.BuildCloudProfileReference(shoot)
+	shootCloudProfile := gardenerutils.BuildCloudProfileReference_v1beta1(shoot)
 	if shootCloudProfile == nil || cloudProfile == nil {
 		return false
 	}
@@ -1373,7 +1373,7 @@ func (r *ReferenceManager) sanityCheckProviderSecret(ctx context.Context, namesp
 				GenerateName: name,
 				Namespace:    namespace,
 				Annotations:  secret.Annotations,
-				Labels:       gardenerutils.MergeStringMaps(secret.Labels, map[string]string{v1beta1constants.LabelShootProviderPrefix + providerType: "true"}),
+				Labels:       utils.MergeStringMaps(secret.Labels, map[string]string{v1beta1constants.LabelShootProviderPrefix + providerType: "true"}),
 			},
 			Type: secret.Type,
 			Data: secret.Data,

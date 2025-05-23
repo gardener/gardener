@@ -23,7 +23,6 @@ import (
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
 
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig/original/components"
@@ -239,12 +238,13 @@ func getKubeletConfig(osc *extensionsv1alpha1.OperatingSystemConfig) (*kubeletco
 		kubeletConfigCodec = kubeletcomponent.NewConfigCodec(fciCodec)
 	)
 
-	kubeletConfigFile := extensionswebhook.FileWithPath(osc.Spec.Files, kubeletcomponent.PathKubeletConfig)
-	if kubeletConfigFile == nil {
-		return nil, fmt.Errorf("kubelet config file with path: %q not found in OSC", kubeletcomponent.PathKubeletConfig)
+	for _, file := range osc.Spec.Files {
+		if file.Path == kubeletcomponent.PathKubeletConfig {
+			return kubeletConfigCodec.Decode(file.Content.Inline)
+		}
 	}
 
-	return kubeletConfigCodec.Decode(kubeletConfigFile.Content.Inline)
+	return nil, fmt.Errorf("kubelet config file with path: %q not found in OSC", kubeletcomponent.PathKubeletConfig)
 }
 
 // ComputeKubeletConfigChange computes changes in the kubelet configuration relevant for in-place updates.
