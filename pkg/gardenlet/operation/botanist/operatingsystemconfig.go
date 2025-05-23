@@ -92,7 +92,6 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
-
 	clusterCABundle, found := clusterCASecret.Data[secretsutils.DataKeyCertificateBundle]
 	if !found {
 		return fmt.Errorf("key %q not found in secret %q", secretsutils.DataKeyCertificateBundle, v1beta1constants.SecretNameCACluster)
