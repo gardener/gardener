@@ -107,7 +107,7 @@ func ValidateCapabilities(capabilities core.Capabilities, capabilitiesDefinition
 	return allErrs
 }
 
-// GetVersionCapabilitySets returns the CapabilitySets for a given machine image version and adds the default capabilitySet if applicable.
+// GetVersionCapabilitySets returns the CapabilitySets for a given machine image version or adds the default capabilitySet if non is defined.
 func GetVersionCapabilitySets(version core.MachineImageVersion, capabilitiesDefinition core.Capabilities) []core.CapabilitySet {
 	versionCapabilitySets := version.CapabilitySets
 	if len(version.CapabilitySets) == 0 {
