@@ -104,6 +104,7 @@
 * [Readiness of Shoot Worker Nodes](usage/advanced/node-readiness.md)
 * [Cleanup of Shoot clusters in deletion](usage/advanced/shoot_cleanup.md)
 * [Tolerations](usage/advanced/tolerations.md)
+* [Immutable Backup Buckets](usage/advanced/immutable-backup-buckets.md)
 
 ## [API Reference](api-reference/README.md)
 
