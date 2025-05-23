@@ -22,7 +22,16 @@ import (
 type Handler struct{}
 
 // ValidateCreate performs the validation.
-func (h *Handler) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (h *Handler) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	extension, ok := obj.(*operatorv1alpha1.Extension)
+	if !ok {
+		return nil, fmt.Errorf("expected *operatorv1alpha1.Extension but got %T", obj)
+	}
+
+	if errs := validation.ValidateExtension(extension); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Extension"), extension.Name, errs)
+	}
+
 	return nil, nil
 }
 
@@ -38,7 +47,11 @@ func (h *Handler) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Objec
 	}
 
 	if errs := validation.ValidateExtensionUpdate(oldExtension, newExtension); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Garden"), newExtension.Name, errs)
+		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Extension"), newExtension.Name, errs)
+	}
+
+	if errs := validation.ValidateExtension(newExtension); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(operatorv1alpha1.Kind("Extension"), newExtension.Name, errs)
 	}
 
 	return nil, nil

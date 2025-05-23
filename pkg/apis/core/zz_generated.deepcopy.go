@@ -1519,6 +1519,16 @@ func (in *ControllerResource) DeepCopyInto(out *ControllerResource) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.AutoEnable != nil {
+		in, out := &in.AutoEnable, &out.AutoEnable
+		*out = make([]ClusterType, len(*in))
+		copy(*out, *in)
+	}
+	if in.ClusterCompatibility != nil {
+		in, out := &in.ClusterCompatibility, &out.ClusterCompatibility
+		*out = make([]ClusterType, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

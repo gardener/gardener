@@ -776,7 +776,7 @@ message ControllerResource {
   optional string type = 2;
 
   // GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
-  // This field is defaulted to false when kind is "Extension".
+  // Deprecated: This field is deprecated and will be removed in Gardener version v1.123. Please use AutoEnable instead.
   // +optional
   optional bool globallyEnabled = 3;
 
@@ -803,6 +803,17 @@ message ControllerResource {
   // This field is only relevant when kind is "Extension".
   // +optional
   optional bool workerlessSupported = 7;
+
+  // AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
+  // This field can only be set for resources of kind "Extension".
+  // +optional
+  repeated string autoEnable = 8;
+
+  // ClusterCompatibility defines the compatibility of this resource with different cluster types.
+  // If compatibility is not specified, it will be defaulted to 'shoot'.
+  // This field can only be set for resources of kind "Extension".
+  // +optional
+  repeated string clusterCompatibility = 9;
 }
 
 // ControllerResourceLifecycle defines the lifecycle of a controller resource.
@@ -1060,7 +1071,7 @@ message Extension {
   // +optional
   optional .k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
-  // Disabled allows to disable extensions that were marked as 'globally enabled' by Gardener administrators.
+  // Disabled allows to disable extensions that were marked as 'automatically enabled' by Gardener administrators.
   // +optional
   optional bool disabled = 3;
 }

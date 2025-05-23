@@ -678,17 +678,6 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 		}
 	}
 
-	disabledExtensions := sets.New[string]()
-	for _, extension := range shoot.Spec.Extensions {
-		id := ExtensionsID(extensionsv1alpha1.ExtensionResource, extension.Type)
-
-		if ptr.Deref(extension.Disabled, false) {
-			disabledExtensions.Insert(id)
-		} else {
-			requiredExtensions.Insert(id)
-		}
-	}
-
 	for _, pool := range shoot.Spec.Provider.Workers {
 		if pool.Machine.Image != nil {
 			requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.OperatingSystemConfigResource, pool.Machine.Image.Name))
@@ -718,19 +707,42 @@ func ComputeRequiredExtensionsForShoot(shoot *gardencorev1beta1.Shoot, seed *gar
 		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
 	}
 
+	for extensionType := range ComputeEnabledTypesForKindExtension(shoot, controllerRegistrationList) {
+		requiredExtensions.Insert(ExtensionsID(extensionsv1alpha1.ExtensionResource, extensionType))
+	}
+
+	return requiredExtensions
+}
+
+// ComputeEnabledTypesForKindExtension computes the enabled extension types for a given Shoot and ControllerRegistrationList.
+// It considers extensions explicitly enabled or disabled in the Shoot specification and those automatically enabled
+// based on the ControllerRegistration resources.
+func ComputeEnabledTypesForKindExtension(shoot *gardencorev1beta1.Shoot, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList) sets.Set[string] {
+	var (
+		enabledTypes  = sets.New[string]()
+		disabledTypes = sets.New[string]()
+	)
+
+	for _, extension := range shoot.Spec.Extensions {
+		if ptr.Deref(extension.Disabled, false) {
+			disabledTypes.Insert(extension.Type)
+		} else {
+			enabledTypes.Insert(extension.Type)
+		}
+	}
+
 	for _, controllerRegistration := range controllerRegistrationList.Items {
 		for _, resource := range controllerRegistration.Spec.Resources {
-			id := ExtensionsID(extensionsv1alpha1.ExtensionResource, resource.Type)
-			if resource.Kind == extensionsv1alpha1.ExtensionResource && ptr.Deref(resource.GloballyEnabled, false) && !disabledExtensions.Has(id) {
+			if extensionEnabledForCluster(gardencorev1beta1.ClusterTypeShoot, resource, disabledTypes) {
 				if v1beta1helper.IsWorkerless(shoot) && !ptr.Deref(resource.WorkerlessSupported, false) {
 					continue
 				}
-				requiredExtensions.Insert(id)
+				enabledTypes.Insert(resource.Type)
 			}
 		}
 	}
 
-	return requiredExtensions
+	return enabledTypes
 }
 
 // ExtensionsID returns an identifier for the given extension kind/type.

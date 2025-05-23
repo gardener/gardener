@@ -7,9 +7,17 @@ metadata:
 #  - kind: BackupBucket
 #    type: local
 #    primary: true|false
-#    globallyEnabled: true|false # only valid if kind=Extension
-#    reconcileTimeout: 30s # only valid if kind=Extension
 #    lifecycle: {}
+#  - kind: Extension
+#    type: local
+#    autoEnable: # only valid if kind=Extension
+#    - shoot
+#    - seed
+#    clusterCompatibility: # only valid if kind=Extension
+#    - shoot
+#    - seed
+#    - garden
+#    reconcileTimeout: 30s # only valid if kind=Extension
 #    workerlessSupported: true|false # only valid if kind=Extension
 #  deployment:
 #    admission:

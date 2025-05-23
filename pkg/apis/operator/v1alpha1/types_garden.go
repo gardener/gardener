@@ -702,6 +702,11 @@ type DashboardIngress struct {
 // GardenerDiscoveryServerConfig contains configuration settings for the gardener-discovery-server.
 type GardenerDiscoveryServerConfig struct{}
 
+const (
+	// ClusterTypeGarden enables the resource only for the garden cluster.
+	ClusterTypeGarden gardencorev1beta1.ClusterType = "garden"
+)
+
 // GardenExtension contains type and provider information for Garden extensions.
 type GardenExtension struct {
 	// Type is the type of the extension resource.

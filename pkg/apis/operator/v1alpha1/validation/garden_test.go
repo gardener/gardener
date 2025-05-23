@@ -31,6 +31,27 @@ import (
 )
 
 var _ = Describe("Validation Tests", func() {
+	var extensions []operatorv1alpha1.Extension
+
+	BeforeEach(func() {
+		extensions = []operatorv1alpha1.Extension{
+			{
+				Spec: operatorv1alpha1.ExtensionSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "Extension", Type: "foo", ClusterCompatibility: []gardencorev1beta1.ClusterType{"garden", "seed", "shoot"}},
+					},
+				},
+			},
+			{
+				Spec: operatorv1alpha1.ExtensionSpec{
+					Resources: []gardencorev1beta1.ControllerResource{
+						{Kind: "Extension", Type: "bar", ClusterCompatibility: []gardencorev1beta1.ClusterType{"seed", "shoot"}},
+					},
+				},
+			},
+		}
+	})
+
 	Describe("#ValidateGarden", func() {
 		var garden *operatorv1alpha1.Garden
 
@@ -80,7 +101,7 @@ var _ = Describe("Validation Tests", func() {
 
 		Context("operation annotation", func() {
 			It("should do nothing if the operation annotation is not set", func() {
-				Expect(ValidateGarden(garden)).To(BeEmpty())
+				Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 			})
 
 			DescribeTable("should not allow starting/completing rotation when garden has deletion timestamp",
@@ -88,7 +109,7 @@ var _ = Describe("Validation Tests", func() {
 					garden.DeletionTimestamp = &metav1.Time{}
 					metav1.SetMetaDataAnnotation(&garden.ObjectMeta, "gardener.cloud/operation", operation)
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
 					}))))
@@ -128,7 +149,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(And(matcher, SatisfyAll(extraMatchers...)))
+					Expect(ValidateGarden(garden, extensions)).To(And(matcher, SatisfyAll(extraMatchers...)))
 				},
 
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
@@ -309,7 +330,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
 				},
 
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
@@ -561,7 +582,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
 				},
 
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
@@ -615,7 +636,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
 				},
 
 				Entry("ca rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
@@ -669,7 +690,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
 				},
 				Entry("rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
@@ -722,7 +743,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
 				},
 
 				Entry("rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
@@ -786,7 +807,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(And(matcher, SatisfyAll(extraMatchers...)))
+					Expect(ValidateGarden(garden, extensions)).To(And(matcher, SatisfyAll(extraMatchers...)))
 				},
 
 				Entry("rotation phase is prepare", false, operatorv1alpha1.GardenStatus{
@@ -859,7 +880,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
 				},
 
 				Entry("rotation phase is prepare", false, operatorv1alpha1.GardenStatus{
@@ -913,7 +934,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
 				},
 				Entry("rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
 					Credentials: &operatorv1alpha1.Credentials{
@@ -966,7 +987,7 @@ var _ = Describe("Validation Tests", func() {
 						})))
 					}
 
-					Expect(ValidateGarden(garden)).To(matcher)
+					Expect(ValidateGarden(garden, extensions)).To(matcher)
 				},
 
 				Entry("rotation phase is preparing", false, operatorv1alpha1.GardenStatus{
@@ -1013,25 +1034,40 @@ var _ = Describe("Validation Tests", func() {
 			BeforeEach(func() {
 				garden.Spec.Extensions = []operatorv1alpha1.GardenExtension{
 					{
-						Type:           "extension-1",
+						Type:           "foo",
 						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{}`)},
-					},
-					{
-						Type: "extension-2",
 					},
 				}
 			})
 
 			It("should succeed if valid extensions are set", func() {
-				Expect(ValidateGarden(garden)).To(BeEmpty())
+				Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 			})
 
 			It("should fail if the same extension type is set multiple times", func() {
 				garden.Spec.Extensions = append(garden.Spec.Extensions, garden.Spec.Extensions[0])
 
-				Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
-					"Field": Equal("spec.extensions[2].type"),
+					"Field": Equal("spec.extensions[1].type"),
+				}))))
+			})
+
+			It("should deny using an incompatible extension", func() {
+				garden.Spec.Extensions = []operatorv1alpha1.GardenExtension{{Type: "bar"}}
+
+				Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.extensions[0].type"),
+				}))))
+			})
+
+			It("should deny using an unregistered extension", func() {
+				garden.Spec.Extensions = []operatorv1alpha1.GardenExtension{{Type: "foobar"}}
+
+				Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.extensions[0].type"),
 				}))))
 			})
 		})
@@ -1043,7 +1079,7 @@ var _ = Describe("Validation Tests", func() {
 					garden.Spec.RuntimeCluster.Networking.Pods = []string{"not-parseable-cidr"}
 					garden.Spec.RuntimeCluster.Networking.Services = []string{"not-parseable-cidr"}
 
-					Expect(ValidateGarden(garden)).To(ContainElements(
+					Expect(ValidateGarden(garden, extensions)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.runtimeCluster.networking.nodes[0]"),
@@ -1061,7 +1097,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain when pod network of runtime cluster intersects with service network of runtime cluster", func() {
 					garden.Spec.RuntimeCluster.Networking.Pods = garden.Spec.RuntimeCluster.Networking.Services
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.runtimeCluster.networking.pods[0]"),
 					}))))
@@ -1070,7 +1106,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain when node network of runtime cluster intersects with pod network of runtime cluster", func() {
 					garden.Spec.RuntimeCluster.Networking.Nodes = garden.Spec.RuntimeCluster.Networking.Pods
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.runtimeCluster.networking.nodes[0]"),
 					}))))
@@ -1079,7 +1115,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain when node network of runtime cluster intersects with service network of runtime cluster", func() {
 					garden.Spec.RuntimeCluster.Networking.Nodes = garden.Spec.RuntimeCluster.Networking.Services
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.runtimeCluster.networking.nodes[0]"),
 					}))))
@@ -1096,7 +1132,7 @@ var _ = Describe("Validation Tests", func() {
 					}
 					garden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
 
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.runtimeCluster.settings.topologyAwareRouting.enabled"),
@@ -1114,7 +1150,7 @@ var _ = Describe("Validation Tests", func() {
 					}
 					garden.Spec.VirtualCluster.ControlPlane = nil
 
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.runtimeCluster.settings.topologyAwareRouting.enabled"),
@@ -1132,7 +1168,7 @@ var _ = Describe("Validation Tests", func() {
 					}
 					garden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
 
-					Expect(ValidateGarden(garden)).To(BeEmpty())
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 				})
 			})
 
@@ -1140,7 +1176,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain about invalid ingress domain names", func() {
 					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: ",,,", Provider: ptr.To("primary")}}
 
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.runtimeCluster.ingress.domains[0].name"),
@@ -1155,7 +1191,7 @@ var _ = Describe("Validation Tests", func() {
 						{Name: "example.com", Provider: ptr.To("primary")},
 					}
 
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeDuplicate),
 							"Field": Equal("spec.runtimeCluster.ingress.domains[2].name"),
@@ -1166,13 +1202,13 @@ var _ = Describe("Validation Tests", func() {
 				It("should accept explicit domain provider", func() {
 					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com", Provider: ptr.To("primary")}}
 
-					Expect(ValidateGarden(garden)).To(BeEmpty())
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 				})
 
 				It("should complain about missing domain provider", func() {
 					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
 
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeRequired),
 							"Field": Equal("spec.runtimeCluster.ingress.domains[0].provider"),
@@ -1184,13 +1220,13 @@ var _ = Describe("Validation Tests", func() {
 					garden.Spec.DNS = nil
 					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
 
-					Expect(ValidateGarden(garden)).To(BeEmpty())
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 				})
 
 				It("should complain about unspecified provider", func() {
 					garden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com", Provider: ptr.To("foo")}}
 
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.runtimeCluster.ingress.domains[0].provider"),
@@ -1205,7 +1241,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain about invalid domain name in 'domain'", func() {
 					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: ",,,", Provider: ptr.To("primary")}}
 
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.virtualCluster.dns.domains[0].name"),
@@ -1219,7 +1255,7 @@ var _ = Describe("Validation Tests", func() {
 						{Name: "foo.bar", Provider: ptr.To("primary")},
 						{Name: "example.com", Provider: ptr.To("primary")},
 					}
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeDuplicate),
 							"Field": Equal("spec.virtualCluster.dns.domains[2].name"),
@@ -1230,13 +1266,13 @@ var _ = Describe("Validation Tests", func() {
 				It("should accept explicit domain provider", func() {
 					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com", Provider: ptr.To("primary")}}
 
-					Expect(ValidateGarden(garden)).To(BeEmpty())
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 				})
 
 				It("should complain about missing domain provider", func() {
 					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
 
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeRequired),
 							"Field": Equal("spec.virtualCluster.dns.domains[0].provider"),
@@ -1248,13 +1284,13 @@ var _ = Describe("Validation Tests", func() {
 					garden.Spec.DNS = nil
 					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
 
-					Expect(ValidateGarden(garden)).To(BeEmpty())
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 				})
 
 				It("should complain about invalid domain provider", func() {
 					garden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com", Provider: ptr.To("foo")}}
 
-					Expect(ValidateGarden(garden)).To(ConsistOf(
+					Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.virtualCluster.dns.domains[0].provider"),
@@ -1277,7 +1313,7 @@ var _ = Describe("Validation Tests", func() {
 						},
 					}
 
-					Expect(ValidateGarden(garden)).To(ContainElements(
+					Expect(ValidateGarden(garden, extensions)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
 							"Field": Equal("spec.virtualCluster.etcd.main.backup.providerConfig"),
@@ -1303,7 +1339,7 @@ var _ = Describe("Validation Tests", func() {
 						},
 					}
 
-					Expect(ValidateGarden(garden)).To(ContainElements(
+					Expect(ValidateGarden(garden, extensions)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeNotSupported),
 							"Field": Equal("spec.virtualCluster.etcd.main.autoscaling.minAllowed.storage"),
@@ -1333,7 +1369,7 @@ var _ = Describe("Validation Tests", func() {
 						},
 					}
 
-					Expect(ValidateGarden(garden)).To(BeEmpty())
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 				})
 			})
 
@@ -1341,7 +1377,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain about an invalid service CIDR", func() {
 					garden.Spec.VirtualCluster.Networking.Services = []string{"not-parseable-cidr"}
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.networking.services[0]"),
 					}))))
@@ -1350,7 +1386,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain when pod network of runtime cluster intersects with service network of virtual cluster", func() {
 					garden.Spec.RuntimeCluster.Networking.Pods = garden.Spec.VirtualCluster.Networking.Services
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.networking.services[0]"),
 					}))))
@@ -1359,7 +1395,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain when service network of runtime cluster intersects with service network of virtual cluster", func() {
 					garden.Spec.RuntimeCluster.Networking.Services = garden.Spec.VirtualCluster.Networking.Services
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.networking.services[0]"),
 					}))))
@@ -1368,7 +1404,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain when node network of runtime cluster intersects with service network of virtual cluster", func() {
 					garden.Spec.RuntimeCluster.Networking.Nodes = garden.Spec.VirtualCluster.Networking.Services
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.networking.services[0]"),
 					}))))
@@ -1377,7 +1413,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain when service network of virtual cluster has too many entries", func() {
 					garden.Spec.VirtualCluster.Networking.Services = []string{"10.4.0.0/16", "10.5.0.0/16", "10.6.0.0/16"}
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.virtualCluster.networking.services"),
 					}))))
@@ -1386,7 +1422,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should complain when service network of virtual cluster has equal IP family", func() {
 					garden.Spec.VirtualCluster.Networking.Services = []string{"10.4.0.0/16", "10.5.0.0/16"}
 
-					Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.virtualCluster.networking.services"),
 					}))))
@@ -1395,7 +1431,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should succeed when service network of virtual cluster has different IP families", func() {
 					garden.Spec.VirtualCluster.Networking.Services = []string{"10.4.0.0/16", "2001:db8::/32"}
 
-					Expect(ValidateGarden(garden)).To(BeEmpty())
+					Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 				})
 			})
 
@@ -1409,7 +1445,7 @@ var _ = Describe("Validation Tests", func() {
 						It("should complain when non-existing feature gates were configured", func() {
 							garden.Spec.VirtualCluster.Gardener.APIServer.FeatureGates = map[string]bool{"Foo": true}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.featureGates.Foo"),
 							}))))
@@ -1427,7 +1463,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.featureGates.Foo"),
 							}))))
@@ -1438,13 +1474,13 @@ var _ = Describe("Validation Tests", func() {
 						It("should allow not specifying admission plugins", func() {
 							garden.Spec.VirtualCluster.Gardener.APIServer.AdmissionPlugins = nil
 
-							Expect(ValidateGarden(garden)).To(BeEmpty())
+							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 						})
 
 						It("should forbid specifying admission plugins without a name", func() {
 							garden.Spec.VirtualCluster.Gardener.APIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{Name: ""}}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.admissionPlugins[0].name"),
 							}))))
@@ -1453,7 +1489,7 @@ var _ = Describe("Validation Tests", func() {
 						It("should forbid specifying non-existing admission plugin", func() {
 							garden.Spec.VirtualCluster.Gardener.APIServer.AdmissionPlugins = []gardencorev1beta1.AdmissionPlugin{{Name: "Foo"}}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeNotSupported),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.admissionPlugins[0].name"),
 							}))))
@@ -1462,7 +1498,7 @@ var _ = Describe("Validation Tests", func() {
 
 					Context("AuditConfig", func() {
 						It("should allow nil AuditConfig", func() {
-							Expect(ValidateGarden(garden)).To(BeEmpty())
+							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 						})
 
 						It("should forbid empty name", func() {
@@ -1472,7 +1508,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							}
 
-							Expect(ValidateGarden(garden)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.auditConfig.auditPolicy.configMapRef.name"),
 							}))))
@@ -1485,7 +1521,7 @@ var _ = Describe("Validation Tests", func() {
 								Resources: []string{"shoots.core.gardener.cloud", "shoots.core.gardener.cloud"},
 							}
 
-							Expect(ValidateGarden(garden)).To(ConsistOf(
+							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":     Equal(field.ErrorTypeDuplicate),
 									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[1]"),
@@ -1506,7 +1542,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							}
 
-							Expect(ValidateGarden(garden)).To(ContainElements(
+							Expect(ValidateGarden(garden, extensions)).To(ContainElements(
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":   Equal(field.ErrorTypeForbidden),
 									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[0]"),
@@ -1540,7 +1576,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							}
 
-							Expect(ValidateGarden(garden)).To(ConsistOf(
+							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":     Equal(field.ErrorTypeInvalid),
 									"Field":    Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[2]"),
@@ -1567,7 +1603,7 @@ var _ = Describe("Validation Tests", func() {
 								Resources: []string{"*.core.gardener.cloud", "*.operations.gardener.cloud"},
 							}
 
-							Expect(ValidateGarden(garden)).To(ConsistOf(
+							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(
 								PointTo(MatchFields(IgnoreExtras, Fields{
 									"Type":   Equal(field.ErrorTypeInvalid),
 									"Field":  Equal("spec.virtualCluster.gardener.gardenerAPIServer.encryptionConfig.resources[0]"),
@@ -1588,7 +1624,7 @@ var _ = Describe("Validation Tests", func() {
 						DescribeTable("watch cache size validation",
 							func(sizes *gardencorev1beta1.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
 								garden.Spec.VirtualCluster.Gardener.APIServer.WatchCacheSizes = sizes
-								Expect(ValidateGarden(garden)).To(matcher)
+								Expect(ValidateGarden(garden, extensions)).To(matcher)
 							},
 
 							Entry("valid (unset)", nil, BeEmpty()),
@@ -1674,7 +1710,7 @@ var _ = Describe("Validation Tests", func() {
 						DescribeTable("ShootAdminKubeconfigMaxExpiration validation",
 							func(duration *metav1.Duration, matcher gomegatypes.GomegaMatcher) {
 								garden.Spec.VirtualCluster.Gardener.APIServer.ShootAdminKubeconfigMaxExpiration = duration
-								Expect(ValidateGarden(garden)).To(matcher)
+								Expect(ValidateGarden(garden, extensions)).To(matcher)
 							},
 
 							Entry("valid (unset)", nil, BeEmpty()),
@@ -1696,7 +1732,7 @@ var _ = Describe("Validation Tests", func() {
 						DescribeTable("Logging validation",
 							func(loggingConfig *gardencorev1beta1.APIServerLogging, matcher gomegatypes.GomegaMatcher) {
 								garden.Spec.VirtualCluster.Gardener.APIServer.Logging = loggingConfig
-								Expect(ValidateGarden(garden)).To(matcher)
+								Expect(ValidateGarden(garden, extensions)).To(matcher)
 							},
 
 							Entry("valid (unset)", nil, BeEmpty()),
@@ -1733,7 +1769,7 @@ var _ = Describe("Validation Tests", func() {
 								MaxMutatingInflight:    ptr.To[int32](412412412),
 							}
 
-							Expect(ValidateGarden(garden)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeInvalid),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.requests.maxNonMutatingInflight"),
 							})), PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1748,7 +1784,7 @@ var _ = Describe("Validation Tests", func() {
 								MaxMutatingInflight:    ptr.To(int32(-1)),
 							}
 
-							Expect(ValidateGarden(garden)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeInvalid),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerAPIServer.requests.maxNonMutatingInflight"),
 							})), PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1763,13 +1799,13 @@ var _ = Describe("Validation Tests", func() {
 					It("should allow the configuration being set to nil", func() {
 						garden.Spec.VirtualCluster.Gardener.AdmissionController = nil
 
-						Expect(ValidateGarden(garden)).To(BeEmpty())
+						Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 					})
 
 					It("should allow the configuration being empty", func() {
 						garden.Spec.VirtualCluster.Gardener.AdmissionController = &operatorv1alpha1.GardenerAdmissionControllerConfig{}
 
-						Expect(ValidateGarden(garden)).To(BeEmpty())
+						Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 					})
 
 					Context("Resource Admission Configuration", func() {
@@ -1790,7 +1826,7 @@ var _ = Describe("Validation Tests", func() {
 									ResourceAdmissionConfiguration: admissionConfig,
 								}
 
-								return ValidateGarden(garden)
+								return ValidateGarden(garden, extensions)
 							}
 
 							It("should allow no mode", func() {
@@ -1837,7 +1873,7 @@ var _ = Describe("Validation Tests", func() {
 										},
 									}
 
-									return ValidateGarden(garden)
+									return ValidateGarden(garden, extensions)
 								}
 							)
 
@@ -1924,7 +1960,7 @@ var _ = Describe("Validation Tests", func() {
 										},
 									}
 
-									return ValidateGarden(garden)
+									return ValidateGarden(garden, extensions)
 								}
 							)
 
@@ -2000,7 +2036,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerControllerManager.featureGates.Foo"),
 							}))))
@@ -2018,7 +2054,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerControllerManager.featureGates.Foo"),
 							}))))
@@ -2033,7 +2069,7 @@ var _ = Describe("Validation Tests", func() {
 								}},
 							}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeInvalid),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerControllerManager.defaultProjectQuotas[0].projectSelector.matchLabels"),
 							}))))
@@ -2050,7 +2086,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.featureGates.Foo"),
 							}))))
@@ -2068,7 +2104,7 @@ var _ = Describe("Validation Tests", func() {
 								},
 							}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerScheduler.featureGates.Foo"),
 							}))))
@@ -2081,7 +2117,7 @@ var _ = Describe("Validation Tests", func() {
 						It("should complain when both token and oidc login is disabled", func() {
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{EnableTokenLogin: ptr.To(false)}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeForbidden),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.enableTokenLogin"),
 							}))))
@@ -2092,7 +2128,7 @@ var _ = Describe("Validation Tests", func() {
 						It("should complain when OIDC config is configured while it is unset in kube-apiserver config", func() {
 							garden.Spec.VirtualCluster.Gardener.Dashboard = &operatorv1alpha1.GardenerDashboardConfig{OIDCConfig: &operatorv1alpha1.DashboardOIDC{}}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeInvalid),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig"),
 							}))))
@@ -2103,7 +2139,7 @@ var _ = Describe("Validation Tests", func() {
 								IssuerURL: ptr.To("https://example.com"),
 							}}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.clientIDPublic"),
 							}))))
@@ -2117,7 +2153,7 @@ var _ = Describe("Validation Tests", func() {
 								ClientID: ptr.To("my-client-id"),
 							}}}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.clientIDPublic"),
 							}))))
@@ -2128,7 +2164,7 @@ var _ = Describe("Validation Tests", func() {
 								ClientIDPublic: ptr.To("my-client-id"),
 							}}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.issuerURL"),
 							}))))
@@ -2142,7 +2178,7 @@ var _ = Describe("Validation Tests", func() {
 								IssuerURL: ptr.To("https://example.com"),
 							}}}
 
-							Expect(ValidateGarden(garden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+							Expect(ValidateGarden(garden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":  Equal(field.ErrorTypeRequired),
 								"Field": Equal("spec.virtualCluster.gardener.gardenerDashboard.oidcConfig.issuerURL"),
 							}))))
@@ -2158,7 +2194,7 @@ var _ = Describe("Validation Tests", func() {
 								StructuredAuthentication: &gardencorev1beta1.StructuredAuthentication{ConfigMapName: "auth-config"}},
 							}
 
-							Expect(ValidateGarden(garden)).To(BeEmpty())
+							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 						})
 
 						It("should not complain when OIDC config is configured in both gardener-dashboard and kube-apiserver via OIDC config", func() {
@@ -2168,7 +2204,7 @@ var _ = Describe("Validation Tests", func() {
 							}}
 							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer = &operatorv1alpha1.KubeAPIServerConfig{KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{OIDCConfig: &gardencorev1beta1.OIDCConfig{}}}
 
-							Expect(ValidateGarden(garden)).To(BeEmpty())
+							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 						})
 
 						It("should not complain when OIDC config is configured in both gardener-dashboard and kube-apiserver via OIDC config IssuerURL and ClientID", func() {
@@ -2178,7 +2214,7 @@ var _ = Describe("Validation Tests", func() {
 								ClientID:  ptr.To("my-client-id"),
 							}}}
 
-							Expect(ValidateGarden(garden)).To(BeEmpty())
+							Expect(ValidateGarden(garden, extensions)).To(BeEmpty())
 						})
 					})
 				})
@@ -2195,6 +2231,7 @@ var _ = Describe("Validation Tests", func() {
 					Name: "garden",
 				},
 				Spec: operatorv1alpha1.GardenSpec{
+					Extensions: []operatorv1alpha1.GardenExtension{{Type: "foo"}},
 					RuntimeCluster: operatorv1alpha1.RuntimeCluster{
 						Ingress: operatorv1alpha1.Ingress{
 							Domains: []operatorv1alpha1.DNSDomain{{Name: "ingress.bar.com"}},
@@ -2230,7 +2267,7 @@ var _ = Describe("Validation Tests", func() {
 					newGarden.Spec.RuntimeCluster.Networking.Pods = append(newGarden.Spec.RuntimeCluster.Networking.Pods, "fd00:3::/64", "fd00:4::/64")
 					newGarden.Spec.RuntimeCluster.Networking.Services = append(newGarden.Spec.RuntimeCluster.Networking.Services, "fd00:5::/64", "fd00:6::/64")
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(BeEmpty())
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
 				})
 
 				It("should deny removing network ranges", func() {
@@ -2238,7 +2275,7 @@ var _ = Describe("Validation Tests", func() {
 					oldGarden.Spec.RuntimeCluster.Networking.Pods = append(oldGarden.Spec.RuntimeCluster.Networking.Pods, "fd00:3::/64", "fd00:4::/64")
 					oldGarden.Spec.RuntimeCluster.Networking.Services = append(oldGarden.Spec.RuntimeCluster.Networking.Services, "fd00:5::/64", "fd00:6::/64")
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElements(
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
 							"Field": Equal("spec.runtimeCluster.networking.nodes"),
@@ -2264,7 +2301,7 @@ var _ = Describe("Validation Tests", func() {
 					newGarden.Spec.RuntimeCluster.Networking.Services = append(newGarden.Spec.RuntimeCluster.Networking.Services, "fd00:7::/64", "fd00:8::/64")
 					newGarden.Spec.RuntimeCluster.Networking.Services[2] = "fd00:9::/64"
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElements(
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElements(
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.runtimeCluster.networking.nodes[0]"),
@@ -2283,7 +2320,7 @@ var _ = Describe("Validation Tests", func() {
 					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
 					newGarden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Field": ContainSubstring("domain"),
 					}))))
 				})
@@ -2292,7 +2329,7 @@ var _ = Describe("Validation Tests", func() {
 					oldGarden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
 					newGarden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}, {Name: "foo.bar"}}
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Field": ContainSubstring("domain"),
 					}))))
 				})
@@ -2308,7 +2345,7 @@ var _ = Describe("Validation Tests", func() {
 						{Name: "bar.foo"},
 					}
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Field": ContainSubstring("domain"),
 					}))))
 				})
@@ -2321,7 +2358,7 @@ var _ = Describe("Validation Tests", func() {
 					}
 					newGarden.Spec.RuntimeCluster.Ingress.Domains = []operatorv1alpha1.DNSDomain{{Name: "bar.foo"}}
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
 					}))))
@@ -2339,7 +2376,7 @@ var _ = Describe("Validation Tests", func() {
 						{Name: "bar.foo"},
 					}
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.runtimeCluster.ingress.domains[0]"),
 					}))))
@@ -2354,7 +2391,7 @@ var _ = Describe("Validation Tests", func() {
 						oldGarden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
 						newGarden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "example.com"}}
 
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Field": ContainSubstring("domain"),
 						}))))
 					})
@@ -2366,7 +2403,7 @@ var _ = Describe("Validation Tests", func() {
 							{Name: "foo.bar"},
 						}
 
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Field": ContainSubstring("domain"),
 						}))))
 					})
@@ -2382,7 +2419,7 @@ var _ = Describe("Validation Tests", func() {
 							{Name: "bar.foo"},
 						}
 
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).NotTo(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Field": ContainSubstring("domain"),
 						}))))
 					})
@@ -2395,7 +2432,7 @@ var _ = Describe("Validation Tests", func() {
 						}
 						newGarden.Spec.VirtualCluster.DNS.Domains = []operatorv1alpha1.DNSDomain{{Name: "bar.foo"}}
 
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.virtualCluster.dns.domains[0].name"),
 						}))))
@@ -2413,7 +2450,7 @@ var _ = Describe("Validation Tests", func() {
 							{Name: "bar.foo"},
 						}
 
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeInvalid),
 							"Field": Equal("spec.virtualCluster.dns.domains[0].name"),
 						}))))
@@ -2442,7 +2479,7 @@ var _ = Describe("Validation Tests", func() {
 						},
 					}
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
 					}))))
@@ -2465,7 +2502,7 @@ var _ = Describe("Validation Tests", func() {
 						},
 					}
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.etcd.main.backup.bucketName"),
 					}))))
@@ -2486,7 +2523,7 @@ var _ = Describe("Validation Tests", func() {
 						},
 					}
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.virtualCluster.etcd.main.backup"),
 					}))))
@@ -2497,13 +2534,13 @@ var _ = Describe("Validation Tests", func() {
 				It("should allow adding service range", func() {
 					newGarden.Spec.VirtualCluster.Networking.Services = append(newGarden.Spec.VirtualCluster.Networking.Services, "fd00:1::/64")
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(BeEmpty())
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
 				})
 
 				It("should deny removing service ranges", func() {
 					oldGarden.Spec.VirtualCluster.Networking.Services = append(oldGarden.Spec.VirtualCluster.Networking.Services, "fd00:1::/64")
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.virtualCluster.networking.services"),
 					}))))
@@ -2514,7 +2551,7 @@ var _ = Describe("Validation Tests", func() {
 					newGarden.Spec.VirtualCluster.Networking.Services = append(newGarden.Spec.VirtualCluster.Networking.Services, "fd00:1::/64", "fd00:2::/64")
 					newGarden.Spec.VirtualCluster.Networking.Services[1] = "fd00:3::/64"
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.networking.services[1]"),
 					}))))
@@ -2525,7 +2562,7 @@ var _ = Describe("Validation Tests", func() {
 				It("should not be possible to remove the high availability setting once set", func() {
 					oldGarden.Spec.VirtualCluster.ControlPlane = &operatorv1alpha1.ControlPlane{HighAvailability: &operatorv1alpha1.HighAvailability{}}
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.virtualCluster.controlPlane.highAvailability"),
 					}))))
@@ -2539,7 +2576,7 @@ var _ = Describe("Validation Tests", func() {
 
 					newGarden.Spec.VirtualCluster.Kubernetes.Version = previousMinor.String()
 
-					Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+					Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.virtualCluster.kubernetes.version"),
 					}))))
@@ -2564,7 +2601,7 @@ var _ = Describe("Validation Tests", func() {
 						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
 						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}
 
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ConsistOf(
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ConsistOf(
 							PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":   Equal(field.ErrorTypeForbidden),
 								"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
@@ -2604,7 +2641,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						}
 
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ConsistOf(
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(ConsistOf(
 							PointTo(MatchFields(IgnoreExtras, Fields{
 								"Type":   Equal(field.ErrorTypeForbidden),
 								"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
@@ -2637,7 +2674,7 @@ var _ = Describe("Validation Tests", func() {
 						newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"shoots.core.gardener.cloud"}
 						newGarden.Status.Credentials = nil
 
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(BeEmpty())
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
 
 						newGarden.Status.Credentials = &operatorv1alpha1.Credentials{
 							Rotation: &operatorv1alpha1.CredentialsRotation{
@@ -2647,7 +2684,7 @@ var _ = Describe("Validation Tests", func() {
 							},
 						}
 
-						Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(BeEmpty())
+						Expect(ValidateGardenUpdate(oldGarden, newGarden, extensions)).To(BeEmpty())
 					})
 				})
 			})

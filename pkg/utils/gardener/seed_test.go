@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -117,7 +118,16 @@ var _ = Describe("utils", func() {
 	})
 
 	Describe("#ComputeRequiredExtensionsForSeed", func() {
-		var seed *gardencorev1beta1.Seed
+		var (
+			seed                       *gardencorev1beta1.Seed
+			controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList
+		)
+
+		const (
+			extensionType1 = "extension1"
+			extensionType2 = "extension2"
+			extensionType3 = "extension3"
+		)
 
 		BeforeEach(func() {
 			seed = &gardencorev1beta1.Seed{
@@ -125,10 +135,60 @@ var _ = Describe("utils", func() {
 					Provider: gardencorev1beta1.SeedProvider{Type: "providerA"},
 				},
 			}
+
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+				Items: []gardencorev1beta1.ControllerRegistration{
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType1,
+									AutoEnable: []gardencorev1beta1.ClusterType{"shoot", "seed"},
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType2,
+									AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind: extensionsv1alpha1.ContainerRuntimeResource,
+									Type: extensionType3,
+								},
+							},
+						},
+					},
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:       extensionsv1alpha1.ExtensionResource,
+									Type:       extensionType3,
+									AutoEnable: []gardencorev1beta1.ClusterType{"seed"},
+								},
+							},
+						},
+					},
+				},
+			}
 		})
 
 		It("should return the required types for seed", func() {
-			Expect(ComputeRequiredExtensionsForSeed(seed).UnsortedList()).To(ConsistOf(
+			Expect(ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList).UnsortedList()).To(ConsistOf(
+				"Extension/extension1",
+				"Extension/extension3",
 				"ControlPlane/providerA",
 				"Infrastructure/providerA",
 				"Worker/providerA",
@@ -143,7 +203,9 @@ var _ = Describe("utils", func() {
 			})
 
 			It("should return the required types for seed", func() {
-				Expect(ComputeRequiredExtensionsForSeed(seed).UnsortedList()).To(ConsistOf(
+				Expect(ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList).UnsortedList()).To(ConsistOf(
+					"Extension/extension1",
+					"Extension/extension3",
 					"DNSRecord/providerB",
 					"ControlPlane/providerA",
 					"Infrastructure/providerA",
@@ -156,14 +218,26 @@ var _ = Describe("utils", func() {
 			BeforeEach(func() {
 				seed.Spec.Extensions = []gardencorev1beta1.Extension{
 					{Type: "extensionA"},
-					{Type: "extensionB"},
 				}
 			})
 
 			It("should return the required types for seed", func() {
-				Expect(ComputeRequiredExtensionsForSeed(seed).UnsortedList()).To(ConsistOf(
+				Expect(ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList).UnsortedList()).To(ConsistOf(
 					"Extension/extensionA",
-					"Extension/extensionB",
+					"Extension/extension1",
+					"Extension/extension3",
+					"ControlPlane/providerA",
+					"Infrastructure/providerA",
+					"Worker/providerA",
+				))
+			})
+
+			It("should exclude disabled extensions", func() {
+				seed.Spec.Extensions = append(seed.Spec.Extensions, gardencorev1beta1.Extension{Type: "extension3", Disabled: ptr.To(true)})
+
+				Expect(ComputeRequiredExtensionsForSeed(seed, controllerRegistrationList).UnsortedList()).To(ConsistOf(
+					"Extension/extensionA",
+					"Extension/extension1",
 					"ControlPlane/providerA",
 					"Infrastructure/providerA",
 					"Worker/providerA",

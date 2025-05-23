@@ -58,9 +58,9 @@ var _ = Describe("Namespaces", func() {
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
 				Resources: []gardencorev1beta1.ControllerResource{
 					{
-						Kind:            extensionsv1alpha1.ExtensionResource,
-						Type:            extensionType3,
-						GloballyEnabled: ptr.To(true),
+						Kind:       extensionsv1alpha1.ExtensionResource,
+						Type:       extensionType3,
+						AutoEnable: []gardencorev1beta1.ClusterType{"shoot"},
 					},
 				},
 			},
@@ -72,9 +72,8 @@ var _ = Describe("Namespaces", func() {
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
 				Resources: []gardencorev1beta1.ControllerResource{
 					{
-						Kind:            extensionsv1alpha1.ExtensionResource,
-						Type:            extensionType4,
-						GloballyEnabled: ptr.To(false),
+						Kind: extensionsv1alpha1.ExtensionResource,
+						Type: extensionType4,
 					},
 				},
 			},

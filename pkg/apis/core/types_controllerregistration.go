@@ -42,6 +42,16 @@ type ControllerRegistrationSpec struct {
 	Deployment *ControllerRegistrationDeployment
 }
 
+// ClusterType defines the type of cluster.
+type ClusterType string
+
+const (
+	// ClusterTypeShoot represents the shoot cluster type.
+	ClusterTypeShoot ClusterType = "shoot"
+	// ClusterTypeSeed represents the seed cluster type.
+	ClusterTypeSeed ClusterType = "seed"
+)
+
 // ControllerResource is a combination of a kind (Infrastructure, Generic, ...) and the actual type for this
 // kind (aws-route53, gcp, auditlog, ...).
 type ControllerResource struct {
@@ -50,7 +60,8 @@ type ControllerResource struct {
 	// Type is the resource type.
 	Type string
 	// GloballyEnabled determines if this resource is required by all Shoot clusters.
-	// This field is defaulted to false when kind is "Extension".
+	// TODO(timuthy): Remove this field in Gardener v1.123.
+	// Deprecated: This field is deprecated and will be removed in Gardener version v1.123. Please use AutoEnable instead.
 	GloballyEnabled *bool
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
 	// This field is defaulted to 3m0s when kind is "Extension".
@@ -68,6 +79,13 @@ type ControllerResource struct {
 	// WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
 	// This field is only relevant when kind is "Extension".
 	WorkerlessSupported *bool
+	// AutoEnable determines if this resource is automatically enabled for shoot or seed clusters, or both.
+	// This field can only be set for resources of kind "Extension".
+	AutoEnable []ClusterType
+	// ClusterCompatibility defines the compatibility of this resource with different cluster types.
+	// If compatibility is not specified, it will be defaulted to 'shoot'.
+	// This field can only be set for resources of kind "Extension".
+	ClusterCompatibility []ClusterType
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.

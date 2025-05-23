@@ -189,6 +189,11 @@ func (r *Reconciler) runReconcileSeedFlow(
 		return err
 	}
 
+	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
+	if err := r.GardenClient.List(ctx, controllerRegistrationList); err != nil {
+		return fmt.Errorf("failed retrieving controller registrations: %w", err)
+	}
+
 	var (
 		g = flow.NewGraph("Seed reconciliation")
 
@@ -264,7 +269,7 @@ func (r *Reconciler) runReconcileSeedFlow(
 			Name: "Waiting until required extensions are ready",
 			Fn: func(ctx context.Context) error {
 				return retry.UntilTimeout(ctx, 5*time.Second, time.Minute, func(ctx context.Context) (done bool, err error) {
-					if err := gardenerutils.RequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo().Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed.GetInfo())); err != nil {
+					if err := gardenerutils.RequiredExtensionsReady(ctx, r.GardenClient, seed.GetInfo().Name, gardenerutils.ComputeRequiredExtensionsForSeed(seed.GetInfo(), controllerRegistrationList)); err != nil {
 						return retry.MinorError(err)
 					}
 

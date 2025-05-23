@@ -371,7 +371,7 @@ spec:
   #   kind: FooBarConfig
   #   foo: bar
   #   secretRef: foobar-secret # See the resources section below for the actual reference
-  # disabled: true # only relevant for extensions that were marked as 'globally enabled' by Gardener administrators
+  # disabled: true # only relevant for extensions that were marked as 'automatically enabled' by Gardener administrators
   networking:
     type: <some-network-extension-name> # {calico,cilium}
     ipFamilies:
