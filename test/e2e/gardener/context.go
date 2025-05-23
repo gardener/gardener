@@ -133,6 +133,10 @@ type ShootContext struct {
 	//    HaveField("Items", HaveLen(1)),
 	//  )
 	SeedKomega komega.Komega
+
+	// ControlPlaneNamespace contains the namespace for the Shoot Control Plane in the Seed.
+	// It must be initialized via WithControlPlaneNamespace.
+	ControlPlaneNamespace string
 }
 
 // WithShootClientSet initializes the shoot clients of this ShootContext from the given client set.
@@ -148,6 +152,12 @@ func (s *ShootContext) WithSeedClientSet(clientSet kubernetes.Interface) *ShootC
 	s.SeedClientSet = clientSet
 	s.SeedClient = clientSet.Client()
 	s.SeedKomega = komega.New(s.SeedClient)
+	return s
+}
+
+// WithControlPlaneNamespace sets the namespace for the Shoot Control Plane in the Seed.
+func (s *ShootContext) WithControlPlaneNamespace(namespace string) *ShootContext {
+	s.ControlPlaneNamespace = namespace
 	return s
 }
 
