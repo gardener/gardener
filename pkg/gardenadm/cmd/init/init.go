@@ -74,6 +74,12 @@ func run(ctx context.Context, opts *Options) error {
 			Name: "Deploying control plane namespace",
 			Fn:   b.DeployControlPlaneNamespace,
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying cloud provider account secret",
+			Fn:           b.DeployCloudProviderSecret,
+			SkipIf:       b.Shoot.Credentials == nil,
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
 		reconcileCustomResourceDefinitions = g.Add(flow.Task{
 			Name: "Reconciling CustomResourceDefinitions",
 			Fn:   b.ReconcileCustomResourceDefinitions,

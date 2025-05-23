@@ -21,6 +21,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/gardenadm"
 	. "github.com/gardener/gardener/pkg/gardenadm/botanist"
 	"github.com/gardener/gardener/pkg/gardenlet/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/gardenlet/operation/botanist"
@@ -120,7 +121,11 @@ var _ = Describe("Extensions", func() {
 		It("should return an error because deployment is not set", func() {
 			controllerRegistration1.Spec.Deployment = nil
 
-			extensions, err := ComputeExtensions(shoot, controllerRegistrations, controllerDeployments, true)
+			extensions, err := ComputeExtensions(gardenadm.Resources{
+				Shoot:                   shoot,
+				ControllerRegistrations: controllerRegistrations,
+				ControllerDeployments:   controllerDeployments,
+			}, true)
 			Expect(err).To(MatchError(ContainSubstring("has invalid deployment refs in its spec")))
 			Expect(extensions).To(BeNil())
 		})
@@ -128,20 +133,31 @@ var _ = Describe("Extensions", func() {
 		It("should return an error because more than one deployment ref is set", func() {
 			controllerRegistration1.Spec.Deployment.DeploymentRefs = append(controllerRegistration1.Spec.Deployment.DeploymentRefs, gardencorev1beta1.DeploymentRef{})
 
-			extensions, err := ComputeExtensions(shoot, controllerRegistrations, controllerDeployments, true)
+			extensions, err := ComputeExtensions(gardenadm.Resources{
+				Shoot:                   shoot,
+				ControllerRegistrations: controllerRegistrations,
+				ControllerDeployments:   controllerDeployments,
+			}, true)
 			Expect(err).To(MatchError(ContainSubstring("has invalid deployment refs in its spec")))
 			Expect(extensions).To(BeNil())
 		})
 
 		It("should return an error because matching ControllerDeployment is not found", func() {
-			extensions, err := ComputeExtensions(shoot, controllerRegistrations, nil, true)
+			extensions, err := ComputeExtensions(gardenadm.Resources{
+				Shoot:                   shoot,
+				ControllerRegistrations: controllerRegistrations,
+			}, true)
 			Expect(err).To(MatchError(ContainSubstring("was not found")))
 			Expect(extensions).To(BeNil())
 		})
 
 		When("running the control plane", func() {
 			It("should return all extensions referenced by shoot (except Infrastructure and Worker)", func() {
-				extensions, err := ComputeExtensions(shoot, controllerRegistrations, controllerDeployments, true)
+				extensions, err := ComputeExtensions(gardenadm.Resources{
+					Shoot:                   shoot,
+					ControllerRegistrations: controllerRegistrations,
+					ControllerDeployments:   controllerDeployments,
+				}, true)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(extensions).To(Equal([]Extension{
 					{
@@ -174,7 +190,11 @@ var _ = Describe("Extensions", func() {
 
 		When("not running the control plane", func() {
 			It("should return the provider extension only (Infrastructure and Worker)", func() {
-				extensions, err := ComputeExtensions(shoot, controllerRegistrations, controllerDeployments, false)
+				extensions, err := ComputeExtensions(gardenadm.Resources{
+					Shoot:                   shoot,
+					ControllerRegistrations: controllerRegistrations,
+					ControllerDeployments:   controllerDeployments,
+				}, false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(extensions).To(Equal([]Extension{
 					{

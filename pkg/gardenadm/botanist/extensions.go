@@ -21,6 +21,7 @@ import (
 	gardencorev1 "github.com/gardener/gardener/pkg/apis/core/v1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/gardenadm"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation/controllerinstallation"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -30,23 +31,19 @@ import (
 
 // ComputeExtensions takes a list of ControllerRegistrations and ControllerDeployments and computes a corresponding list
 // of Extensions.
-func ComputeExtensions(
-	shoot *gardencorev1beta1.Shoot,
-	controllerRegistrations []*gardencorev1beta1.ControllerRegistration,
-	controllerDeployments []*gardencorev1.ControllerDeployment,
-	runsControlPlane bool,
-) (
-	[]Extension,
-	error,
-) {
+func ComputeExtensions(resources gardenadm.Resources, runsControlPlane bool) ([]Extension, error) {
 	var extensions []Extension
 
-	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(shoot, controllerRegistrations, wantedExtensionKinds(runsControlPlane))
+	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(
+		resources.Shoot,
+		resources.ControllerRegistrations,
+		wantedExtensionKinds(runsControlPlane),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed computing the names of the wanted ControllerRegistrations: %w", err)
 	}
 
-	for _, controllerRegistration := range controllerRegistrations {
+	for _, controllerRegistration := range resources.ControllerRegistrations {
 		if !wantedControllerRegistrationNames.Has(controllerRegistration.Name) {
 			continue
 		}
@@ -55,7 +52,7 @@ func ComputeExtensions(
 			return nil, fmt.Errorf("ControllerRegistration %s has invalid deployment refs in its spec (must reference exactly one ControllerDeployment)", controllerRegistration.Name)
 		}
 
-		idx := slices.IndexFunc(controllerDeployments, func(controllerDeployment *gardencorev1.ControllerDeployment) bool {
+		idx := slices.IndexFunc(resources.ControllerDeployments, func(controllerDeployment *gardencorev1.ControllerDeployment) bool {
 			return controllerDeployment.Name == controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name
 		})
 		if idx == -1 {
@@ -63,13 +60,13 @@ func ComputeExtensions(
 		}
 
 		var (
-			controllerDeployment   = controllerDeployments[idx].DeepCopy()
+			controllerDeployment   = resources.ControllerDeployments[idx].DeepCopy()
 			controllerInstallation = &gardencorev1beta1.ControllerInstallation{
 				ObjectMeta: metav1.ObjectMeta{Name: controllerRegistration.Name},
 				Spec: gardencorev1beta1.ControllerInstallationSpec{
 					RegistrationRef: corev1.ObjectReference{Name: controllerRegistration.Name},
 					DeploymentRef:   &corev1.ObjectReference{Name: controllerDeployment.Name},
-					SeedRef:         corev1.ObjectReference{Name: shoot.Name},
+					SeedRef:         corev1.ObjectReference{Name: resources.Shoot.Name},
 				},
 			}
 		)
