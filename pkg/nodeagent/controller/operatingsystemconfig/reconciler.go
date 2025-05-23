@@ -103,8 +103,9 @@ type Reconciler struct {
 	HostName      string
 	NodeName      string
 	MachineName   string
-	// SkipWriteLastAppliedConfiguration is used by gardenadm that it does not confuse gardener-node-agent's change
-	// detection when applying other OSCs than the original one.
+	// SkipWriteLastAppliedConfiguration is used by gardenadm when it deploys the provision OSC. In this case the last
+	// applied configuration should not be written. Otherwise, gardener-node-agent would delete files which exist in the
+	// provision OSC only when applying the reconcile OSC.
 	SkipWriteLastAppliedConfiguration bool
 
 	// Channel and TokenSecretSyncConfigs are used by the reconciler to trigger events for the token reconciler during an in-place service-account-key rotation.

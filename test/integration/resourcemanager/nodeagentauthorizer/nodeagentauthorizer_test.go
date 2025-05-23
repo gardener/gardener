@@ -534,14 +534,13 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 
 		Describe("#Secrets", func() {
 			BeforeEach(func() {
-				if machineNamespace == nil {
-					createNode(node, nil)
-				}
+				createNode(node, machine)
 
 				machineSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      machineSecretName,
 						Namespace: "kube-system",
+						Labels:    map[string]string{"worker.gardener.cloud/pool": "foo"},
 					},
 				}
 				ExpectWithOffset(1, testClient.Create(ctx, machineSecret)).To(Succeed())
@@ -554,6 +553,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      otherMachineSecretName,
 						Namespace: "kube-system",
+						Labels:    map[string]string{"worker.gardener.cloud/pool": "foo"},
 					},
 				}
 				ExpectWithOffset(1, testClient.Create(ctx, otherMachineSecret)).To(Succeed())
@@ -585,6 +585,18 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 					By("Delete foo Secret")
 					ExpectWithOffset(1, testClient.Delete(ctx, fooSecret)).To(Or(Succeed(), BeNotFoundError()))
 				})
+
+				barSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "bar",
+						Namespace: "kube-system",
+					},
+				}
+				ExpectWithOffset(1, testClient.Create(ctx, barSecret)).To(Succeed())
+				DeferCleanup(func() {
+					By("Delete bar Secret")
+					ExpectWithOffset(1, testClient.Delete(ctx, barSecret)).To(Or(Succeed(), BeNotFoundError()))
+				})
 			})
 
 			DescribeTable("#get",
@@ -598,6 +610,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				Entry("allow valitail secret", valitailSecretName, "kube-system", true),
 				Entry("allow machine secret", machineSecretName, "kube-system", true),
 				Entry("forbid foo secret", "foo", "default", false),
+				Entry("forbid bar secret", "bar", "kube-system", false),
 				Entry("forbid other machine secret", otherMachineSecretName, "kube-system", false),
 			)
 
@@ -611,6 +624,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				Entry("forbid valitail secret", valitailSecretName, "kube-system"),
 				Entry("forbid machine secret", machineSecretName, "kube-system"),
 				Entry("forbid foo secret", "foo", "default"),
+				Entry("forbid bar secret", "bar", "kube-system"),
 				Entry("forbid other machine secret", otherMachineSecretName, "kube-system"),
 			)
 
@@ -625,6 +639,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				Entry("forbid valitail secret", valitailSecretName, "kube-system"),
 				Entry("forbid machine secret", machineSecretName, "kube-system"),
 				Entry("forbid foo secret", "foo", "default"),
+				Entry("forbid bar secret", "bar", "kube-system"),
 				Entry("forbid other machine secret", otherMachineSecretName, "kube-system"),
 			)
 
@@ -637,6 +652,7 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				Entry("forbid valitail secret", valitailSecretName, "kube-system"),
 				Entry("forbid machine secret", machineSecretName, "kube-system"),
 				Entry("forbid foo secret", "foo", "default"),
+				Entry("forbid bar secret", "bar", "kube-system"),
 				Entry("forbid other machine secret", otherMachineSecretName, "kube-system"),
 			)
 
@@ -661,6 +677,13 @@ var _ = Describe("NodeAgentAuthorizer tests", func() {
 				Entry("forbid kube-system namespace", "", "kube-system", false),
 				Entry("forbid cluster wide", "", "", false),
 			)
+
+			It("should not be able to escalate privileges to a non operating system config secret by updating the node", func() {
+				node.Labels[v1beta1constants.LabelWorkerPoolGardenerNodeAgentSecretName] = "bar"
+				ExpectWithOffset(1, testClient.Update(ctx, node)).To(Succeed())
+
+				ExpectWithOffset(1, testClientNodeAgent.Get(ctx, client.ObjectKey{Namespace: "kube-system", Name: "bar"}, &corev1.Secret{})).To(BeForbiddenError())
+			})
 		})
 	}
 
