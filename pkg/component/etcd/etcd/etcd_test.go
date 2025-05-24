@@ -20,7 +20,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"go.uber.org/mock/gomock"
-	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -389,8 +388,9 @@ var _ = Describe("Etcd", func() {
 				},
 				Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 					TargetRef: &autoscalingv1.CrossVersionObjectReference{
-						Name: etcdName, Kind: "StatefulSet",
-						APIVersion: appsv1.SchemeGroupVersion.String(),
+						APIVersion: druidcorev1alpha1.SchemeGroupVersion.String(),
+						Kind:       "Etcd",
+						Name:       etcdName,
 					},
 					UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 						UpdateMode: &vpaUpdateMode,

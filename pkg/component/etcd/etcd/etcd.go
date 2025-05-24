@@ -21,7 +21,6 @@ import (
 	monitoringv1alpha1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1alpha1"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -792,8 +791,8 @@ func (e *etcd) reconcileVerticalPodAutoscaler(ctx context.Context, vpa *vpaautos
 
 		vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
 			TargetRef: &autoscalingv1.CrossVersionObjectReference{
-				APIVersion: appsv1.SchemeGroupVersion.String(),
-				Kind:       "StatefulSet",
+				APIVersion: druidcorev1alpha1.SchemeGroupVersion.String(),
+				Kind:       "Etcd",
 				Name:       e.etcd.Name,
 			},
 			UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
