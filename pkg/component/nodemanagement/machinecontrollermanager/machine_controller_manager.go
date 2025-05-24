@@ -90,6 +90,8 @@ type Values struct {
 	Image string
 	// Replicas is the number of replicas for the deployment.
 	Replicas int32
+	// AutonomousShoot is true if the machine-controller-manager is deployed for an autonomous shoot cluster.
+	AutonomousShoot bool
 
 	namespaceUID types.UID
 }
@@ -178,8 +180,10 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := shootAccessSecret.Reconcile(ctx, m.client); err != nil {
-		return err
+	if !m.values.AutonomousShoot {
+		if err := shootAccessSecret.Reconcile(ctx, m.client); err != nil {
+			return err
+		}
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, m.client, deployment, func() error {
@@ -216,7 +220,7 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 						fmt.Sprintf("--port=%d", portMetrics),
 						"--safety-up=2",
 						"--safety-down=1",
-						"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+						"--target-kubeconfig=" + targetKubeconfig(m.values.AutonomousShoot, m.namespace),
 						"--concurrent-syncs=30",
 						"--kube-api-qps=150",
 						"--kube-api-burst=200",
@@ -258,7 +262,10 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
+		if !m.values.AutonomousShoot {
+			utilruntime.Must(gardenerutils.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
+		}
+
 		return nil
 	}); err != nil {
 		return err
@@ -437,7 +444,33 @@ func (m *machineControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if m.values.AutonomousShoot && m.namespace != metav1.NamespaceSystem {
+		// This deploys the target cluster RBAC (e.g., for managing nodes and bootstrap tokens) in the bootstrap cluster
+		// because we configure machine-controller-manager with the in-cluster config as the target kubeconfig for now.
+		// TODO(timebertt): disable machine-controller-manager's target cluster interaction entirely
+		//  when https://github.com/gardener/machine-controller-manager/issues/994 has been implemented
+		return managedresources.CreateForSeed(ctx, m.client, m.namespace, managedResourceTargetName, false, data)
+	}
 	return managedresources.CreateForShoot(ctx, m.client, m.namespace, managedResourceTargetName, managedresources.LabelValueGardener, false, data)
+}
+
+// targetKubeconfig returns the path to the target kubeconfig file depending on the shoot configuration.
+func targetKubeconfig(autonomousShoot bool, controlPlaneNamespace string) string {
+	if !autonomousShoot {
+		return gardenerutils.PathGenericKubeconfig
+	}
+
+	if controlPlaneNamespace == metav1.NamespaceSystem {
+		// The control plane runs inside the cluster, use the in-cluster config as the target kubeconfig.
+		return ""
+	}
+
+	// There is no control plane for the autonomous shoot cluster yet, i.e., we're creating machines for the control plane
+	// nodes with `gardenadm bootstrap`. machine-controller-manager should not interact with a target cluster.
+	// TODO(timebertt): disable machine-controller-manager's target cluster interaction entirely
+	//  when https://github.com/gardener/machine-controller-manager/issues/994 has been implemented
+	// return "none" here
+	return ""
 }
 
 func (m *machineControllerManager) Destroy(ctx context.Context) error {
@@ -493,6 +526,15 @@ func (m *machineControllerManager) SetNamespaceUID(uid types.UID) { m.values.nam
 func (m *machineControllerManager) SetReplicas(replicas int32)    { m.values.Replicas = replicas }
 
 func (m *machineControllerManager) computeShootResourcesData(serviceAccountName string) (map[string][]byte, error) {
+	subject := rbacv1.Subject{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccountName,
+		Namespace: metav1.NamespaceSystem,
+	}
+	if m.values.AutonomousShoot {
+		subject.Namespace = m.namespace
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -543,11 +585,7 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 				Kind:     "ClusterRole",
 				Name:     clusterRole.Name,
 			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccountName,
-				Namespace: metav1.NamespaceSystem,
-			}},
+			Subjects: []rbacv1.Subject{subject},
 		}
 
 		role = &rbacv1.Role{
@@ -570,11 +608,7 @@ func (m *machineControllerManager) computeShootResourcesData(serviceAccountName 
 				Name:      "gardener.cloud:target:machine-controller-manager",
 				Namespace: metav1.NamespaceSystem,
 			},
-			Subjects: []rbacv1.Subject{{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccountName,
-				Namespace: metav1.NamespaceSystem,
-			}},
+			Subjects: []rbacv1.Subject{subject},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
 				Kind:     "Role",

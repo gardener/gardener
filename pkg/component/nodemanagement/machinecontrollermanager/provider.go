@@ -13,6 +13,8 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/ptr"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -24,8 +26,11 @@ const (
 // ProviderSidecarContainer returns a corev1.Container object which can be injected into the machine-controller-manager
 // deployment managed by the gardenlet. This function can be used in provider-specific control plane webhook
 // implementations when the standard sidecar container is required.
-func ProviderSidecarContainer(namespace, providerName, image string) corev1.Container {
-	return corev1.Container{
+// The shoot object can be read from the `Cluster` object, e.g., using the GardenContext.GetCluster method in webhooks.
+func ProviderSidecarContainer(shoot *gardencorev1beta1.Shoot, controlPlaneNamespace, providerName, image string) corev1.Container {
+	autonomousShoot := v1beta1helper.IsShootAutonomous(shoot)
+
+	c := corev1.Container{
 		Name:            providerSidecarContainerName(providerName),
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -37,9 +42,9 @@ func ProviderSidecarContainer(namespace, providerName, image string) corev1.Cont
 			"--machine-safety-apiserver-statuscheck-timeout=30s",
 			"--machine-safety-apiserver-statuscheck-period=1m",
 			"--machine-safety-orphan-vms-period=30m",
-			"--namespace=" + namespace,
+			"--namespace=" + controlPlaneNamespace,
 			"--port=" + strconv.Itoa(portProviderMetrics),
-			"--target-kubeconfig=" + gardenerutils.PathGenericKubeconfig,
+			"--target-kubeconfig=" + targetKubeconfig(autonomousShoot, controlPlaneNamespace),
 			"--v=3",
 		},
 		LivenessProbe: &corev1.Probe{
@@ -70,12 +75,17 @@ func ProviderSidecarContainer(namespace, providerName, image string) corev1.Cont
 		SecurityContext: &corev1.SecurityContext{
 			AllowPrivilegeEscalation: ptr.To(false),
 		},
-		VolumeMounts: []corev1.VolumeMount{{
+	}
+
+	if !autonomousShoot {
+		c.VolumeMounts = append(c.VolumeMounts, corev1.VolumeMount{
 			Name:      "kubeconfig",
 			MountPath: gardenerutils.VolumeMountPathGenericKubeconfig,
 			ReadOnly:  true,
-		}},
+		})
 	}
+
+	return c
 }
 
 // ProviderSidecarVPAContainerPolicy returns a vpaautoscalingv1.ContainerResourcePolicy object which can be injected
